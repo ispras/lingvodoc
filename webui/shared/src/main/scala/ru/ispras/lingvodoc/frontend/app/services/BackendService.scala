@@ -863,6 +863,20 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def disconnectLexicalEntry(dictionaryId:CompositeId, perspectiveId: CompositeId, fieldId: CompositeId, targetEntry: LexicalEntry, sourceEntry: LexicalEntry): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = s"dictionary/${dictionaryId.clientId}/${dictionaryId.objectId}/perspective/${perspectiveId.clientId}/${perspectiveId.objectId}/lexical_entry/connect"
+    val req = js.Dynamic.literal("field_client_id" -> fieldId.clientId,
+      "field_object_id" -> fieldId.objectId
+    )
+    $http.delete(getMethodUrl(url), req) onComplete {
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to disconnect lexical entries", e))
+    }
+    p.future
+  }
+
+
   def getEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Entity] = {
 
     val p = Promise[Entity]()
@@ -911,7 +925,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
       encodeURIComponent(perspectiveId.objectId.toString) +
       "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
-      encodeURIComponent(entryId.objectId.toString) + "/entity/" + encodeURIComponent(entityId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) + "/entity/" +
+      encodeURIComponent(entityId.clientId.toString) + "/" +
       encodeURIComponent(entityId.objectId.toString)
 
     $http.delete(getMethodUrl(url)) onComplete {

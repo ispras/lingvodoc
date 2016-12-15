@@ -2,9 +2,10 @@ package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
@@ -23,16 +24,16 @@ trait EditGroupingTagScope extends Scope {
 }
 
 @injectable("EditGroupingTagModalController")
-class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalService,
+class EditGroupingTagModalController(scope: EditGroupingTagScope,
+                                     modal: ModalService,
                                      instance: ModalInstance[Unit],
                                      backend: BackendService,
-                                     val timeout: Timeout,
+                                     timeout: Timeout,
                                      val exceptionHandler: ExceptionHandler,
                                      params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditGroupingTagScope](scope)
+  extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
-    with SimplePlay
-    with LoadingPlaceholder {
+    with SimplePlay {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
@@ -79,7 +80,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   }
 
   @JSExport
-  def search() = {
+  def search(): Unit = {
     backend.search(scope.searchQuery, None, tagsOnly = false) map { results =>
       val entries = results map (_.lexicalEntry)
       Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId))}) map { perspectives =>
@@ -101,15 +102,17 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   }
 
   @JSExport
-  def connect(entry: LexicalEntry) = {
+  def connect(entry: LexicalEntry): Unit = {
     backend.connectLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(field), lexicalEntry, entry).foreach { _ =>
       scope.dictionaryTable.addEntry(entry)
     }
   }
 
   @JSExport
-  def remove() = {
-
+  def remove(entry: LexicalEntry): Unit = {
+    backend.disconnectLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(field), lexicalEntry, entry).foreach { _ =>
+      scope.dictionaryTable.removeEntry(entry)
+    }
   }
 
   @JSExport
@@ -118,7 +121,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   }
 
   @JSExport
-  def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+  def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
       dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
@@ -152,7 +155,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   }
 
   @JSExport
-  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
       dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
@@ -184,22 +187,11 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
 
       }
     }
-  }
-
-  override protected def onLoaded[T](result: T): Unit = {}
-
-  override protected def onError(reason: Throwable): Unit = {}
-
-  override protected def preRequestHook(): Unit = {
-    scope.pageLoaded = false
-  }
-
-  override protected def postRequestHook(): Unit = {
-    scope.pageLoaded = true
+    ()
   }
 
 
-  doAjax(() => {
+  load(() => {
     backend.dataTypes() flatMap { allDataTypes =>
       dataTypes = allDataTypes
       // get fields of main perspective
@@ -221,4 +213,16 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   })
 
 
+  override protected def onModalClose(): Unit = {
+    waveSurfer.foreach(w => w.destroy())
+    super.onModalClose()
+  }
+
+  override protected def onStartRequest(): Unit = {
+    scope.pageLoaded = false
+  }
+
+  override protected def onCompleteRequest(): Unit = {
+    scope.pageLoaded = true
+  }
 }

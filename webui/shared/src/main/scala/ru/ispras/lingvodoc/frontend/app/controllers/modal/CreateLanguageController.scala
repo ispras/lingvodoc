@@ -1,8 +1,10 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.extensions.ModalInstance
+import com.greencatsoft.angularjs.core.{Event, ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LanguageEdit, LoadingPlaceholder}
 import ru.ispras.lingvodoc.frontend.app.model.{CompositeId, Language, Locale, LocalizedString}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
@@ -27,14 +29,15 @@ trait CreateLanguageScope extends Scope {
 
 @injectable("CreateLanguageController")
 class CreateLanguageController(scope: CreateLanguageScope,
+                               modalService: ModalService,
                                modalInstance: ModalInstance[Language],
                                backend: BackendService,
-                               val timeout: Timeout,
+                               timeout: Timeout,
                                val exceptionHandler: ExceptionHandler,
-                               params: js.Dictionary[js.Function0[js.Any]]) extends AbstractController[CreateLanguageScope](scope)
-  with AngularExecutionContextProvider
-  with LanguageEdit
-  with LoadingPlaceholder {
+                               params: js.Dictionary[js.Function0[js.Any]])
+  extends BaseModalController[CreateLanguageScope, Language](scope, modalService, modalInstance, timeout, params)
+    with AngularExecutionContextProvider
+    with LanguageEdit {
 
   // edit language
   private[this] val language = params.find(_._1 == "language") map { case (_, inst) =>
@@ -163,7 +166,7 @@ class CreateLanguageController(scope: CreateLanguageScope,
   }
 
 
-  doAjax(() => {
+  load(() => {
     backend.getLocales() flatMap { locales =>
       scope.locales = locales.toJSArray
 
@@ -192,15 +195,11 @@ class CreateLanguageController(scope: CreateLanguageScope,
     }
   })
 
-  override protected def onLoaded[T](result: T): Unit = {}
-
-  override protected def onError(reason: Throwable): Unit = {}
-
-  override protected def preRequestHook(): Unit = {
+  override protected def onStartRequest(): Unit = {
     scope.progressBar = true
   }
 
-  override protected def postRequestHook(): Unit = {
+  override protected def onCompleteRequest(): Unit = {
     scope.progressBar = false
   }
 }

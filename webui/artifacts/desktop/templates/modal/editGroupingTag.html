@@ -37,8 +37,9 @@
                 <table class="table table-striped table-bordered">
                     <thead>
                     <tr>
-                        <td></td>
+                        <td><!-- dictionary name --></td>
                         <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
+                        <td><!-- remove button --></td>
                     </tr>
                     </thead>
 
@@ -251,6 +252,8 @@
                             </div>
 
                         </td>
+
+                        <td><button type="button" class="btn btn-danger" ng-click="controller.remove(row.entry)">Remove</button></td>
 
                     </tr>
 

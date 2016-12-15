@@ -5,6 +5,7 @@ import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, Modal
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
@@ -38,10 +39,11 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
                                     modal: ModalService,
                                     instance: ModalInstance[Seq[Entity]],
                                     backend: BackendService,
-                                    val timeout: Timeout,
+                                    timeout: Timeout,
                                     val exceptionHandler: ExceptionHandler,
                                     params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditDictionaryModalScope](scope) with AngularExecutionContextProvider with SimplePlay {
+  extends BaseModalController(scope, modal, instance, timeout, params)
+    with SimplePlay {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
@@ -394,7 +396,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
 
   @JSExport
-  def close() = {
+  def close(): Unit = {
     instance.close(createdEntities)
   }
 
@@ -409,7 +411,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
           case dictionary: Dictionary => dictionary.translation
           case perspective: Perspective => perspective.translation
         }}.mkString(" >> ")
-      case Failure(e) => console.error(e.getMessage)
+      case Failure(e) => error(e)
     }
 
     backend.perspectiveSource(perspectiveId) onComplete {
@@ -419,12 +421,12 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
           case dictionary: Dictionary => dictionary.translation
           case perspective: Perspective => perspective.translation
         }}.mkString(" >> ")
-      case Failure(e) => console.error(e.getMessage)
+      case Failure(e) => error(e)
     }
 
     backend.getPerspective(linkPerspectiveId) map {
       p =>
-        backend.translationGist(p.translationGistClientId, p.translationGistObjectId) map {
+        backend.translationGist(CompositeId(p.translationGistClientId, p.translationGistObjectId)) map {
           gist =>
             perspectiveTranslation = Some(gist)
         }
@@ -450,9 +452,9 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
                     backend.getLexicalEntries(dictionaryId, linkPerspectiveId, LexicalEntriesType.All, scope.offset, scope.size) onComplete {
                       case Success(entries) =>
                         scope.linkedDictionaryTable = DictionaryTable.build(linkedFields, dataTypes, entries)
-                      case Failure(e) => console.log(e.getMessage)
+                      case Failure(e) => error(e)
                     }
-                  case Failure(e) => console.log(e.getMessage)
+                  case Failure(e) => error(e)
                 }
 
                 linkedPerspectiveFields = linkedFields
@@ -460,14 +462,25 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
                 Future.sequence(reqs) onComplete {
                   case Success(lexicalEntries) =>
                     scope.dictionaryTable = DictionaryTable.build(linkedFields, dataTypes, lexicalEntries)
-                  case Failure(e) => console.log(e.getMessage)
+                  case Failure(e) => error(e)
                 }
-              case Failure(e) => console.log(e.getMessage)
+              case Failure(e) => error(e)
             }
-          case Failure(e) => console.log(e.getMessage)
+          case Failure(e) => error(e)
         }
 
-      case Failure(e) => console.log(e.getMessage)
+      case Failure(e) => error(e)
     }
   }
+
+
+  override protected def onModalClose(): Unit = {
+    waveSurfer foreach {w =>
+      w.destroy()}
+    super.onModalClose()
+  }
+
+  override protected def onStartRequest(): Unit = {}
+
+  override protected def onCompleteRequest(): Unit = {}
 }
