@@ -88,7 +88,7 @@ If you are using less recent distro version, replace `xenial` with `trusty` or `
              * `effective_cache_size` - 1/8 of total RAM (e.g. 4096MB)
              * `wal_level = replica`
      * Restart postgres: `sudo service postgresql restart`
-     * Import the latest database backup (from-scratch creation look in `# from psql` section): `sudo -u posgres psql < lingvodoc.sql`
+     * Import the latest database backup (from-scratch creation look in `# from psql` section): `sudo -u postgres psql lingvodoc < lingvodoc.sql`
 2. Install Redis: `sudo apt-get install redis-server`.
 3. Install compilers, libraries and git: `sudo apt-get install build-essential python3-dev libssl-dev git`
 4. Install venv-creator: `sudo apt-get install python3-virtualenv`
@@ -164,3 +164,34 @@ API documentation
 /authors
 /sound
 /markup
+
+Testing
+-------
+
+Testing is performed via [pytest](http://doc.pytest.org). Installation of required packages:
+```
+pip install -r develop-requirements.txt
+```
+
+Running tests from the root project directory:
+```
+$VENV/bin/py.test
+```
+
+Documentation
+-------------
+
+Documentation for Python source code, including tests, can be generated via [Sphinx](http://www.sphinx-doc.org). Installation of required packages:
+```
+pip install -r develop-requirements.txt
+```
+
+Generating documentation from the root project directory:
+```
+make -f sphinx/Makefile html
+```
+
+Generated documentation can be accessed at `sphinx/build/html/index.html`. It includes all Python packages, modules, classes and functions of the project; descriptions of packages, modules, classes and functions are automatically produced from their docstrings.
+
+Documentation also includes an up-to-date list of Pyramid REST API routes provided by the application, extracted via [pyramid\_autodoc](https://github.com/SurveyMonkey/pyramid_autodoc) Sphinx extension.
+

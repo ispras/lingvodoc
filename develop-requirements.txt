@@ -1,0 +1,4 @@
+Sphinx
+pytest
+simplejson
+webtest

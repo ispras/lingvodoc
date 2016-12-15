@@ -130,12 +130,13 @@ class Corpus(object):
 
 #-----------------------------------------------------------------------
 
-element_tree = ElementTree.parse('corpus.xml')
+if __name__ == '__main__':
+    element_tree = ElementTree.parse('corpus.xml')
 
-with open('corpus.json', 'w') as corpus_file:
-    simplejson.dump(
-        Corpus().parse_document(element_tree.getroot()),
-        corpus_file,
-        ensure_ascii=False, separators=(',', ':'), sort_keys = False)
+    with open('corpus.json', 'w') as corpus_file:
+        simplejson.dump(
+            Corpus().parse_document(element_tree.getroot()),
+            corpus_file,
+            ensure_ascii=False, separators=(',', ':'), sort_keys = False)
 
 #-----------------------------------------------------------------------

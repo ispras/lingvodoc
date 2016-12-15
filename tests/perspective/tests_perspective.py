@@ -1,3 +1,11 @@
+# 
+# NOTE
+#
+# See information on how tests are organized and how they should work in the tests' package __init__.py file
+# (currently lingvodoc/tests/__init__.py).
+#
+
+
 from tests.tests import MyTestCase
 from tests.common import initValuesFactory
 from tests.common import load_correct_answers
@@ -13,7 +21,12 @@ from pyramid.httpexceptions import (
     HTTPForbidden
 )
 
+import pytest
+
+
+@pytest.mark.skip(reason = 'Unconverted test from the previous version.')
 class PerspectiveTest(MyTestCase):
+
     def _build_ordered_lists(self, response, correct_answer):
         self.assertEqual(response.status_int, HTTPOk.code)
         answer = sorted(correct_answer, key=lambda x: (x['client_id'], x['object_id']))
@@ -290,3 +303,4 @@ class PerspectiveTest(MyTestCase):
                                 (dict_1['client_id'], dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertEqual(response.json, correct_answers[test_name])
+

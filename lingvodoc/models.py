@@ -590,12 +590,14 @@ class Field(CompositeIdMixin,
             AdditionalMetadataMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
+
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
-          show on dictionary page.
+           show on dictionary page.
         2. Also we can know what entities should be grouped under the buttons (for example paradigms). Also we can
-          control connections between level-one and level-two entities. And we can control grouping entities (if we
-          want to have not only etymology connections).
+           control connections between level-one and level-two entities. And we can control grouping entities (if we
+           want to have not only etymology connections).
         3. With it we can restrict to use any entity types except listed here (security concerns).
+
     Parent: DictionaryPerspective.
     """
     marked_for_deletion = Column(Boolean, default=False, nullable=False)

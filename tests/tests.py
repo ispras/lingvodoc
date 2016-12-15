@@ -1,3 +1,10 @@
+# 
+# NOTE
+#
+# See information on how tests are organized and how they should work in the tests' package __init__.py file
+# (currently lingvodoc/tests/__init__.py).
+#
+
 import unittest
 import transaction
 
@@ -22,13 +29,24 @@ from pyramid.paster import (
 from subprocess import PIPE, Popen
 from configparser import ConfigParser
 
-alembicini = 'alembictests.ini'
+import os
+import pdb
+import pytest
+import sys
+
+
+# Assuming that required .ini-file is in the parent directory of the
+# 'tests' package --- i.e., package of this module.
+alembic_ini_path = os.path.join(
+  os.path.dirname(__file__), '..', 'alembictests.ini')
+
 parser = ConfigParser()
-parser.read('../' + alembicini)
+parser.read(alembic_ini_path)
 alembic_conf = dict()
 for k, v in parser.items('alembic'):
     alembic_conf[k] = v
 dbname = alembic_conf['sqlalchemy.url']
+
 from lingvodoc.scripts.initializedb import data_init
 
 
@@ -36,8 +54,6 @@ def debug_print(debug_flag, mssg):
     if debug_flag:
         for entry in mssg:
             print(entry)
-
-# from copy import deepcopy
 
 
 def new_dict(d, key_set, stop_words=list(), debug_flag=False):
@@ -111,6 +127,9 @@ class DummyWs(object):
 
 
 class MyTestCase(unittest.TestCase):
+    """
+    Common parent class for Lingvodoc API test cases.
+    """
 
     server_is_up = False
 
@@ -123,45 +142,46 @@ class MyTestCase(unittest.TestCase):
         return MyTestCase.server_is_up
 
     def setUp(self):
-        # try:
-            import os
-            self.config = testing.setUp()
-            import webtest.http
-            from pyramid import paster
-            from sqlalchemy import create_engine
-            engine = create_engine(dbname)
 
-            myapp = paster.get_app('../' + alembicini)
-            if not self.get_server_is_up():
-                self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")  # todo: change to pserve
-                self.ws.wait()
-                self.set_server_is_up(True)
-            self.app = webtest.TestApp(myapp)
-            # DBSession.remove()
-            # bashcommand = "alembic -c %s downgrade base" % alembicini
-            DBSession.configure(bind=engine)
-            bashcommand = "alembic -c %s upgrade head" % alembicini
-            args = bashcommand.split()
-            pathdir = os.path.dirname(os.path.realpath(__file__))
-            pathdir = pathdir[:(len(pathdir) - 6)]
-            my_env = os.environ
-            proc = Popen(args, cwd=pathdir, env=my_env)
-            proc.communicate()
-            accounts = get_appsettings('../' + alembicini, 'accounts')
-            data_init(transaction.manager, accounts)
-        # except:
-        #     self.tearDown()
+        self.config = testing.setUp()
 
-    def tearDown(self):
-        import os
-        DBSession.remove()
-        bashcommand = "alembic -c %s downgrade base" % alembicini
+        import webtest.http
+        from pyramid import paster
+        from sqlalchemy import create_engine
+        engine = create_engine(dbname)
+
+        myapp = paster.get_app(alembic_ini_path)
+        if not self.get_server_is_up():
+            self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")  # todo: change to pserve
+            self.ws.wait()
+            self.set_server_is_up(True)
+        self.app = webtest.TestApp(myapp)
+
+        DBSession.configure(bind=engine)
+        bashcommand = "alembic -c %s upgrade head" % alembic_ini_path
+
         args = bashcommand.split()
         pathdir = os.path.dirname(os.path.realpath(__file__))
         pathdir = pathdir[:(len(pathdir) - 6)]
         my_env = os.environ
         proc = Popen(args, cwd=pathdir, env=my_env)
         proc.communicate()
+
+        accounts = get_appsettings(alembic_ini_path, 'accounts')
+        data_init(transaction.manager, accounts)
+
+    def tearDown(self):
+
+        DBSession.remove()
+
+        bashcommand = "alembic -c %s downgrade base" % alembic_ini_path
+        args = bashcommand.split()
+        pathdir = os.path.dirname(os.path.realpath(__file__))
+        pathdir = pathdir[:(len(pathdir) - 6)]
+        my_env = os.environ
+        proc = Popen(args, cwd=pathdir, env=my_env)
+        proc.communicate()
+
         testing.tearDown()
 
     def assertEqual(self, d1, d2, msg=None, stop_words=list(), set_like=True, debug_flag=False):
@@ -318,6 +338,7 @@ class MyTestCase(unittest.TestCase):
         return dict_ids, persp_ids
 
 
+@pytest.mark.skip(reason = 'Unconverted test from the previous version.')
 class TestBig(MyTestCase):
 
     def one_big_test(self):

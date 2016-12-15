@@ -1,4 +1,5 @@
 .DS_Store
+.cache
 .idea/
 .virtual_env/
 virtual_env/
@@ -19,3 +20,8 @@ alembic.ini
 
 # webui2
 target/
+
+Session.vim
+pytest.output
+sphinx/source/apidoc-*/
+sphinx/pyramid_autodoc

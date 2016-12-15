@@ -24,6 +24,7 @@ def configure_routes(config):
     """
     This function registers views from .views for pyramid event loop. Actually all listed items here is our
     'site-map' for:
+
     1) web-views (html+javascript) - will be marked as 'web-view'
     2) REST API - will be marked as 'API'
     3) internal calls for frontend (in most cases it's API but not always). If it's not API part, will be marked
@@ -675,15 +676,18 @@ def main(global_config, **settings):
     config_file = global_config['__file__']
     parser = ConfigParser()
     parser.read(config_file)
+
     # TODO: DANGER
-    storage = dict()
-    for k, v in parser.items('backend:storage'):
-        storage[k] = v
-    settings['storage'] = storage
+
+    settings['storage'] = dict(parser.items(
+        'backend:storage' if parser.has_section('backend:storage') else
+            'storage'))
+
     if parser.has_section('app:desktop'):
         for k, v in parser.items('app:desktop'):
             storage[k] = v
         settings['desktop'] = storage
+
     config = Configurator(settings=settings)
     log = logging.getLogger(__name__)
 
