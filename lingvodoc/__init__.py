@@ -665,6 +665,9 @@ def configure_routes(config):
     config.add_route(name="delete_user_blob",
                      pattern="/blobs/{client_id}/{object_id}", request_method='DELETE')
 
+    config.add_route(name="phonology", pattern="/phonology")
+
+
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
