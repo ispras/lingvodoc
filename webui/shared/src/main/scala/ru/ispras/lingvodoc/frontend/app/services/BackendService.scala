@@ -6,19 +6,19 @@ import com.greencatsoft.angularjs.core.HttpPromise.promise2future
 import com.greencatsoft.angularjs.core._
 import org.scalajs.dom
 import org.scalajs.dom.ext.Ajax.InputData
-import org.scalajs.dom.{FormData, console}
+import org.scalajs.dom.{FormData, XMLHttpRequest}
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.LexicalEntriesType.LexicalEntriesType
-import upickle.Js
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.Any.fromString
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.{Dynamic, JSON, UndefOr}
 import scala.scalajs.js.URIUtils._
+import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}
+import scala.scalajs.js.{Dynamic, JSON}
 import scala.util.{Failure, Success}
 
 
@@ -863,16 +863,28 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def disconnectLexicalEntry(dictionaryId:CompositeId, perspectiveId: CompositeId, fieldId: CompositeId, targetEntry: LexicalEntry, sourceEntry: LexicalEntry): Future[Unit] = {
+  def disconnectLexicalEntry(entry: LexicalEntry, fieldId: CompositeId): Future[Unit] = {
     val p = Promise[Unit]()
-    val url = s"dictionary/${dictionaryId.clientId}/${dictionaryId.objectId}/perspective/${perspectiveId.clientId}/${perspectiveId.objectId}/lexical_entry/connect"
-    val req = js.Dynamic.literal("field_client_id" -> fieldId.clientId,
+
+    val url = s"group_entity/${entry.clientId}/${entry.objectId}"
+    val req = js.Dynamic.literal(
+      "field_client_id" -> fieldId.clientId,
       "field_object_id" -> fieldId.objectId
     )
-    $http.delete(getMethodUrl(url), req) onComplete {
-      case Success(response) => p.success(())
-      case Failure(e) => p.failure(BackendException("Failed to disconnect lexical entries", e))
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("DELETE", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(())
+      } else {
+        p.failure(new BackendException("Failed to disconnect lexical entries"))
+      }
     }
+    xhr.send(JSON.stringify(req))
+
     p.future
   }
 
@@ -1894,6 +1906,30 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
         p.success(())
       case Failure(e) => p.failure(BackendException("Failed to convert corpus", e))
     }
+    p.future
+  }
+
+  def phonology(perspectiveId: CompositeId): Future[String] = {
+    val p = Promise[String]()
+    val url = s"phonology?perspective_client_id=${perspectiveId.clientId}&perspective_object_id=${perspectiveId.objectId}"
+    val xhr: XMLHttpRequest = new dom.XMLHttpRequest()
+    xhr.open("GET", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+    xhr.responseType = "arraybuffer"
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        val arr = js.Array[Byte]()
+        val data = new Uint8Array(xhr.response.asInstanceOf[ArrayBuffer])
+        for (i <- 0 until data.byteLength) {
+          arr.push(data(i).toByte)
+        }
+        val b64content = dom.window.btoa(new String(arr.toArray, "Latin1"))
+        p.success(b64content)
+      } else {
+        p.failure(new BackendException("Failed to changed approval status entities"))
+      }
+    }
+    xhr.send()
     p.future
   }
 }
