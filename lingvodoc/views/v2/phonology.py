@@ -166,7 +166,7 @@ def phonology(request):
         markup_url = row.Entity.content
         sound_url = row.Sound.content
 
-        cache_key = '{0}:{1}:{2}:{3}'.format(
+        cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
             row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id)
 
         # Checking if we have cached result for this pair of sound/markup.
@@ -222,7 +222,7 @@ def phonology(request):
         if all(character not in vowel_set for character in transcription):
             CACHE.set(cache_key, 'no_vowel')
 
-            log.debug('{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}) [CACHE]: no vowels'.format(
+            log.debug('{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}): no vowels'.format(
                 index,
                 row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id))
 
