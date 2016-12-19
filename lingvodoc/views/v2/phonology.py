@@ -18,6 +18,7 @@ from pydub.utils import ratio_to_db
 
 import pympi
 
+from pyramid.httpexceptions import HTTPPreconditionFailed
 from pyramid.response import FileIter, Response
 from pyramid.view import view_config
 
@@ -34,6 +35,7 @@ from lingvodoc.models import (
     DBSession,
     Entity,
     LexicalEntry,
+    PublishingEntity,
 )
 
 
@@ -113,7 +115,7 @@ def find_max_segment(wav_url, segment_list, type = 'rms'):
 
 
 #: Set of vowels used by computation of phonology of dictionary perspectives.
-vowel_set = set('iyɨʉɯuɪʏɪ̈ʊ̈ɯ̽ʊeøɘɵɤoəɛœɜɞʌɔæɐaɶɑɒ')
+vowel_set = set('aeiouyæøœɐɑɒɔɘəɛɜɞɤɨɪɯɵɶʉʊʌʏ̈̽ао')
 
 
 @view_config(route_name="phonology", renderer='json')
@@ -143,15 +145,28 @@ def phonology(request):
     # TODO: get perspective's translation and language it belongs to.
     # We get lexical entries of this perspective with markup'ed sounds.
 
-    Sound = aliased(Entity, name="Sound")
-    query = DBSession.query(LexicalEntry, Entity, Sound).filter(and_(
+    Sound = aliased(Entity, name = "Sound")
+    PublishingSound = aliased(PublishingEntity, name = "PublishingSound")
+
+    query = DBSession.query(LexicalEntry, Entity, Sound, PublishingEntity, PublishingSound).filter(and_(
         LexicalEntry.parent_client_id == perspective_cid,
         LexicalEntry.parent_object_id == perspective_oid,
+        LexicalEntry.marked_for_deletion == False,
         Entity.parent_client_id == LexicalEntry.client_id,
         Entity.parent_object_id == LexicalEntry.object_id,
+        Entity.marked_for_deletion == False,
         Entity.additional_metadata.contains({"data_type": "praat markup"}),
+        PublishingEntity.client_id == Entity.client_id,
+        PublishingEntity.object_id == Entity.object_id,
+        PublishingEntity.published == True,
+        PublishingEntity.accepted == True,
         Sound.client_id == Entity.self_client_id,
-        Sound.object_id == Entity.self_object_id))
+        Sound.object_id == Entity.self_object_id,
+        Sound.marked_for_deletion == False,
+        PublishingSound.client_id == Sound.client_id,
+        PublishingSound.object_id == Sound.object_id,
+        PublishingSound.published == True,
+        PublishingSound.accepted == True))
 
     # We process these lexical entries in batches. Just in case, it seems that perspectives rarely have more
     # then several hundred such lexical entries.
@@ -214,8 +229,27 @@ def phonology(request):
         textgrid = pympi.Praat.TextGrid(xmax = 0)
         textgrid.from_file(io.BytesIO(markup_bytes), codec = chardet.detect(markup_bytes)['encoding'])
 
-        interval_list = textgrid.get_tier(0).get_all_intervals()
+        raw_interval_list = textgrid.get_tier(0).get_all_intervals()
+        interval_list = []
+        long_text_flag = False
+
+        for interval in raw_interval_list:
+            if len(interval[2]) <= 1 or len(interval[2]) == 2 and interval[2][-1] == '\'':
+                interval_list.append(interval)
+            else:
+                long_text_flag = True
+
         transcription = ''.join(text for begin, end, text in interval_list)
+
+        # If we have intervals with non-singleton markup, we report them.
+
+        if long_text_flag:
+            log.debug(
+                '{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}): '
+                'interval(s) with long text: {5}'.format(
+                index,
+                row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id,
+                list(map(lambda interval: interval[2], raw_interval_list))))
 
         # If the markup does not have any vowels, we skip it.
 
@@ -291,6 +325,8 @@ def phonology(request):
     # markups with no vowels.
 
     if not result_list:
+        request.response.status = HTTPPreconditionFailed.code
+
         return {
             "error": "no markups for this query",
             "exception_counter": exception_counter,
