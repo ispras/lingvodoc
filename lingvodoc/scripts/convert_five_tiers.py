@@ -343,9 +343,10 @@ def convert_five_tiers(
             field = data_type_query.filter(TranslationAtom.locale_id == 2,
                                                  TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
             field_ids[name] = (field.client_id, field.object_id)
-        fp_structure = [field_ids[x] for x in ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")]
-        sp_structure = [field_ids[x] for x in ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Paradigm Markup", "Backref")]
+        fp_structure = set([field_ids[x] for x in ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")])
+        sp_structure = set([field_ids[x] for x in ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Paradigm Markup", "Backref")])
         DBSession.flush()
+
         """
         parent_client_id = gist_client_id
         parent_object_id = gist_object_id
@@ -389,20 +390,20 @@ def convert_five_tiers(
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         first_perspective = None
         second_perspective = None
-        for perspective in DBSession.query(DictionaryPerspective).filter_by(parent=parent):
-            structure = []
+        for perspective in DBSession.query(DictionaryPerspective).filter_by(parent=parent, marked_for_deletion=False):
+            structure = set()
             fields = DBSession.query(DictionaryPerspectiveToField)\
                         .filter_by(parent=perspective)\
                         .all()
             DBSession.flush()
             for p_to_field in fields:
-                structure.append((p_to_field.field_client_id, p_to_field.field_object_id))
+                structure.add((p_to_field.field_client_id, p_to_field.field_object_id))
 
             if structure == fp_structure:
                 first_perspective = perspective
             elif structure == sp_structure:
                 second_perspective = perspective
-            structure[:] = []
+            structure.clear()
         """
         # FIRST PERSPECTIVE
         """
@@ -518,7 +519,7 @@ def convert_five_tiers(
         sp_field_names = ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Backref")
         sp_fields_dict = {}
         fields_list = []
-        for fieldname in sp_field_names: #
+        for fieldname in sp_field_names:
             if fieldname == "Backref":
                 fields_list.append(
                     {
