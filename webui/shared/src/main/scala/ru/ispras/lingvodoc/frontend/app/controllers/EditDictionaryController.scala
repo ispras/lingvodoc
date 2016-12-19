@@ -395,6 +395,30 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
     getPageLink(scope.pageNumber) + "/" + sort
   }
 
+  @JSExport
+  def phonology(): Unit = {
+    backend.phonology(perspectiveId) map { blob =>
+      val options = ModalOptions()
+      options.templateUrl = "/static/templates/modal/downloadEmbeddedBlob.html"
+      options.windowClass = "sm-modal-window"
+      options.controller = "DownloadEmbeddedBlobController"
+      options.backdrop = false
+      options.keyboard = false
+      options.size = "lg"
+      options.resolve = js.Dynamic.literal(
+        params = () => {
+          js.Dynamic.literal(
+            "fileName" -> "phonology.xls",
+            "fileType" -> "application/vnd.ms-excel",
+            "blob" -> blob
+          )
+        }
+      ).asInstanceOf[js.Dictionary[Any]]
+      modal.open[Unit](options)
+    } recover { case e: Throwable =>
+        onError(e)
+    }
+  }
 
   override protected def onLoaded[T](result: T): Unit = {}
 

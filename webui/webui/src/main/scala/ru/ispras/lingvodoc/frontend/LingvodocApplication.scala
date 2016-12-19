@@ -77,11 +77,13 @@ object LingvodocApplication {
       .controller[SociolinguisticsController]
       .controller[ViewSociolinguisticsInfoController]
       .controller[ConvertEafController]
+      .controller[DownloadEmbeddedBlobController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
       .directive[TranslatableDirective]
       .directive[WaveSurferDirective]
       .directive[IndeterminateCheckboxDirective]
+      .directive[DataLinkDirective]
   }
 }

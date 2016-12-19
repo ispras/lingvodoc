@@ -105,8 +105,9 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   @JSExport
   def remove(entry: LexicalEntry): Unit = {
-    backend.disconnectLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(field), lexicalEntry, entry).foreach { _ =>
+    backend.disconnectLexicalEntry(entry, CompositeId.fromObject(field)).foreach { _ =>
       scope.dictionaryTable.removeEntry(entry)
+      scope.$apply()
     }
   }
 

@@ -16,6 +16,7 @@ import scala.scalajs.js.annotation.JSExport
 @js.native
 trait HomeScope extends Scope {
   var languages: js.Array[Language] = js.native
+  var data: String = js.native
 }
 
 @JSExport
@@ -66,4 +67,12 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
       //}
     }
   })
+
+  backend.phonology(CompositeId(345, 2)) map {response =>
+    org.scalajs.dom.console.log("length: " + response.length)
+    scope.data = response
+  }
+
+
+
 }
