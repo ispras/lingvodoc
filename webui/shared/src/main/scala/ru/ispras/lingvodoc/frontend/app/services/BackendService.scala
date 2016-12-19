@@ -1926,7 +1926,12 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
         val b64content = dom.window.btoa(new String(arr.toArray, "Latin1"))
         p.success(b64content)
       } else {
-        p.failure(new BackendException("Failed to changed approval status entities"))
+        val response: Dynamic = JSON.parse(xhr.responseText)
+        if (!js.isUndefined(response.error)) {
+          p.failure(new BackendException(response.error.asInstanceOf[String]))
+        } else {
+          p.failure(new BackendException("Failed to obtain phonology."))
+        }
       }
     }
     xhr.send()
