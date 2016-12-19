@@ -1,10 +1,34 @@
+
+# Standard library imports.
+
+import io
+import logging
+import tempfile
+import traceback
+
+import urllib.request
+import urllib.parse
+
+# External imports.
+
+import chardet
+
+import pydub
+from pydub.utils import ratio_to_db
+
+import pympi
+
+from pyramid.response import FileIter, Response
 from pyramid.view import view_config
 
-from sqlalchemy import (
-    and_,
-)
-
+from sqlalchemy import (and_,)
 from sqlalchemy.orm import aliased
+
+import xlwt
+
+# Project imports.
+
+from lingvodoc.cache.caching import CACHE
 
 from lingvodoc.models import (
     DBSession,
@@ -12,24 +36,8 @@ from lingvodoc.models import (
     LexicalEntry,
 )
 
-from pyramid.httpexceptions import (
-    HTTPOk
-)
 
-from pyramid.response import FileIter, Response
-
-import chardet
-import pydub
-import pydub.utils
-import pympi
-import xlwt
-
-import io
-import tempfile
-import urllib.request
-import urllib.parse
-
-import logging
+# Setting up logging.
 log = logging.getLogger(__name__)
 
 
@@ -39,9 +47,10 @@ def find_max_segment(wav_url, segment_list, type = 'rms'):
     the segment with the highest intensity, relative intensity of this segment, index of the longest segment
     and the length of the longest segment.
 
-    Intensity can be measured either as mean absolute intensity, or a root mean squared intesity. Choice of
-    the intensity computation method is controlled by a third parameter with default value of 'rms' meaning
-    root mean squared intensity. Other possible value is 'mean_abs', meaning mean absolute intesity.
+    Intensity can be measured either as mean absolute intensity, or a root mean squared intesity, both in dB
+    relative to full scale (dBFS). Choice of the intensity computation method is controlled by a third
+    parameter with default value of 'rms' meaning root mean squared intensity. Other possible value is
+    'mean_abs', meaning mean absolute intesity.
     """
 
     if not segment_list:
@@ -85,7 +94,8 @@ def find_max_segment(wav_url, segment_list, type = 'rms'):
             # Pydub's AudioSegment references sound locations in milliseconds, see
             # https://github.com/jiaaro/pydub/blob/master/API.markdown.
 
-            intensity = intensity_f(sound[begin_sec * 1000 : end_sec * 1000])
+            segment = sound[begin_sec * 1000 : end_sec * 1000]
+            intensity = ratio_to_db(intensity_f(segment), segment.max_possible_amplitude)
             length = end_sec - begin_sec
 
             if max_intensity == None or intensity > max_intensity:
@@ -156,17 +166,66 @@ def phonology(request):
         markup_url = row.Entity.content
         sound_url = row.Sound.content
 
+        cache_key = '{0}:{1}:{2}:{3}'.format(
+            row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id)
+
+        # Checking if we have cached result for this pair of sound/markup.
+
+        result = CACHE.get(cache_key)
+
+        if result == 'no_vowel':
+
+            log.debug('{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}) [CACHE {5}]: no vowels'.format(
+                index,
+                row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id,
+                cache_key))
+
+            no_vowel_counter += 1
+
+            if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                limit and index + 1 >= limit):
+                break
+
+            continue
+
+        elif result:
+
+            # If we actually have the result, we use it and continue.
+
+            log.debug(
+                '{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}) [CACHE {5}]:'
+                '\n{6}\n{7}\n{8}'.format(
+                    index,
+                    row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id,
+                    cache_key, markup_url, sound_url, result))
+
+            result_list.append(result)
+
+            if (limit_result and len(result_list) >= limit_result or
+                limit and index + 1 >= limit):
+                break
+
+            continue
+
+        # Getting sound and markup, compiling transcription.
+
         markup_bytes = urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')).read()
 
         textgrid = pympi.Praat.TextGrid(xmax = 0)
         textgrid.from_file(io.BytesIO(markup_bytes), codec = chardet.detect(markup_bytes)['encoding'])
 
-        # If the markup does not have any vowels, we skip it.
-
         interval_list = textgrid.get_tier(0).get_all_intervals()
         transcription = ''.join(text for begin, end, text in interval_list)
 
+        # If the markup does not have any vowels, we skip it.
+
         if all(character not in vowel_set for character in transcription):
+            CACHE.set(cache_key, 'no_vowel')
+
+            log.debug('{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}) [CACHE]: no vowels'.format(
+                index,
+                row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id))
+
             no_vowel_counter += 1
 
             if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
@@ -187,23 +246,38 @@ def phonology(request):
             max_length_interval[2], max_length,
             len(''.join(text for begin, end, text in interval_list[:max_length_index])) + 1)
 
-        max_intensity_str = '{0} {1}{2:.3f} [{3}]'.format(
+        max_intensity_str = '{0} {1:.3f} [{2}]'.format(
             max_intensity_interval[2],
-            '+' if max_intensity_index == max_length_index else '-',
             max_intensity,
             len(''.join(text for begin, end, text in interval_list[:max_intensity_index])) + 1)
 
-        log.debug('{0}:\n{1}\n{2}\n{3}'.format(
-            index, markup_url, sound_url,
-            (transcription, max_length_str, max_intensity_str)))
+        result = (transcription, max_length_str, max_intensity_str,
+            '+' if max_intensity_index == max_length_index else '-')
 
-        result_list.append((transcription, max_length_str, max_intensity_str))
+        log.debug('{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}):\n{5}\n{6}\n{7}'.format(
+            index,
+            row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id,
+            markup_url, sound_url, result))
+
+        # Saving result, stopping earlier, if required.
+
+        result_list.append(result)
+        CACHE.set(cache_key, result)
 
         if (limit_result and len(result_list) >= limit_result or
             limit and index + 1 >= limit):
             break
 
-      except:
+      except Exception as exception:
+        log.debug('{0} (sound-Entity {1}/{2}, markup-Entity {3}/{4}):\nException'.format(
+            index,
+            row.Sound.client_id, row.Sound.object_id, row.Entity.client_id, row.Entity.object_id))
+
+        # If we encountered an exception, we show its info.
+
+        log.debug(''.join(traceback.format_exception(
+            Exception, exception, exception.__traceback__))[:-1])
+
         exception_counter += 1
 
         if (limit_exception and exception_counter >= limit_exception or
@@ -227,10 +301,23 @@ def phonology(request):
     excel_book = xlwt.Workbook(encoding = "utf-8")
     sheet = excel_book.add_sheet("Sheet 1")
 
-    for index, (transcription, max_length_str, max_intensity_str) in enumerate(result_list):
-        sheet.write(index, 0, transcription)
-        sheet.write(index, 1, max_length_str)
-        sheet.write(index, 2, max_intensity_str)
+    sheet.write(0, 0, 'Transcription')
+    sheet.write(0, 1, 'Longest (seconds) segment')
+    sheet.write(0, 2, 'Highest intensity (dB) segment')
+    sheet.write(0, 3, 'Coincidence')
+
+    for index, (transcription, max_length_str, max_intensity_str, check_str) in enumerate(result_list):
+        sheet.write(index + 1, 0, transcription)
+        sheet.write(index + 1, 1, max_length_str)
+        sheet.write(index + 1, 2, max_intensity_str)
+        sheet.write(index + 1, 3, check_str)
+
+    # Formatting column widths.
+
+    sheet.col(0).width = 24 * 256
+    sheet.col(1).width = 24 * 256
+    sheet.col(2).width = 24 * 256
+    sheet.col(3).width = 12 * 256
 
     excel_stream = io.BytesIO()
     excel_book.save(excel_stream)
