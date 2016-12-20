@@ -11,7 +11,7 @@ import urllib.parse
 
 # External imports.
 
-import chardet
+import cchardet as chardet
 
 import pydub
 from pydub.utils import ratio_to_db
@@ -233,10 +233,15 @@ def phonology(request):
         interval_list = []
         long_text_flag = False
 
-        for interval in raw_interval_list:
-            if len(interval[2]) <= 2 and len(interval[2].strip()):
+        interval_idx_to_raw_idx = dict()
+
+        for raw_index, interval in enumerate(raw_interval_list):
+            if len(interval[2]) <= 2 \
+                    and len(interval[2].strip()) \
+                    and any(character in vowel_set for character in interval[2]):
                 interval_list.append(interval)
-            else:
+                interval_idx_to_raw_idx[len(interval_list)-1] = raw_index
+            elif len(interval[2]) > 2:
                 long_text_flag = True
 
         transcription = ''.join(text for begin, end, text in raw_interval_list)
@@ -278,12 +283,12 @@ def phonology(request):
 
         max_length_str = '{0} {1:.3f} [{2}]'.format(
             max_length_interval[2], max_length,
-            len(''.join(text for begin, end, text in interval_list[:max_length_index])) + 1)
+            len(''.join(text for begin, end, text in raw_interval_list[:interval_idx_to_raw_idx[max_length_index]])))
 
         max_intensity_str = '{0} {1:.3f} [{2}]'.format(
             max_intensity_interval[2],
             max_intensity,
-            len(''.join(text for begin, end, text in interval_list[:max_intensity_index])) + 1)
+            len(''.join(text for begin, end, text in raw_interval_list[:interval_idx_to_raw_idx[max_intensity_index]])))
 
         result = (transcription, max_length_str, max_intensity_str,
             '+' if max_intensity_index == max_length_index else '-')
