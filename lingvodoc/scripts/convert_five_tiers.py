@@ -15,7 +15,6 @@ import tempfile
 from collections import defaultdict
 from pathvalidate import sanitize_filename
 from urllib import request
-
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import create_engine
 from sqlalchemy import and_
@@ -205,6 +204,7 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content= None, filename=None,
                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):  # tested
+    return ##DBG
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
@@ -404,6 +404,28 @@ def convert_five_tiers(
             elif structure == sp_structure:
                 second_perspective = perspective
             structure.clear()
+        if first_perspective:
+            print(first_perspective.object_id)
+            lexes = DBSession.query(DictionaryPerspective, LexicalEntry, Entity).filter(and_(DictionaryPerspective.object_id==first_perspective.object_id,
+                        DictionaryPerspective.client_id==first_perspective.client_id))\
+                .join(LexicalEntry, and_( LexicalEntry.parent_object_id==DictionaryPerspective.object_id,
+                                          LexicalEntry.parent_client_id==DictionaryPerspective.client_id))\
+                .join(Entity, and_(LexicalEntry.object_id==Entity.parent_object_id,
+                                   LexicalEntry.client_id==Entity.parent_client_id))
+            tuples = ()
+            for x in lexes:
+                print(x,  x[2].content, x[2].field.data_type)
+
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+            new_group = Group(parent=base,
+                              subject_object_id=dictionary_object_id, subject_client_id=dictionary_client_id)
+            if user not in new_group.users:
+                new_group.users.append(user)
+            DBSession.add(new_group)
+            DBSession.flush()
+
         """
         # FIRST PERSPECTIVE
         """
@@ -548,7 +570,7 @@ def convert_five_tiers(
             sp_fields_dict[fieldname] = (field_ids[fieldname][0], field_ids[fieldname][1])
         sp_fields_dict["Paradigm Markup"] = (field_ids["Paradigm Markup"][0], field_ids["Paradigm Markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
-        link_dict = defaultdict(list)
+
         dubl = []
 
         log = logging.getLogger(__name__)
@@ -562,7 +584,7 @@ def convert_five_tiers(
             converter.parse()
             final_dicts = converter.proc()
             temp.flush()
-
+        print("!!!!")
         for phrase in final_dicts:
             perspective = DBSession.query(DictionaryPerspective).\
             filter_by(client_id=second_perspective_client_id, object_id = second_perspective_object_id).first() #sec?
@@ -598,36 +620,82 @@ def convert_five_tiers(
                     create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids[EAF_TIERS[tier_name]][0], field_ids[EAF_TIERS[tier_name]][1],
                         None, client, new, filename=None, storage=storage)
             for word in curr_dict:
+                # column = [word] + curr_dict[word]
+                # cort = reversed(tuple(i.text for i in column))
+                # print([x for x in cort])
+
+
+                perspective = DBSession.query(DictionaryPerspective).\
+                filter_by(client_id=first_perspective_client_id, object_id = first_perspective_object_id).first()
+                if not perspective:
+                    return {'error': str("No such perspective in the system")}
+
+
+                ###
+                lexentr = LexicalEntry(client_id=client.id,
+                                       parent_object_id=first_perspective_object_id, parent=perspective)
+                DBSession.add(lexentr)
+                fp_lexical_entry_client_id = lexentr.client_id
+                fp_lexical_entry_object_id = lexentr.object_id
+                ###
                 column = [word] + curr_dict[word]
-                cort = reversed(tuple(i.text for i in column))
-                if cort in link_dict:
-                    fp_lexical_entry_client_id, fp_lexical_entry_object_id = link_dict[cort]
-                else:
-                    perspective = DBSession.query(DictionaryPerspective).\
-                    filter_by(client_id=first_perspective_client_id, object_id = first_perspective_object_id).first()
-                    if not perspective:
-                        return {'error': str("No such perspective in the system")}
-                    lexentr = LexicalEntry(client_id=client.id,
-                                           parent_object_id=first_perspective_object_id, parent=perspective)
-                    DBSession.add(lexentr)
-                    fp_lexical_entry_client_id = lexentr.client_id
-                    fp_lexical_entry_object_id = lexentr.object_id
-                    create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids[EAF_TIERS[word.tier]][0], field_ids[EAF_TIERS[word.tier]][1],
-                        None, client, word.text, filename=None, storage=storage)
+                match_counter = 0
+                match_dict = defaultdict(list)
+                for crt in reversed(tuple(i for i in column)):
+                    match = [x for x in filter(lambda x: x[2].content == crt.text, lexes)]  #LEX COUNT OR RANDOM
+                    for t in match:
+                        #print(crt.tier)
+                        #print(field_ids[crt.tier] == (t[2].field.client_id, t[2].field.object_id))
+                        if field_ids[EAF_TIERS[crt.tier]] == (t[2].field.client_id, t[2].field.object_id):
+                           match_dict[t[1]].append(t)
+                # print("l ", len(match_dict))
+                filter(lambda x: len(match_dict[x]) >= 2, match_dict)
+                # print("l ", len(match_dict))
+                #max_sim = match_dict[0]
+                max_sim = None
+                for le in match_dict:
+                    if max_sim is None:
+                        max_sim = le
+                    else:
+                        if len(match_dict[le]) >= len(match_dict[max_sim]):
+                            max_sim = le
+                #print(le, match_dict[le])
+                print([(x[1],x[2].content) for x in match_dict[le]]) ## le может не посчитатсья
 
-                    link_dict[cort] = (fp_lexical_entry_client_id, fp_lexical_entry_object_id)
+                # for crt in reversed(tuple(i for i in column)):
+                #     match_dict = defaultdict(list)
+                #     match = [x for x in filter(lambda x: x[2].content == crt.text, lexes)]  #LEX COUNT OR RANDOM
+                #     for t in match:
+                #         match_dict[t[1]].append(t)
+                #
+                #     if len(match) > 0:
+                #         match_dict = sorted(match_dict, key=len, reverse=True)
+                #         match_dict[crt] = match[0]
+                #print([(x, match_dict[x]) for x in match_dict])
+                # if len(match_dict) >= 2 and True:
+                #     pass
+                #print([x for x in reversed(tuple(i.text for i in column))], len(match_dict))
+                match_dict.clear()
+                # a = set([match_dict[x][1] for x in match_dict])
 
-                    for other_word in curr_dict[word]:
-                        create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids[EAF_TIERS[other_word.tier]][0], field_ids[EAF_TIERS[other_word.tier]][1],
-                            None, client, other_word.text, filename=None, storage=storage)
-                    if not no_sound:
-                        if word.time[1] < len(full_audio):
-                            with tempfile.NamedTemporaryFile() as temp:
-                                full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
-                                audio_slice = temp.read()
-                                create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids["Sound"][0], field_ids["Sound"][1],
-                                    None, client, filename="%s.wav" %(word.index) , folder_name="sound1", content=base64.urlsafe_b64encode(audio_slice).decode(), storage=storage)
-                                temp.flush()
+                #print("@@", a)
+                #print("!!", word.text)
+                create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids[EAF_TIERS[word.tier]][0], field_ids[EAF_TIERS[word.tier]][1],
+                    None, client, word.text, filename=None, storage=storage)
+
+
+                for other_word in curr_dict[word]:
+                    #print(other_word.text)
+                    create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids[EAF_TIERS[other_word.tier]][0], field_ids[EAF_TIERS[other_word.tier]][1],
+                        None, client, other_word.text, filename=None, storage=storage)
+                if not no_sound:
+                    if word.time[1] < len(full_audio):
+                        with tempfile.NamedTemporaryFile() as temp:
+                            full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
+                            audio_slice = temp.read()
+                            create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids["Sound"][0], field_ids["Sound"][1],
+                                None, client, filename="%s.wav" %(word.index) , folder_name="sound1", content=base64.urlsafe_b64encode(audio_slice).decode(), storage=storage)
+                            temp.flush()
 
                 dubl_tuple = ((sp_lexical_entry_client_id, sp_lexical_entry_object_id), (fp_lexical_entry_client_id, fp_lexical_entry_object_id))
                 if not  dubl_tuple in dubl:
