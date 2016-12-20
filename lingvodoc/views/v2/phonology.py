@@ -234,12 +234,12 @@ def phonology(request):
         long_text_flag = False
 
         for interval in raw_interval_list:
-            if len(interval[2]) <= 1 or len(interval[2]) == 2 and interval[2][-1] == '\'':
+            if len(interval[2]) <= 2 and len(interval[2].strip()):
                 interval_list.append(interval)
             else:
                 long_text_flag = True
 
-        transcription = ''.join(text for begin, end, text in interval_list)
+        transcription = ''.join(text for begin, end, text in raw_interval_list)
 
         # If we have intervals with non-singleton markup, we report them.
 
