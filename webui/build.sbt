@@ -69,7 +69,8 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       lib.angular,
       lib.bootstrap,
       lib.bootstrapUI,
-      lib.validator
+      lib.validator,
+      lib.base64
     ),
     jsDependencies ++= Seq(
       js.jquery / "2.2.1/jquery.js" minified "2.2.1/jquery.min.js",
@@ -108,7 +109,8 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
       lib.angular,
       lib.bootstrap,
       lib.bootstrapUI,
-      lib.validator
+      lib.validator,
+      lib.base64
     ),
     jsDependencies ++= Seq(
       js.jquery / "2.2.1/jquery.js" minified "2.2.1/jquery.min.js",
@@ -146,7 +148,8 @@ lazy val shared = (project in file("shared"))
       lib.angular,
       lib.bootstrap,
       lib.bootstrapUI,
-      lib.validator
+      lib.validator,
+      lib.base64
     ),
     jsDependencies ++= Seq(
       js.jquery / "2.2.1/jquery.js" minified "2.2.1/jquery.min.js",

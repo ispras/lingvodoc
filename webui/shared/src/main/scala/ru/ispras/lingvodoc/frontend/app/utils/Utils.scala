@@ -1,14 +1,9 @@
 package ru.ispras.lingvodoc.frontend.app.utils
 
-import ru.ispras.lingvodoc.frontend.app.model.{Field, Language, TranslationGist}
-
-import scala.scalajs.js.URIUtils
-import scala.scalajs.js.URIUtils._
 import org.scalajs.dom
+import ru.ispras.lingvodoc.frontend.app.model.{Language, TranslationGist}
 
-import scala.annotation.tailrec
 import scala.scalajs.js
-import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}
 
 object Utils {
 
@@ -59,22 +54,27 @@ object Utils {
 }
 
 
-object Base64Utils {
-
-  implicit class ArrayBufferBase64(val src: ArrayBuffer) {
+object ConversionUtils {
+  implicit class ArrayBufferBase64(val src: js.typedarray.ArrayBuffer) {
+    import com.github.marklister.base64.Base64.Encoder
     def toBase64: String = {
       val arr = js.Array[Byte]()
-      val data = new Uint8Array(src)
+      val data = new js.typedarray.Uint8Array(src)
       for (i <- 0 until data.byteLength) {
         arr.push(data(i).toByte)
       }
-      dom.window.btoa(new String(arr.toArray, "Latin1"))
+      arr.toArray.toBase64
     }
   }
 
-  implicit class StringBufferBase64(val src: String) {
-    def toBase64: String = {
-      dom.window.btoa(src)
+  implicit class JSArrayBufferToString(val src: js.typedarray.ArrayBuffer) {
+    def toStr(encoding: String = "UTF-8"): String = {
+      val c = new js.typedarray.Uint8Array(src)
+      val arr = js.Array[Byte]()
+      for (i <- 0 until c.byteLength) {
+        arr.push(c(i).toByte)
+      }
+      new String(arr.toArray, encoding)
     }
   }
 }
