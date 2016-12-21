@@ -85,7 +85,9 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
-      ProvidedJS / "leaflet.js"
+      ProvidedJS / "leaflet.js",
+      ProvidedJS / "chroma.min.js"
+
     ),
     relativeSourceMaps := true,
     skip in packageJSDependencies := false,
@@ -125,7 +127,8 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
-      ProvidedJS / "leaflet.js"
+      ProvidedJS / "leaflet.js",
+      ProvidedJS / "chroma.min.js"
     ),
     relativeSourceMaps := true,
     skip in packageJSDependencies := false,
@@ -163,6 +166,7 @@ lazy val shared = (project in file("shared"))
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
-      ProvidedJS / "leaflet.js"
+      ProvidedJS / "leaflet.js",
+      ProvidedJS / "chroma.min.js"
     )
   )
