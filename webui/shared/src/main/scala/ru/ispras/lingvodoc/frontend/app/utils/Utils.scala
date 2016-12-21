@@ -7,21 +7,10 @@ import scala.scalajs.js.URIUtils._
 import org.scalajs.dom
 
 import scala.annotation.tailrec
+import scala.scalajs.js
+import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}
 
 object Utils {
-
-//  def flattenLanguages1(languages: Seq[Language]) = {
-//    var acc = Seq[Language]()
-//    var queue = Vector[Language]()
-//    queue = queue ++ languages
-//
-//    while (queue.nonEmpty) {
-//      val first +: rest = queue
-//      acc = acc :+ first
-//      queue = rest ++ first.languages
-//    }
-//    acc
-//  }
 
 
   def flattenLanguages(tree: Seq[Language]): Seq[Language] = {
@@ -68,3 +57,26 @@ object Utils {
     dataType.atoms.find(_.localeId == 2).get.content
   }
 }
+
+
+object Base64Utils {
+
+  implicit class ArrayBufferBase64(val src: ArrayBuffer) {
+    def toBase64: String = {
+      val arr = js.Array[Byte]()
+      val data = new Uint8Array(src)
+      for (i <- 0 until data.byteLength) {
+        arr.push(data(i).toByte)
+      }
+      dom.window.btoa(new String(arr.toArray, "Latin1"))
+    }
+  }
+
+  implicit class StringBufferBase64(val src: String) {
+    def toBase64: String = {
+      dom.window.btoa(src)
+    }
+  }
+}
+
+
