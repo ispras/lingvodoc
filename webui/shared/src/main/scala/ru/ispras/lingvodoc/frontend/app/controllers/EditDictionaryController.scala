@@ -5,6 +5,7 @@ import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
@@ -35,10 +36,18 @@ trait EditDictionaryScope extends Scope {
   var pageLoaded: Boolean = js.native
 }
 
-@JSExport
 @injectable("EditDictionaryController")
-class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, userService: UserService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends
-  AbstractController[EditDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay with Pagination with LoadingPlaceholder {
+class EditDictionaryController(scope: EditDictionaryScope,
+                               params: RouteParams,
+                               modal: ModalService,
+                               userService: UserService,
+                               backend: BackendService,
+                               timeout: Timeout,
+                               val exceptionHandler: ExceptionHandler)
+  extends BaseController(scope, modal, timeout)
+    with AngularExecutionContextProvider
+    with SimplePlay
+    with Pagination {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -416,24 +425,21 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
       ).asInstanceOf[js.Dictionary[Any]]
       modal.open[Unit](options)
     } recover { case e: Throwable =>
-        onError(e)
+        error(e)
     }
   }
 
-  override protected def onLoaded[T](result: T): Unit = {}
 
-  override protected def onError(reason: Throwable): Unit = {}
-
-  override protected def preRequestHook(): Unit = {
+  override protected def onStartRequest(): Unit = {
     scope.pageLoaded = false
   }
 
-  override protected def postRequestHook(): Unit = {
+  override protected def onCompleteRequest(): Unit = {
     scope.pageLoaded = true
   }
 
 
-  doAjax(() => {
+  load(() => {
     backend.perspectiveSource(perspectiveId) flatMap {
       sources =>
         scope.path = sources.reverse.map {
