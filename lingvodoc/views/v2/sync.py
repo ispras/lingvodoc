@@ -144,6 +144,7 @@ def basic_sync(request):
     status = session.get(path, cookies=cookies)
     server = status.json()
     new_entries = list()
+    old_langs = dict()
     langs = list()
     for table in [Locale, User, Client, BaseGroup, TranslationGist, TranslationAtom, Field, Group, Language]:
         curr_server = server[table.__tablename__]
@@ -184,24 +185,26 @@ def basic_sync(request):
                         else:
                             langs.append(table(**kwargs))
 
-        all_entries = DBSession.query(table).all()
-        if hasattr(table, 'client_id'):
-            for entry in all_entries:
-                client_id = str(entry.client_id)
-                object_id = str(entry.object_id)
-                if client_id in curr_server:
-                    if object_id in curr_server[client_id]:
-                        for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
-                            setattr(entry, key, value)
+        if table != Language:
+            all_entries = DBSession.query(table).all()
+            if hasattr(table, 'client_id'):
+                    for entry in all_entries:
+                        client_id = str(entry.client_id)
+                        object_id = str(entry.object_id)
+                        if client_id in curr_server and object_id in curr_server[client_id]:
+                            for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
+                                setattr(entry, key, value)
+            else:
+                for entry in all_entries:
+                    id = str(entry.id)
+                    if id in curr_server:
+                        for key, value in list(return_date_time(curr_server[id]).items()):
+                            if key != 'counter' and table != User:
+                                setattr(entry, key, value)
+            new_entries.extend(all_entries)
         else:
-            for entry in all_entries:
-                id = str(entry.id)
-                if id in curr_server:
-                    for key, value in list(return_date_time(curr_server[id]).items()):
-                        if key != 'counter' and table != User:
-                            setattr(entry, key, value)
-        new_entries.extend(all_entries)
-
+            old_langs = curr_server
+    DBSession.flush()
     parent_langs_ids = DBSession.query(Language.client_id, Language.object_id).all()
     parent_langs = [lang for lang in langs if not lang.parent_client_id]
     parent_langs_ids.extend([(lang.client_id, lang.object_id) for lang in langs if not lang.parent_client_id])
@@ -215,6 +218,12 @@ def basic_sync(request):
         lang.parent_client_id, lang.parent_object_id) in parent_langs_ids])
         new_langs = [lang for lang in langs if (lang.client_id, lang.object_id) not in parent_langs_ids]
     new_entries.extend(parent_langs)
+    for entry in DBSession.query(Language).all():
+        client_id = str(entry.client_id)
+        object_id = str(entry.object_id)
+        if client_id in curr_server and object_id in old_langs[client_id]:
+                for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
+                    setattr(entry, key, value)
     DBSession.bulk_save_objects(new_entries)
     # client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     # if not client:
@@ -349,34 +358,52 @@ def diff_desk(request):
         gr_req = row2dict(group)
         gr_req['users']=[user.id]
         status = make_request(path, 'post', gr_req)
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in translationgist:
         desk_gist = DBSession.query(TranslationGist).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
         path = central_server + 'translationgist'
-        make_request(path, 'post', row2dict(desk_gist))
+        status = make_request(path, 'post', row2dict(desk_gist))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in translationatom:
         desk_atom = DBSession.query(TranslationAtom).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
         path = central_server + 'translationatom'
-        make_request(path, 'post', row2dict(desk_atom))
+        status = make_request(path, 'post', row2dict(desk_atom))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in language:
         desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).one()
         path = central_server + 'language'
-        make_request(path, 'post', row2dict(desk_lang))
+        status = make_request(path, 'post', row2dict(desk_lang))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in dictionary:
         desk_dict = DBSession.query(Dictionary).filter_by(client_id=entry['client_id'],
                                                           object_id=entry['object_id']).one()
         path = central_server + 'dictionary'
         desk_json = row2dict(desk_dict)
         desk_json['category'] = categories[desk_json['category']]
-        make_request(path, 'post', desk_json)
+        status = make_request(path, 'post', desk_json)
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in perspective:
         desk_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=entry['client_id'],
                                                                       object_id=entry['object_id']).one()
         path = central_server + 'dictionary/%s/%s/perspective' % (
             desk_persp.parent_client_id, desk_persp.parent_object_id)
         status = make_request(path, 'post', row2dict(desk_persp))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in field:
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
