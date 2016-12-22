@@ -16,6 +16,7 @@ import ru.ispras.lingvodoc.frontend.app.utils.Utils
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
@@ -60,6 +61,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var enabledInputs: Seq[String] = Seq[String]()
+  private[this] var editInputs: Seq[String] = Seq[String]()
 
   private[this] var createdLexicalEntries: Seq[LexicalEntry] = Seq[LexicalEntry]()
 
@@ -239,6 +241,45 @@ class EditDictionaryController(scope: EditDictionaryScope,
     enabledInputs.contains(id)
   }
 
+  @JSExport
+  def editEntity(id: String, entity: Entity): Unit = {
+    editInputs = editInputs :+ entity.getId
+  }
+
+  @JSExport
+  def isEditActive(entity: Entity): Boolean = {
+    editInputs.contains(entity.getId)
+  }
+
+  @JSExport
+  def updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, event: Event): Unit = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
+    val newTextValue = e.target.asInstanceOf[HTMLInputElement].value
+    val oldTextValue = entity.content
+
+    if (newTextValue != oldTextValue) {
+
+      backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), CompositeId.fromObject(entity)) map { removedEntity =>
+        entity.markedForDeletion = true
+
+        val newEntity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
+        newEntity.content = Some(Left(newTextValue))
+
+        backend.createEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), newEntity) onComplete {
+          case Success(entityId) =>
+            backend.getEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), entityId) onComplete {
+              case Success(updatedEntity) =>
+                scope.dictionaryTable.updateEntity(entry, entity, updatedEntity)
+              case Failure(ex) => console.log(ex.getMessage)
+            }
+          case Failure(ex) => console.log(ex.getMessage)
+        }
+      }
+    }
+    editInputs = editInputs.filterNot(_ == entity.getId)
+  }
+
+
 
   @JSExport
   def isRemovable(entry: LexicalEntry, entity: Entity): Boolean = {
@@ -252,6 +293,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
       case None => false
     }
   }
+
+
 
 
   @JSExport
@@ -357,7 +400,6 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
   }
 
-
   @JSExport
   def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
 
@@ -428,7 +470,6 @@ class EditDictionaryController(scope: EditDictionaryScope,
         error(e)
     }
   }
-
 
   override protected def onStartRequest(): Unit = {
     scope.pageLoaded = false

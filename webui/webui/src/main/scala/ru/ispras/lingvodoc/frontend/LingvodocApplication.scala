@@ -85,5 +85,6 @@ object LingvodocApplication {
       .directive[WaveSurferDirective]
       .directive[IndeterminateCheckboxDirective]
       .directive[DataLinkDirective]
+      .directive[ClickAndHoldDirective]
   }
 }
