@@ -4,6 +4,7 @@
 import io
 import logging
 import math
+import re
 import tempfile
 import traceback
 
@@ -13,6 +14,9 @@ import urllib.parse
 # External imports.
 
 import cchardet as chardet
+
+import numpy
+import numpy.polynomial
 
 import pydub
 from pydub.utils import ratio_to_db
@@ -42,67 +46,6 @@ from lingvodoc.models import (
 
 # Setting up logging.
 log = logging.getLogger(__name__)
-
-
-def find_max_interval(sound, interval_list, type = 'rms'):
-    """
-    Accepts a sound recording and a list of intervals specified by boundaries in seconds, returns index of
-    the interval with the highest sound intensity, relative intensity of this interval, index of the longest
-    interval and the length of the longest interval.
-
-    Intensity can be measured either as mean absolute intensity, or a root mean squared intesity, both in dB
-    relative to full scale (dBFS). Choice of the intensity computation method is controlled by a third
-    parameter with default value of 'rms' meaning root mean squared intensity. Other possible value is
-    'mean_abs', meaning mean absolute intesity.
-    """
-
-    if not interval_list:
-        return None
-
-    # Setting intensity measure function.
-
-    rms_f = lambda interval: interval.rms
-
-    def mean_abs_f(interval):
-        sample_list = interval.get_array_of_samples()
-        return int(sum(abs(sample) for sample in sample_list) / len(sample_list))
-
-    if type == 'rms':
-        intensity_f = rms_f
-    elif type == 'mean_abs':
-        intensity_f = mean_abs_f
-    else:
-        raise ValueError()
-
-    # Finding loudest and longest intervals.
-
-    max_intensity = None
-    max_intensity_index = None
-
-    max_length = None
-    max_length_index = None
-
-    for index, (begin_sec, end_sec, _) in enumerate(interval_list):
-
-        # Pydub's AudioSegment references sound locations in milliseconds, see
-        # https://github.com/jiaaro/pydub/blob/master/API.markdown.
-
-        interval = sound[begin_sec * 1000 : end_sec * 1000]
-        intensity = ratio_to_db(intensity_f(interval), interval.max_possible_amplitude)
-        length = end_sec - begin_sec
-
-        if max_intensity == None or intensity > max_intensity:
-            max_intensity = intensity
-            max_intensity_index = index
-
-        if max_length == None or length > max_length:
-            max_length = length
-            max_length_index = index
-
-    return (max_intensity_index,
-        float(max_intensity) / intensity_f(sound),
-        max_length_index,
-        max_length)
 
 
 def bessel_i0_approximation(x):
@@ -137,19 +80,19 @@ def bessel_i0_approximation(x):
     raise "Unimplemented."
 
 
-#: Dictionary used for memoization of window function computation.
-window_dict = dict()
+#: Dictionary used for memoization of Kaiser window function computation.
+kaiser_window_dict = dict()
 
 
-def get_window(half_window_size):
+def get_kaiser_window(half_window_size):
     """
     Computes (2N + 1)-sample Kaiser window, where N is a half window size in samples.
 
     Employs memoization.
     """
 
-    if half_window_size in window_dict:
-        return window_dict[half_window_size]
+    if half_window_size in kaiser_window_dict:
+        return kaiser_window_dict[half_window_size]
 
     # Computing a new window, saving it for reuse, and returning it.
 
@@ -161,19 +104,88 @@ def get_window(half_window_size):
 
     window_sum = sum(window_list)
 
-    window_dict[half_window_size] = (window_list, window_sum)
+    kaiser_window_dict[half_window_size] = (window_list, window_sum)
     return (window_list, window_sum)
 
 
-class AudioPraatLike(pydub.AudioSegment):
+#: Dictionary used for memoization of Gaussian window function computation.
+gaussian_window_dict = dict()
+
+
+def get_gaussian_window(window_size):
     """
-    Extends pydub.AudioSegment to allow computations of intensity and, possibly in the future, formants
-    using algorithms mimicking as close as possible corresponding algorithms of the Praat [http://www.fon.
-    hum.uva.nl/praat] software.
+    Computes (2N + 1)-sample Gaussian window, where N is a half window size in samples.
+
+    Employs memoization.
     """
 
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
+    if window_size in gaussian_window_dict:
+        return gaussian_window_dict[window_size]
+
+    # Computing a new window, saving it for reuse, and returning it.
+
+    middle = float(window_size + 1) / 2
+    edge = math.exp(-12)
+    edge_one_minus = 1.0 - edge
+    
+    window_list = [
+        (math.exp(-48 * ((i - middle) / (window_size + 1)) ** 2) - edge) / edge_one_minus
+            for i in range(1, window_size + 1)]
+
+    gaussian_window_dict[window_size] = window_list
+    return window_list
+
+
+def burg(sample_list, coefficient_number):
+    """
+    Computes Linear Prediction coefficients via Burg method from a list of samples.
+    """
+
+    p = sum(sample ** 2 for sample in sample_list)
+    a0 = p / len(sample_list)
+
+    b1 = sample_list[:len(sample_list) - 1]
+    b2 = sample_list[1:]
+
+    aa = [0.0 for i in range(coefficient_number)]
+    coefficient_list = [0.0 for i in range(coefficient_number)]
+
+    for i in range(coefficient_number):
+
+        numerator = 0.0
+        denominator = 0.0
+
+        for j in range(len(sample_list) - i - 1):
+            numerator += b1[j] * b2[j]
+            denominator += b1[j] ** 2 + b2[j] **2
+
+        coefficient_list[i] = 2.0 * numerator / denominator
+        a0 *= 1.0 - coefficient_list[i] ** 2
+
+        for j in range(i - 1):
+            coefficient_list[j] = aa[j] - coefficient_list[i] * aa[i - j - 1]
+
+        if i < coefficient_number + 1:
+
+            for j in range(i + 1):
+                aa[j] = coefficient_list[j]
+
+            for j in range(len(sample_list) - i - 2):
+                b1[j] -= aa[i] * b2[j]
+                b2[j] = b2[j + 1] - aa[i] * b1[j + 1];
+
+    return a0, coefficient_list
+
+
+class AudioPraatLike(object):
+    """
+    Allows computations of sound intensity and formants using algorithms mimicking as close as possible
+    corresponding algorithms of the Praat [http://www.fon.hum.uva.nl/praat] software.
+    """
+
+    def __init__(self, source_sound):
+
+        self.intensity_sound = source_sound
 
         #
         # Praat's intensity window size is computed as 3.2/minimum_pitch (see http://www.fon.hum.uva.nl/
@@ -192,55 +204,249 @@ class AudioPraatLike(pydub.AudioSegment):
         # size, computed as 4 times the number of samples in the time step.
         #
 
-        self.step_size = int(math.floor(0.0125 * self.frame_rate))
-        self.half_window_size = 4 * self.step_size
-        self.window_size = 2 * self.half_window_size + 1
+        self.intensity_step_size = int(math.floor(0.0125 * self.intensity_sound.frame_rate))
+        self.intensity_half_window_size = 4 * self.intensity_step_size
+        self.intensity_window_size = 2 * self.intensity_half_window_size + 1
 
-        self.step_count = int(math.floor((self.frame_count() - 1) // self.step_size + 1))
-        self.intensity_list = [None for i in range(self.step_count)]
+        self.intensity_step_count = int(
+            math.floor((self.intensity_sound.frame_count() - 1) // self.intensity_step_size + 1))
+
+        self.intensity_list = [None for i in range(self.intensity_step_count)]
+
+        #
+        # Praat's formant window size is 0.05 seconds, and formant time step is 8 times less, i.e.
+        # 0.05 / 8 = 0.00625 seconds.
+        #
+        # Computation of formants is performed on the sound recording resampled to twice the maximum formant
+        # frequency (see http://www.fon.hum.uva.nl/praat/manual/Sound__To_Formant__burg____.html). Standard
+        # maximum formant frequency is 5500 Hz, so standard resampling frequency is 11000 Hz.
+        #
+        # We set resampling frequency to 11025 Hz, which is a divisor of common sound recording frequencies
+        # 44100 Hz and 22050 Hz; doing so allows us to minimize resampling errors when using pydub's simple
+        # linear interpolation resampling.
+        #
+
+        self.formant_frame_rate = 11025
+
+        self.formant_step_size = int(math.floor(0.00625 * self.formant_frame_rate))
+        self.formant_half_window_size = 4 * self.formant_step_size
+        self.formant_window_size = 2 * self.formant_half_window_size + 1
+
+        self.formant_sound = None
 
     def get_intensity(self, step_index):
         """
-        Computes intensity at the point specified by time step index.
+        Computes intensity at the point specified by intensity time step index.
         """
 
-        if step_index < 4 or step_index > self.step_count - 4:
-            raise ValueError('step index {0} is out of bounds [4, {1}]'.format(
-                step_index, self.step_count - 4))
+        if step_index < 4 or step_index >= self.intensity_step_count - 4:
+            raise ValueError('step index {0} is out of bounds [4, {1})'.format(
+                step_index, self.intensity_step_count - 4))
 
-        window_list, window_sum = get_window(self.half_window_size)
+        # Checking if we already computed required intensity value.
 
-        sample_array = self.get_array_of_samples()
+        if self.intensity_list[step_index] != None:
+            return self.intensity_list[step_index]
+
+        # No, we haven't, so we are going to compute it.
+
+        window_list, window_sum = get_kaiser_window(self.intensity_half_window_size)
+
+        sample_array = self.intensity_sound.get_array_of_samples()
         sample_sum = 0.0
 
-        sample_from = (step_index - 4) * self.step_size * self.channels
+        channel_count = self.intensity_sound.channels
+        amplitude_limit = self.intensity_sound.max_possible_amplitude
 
         # We sum squared normalized amplitudes of all samples of all channels in the window.
 
-        for i in range(self.window_size):
-            for j in range(self.channels):
-                sample = sample_array[sample_from + i * self.channels + j] / self.max_possible_amplitude
+        sample_from = (step_index - 4) * self.intensity_step_size * channel_count
+
+        for i in range(self.intensity_window_size):
+            for j in range(channel_count):
+                sample = sample_array[sample_from + i * channel_count + j] / amplitude_limit
                 sample_sum += sample ** 2 * window_list[i]
 
         # Multiplication by 2.5e9 is taken directly from Praat source code, where it is performed via
         # division by 4e-10.
 
-        intensity = sample_sum / (self.channels * window_sum) * 2.5e9
-        return -300 if intensity < 1e-30 else 10 * math.log10(intensity);
+        intensity_ratio = sample_sum / (channel_count * window_sum) * 2.5e9
+        intensity = -300 if intensity_ratio < 1e-30 else 10 * math.log10(intensity_ratio)
+
+        # Saving computed intensity value for reuse, and returning it.
+
+        self.intensity_list[step_index] = intensity
+        return intensity
 
     def get_interval_intensity(self, begin, end):
         """
-        Computes mean-energy intensity of the interval specified by beginning and end in seconds.
+        Computes mean-energy intensity of an interval specified by beginning and end in seconds.
         """
 
-        begin_step = int(math.ceil(begin * self.frame_rate / self.step_size))
-        end_step = int(math.floor(end * self.frame_rate / self.step_size))
+        # Due to windowed nature of intensity computation, we can't compute it for points close to the
+        # beginning and the end of the recording; such points are skipped.
+
+        factor = self.intensity_sound.frame_rate / self.intensity_step_size
+
+        begin_step = max(4, int(math.ceil(begin * factor)))
+        end_step = min(self.intensity_step_count - 5, int(math.floor(end * factor)))
 
         energy_sum = sum(
             math.pow(10, 0.1 * self.get_intensity(step_index))
                 for step_index in range(begin_step, end_step + 1))
 
         return 10 * math.log10(energy_sum / (end_step - begin_step + 1))
+
+    def get_formants(self, step_index):
+        """
+        Computes point formant values at the point specified by formant time step index.
+        """
+
+        if step_index < 4 or step_index >= self.formant_step_count - 4:
+            raise ValueError('step index {0} is out of bounds [4, {1})'.format(
+                step_index, self.formant_step_count - 4))
+
+        # Checking if we already computed required formant point value.
+
+        if self.formant_list[step_index] != None:
+            return self.formant_list[step_index]
+
+        # No, we haven't, so we are going to compute it.
+
+        window_list = get_gaussian_window(self.formant_window_size)
+        sample_from = (step_index - 4) * self.formant_step_size
+
+        sample_list = [self.formant_sample_list[sample_from + i] * window_list[i]
+            for i in range(self.formant_window_size)]
+
+        # Computing Linear Prediction coefficients via Burg method, number of coefficients is twice the
+        # number of formants we want to detect (hence 2 * 5 = 10).
+        #
+        # These coefficients a[0], a[1], ... a[10] are coefficients of a polynomial 1 - a[1] * x -
+        # a[1] * x^2 - ... - a[10] * x^10 of degree 10 defined on [-1, 1], which is a so-called
+        # characteristic polynomial, see https://en.wikipedia.org/wiki/Autoregressive_model. We then find
+        # the roots of this polynomial.
+
+        a0, coefficient_list = burg(sample_list, 10)
+
+        polynomial = numpy.polynomial.Polynomial([1.0] + [-c for c in coefficient_list])
+        root_list = polynomial.roots()
+
+        derivative = polynomial.deriv()
+
+        better_root_list = []
+        better_root_index = 0
+
+        # Finding better root approximations via Newton-Raphson iteration (see https://en.wikipedia.org/
+        # wiki/Newton's_method.
+
+        while better_root_index < len(root_list):
+
+            previous = root_list[better_root_index]
+            previous_delta = abs(polynomial(previous))
+
+            current = previous - polynomial(previous) / derivative(previous)
+            current_delta = abs(polynomial(current))
+
+            while current_delta < previous_delta:
+
+                previous = current
+                previous_delta = current_delta
+
+                current = previous - polynomial(previous) / derivative(previous)
+                current_delta = abs(polynomial(current))
+
+            # If it is a complex root, the next one is just its complex conjugate.
+
+            better_root_list.append(previous)
+            better_root_index += 1
+
+            if abs(previous.imag) > 0:
+
+                better_root_list.append(previous.conjugate())
+                better_root_index += 1
+
+            continue
+
+        # Moving all roots into the unit circle. If a root is outside, we replace it with reciprocal of its
+        # conjugate, reflecting it about the real line and projecting it inside the unit circle. Then we
+        # find formants by looking at roots above the real line.
+
+        nyquist_frequency = self.formant_sound.frame_rate * 0.5
+        formant_list = []
+
+        for root in better_root_list:
+
+            if abs(root) > 1.0:
+                root = 1.0 / root.conjugate()
+
+            if root.imag >= 0:
+                frequency = abs(math.atan2(root.imag, root.real)) * nyquist_frequency / math.pi
+
+                if frequency >= 50 and frequency <= nyquist_frequency - 50:
+                    formant_list.append(frequency)
+
+        # Memoizing and returning first two formants.
+
+        formant_list.sort()
+        self.formant_list[step_index] = formant_list[:2]
+
+        return formant_list[:2]
+
+    def get_interval_formants(self, begin, end):
+        """
+        Computes first and second formants of an interval specified by beginning and end in seconds.
+        """
+
+        # Initializing formant computation data, if required.
+
+        if self.formant_sound == None:
+
+            self.formant_sound = self.intensity_sound.set_frame_rate(self.formant_frame_rate)
+
+            self.formant_step_count = int(
+                math.floor((self.formant_sound.frame_count() - 1) // self.formant_step_size + 1))
+
+            self.formant_list = [None for i in range(self.formant_step_count)]
+
+            # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
+            # than 50 Hz.
+
+            factor = math.exp(-2.0 * math.pi * 50 / self.formant_sound.frame_rate)
+            sample_array = self.formant_sound.get_array_of_samples()
+
+            channel_count = self.formant_sound.channels
+
+            self.formant_sample_list = [
+                sum(sample_array[j] for j in range(channel_count)) / channel_count]
+
+            for i in range(1, int(self.formant_sound.frame_count())):
+
+                self.formant_sample_list.append(sum(
+                    sample_array[i * channel_count + j] -
+                    factor * sample_array[(i - 1) * channel_count + j]
+                        for j in range(channel_count)) / channel_count)
+
+        # Due to windowed nature of formant value computation, we can't compute them for points close to
+        # the beginning and the end of the recording; such points are skipped.
+
+        factor = self.formant_sound.frame_rate / self.formant_step_size
+
+        begin_step = max(4, int(math.ceil(begin * factor)))
+        end_step = min(self.formant_step_count - 5, int(math.floor(end * factor)))
+
+        # Computing interval formant values as means of point formant values.
+
+        f1_sum, f2_sum = 0.0, 0.0
+
+        for step_index in range(begin_step, end_step + 1):
+            f1, f2 = self.get_formants(step_index)
+
+            f1_sum += f1
+            f2_sum += f2
+
+        step_count = end_step - begin_step + 1
+        return f1_sum / step_count, f2_sum / step_count
 
 
 def find_max_interval_praat(sound, interval_list):
@@ -278,6 +484,35 @@ def find_max_interval_praat(sound, interval_list):
 
 #: Set of vowels used by computation of phonology of dictionary perspectives.
 vowel_set = set('aeiouyæøœɐɑɒɔɘəɛɜɞɤɨɪɯɵɶʉʊʌʏ̈̽ао')
+
+
+#: List of Unicode characters which can be used to write phonetic transcriptions.
+#:
+#: We have to define it through Unicode character codes because it contains combining characters, which mess
+#: with syntax highlighting and probably could mess with Python source code parsing.
+#:
+phonetic_character_list = list(map(chr, [
+    39, 46, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
+    117, 118, 119, 120, 121, 122, 124, 161, 228, 230, 231, 232, 233, 234, 235, 240, 248, 259, 275, 283, 295,
+    331, 339, 448, 449, 450, 451, 517, 592, 593, 594, 595, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605,
+    606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 618, 619, 620, 621, 622, 623, 624, 625, 626, 627,
+    628, 629, 630, 632, 633, 634, 635, 637, 638, 640, 641, 642, 643, 644, 648, 649, 650, 651, 652, 653, 654,
+    655, 656, 657, 658, 660, 661, 664, 665, 667, 668, 669, 670, 671, 673, 674, 675, 676, 677, 678, 679, 680,
+    688, 690, 695, 700, 704, 712, 716, 720, 721, 724, 725, 726, 727, 734, 736, 737, 739, 740, 741, 742, 743,
+    744, 745, 768, 769, 770, 771, 772, 774, 776, 778, 779, 780, 781, 783, 785, 792, 793, 794, 796, 797, 798,
+    799, 800, 804, 805, 809, 810, 812, 814, 815, 816, 817, 820, 825, 826, 827, 828, 829, 865, 946, 952, 967,
+    1072, 1086, 7498, 7542, 7569, 7587, 7609, 7615, 7869, 8201, 8214, 8255, 8319, 8599, 8600, 11377, 42779,
+    42780]))
+
+
+#: Regular expression defining acceptable phonetic transcription.
+#:
+#: Right now we use the simplest approach, just a sequence of acceptable symbols and whitespace. For lists
+#: of phonetic symbols of various classes see https://en.wikipedia.org/wiki/International_Phonetic_Alphabet.
+#:
+transcription_re = re.compile(
+    '[\s{0}]*'.format(''.join(phonetic_character_list)),
+    re.DOTALL | re.IGNORECASE | re.VERBOSE)
 
 
 @view_config(route_name="phonology", renderer='json')
@@ -345,59 +580,89 @@ def phonology(request):
         markup_url = row.Entity.content
         sound_url = row.Sound.content
 
-        try:
-            cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
+        cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
+            row.Sound.client_id, row.Sound.object_id,
+            row.Entity.client_id, row.Entity.object_id)
+
+        # Checking if we have cached result for this pair of sound/markup.
+
+        cache_result = CACHE.get(cache_key)
+
+        if cache_result == 'no_vowel':
+
+            log.debug(
+                '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}) '
+                '[CACHE {7}]: no vowels\n{8}\n{9}'.format(
+                index,
+                row.LexicalEntry.client_id, row.LexicalEntry.object_id,
                 row.Sound.client_id, row.Sound.object_id,
-                row.Entity.client_id, row.Entity.object_id)
+                row.Entity.client_id, row.Entity.object_id,
+                cache_key, markup_url, sound_url))
 
-            # Checking if we have cached result for this pair of sound/markup.
+            no_vowel_counter += 1
 
-            cache_result = CACHE.get(cache_key)
+            if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                limit and index + 1 >= limit):
+                break
 
-            if cache_result == 'no_vowel':
+            continue
 
-                log.debug(
-                    '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}) '
-                    '[CACHE {7}]: no vowels\n{8}\n{9}'.format(
-                    index,
-                    row.LexicalEntry.client_id, row.LexicalEntry.object_id,
-                    row.Sound.client_id, row.Sound.object_id,
-                    row.Entity.client_id, row.Entity.object_id,
-                    cache_key, markup_url, sound_url))
+        # If we have cached exception, we do the same as with absence of vowels, show its info and
+        # continue.
 
-                no_vowel_counter += 1
+        elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
+            exception, traceback_string = cache_result[1:3]
 
-                if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
-                    limit and index + 1 >= limit):
-                    break
+            log.debug(
+                '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}): '
+                '[CACHE {7}]: exception\n{8}\n{9}'.format(
+                index,
+                row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                row.Sound.client_id, row.Sound.object_id,
+                row.Entity.client_id, row.Entity.object_id,
+                cache_key, markup_url, sound_url))
 
-                continue
+            log.debug(traceback_string)
 
-            elif cache_result:
+            exception_counter += 1
 
-                # If we actually have the result, we use it and continue.
+            if (limit_exception and exception_counter >= limit_exception or
+                limit and index + 1 >= limit):
+                break
 
-                result_string = '\n'.join(
-                    'tier {0} \'{1}\': {2}'.format(tier_number, tier_name, tier_result)
-                        for tier_number, tier_name, tier_result in cache_result)
+            continue
 
-                log.debug(
-                    '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}) '
-                    '[CACHE {7}]:\n{8}\n{9}\n{10}'.format(
-                    index,
-                    row.LexicalEntry.client_id, row.LexicalEntry.object_id,
-                    row.Sound.client_id, row.Sound.object_id,
-                    row.Entity.client_id, row.Entity.object_id,
-                    cache_key, markup_url, sound_url, result_string))
+        # If we actually have the result, we use it and continue.
 
-                result_list.append(cache_result)
+        elif cache_result:
 
-                if (limit_result and len(result_list) >= limit_result or
-                    limit and index + 1 >= limit):
-                    break
+            result_string = '\n'.join(
+                'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
+                    
+                    tier_result_seq_list if not isinstance(tier_result_seq_list, list) else
+                    tier_result_seq_list[0] if len(tier_result_seq_list) <= 1 else
+                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_seq_list))
 
-                continue
+                    for tier_number, tier_name, tier_result_seq_list in cache_result)
 
+            log.debug(
+                '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}) '
+                '[CACHE {7}]:\n{8}\n{9}\n{10}'.format(
+                index,
+                row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                row.Sound.client_id, row.Sound.object_id,
+                row.Entity.client_id, row.Entity.object_id,
+                cache_key, markup_url, sound_url, result_string))
+
+            result_list.append(cache_result)
+
+            if (limit_result and len(result_list) >= limit_result or
+                limit and index + 1 >= limit):
+                break
+
+            continue
+
+        try:
             # Getting markup, checking for each tier if it needs to be processed.
 
             markup_bytes = urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')).read()
@@ -411,44 +676,86 @@ def phonology(request):
             vowel_flag = False
 
             for tier_number, tier_name in textgrid.get_tier_name_num():
-                
+
                 raw_interval_list = textgrid.get_tier(tier_number).get_all_intervals()
-                interval_list = []
-                long_text_flag = False
+                raw_interval_seq_list = [[]]
 
-                interval_idx_to_raw_idx = dict()
-
-                # Compiling transcription, checking if we have unusual markup.
-
-                # TODO: split sound and markup on intervals with empty markup into separate interval
-                # sequences and treat each such sequence as a separate word.
+                # Splitting interval sequence on empty intervals.
 
                 for raw_index, interval in enumerate(raw_interval_list):
 
-                    if len(interval[2]) <= 2 \
-                            and len(interval[2].strip()) \
-                            and any(character in vowel_set for character in interval[2]):
+                    if len(interval[2].strip()) <= 0:
+                        if len(raw_interval_seq_list[-1]) > 0:
+                            raw_interval_seq_list.append([])
 
-                        interval_list.append(interval)
-                        interval_idx_to_raw_idx[len(interval_list)-1] = raw_index
+                    else:
+                        raw_interval_seq_list[-1].append((raw_index, interval))
 
-                    elif len(interval[2]) > 2:
-                        long_text_flag = True
+                if len(raw_interval_seq_list[-1]) <= 0:
+                    del raw_interval_seq_list[-1]
 
-                transcription = ''.join(text for begin, end, text in raw_interval_list)
+                # Selecting interval sequences for analysis, checking if we have unusual markup.
+                
+                interval_seq_list = []
+                interval_idx_to_raw_idx = dict()
 
-                # If we have intervals with non-singleton markup, we report them.
+                unusual_markup_flag = False
+                unusual_markup_list = []
 
-                if long_text_flag:
+                for raw_interval_seq in raw_interval_seq_list:
+
+                    interval_seq_list.append([])
+                    interval_idx_to_raw_idx[len(interval_seq_list) - 1] = {}
+
+                    for partial_raw_index, (raw_index, interval) in enumerate(raw_interval_seq):
+
+                        interval_text = interval[2].strip()
+
+                        # Accepting interval if its text contains at least one vowel, and is short enough or
+                        # is a valid phonetic transcription.
+
+                        transcription_check = re.fullmatch(transcription_re, interval_text)
+
+                        if (len(interval_text) > 0 and
+                                any(character in vowel_set for character in interval_text) and
+                                (len(interval_text) <= 2 or transcription_check)):
+
+                            interval_seq_list[-1].append(interval)
+
+                            sequence_index = len(interval_seq_list) - 1
+                            interval_index = len(interval_seq_list[-1]) - 1
+
+                            interval_idx_to_raw_idx[(sequence_index, interval_index)] = raw_index
+                            interval_idx_to_raw_idx[sequence_index][interval_index] = partial_raw_index
+
+                        # Noting if the interval contains unusual (i.e. non-transcription) markup.
+
+                        elif not transcription_check:
+
+                            unusual_markup_flag = True
+                            unusual_markup_list.append((raw_index, interval))
+
+                transcription_list = [text for begin, end, text in raw_interval_list]
+                transcription = ''.join(transcription_list)
+
+                selected_list = [text
+                    for interval_list in interval_seq_list
+                        for begin, end, text in interval_list]
+
+                selected = ''.join(selected_list)
+
+                # If we have intervals with unusual markup, we report them.
+
+                if unusual_markup_flag:
                     log.debug(
                         '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}): '
-                        'tier {7} \'{8}\' has interval(s) with unusually long text: {9}'.format(
+                        'tier {7} \'{8}\' has interval(s) with unusual transcription text: '
+                        '{9} / {10}'.format(
                         index,
                         row.LexicalEntry.client_id, row.LexicalEntry.object_id,
                         row.Sound.client_id, row.Sound.object_id,
                         row.Entity.client_id, row.Entity.object_id,
-                        tier_number, tier_name,
-                        list(map(lambda interval: interval[2], raw_interval_list))))
+                        tier_number, tier_name, transcription, dict(unusual_markup_list)))
 
                 # If the markup does not have any vowels, we note it and also report it.
 
@@ -458,18 +765,37 @@ def phonology(request):
 
                     log.debug(
                         '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}): '
-                        'tier {7} \'{8}\' doesn\'t have any vowel markup'.format(
+                        'tier {7} \'{8}\' doesn\'t have any vowel markup: {9}'.format(
                         index,
                         row.LexicalEntry.client_id, row.LexicalEntry.object_id,
                         row.Sound.client_id, row.Sound.object_id,
                         row.Entity.client_id, row.Entity.object_id,
-                        tier_number, tier_name))
+                        tier_number, tier_name, transcription_list))
+
+                # It is also possible that while full transcription has vowels, intervals selected for
+                # analysis do not. In that case we also note it and report it.
+
+                elif not any(character in vowel_set for character in selected):
+
+                    tier_data_list.append((tier_number, tier_name, 'no_vowel_selected'))
+
+                    log.debug(
+                        '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}): '
+                        'tier {7} \'{8}\' intervals to be processed don\'t have any vowel markup: '
+                        'markup {9}, selected {10}'.format(
+                        index,
+                        row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                        row.Sound.client_id, row.Sound.object_id,
+                        row.Entity.client_id, row.Entity.object_id,
+                        tier_number, tier_name,
+                        transcription_list, selected_list))
 
                 # Otherwise we store tier data to be used during processing of the sound file.
 
                 else:
                     tier_data_list.append((tier_number, tier_name,
-                        (raw_interval_list, interval_list, interval_idx_to_raw_idx, transcription)))
+                        (raw_interval_list, raw_interval_seq_list, interval_seq_list,
+                            interval_idx_to_raw_idx, transcription)))
 
                     vowel_flag = True
 
@@ -496,42 +822,60 @@ def phonology(request):
                 temp_file.write(sound_file.read())
                 temp_file.flush()
 
-                sound = AudioPraatLike.from_wav(temp_file.name)
+                sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
 
-            tier_result_list = list()
+            tier_result_list = []
 
             for tier_number, tier_name, tier_data in tier_data_list:
 
-                if tier_data == 'no_vowel':
-                    tier_result_list.append((tier_number, tier_name, 'no_vowel'))
+                if tier_data == 'no_vowel' or tier_data == 'no_vowel_selected':
+                    tier_result_list.append((tier_number, tier_name, tier_data))
                     continue
 
-                # Analyzing vowel sounds.
+                # Analyzing vowel sounds of each interval sequence.
 
-                raw_interval_list, interval_list, interval_idx_to_raw_idx, transcription = tier_data
+                (raw_interval_list, raw_interval_seq_list, interval_seq_list, interval_idx_to_raw_idx,
+                    transcription) = tier_data
 
-                (max_intensity_index, max_intensity, max_length_index, max_length) = \
-                    find_max_interval_praat(sound, interval_list)
+                tier_result_list.append((tier_number, tier_name, []))
 
-                max_intensity_interval = interval_list[max_intensity_index]
-                max_length_interval = interval_list[max_length_index]
+                for seq_index, (raw_interval_list, interval_list) in enumerate(zip(
+                    raw_interval_seq_list, interval_seq_list)):
 
-                # Compiling results.
+                    if len(interval_list) <= 0:
+                        continue
 
-                max_length_str = '{0} {1:.3f} [{2}]'.format(
-                    max_length_interval[2], max_length,
-                    len(''.join(text for begin, end, text in
-                        raw_interval_list[:interval_idx_to_raw_idx[max_length_index]])))
+                    (max_intensity_index, max_intensity, max_length_index, max_length) = \
+                        find_max_interval_praat(sound, interval_list)
 
-                max_intensity_str = '{0} {1:.3f} [{2}]'.format(
-                    max_intensity_interval[2],
-                    max_intensity,
-                    len(''.join(text for begin, end, text in
-                        raw_interval_list[:interval_idx_to_raw_idx[max_intensity_index]])))
+                    max_intensity_interval = interval_list[max_intensity_index]
+                    max_length_interval = interval_list[max_length_index]
 
-                tier_result_list.append((tier_number, tier_name,
-                    (transcription, max_length_str, max_intensity_str,
-                        '+' if max_intensity_index == max_length_index else '-')))
+                    max_intensity_f1_f2 = sound.get_interval_formants(*max_intensity_interval[:2])
+                    max_length_f1_f2 = sound.get_interval_formants(*max_length_interval[:2])
+
+                    # Compiling results.
+
+                    max_length_str = '{0} {1:.3f} [{2}]'.format(
+                        max_length_interval[2], max_length,
+                        len(''.join(text for index, (begin, end, text) in
+                            raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_length_index]])))
+
+                    max_intensity_str = '{0} {1:.3f} [{2}]'.format(
+                        max_intensity_interval[2],
+                        max_intensity,
+                        len(''.join(text for index, (begin, end, text) in
+                            raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
+
+                    tier_result_list[-1][2].append([
+                        ''.join(text for index, (begin, end, text) in raw_interval_list),
+                        max_length_str,
+                        '{0:.3f}'.format(max_length_f1_f2[0]),
+                        '{0:.3f}'.format(max_length_f1_f2[1]),
+                        max_intensity_str,
+                        '{0:.3f}'.format(max_intensity_f1_f2[0]),
+                        '{0:.3f}'.format(max_intensity_f1_f2[1]),
+                        '+' if max_intensity_index == max_length_index else '-'])
 
             # Saving result.
 
@@ -539,8 +883,13 @@ def phonology(request):
             CACHE.set(cache_key, tier_result_list)
 
             result_string = '\n'.join(
-                'tier {0} \'{1}\': {2}'.format(tier_number, tier_name, tier_result)
-                    for tier_number, tier_name, tier_result in tier_result_list)
+                'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
+                    
+                    tier_result_seq_list if not isinstance(tier_result_seq_list, list) else
+                    tier_result_seq_list[0] if len(tier_result_seq_list) <= 1 else
+                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_seq_list))
+
+                    for tier_number, tier_name, tier_result_seq_list in tier_result_list)
 
             log.debug(
                 '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}):'
@@ -559,6 +908,21 @@ def phonology(request):
 
         except Exception as exception:
 
+            #
+            # NOTE
+            #
+            # Exceptional situations encountered so far:
+            #
+            #   1. TextGrid file actually contains sound, and wav file actually contains textgrid markup.
+            #
+            #     Perspective 330/4, LexicalEntry 330/7, sound-Entity 330/2328, markup-Entity 330/6934
+            #
+            #   2. Markup for one of the intervals contains a newline "\n", and pympi fails to parse it.
+            #     Praat parses such files without problems.
+            #
+            #     Perspective 330/4, LexicalEntry 330/20, sound-Entity 330/6297, markup-Entity 330/6967
+            #
+
             log.debug(
                 '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}): '
                 'exception\n{7}\n{8}'.format(
@@ -568,10 +932,16 @@ def phonology(request):
                 row.Entity.client_id, row.Entity.object_id,
                 markup_url, sound_url))
 
-            # If we encountered an exception, we show its info.
+            # if we encountered an exception, we show its info and remember not to try offending
+            # sound/markup pair again.
 
-            log.debug(''.join(traceback.format_exception(
-                Exception, exception, exception.__traceback__))[:-1])
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug(traceback_string)
+
+            CACHE.set(cache_key, ('exception', exception,
+                traceback_string.replace('Traceback', 'CACHEd traceback')))
 
             exception_counter += 1
 
@@ -579,8 +949,10 @@ def phonology(request):
                 limit and index + 1 >= limit):
                 break
 
-    log.debug('phonology {0}/{1}: {2} results, {3} no vowels, {4} exceptions'.format(
-        perspective_cid, perspective_oid, len(result_list), no_vowel_counter, exception_counter))
+    log.debug('phonology {0}/{1}: {2} result{3}, {4} no vowels, {5} exceptions'.format(
+        perspective_cid, perspective_oid,
+        len(result_list), '' if len(result_list) == 1 else 's',
+        no_vowel_counter, exception_counter))
 
     # If we have no results, we indicate the situation and also show number of failures and number of
     # markups with no vowels.
@@ -599,33 +971,38 @@ def phonology(request):
     sheet = excel_book.add_sheet("Sheet 1")
 
     sheet.write(0, 0, 'Transcription')
-    sheet.write(0, 1, 'Longest (seconds) segment')
-    sheet.write(0, 2, 'Highest intensity (dB) segment')
-    sheet.write(0, 3, 'Coincidence')
+    sheet.write(0, 1, 'Longest (seconds) interval')
+    sheet.write(0, 2, 'F1 (Hz)')
+    sheet.write(0, 3, 'F2 (Hz)')
+    sheet.write(0, 4, 'Highest intensity (dB) interval')
+    sheet.write(0, 5, 'F1 (Hz)')
+    sheet.write(0, 6, 'F2 (Hz)')
+    sheet.write(0, 7, 'Coincidence')
 
     row_counter = 1
 
     for tier_result_list in result_list:
-        for tier_number, tier_name, tier_data in tier_result_list:
+        for tier_number, tier_name, tier_result_seq_list in tier_result_list:
 
-            if tier_data == 'no_vowel':
+            if tier_result_seq_list == 'no_vowel':
                 continue
 
-            transcription, max_length_str, max_intensity_str, check_str = tier_data
+            for tier_data in tier_result_seq_list:
+                for index, tier_data_str in enumerate(tier_data):
+                    sheet.write(row_counter, index, tier_data_str)
 
-            sheet.write(row_counter, 0, transcription)
-            sheet.write(row_counter, 1, max_length_str)
-            sheet.write(row_counter, 2, max_intensity_str)
-            sheet.write(row_counter, 3, check_str)
-
-            row_counter += 1
+                row_counter += 1
 
     # Formatting column widths.
 
     sheet.col(0).width = 24 * 256
     sheet.col(1).width = 24 * 256
-    sheet.col(2).width = 24 * 256
+    sheet.col(2).width = 12 * 256
     sheet.col(3).width = 12 * 256
+    sheet.col(4).width = 24 * 256
+    sheet.col(5).width = 12 * 256
+    sheet.col(6).width = 12 * 256
+    sheet.col(7).width = 12 * 256
 
     excel_stream = io.BytesIO()
     excel_book.save(excel_stream)
@@ -640,4 +1017,74 @@ def phonology(request):
     response.headers['Content-Disposition'] = "attachment; filename=phonology.xls"
 
     return response
+
+
+# A little bit of local testing.
+
+if __name__ == '__main__':
+
+    markup_bytes = open('корень_БИН_(1_раз).TextGrid', 'rb').read()
+
+    textgrid = pympi.Praat.TextGrid(xmax = 0)
+    textgrid.from_file(
+        io.BytesIO(markup_bytes),
+        codec = chardet.detect(markup_bytes)['encoding'])
+
+    raw_interval_list = textgrid.get_tier(1).get_all_intervals()
+    interval_list = []
+    long_text_flag = False
+
+    interval_idx_to_raw_idx = dict()
+
+    # Compiling transcription, checking if we have unusual markup.
+
+    for raw_index, interval in enumerate(raw_interval_list):
+
+        if len(interval[2]) <= 2 \
+                and len(interval[2].strip()) \
+                and any(character in vowel_set for character in interval[2]):
+
+            interval_list.append(interval)
+            interval_idx_to_raw_idx[len(interval_list)-1] = raw_index
+
+        elif len(interval[2]) > 2:
+            long_text_flag = True
+
+    transcription = ''.join(text for begin, end, text in raw_interval_list)
+
+    # Otherwise we retrieve the sound file and analyse each vowel-containing markup.
+
+    sound = AudioPraatLike(pydub.AudioSegment.from_wav('корень_БИН_(1_раз).wav'))
+
+    (max_intensity_index, max_intensity, max_length_index, max_length) = \
+        find_max_interval_praat(sound, interval_list)
+
+    max_intensity_interval = interval_list[max_intensity_index]
+    max_length_interval = interval_list[max_length_index]
+
+    # Compiling results.
+
+    max_length_str = '{0} {1:.3f} [{2}]'.format(
+        max_length_interval[2], max_length,
+        len(''.join(text for begin, end, text in
+            raw_interval_list[:interval_idx_to_raw_idx[max_length_index]])))
+
+    max_intensity_str = '{0} {1:.3f} [{2}]'.format(
+        max_intensity_interval[2],
+        max_intensity,
+        len(''.join(text for begin, end, text in
+            raw_interval_list[:interval_idx_to_raw_idx[max_intensity_index]])))
+
+    print((transcription, max_length_str, max_intensity_str,
+        '+' if max_intensity_index == max_length_index else '-'))
+
+    # Getting formants.
+
+    begin, end = raw_interval_list[interval_idx_to_raw_idx[max_length_index]][:2]
+    print(raw_interval_list[interval_idx_to_raw_idx[max_length_index]])
+    print(sound.get_interval_formants(begin, end))
+
+    begin, end = raw_interval_list[interval_idx_to_raw_idx[max_intensity_index]][:2]
+    print(raw_interval_list[interval_idx_to_raw_idx[max_intensity_index]])
+    print(sound.get_interval_formants(begin, end))
 
