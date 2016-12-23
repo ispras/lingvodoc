@@ -359,7 +359,7 @@ class TranslationMixin(PrimeTableArgs):
         key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
         translation = CACHE.get(key)
         if translation:
-            log.error("Got cached %s " % str(key))
+            log.info("Got cached %s " % str(key))
             return translation
         log.debug("No cached value, getting from DB: %s " % str(key))
 
