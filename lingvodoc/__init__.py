@@ -358,7 +358,7 @@ def configure_routes(config):
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
     config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityAcl')  # tested (no del)
+                     factory='lingvodoc.models.LexicalViewAcl')  # tested (no del)
     # tags are different there and in connected words
 
     # API #GET
@@ -687,6 +687,7 @@ def main(global_config, **settings):
             'storage'))
 
     if parser.has_section('app:desktop'):
+        storage = dict()
         for k, v in parser.items('app:desktop'):
             storage[k] = v
         settings['desktop'] = storage
