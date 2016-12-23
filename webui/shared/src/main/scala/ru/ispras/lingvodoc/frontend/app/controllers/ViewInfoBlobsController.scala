@@ -1,17 +1,16 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable
+import com.greencatsoft.angularjs.extensions.ModalInstance
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.JSConverters._
-import scala.util.{Failure, Success, Try}
+import scala.scalajs.js.annotation.JSExport
 
 
 @js.native
@@ -33,9 +32,9 @@ class ViewInfoBlobsController(scope: ViewInfoBlobsScope,
   with LoadingPlaceholder {
 
 
-  val dictionary = params("dictionary").asInstanceOf[Dictionary]
-  val perspective = params("perspective").asInstanceOf[Perspective]
-  val meta = params("meta").asInstanceOf[MetaData]
+  private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
+  private[this] val perspective = params("perspective").asInstanceOf[Perspective]
+  private[this] val meta = params("meta").asInstanceOf[MetaData]
 
   scope.title = dictionary.translation
   scope.blobs = js.Array[File]()

@@ -8,6 +8,8 @@ import json
 import logging
 import multiprocessing
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -501,7 +503,7 @@ def edit_perspective_meta(request):  # tested & in docs
                 old_meta = perspective.additional_metadata
                 new_meta = req
                 old_meta.update(new_meta)
-                perspective.additional_metadata = old_meta
+                flag_modified(perspective, 'additional_metadata')
             else:
                 perspective.additional_metadata = req
             request.response.status = HTTPOk.code
@@ -542,6 +544,7 @@ def delete_perspective_meta(request):  # tested & in docs
                 if entry in old_meta:
                     del old_meta[entry]
             perspective.additional_metadata = old_meta
+            flag_modified(perspective, 'additional_metadata')
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -971,6 +974,7 @@ def view_perspective_roles(request):  # TODO: test
                                                          subject_object_id=object_id,
                                                          subject_client_id=client_id).first()
                 if not group:
+                    print(base.name)
                     continue
                 perm = base.name
                 users = []
@@ -1296,6 +1300,7 @@ def create_field(request):
         data_type_translation_gist_client_id = req['data_type_translation_gist_client_id']
         data_type_translation_gist_object_id = req['data_type_translation_gist_object_id']
         object_id = req.get('object_id', None)
+        marked_for_deletion = req.get('object_id', None)
 
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -1310,7 +1315,8 @@ def create_field(request):
                       data_type_translation_gist_client_id=data_type_translation_gist_client_id,
                       data_type_translation_gist_object_id=data_type_translation_gist_object_id,
                       translation_gist_client_id=translation_gist_client_id,
-                      translation_gist_object_id=translation_gist_object_id
+                      translation_gist_object_id=translation_gist_object_id,
+                      marked_for_deletion=marked_for_deletion
                       )
 
         if req.get('is_translatable', None):
@@ -1391,7 +1397,7 @@ def view_perspective_fields(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective and not perspective.marked_for_deletion:
         fields = DBSession.query(DictionaryPerspectiveToField) \
-            .filter_by(parent=perspective, upper_level=None) \
+            .filter_by(parent=perspective, upper_level=None, marked_for_deletion=False) \
             .order_by(DictionaryPerspectiveToField.position) \
             .all()
         try:
@@ -1569,7 +1575,7 @@ def lexical_entries_all(request):
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
                                 for lex in lexes.all()]
 
-        result = LexicalEntry.track_multiple(False, lexes_composite_list, int(request.cookies.get('locale_id') or 2))
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=None, accept=True)
 
         response = list(result)
 
@@ -1703,7 +1709,7 @@ def lexical_entries_published(request):
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
                                 for lex in lexes.all()]
 
-        result = LexicalEntry.track_multiple(True, lexes_composite_list, int(request.cookies.get('locale_id') or 2))
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=True, accept=True)
 
         response = list(result)
         if preview_mode:
@@ -1769,10 +1775,17 @@ def lexical_entries_not_accepted(request):
             else_=Entity.content))) \
             .group_by(LexicalEntry) \
             .offset(start_from).limit(count)
+
         result = deque()
 
-        for entry in lexes.all():
-            result.append(entry.track(False, int(request.cookies.get('locale_id') or 2)))
+        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                                 lex.marked_for_deletion, lex.additional_metadata,
+                                 lex.additional_metadata.get('came_from')
+                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                                for lex in lexes.all()]
+
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=None, accept=False)
+
         response = list(result)
 
         request.response.status = HTTPOk.code

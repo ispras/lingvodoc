@@ -11,11 +11,12 @@ import ru.ispras.lingvodoc.frontend.app.exceptions.{ControllerException, ModelEx
 import ru.ispras.lingvodoc.frontend.app.utils.{GUIDGenerator, Utils}
 
 
-
 @JSExportAll
 abstract class Column(field: Field, dataType: TranslationGist) {
   def getType(): String
+
   def getName(): String
+
   def getField(): Field = field
 
   val internalId = GUIDGenerator.generate()
@@ -61,6 +62,7 @@ case class GroupColumn(field: Field, dataType: TranslationGist) extends Column(f
 @JSExportAll
 abstract class Value(entity: Entity) {
   def getType(): String
+
   def getContent(): String
 
   val internalId = GUIDGenerator.generate()
@@ -73,6 +75,7 @@ abstract class Value(entity: Entity) {
 @JSExportAll
 case class TextValue(entity: Entity, dataType: TranslationGist, values: js.Array[Value]) extends Value(entity) {
   override def getType(): String = "Text"
+
   override def getContent(): String = entity.content
 }
 
@@ -80,6 +83,7 @@ case class TextValue(entity: Entity, dataType: TranslationGist, values: js.Array
 @JSExportAll
 case class GroupValue(entity: Entity, dataType: TranslationGist, link: Link) extends Value(entity) {
   override def getType(): String = "Group"
+
   override def getContent(): String = "group"
 }
 
@@ -87,7 +91,9 @@ case class GroupValue(entity: Entity, dataType: TranslationGist, link: Link) ext
 @JSExportAll
 abstract class GenericCell(values: js.Array[Value], field: Field) {
   def getType(): String
+
   def getValues() = values
+
   def getField() = field
 
   val internalId = GUIDGenerator.generate()
@@ -117,7 +123,6 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
 
   @JSExport
   var rows: js.Array[Row] = js.Array()
-
 
 
   protected def getContent(entities: Seq[Entity], column: SimpleColumn): GenericCell = {
@@ -151,13 +156,17 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
   }
 
 
-  def addEntry(entry: LexicalEntry) = {
+  def addEntry(entry: LexicalEntry): Unit = {
     val rowData: js.Array[GenericCell] = header.map {
       case column: SimpleColumn => getContent(entry.entities, column)
       case column: MasterColumn => getContent(entry.entities, column)
       case column: GroupColumn => getContent(entry.entities, column)
     }.toJSArray
     rows = Row(entry, rowData.asInstanceOf[js.Array[GenericCell]]) +: rows
+  }
+
+  def removeEntry(entry: LexicalEntry): Unit = {
+    rows = rows.filterNot(_.entry.getId == entry.getId)
   }
 
   def addRow(entities: Seq[Entity]) = {
@@ -170,7 +179,7 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
 
 
   protected def findField(fields: Seq[Field], fieldId: CompositeId): Option[Field] = {
-    fields.find(f => f.clientId == fieldId.clientId && f.objectId == fieldId.objectId ) match {
+    fields.find(f => f.clientId == fieldId.clientId && f.objectId == fieldId.objectId) match {
       case Some(field) => Some(field)
       case None =>
         var result: Option[Field] = None
@@ -209,21 +218,21 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
   protected def entityToValue(entity: Entity): Value = {
     findField(fields, CompositeId(entity.fieldClientId, entity.fieldObjectId)) match {
       case Some(field) =>
-      dataTypes.find { d => d.clientId == field.dataTypeTranslationGistClientId && d.objectId == field.dataTypeTranslationGistObjectId } match {
-        case Some(dataType) =>
+        dataTypes.find { d => d.clientId == field.dataTypeTranslationGistClientId && d.objectId == field.dataTypeTranslationGistObjectId } match {
+          case Some(dataType) =>
 
-          val entities = entity.entities.map(e => entityToValue(e))
+            val entities = entity.entities.map(e => entityToValue(e))
 
-          Utils.getDataTypeName(dataType) match {
-            case "Text" => TextValue(entity, dataType, entities)
-            case "Sound" => TextValue(entity, dataType, entities)
-            case "Markup" => TextValue(entity, dataType, entities)
-            case "Image" => TextValue(entity, dataType, entities)
-            case "Link" => GroupValue(entity, dataType, entity.link.get)
-            case "Grouping Tag" => TextValue(entity, dataType, entities)
-          }
-        case None => throw new ModelException("Entity refers to the unknown data type!")
-      }
+            Utils.getDataTypeName(dataType) match {
+              case "Text" => TextValue(entity, dataType, entities)
+              case "Sound" => TextValue(entity, dataType, entities)
+              case "Markup" => TextValue(entity, dataType, entities)
+              case "Image" => TextValue(entity, dataType, entities)
+              case "Link" => GroupValue(entity, dataType, entity.link.get)
+              case "Grouping Tag" => TextValue(entity, dataType, entities)
+            }
+          case None => throw new ModelException("Entity refers to the unknown data type!")
+        }
       case None =>
         throw new ModelException("Entity refers to the unknown field!")
     }
@@ -266,6 +275,14 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
           case None =>
         }
       case None =>
+    }
+  }
+
+  def updateEntity(entry: LexicalEntry, oldEntity: Entity, newEntity: Entity) = {
+    rows.find { row => row.entry.getId == entry.getId } foreach { row =>
+      row.cells.zipWithIndex.find { case (cell, i) => cell.getField.clientId == oldEntity.fieldClientId && cell.getField.objectId == oldEntity.fieldObjectId } foreach { case (cell, i) =>
+        cell.getValues.update(i, entityToValue(newEntity))
+      }
     }
   }
 }

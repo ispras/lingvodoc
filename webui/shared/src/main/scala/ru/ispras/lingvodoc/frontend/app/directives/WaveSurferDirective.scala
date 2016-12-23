@@ -15,7 +15,7 @@ class WaveSurferDirective(parse: Parse) extends ElementDirective {
     jQuery(element).css("display", "block")
 
     val wso = WaveSurferOpts(element, waveColor = "violet", progressColor = "purple",
-      cursorWidth = 1, cursorColor = "red", fillParent = true)
+      cursorWidth = 2, cursorColor = "red", fillParent = true, height = 64, barWidth = 1)
     val waveSurfer = WaveSurfer.create(wso)
 
     val handler = attrs("onReady").toOption.map(parse(_))

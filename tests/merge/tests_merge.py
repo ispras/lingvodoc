@@ -1,3 +1,11 @@
+# 
+# NOTE
+#
+# See information on how tests are organized and how they should work in the tests' package __init__.py file
+# (currently lingvodoc/tests/__init__.py).
+#
+
+
 from tests.tests import MyTestCase
 from tests.common import initValuesFactory
 from tests.common import load_correct_answers
@@ -12,6 +20,7 @@ from pyramid.httpexceptions import (
     HTTPFound,
     HTTPForbidden
 )
+
 
 class MergeTest(MyTestCase):
 

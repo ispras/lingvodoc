@@ -1,3 +1,11 @@
+# 
+# NOTE
+#
+# See information on how tests are organized and how they should work in the tests' package __init__.py file
+# (currently lingvodoc/tests/__init__.py).
+#
+
+
 from tests.tests import MyTestCase
 from tests.common import initValuesFactory
 from tests.common import load_correct_answers
@@ -13,7 +21,10 @@ from pyramid.httpexceptions import (
     HTTPForbidden
 )
 
+import pytest
 
+
+@pytest.mark.skip(reason = 'Unconverted test from the previous version.')
 class NewTestClass(MyTestCase):
 
     def testlogin(self):
@@ -26,6 +37,7 @@ class NewTestClass(MyTestCase):
         self.assertDictEqual(response.json, correct_answer, stop_words=['id', 'signup_date'])
 
 
+@pytest.mark.skip(reason = 'Unconverted test from the previous version.')
 class DictionaryTest(MyTestCase):
 
     def setUp(self):
@@ -196,6 +208,7 @@ class DictionaryTest(MyTestCase):
         self.assertEqual(response.json, correct_answers[test_name])
 
 
+@pytest.mark.skip(reason = 'Unconverted test from the previous version.')
 class ConvertedDictionaryTest(MyTestCase):
 
     def test_dict_convert(self):
@@ -263,3 +276,4 @@ class ConvertedDictionaryTest(MyTestCase):
         json_file = open('dictionary/test_dict_convert.json', 'r')
         correct_answer = json.loads(json_file.read())
         self.assertDictEqual(response.json, correct_answer, set_like= True)
+

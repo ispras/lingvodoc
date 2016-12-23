@@ -1,21 +1,20 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout, Location}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
-import scala.scalajs.js.{Dynamic, Object, UndefOr}
+import scala.scalajs.js.{Dynamic, Object}
 import scala.util.{Failure, Success}
-
 
 @js.native
 trait CreateCorpusScope extends Scope {
@@ -29,17 +28,23 @@ trait CreateCorpusScope extends Scope {
   var names: js.Array[LocalizedString] = js.native
   var layers: js.Array[Layer] = js.native
   var fields: js.Array[Field] = js.native
-  //var dataTypes: js.Array[TranslationGist] = js.native
   var dictionaryId: Option[CompositeId] = js.native
   var step: Int = js.native
 }
 
 @injectable("CreateCorpusController")
-class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
+class CreateCorpusController(scope: CreateCorpusScope,
+                             modal: ModalService,
+                             location: Location,
+                             backend: BackendService,
+                             val timeout: Timeout,
+                             val exceptionHandler: ExceptionHandler)
   extends AbstractController[CreateCorpusScope](scope)
     with AngularExecutionContextProvider {
 
   private[this] var dataTypes: js.Array[TranslationGist] = js.Array[TranslationGist]()
+  private[this] var indentation = Map[String, Int]()
+
 
   // Scope initialization
   scope.locales = js.Array[Locale]()
@@ -95,8 +100,39 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
 
   @JSExport
   def newLanguage() = {
+    val parentLanguage = scope.languages.find(_.getId == scope.languageId)
 
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/createLanguage.html"
+    options.controller = "CreateLanguageController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          "parentLanguage" -> parentLanguage.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    val instance = modal.open[Language](options)
+
+    instance.result foreach { _ =>
+      backend.getLanguages onComplete {
+        case Success(tree: Seq[Language]) =>
+          indentation = indentations(tree)
+          scope.languages = Utils.flattenLanguages(tree).toJSArray
+        case Failure(e) =>
+      }
+    }
   }
+
+  @JSExport
+  def languagePadding(language: Language) = {
+    "&nbsp;&nbsp;&nbsp;" * indentation.getOrElse(language.getId, 0)
+  }
+
 
   @JSExport
   def createDictionary2() = {
@@ -124,6 +160,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
             scope.files.find(_.getId == scope.fileId) foreach { file =>
               backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
                 scope.step = 3
+                redirectToDashboard()
               }
             }
           }
@@ -174,42 +211,6 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
       case None => ""
     }
   }
-
-//  @JSExport
-//  def getLinkedLayerDisplayName(layer: Layer) = {
-//    val localeId = Utils.getLocale().getOrElse(2)
-//
-//    val indexBasedName = scope.layers.zipWithIndex.find(x => layer.equals(x._1)) match {
-//      case Some(x) => "#" + (x._2 + 1).toString
-//      case None => ""
-//    }
-//
-//    layer.names.find(name => name.localeId == localeId) match {
-//      case Some(name) => if (name.str.trim.nonEmpty) {
-//        name.str
-//      } else {
-//        indexBasedName
-//      }
-//      case None => indexBasedName
-//    }
-//  }
-
-//  @JSExport
-//  def linkedLayersEnabled(): Boolean = {
-//    scope.layers.size > 1
-//  }
-
-//  @JSExport
-//  def linkFieldSelected(fieldEntry: FieldEntry): Boolean = {
-//    fields.find(field => field.getId == fieldEntry.fieldId) match {
-//      case Some(field) =>
-//        dataTypes.find(dataType => dataType.clientId == field.dataTypeTranslationGistClientId && dataType.objectId == field.dataTypeTranslationGistObjectId) match {
-//          case Some(dataType) => dataType.atoms.exists(atom => atom.content.equals("Link") && atom.localeId == 2)
-//          case None => false
-//        }
-//      case None => false
-//    }
-//  }
 
   private[this] def createPerspectiveTranslationGist(layer: Layer): Future[CompositeId] = {
     val p = Promise[CompositeId]()
@@ -289,6 +290,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
   def finish() = {
     createPerspectives() foreach { _ =>
       scope.step = 3
+      redirectToDashboard()
     }
   }
 
@@ -335,6 +337,35 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
     Future.sequence(fieldEntries)
   }
 
+  private[this] def getDepth(language: Language, tree: Seq[Language], depth: Int = 0): Option[Int] = {
+    if (tree.exists(_.getId == language.getId)) {
+      Some(depth)
+    } else {
+      for (lang <- tree) {
+        val r = getDepth(language, lang.languages.toSeq, depth + 1)
+        if (r.nonEmpty) {
+          return r
+        }
+      }
+      Option.empty[Int]
+    }
+  }
+
+  private[this] def indentations(tree: Seq[Language]) = {
+    val languages = Utils.flattenLanguages(tree).toJSArray
+    languages.map { language =>
+      language.getId -> getDepth(language, tree).get
+    }.toMap
+  }
+
+  private[this] def redirectToDashboard(): Unit = {
+    import scala.scalajs.js.timers._
+    setTimeout(5000) {
+      location.path("/corpora")
+      scope.$apply()
+    }
+  }
+
   /**
     * Loads data from backend
     */
@@ -360,6 +391,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
 
     backend.getLanguages onComplete {
       case Success(tree: Seq[Language]) =>
+        indentation = indentations(tree)
         scope.languages = Utils.flattenLanguages(tree).toJSArray
       case Failure(e) =>
     }

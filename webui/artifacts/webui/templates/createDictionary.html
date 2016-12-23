@@ -8,7 +8,7 @@
                 <!-- List of all languages -->
                 <label for="language"><translatable str="Language">Language</translatable></label>
 
-                <select id="language"  ng-model="languageId">
+                <select class="form-control" id="language"  ng-model="languageId">
                     <option ng-repeat="language in languages" value="{{ language.getId }}" ng-bind-html="controller.languagePadding(language) + language.translation">
 		    </option>
                 </select>
@@ -227,7 +227,8 @@
             <div  ng-show="step==3">
                 <div class="row">
                     <div class="col-lg-12">
-                        <h1><translatable str="Dictionary created">Dictionary created</translatable></h1>
+                        <h1 class="text-center"><translatable str="Dictionary created">Dictionary created</translatable></h1>
+                        <div class="text-center">You will be redirected in five seconds...</div>
                     </div>
                 </div>
             </div>

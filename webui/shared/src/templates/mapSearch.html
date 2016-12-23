@@ -1,3 +1,8 @@
+<div id="shaderFull" class="animate-show" ng-show="progressBar">
+    <div id="loader-wrapper-fullscreen">
+        <div id="loader"></div>
+    </div>
+</div>
 
 <div class="container">
 
@@ -38,25 +43,36 @@
     </div>
 
 
-    <div class="row">
+    <div class="row top15">
         <div class="col-md-12">
 
             <div id="map-holder">
                 <div class="container fill">
-                    <div id="map"></div>
+                    <div id="searchMap"></div>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <div class="row" ng-show="searchResults.length > 0">
+
+    <div class="row top30" ng-show="resultEntriesCount >= 0 && !progressBar">
+        <h3 class="text-center">Found {{ resultEntriesCount }} entries</h3>
+    </div>
+
+
+    <div class="row top15" ng-show="searchResults.length > 0 && !progressBar">
         <div class="col-md-12">
             <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
         </div>
+        <div class="col-md-12">
+            <div id="spectrogram"></div>
+        </div>
     </div>
 
-    <div class="row" ng-repeat="searchTable in searchResults">
+
+
+    <div class="row top15" ng-repeat="searchTable in searchResults" ng-show="!progressBar">
         <div class="col-md-12">
             <h4>{{ controller.getSearchSource(searchTable.rows[0].entry) }}</h4>
             <table class="table table-striped table-bordered">
@@ -278,6 +294,25 @@
             </table>
         </div>
     </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+
+            <div class="text-center">
+                <nav>
+                    <ul class="pagination pagination-sm">
+                        <li ng-repeat="p in controller.range()"
+                            ng-class="{active: pageNumber == p}">
+                            <a href="" ng-click="controller.getPage(p)">{{ p }}</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+        </div>
+
+    </div>
+
 
 
 

@@ -50900,11 +50900,2126 @@ angular.module('ui.bootstrap.datepickerPopup').run(function() {!angular.$$csp().
 angular.module('ui.bootstrap.tooltip').run(function() {!angular.$$csp().noInlineStyle && !angular.$$uibTooltipCss && angular.element(document).find('head').prepend('<style type="text/css">[uib-tooltip-popup].tooltip.top-left > .tooltip-arrow,[uib-tooltip-popup].tooltip.top-right > .tooltip-arrow,[uib-tooltip-popup].tooltip.bottom-left > .tooltip-arrow,[uib-tooltip-popup].tooltip.bottom-right > .tooltip-arrow,[uib-tooltip-popup].tooltip.left-top > .tooltip-arrow,[uib-tooltip-popup].tooltip.left-bottom > .tooltip-arrow,[uib-tooltip-popup].tooltip.right-top > .tooltip-arrow,[uib-tooltip-popup].tooltip.right-bottom > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.top-left > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.top-right > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.bottom-left > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.bottom-right > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.left-top > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.left-bottom > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.right-top > .tooltip-arrow,[uib-tooltip-html-popup].tooltip.right-bottom > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.top-left > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.top-right > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.bottom-left > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.bottom-right > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.left-top > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.left-bottom > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.right-top > .tooltip-arrow,[uib-tooltip-template-popup].tooltip.right-bottom > .tooltip-arrow,[uib-popover-popup].popover.top-left > .arrow,[uib-popover-popup].popover.top-right > .arrow,[uib-popover-popup].popover.bottom-left > .arrow,[uib-popover-popup].popover.bottom-right > .arrow,[uib-popover-popup].popover.left-top > .arrow,[uib-popover-popup].popover.left-bottom > .arrow,[uib-popover-popup].popover.right-top > .arrow,[uib-popover-popup].popover.right-bottom > .arrow,[uib-popover-html-popup].popover.top-left > .arrow,[uib-popover-html-popup].popover.top-right > .arrow,[uib-popover-html-popup].popover.bottom-left > .arrow,[uib-popover-html-popup].popover.bottom-right > .arrow,[uib-popover-html-popup].popover.left-top > .arrow,[uib-popover-html-popup].popover.left-bottom > .arrow,[uib-popover-html-popup].popover.right-top > .arrow,[uib-popover-html-popup].popover.right-bottom > .arrow,[uib-popover-template-popup].popover.top-left > .arrow,[uib-popover-template-popup].popover.top-right > .arrow,[uib-popover-template-popup].popover.bottom-left > .arrow,[uib-popover-template-popup].popover.bottom-right > .arrow,[uib-popover-template-popup].popover.left-top > .arrow,[uib-popover-template-popup].popover.left-bottom > .arrow,[uib-popover-template-popup].popover.right-top > .arrow,[uib-popover-template-popup].popover.right-bottom > .arrow{top:auto;bottom:auto;left:auto;right:auto;margin:0;}[uib-popover-popup].popover,[uib-popover-html-popup].popover,[uib-popover-template-popup].popover{display:block !important;}</style>'); angular.$$uibTooltipCss = true; });
 angular.module('ui.bootstrap.timepicker').run(function() {!angular.$$csp().noInlineStyle && !angular.$$uibTimepickerCss && angular.element(document).find('head').prepend('<style type="text/css">.uib-time input{width:50px;}</style>'); angular.$$uibTimepickerCss = true; });
 angular.module('ui.bootstrap.typeahead').run(function() {!angular.$$csp().noInlineStyle && !angular.$$uibTypeaheadCss && angular.element(document).find('head').prepend('<style type="text/css">[uib-typeahead-popup].dropdown-menu{display:block;}</style>'); angular.$$uibTypeaheadCss = true; });
-/*! wavesurfer.js 1.0.52
-* https://github.com/katspaugh/wavesurfer.js
-* @license CC-BY-3.0 */
-"use strict";var WaveSurfer={defaultParams:{height:128,waveColor:"#999",progressColor:"#555",cursorColor:"#333",cursorWidth:1,skipLength:2,minPxPerSec:20,pixelRatio:window.devicePixelRatio,fillParent:!0,scrollParent:!1,hideScrollbar:!1,normalize:!1,audioContext:null,container:null,dragSelection:!0,loopSelection:!0,audioRate:1,interact:!0,splitChannels:!1,mediaContainer:null,mediaControls:!1,renderer:"Canvas",backend:"WebAudio",mediaType:"audio",autoCenter:!0},init:function(a){if(this.params=WaveSurfer.util.extend({},this.defaultParams,a),this.container="string"==typeof a.container?document.querySelector(this.params.container):this.params.container,!this.container)throw new Error("Container element not found");if(null==this.params.mediaContainer?this.mediaContainer=this.container:"string"==typeof this.params.mediaContainer?this.mediaContainer=document.querySelector(this.params.mediaContainer):this.mediaContainer=this.params.mediaContainer,!this.mediaContainer)throw new Error("Media Container element not found");this.savedVolume=0,this.isMuted=!1,this.tmpEvents=[],this.createDrawer(),this.createBackend()},createDrawer:function(){var a=this;this.drawer=Object.create(WaveSurfer.Drawer[this.params.renderer]),this.drawer.init(this.container,this.params),this.drawer.on("redraw",function(){a.drawBuffer(),a.drawer.progress(a.backend.getPlayedPercents())}),this.drawer.on("click",function(b,c){setTimeout(function(){a.seekTo(c)},0)}),this.drawer.on("scroll",function(b){a.fireEvent("scroll",b)})},createBackend:function(){var a=this;this.backend&&this.backend.destroy(),"AudioElement"==this.params.backend&&(this.params.backend="MediaElement"),"WebAudio"!=this.params.backend||WaveSurfer.WebAudio.supportsWebAudio()||(this.params.backend="MediaElement"),this.backend=Object.create(WaveSurfer[this.params.backend]),this.backend.init(this.params),this.backend.on("finish",function(){a.fireEvent("finish")}),this.backend.on("play",function(){a.fireEvent("play")}),this.backend.on("pause",function(){a.fireEvent("pause")}),this.backend.on("audioprocess",function(b){a.fireEvent("audioprocess",b)})},startAnimationLoop:function(){var a=this,b=window.requestAnimationFrame||window.webkitRequestAnimationFrame||window.mozRequestAnimationFrame,c=function(){if(!a.backend.isPaused()){var d=a.backend.getPlayedPercents();a.drawer.progress(d),a.fireEvent("audioprocess",d),b(c)}};c()},getDuration:function(){return this.backend.getDuration()},getCurrentTime:function(){return this.backend.getCurrentTime()},play:function(a,b){this.backend.play(a,b),this.startAnimationLoop()},pause:function(){this.backend.pause()},playPause:function(){this.backend.isPaused()?this.play():this.pause()},isPlaying:function(){return!this.backend.isPaused()},skipBackward:function(a){this.skip(-a||-this.params.skipLength)},skipForward:function(a){this.skip(a||this.params.skipLength)},skip:function(a){var b=this.getCurrentTime()||0,c=this.getDuration()||1;b=Math.max(0,Math.min(c,b+(a||0))),this.seekAndCenter(b/c)},seekAndCenter:function(a){this.seekTo(a),this.drawer.recenter(a)},seekTo:function(a){var b=this.backend.isPaused(),c=this.params.scrollParent;b&&(this.params.scrollParent=!1),this.backend.seekTo(a*this.getDuration()),this.drawer.progress(this.backend.getPlayedPercents()),b||(this.backend.pause(),this.backend.play()),this.params.scrollParent=c,this.fireEvent("seek",a)},stop:function(){this.pause(),this.seekTo(0),this.drawer.progress(0)},setVolume:function(a){this.backend.setVolume(a)},setPlaybackRate:function(a){this.backend.setPlaybackRate(a)},toggleMute:function(){this.isMuted?(this.backend.setVolume(this.savedVolume),this.isMuted=!1):(this.savedVolume=this.backend.getVolume(),this.backend.setVolume(0),this.isMuted=!0)},toggleScroll:function(){this.params.scrollParent=!this.params.scrollParent,this.drawBuffer()},toggleInteraction:function(){this.params.interact=!this.params.interact},drawBuffer:function(){var a=Math.round(this.getDuration()*this.params.minPxPerSec*this.params.pixelRatio),b=this.drawer.getWidth(),c=a;this.params.fillParent&&(!this.params.scrollParent||b>a)&&(c=b);var d=this.backend.getPeaks(c);this.drawer.drawPeaks(d,c),this.fireEvent("redraw",d,c)},zoom:function(a){this.params.minPxPerSec=a,this.params.scrollParent=!0,this.drawBuffer(),this.seekAndCenter(this.getCurrentTime()/this.getDuration()),this.fireEvent("zoom",a)},loadArrayBuffer:function(a){this.decodeArrayBuffer(a,function(a){this.loadDecodedBuffer(a)}.bind(this))},loadDecodedBuffer:function(a){this.backend.load(a),this.drawBuffer(),this.fireEvent("ready")},loadBlob:function(a){var b=this,c=new FileReader;c.addEventListener("progress",function(a){b.onProgress(a)}),c.addEventListener("load",function(a){b.loadArrayBuffer(a.target.result)}),c.addEventListener("error",function(){b.fireEvent("error","Error reading file")}),c.readAsArrayBuffer(a),this.empty()},load:function(a,b){switch(this.params.backend){case"WebAudio":return this.loadBuffer(a);case"MediaElement":return this.loadMediaElement(a,b)}},loadBuffer:function(a){return this.empty(),this.getArrayBuffer(a,this.loadArrayBuffer.bind(this))},loadMediaElement:function(a,b){this.empty(),this.backend.load(a,this.mediaContainer,b),this.tmpEvents.push(this.backend.once("canplay",function(){this.drawBuffer(),this.fireEvent("ready")}.bind(this)),this.backend.once("error",function(a){this.fireEvent("error",a)}.bind(this))),!b&&this.backend.supportsWebAudio()&&this.getArrayBuffer(a,function(a){this.decodeArrayBuffer(a,function(a){this.backend.buffer=a,this.drawBuffer()}.bind(this))}.bind(this))},decodeArrayBuffer:function(a,b){this.backend.decodeArrayBuffer(a,this.fireEvent.bind(this,"decoded"),this.fireEvent.bind(this,"error","Error decoding audiobuffer")),this.tmpEvents.push(this.once("decoded",b))},getArrayBuffer:function(a,b){var c=this,d=WaveSurfer.util.ajax({url:a,responseType:"arraybuffer"});return this.tmpEvents.push(d.on("progress",function(a){c.onProgress(a)}),d.on("success",b),d.on("error",function(a){c.fireEvent("error","XHR error: "+a.target.statusText)})),d},onProgress:function(a){if(a.lengthComputable)var b=a.loaded/a.total;else b=a.loaded/(a.loaded+1e6);this.fireEvent("loading",Math.round(100*b),a.target)},exportPCM:function(a,b,c){a=a||1024,b=b||1e4,c=c||!1;var d=this.backend.getPeaks(a,b),e=[].map.call(d,function(a){return Math.round(a*b)/b}),f=JSON.stringify(e);return c||window.open("data:application/json;charset=utf-8,"+encodeURIComponent(f)),f},clearTmpEvents:function(){this.tmpEvents.forEach(function(a){a.un()})},empty:function(){this.backend.isPaused()||(this.stop(),this.backend.disconnectSource()),this.clearTmpEvents(),this.drawer.progress(0),this.drawer.setWidth(0),this.drawer.drawPeaks({length:this.drawer.getWidth()},0)},destroy:function(){this.fireEvent("destroy"),this.clearTmpEvents(),this.unAll(),this.backend.destroy(),this.drawer.destroy()}};WaveSurfer.create=function(a){var b=Object.create(WaveSurfer);return b.init(a),b},WaveSurfer.util={extend:function(a){var b=Array.prototype.slice.call(arguments,1);return b.forEach(function(b){Object.keys(b).forEach(function(c){a[c]=b[c]})}),a},getId:function(){return"wavesurfer_"+Math.random().toString(32).substring(2)},ajax:function(a){var b=Object.create(WaveSurfer.Observer),c=new XMLHttpRequest,d=!1;return c.open(a.method||"GET",a.url,!0),c.responseType=a.responseType||"json",c.addEventListener("progress",function(a){b.fireEvent("progress",a),a.lengthComputable&&a.loaded==a.total&&(d=!0)}),c.addEventListener("load",function(a){d||b.fireEvent("progress",a),b.fireEvent("load",a),200==c.status||206==c.status?b.fireEvent("success",c.response,a):b.fireEvent("error",a)}),c.addEventListener("error",function(a){b.fireEvent("error",a)}),c.send(),b.xhr=c,b}},WaveSurfer.Observer={on:function(a,b){this.handlers||(this.handlers={});var c=this.handlers[a];return c||(c=this.handlers[a]=[]),c.push(b),{name:a,callback:b,un:this.un.bind(this,a,b)}},un:function(a,b){if(this.handlers){var c=this.handlers[a];if(c)if(b)for(var d=c.length-1;d>=0;d--)c[d]==b&&c.splice(d,1);else c.length=0}},unAll:function(){this.handlers=null},once:function(a,b){var c=this,d=function(){b.apply(this,arguments),setTimeout(function(){c.un(a,d)},0)};return this.on(a,d)},fireEvent:function(a){if(this.handlers){var b=this.handlers[a],c=Array.prototype.slice.call(arguments,1);b&&b.forEach(function(a){a.apply(null,c)})}}},WaveSurfer.util.extend(WaveSurfer,WaveSurfer.Observer),WaveSurfer.WebAudio={scriptBufferSize:256,PLAYING_STATE:0,PAUSED_STATE:1,FINISHED_STATE:2,supportsWebAudio:function(){return!(!window.AudioContext&&!window.webkitAudioContext)},getAudioContext:function(){return WaveSurfer.WebAudio.audioContext||(WaveSurfer.WebAudio.audioContext=new(window.AudioContext||window.webkitAudioContext)),WaveSurfer.WebAudio.audioContext},getOfflineAudioContext:function(a){return WaveSurfer.WebAudio.offlineAudioContext||(WaveSurfer.WebAudio.offlineAudioContext=new(window.OfflineAudioContext||window.webkitOfflineAudioContext)(1,2,a)),WaveSurfer.WebAudio.offlineAudioContext},init:function(a){this.params=a,this.ac=a.audioContext||this.getAudioContext(),this.lastPlay=this.ac.currentTime,this.startPosition=0,this.scheduledPause=null,this.states=[Object.create(WaveSurfer.WebAudio.state.playing),Object.create(WaveSurfer.WebAudio.state.paused),Object.create(WaveSurfer.WebAudio.state.finished)],this.createVolumeNode(),this.createScriptNode(),this.createAnalyserNode(),this.setState(this.PAUSED_STATE),this.setPlaybackRate(this.params.audioRate)},disconnectFilters:function(){this.filters&&(this.filters.forEach(function(a){a&&a.disconnect()}),this.filters=null,this.analyser.connect(this.gainNode))},setState:function(a){this.state!==this.states[a]&&(this.state=this.states[a],this.state.init.call(this))},setFilter:function(){this.setFilters([].slice.call(arguments))},setFilters:function(a){this.disconnectFilters(),a&&a.length&&(this.filters=a,this.analyser.disconnect(),a.reduce(function(a,b){return a.connect(b),b},this.analyser).connect(this.gainNode))},createScriptNode:function(){this.ac.createScriptProcessor?this.scriptNode=this.ac.createScriptProcessor(this.scriptBufferSize):this.scriptNode=this.ac.createJavaScriptNode(this.scriptBufferSize),this.scriptNode.connect(this.ac.destination)},addOnAudioProcess:function(){var a=this;this.scriptNode.onaudioprocess=function(){var b=a.getCurrentTime();b>=a.getDuration()?(a.setState(a.FINISHED_STATE),a.fireEvent("pause")):b>=a.scheduledPause?(a.setState(a.PAUSED_STATE),a.fireEvent("pause")):a.state===a.states[a.PLAYING_STATE]&&a.fireEvent("audioprocess",b)}},removeOnAudioProcess:function(){this.scriptNode.onaudioprocess=null},createAnalyserNode:function(){this.analyser=this.ac.createAnalyser(),this.analyser.connect(this.gainNode)},createVolumeNode:function(){this.ac.createGain?this.gainNode=this.ac.createGain():this.gainNode=this.ac.createGainNode(),this.gainNode.connect(this.ac.destination)},setVolume:function(a){this.gainNode.gain.value=a},getVolume:function(){return this.gainNode.gain.value},decodeArrayBuffer:function(a,b,c){this.offlineAc||(this.offlineAc=this.getOfflineAudioContext(this.ac?this.ac.sampleRate:44100)),this.offlineAc.decodeAudioData(a,function(a){b(a)}.bind(this),c)},getPeaks:function(a){for(var b=this.buffer.length/a,c=~~(b/10)||1,d=this.buffer.numberOfChannels,e=[],f=[],g=0;d>g;g++)for(var h=e[g]=[],i=this.buffer.getChannelData(g),j=0;a>j;j++){for(var k=~~(j*b),l=~~(k+b),m=i[0],n=i[0],o=k;l>o;o+=c){var p=i[o];p>n&&(n=p),m>p&&(m=p)}h[2*j]=n,h[2*j+1]=m,(0==g||n>f[2*j])&&(f[2*j]=n),(0==g||m<f[2*j+1])&&(f[2*j+1]=m)}return this.params.splitChannels?e:f},getPlayedPercents:function(){return this.state.getPlayedPercents.call(this)},disconnectSource:function(){this.source&&this.source.disconnect()},destroy:function(){this.isPaused()||this.pause(),this.unAll(),this.buffer=null,this.disconnectFilters(),this.disconnectSource(),this.gainNode.disconnect(),this.scriptNode.disconnect(),this.analyser.disconnect()},load:function(a){this.startPosition=0,this.lastPlay=this.ac.currentTime,this.buffer=a,this.createSource()},createSource:function(){this.disconnectSource(),this.source=this.ac.createBufferSource(),this.source.start=this.source.start||this.source.noteGrainOn,this.source.stop=this.source.stop||this.source.noteOff,this.source.playbackRate.value=this.playbackRate,this.source.buffer=this.buffer,this.source.connect(this.analyser)},isPaused:function(){return this.state!==this.states[this.PLAYING_STATE]},getDuration:function(){return this.buffer?this.buffer.duration:0},seekTo:function(a,b){return this.scheduledPause=null,null==a&&(a=this.getCurrentTime(),a>=this.getDuration()&&(a=0)),null==b&&(b=this.getDuration()),this.startPosition=a,this.lastPlay=this.ac.currentTime,this.state===this.states[this.FINISHED_STATE]&&this.setState(this.PAUSED_STATE),{start:a,end:b}},getPlayedTime:function(){return(this.ac.currentTime-this.lastPlay)*this.playbackRate},play:function(a,b){this.createSource();var c=this.seekTo(a,b);a=c.start,b=c.end,this.scheduledPause=b,this.source.start(0,a,b-a),this.setState(this.PLAYING_STATE),this.fireEvent("play")},pause:function(){this.scheduledPause=null,this.startPosition+=this.getPlayedTime(),this.source&&this.source.stop(0),this.setState(this.PAUSED_STATE),this.fireEvent("pause")},getCurrentTime:function(){return this.state.getCurrentTime.call(this)},setPlaybackRate:function(a){a=a||1,this.isPaused()?this.playbackRate=a:(this.pause(),this.playbackRate=a,this.play())}},WaveSurfer.WebAudio.state={},WaveSurfer.WebAudio.state.playing={init:function(){this.addOnAudioProcess()},getPlayedPercents:function(){var a=this.getDuration();return this.getCurrentTime()/a||0},getCurrentTime:function(){return this.startPosition+this.getPlayedTime()}},WaveSurfer.WebAudio.state.paused={init:function(){this.removeOnAudioProcess()},getPlayedPercents:function(){var a=this.getDuration();return this.getCurrentTime()/a||0},getCurrentTime:function(){return this.startPosition}},WaveSurfer.WebAudio.state.finished={init:function(){this.removeOnAudioProcess(),this.fireEvent("finish")},getPlayedPercents:function(){return 1},getCurrentTime:function(){return this.getDuration()}},WaveSurfer.util.extend(WaveSurfer.WebAudio,WaveSurfer.Observer),WaveSurfer.MediaElement=Object.create(WaveSurfer.WebAudio),WaveSurfer.util.extend(WaveSurfer.MediaElement,{init:function(a){this.params=a,this.media={currentTime:0,duration:0,paused:!0,playbackRate:1,play:function(){},pause:function(){}},this.mediaType=a.mediaType.toLowerCase(),this.elementPosition=a.elementPosition},load:function(a,b,c){var d=this,e=document.createElement(this.mediaType);e.controls=this.params.mediaControls,e.autoplay=this.params.autoplay||!1,e.preload="auto",e.src=a,e.style.width="100%",e.addEventListener("error",function(){d.fireEvent("error","Error loading media element")}),e.addEventListener("canplay",function(){d.fireEvent("canplay")}),e.addEventListener("ended",function(){d.fireEvent("finish")}),e.addEventListener("timeupdate",function(){d.fireEvent("audioprocess",d.getCurrentTime())});var f=b.querySelector(this.mediaType);f&&b.removeChild(f),b.appendChild(e),this.media=e,this.peaks=c,this.onPlayEnd=null,this.buffer=null,this.setPlaybackRate(this.playbackRate)},isPaused:function(){return!this.media||this.media.paused},getDuration:function(){var a=this.media.duration;return a>=1/0&&(a=this.media.seekable.end()),a},getCurrentTime:function(){return this.media&&this.media.currentTime},getPlayedPercents:function(){return this.getCurrentTime()/this.getDuration()||0},setPlaybackRate:function(a){this.playbackRate=a||1,this.media.playbackRate=this.playbackRate},seekTo:function(a){null!=a&&(this.media.currentTime=a),this.clearPlayEnd()},play:function(a,b){this.seekTo(a),this.media.play(),b&&this.setPlayEnd(b),this.fireEvent("play")},pause:function(){this.media&&this.media.pause(),this.clearPlayEnd(),this.fireEvent("pause")},setPlayEnd:function(a){var b=this;this.onPlayEnd=function(c){c>=a&&(b.pause(),b.seekTo(a))},this.on("audioprocess",this.onPlayEnd)},clearPlayEnd:function(){this.onPlayEnd&&(this.un("audioprocess",this.onPlayEnd),this.onPlayEnd=null)},getPeaks:function(a){return this.buffer?WaveSurfer.WebAudio.getPeaks.call(this,a):this.peaks||[]},getVolume:function(){return this.media.volume},setVolume:function(a){this.media.volume=a},destroy:function(){this.pause(),this.unAll(),this.media&&this.media.parentNode&&this.media.parentNode.removeChild(this.media),this.media=null}}),WaveSurfer.AudioElement=WaveSurfer.MediaElement,WaveSurfer.Drawer={init:function(a,b){this.container=a,this.params=b,this.width=0,this.height=b.height*this.params.pixelRatio,this.lastPos=0,this.createWrapper(),this.createElements()},createWrapper:function(){this.wrapper=this.container.appendChild(document.createElement("wave")),this.style(this.wrapper,{display:"block",position:"relative",userSelect:"none",webkitUserSelect:"none",height:this.params.height+"px"}),(this.params.fillParent||this.params.scrollParent)&&this.style(this.wrapper,{width:"100%",overflowX:this.params.hideScrollbar?"hidden":"auto",overflowY:"hidden"}),this.setupWrapperEvents()},handleEvent:function(a){a.preventDefault();var b=this.wrapper.getBoundingClientRect();return(a.clientX-b.left+this.wrapper.scrollLeft)/this.wrapper.scrollWidth||0},setupWrapperEvents:function(){var a=this;this.wrapper.addEventListener("click",function(b){var c=a.wrapper.offsetHeight-a.wrapper.clientHeight;if(0!=c){var d=a.wrapper.getBoundingClientRect();if(b.clientY>=d.bottom-c)return}a.params.interact&&a.fireEvent("click",b,a.handleEvent(b))}),this.wrapper.addEventListener("scroll",function(b){a.fireEvent("scroll",b)})},drawPeaks:function(a,b){this.resetScroll(),this.setWidth(b),this.params.barWidth?this.drawBars(a):this.drawWave(a)},style:function(a,b){return Object.keys(b).forEach(function(c){a.style[c]!==b[c]&&(a.style[c]=b[c])}),a},resetScroll:function(){null!==this.wrapper&&(this.wrapper.scrollLeft=0)},recenter:function(a){var b=this.wrapper.scrollWidth*a;this.recenterOnPosition(b,!0)},recenterOnPosition:function(a,b){var c=this.wrapper.scrollLeft,d=~~(this.wrapper.clientWidth/2),e=a-d,f=e-c,g=this.wrapper.scrollWidth-this.wrapper.clientWidth;if(0!=g){if(!b&&f>=-d&&d>f){var h=5;f=Math.max(-h,Math.min(h,f)),e=c+f}e=Math.max(0,Math.min(g,e)),e!=c&&(this.wrapper.scrollLeft=e)}},getWidth:function(){return Math.round(this.container.clientWidth*this.params.pixelRatio)},setWidth:function(a){a!=this.width&&(this.width=a,this.params.fillParent||this.params.scrollParent?this.style(this.wrapper,{width:""}):this.style(this.wrapper,{width:~~(this.width/this.params.pixelRatio)+"px"}),this.updateSize())},setHeight:function(a){a!=this.height&&(this.height=a,this.style(this.wrapper,{height:~~(this.height/this.params.pixelRatio)+"px"}),this.updateSize())},progress:function(a){var b=1/this.params.pixelRatio,c=Math.round(a*this.width)*b;if(c<this.lastPos||c-this.lastPos>=b){if(this.lastPos=c,this.params.scrollParent&&this.params.autoCenter){var d=~~(this.wrapper.scrollWidth*a);this.recenterOnPosition(d)}this.updateProgress(a)}},destroy:function(){this.unAll(),this.wrapper&&(this.container.removeChild(this.wrapper),this.wrapper=null)},createElements:function(){},updateSize:function(){},drawWave:function(a,b){},clearWave:function(){},updateProgress:function(a){}},WaveSurfer.util.extend(WaveSurfer.Drawer,WaveSurfer.Observer),WaveSurfer.Drawer.Canvas=Object.create(WaveSurfer.Drawer),WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas,{createElements:function(){var a=this.wrapper.appendChild(this.style(document.createElement("canvas"),{position:"absolute",zIndex:1,left:0,top:0,bottom:0}));if(this.waveCc=a.getContext("2d"),this.progressWave=this.wrapper.appendChild(this.style(document.createElement("wave"),{position:"absolute",zIndex:2,left:0,top:0,bottom:0,overflow:"hidden",width:"0",display:"none",boxSizing:"border-box",borderRightStyle:"solid",borderRightWidth:this.params.cursorWidth+"px",borderRightColor:this.params.cursorColor})),this.params.waveColor!=this.params.progressColor){var b=this.progressWave.appendChild(document.createElement("canvas"));this.progressCc=b.getContext("2d")}},updateSize:function(){var a=Math.round(this.width/this.params.pixelRatio);this.waveCc.canvas.width=this.width,this.waveCc.canvas.height=this.height,this.style(this.waveCc.canvas,{width:a+"px"}),this.style(this.progressWave,{display:"block"}),this.progressCc&&(this.progressCc.canvas.width=this.width,this.progressCc.canvas.height=this.height,this.style(this.progressCc.canvas,{width:a+"px"})),this.clearWave()},clearWave:function(){this.waveCc.clearRect(0,0,this.width,this.height),this.progressCc&&this.progressCc.clearRect(0,0,this.width,this.height)},drawBars:function(a,b){if(a[0]instanceof Array){var c=a;if(this.params.splitChannels)return this.setHeight(c.length*this.params.height*this.params.pixelRatio),void c.forEach(this.drawBars,this);a=c[0]}var d=[].some.call(a,function(a){return 0>a});d&&(a=[].filter.call(a,function(a,b){return b%2==0}));var e=.5/this.params.pixelRatio,f=this.width,g=this.params.height*this.params.pixelRatio,h=g*b||0,i=g/2,j=a.length,k=this.params.barWidth*this.params.pixelRatio,l=Math.max(this.params.pixelRatio,~~(k/2)),m=k+l,n=1;this.params.normalize&&(n=Math.max.apply(Math,a));var o=j/f;this.waveCc.fillStyle=this.params.waveColor,this.progressCc&&(this.progressCc.fillStyle=this.params.progressColor),[this.waveCc,this.progressCc].forEach(function(b){if(b)for(var c=0;f>c;c+=m){var d=Math.round(a[Math.floor(c*o)]/n*i);b.fillRect(c+e,i-d+h,k+e,2*d)}},this)},drawWave:function(a,b){if(a[0]instanceof Array){var c=a;if(this.params.splitChannels)return this.setHeight(c.length*this.params.height*this.params.pixelRatio),void c.forEach(this.drawWave,this);a=c[0]}var d=[].some.call(a,function(a){return 0>a});if(!d){for(var e=[],f=0,g=a.length;g>f;f++)e[2*f]=a[f],e[2*f+1]=-a[f];a=e}var h=.5/this.params.pixelRatio,i=this.params.height*this.params.pixelRatio,j=i*b||0,k=i/2,l=~~(a.length/2),m=1;this.params.fillParent&&this.width!=l&&(m=this.width/l);var n=1;if(this.params.normalize){var o=Math.max.apply(Math,a),p=Math.min.apply(Math,a);n=-p>o?-p:o}this.waveCc.fillStyle=this.params.waveColor,this.progressCc&&(this.progressCc.fillStyle=this.params.progressColor),[this.waveCc,this.progressCc].forEach(function(b){if(b){b.beginPath(),b.moveTo(h,k+j);for(var c=0;l>c;c++){var d=Math.round(a[2*c]/n*k);b.lineTo(c*m+h,k-d+j)}for(var c=l-1;c>=0;c--){var d=Math.round(a[2*c+1]/n*k);b.lineTo(c*m+h,k-d+j)}b.closePath(),b.fill(),b.fillRect(0,k+j-h,this.width,h)}},this)},updateProgress:function(a){var b=Math.round(this.width*a)/this.params.pixelRatio;this.style(this.progressWave,{width:b+"px"})}}),function(){var a=function(){var a=document.querySelectorAll("wavesurfer");Array.prototype.forEach.call(a,function(a){var b=WaveSurfer.util.extend({container:a,backend:"MediaElement",mediaControls:!0},a.dataset);a.style.display="block";var c=WaveSurfer.create(b);if(a.dataset.peaks)var d=JSON.parse(a.dataset.peaks);c.load(a.dataset.url,d)})};"complete"===document.readyState?a():window.addEventListener("load",a)}();
-//# sourceMappingURL=wavesurfer.min.js.map
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module unless amdModuleId is set
+    define('wavesurfer', [], function () {
+      return (root['WaveSurfer'] = factory());
+    });
+  } else if (typeof exports === 'object') {
+    // Node. Does not work with strict CommonJS, but
+    // only CommonJS-like environments that support module.exports,
+    // like Node.
+    module.exports = factory();
+  } else {
+    root['WaveSurfer'] = factory();
+  }
+}(this, function () {
+
+'use strict';
+
+var WaveSurfer = {
+    defaultParams: {
+        height        : 128,
+        waveColor     : '#999',
+        progressColor : '#555',
+        cursorColor   : '#333',
+        cursorWidth   : 1,
+        skipLength    : 2,
+        minPxPerSec   : 20,
+        pixelRatio    : window.devicePixelRatio || screen.deviceXDPI / screen.logicalXDPI,
+        fillParent    : true,
+        scrollParent  : false,
+        hideScrollbar : false,
+        normalize     : false,
+        audioContext  : null,
+        container     : null,
+        dragSelection : true,
+        loopSelection : true,
+        audioRate     : 1,
+        interact      : true,
+        splitChannels : false,
+        mediaContainer: null,
+        mediaControls : false,
+        renderer      : 'Canvas',
+        backend       : 'WebAudio',
+        mediaType     : 'audio',
+        autoCenter    : true
+    },
+
+    init: function (params) {
+        // Extract relevant parameters (or defaults)
+        this.params = WaveSurfer.util.extend({}, this.defaultParams, params);
+
+        this.container = 'string' == typeof params.container ?
+            document.querySelector(this.params.container) :
+            this.params.container;
+
+        if (!this.container) {
+            throw new Error('Container element not found');
+        }
+
+        if (this.params.mediaContainer == null) {
+            this.mediaContainer = this.container;
+        } else if (typeof this.params.mediaContainer == 'string') {
+            this.mediaContainer = document.querySelector(this.params.mediaContainer);
+        } else {
+            this.mediaContainer = this.params.mediaContainer;
+        }
+
+        if (!this.mediaContainer) {
+            throw new Error('Media Container element not found');
+        }
+
+        // Used to save the current volume when muting so we can
+        // restore once unmuted
+        this.savedVolume = 0;
+
+        // The current muted state
+        this.isMuted = false;
+
+        // Will hold a list of event descriptors that need to be
+        // cancelled on subsequent loads of audio
+        this.tmpEvents = [];
+
+        // Holds any running audio downloads
+        this.currentAjax = null;
+
+        this.createDrawer();
+        this.createBackend();
+
+        this.isDestroyed = false;
+    },
+
+    createDrawer: function () {
+        var my = this;
+
+        this.drawer = Object.create(WaveSurfer.Drawer[this.params.renderer]);
+        this.drawer.init(this.container, this.params);
+
+        this.drawer.on('redraw', function () {
+            my.drawBuffer();
+            my.drawer.progress(my.backend.getPlayedPercents());
+        });
+
+        // Click-to-seek
+        this.drawer.on('click', function (e, progress) {
+            setTimeout(function () {
+                my.seekTo(progress);
+            }, 0);
+        });
+
+        // Relay the scroll event from the drawer
+        this.drawer.on('scroll', function (e) {
+            my.fireEvent('scroll', e);
+        });
+    },
+
+    createBackend: function () {
+        var my = this;
+
+        if (this.backend) {
+            this.backend.destroy();
+        }
+
+        // Back compat
+        if (this.params.backend == 'AudioElement') {
+            this.params.backend = 'MediaElement';
+        }
+
+        if (this.params.backend == 'WebAudio' && !WaveSurfer.WebAudio.supportsWebAudio()) {
+            this.params.backend = 'MediaElement';
+        }
+
+        this.backend = Object.create(WaveSurfer[this.params.backend]);
+        this.backend.init(this.params);
+
+        this.backend.on('finish', function () { my.fireEvent('finish'); });
+        this.backend.on('play', function () { my.fireEvent('play'); });
+        this.backend.on('pause', function () { my.fireEvent('pause'); });
+
+        this.backend.on('audioprocess', function (time) {
+            my.drawer.progress(my.backend.getPlayedPercents());
+            my.fireEvent('audioprocess', time);
+        });
+    },
+
+    getDuration: function () {
+        return this.backend.getDuration();
+    },
+
+    getCurrentTime: function () {
+        return this.backend.getCurrentTime();
+    },
+
+    play: function (start, end) {
+        this.fireEvent('interaction', this.play.bind(this, start, end));
+        this.backend.play(start, end);
+    },
+
+    pause: function () {
+        this.backend.pause();
+    },
+
+    playPause: function () {
+        this.backend.isPaused() ? this.play() : this.pause();
+    },
+
+    isPlaying: function () {
+        return !this.backend.isPaused();
+    },
+
+    skipBackward: function (seconds) {
+        this.skip(-seconds || -this.params.skipLength);
+    },
+
+    skipForward: function (seconds) {
+        this.skip(seconds || this.params.skipLength);
+    },
+
+    skip: function (offset) {
+        var position = this.getCurrentTime() || 0;
+        var duration = this.getDuration() || 1;
+        position = Math.max(0, Math.min(duration, position + (offset || 0)));
+        this.seekAndCenter(position / duration);
+    },
+
+    seekAndCenter: function (progress) {
+        this.seekTo(progress);
+        this.drawer.recenter(progress);
+    },
+
+    seekTo: function (progress) {
+        this.fireEvent('interaction', this.seekTo.bind(this, progress));
+
+        var paused = this.backend.isPaused();
+        // avoid small scrolls while paused seeking
+        var oldScrollParent = this.params.scrollParent;
+        if (paused) {
+            this.params.scrollParent = false;
+        }
+        this.backend.seekTo(progress * this.getDuration());
+        this.drawer.progress(this.backend.getPlayedPercents());
+
+        if (!paused) {
+            this.backend.pause();
+            this.backend.play();
+        }
+        this.params.scrollParent = oldScrollParent;
+        this.fireEvent('seek', progress);
+    },
+
+    stop: function () {
+        this.pause();
+        this.seekTo(0);
+        this.drawer.progress(0);
+    },
+
+    /**
+     * Set the playback volume.
+     *
+     * @param {Number} newVolume A value between 0 and 1, 0 being no
+     * volume and 1 being full volume.
+     */
+    setVolume: function (newVolume) {
+        this.backend.setVolume(newVolume);
+    },
+
+    /**
+     * Set the playback rate.
+     *
+     * @param {Number} rate A positive number. E.g. 0.5 means half the
+     * normal speed, 2 means double speed and so on.
+     */
+    setPlaybackRate: function (rate) {
+        this.backend.setPlaybackRate(rate);
+    },
+
+    /**
+     * Toggle the volume on and off. It not currenly muted it will
+     * save the current volume value and turn the volume off.
+     * If currently muted then it will restore the volume to the saved
+     * value, and then rest the saved value.
+     */
+    toggleMute: function () {
+        this.setMute(!this.isMuted);
+    },
+
+    setMute: function (mute) {
+        // ignore all muting requests if the audio is already in that state
+        if (mute === this.isMuted) {
+            return;
+        }
+
+        if (mute) {
+            // If currently not muted then save current volume,
+            // turn off the volume and update the mute properties
+            this.savedVolume = this.backend.getVolume();
+            this.backend.setVolume(0);
+            this.isMuted = true;
+        } else {
+            // If currently muted then restore to the saved volume
+            // and update the mute properties
+            this.backend.setVolume(this.savedVolume);
+            this.isMuted = false;
+        }
+    },
+
+    toggleScroll: function () {
+        this.params.scrollParent = !this.params.scrollParent;
+        this.drawBuffer();
+    },
+
+    toggleInteraction: function () {
+        this.params.interact = !this.params.interact;
+    },
+
+    drawBuffer: function () {
+        var nominalWidth = Math.round(
+            this.getDuration() * this.params.minPxPerSec * this.params.pixelRatio
+        );
+        var parentWidth = this.drawer.getWidth();
+        var width = nominalWidth;
+
+        // Fill container
+        if (this.params.fillParent && (!this.params.scrollParent || nominalWidth < parentWidth)) {
+            width = parentWidth;
+        }
+
+        var peaks = this.backend.getPeaks(width);
+        this.drawer.drawPeaks(peaks, width);
+        this.fireEvent('redraw', peaks, width);
+    },
+
+    zoom: function (pxPerSec) {
+        this.params.minPxPerSec = pxPerSec;
+
+        this.params.scrollParent = true;
+
+        this.drawBuffer();
+        this.drawer.progress(this.backend.getPlayedPercents());
+
+        this.drawer.recenter(
+            this.getCurrentTime() / this.getDuration()
+        );
+        this.fireEvent('zoom', pxPerSec);
+    },
+
+    /**
+     * Internal method.
+     */
+    loadArrayBuffer: function (arraybuffer) {
+        this.decodeArrayBuffer(arraybuffer, function (data) {
+            if (!this.isDestroyed) {
+                this.loadDecodedBuffer(data);
+            }
+        }.bind(this));
+    },
+
+    /**
+     * Directly load an externally decoded AudioBuffer.
+     */
+    loadDecodedBuffer: function (buffer) {
+        this.backend.load(buffer);
+        this.drawBuffer();
+        this.fireEvent('ready');
+    },
+
+    /**
+     * Loads audio data from a Blob or File object.
+     *
+     * @param {Blob|File} blob Audio data.
+     */
+    loadBlob: function (blob) {
+        var my = this;
+        // Create file reader
+        var reader = new FileReader();
+        reader.addEventListener('progress', function (e) {
+            my.onProgress(e);
+        });
+        reader.addEventListener('load', function (e) {
+            my.loadArrayBuffer(e.target.result);
+        });
+        reader.addEventListener('error', function () {
+            my.fireEvent('error', 'Error reading file');
+        });
+        reader.readAsArrayBuffer(blob);
+        this.empty();
+    },
+
+    /**
+     * Loads audio and re-renders the waveform.
+     */
+    load: function (url, peaks, preload) {
+        this.empty();
+        switch (this.params.backend) {
+            case 'WebAudio': return this.loadBuffer(url, peaks);
+            case 'MediaElement': return this.loadMediaElement(url, peaks, preload);
+        }
+    },
+
+    /**
+     * Loads audio using Web Audio buffer backend.
+     */
+    loadBuffer: function (url, peaks) {
+        var load = (function (action) {
+            if (action) {
+                this.tmpEvents.push(this.once('ready', action));
+            }
+            return this.getArrayBuffer(url, this.loadArrayBuffer.bind(this));
+        }).bind(this);
+
+        if (peaks) {
+            this.backend.setPeaks(peaks);
+            this.drawBuffer();
+            this.tmpEvents.push(this.once('interaction', load));
+        } else {
+            return load();
+        }
+    },
+
+    /**
+     *  Either create a media element, or load
+     *  an existing media element.
+     *  @param  {String|HTMLElement} urlOrElt Either a path to a media file,
+     *                                          or an existing HTML5 Audio/Video
+     *                                          Element
+     *  @param  {Array}            [peaks]     Array of peaks. Required to bypass
+     *                                          web audio dependency
+     */
+    loadMediaElement: function (urlOrElt, peaks, preload) {
+        var url = urlOrElt;
+
+        if (typeof urlOrElt === 'string') {
+            this.backend.load(url, this.mediaContainer, peaks, preload);
+        } else {
+            var elt = urlOrElt;
+            this.backend.loadElt(elt, peaks);
+
+            // If peaks are not provided,
+            // url = element.src so we can get peaks with web audio
+            url = elt.src;
+        }
+
+        this.tmpEvents.push(
+            this.backend.once('canplay', (function () {
+                this.drawBuffer();
+                this.fireEvent('ready');
+            }).bind(this)),
+
+            this.backend.once('error', (function (err) {
+                this.fireEvent('error', err);
+            }).bind(this))
+        );
+
+        // If no pre-decoded peaks provided, attempt to download the
+        // audio file and decode it with Web Audio.
+        if (peaks) {
+            this.backend.setPeaks(peaks);
+        } else if (this.backend.supportsWebAudio()) {
+            this.getArrayBuffer(url, (function (arraybuffer) {
+                this.decodeArrayBuffer(arraybuffer, (function (buffer) {
+                    this.backend.buffer = buffer;
+                    this.drawBuffer();
+                    this.fireEvent('waveform-ready');
+                }).bind(this));
+            }).bind(this));
+        }
+    },
+
+    decodeArrayBuffer: function (arraybuffer, callback) {
+        this.arraybuffer = arraybuffer;
+
+        this.backend.decodeArrayBuffer(
+            arraybuffer,
+            (function (data) {
+                // Only use the decoded data if we haven't been destroyed or another decode started in the meantime
+                if (!this.isDestroyed && this.arraybuffer == arraybuffer) {
+                    callback(data);
+                    this.arraybuffer = null;
+                }
+            }).bind(this),
+            this.fireEvent.bind(this, 'error', 'Error decoding audiobuffer')
+        );
+    },
+
+    getArrayBuffer: function (url, callback) {
+        var my = this;
+
+        var ajax = WaveSurfer.util.ajax({
+            url: url,
+            responseType: 'arraybuffer'
+        });
+
+        this.currentAjax = ajax;
+
+        this.tmpEvents.push(
+            ajax.on('progress', function (e) {
+                my.onProgress(e);
+            }),
+            ajax.on('success', function (data, e) {
+                callback(data);
+                my.currentAjax = null;
+            }),
+            ajax.on('error', function (e) {
+                my.fireEvent('error', 'XHR error: ' + e.target.statusText);
+                my.currentAjax = null;
+            })
+        );
+
+        return ajax;
+    },
+
+    onProgress: function (e) {
+        if (e.lengthComputable) {
+            var percentComplete = e.loaded / e.total;
+        } else {
+            // Approximate progress with an asymptotic
+            // function, and assume downloads in the 1-3 MB range.
+            percentComplete = e.loaded / (e.loaded + 1000000);
+        }
+        this.fireEvent('loading', Math.round(percentComplete * 100), e.target);
+    },
+
+    /**
+     * Exports PCM data into a JSON array and opens in a new window.
+     */
+    exportPCM: function (length, accuracy, noWindow) {
+        length = length || 1024;
+        accuracy = accuracy || 10000;
+        noWindow = noWindow || false;
+        var peaks = this.backend.getPeaks(length, accuracy);
+        var arr = [].map.call(peaks, function (val) {
+            return Math.round(val * accuracy) / accuracy;
+        });
+        var json = JSON.stringify(arr);
+        if (!noWindow) {
+            window.open('data:application/json;charset=utf-8,' +
+                encodeURIComponent(json));
+        }
+        return json;
+    },
+
+    /**
+     * Save waveform image as data URI.
+     *
+     * The default format is 'image/png'. Other supported types are
+     * 'image/jpeg' and 'image/webp'.
+     */
+    exportImage: function(format, quality) {
+        if (!format) {
+            format = 'image/png';
+        }
+        if (!quality) {
+            quality = 1;
+        }
+
+        return this.drawer.getImage(format, quality);
+    },
+
+    cancelAjax: function () {
+        if (this.currentAjax) {
+            this.currentAjax.xhr.abort();
+            this.currentAjax = null;
+        }
+    },
+
+    clearTmpEvents: function () {
+        this.tmpEvents.forEach(function (e) { e.un(); });
+    },
+
+    /**
+     * Display empty waveform.
+     */
+    empty: function () {
+        if (!this.backend.isPaused()) {
+            this.stop();
+            this.backend.disconnectSource();
+        }
+        this.cancelAjax();
+        this.clearTmpEvents();
+        this.drawer.progress(0);
+        this.drawer.setWidth(0);
+        this.drawer.drawPeaks({ length: this.drawer.getWidth() }, 0);
+    },
+
+    /**
+     * Remove events, elements and disconnect WebAudio nodes.
+     */
+    destroy: function () {
+        this.fireEvent('destroy');
+        this.cancelAjax();
+        this.clearTmpEvents();
+        this.unAll();
+        this.backend.destroy();
+        this.drawer.destroy();
+        this.isDestroyed = true;
+    }
+};
+
+WaveSurfer.create = function (params) {
+    var wavesurfer = Object.create(WaveSurfer);
+    wavesurfer.init(params);
+    return wavesurfer;
+};
+
+WaveSurfer.util = {
+    extend: function (dest) {
+        var sources = Array.prototype.slice.call(arguments, 1);
+        sources.forEach(function (source) {
+            Object.keys(source).forEach(function (key) {
+                dest[key] = source[key];
+            });
+        });
+        return dest;
+    },
+
+    min: function(values) {
+        var min = +Infinity;
+        for (var i in values) {
+            if (values[i] < min) {
+                min = values[i];
+            }
+        }
+
+        return min;
+    },
+
+    max: function(values) {
+        var max = -Infinity;
+        for (var i in values) {
+            if (values[i] > max) {
+                max = values[i];
+            }
+        }
+
+        return max;
+    },
+
+    getId: function () {
+        return 'wavesurfer_' + Math.random().toString(32).substring(2);
+    },
+
+    ajax: function (options) {
+        var ajax = Object.create(WaveSurfer.Observer);
+        var xhr = new XMLHttpRequest();
+        var fired100 = false;
+
+        xhr.open(options.method || 'GET', options.url, true);
+        xhr.responseType = options.responseType || 'json';
+
+        xhr.addEventListener('progress', function (e) {
+            ajax.fireEvent('progress', e);
+            if (e.lengthComputable && e.loaded == e.total) {
+                fired100 = true;
+            }
+        });
+
+        xhr.addEventListener('load', function (e) {
+            if (!fired100) {
+                ajax.fireEvent('progress', e);
+            }
+            ajax.fireEvent('load', e);
+
+            if (200 == xhr.status || 206 == xhr.status) {
+                ajax.fireEvent('success', xhr.response, e);
+            } else {
+                ajax.fireEvent('error', e);
+            }
+        });
+
+        xhr.addEventListener('error', function (e) {
+            ajax.fireEvent('error', e);
+        });
+
+        xhr.send();
+        ajax.xhr = xhr;
+        return ajax;
+    }
+};
+
+/* Observer */
+WaveSurfer.Observer = {
+    /**
+     * Attach a handler function for an event.
+     */
+    on: function (event, fn) {
+        if (!this.handlers) { this.handlers = {}; }
+
+        var handlers = this.handlers[event];
+        if (!handlers) {
+            handlers = this.handlers[event] = [];
+        }
+        handlers.push(fn);
+
+        // Return an event descriptor
+        return {
+            name: event,
+            callback: fn,
+            un: this.un.bind(this, event, fn)
+        };
+    },
+
+    /**
+     * Remove an event handler.
+     */
+    un: function (event, fn) {
+        if (!this.handlers) { return; }
+
+        var handlers = this.handlers[event];
+        if (handlers) {
+            if (fn) {
+                for (var i = handlers.length - 1; i >= 0; i--) {
+                    if (handlers[i] == fn) {
+                        handlers.splice(i, 1);
+                    }
+                }
+            } else {
+                handlers.length = 0;
+            }
+        }
+    },
+
+    /**
+     * Remove all event handlers.
+     */
+    unAll: function () {
+        this.handlers = null;
+    },
+
+    /**
+     * Attach a handler to an event. The handler is executed at most once per
+     * event type.
+     */
+    once: function (event, handler) {
+        var my = this;
+        var fn = function () {
+            handler.apply(this, arguments);
+            setTimeout(function () {
+                my.un(event, fn);
+            }, 0);
+        };
+        return this.on(event, fn);
+    },
+
+    fireEvent: function (event) {
+        if (!this.handlers) { return; }
+        var handlers = this.handlers[event];
+        var args = Array.prototype.slice.call(arguments, 1);
+        handlers && handlers.forEach(function (fn) {
+            fn.apply(null, args);
+        });
+    }
+};
+
+/* Make the main WaveSurfer object an observer */
+WaveSurfer.util.extend(WaveSurfer, WaveSurfer.Observer);
+
+'use strict';
+
+WaveSurfer.WebAudio = {
+    scriptBufferSize: 256,
+    PLAYING_STATE: 0,
+    PAUSED_STATE: 1,
+    FINISHED_STATE: 2,
+
+    supportsWebAudio: function () {
+        return !!(window.AudioContext || window.webkitAudioContext);
+    },
+
+    getAudioContext: function () {
+        if (!this.ac) {
+            this.ac = new (
+                window.AudioContext || window.webkitAudioContext
+            );
+        }
+        return this.ac;
+    },
+
+    getOfflineAudioContext: function (sampleRate) {
+        if (!WaveSurfer.WebAudio.offlineAudioContext) {
+            WaveSurfer.WebAudio.offlineAudioContext = new (
+                window.OfflineAudioContext || window.webkitOfflineAudioContext
+            )(1, 2, sampleRate);
+        }
+        return WaveSurfer.WebAudio.offlineAudioContext;
+    },
+
+    init: function (params) {
+        this.params = params;
+        this.ac = params.audioContext || this.getAudioContext();
+
+        this.lastPlay = this.ac.currentTime;
+        this.startPosition = 0;
+        this.scheduledPause = null;
+
+        this.states = [
+            Object.create(WaveSurfer.WebAudio.state.playing),
+            Object.create(WaveSurfer.WebAudio.state.paused),
+            Object.create(WaveSurfer.WebAudio.state.finished)
+        ];
+
+        this.createVolumeNode();
+        this.createScriptNode();
+        this.createAnalyserNode();
+
+        this.setState(this.PAUSED_STATE);
+        this.setPlaybackRate(this.params.audioRate);
+    },
+
+    disconnectFilters: function () {
+        if (this.filters) {
+            this.filters.forEach(function (filter) {
+                filter && filter.disconnect();
+            });
+            this.filters = null;
+            // Reconnect direct path
+            this.analyser.connect(this.gainNode);
+        }
+    },
+
+    setState: function (state) {
+        if (this.state !== this.states[state]) {
+            this.state = this.states[state];
+            this.state.init.call(this);
+        }
+    },
+
+    // Unpacked filters
+    setFilter: function () {
+        this.setFilters([].slice.call(arguments));
+    },
+
+    /**
+     * @param {Array} filters Packed ilters array
+     */
+    setFilters: function (filters) {
+        // Remove existing filters
+        this.disconnectFilters();
+
+        // Insert filters if filter array not empty
+        if (filters && filters.length) {
+            this.filters = filters;
+
+            // Disconnect direct path before inserting filters
+            this.analyser.disconnect();
+
+            // Connect each filter in turn
+            filters.reduce(function (prev, curr) {
+                prev.connect(curr);
+                return curr;
+            }, this.analyser).connect(this.gainNode);
+        }
+
+    },
+
+    createScriptNode: function () {
+        if (this.ac.createScriptProcessor) {
+            this.scriptNode = this.ac.createScriptProcessor(this.scriptBufferSize);
+        } else {
+            this.scriptNode = this.ac.createJavaScriptNode(this.scriptBufferSize);
+        }
+
+        this.scriptNode.connect(this.ac.destination);
+    },
+
+    addOnAudioProcess: function () {
+        var my = this;
+
+        this.scriptNode.onaudioprocess = function () {
+            var time = my.getCurrentTime();
+
+            if (time >= my.getDuration()) {
+                my.setState(my.FINISHED_STATE);
+                my.fireEvent('pause');
+            } else if (time >= my.scheduledPause) {
+                my.pause();
+            } else if (my.state === my.states[my.PLAYING_STATE]) {
+                my.fireEvent('audioprocess', time);
+            }
+        };
+    },
+
+    removeOnAudioProcess: function () {
+        this.scriptNode.onaudioprocess = null;
+    },
+
+    createAnalyserNode: function () {
+        this.analyser = this.ac.createAnalyser();
+        this.analyser.connect(this.gainNode);
+    },
+
+    /**
+     * Create the gain node needed to control the playback volume.
+     */
+    createVolumeNode: function () {
+        // Create gain node using the AudioContext
+        if (this.ac.createGain) {
+            this.gainNode = this.ac.createGain();
+        } else {
+            this.gainNode = this.ac.createGainNode();
+        }
+        // Add the gain node to the graph
+        this.gainNode.connect(this.ac.destination);
+    },
+
+    /**
+     * Set the gain to a new value.
+     *
+     * @param {Number} newGain The new gain, a floating point value
+     * between 0 and 1. 0 being no gain and 1 being maximum gain.
+     */
+    setVolume: function (newGain) {
+        this.gainNode.gain.value = newGain;
+    },
+
+    /**
+     * Get the current gain.
+     *
+     * @returns {Number} The current gain, a floating point value
+     * between 0 and 1. 0 being no gain and 1 being maximum gain.
+     */
+    getVolume: function () {
+        return this.gainNode.gain.value;
+    },
+
+    decodeArrayBuffer: function (arraybuffer, callback, errback) {
+        if (!this.offlineAc) {
+            this.offlineAc = this.getOfflineAudioContext(this.ac ? this.ac.sampleRate : 44100);
+        }
+        this.offlineAc.decodeAudioData(arraybuffer, (function (data) {
+            callback(data);
+        }).bind(this), errback);
+    },
+
+    /**
+     * Set pre-decoded peaks.
+     */
+    setPeaks: function (peaks) {
+        this.peaks = peaks;
+    },
+
+    /**
+     * Compute the max and min value of the waveform when broken into
+     * <length> subranges.
+     * @param {Number} How many subranges to break the waveform into.
+     * @returns {Array} Array of 2*<length> peaks or array of arrays
+     * of peaks consisting of (max, min) values for each subrange.
+     */
+    getPeaks: function (length) {
+        if (this.peaks) { return this.peaks; }
+
+        var sampleSize = this.buffer.length / length;
+        var sampleStep = ~~(sampleSize / 10) || 1;
+        var channels = this.buffer.numberOfChannels;
+        var splitPeaks = [];
+        var mergedPeaks = [];
+
+        for (var c = 0; c < channels; c++) {
+            var peaks = splitPeaks[c] = [];
+            var chan = this.buffer.getChannelData(c);
+
+            for (var i = 0; i < length; i++) {
+                var start = ~~(i * sampleSize);
+                var end = ~~(start + sampleSize);
+                var min = 0;
+                var max = 0;
+
+                for (var j = start; j < end; j += sampleStep) {
+                    var value = chan[j];
+
+                    if (value > max) {
+                        max = value;
+                    }
+
+                    if (value < min) {
+                        min = value;
+                    }
+                }
+
+                peaks[2 * i] = max;
+                peaks[2 * i + 1] = min;
+
+                if (c == 0 || max > mergedPeaks[2 * i]) {
+                    mergedPeaks[2 * i] = max;
+                }
+
+                if (c == 0 || min < mergedPeaks[2 * i + 1]) {
+                    mergedPeaks[2 * i + 1] = min;
+                }
+            }
+        }
+
+        return this.params.splitChannels ? splitPeaks : mergedPeaks;
+    },
+
+    getPlayedPercents: function () {
+        return this.state.getPlayedPercents.call(this);
+    },
+
+    disconnectSource: function () {
+        if (this.source) {
+            this.source.disconnect();
+        }
+    },
+
+    destroy: function () {
+        if (!this.isPaused()) {
+            this.pause();
+        }
+        this.unAll();
+        this.buffer = null;
+        this.disconnectFilters();
+        this.disconnectSource();
+        this.gainNode.disconnect();
+        this.scriptNode.disconnect();
+        this.analyser.disconnect();
+        // close the audioContext if it was created by wavesurfer
+        // not passed in as a parameter
+        if (!this.params.audioContext) {
+            this.ac.close();
+        }
+    },
+
+    load: function (buffer) {
+        this.startPosition = 0;
+        this.lastPlay = this.ac.currentTime;
+        this.buffer = buffer;
+        this.createSource();
+    },
+
+    createSource: function () {
+        this.disconnectSource();
+        this.source = this.ac.createBufferSource();
+
+        //adjust for old browsers.
+        this.source.start = this.source.start || this.source.noteGrainOn;
+        this.source.stop = this.source.stop || this.source.noteOff;
+
+        this.source.playbackRate.value = this.playbackRate;
+        this.source.buffer = this.buffer;
+        this.source.connect(this.analyser);
+    },
+
+    isPaused: function () {
+        return this.state !== this.states[this.PLAYING_STATE];
+    },
+
+    getDuration: function () {
+        if (!this.buffer) {
+            return 0;
+        }
+        return this.buffer.duration;
+    },
+
+    seekTo: function (start, end) {
+        if (!this.buffer) { return; }
+
+        this.scheduledPause = null;
+
+        if (start == null) {
+            start = this.getCurrentTime();
+            if (start >= this.getDuration()) {
+                start = 0;
+            }
+        }
+        if (end == null) {
+            end = this.getDuration();
+        }
+
+        this.startPosition = start;
+        this.lastPlay = this.ac.currentTime;
+
+        if (this.state === this.states[this.FINISHED_STATE]) {
+            this.setState(this.PAUSED_STATE);
+        }
+
+        return { start: start, end: end };
+    },
+
+    getPlayedTime: function () {
+        return (this.ac.currentTime - this.lastPlay) * this.playbackRate;
+    },
+
+    /**
+     * Plays the loaded audio region.
+     *
+     * @param {Number} start Start offset in seconds,
+     * relative to the beginning of a clip.
+     * @param {Number} end When to stop
+     * relative to the beginning of a clip.
+     */
+    play: function (start, end) {
+        if (!this.buffer) { return; }
+
+        // need to re-create source on each playback
+        this.createSource();
+
+        var adjustedTime = this.seekTo(start, end);
+
+        start = adjustedTime.start;
+        end = adjustedTime.end;
+
+        this.scheduledPause = end;
+
+        this.source.start(0, start, end - start);
+
+        if (this.ac.state == 'suspended') {
+          this.ac.resume && this.ac.resume();
+        }
+
+        this.setState(this.PLAYING_STATE);
+
+        this.fireEvent('play');
+    },
+
+    /**
+     * Pauses the loaded audio.
+     */
+    pause: function () {
+        this.scheduledPause = null;
+
+        this.startPosition += this.getPlayedTime();
+        this.source && this.source.stop(0);
+
+        this.setState(this.PAUSED_STATE);
+
+        this.fireEvent('pause');
+    },
+
+    /**
+    *   Returns the current time in seconds relative to the audioclip's duration.
+    */
+    getCurrentTime: function () {
+        return this.state.getCurrentTime.call(this);
+    },
+
+    /**
+     * Set the audio source playback rate.
+     */
+    setPlaybackRate: function (value) {
+        value = value || 1;
+        if (this.isPaused()) {
+            this.playbackRate = value;
+        } else {
+            this.pause();
+            this.playbackRate = value;
+            this.play();
+        }
+    }
+};
+
+WaveSurfer.WebAudio.state = {};
+
+WaveSurfer.WebAudio.state.playing = {
+    init: function () {
+        this.addOnAudioProcess();
+    },
+    getPlayedPercents: function () {
+        var duration = this.getDuration();
+        return (this.getCurrentTime() / duration) || 0;
+    },
+    getCurrentTime: function () {
+        return this.startPosition + this.getPlayedTime();
+    }
+};
+
+WaveSurfer.WebAudio.state.paused = {
+    init: function () {
+        this.removeOnAudioProcess();
+    },
+    getPlayedPercents: function () {
+        var duration = this.getDuration();
+        return (this.getCurrentTime() / duration) || 0;
+    },
+    getCurrentTime: function () {
+        return this.startPosition;
+    }
+};
+
+WaveSurfer.WebAudio.state.finished = {
+    init: function () {
+        this.removeOnAudioProcess();
+        this.fireEvent('finish');
+    },
+    getPlayedPercents: function () {
+        return 1;
+    },
+    getCurrentTime: function () {
+        return this.getDuration();
+    }
+};
+
+WaveSurfer.util.extend(WaveSurfer.WebAudio, WaveSurfer.Observer);
+
+'use strict';
+
+WaveSurfer.MediaElement = Object.create(WaveSurfer.WebAudio);
+
+WaveSurfer.util.extend(WaveSurfer.MediaElement, {
+    init: function (params) {
+        this.params = params;
+
+        // Dummy media to catch errors
+        this.media = {
+            currentTime: 0,
+            duration: 0,
+            paused: true,
+            playbackRate: 1,
+            play: function () {},
+            pause: function () {}
+        };
+
+        this.mediaType = params.mediaType.toLowerCase();
+        this.elementPosition = params.elementPosition;
+        this.setPlaybackRate(this.params.audioRate);
+        this.createTimer();
+    },
+
+
+    /**
+     * Create a timer to provide a more precise `audioprocess' event.
+     */
+    createTimer: function () {
+        var my = this;
+        var playing = false;
+
+        var onAudioProcess = function () {
+            if (my.isPaused()) { return; }
+
+            my.fireEvent('audioprocess', my.getCurrentTime());
+
+            // Call again in the next frame
+            var requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame;
+            requestAnimationFrame(onAudioProcess);
+        };
+
+        this.on('play', onAudioProcess);
+    },
+
+    /**
+     *  Create media element with url as its source,
+     *  and append to container element.
+     *  @param  {String}        url         path to media file
+     *  @param  {HTMLElement}   container   HTML element
+     *  @param  {Array}         peaks       array of peak data
+     *  @param  {String}        preload     HTML 5 preload attribute value
+     */
+    load: function (url, container, peaks, preload) {
+        var my = this;
+
+        var media = document.createElement(this.mediaType);
+        media.controls = this.params.mediaControls;
+        media.autoplay = this.params.autoplay || false;
+        media.preload = preload == null ? 'auto' : preload;
+        media.src = url;
+        media.style.width = '100%';
+
+        var prevMedia = container.querySelector(this.mediaType);
+        if (prevMedia) {
+            container.removeChild(prevMedia);
+        }
+        container.appendChild(media);
+
+        this._load(media, peaks);
+    },
+
+    /**
+     *  Load existing media element.
+     *  @param  {MediaElement}  elt     HTML5 Audio or Video element
+     *  @param  {Array}         peaks   array of peak data
+     */
+    loadElt: function (elt, peaks) {
+        var my = this;
+
+        var media = elt;
+        media.controls = this.params.mediaControls;
+        media.autoplay = this.params.autoplay || false;
+
+        this._load(media, peaks);
+    },
+
+    /**
+     *  Private method called by both load (from url)
+     *  and loadElt (existing media element).
+     *  @param  {MediaElement}  media     HTML5 Audio or Video element
+     *  @param  {Array}         peaks   array of peak data
+     *  @private
+     */
+    _load: function (media, peaks) {
+        var my = this;
+
+        // load must be called manually on iOS, otherwise peaks won't draw
+        // until a user interaction triggers load --> 'ready' event
+        media.load();
+
+        media.addEventListener('error', function () {
+            my.fireEvent('error', 'Error loading media element');
+        });
+
+        media.addEventListener('canplay', function () {
+            my.fireEvent('canplay');
+        });
+
+        media.addEventListener('ended', function () {
+            my.fireEvent('finish');
+        });
+
+        this.media = media;
+        this.peaks = peaks;
+        this.onPlayEnd = null;
+        this.buffer = null;
+        this.setPlaybackRate(this.playbackRate);
+    },
+
+    isPaused: function () {
+        return !this.media || this.media.paused;
+    },
+
+    getDuration: function () {
+        var duration = this.media.duration;
+        if (duration >= Infinity) { // streaming audio
+            duration = this.media.seekable.end(0);
+        }
+        return duration;
+    },
+
+    getCurrentTime: function () {
+        return this.media && this.media.currentTime;
+    },
+
+    getPlayedPercents: function () {
+        return (this.getCurrentTime() / this.getDuration()) || 0;
+    },
+
+    /**
+     * Set the audio source playback rate.
+     */
+    setPlaybackRate: function (value) {
+        this.playbackRate = value || 1;
+        this.media.playbackRate = this.playbackRate;
+    },
+
+    seekTo: function (start) {
+        if (start != null) {
+            this.media.currentTime = start;
+        }
+        this.clearPlayEnd();
+    },
+
+    /**
+     * Plays the loaded audio region.
+     *
+     * @param {Number} start Start offset in seconds,
+     * relative to the beginning of a clip.
+     * @param {Number} end End offset in seconds,
+     * relative to the beginning of a clip.
+     */
+    play: function (start, end) {
+        this.seekTo(start);
+        this.media.play();
+        end && this.setPlayEnd(end);
+        this.fireEvent('play');
+    },
+
+    /**
+     * Pauses the loaded audio.
+     */
+    pause: function () {
+        this.media && this.media.pause();
+        this.clearPlayEnd();
+        this.fireEvent('pause');
+    },
+
+    setPlayEnd: function (end) {
+        var my = this;
+        this.onPlayEnd = function (time) {
+            if (time >= end) {
+                my.pause();
+                my.seekTo(end);
+            }
+        };
+        this.on('audioprocess', this.onPlayEnd);
+    },
+
+    clearPlayEnd: function () {
+        if (this.onPlayEnd) {
+            this.un('audioprocess', this.onPlayEnd);
+            this.onPlayEnd = null;
+        }
+    },
+
+    getPeaks: function (length) {
+        if (this.buffer) {
+            return WaveSurfer.WebAudio.getPeaks.call(this, length);
+        }
+        return this.peaks || [];
+    },
+
+    getVolume: function () {
+        return this.media.volume;
+    },
+
+    setVolume: function (val) {
+        this.media.volume = val;
+    },
+
+    destroy: function () {
+        this.pause();
+        this.unAll();
+        this.media && this.media.parentNode && this.media.parentNode.removeChild(this.media);
+        this.media = null;
+    }
+});
+
+//For backwards compatibility
+WaveSurfer.AudioElement = WaveSurfer.MediaElement;
+
+'use strict';
+
+WaveSurfer.Drawer = {
+    init: function (container, params) {
+        this.container = container;
+        this.params = params;
+
+        this.width = 0;
+        this.height = params.height * this.params.pixelRatio;
+
+        this.lastPos = 0;
+
+        this.initDrawer(params);
+        this.createWrapper();
+        this.createElements();
+    },
+
+    createWrapper: function () {
+        this.wrapper = this.container.appendChild(
+            document.createElement('wave')
+        );
+
+        this.style(this.wrapper, {
+            display: 'block',
+            position: 'relative',
+            userSelect: 'none',
+            webkitUserSelect: 'none',
+            height: this.params.height + 'px'
+        });
+
+        if (this.params.fillParent || this.params.scrollParent) {
+            this.style(this.wrapper, {
+                width: '100%',
+                overflowX: this.params.hideScrollbar ? 'hidden' : 'auto',
+                overflowY: 'hidden'
+            });
+        }
+
+        this.setupWrapperEvents();
+    },
+
+    handleEvent: function (e, noPrevent) {
+        !noPrevent && e.preventDefault();
+
+        var clientX = e.targetTouches ? e.targetTouches[0].clientX : e.clientX;
+        var bbox = this.wrapper.getBoundingClientRect();
+
+        var nominalWidth = this.width;
+        var parentWidth = this.getWidth();
+
+        var progress;
+
+        if (!this.params.fillParent && nominalWidth < parentWidth) {
+            progress = ((clientX - bbox.left) * this.params.pixelRatio / nominalWidth) || 0;
+
+            if (progress > 1) {
+                progress = 1;
+            }
+        } else {
+            progress = ((clientX - bbox.left + this.wrapper.scrollLeft) / this.wrapper.scrollWidth) || 0;
+        }
+
+        return progress;
+    },
+
+    setupWrapperEvents: function () {
+        var my = this;
+
+        this.wrapper.addEventListener('click', function (e) {
+            var scrollbarHeight = my.wrapper.offsetHeight - my.wrapper.clientHeight;
+            if (scrollbarHeight != 0) {
+                // scrollbar is visible.  Check if click was on it
+                var bbox = my.wrapper.getBoundingClientRect();
+                if (e.clientY >= bbox.bottom - scrollbarHeight) {
+                    // ignore mousedown as it was on the scrollbar
+                    return;
+                }
+            }
+
+            if (my.params.interact) {
+                my.fireEvent('click', e, my.handleEvent(e));
+            }
+        });
+
+        this.wrapper.addEventListener('scroll', function (e) {
+            my.fireEvent('scroll', e);
+        });
+    },
+
+    drawPeaks: function (peaks, length) {
+        this.resetScroll();
+        this.setWidth(length);
+
+        this.params.barWidth ?
+            this.drawBars(peaks) :
+            this.drawWave(peaks);
+    },
+
+    style: function (el, styles) {
+        Object.keys(styles).forEach(function (prop) {
+            if (el.style[prop] !== styles[prop]) {
+                el.style[prop] = styles[prop];
+            }
+        });
+        return el;
+    },
+
+    resetScroll: function () {
+        if (this.wrapper !== null) {
+            this.wrapper.scrollLeft = 0;
+        }
+    },
+
+    recenter: function (percent) {
+        var position = this.wrapper.scrollWidth * percent;
+        this.recenterOnPosition(position, true);
+    },
+
+    recenterOnPosition: function (position, immediate) {
+        var scrollLeft = this.wrapper.scrollLeft;
+        var half = ~~(this.wrapper.clientWidth / 2);
+        var target = position - half;
+        var offset = target - scrollLeft;
+        var maxScroll = this.wrapper.scrollWidth - this.wrapper.clientWidth;
+
+        if (maxScroll == 0) {
+            // no need to continue if scrollbar is not there
+            return;
+        }
+
+        // if the cursor is currently visible...
+        if (!immediate && -half <= offset && offset < half) {
+            // we'll limit the "re-center" rate.
+            var rate = 5;
+            offset = Math.max(-rate, Math.min(rate, offset));
+            target = scrollLeft + offset;
+        }
+
+        // limit target to valid range (0 to maxScroll)
+        target = Math.max(0, Math.min(maxScroll, target));
+        // no use attempting to scroll if we're not moving
+        if (target != scrollLeft) {
+            this.wrapper.scrollLeft = target;
+        }
+
+    },
+
+    getWidth: function () {
+        return Math.round(this.container.clientWidth * this.params.pixelRatio);
+    },
+
+    setWidth: function (width) {
+        this.width = width;
+
+        if (this.params.fillParent || this.params.scrollParent) {
+            this.style(this.wrapper, {
+                width: ''
+            });
+        } else {
+            this.style(this.wrapper, {
+                width: ~~(this.width / this.params.pixelRatio) + 'px'
+            });
+        }
+
+        this.updateSize();
+    },
+
+    setHeight: function (height) {
+        if (height == this.height) { return; }
+        this.height = height;
+        this.style(this.wrapper, {
+            height: ~~(this.height / this.params.pixelRatio) + 'px'
+        });
+        this.updateSize();
+    },
+
+    progress: function (progress) {
+        var minPxDelta = 1 / this.params.pixelRatio;
+        var pos = Math.round(progress * this.width) * minPxDelta;
+
+        if (pos < this.lastPos || pos - this.lastPos >= minPxDelta) {
+            this.lastPos = pos;
+
+            if (this.params.scrollParent && this.params.autoCenter) {
+                var newPos = ~~(this.wrapper.scrollWidth * progress);
+                this.recenterOnPosition(newPos);
+            }
+
+            this.updateProgress(progress);
+        }
+    },
+
+    destroy: function () {
+        this.unAll();
+        if (this.wrapper) {
+            this.container.removeChild(this.wrapper);
+            this.wrapper = null;
+        }
+    },
+
+    /* Renderer-specific methods */
+    initDrawer: function () {},
+
+    createElements: function () {},
+
+    updateSize: function () {},
+
+    drawWave: function (peaks, max) {},
+
+    clearWave: function () {},
+
+    updateProgress: function (position) {}
+};
+
+WaveSurfer.util.extend(WaveSurfer.Drawer, WaveSurfer.Observer);
+
+'use strict';
+
+WaveSurfer.Drawer.Canvas = Object.create(WaveSurfer.Drawer);
+
+WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
+    createElements: function () {
+        var waveCanvas = this.wrapper.appendChild(
+            this.style(document.createElement('canvas'), {
+                position: 'absolute',
+                zIndex: 1,
+                left: 0,
+                top: 0,
+                bottom: 0
+            })
+        );
+        this.waveCc = waveCanvas.getContext('2d');
+
+        this.progressWave = this.wrapper.appendChild(
+            this.style(document.createElement('wave'), {
+                position: 'absolute',
+                zIndex: 2,
+                left: 0,
+                top: 0,
+                bottom: 0,
+                overflow: 'hidden',
+                width: '0',
+                display: 'none',
+                boxSizing: 'border-box',
+                borderRightStyle: 'solid',
+                borderRightWidth: this.params.cursorWidth + 'px',
+                borderRightColor: this.params.cursorColor
+            })
+        );
+
+        if (this.params.waveColor != this.params.progressColor) {
+            var progressCanvas = this.progressWave.appendChild(
+                document.createElement('canvas')
+            );
+            this.progressCc = progressCanvas.getContext('2d');
+        }
+    },
+
+    updateSize: function () {
+        var width = Math.round(this.width / this.params.pixelRatio);
+
+        this.waveCc.canvas.width = this.width;
+        this.waveCc.canvas.height = this.height;
+        this.style(this.waveCc.canvas, { width: width + 'px'});
+
+        this.style(this.progressWave, { display: 'block'});
+
+        if (this.progressCc) {
+            this.progressCc.canvas.width = this.width;
+            this.progressCc.canvas.height = this.height;
+            this.style(this.progressCc.canvas, { width: width + 'px'});
+        }
+
+        this.clearWave();
+    },
+
+    clearWave: function () {
+        this.waveCc.clearRect(0, 0, this.width, this.height);
+        if (this.progressCc) {
+            this.progressCc.clearRect(0, 0, this.width, this.height);
+        }
+    },
+
+    drawBars: function (peaks, channelIndex) {
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(this.drawBars, this);
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
+
+        // Bar wave draws the bottom only as a reflection of the top,
+        // so we don't need negative values
+        var hasMinVals = [].some.call(peaks, function (val) { return val < 0; });
+        if (hasMinVals) {
+            peaks = [].filter.call(peaks, function (_, index) { return index % 2 == 0; });
+        }
+
+        // A half-pixel offset makes lines crisp
+        var $ = 0.5 / this.params.pixelRatio;
+        var width = this.width;
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+        var halfH = height / 2;
+        var length = peaks.length;
+        var bar = this.params.barWidth * this.params.pixelRatio;
+        var gap = Math.max(this.params.pixelRatio, ~~(bar / 2));
+        var step = bar + gap;
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            absmax = WaveSurfer.util.max(peaks);
+        }
+
+        var scale = length / width;
+
+        this.waveCc.fillStyle = this.params.waveColor;
+        if (this.progressCc) {
+            this.progressCc.fillStyle = this.params.progressColor;
+        }
+
+        [ this.waveCc, this.progressCc ].forEach(function (cc) {
+            if (!cc) { return; }
+
+            for (var i = 0; i < width; i += step) {
+                var h = Math.round(peaks[Math.floor(i * scale)] / absmax * halfH);
+                cc.fillRect(i + $, halfH - h + offsetY, bar + $, h * 2);
+            }
+        }, this);
+    },
+
+    drawWave: function (peaks, channelIndex) {
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(this.drawWave, this);
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
+
+        // Support arrays without negative peaks
+        var hasMinValues = [].some.call(peaks, function (val) { return val < 0; });
+        if (!hasMinValues) {
+            var reflectedPeaks = [];
+            for (var i = 0, len = peaks.length; i < len; i++) {
+                reflectedPeaks[2 * i] = peaks[i];
+                reflectedPeaks[2 * i + 1] = -peaks[i];
+            }
+            peaks = reflectedPeaks;
+        }
+
+        // A half-pixel offset makes lines crisp
+        var $ = 0.5 / this.params.pixelRatio;
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+        var halfH = height / 2;
+        var length = ~~(peaks.length / 2);
+
+        var scale = 1;
+        if (this.params.fillParent && this.width != length) {
+            scale = this.width / length;
+        }
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            var max = WaveSurfer.util.max(peaks);
+            var min = WaveSurfer.util.min(peaks);
+            absmax = -min > max ? -min : max;
+        }
+
+        this.waveCc.fillStyle = this.params.waveColor;
+        if (this.progressCc) {
+            this.progressCc.fillStyle = this.params.progressColor;
+        }
+
+        [ this.waveCc, this.progressCc ].forEach(function (cc) {
+            if (!cc) { return; }
+
+            cc.beginPath();
+            cc.moveTo($, halfH + offsetY);
+
+            for (var i = 0; i < length; i++) {
+                var h = Math.round(peaks[2 * i] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            // Draw the bottom edge going backwards, to make a single
+            // closed hull to fill.
+            for (var i = length - 1; i >= 0; i--) {
+                var h = Math.round(peaks[2 * i + 1] / absmax * halfH);
+                cc.lineTo(i * scale + $, halfH - h + offsetY);
+            }
+
+            cc.closePath();
+            cc.fill();
+
+            // Always draw a median line
+            cc.fillRect(0, halfH + offsetY - $, this.width, $);
+        }, this);
+    },
+
+    updateProgress: function (progress) {
+        var pos = Math.round(
+            this.width * progress
+        ) / this.params.pixelRatio;
+        this.style(this.progressWave, { width: pos + 'px' });
+    },
+
+    getImage: function(type, quality) {
+        return this.waveCc.canvas.toDataURL(type, quality);
+    }
+});
+
+'use strict';
+
+WaveSurfer.Drawer.MultiCanvas = Object.create(WaveSurfer.Drawer);
+
+WaveSurfer.util.extend(WaveSurfer.Drawer.MultiCanvas, {
+
+    initDrawer: function (params) {
+        this.maxCanvasWidth = params.maxCanvasWidth != null ? params.maxCanvasWidth : 4000;
+        this.maxCanvasElementWidth = Math.round(this.maxCanvasWidth / this.params.pixelRatio);
+
+        if (this.maxCanvasWidth <= 1) {
+            throw 'maxCanvasWidth must be greater than 1.';
+        } else if (this.maxCanvasWidth % 2 == 1) {
+            throw 'maxCanvasWidth must be an even number.';
+        }
+
+        this.hasProgressCanvas = this.params.waveColor != this.params.progressColor;
+        this.halfPixel = 0.5 / this.params.pixelRatio;
+        this.canvases = [];
+    },
+
+    createElements: function () {
+        this.progressWave = this.wrapper.appendChild(
+            this.style(document.createElement('wave'), {
+                position: 'absolute',
+                zIndex: 2,
+                left: 0,
+                top: 0,
+                bottom: 0,
+                overflow: 'hidden',
+                width: '0',
+                display: 'none',
+                boxSizing: 'border-box',
+                borderRightStyle: 'solid',
+                borderRightWidth: this.params.cursorWidth + 'px',
+                borderRightColor: this.params.cursorColor
+            })
+        );
+
+        this.addCanvas();
+    },
+
+    updateSize: function () {
+        var totalWidth = Math.round(this.width / this.params.pixelRatio),
+            requiredCanvases = Math.ceil(totalWidth / this.maxCanvasElementWidth);
+
+        while (this.canvases.length < requiredCanvases) {
+            this.addCanvas();
+        }
+
+        while (this.canvases.length > requiredCanvases) {
+            this.removeCanvas();
+        }
+
+        for (var i in this.canvases) {
+            // Add some overlap to prevent vertical white stripes, keep the width even for simplicity.
+            var canvasWidth = this.maxCanvasWidth + 2 * Math.ceil(this.params.pixelRatio / 2);
+
+            if (i == this.canvases.length - 1) {
+                canvasWidth = this.width - (this.maxCanvasWidth * (this.canvases.length - 1));
+            }
+
+            this.updateDimensions(this.canvases[i], canvasWidth, this.height);
+            this.clearWaveForEntry(this.canvases[i]);
+        }
+    },
+
+     addCanvas: function () {
+        var entry = {},
+            leftOffset = this.maxCanvasElementWidth * this.canvases.length;
+
+        entry.wave = this.wrapper.appendChild(
+            this.style(document.createElement('canvas'), {
+                position: 'absolute',
+                zIndex: 1,
+                left: leftOffset + 'px',
+                top: 0,
+                bottom: 0
+            })
+        );
+        entry.waveCtx = entry.wave.getContext('2d');
+
+        if (this.hasProgressCanvas) {
+            entry.progress = this.progressWave.appendChild(
+                this.style(document.createElement('canvas'), {
+                    position: 'absolute',
+                    left: leftOffset + 'px',
+                    top: 0,
+                    bottom: 0
+                })
+            );
+            entry.progressCtx = entry.progress.getContext('2d');
+        }
+
+        this.canvases.push(entry);
+    },
+
+    removeCanvas: function () {
+        var lastEntry = this.canvases.pop();
+        lastEntry.wave.parentElement.removeChild(lastEntry.wave);
+        if (this.hasProgressCanvas) {
+            lastEntry.progress.parentElement.removeChild(lastEntry.progress);
+        }
+    },
+
+    updateDimensions: function (entry, width, height) {
+        var elementWidth = Math.round(width / this.params.pixelRatio),
+            totalWidth = Math.round(this.width / this.params.pixelRatio);
+
+        // Where the canvas starts and ends in the waveform, represented as a decimal between 0 and 1.
+        entry.start = (entry.waveCtx.canvas.offsetLeft / totalWidth) || 0;
+        entry.end = entry.start + elementWidth / totalWidth;
+
+        entry.waveCtx.canvas.width = width;
+        entry.waveCtx.canvas.height = height;
+        this.style(entry.waveCtx.canvas, { width: elementWidth + 'px'});
+
+        this.style(this.progressWave, { display: 'block'});
+
+        if (this.hasProgressCanvas) {
+            entry.progressCtx.canvas.width = width;
+            entry.progressCtx.canvas.height = height;
+            this.style(entry.progressCtx.canvas, { width: elementWidth + 'px'});
+        }
+    },
+
+    clearWave: function () {
+        for (var i in this.canvases) {
+            this.clearWaveForEntry(this.canvases[i]);
+        }
+    },
+
+    clearWaveForEntry: function (entry) {
+        entry.waveCtx.clearRect(0, 0, entry.waveCtx.canvas.width, entry.waveCtx.canvas.height);
+        if (this.hasProgressCanvas) {
+            entry.progressCtx.clearRect(0, 0, entry.progressCtx.canvas.width, entry.progressCtx.canvas.height);
+        }
+    },
+
+    drawBars: function (peaks, channelIndex) {
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(this.drawBars, this);
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
+
+        // Bar wave draws the bottom only as a reflection of the top,
+        // so we don't need negative values
+        var hasMinVals = [].some.call(peaks, function (val) { return val < 0; });
+        if (hasMinVals) {
+            peaks = [].filter.call(peaks, function (_, index) { return index % 2 == 0; });
+        }
+
+        // A half-pixel offset makes lines crisp
+        var width = this.width;
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+        var halfH = height / 2;
+        var length = peaks.length;
+        var bar = this.params.barWidth * this.params.pixelRatio;
+        var gap = Math.max(this.params.pixelRatio, ~~(bar / 2));
+        var step = bar + gap;
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            absmax = WaveSurfer.util.max(peaks);
+        }
+
+        var scale = length / width;
+
+        for (var i = 0; i < width; i += step) {
+            var h = Math.round(peaks[Math.floor(i * scale)] / absmax * halfH);
+            this.fillRect(i + this.halfPixel, halfH - h + offsetY, bar + this.halfPixel, h * 2);
+        }
+    },
+
+    drawWave: function (peaks, channelIndex) {
+        // Split channels
+        if (peaks[0] instanceof Array) {
+            var channels = peaks;
+            if (this.params.splitChannels) {
+                this.setHeight(channels.length * this.params.height * this.params.pixelRatio);
+                channels.forEach(this.drawWave, this);
+                return;
+            } else {
+                peaks = channels[0];
+            }
+        }
+
+        // Support arrays without negative peaks
+        var hasMinValues = [].some.call(peaks, function (val) { return val < 0; });
+        if (!hasMinValues) {
+            var reflectedPeaks = [];
+            for (var i = 0, len = peaks.length; i < len; i++) {
+                reflectedPeaks[2 * i] = peaks[i];
+                reflectedPeaks[2 * i + 1] = -peaks[i];
+            }
+            peaks = reflectedPeaks;
+        }
+
+        // A half-pixel offset makes lines crisp
+        var height = this.params.height * this.params.pixelRatio;
+        var offsetY = height * channelIndex || 0;
+        var halfH = height / 2;
+
+        var absmax = 1;
+        if (this.params.normalize) {
+            var max = WaveSurfer.util.max(peaks);
+            var min = WaveSurfer.util.min(peaks);
+            absmax = -min > max ? -min : max;
+        }
+
+        this.drawLine(peaks, absmax, halfH, offsetY);
+
+        // Always draw a median line
+        this.fillRect(0, halfH + offsetY - this.halfPixel, this.width, this.halfPixel);
+    },
+
+    drawLine: function (peaks, absmax, halfH, offsetY) {
+        for (var index in this.canvases) {
+            var entry = this.canvases[index];
+
+            this.setFillStyles(entry);
+
+            this.drawLineToContext(entry, entry.waveCtx, peaks, absmax, halfH, offsetY);
+            this.drawLineToContext(entry, entry.progressCtx, peaks, absmax, halfH, offsetY);
+        }
+    },
+
+    drawLineToContext: function (entry, ctx, peaks, absmax, halfH, offsetY) {
+        if (!ctx) { return; }
+
+        var length = peaks.length / 2;
+
+        var scale = 1;
+        if (this.params.fillParent && this.width != length) {
+            scale = this.width / length;
+        }
+
+        var first = Math.round(length * entry.start),
+            last = Math.round(length * entry.end);
+
+        ctx.beginPath();
+        ctx.moveTo(this.halfPixel, halfH + offsetY);
+
+        for (var i = first; i < last; i++) {
+            var h = Math.round(peaks[2 * i] / absmax * halfH);
+            ctx.lineTo((i - first) * scale + this.halfPixel, halfH - h + offsetY);
+        }
+
+        // Draw the bottom edge going backwards, to make a single
+        // closed hull to fill.
+        for (var i = last - 1; i >= first; i--) {
+            var h = Math.round(peaks[2 * i + 1] / absmax * halfH);
+            ctx.lineTo((i - first) * scale + this.halfPixel, halfH - h + offsetY);
+        }
+
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    fillRect: function (x, y, width, height) {
+        for (var i in this.canvases) {
+            var entry = this.canvases[i],
+                leftOffset = i * this.maxCanvasWidth;
+
+            var intersection = {
+                x1: Math.max(x, i * this.maxCanvasWidth),
+                y1: y,
+                x2: Math.min(x + width, i * this.maxCanvasWidth + entry.waveCtx.canvas.width),
+                y2: y + height
+            };
+
+            if (intersection.x1 < intersection.x2) {
+                this.setFillStyles(entry);
+
+                this.fillRectToContext(entry.waveCtx,
+                        intersection.x1 - leftOffset,
+                        intersection.y1,
+                        intersection.x2 - intersection.x1,
+                        intersection.y2 - intersection.y1);
+
+                this.fillRectToContext(entry.progressCtx,
+                        intersection.x1 - leftOffset,
+                        intersection.y1,
+                        intersection.x2 - intersection.x1,
+                        intersection.y2 - intersection.y1);
+            }
+        }
+    },
+
+    fillRectToContext: function (ctx, x, y, width, height) {
+        if (!ctx) { return; }
+        ctx.fillRect(x, y, width, height);
+    },
+
+    setFillStyles: function (entry) {
+        entry.waveCtx.fillStyle = this.params.waveColor;
+        if (this.hasProgressCanvas) {
+            entry.progressCtx.fillStyle = this.params.progressColor;
+        }
+    },
+
+    updateProgress: function (progress) {
+        var pos = Math.round(
+            this.width * progress
+        ) / this.params.pixelRatio;
+        this.style(this.progressWave, { width: pos + 'px' });
+    }
+});
+
+'use strict';
+
+return WaveSurfer;
+
+}));
+
 /**
  * @license AngularJS v1.5.8
  * (c) 2010-2016 Google, Inc. http://angularjs.org
@@ -62674,6 +64789,39 @@ WaveSurfer.Timeline = {
 
 WaveSurfer.util.extend(WaveSurfer.Timeline, WaveSurfer.Observer);
 
+/*
+chroma.js - JavaScript library for color conversions
+
+Copyright (c) 2011-2015, Gregor Aisch
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. The name Gregor Aisch may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL GREGOR AISCH OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+*/
+(function(){var a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,$,_,aa,ba,ca,da,ea,fa,ga,ha,ia,ja,ka,la,ma,na,oa,pa,qa,ra,sa,ta,ua,va,wa,xa,ya,za=[].slice;ua=function(){var a,b,c,d,e;for(a={},e="Boolean Number String Function Array Date RegExp Undefined Null".split(" "),d=0,b=e.length;d<b;d++)c=e[d],a["[object "+c+"]"]=c.toLowerCase();return function(b){var c;return c=Object.prototype.toString.call(b),a[c]||"object"}}(),S=function(a,b,c){return null==b&&(b=0),null==c&&(c=1),a<b&&(a=b),a>c&&(a=c),a},va=function(a){return a.length>=3?[].slice.call(a):a[0]},t=function(a){var b;for(b in a)b<3?(a[b]<0&&(a[b]=0),a[b]>255&&(a[b]=255)):3===b&&(a[b]<0&&(a[b]=0),a[b]>1&&(a[b]=1));return a},d=Math.PI,pa=Math.round,w=Math.cos,B=Math.floor,_=Math.pow,T=Math.log,ra=Math.sin,sa=Math.sqrt,m=Math.atan2,W=Math.max,l=Math.abs,g=2*d,e=d/3,b=d/180,f=180/d,s=function(){return arguments[0]instanceof a?arguments[0]:function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,arguments,function(){})},k=[],"undefined"!=typeof module&&null!==module&&null!=module.exports&&(module.exports=s),"function"==typeof define&&define.amd?define([],function(){return s}):(oa="undefined"!=typeof exports&&null!==exports?exports:this,oa.chroma=s),s.version="1.1.1",j={},h=[],i=!1,a=function(){function a(){var a,b,c,d,e,f,g,k,l;for(f=this,b=[],k=0,d=arguments.length;k<d;k++)a=arguments[k],null!=a&&b.push(a);if(g=b[b.length-1],null!=j[g])f._rgb=t(j[g](va(b.slice(0,-1))));else{for(i||(h=h.sort(function(a,b){return b.p-a.p}),i=!0),l=0,e=h.length;l<e&&(c=h[l],!(g=c.test.apply(c,b)));l++);g&&(f._rgb=t(j[g].apply(j,b)))}null==f._rgb&&console.warn("unknown format: "+b),null==f._rgb&&(f._rgb=[0,0,0]),3===f._rgb.length&&f._rgb.push(1)}return a.prototype.alpha=function(a){return arguments.length?(this._rgb[3]=a,this):this._rgb[3]},a.prototype.toString=function(){return this.name()},a}(),s._input=j,s.brewer=q={OrRd:["#fff7ec","#fee8c8","#fdd49e","#fdbb84","#fc8d59","#ef6548","#d7301f","#b30000","#7f0000"],PuBu:["#fff7fb","#ece7f2","#d0d1e6","#a6bddb","#74a9cf","#3690c0","#0570b0","#045a8d","#023858"],BuPu:["#f7fcfd","#e0ecf4","#bfd3e6","#9ebcda","#8c96c6","#8c6bb1","#88419d","#810f7c","#4d004b"],Oranges:["#fff5eb","#fee6ce","#fdd0a2","#fdae6b","#fd8d3c","#f16913","#d94801","#a63603","#7f2704"],BuGn:["#f7fcfd","#e5f5f9","#ccece6","#99d8c9","#66c2a4","#41ae76","#238b45","#006d2c","#00441b"],YlOrBr:["#ffffe5","#fff7bc","#fee391","#fec44f","#fe9929","#ec7014","#cc4c02","#993404","#662506"],YlGn:["#ffffe5","#f7fcb9","#d9f0a3","#addd8e","#78c679","#41ab5d","#238443","#006837","#004529"],Reds:["#fff5f0","#fee0d2","#fcbba1","#fc9272","#fb6a4a","#ef3b2c","#cb181d","#a50f15","#67000d"],RdPu:["#fff7f3","#fde0dd","#fcc5c0","#fa9fb5","#f768a1","#dd3497","#ae017e","#7a0177","#49006a"],Greens:["#f7fcf5","#e5f5e0","#c7e9c0","#a1d99b","#74c476","#41ab5d","#238b45","#006d2c","#00441b"],YlGnBu:["#ffffd9","#edf8b1","#c7e9b4","#7fcdbb","#41b6c4","#1d91c0","#225ea8","#253494","#081d58"],Purples:["#fcfbfd","#efedf5","#dadaeb","#bcbddc","#9e9ac8","#807dba","#6a51a3","#54278f","#3f007d"],GnBu:["#f7fcf0","#e0f3db","#ccebc5","#a8ddb5","#7bccc4","#4eb3d3","#2b8cbe","#0868ac","#084081"],Greys:["#ffffff","#f0f0f0","#d9d9d9","#bdbdbd","#969696","#737373","#525252","#252525","#000000"],YlOrRd:["#ffffcc","#ffeda0","#fed976","#feb24c","#fd8d3c","#fc4e2a","#e31a1c","#bd0026","#800026"],PuRd:["#f7f4f9","#e7e1ef","#d4b9da","#c994c7","#df65b0","#e7298a","#ce1256","#980043","#67001f"],Blues:["#f7fbff","#deebf7","#c6dbef","#9ecae1","#6baed6","#4292c6","#2171b5","#08519c","#08306b"],PuBuGn:["#fff7fb","#ece2f0","#d0d1e6","#a6bddb","#67a9cf","#3690c0","#02818a","#016c59","#014636"],Spectral:["#9e0142","#d53e4f","#f46d43","#fdae61","#fee08b","#ffffbf","#e6f598","#abdda4","#66c2a5","#3288bd","#5e4fa2"],RdYlGn:["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#ffffbf","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"],RdBu:["#67001f","#b2182b","#d6604d","#f4a582","#fddbc7","#f7f7f7","#d1e5f0","#92c5de","#4393c3","#2166ac","#053061"],PiYG:["#8e0152","#c51b7d","#de77ae","#f1b6da","#fde0ef","#f7f7f7","#e6f5d0","#b8e186","#7fbc41","#4d9221","#276419"],PRGn:["#40004b","#762a83","#9970ab","#c2a5cf","#e7d4e8","#f7f7f7","#d9f0d3","#a6dba0","#5aae61","#1b7837","#00441b"],RdYlBu:["#a50026","#d73027","#f46d43","#fdae61","#fee090","#ffffbf","#e0f3f8","#abd9e9","#74add1","#4575b4","#313695"],BrBG:["#543005","#8c510a","#bf812d","#dfc27d","#f6e8c3","#f5f5f5","#c7eae5","#80cdc1","#35978f","#01665e","#003c30"],RdGy:["#67001f","#b2182b","#d6604d","#f4a582","#fddbc7","#ffffff","#e0e0e0","#bababa","#878787","#4d4d4d","#1a1a1a"],PuOr:["#7f3b08","#b35806","#e08214","#fdb863","#fee0b6","#f7f7f7","#d8daeb","#b2abd2","#8073ac","#542788","#2d004b"],Set2:["#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854","#ffd92f","#e5c494","#b3b3b3"],Accent:["#7fc97f","#beaed4","#fdc086","#ffff99","#386cb0","#f0027f","#bf5b17","#666666"],Set1:["#e41a1c","#377eb8","#4daf4a","#984ea3","#ff7f00","#ffff33","#a65628","#f781bf","#999999"],Set3:["#8dd3c7","#ffffb3","#bebada","#fb8072","#80b1d3","#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5","#ffed6f"],Dark2:["#1b9e77","#d95f02","#7570b3","#e7298a","#66a61e","#e6ab02","#a6761d","#666666"],Paired:["#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928"],Pastel2:["#b3e2cd","#fdcdac","#cbd5e8","#f4cae4","#e6f5c9","#fff2ae","#f1e2cc","#cccccc"],Pastel1:["#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#ffffcc","#e5d8bd","#fddaec","#f2f2f2"]},wa={indigo:"#4b0082",gold:"#ffd700",hotpink:"#ff69b4",firebrick:"#b22222",indianred:"#cd5c5c",yellow:"#ffff00",mistyrose:"#ffe4e1",darkolivegreen:"#556b2f",olive:"#808000",darkseagreen:"#8fbc8f",pink:"#ffc0cb",tomato:"#ff6347",lightcoral:"#f08080",orangered:"#ff4500",navajowhite:"#ffdead",lime:"#00ff00",palegreen:"#98fb98",darkslategrey:"#2f4f4f",greenyellow:"#adff2f",burlywood:"#deb887",seashell:"#fff5ee",mediumspringgreen:"#00fa9a",fuchsia:"#ff00ff",papayawhip:"#ffefd5",blanchedalmond:"#ffebcd",chartreuse:"#7fff00",dimgray:"#696969",black:"#000000",peachpuff:"#ffdab9",springgreen:"#00ff7f",aquamarine:"#7fffd4",white:"#ffffff",orange:"#ffa500",lightsalmon:"#ffa07a",darkslategray:"#2f4f4f",brown:"#a52a2a",ivory:"#fffff0",dodgerblue:"#1e90ff",peru:"#cd853f",lawngreen:"#7cfc00",chocolate:"#d2691e",crimson:"#dc143c",forestgreen:"#228b22",darkgrey:"#a9a9a9",lightseagreen:"#20b2aa",cyan:"#00ffff",mintcream:"#f5fffa",silver:"#c0c0c0",antiquewhite:"#faebd7",mediumorchid:"#ba55d3",skyblue:"#87ceeb",gray:"#808080",darkturquoise:"#00ced1",goldenrod:"#daa520",darkgreen:"#006400",floralwhite:"#fffaf0",darkviolet:"#9400d3",darkgray:"#a9a9a9",moccasin:"#ffe4b5",saddlebrown:"#8b4513",grey:"#808080",darkslateblue:"#483d8b",lightskyblue:"#87cefa",lightpink:"#ffb6c1",mediumvioletred:"#c71585",slategrey:"#708090",red:"#ff0000",deeppink:"#ff1493",limegreen:"#32cd32",darkmagenta:"#8b008b",palegoldenrod:"#eee8aa",plum:"#dda0dd",turquoise:"#40e0d0",lightgrey:"#d3d3d3",lightgoldenrodyellow:"#fafad2",darkgoldenrod:"#b8860b",lavender:"#e6e6fa",maroon:"#800000",yellowgreen:"#9acd32",sandybrown:"#f4a460",thistle:"#d8bfd8",violet:"#ee82ee",navy:"#000080",magenta:"#ff00ff",dimgrey:"#696969",tan:"#d2b48c",rosybrown:"#bc8f8f",olivedrab:"#6b8e23",blue:"#0000ff",lightblue:"#add8e6",ghostwhite:"#f8f8ff",honeydew:"#f0fff0",cornflowerblue:"#6495ed",slateblue:"#6a5acd",linen:"#faf0e6",darkblue:"#00008b",powderblue:"#b0e0e6",seagreen:"#2e8b57",darkkhaki:"#bdb76b",snow:"#fffafa",sienna:"#a0522d",mediumblue:"#0000cd",royalblue:"#4169e1",lightcyan:"#e0ffff",green:"#008000",mediumpurple:"#9370db",midnightblue:"#191970",cornsilk:"#fff8dc",paleturquoise:"#afeeee",bisque:"#ffe4c4",slategray:"#708090",darkcyan:"#008b8b",khaki:"#f0e68c",wheat:"#f5deb3",teal:"#008080",darkorchid:"#9932cc",deepskyblue:"#00bfff",salmon:"#fa8072",darkred:"#8b0000",steelblue:"#4682b4",palevioletred:"#db7093",lightslategray:"#778899",aliceblue:"#f0f8ff",lightslategrey:"#778899",lightgreen:"#90ee90",orchid:"#da70d6",gainsboro:"#dcdcdc",mediumseagreen:"#3cb371",lightgray:"#d3d3d3",mediumturquoise:"#48d1cc",lemonchiffon:"#fffacd",cadetblue:"#5f9ea0",lightyellow:"#ffffe0",lavenderblush:"#fff0f5",coral:"#ff7f50",purple:"#800080",aqua:"#00ffff",whitesmoke:"#f5f5f5",mediumslateblue:"#7b68ee",darkorange:"#ff8c00",mediumaquamarine:"#66cdaa",darksalmon:"#e9967a",beige:"#f5f5dc",blueviolet:"#8a2be2",azure:"#f0ffff",lightsteelblue:"#b0c4de",oldlace:"#fdf5e6",rebeccapurple:"#663399"},s.colors=v=wa,N=function(){var a,b,d,e,f,g,h,i,j;return b=va(arguments),f=b[0],a=b[1],d=b[2],i=(f+16)/116,h=isNaN(a)?i:i+a/500,j=isNaN(d)?i:i-d/200,i=c.Yn*O(i),h=c.Xn*O(h),j=c.Zn*O(j),g=ya(3.2404542*h-1.5371385*i-.4985314*j),e=ya(-.969266*h+1.8760108*i+.041556*j),d=ya(.0556434*h-.2040259*i+1.0572252*j),g=S(g,0,255),e=S(e,0,255),d=S(d,0,255),[g,e,d,b.length>3?b[3]:1]},ya=function(a){return pa(255*(a<=.00304?12.92*a:1.055*_(a,1/2.4)-.055))},O=function(a){return a>c.t1?a*a*a:c.t2*(a-c.t0)},c={Kn:18,Xn:.95047,Yn:1,Zn:1.08883,t0:.137931034,t1:.206896552,t2:.12841855,t3:.008856452},ga=function(){var a,b,c,d,e,f,g,h;return d=va(arguments),c=d[0],b=d[1],a=d[2],e=la(c,b,a),f=e[0],g=e[1],h=e[2],[116*g-16,500*(f-g),200*(g-h)]},ma=function(a){return(a/=255)<=.04045?a/12.92:_((a+.055)/1.055,2.4)},xa=function(a){return a>c.t3?_(a,1/3):a/c.t2+c.t0},la=function(){var a,b,d,e,f,g,h;return e=va(arguments),d=e[0],b=e[1],a=e[2],d=ma(d),b=ma(b),a=ma(a),f=xa((.4124564*d+.3575761*b+.1804375*a)/c.Xn),g=xa((.2126729*d+.7151522*b+.072175*a)/c.Yn),h=xa((.0193339*d+.119192*b+.9503041*a)/c.Zn),[f,g,h]},s.lab=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["lab"]),function(){})},j.lab=N,a.prototype.lab=function(){return ga(this._rgb)},n=function(a){var b,c,d,e,f,g,h,i,j,k,l;return a=function(){var b,c,d;for(d=[],c=0,b=a.length;c<b;c++)e=a[c],d.push(s(e));return d}(),2===a.length?(j=function(){var b,c,d;for(d=[],c=0,b=a.length;c<b;c++)e=a[c],d.push(e.lab());return d}(),f=j[0],g=j[1],b=function(a){var b,c;return c=function(){var c,d;for(d=[],b=c=0;c<=2;b=++c)d.push(f[b]+a*(g[b]-f[b]));return d}(),s.lab.apply(s,c)}):3===a.length?(k=function(){var b,c,d;for(d=[],c=0,b=a.length;c<b;c++)e=a[c],d.push(e.lab());return d}(),f=k[0],g=k[1],h=k[2],b=function(a){var b,c;return c=function(){var c,d;for(d=[],b=c=0;c<=2;b=++c)d.push((1-a)*(1-a)*f[b]+2*(1-a)*a*g[b]+a*a*h[b]);return d}(),s.lab.apply(s,c)}):4===a.length?(l=function(){var b,c,d;for(d=[],c=0,b=a.length;c<b;c++)e=a[c],d.push(e.lab());return d}(),f=l[0],g=l[1],h=l[2],i=l[3],b=function(a){var b,c;return c=function(){var c,d;for(d=[],b=c=0;c<=2;b=++c)d.push((1-a)*(1-a)*(1-a)*f[b]+3*(1-a)*(1-a)*a*g[b]+3*(1-a)*a*a*h[b]+a*a*a*i[b]);return d}(),s.lab.apply(s,c)}):5===a.length&&(c=n(a.slice(0,3)),d=n(a.slice(2,5)),b=function(a){return a<.5?c(2*a):d(2*(a-.5))}),b},s.bezier=function(a){var b;return b=n(a),b.scale=function(){return s.scale(b)},b},s.cubehelix=function(a,b,c,d,e){var f,h,i;return null==a&&(a=300),null==b&&(b=-1.5),null==c&&(c=1),null==d&&(d=1),null==e&&(e=[0,1]),h=e[1]-e[0],f=0,i=function(i){var j,k,l,m,n,o,p,q,r;return j=g*((a+120)/360+b*i),p=_(e[0]+h*i,d),o=0!==f?c[0]+i*f:c,k=o*p*(1-p)/2,m=w(j),r=ra(j),q=p+k*(-.14861*m+1.78277*r),n=p+k*(-.29227*m-.90649*r),l=p+k*(1.97294*m),s(t([255*q,255*n,255*l]))},i.start=function(b){return null==b?a:(a=b,i)},i.rotations=function(a){return null==a?b:(b=a,i)},i.gamma=function(a){return null==a?d:(d=a,i)},i.hue=function(a){return null==a?c:(c=a,"array"===ua(c)?(f=c[1]-c[0],0===f&&(c=c[1])):f=0,i)},i.lightness=function(a){return null==a?e:(e=a,"array"===ua(e)?(h=e[1]-e[0],0===h&&(e=e[1])):h=0,i)},i.scale=function(){return s.scale(i)},i.hue(c),i},s.random=function(){var b,c,d,e;for(c="0123456789abcdef",b="#",d=e=0;e<6;d=++e)b+=c.charAt(B(16*Math.random()));return new a(b)},s.average=function(b){var c,d,e,f,g,h,i,j,k;for(j=f=d=c=0,g=b.length,i=0,h=b.length;i<h;i++)e=b[i],k=s(e).rgba(),j+=k[0],f+=k[1],d+=k[2],c+=k[3];return new a(j/g,f/g,d/g,c/g)},j.rgb=function(){var a,b,c,d;b=va(arguments),c=[];for(a in b)d=b[a],c.push(d);return c},s.rgb=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["rgb"]),function(){})},a.prototype.rgb=function(){return this._rgb.slice(0,3)},a.prototype.rgba=function(){return this._rgb},h.push({p:15,test:function(a){var b;return b=va(arguments),"array"===ua(b)&&3===b.length?"rgb":4===b.length&&"number"===ua(b[3])&&b[3]>=0&&b[3]<=1?"rgb":void 0}}),C=function(a){var b,c,d,e,f,g;if(a.match(/^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/))return 4!==a.length&&7!==a.length||(a=a.substr(1)),3===a.length&&(a=a.split(""),a=a[0]+a[0]+a[1]+a[1]+a[2]+a[2]),g=parseInt(a,16),e=g>>16,d=g>>8&255,c=255&g,[e,d,c,1];if(a.match(/^#?([A-Fa-f0-9]{8})$/))return 9===a.length&&(a=a.substr(1)),g=parseInt(a,16),e=g>>24&255,d=g>>16&255,c=g>>8&255,b=pa((255&g)/255*100)/100,[e,d,c,b];if(null!=j.css&&(f=j.css(a)))return f;throw"unknown color: "+a},ca=function(a,b){var c,d,e,f,g,h,i;return null==b&&(b="rgb"),g=a[0],e=a[1],d=a[2],c=a[3],i=g<<16|e<<8|d,h="000000"+i.toString(16),h=h.substr(h.length-6),f="0"+pa(255*c).toString(16),f=f.substr(f.length-2),"#"+function(){switch(b.toLowerCase()){case"rgba":return h+f;case"argb":return f+h;default:return h}}()},j.hex=function(a){return C(a)},s.hex=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["hex"]),function(){})},a.prototype.hex=function(a){return null==a&&(a="rgb"),ca(this._rgb,a)},h.push({p:10,test:function(a){if(1===arguments.length&&"string"===ua(a))return"hex"}}),F=function(){var a,b,c,d,e,f,g,h,i,j,k,l,m,n;if(a=va(arguments),e=a[0],k=a[1],g=a[2],0===k)i=d=b=255*g;else{for(n=[0,0,0],c=[0,0,0],m=g<.5?g*(1+k):g+k-g*k,l=2*g-m,e/=360,n[0]=e+1/3,n[1]=e,n[2]=e-1/3,f=h=0;h<=2;f=++h)n[f]<0&&(n[f]+=1),n[f]>1&&(n[f]-=1),6*n[f]<1?c[f]=l+6*(m-l)*n[f]:2*n[f]<1?c[f]=m:3*n[f]<2?c[f]=l+(m-l)*(2/3-n[f])*6:c[f]=l;j=[pa(255*c[0]),pa(255*c[1]),pa(255*c[2])],i=j[0],d=j[1],b=j[2]}return a.length>3?[i,d,b,a[3]]:[i,d,b]},ea=function(a,b,c){var d,e,f,g,h;return void 0!==a&&a.length>=3&&(g=a,a=g[0],b=g[1],c=g[2]),a/=255,b/=255,c/=255,f=Math.min(a,b,c),W=Math.max(a,b,c),e=(W+f)/2,W===f?(h=0,d=Number.NaN):h=e<.5?(W-f)/(W+f):(W-f)/(2-W-f),a===W?d=(b-c)/(W-f):b===W?d=2+(c-a)/(W-f):c===W&&(d=4+(a-b)/(W-f)),d*=60,d<0&&(d+=360),[d,h,e]},s.hsl=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["hsl"]),function(){})},j.hsl=F,a.prototype.hsl=function(){return ea(this._rgb)},G=function(){var a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r;if(a=va(arguments),e=a[0],p=a[1],r=a[2],r*=255,0===p)i=d=b=r;else switch(360===e&&(e=0),e>360&&(e-=360),e<0&&(e+=360),e/=60,f=B(e),c=e-f,g=r*(1-p),h=r*(1-p*c),q=r*(1-p*(1-c)),f){case 0:j=[r,q,g],i=j[0],d=j[1],b=j[2];break;case 1:k=[h,r,g],i=k[0],d=k[1],b=k[2];break;case 2:l=[g,r,q],i=l[0],d=l[1],b=l[2];break;case 3:m=[g,h,r],i=m[0],d=m[1],b=m[2];break;case 4:n=[q,g,r],i=n[0],d=n[1],b=n[2];break;case 5:o=[r,g,h],i=o[0],d=o[1],b=o[2]}return i=pa(i),d=pa(d),b=pa(b),[i,d,b,a.length>3?a[3]:1]},fa=function(){var a,b,c,d,e,f,g,h,i;return g=va(arguments),f=g[0],c=g[1],a=g[2],e=Math.min(f,c,a),W=Math.max(f,c,a),b=W-e,i=W/255,0===W?(d=Number.NaN,h=0):(h=b/W,f===W&&(d=(c-a)/b),c===W&&(d=2+(a-f)/b),a===W&&(d=4+(f-c)/b),d*=60,d<0&&(d+=360)),[d,h,i]},s.hsv=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["hsv"]),function(){})},j.hsv=G,a.prototype.hsv=function(){return fa(this._rgb)},Z=function(a){var b,c,d;return"number"===ua(a)&&a>=0&&a<=16777215?(d=a>>16,c=a>>8&255,b=255&a,[d,c,b,1]):(console.warn("unknown num color: "+a),[0,0,0,1])},ja=function(){var a,b,c,d;return d=va(arguments),c=d[0],b=d[1],a=d[2],(c<<16)+(b<<8)+a},s.num=function(b){return new a(b,"num")},a.prototype.num=function(a){return null==a&&(a="rgb"),ja(this._rgb,a)},j.num=Z,h.push({p:10,test:function(a){if(1===arguments.length&&"number"===ua(a)&&a>=0&&a<=16777215)return"num"}}),x=function(a){var b,c,d,e,f,g,h,i;if(a=a.toLowerCase(),null!=s.colors&&s.colors[a])return C(s.colors[a]);if(f=a.match(/rgb\(\s*(\-?\d+),\s*(\-?\d+)\s*,\s*(\-?\d+)\s*\)/)){for(h=f.slice(1,4),e=g=0;g<=2;e=++g)h[e]=+h[e];h[3]=1}else if(f=a.match(/rgba\(\s*(\-?\d+),\s*(\-?\d+)\s*,\s*(\-?\d+)\s*,\s*([01]|[01]?\.\d+)\)/))for(h=f.slice(1,5),e=i=0;i<=3;e=++i)h[e]=+h[e];else if(f=a.match(/rgb\(\s*(\-?\d+(?:\.\d+)?)%,\s*(\-?\d+(?:\.\d+)?)%\s*,\s*(\-?\d+(?:\.\d+)?)%\s*\)/)){for(h=f.slice(1,4),e=b=0;b<=2;e=++b)h[e]=pa(2.55*h[e]);h[3]=1}else if(f=a.match(/rgba\(\s*(\-?\d+(?:\.\d+)?)%,\s*(\-?\d+(?:\.\d+)?)%\s*,\s*(\-?\d+(?:\.\d+)?)%\s*,\s*([01]|[01]?\.\d+)\)/)){for(h=f.slice(1,5),e=c=0;c<=2;e=++c)h[e]=pa(2.55*h[e]);h[3]=+h[3]}else(f=a.match(/hsl\(\s*(\-?\d+(?:\.\d+)?),\s*(\-?\d+(?:\.\d+)?)%\s*,\s*(\-?\d+(?:\.\d+)?)%\s*\)/))?(d=f.slice(1,4),d[1]*=.01,d[2]*=.01,h=F(d),h[3]=1):(f=a.match(/hsla\(\s*(\-?\d+(?:\.\d+)?),\s*(\-?\d+(?:\.\d+)?)%\s*,\s*(\-?\d+(?:\.\d+)?)%\s*,\s*([01]|[01]?\.\d+)\)/))&&(d=f.slice(1,4),d[1]*=.01,d[2]*=.01,h=F(d),h[3]=+f[4]);return h},ba=function(a){var b;return b=a[3]<1?"rgba":"rgb","rgb"===b?b+"("+a.slice(0,3).map(pa).join(",")+")":"rgba"===b?b+"("+a.slice(0,3).map(pa).join(",")+","+a[3]+")":void 0},na=function(a){return pa(100*a)/100},E=function(a,b){var c;return c=b<1?"hsla":"hsl",a[0]=na(a[0]||0),a[1]=na(100*a[1])+"%",a[2]=na(100*a[2])+"%","hsla"===c&&(a[3]=b),c+"("+a.join(",")+")"},j.css=function(a){return x(a)},s.css=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["css"]),function(){})},a.prototype.css=function(a){return null==a&&(a="rgb"),"rgb"===a.slice(0,3)?ba(this._rgb):"hsl"===a.slice(0,3)?E(this.hsl(),this.alpha()):void 0},j.named=function(a){return C(wa[a])},h.push({p:20,test:function(a){if(1===arguments.length&&null!=wa[a])return"named"}}),a.prototype.name=function(a){var b,c;arguments.length&&(wa[a]&&(this._rgb=C(wa[a])),this._rgb[3]=1),b=this.hex();for(c in wa)if(b===wa[c])return c;return b},P=function(){var a,c,d,e;return e=va(arguments),d=e[0],a=e[1],c=e[2],c*=b,[d,w(c)*a,ra(c)*a]},Q=function(){var a,b,c,d,e,f,g,h,i,j,k;return c=va(arguments),h=c[0],e=c[1],g=c[2],j=P(h,e,g),a=j[0],b=j[1],d=j[2],k=N(a,b,d),i=k[0],f=k[1],d=k[2],[S(i,0,255),S(f,0,255),S(d,0,255),c.length>3?c[3]:1]},M=function(){var a,b,c,d,e,g;return g=va(arguments),e=g[0],a=g[1],b=g[2],c=sa(a*a+b*b),d=(m(b,a)*f+360)%360,0===pa(1e4*c)&&(d=Number.NaN),[e,c,d]},ha=function(){var a,b,c,d,e,f,g;return f=va(arguments),e=f[0],c=f[1],b=f[2],g=ga(e,c,b),d=g[0],a=g[1],b=g[2],M(d,a,b)},s.lch=function(){var b;return b=va(arguments),new a(b,"lch")},s.hcl=function(){var b;return b=va(arguments),new a(b,"hcl")},j.lch=Q,j.hcl=function(){var a,b,c,d;return d=va(arguments),b=d[0],a=d[1],c=d[2],Q([c,a,b])},a.prototype.lch=function(){return ha(this._rgb)},a.prototype.hcl=function(){return ha(this._rgb).reverse()},aa=function(a){var b,c,d,e,f,g,h,i,j;return null==a&&(a="rgb"),i=va(arguments),h=i[0],e=i[1],b=i[2],h/=255,e/=255,b/=255,f=1-Math.max(h,Math.max(e,b)),d=f<1?1/(1-f):0,c=(1-h-f)*d,g=(1-e-f)*d,j=(1-b-f)*d,[c,g,j,f]},u=function(){var a,b,c,d,e,f,g,h,i;return b=va(arguments),d=b[0],g=b[1],i=b[2],f=b[3],a=b.length>4?b[4]:1,1===f?[0,0,0,a]:(h=d>=1?0:pa(255*(1-d)*(1-f)),e=g>=1?0:pa(255*(1-g)*(1-f)),c=i>=1?0:pa(255*(1-i)*(1-f)),[h,e,c,a])},j.cmyk=function(){return u(va(arguments))},s.cmyk=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["cmyk"]),function(){})},a.prototype.cmyk=function(){return aa(this._rgb)},j.gl=function(){var a,b,c,d,e;for(d=function(){var a,c;a=va(arguments),c=[];for(b in a)e=a[b],c.push(e);return c}.apply(this,arguments),a=c=0;c<=2;a=++c)d[a]*=255;return d},s.gl=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["gl"]),function(){})},a.prototype.gl=function(){var a;return a=this._rgb,[a[0]/255,a[1]/255,a[2]/255,a[3]]},ia=function(a,b,c){var d;return d=va(arguments),a=d[0],b=d[1],c=d[2],a=U(a),b=U(b),c=U(c),.2126*a+.7152*b+.0722*c},U=function(a){return a/=255,a<=.03928?a/12.92:_((a+.055)/1.055,2.4)},k=[],H=function(a,b,c,d){var e,f,g,h;for(null==c&&(c=.5),null==d&&(d="rgb"),"object"!==ua(a)&&(a=s(a)),"object"!==ua(b)&&(b=s(b)),g=0,f=k.length;g<f;g++)if(e=k[g],d===e[0]){h=e[1](a,b,c,d);break}if(null==h)throw"color mode "+d+" is not supported";return h.alpha(a.alpha()+c*(b.alpha()-a.alpha())),h},s.interpolate=H,a.prototype.interpolate=function(a,b,c){return H(this,a,b,c)},s.mix=H,a.prototype.mix=a.prototype.interpolate,L=function(b,c,d,e){var f,g;return f=b._rgb,g=c._rgb,new a(f[0]+d*(g[0]-f[0]),f[1]+d*(g[1]-f[1]),f[2]+d*(g[2]-f[2]),e)},k.push(["rgb",L]),a.prototype.luminance=function(a,b){var c,d,e,f;return null==b&&(b="rgb"),arguments.length?(0===a?this._rgb=[0,0,0,this._rgb[3]]:1===a?this._rgb=[255,255,255,this._rgb[3]]:(d=1e-7,e=20,f=function(c,g){var h,i;return i=c.interpolate(g,.5,b),h=i.luminance(),Math.abs(a-h)<d||!e--?i:h>a?f(c,i):f(i,g)},c=ia(this._rgb),this._rgb=(c>a?f(s("black"),this):f(this,s("white"))).rgba()),this):ia(this._rgb)},ta=function(a){var b,c,d,e;return e=a/100,e<66?(d=255,c=-155.25485562709179-.44596950469579133*(c=e-2)+104.49216199393888*T(c),b=e<20?0:-254.76935184120902+.8274096064007395*(b=e-10)+115.67994401066147*T(b)):(d=351.97690566805693+.114206453784165*(d=e-55)-40.25366309332127*T(d),c=325.4494125711974+.07943456536662342*(c=e-50)-28.0852963507957*T(c),b=255),t([d,c,b])},ka=function(){var a,b,c,d,e,f,g,h,i;for(g=va(arguments),f=g[0],c=g[1],a=g[2],e=1e3,d=4e4,b=.4;d-e>b;)i=.5*(d+e),h=ta(i),h[2]/h[0]>=a/f?d=i:e=i;return pa(i)},s.temperature=s.kelvin=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["temperature"]),function(){})},j.temperature=j.kelvin=j.K=ta,a.prototype.temperature=function(){return ka(this._rgb)},a.prototype.kelvin=a.prototype.temperature,s.contrast=function(b,c){var d,e,f,g;return"string"!==(f=ua(b))&&"number"!==f||(b=new a(b)),"string"!==(g=ua(c))&&"number"!==g||(c=new a(c)),d=b.luminance(),e=c.luminance(),d>e?(d+.05)/(e+.05):(e+.05)/(d+.05)},a.prototype.get=function(a){var b,c,d,e,f,g;return d=this,f=a.split("."),e=f[0],b=f[1],g=d[e](),b?(c=e.indexOf(b),c>-1?g[c]:console.warn("unknown channel "+b+" in mode "+e)):g},a.prototype.set=function(a,b){var c,d,e,f,g,h;if(e=this,g=a.split("."),f=g[0],c=g[1],c)if(h=e[f](),d=f.indexOf(c),d>-1)if("string"===ua(b))switch(b.charAt(0)){case"+":h[d]+=+b;break;case"-":h[d]+=+b;break;case"*":h[d]*=+b.substr(1);break;case"/":h[d]/=+b.substr(1);break;default:h[d]=+b}else h[d]=b;else console.warn("unknown channel "+c+" in mode "+f);else h=b;return e._rgb=s(h,f).alpha(e.alpha())._rgb,e},a.prototype.darken=function(a){var b,d;return null==a&&(a=1),d=this,b=d.lab(),b[0]-=c.Kn*a,s.lab(b).alpha(d.alpha())},a.prototype.brighten=function(a){return null==a&&(a=1),this.darken(-a)},a.prototype.darker=a.prototype.darken,a.prototype.brighter=a.prototype.brighten,a.prototype.saturate=function(a){var b,d;return null==a&&(a=1),d=this,b=d.lch(),b[1]+=a*c.Kn,b[1]<0&&(b[1]=0),s.lch(b).alpha(d.alpha())},a.prototype.desaturate=function(a){return null==a&&(a=1),this.saturate(-a)},a.prototype.premultiply=function(){var a,b;return b=this.rgb(),a=this.alpha(),s(b[0]*a,b[1]*a,b[2]*a,a)},o=function(a,b,c){if(!o[c])throw"unknown blend mode "+c;return o[c](a,b)},p=function(a){return function(b,c){var d,e;return d=s(c).rgb(),e=s(b).rgb(),s(a(d,e),"rgb")}},A=function(a){return function(b,c){var d,e,f;for(f=[],d=e=0;e<=3;d=++e)f[d]=a(b[d],c[d]);return f}},Y=function(a,b){return a},X=function(a,b){return a*b/255},y=function(a,b){return a>b?b:a},R=function(a,b){return a>b?a:b},qa=function(a,b){return 255*(1-(1-a/255)*(1-b/255))},$=function(a,b){return b<128?2*a*b/255:255*(1-2*(1-a/255)*(1-b/255))},r=function(a,b){return 255*(1-(1-b/255)/(a/255))},z=function(a,b){return 255===a?255:(a=255*(b/255)/(1-a/255),a>255?255:a)},o.normal=p(A(Y)),o.multiply=p(A(X)),o.screen=p(A(qa)),o.overlay=p(A($)),o.darken=p(A(y)),o.lighten=p(A(R)),o.dodge=p(A(z)),o.burn=p(A(r)),s.blend=o,s.analyze=function(a){var b,c,d,e;for(d={min:Number.MAX_VALUE,max:Number.MAX_VALUE*-1,sum:0,values:[],count:0},c=0,b=a.length;c<b;c++)e=a[c],null==e||isNaN(e)||(d.values.push(e),d.sum+=e,e<d.min&&(d.min=e),e>d.max&&(d.max=e),d.count+=1);return d.domain=[d.min,d.max],d.limits=function(a,b){return s.limits(d,a,b)},d},s.scale=function(a,b){var c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,t,u,v,w,x;return k="rgb",l=s("#ccc"),p=0,h=!1,g=[0,1],o=[],n=[0,0],c=!1,e=[],m=!1,j=0,i=1,f=!1,d={},w=function(a){var b,c,d,f,g,h,i;if(null==a&&(a=["#fff","#000"]),null!=a&&"string"===ua(a)&&null!=(null!=(f=s.brewer)?f[a]:void 0)&&(a=s.brewer[a]),"array"===ua(a)){for(a=a.slice(0),b=d=0,g=a.length-1;0<=g?d<=g:d>=g;b=0<=g?++d:--d)c=a[b],"string"===ua(c)&&(a[b]=s(c));for(o.length=0,b=i=0,h=a.length-1;0<=h?i<=h:i>=h;b=0<=h?++i:--i)o.push(b/(a.length-1))}return v(),e=a},t=function(a){var b,d;if(null!=c){for(d=c.length-1,b=0;b<d&&a>=c[b];)b++;return b-1}return 0},x=function(a){return a},q=function(a){var b,d,e,f,g;return g=a,c.length>2&&(f=c.length-1,b=t(a),e=c[0]+(c[1]-c[0])*(0+.5*p),d=c[f-1]+(c[f]-c[f-1])*(1-.5*p),g=j+(c[b]+.5*(c[b+1]-c[b])-e)/(d-e)*(i-j)),g},u=function(a,b){var f,g,h,m,p,q,r,u;if(null==b&&(b=!1),isNaN(a))return l;if(b?u=a:c&&c.length>2?(f=t(a),u=f/(c.length-2),u=n[0]+u*(1-n[0]-n[1])):i!==j?(u=(a-j)/(i-j),u=n[0]+u*(1-n[0]-n[1]),u=Math.min(1,Math.max(0,u))):u=1,b||(u=x(u)),m=Math.floor(1e4*u),d[m])g=d[m];else{if("array"===ua(e))for(h=p=0,r=o.length-1;0<=r?p<=r:p>=r;h=0<=r?++p:--p){if(q=o[h],u<=q){g=e[h];break}if(u>=q&&h===o.length-1){g=e[h];break}if(u>q&&u<o[h+1]){u=(u-q)/(o[h+1]-q),g=s.interpolate(e[h],e[h+1],u,k);break}}else"function"===ua(e)&&(g=e(u));d[m]=g}return g},v=function(){return d={}},w(a),r=function(a){var b;return b=s(u(a)),m&&b[m]?b[m]():b},r.classes=function(a){var b;return null!=a?("array"===ua(a)?(c=a,g=[a[0],a[a.length-1]]):(b=s.analyze(g),c=0===a?[b.min,b.max]:s.limits(b,"e",a)),r):c},r.domain=function(a){var b,c,d,f,h,k,l;if(!arguments.length)return g;if(j=a[0],i=a[a.length-1],o=[],d=e.length,a.length===d&&j!==i)for(h=0,f=a.length;h<f;h++)c=a[h],o.push((c-j)/(i-j));else for(b=l=0,k=d-1;0<=k?l<=k:l>=k;b=0<=k?++l:--l)o.push(b/(d-1));return g=[j,i],r},r.mode=function(a){return arguments.length?(k=a,v(),r):k},r.range=function(a,b){return w(a,b),r},r.out=function(a){return m=a,r},r.spread=function(a){return arguments.length?(p=a,r):p},r.correctLightness=function(a){return null==a&&(a=!0),f=a,v(),x=f?function(a){var b,c,d,e,f,g,h,i,j;for(b=u(0,!0).lab()[0],c=u(1,!0).lab()[0],h=b>c,d=u(a,!0).lab()[0],f=b+(c-b)*a,e=d-f,i=0,j=1,g=20;Math.abs(e)>.01&&g-- >0;)!function(){return h&&(e*=-1),e<0?(i=a,a+=.5*(j-a)):(j=a,a+=.5*(i-a)),d=u(a,!0).lab()[0],e=d-f}();return a}:function(a){return a},r},r.padding=function(a){return null!=a?("number"===ua(a)&&(a=[a,a]),n=a,r):n},r.colors=function(){var b,d,e,f,h,i,j,k,l;if(f=0,h="hex",1===arguments.length&&("string"===ua(arguments[0])?h=arguments[0]:f=arguments[0]),2===arguments.length&&(f=arguments[0],h=arguments[1]),f)return d=g[0],b=g[1]-d,function(){j=[];for(var a=0;0<=f?a<f:a>f;0<=f?a++:a--)j.push(a);return j}.apply(this).map(function(a){return r(d+a/(f-1)*b)[h]()});if(a=[],k=[],c&&c.length>2)for(e=l=1,i=c.length;1<=i?l<i:l>i;e=1<=i?++l:--l)k.push(.5*(c[e-1]+c[e]));else k=g;return k.map(function(a){return r(a)[h]()})},r},null==s.scales&&(s.scales={}),s.scales.cool=function(){return s.scale([s.hsl(180,1,.9),s.hsl(250,.7,.4)])},s.scales.hot=function(){return s.scale(["#000","#f00","#ff0","#fff"],[0,.25,.75,1]).mode("rgb")},s.analyze=function(a,b,c){var d,e,f,g,h,i,j;if(h={min:Number.MAX_VALUE,max:Number.MAX_VALUE*-1,sum:0,values:[],count:0},null==c&&(c=function(){return!0}),d=function(a){null==a||isNaN(a)||(h.values.push(a),h.sum+=a,a<h.min&&(h.min=a),a>h.max&&(h.max=a),h.count+=1)},j=function(a,e){if(c(a,e))return d(null!=b&&"function"===ua(b)?b(a):null!=b&&"string"===ua(b)||"number"===ua(b)?a[b]:a)},"array"===ua(a))for(g=0,f=a.length;g<f;g++)i=a[g],j(i);else for(e in a)i=a[e],j(i,e);return h.domain=[h.min,h.max],h.limits=function(a,b){return s.limits(h,a,b)},h},s.limits=function(a,b,c){var d,e,f,g,h,i,j,k,m,n,o,p,q,r,t,u,v,w,x,y,z,A,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,U,V,X,Y,Z,$,aa,ba,ca,da,ea,fa,ga,ha,ia,ja;if(null==b&&(b="equal"),null==c&&(c=7),"array"===ua(a)&&(a=s.analyze(a)),E=a.min,W=a.max,fa=a.sum,ia=a.values.sort(function(a,b){return a-b}),C=[],"c"===b.substr(0,1)&&(C.push(E),C.push(W)),"e"===b.substr(0,1)){for(C.push(E),y=K=1,O=c-1;1<=O?K<=O:K>=O;y=1<=O?++K:--K)C.push(E+y/c*(W-E));C.push(W)}else if("l"===b.substr(0,1)){if(E<=0)throw"Logarithmic scales are only possible for values > 0";for(F=Math.LOG10E*T(E),D=Math.LOG10E*T(W),C.push(E),y=ja=1,P=c-1;1<=P?ja<=P:ja>=P;y=1<=P?++ja:--ja)C.push(_(10,F+y/c*(D-F)));C.push(W)}else if("q"===b.substr(0,1)){for(C.push(E),y=d=1,X=c-1;1<=X?d<=X:d>=X;y=1<=X?++d:--d)L=ia.length*y/c,M=B(L),M===L?C.push(ia[M]):(N=L-M,C.push(ia[M]*N+ia[M+1]*(1-N)));C.push(W)}else if("k"===b.substr(0,1)){for(H=ia.length,r=new Array(H),w=new Array(c),ea=!0,I=0,u=null,u=[],u.push(E),y=e=1,Y=c-1;1<=Y?e<=Y:e>=Y;y=1<=Y?++e:--e)u.push(E+y/c*(W-E));for(u.push(W);ea;){for(z=f=0,Z=c-1;0<=Z?f<=Z:f>=Z;z=0<=Z?++f:--f)w[z]=0;for(y=g=0,$=H-1;0<=$?g<=$:g>=$;y=0<=$?++g:--g){for(ha=ia[y],G=Number.MAX_VALUE,z=h=0,aa=c-1;0<=aa?h<=aa:h>=aa;z=0<=aa?++h:--h)x=l(u[z]-ha),x<G&&(G=x,t=z);w[t]++,r[y]=t}for(J=new Array(c),z=i=0,ba=c-1;0<=ba?i<=ba:i>=ba;z=0<=ba?++i:--i)J[z]=null;for(y=j=0,ca=H-1;0<=ca?j<=ca:j>=ca;y=0<=ca?++j:--j)v=r[y],null===J[v]?J[v]=ia[y]:J[v]+=ia[y];for(z=k=0,da=c-1;0<=da?k<=da:k>=da;z=0<=da?++k:--k)J[z]*=1/w[z];for(ea=!1,z=m=0,Q=c-1;0<=Q?m<=Q:m>=Q;z=0<=Q?++m:--m)if(J[z]!==u[y]){ea=!0;break}u=J,I++,I>200&&(ea=!1)}for(A={},z=n=0,R=c-1;0<=R?n<=R:n>=R;z=0<=R?++n:--n)A[z]=[];for(y=o=0,S=H-1;0<=S?o<=S:o>=S;y=0<=S?++o:--o)v=r[y],A[v].push(ia[y]);for(ga=[],z=p=0,U=c-1;0<=U?p<=U:p>=U;z=0<=U?++p:--p)ga.push(A[z][0]),ga.push(A[z][A[z].length-1]);for(ga=ga.sort(function(a,b){return a-b}),C.push(ga[0]),y=q=1,V=ga.length-1;q<=V;y=q+=2)isNaN(ga[y])||C.push(ga[y])}return C},D=function(a,b,c){var d,f,h,i;return d=va(arguments),a=d[0],b=d[1],c=d[2],a/=360,a<1/3?(f=(1-b)/3,i=(1+b*w(g*a)/w(e-g*a))/3,h=1-(f+i)):a<2/3?(a-=1/3,i=(1-b)/3,h=(1+b*w(g*a)/w(e-g*a))/3,f=1-(i+h)):(a-=2/3,h=(1-b)/3,f=(1+b*w(g*a)/w(e-g*a))/3,i=1-(h+f)),i=S(c*i*3),h=S(c*h*3),f=S(c*f*3),[255*i,255*h,255*f,d.length>3?d[3]:1]},da=function(){var a,b,c,d,e,f,h,i;return h=va(arguments),f=h[0],b=h[1],a=h[2],g=2*Math.PI,f/=255,b/=255,a/=255,e=Math.min(f,b,a),d=(f+b+a)/3,i=1-e/d,0===i?c=0:(c=(f-b+(f-a))/2,c/=Math.sqrt((f-b)*(f-b)+(f-a)*(b-a)),c=Math.acos(c),a>b&&(c=g-c),c/=g),[360*c,i,d]},s.hsi=function(){return function(a,b,c){c.prototype=a.prototype;var d=new c,e=a.apply(d,b);return Object(e)===e?e:d}(a,za.call(arguments).concat(["hsi"]),function(){})},j.hsi=D,a.prototype.hsi=function(){return da(this._rgb)},I=function(a,b,c,d){var e,f,g,h,i,j,k,l,m,n,o,p,q;return"hsl"===d?(p=a.hsl(),q=b.hsl()):"hsv"===d?(p=a.hsv(),q=b.hsv()):"hsi"===d?(p=a.hsi(),q=b.hsi()):"lch"!==d&&"hcl"!==d||(d="hcl",p=a.hcl(),q=b.hcl()),"h"===d.substr(0,1)&&(g=p[0],n=p[1],j=p[2],h=q[0],o=q[1],k=q[2]),isNaN(g)||isNaN(h)?isNaN(g)?isNaN(h)?f=Number.NaN:(f=h,1!==j&&0!==j||"hsv"===d||(m=o)):(f=g,1!==k&&0!==k||"hsv"===d||(m=n)):(e=h>g&&h-g>180?h-(g+360):h<g&&g-h>180?h+360-g:h-g,f=g+c*e),null==m&&(m=n+c*(o-n)),i=j+c*(k-j),l=s[d](f,m,i)},k=k.concat(function(){var a,b,c,d;for(c=["hsv","hsl","hsi","hcl","lch"],d=[],b=0,a=c.length;b<a;b++)V=c[b],d.push([V,I]);return d}()),K=function(a,b,c,d){var e,f;return e=a.num(),f=b.num(),s.num(e+(f-e)*c,"num");
+},k.push(["num",K]),J=function(b,c,d,e){var f,g,h;return g=b.lab(),h=c.lab(),f=new a(g[0]+d*(h[0]-g[0]),g[1]+d*(h[1]-g[1]),g[2]+d*(h[2]-g[2]),e)},k.push(["lab",J])}).call(this);
 'use strict';
 
 WaveSurfer.Spectrogram = {
@@ -62700,6 +64848,7 @@ WaveSurfer.Spectrogram = {
     init: function (params) {
         this.params = params;
         var wavesurfer = this.wavesurfer = params.wavesurfer;
+        window.wavesurfer = wavesurfer;
 
         if (!this.wavesurfer) {
             throw Error('No WaveSurfer instance provided');
@@ -62723,6 +64872,9 @@ WaveSurfer.Spectrogram = {
         this.noverlap = params.noverlap;
         this.windowFunc = params.windowFunc;
         this.alpha = params.alpha;
+
+        this.getColor = new chroma.scale(['navy', 'yellow']).mode('lch').domain([0, 300]);
+        this.realtime = !!this.params.realtime;
 
         this.createWrapper();
         this.createCanvas();
@@ -62796,17 +64948,47 @@ WaveSurfer.Spectrogram = {
 
         if (this.frequenciesDataUrl) {
             this.loadFrequenciesData(this.frequenciesDataUrl);
+            return;
         }
-        else {
-            this.getFrequencies(this.drawSpectrogram);
+        if (this.realtime) {
+            this.setupAnalyzer();
+            return;
         }
+        this.getFrequencies(this.drawSpectrogram);
     },
 
     updateCanvasStyle: function () {
-        var width = Math.round(this.width / this.pixelRatio) + 'px';
-        this.canvas.width = this.width;
+        var width = Math.round(this.drawer.width / this.pixelRatio) + 'px';
+        this.canvas.width = this.width = this.drawer.width;
         this.canvas.height = this.height;
         this.canvas.style.width = width;
+    },
+
+    setupAnalyzer: function() {
+        var analyser = this.wavesurfer.backend.analyser;
+        analyser.fftSize = this.fftSamples * 2;
+        analyser.smoothingTimeConstant = 0;
+
+        wavesurfer.on('audioprocess', function(time) {
+            var analyser = this.wavesurfer.backend.analyser;
+            var array = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(array);
+
+            this.realtimeDrawSpectrogram(array, time / this.wavesurfer.getDuration());
+        }.bind(this));
+
+        wavesurfer.on('zoom', this.updateCanvasStyle.bind(this));
+    },
+
+    realtimeDrawSpectrogram: function(array, percent) {
+        var x = this.width * percent;
+        var height = this.height;
+        var heightFactor = this.buffer ? 2 / this.buffer.numberOfChannels : 1;
+
+        for (var j = 0; j < array.length; j++) {
+            this.spectrCc.fillStyle = this.getColor(array[j]).hex();
+            this.spectrCc.fillRect(x, height - j * heightFactor, 2, heightFactor);
+        };
     },
 
     drawSpectrogram: function(frequenciesData, my) {
@@ -62819,12 +65001,15 @@ WaveSurfer.Spectrogram = {
 
         var heightFactor = my.buffer ? 2 / my.buffer.numberOfChannels : 1;
 
-        for (var i = 0; i < pixels.length; i++) {
-            for (var j = 0; j < pixels[i].length; j++) {
-                var colorValue = 255 - pixels[i][j];
-                my.spectrCc.fillStyle = 'rgb(' + colorValue + ', '  + colorValue + ', ' + colorValue + ')';
-                my.spectrCc.fillRect(i, height - j * heightFactor, 1, heightFactor);
+        var drawSpectrogramColumn = function(column) {
+            for (var j = 0; j < pixels[this].length; j++) {
+                my.spectrCc.fillStyle = my.getColor(pixels[this][j]).hex();
+                my.spectrCc.fillRect(this, height - j * heightFactor, 1, heightFactor);
             }
+        }
+
+        for (var i = 0; i < pixels.length; i++) {
+            setTimeout(drawSpectrogramColumn.bind(i), 0)
         }
     },
 

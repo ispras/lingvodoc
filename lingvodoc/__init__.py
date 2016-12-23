@@ -24,6 +24,7 @@ def configure_routes(config):
     """
     This function registers views from .views for pyramid event loop. Actually all listed items here is our
     'site-map' for:
+
     1) web-views (html+javascript) - will be marked as 'web-view'
     2) REST API - will be marked as 'API'
     3) internal calls for frontend (in most cases it's API but not always). If it's not API part, will be marked
@@ -331,7 +332,7 @@ def configure_routes(config):
     # API #GET
     # no params, returns file
     config.add_route(name="get_user_blob",
-                     pattern="/blobs/{client_id}/{object_id}")
+                     pattern="/blobs/{client_id}/{object_id}", request_method='GET')
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
@@ -357,7 +358,7 @@ def configure_routes(config):
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
     config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityAcl')  # tested (no del)
+                     factory='lingvodoc.models.LexicalViewAcl')  # tested (no del)
     # tags are different there and in connected words
 
     # API #GET
@@ -655,6 +656,17 @@ def configure_routes(config):
 
     config.add_route(name='translation_service_search', pattern='/translation_service_search')
 
+    config.add_route(name='sociolinguistics', pattern='/sociolinguistics')
+
+    config.add_route(name='sociolinguistics_questions', pattern='/sociolinguistics/questions')
+
+    config.add_route(name='sociolinguistics_answers', pattern='/sociolinguistics/answers')
+
+    config.add_route(name="delete_user_blob",
+                     pattern="/blobs/{client_id}/{object_id}", request_method='DELETE')
+
+    config.add_route(name="phonology", pattern="/phonology")
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
@@ -667,15 +679,19 @@ def main(global_config, **settings):
     config_file = global_config['__file__']
     parser = ConfigParser()
     parser.read(config_file)
+
     # TODO: DANGER
-    storage = dict()
-    for k, v in parser.items('backend:storage'):
-        storage[k] = v
-    settings['storage'] = storage
+
+    settings['storage'] = dict(parser.items(
+        'backend:storage' if parser.has_section('backend:storage') else
+            'storage'))
+
     if parser.has_section('app:desktop'):
+        storage = dict()
         for k, v in parser.items('app:desktop'):
             storage[k] = v
         settings['desktop'] = storage
+
     config = Configurator(settings=settings)
     log = logging.getLogger(__name__)
 

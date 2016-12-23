@@ -1,0 +1,69 @@
+
+<div class="container">
+
+    <div class="row" ng-repeat="query in queries">
+        <div class="col-md-6">
+            <select ng-model="query.question">
+                <option ng-repeat="question in questions">{{ question }}</option>
+            </select>
+        </div>
+
+        <div class="col-md-5">
+            <select ng-model="query.answer">
+                <option ng-repeat="answer in answers">{{ answer }}</option>
+            </select>
+        </div>
+
+        <div class="col-md-1">
+            <button type="button" class="btn btn-default" ng-click="controller.addQuery()" ng-if="$index == (queries.length - 1)"> <span class="glyphicon glyphicon-plus-sign"></span></button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <br>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <button type="button" class="btn btn-primary" ng-click="controller.doSearch()">Поиск</button>
+            <button type="button" class="btn btn-default" ng-click="controller.reset()">Новый поиск</button>
+        </div>
+    </div>
+
+
+
+    <div class="row">
+        <div class="col-md-12">
+            <hr/>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="col-md-12">
+
+            <div id="map-holder">
+                <div class="container fill">
+                    <div id="sociolinguisticsMap"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="row top30" ng-show="searchComplete">
+        <div class="col-md-12">
+            <h3 class="text-center">под условия запроса подходят {{ results.length }} анкет</h3>
+        </div>
+
+    </div>
+
+
+</div>
+
+
+
+

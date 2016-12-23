@@ -2,19 +2,26 @@
 
 <ul>
     <li ng-repeat="dictionary in language.dictionaries">
-        <input type="checkbox" ng-checked="controller.isDictionarySelected(dictionary)" ng-click="controller.toggleDictionarySelection(dictionary)" ng-disabled="controller.isDownloaded(dictionary)"> {{ dictionary.translation }}
+        <input type="checkbox" ng-checked="controller.isDictionarySelected(dictionary)" ng-click="controller.toggleDictionarySelection(dictionary)" ng-show="!controller.isDownloaded(dictionary)"> {{ dictionary.translation }}
         <ul>
             <li ng-repeat="perspective in dictionary.perspectives" ng-init="permissions=controller.getPerspectivePermissions(perspective)">
 
                 {{perspective.translation}}
 
-                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/edit" ng-show="permissions.write && controller.isDownloaded(dictionary)">
+                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/edit" ng-if="permissions.write && controller.isDownloaded(dictionary)">
                     <span class="glyphicon glyphicon-pencil"></span>
                 </a>
 
-                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/view" ng-show="permissions.read && controller.isDownloaded(dictionary)">
-                    <span class="glyphicon glyphicon-list-alt"></span>
+                <span class="glyphicon glyphicon-pencil" ng-if="permissions.write && !controller.isDownloaded(dictionary)"></span>
+
+                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/view" ng-if="permissions.read && controller.isDownloaded(dictionary)">
+                    <span class="glyphicon glyphicon-eye-open"></span>
                 </a>
+
+                <span class="glyphicon glyphicon-eye-open" ng-if="permissions.read && !controller.isDownloaded(dictionary)"></span>
+
+
+                <span class="badge" ng-show="controller.isDownloaded(dictionary)">Downloaded</span>
 
 
             </li>

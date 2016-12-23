@@ -1,14 +1,15 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import com.greencatsoft.angularjs.core.{Event => _, _}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -49,7 +50,7 @@ class ContributionsController(scope: ContributionsScope,
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
-  private[this] var sortBy = params.get("sortBy").map(_.toString).toOption
+  private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
 
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
@@ -122,12 +123,38 @@ class ContributionsController(scope: ContributionsScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
   }
 
+  @JSExport
+  def viewMarkup(markupValue: Value) = {
+
+    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+      case Success(elan) =>
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "SoundMarkupController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              markupData = elan.asInstanceOf[js.Object],
+              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
+              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[Any]]
+        val instance = modal.open[Unit](options)
+      case Failure(e) =>
+    }
+  }
 
 
   @JSExport
@@ -162,7 +189,7 @@ class ContributionsController(scope: ContributionsScope,
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -208,7 +235,7 @@ class ContributionsController(scope: ContributionsScope,
           values = values.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
     instance.result map { _ =>

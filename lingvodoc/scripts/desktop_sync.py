@@ -491,7 +491,6 @@ def download(
             return
         perspective_json['additional_metadata'] = meta_json.json()
 
-
         fields_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/fields' % (
             client_id,
             object_id,
@@ -502,8 +501,7 @@ def download(
             session.rollback()
             return
         for field_json in fields_json.json():
-            new_jsons['dictionaryperspectivetofield'].append(dict2strippeddict(field_json, DictionaryPerspectiveToField))
-
+            new_jsons['dictionaryperspectivetofield'].append(dict2strippeddict(field_json, DictionaryPerspectiveToField))  # todo: think about it
 
         new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
         count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
@@ -522,10 +520,35 @@ def download(
             perspective_json['client_id'],
             perspective_json['object_id'],
             count_json['count']))
+        published_json = None
         if all_json.status_code != 200:
             log.error('get all fail', all_json.status_code)
-            session.rollback()
-            return
+            if all_json.status_code == 403:
+                count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/published_count' % (
+                    client_id,
+                    object_id,
+                    perspective_json['client_id'],
+                    perspective_json['object_id']))
+                if count_json.status_code != 200:
+                    log.error('count fail', count_json.status_code)
+                    session.rollback()
+                    return
+                count_json = count_json.json()
+                published_json = make_request(
+                    central_server + 'dictionary/%s/%s/perspective/%s/%s/published?start_from=0&count=%s' % (
+                        client_id,
+                        object_id,
+                        perspective_json['client_id'],
+                        perspective_json['object_id'],
+                        count_json['count']))
+                if published_json.status_code != 200:
+                    session.rollback()
+                    return
+            else:
+                session.rollback()
+                return
+        if published_json:
+            all_json = published_json
         all_json = all_json.json()
         for lexical_entry_json in all_json:
             new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))

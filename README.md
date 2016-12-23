@@ -88,7 +88,7 @@ If you are using less recent distro version, replace `xenial` with `trusty` or `
              * `effective_cache_size` - 1/8 of total RAM (e.g. 4096MB)
              * `wal_level = replica`
      * Restart postgres: `sudo service postgresql restart`
-     * Import the latest database backup (from-scratch creation look in `# from psql` section): `sudo -u posgres psql < lingvodoc.sql`
+     * Import the latest database backup (from-scratch creation look in `# from psql` section): `sudo -u postgres psql lingvodoc < lingvodoc.sql`
 2. Install Redis: `sudo apt-get install redis-server`.
 3. Install compilers, libraries and git: `sudo apt-get install build-essential python3-dev libssl-dev git`
 4. Install venv-creator: `sudo apt-get install python3-virtualenv`
@@ -113,7 +113,7 @@ If you use this step, login as that user for all the other steps.
      proc_name = lingvodoc
      bind = unix:/tmp/lingvodoc.sock
      ``` 
-     (note: you should install gunicorn to use that config; it's not present in requirements since pserve/waitress works well too)
+     (note: you should install gunicorn to use that config; it`s not present in requirements since pserve/waitress works well too)
      (note2: if you are using that way, you will need wsgi-frontend [nginx for example])
     * section [app:main] 
       - `secret = 'your random string'`
@@ -139,8 +139,9 @@ If you use this step, login as that user for all the other steps.
       auth_version = 2.0
       tenant_name = admin
       ```
-14. Run lingvodoc: `pserve --daemon ./postgres.ini start`   
-             
+14. Run lingvodoc: `pserve --daemon ./postgres.ini start`
+15. (optionally) To run a celery worker you need to run `celery worker -A lingvodoc.queue.celery` from lingvodoc root.
+    * Enable the celery — open your celery.ini file and set the value of celery to `true`.
              
 Installing as desktop (user) environment for Ubuntu
 ---------------
@@ -163,3 +164,34 @@ API documentation
 /authors
 /sound
 /markup
+
+Testing
+-------
+
+Testing is performed via [pytest](http://doc.pytest.org). Installation of required packages:
+```
+pip install -r develop-requirements.txt
+```
+
+Running tests from the root project directory:
+```
+$VENV/bin/py.test
+```
+
+Documentation
+-------------
+
+Documentation for Python source code, including tests, can be generated via [Sphinx](http://www.sphinx-doc.org). Installation of required packages:
+```
+pip install -r develop-requirements.txt
+```
+
+Generating documentation from the root project directory:
+```
+make -f sphinx/Makefile html
+```
+
+Generated documentation can be accessed at `sphinx/build/html/index.html`. It includes all Python packages, modules, classes and functions of the project; descriptions of packages, modules, classes and functions are automatically produced from their docstrings.
+
+Documentation also includes an up-to-date list of Pyramid REST API routes provided by the application, extracted via [pyramid\_autodoc](https://github.com/SurveyMonkey/pyramid_autodoc) Sphinx extension.
+

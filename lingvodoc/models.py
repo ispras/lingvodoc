@@ -20,6 +20,7 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
     and_,
+    or_,
     tuple_
 )
 
@@ -61,6 +62,7 @@ import logging
 
 import uuid
 
+RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
 log = logging.getLogger(__name__)
@@ -273,13 +275,14 @@ class ObjectTOC(Base, TableNameMixin):
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
     table_name = Column(UnicodeText, nullable=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class CompositeIdMixin(object):
     """
     It's used for automatically set client_id and object_id as composite primary key.
     """
-    object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
+    object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
 
     def __init__(self, **kwargs):
@@ -288,7 +291,10 @@ class CompositeIdMixin(object):
             kwargs["object_id"] = client_by_id.counter
         DBSession.add(ObjectTOC(client_id=kwargs['client_id'],
                                 object_id=kwargs['object_id'],
-                                table_name=self.__tablename__))
+                                table_name=self.__tablename__,
+                                marked_for_deletion=kwargs.get('marked_for_deletion', False)
+                                )
+                      )
         super().__init__(**kwargs)
 
 
@@ -347,36 +353,34 @@ class TranslationMixin(PrimeTableArgs):
     def get_translation(self, locale_id):
         from lingvodoc.cache.caching import CACHE
 
-        key = ':'.join([str(self.translation_gist_client_id),
-                        str(self.translation_gist_object_id), str(locale_id)])
+        main_locale = str(locale_id)
+        fallback_locale = str(ENGLISH_LOCALE) if locale_id != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
+
+        key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
         translation = CACHE.get(key)
-        if translation is not None:
-            log.debug("Got cached")
+        if translation:
+            log.info("Got cached %s " % str(key))
             return translation
-        log.debug("No cached value, getting from DB")
-        translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
-                                                                 parent_object_id=self.translation_gist_object_id,
-                                                                 locale_id=locale_id).first()
-        if translation is None:
-            log.debug("No value in DB, getting default value")
-            key = ':'.join([str(self.translation_gist_client_id),
-                            str(self.translation_gist_object_id), str(ENGLISH_LOCALE)])
-            translation = CACHE.get(key)
-            if translation is not None:
-                log.debug("Got cached default value")
-                return translation
-            log.debug("No cached default value, getting from DB")
-            translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
-                                                                     parent_object_id=self.translation_gist_object_id,
-                                                                     locale_id=ENGLISH_LOCALE).first()
-        if translation is not None:
-            log.debug("Got results. Putting the value in the cache")
-            CACHE.set(key, translation.content)
-            return translation.content
-        log.warn("'translationgist' exists but there is no default (english) translation. "
-                 "translation_gist_client_id={0}, translation_gist_object_id={1}"
-                 .format(self.translation_gist_client_id, self.translation_gist_object_id))
-        return "Translation N/A"
+        log.debug("No cached value, getting from DB: %s " % str(key))
+
+        all_translations = DBSession.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(parent_client_id=self.translation_gist_client_id,
+                                                                 parent_object_id=self.translation_gist_object_id).all()
+        all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
+        if not all_translations_dict:
+            return "Translation missing for all locales"
+        elif all_translations_dict.get(main_locale):
+            translation = all_translations_dict.get(main_locale)
+            key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
+            CACHE.set(key=key, value=translation)
+            return translation
+        elif all_translations_dict.get(fallback_locale):
+            translation = all_translations_dict.get(fallback_locale)
+            key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(fallback_locale))
+            CACHE.set(key=key, value=translation)
+            return translation
+        else:
+            return "Translation missing for your locale and fallback locale"
+        # TODO: continue iterating to get any translation
 
 
 class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
@@ -476,6 +480,17 @@ class DictionaryPerspective(CompositeIdMixin,
     is_template = Column(Boolean, default=False, nullable=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
+    @classmethod
+    def get_deleted(cls):
+        deleted = DBSession.query(DictionaryPerspective.client_id,
+                                  DictionaryPerspective.object_id).join(Dictionary).filter(or_(
+            Dictionary.marked_for_deletion == True,
+            DictionaryPerspective.marked_for_deletion == True
+        )).all()
+        deleted_set = set()
+        for i in deleted:
+            deleted_set.add((i.client_id, i.object_id))
+        return deleted_set
 
 
 class SelfMixin(PrimeTableArgs):
@@ -580,12 +595,14 @@ class Field(CompositeIdMixin,
             AdditionalMetadataMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
+
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
-          show on dictionary page.
+           show on dictionary page.
         2. Also we can know what entities should be grouped under the buttons (for example paradigms). Also we can
-          control connections between level-one and level-two entities. And we can control grouping entities (if we
-          want to have not only etymology connections).
+           control connections between level-one and level-two entities. And we can control grouping entities (if we
+           want to have not only etymology connections).
         3. With it we can restrict to use any entity types except listed here (security concerns).
+
     Parent: DictionaryPerspective.
     """
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
@@ -615,19 +632,39 @@ class LexicalEntry(CompositeIdMixin,
         lexes_composite_list = [(self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
                                  self.marked_for_deletion, metadata, came_from)]
 
-        res_list = self.track_multiple(publish, lexes_composite_list, locale_id)
+        res_list = self.track_multiple(lexes_composite_list, locale_id, publish)
 
         return res_list[0] if res_list else {}
 
     @classmethod
-    def track_multiple(cls, publish, lexs, locale_id):
+    def track_multiple(cls, lexs, locale_id, publish=None, accept=None):
         log.debug(lexs)
+        filtered_lexes = []
+
+        deleted_persps = DictionaryPerspective.get_deleted()
+        for i in lexs:
+            if (i[2], i[3]) not in deleted_persps:
+                filtered_lexes.append(i)
         ls = []
-        for i, x in enumerate(lexs):
+
+        for i, x in enumerate(filtered_lexes):
             ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
 
         if not ls:
             return []
+
+        pub_filter = ""
+        if publish or accept:
+            if publish and accept is None:
+                pub_filter = " WHERE publishingentity.published = True "
+            elif accept and publish is None:
+                pub_filter = " WHERE publishingentity.accepted = True "
+            elif accept and publish:
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True"
+            elif publish and not accept:
+                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True"
+            elif accept and not publish:
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False"
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
@@ -693,9 +730,9 @@ class LexicalEntry(CompositeIdMixin,
             ON data_type_translation_gist.client_id = data_type_atom_fallback.parent_client_id AND
                data_type_translation_gist.object_id = data_type_atom_fallback.parent_object_id AND
                data_type_atom_fallback.locale_id = 1
-
+          %s
         ORDER BY traversal_lexical_order, tree_numbering_scheme, tree_level;
-        ''' % (temp_table_name, temp_table_name, temp_table_name, temp_table_name)), {'locale': locale_id})
+        ''' % (temp_table_name, temp_table_name, temp_table_name, temp_table_name, pub_filter)), {'locale': locale_id})
 
         entries = result.fetchall()
 
@@ -712,7 +749,7 @@ class LexicalEntry(CompositeIdMixin,
             return obj
 
         lexical_list = []
-        for k in lexs:
+        for k in filtered_lexes:
             a = []
             entry = {
                 'client_id': k[0],
@@ -916,7 +953,7 @@ def acl_by_groups(object_id, client_id, subject):
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
-        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
+        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:  # todo: remove this and fix everything that's broken after that
             persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
                 if persp.state == 'Published' or persp.state == 'Limited access':
@@ -1074,7 +1111,7 @@ class PerspectiveEntityAcl(ACLMixin):
     def __acl__(self):
         object_id = self.request.matchdict.get('object_id', None)
         client_id = self.request.matchdict.get('client_id', None)
-        levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id ).first()
         perspective = levoneent.parent.parent
         return acl_by_groups(perspective.object_id, perspective.client_id, self.subject)
 

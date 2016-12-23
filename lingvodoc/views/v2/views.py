@@ -18,7 +18,12 @@ from lingvodoc.models import (
     Field,
     Client,
     Group,
-    UserBlobs
+    UserBlobs,
+    Language,
+    ObjectTOC,
+    LexicalEntry,
+    Dictionary,
+    Entity
 )
 
 from sqlalchemy import (
@@ -51,24 +56,26 @@ log = logging.getLogger(__name__)
 import json
 import requests
 from pyramid.request import Request
+from time import time
 
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    from lingvodoc.views.v2.sync import make_request
-    settings = request.registry.settings
-    central_server = settings['desktop']['central_server']
-    desk_blob = DBSession.query(UserBlobs).first()
-    path = central_server + 'blob'  # todo: normal content upload
-
-    data = {'object_id':desk_blob.object_id, 'data_type':desk_blob.data_type}
-    files = {'blob':open(desk_blob.real_storage_path, 'rb')}
-
-    status = make_request(path, 'post', data=data, files=files)
-    if status.status_code != 200:
-        print(status.status_code)
-    return {}
-
+    with_group = 0
+    without_group = 0
+    for group in DBSession.query(Group).filter_by(base_group_id=26).all():
+        DBSession.delete(group)
+    for persp in DBSession.query(DictionaryPerspective):
+        group = DBSession.query(Group).filter_by(base_group_id=22, subject_client_id=persp.client_id,
+                                                 subject_object_id=persp.object_id).first()
+        if not group:
+            without_group +=1
+        new_group = Group(base_group_id=26, subject_client_id=persp.client_id,
+                          subject_object_id=persp.object_id)
+        for user in group.users:
+            new_group.users.append(user)
+        DBSession.add(new_group)
+    return {"good": with_group, "bad": without_group}
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
 def main_get(request):

@@ -2,7 +2,9 @@ package ru.ispras.lingvodoc.frontend
 
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
-import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
+import ru.ispras.lingvodoc.frontend.app.controllers.modal._
+import ru.ispras.lingvodoc.frontend.app.controllers.desktop.PerspectivePropertiesController
+import ru.ispras.lingvodoc.frontend.app.controllers.{_}
 import ru.ispras.lingvodoc.frontend.app.directives._
 import ru.ispras.lingvodoc.frontend.app.services._
 
@@ -10,19 +12,19 @@ import scala.scalajs.js.annotation.JSExport
 
 class DesktopApplicationConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) extends Config {
   routeProvider
-    .when("/", Route("/static/templates/home.html", "DesktopHome", "HomeController"))
-    .when("/login", Route("/static/templates/login.html", "Login", "LoginController"))
-    .when("/logout", Route("/static/templates/logout.html", "Logout", "LogoutController"))
-    .when("/dashboard", Route("/static/templates/dashboard.html", "Dashboard", "DashboardController"))
-    .when("/corpora", Route("/static/templates/corpora.html", "Corpora", "CorporaController"))
-    .when("/languages", Route("/static/templates/language.html", "Languages", "LanguageController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view/:page?/:sortBy?", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit/:page?/:sortBy?", Route("/static/templates/editDictionary.html", "EditDictionary", "EditDictionaryController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/contributions/:page?/:sortBy?", Route("/static/templates/contributions.html", "Contributions", "ContributionsController"))
+    .when("/", Route("/static/templates/home.html", "Lingvodoc 2.0", "HomeController"))
+    .when("/login", Route("/static/templates/login.html", "Lingvodoc 2.0 / Login", "LoginController"))
+    .when("/logout", Route("/static/templates/logout.html", "Lingvodoc 2.0 / Logout", "LogoutController"))
+    .when("/dashboard", Route("/static/templates/dashboard.html", "Lingvodoc 2.0 / Dashboard", "DashboardController"))
+    .when("/corpora", Route("/static/templates/corpora.html", "Lingvodoc 2.0 / Corpora", "CorporaController"))
+    .when("/languages", Route("/static/templates/language.html", "Lingvodoc 2.0 / Languages", "LanguageController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view/:page?/:sortBy?", Route("/static/templates/viewDictionary.html", "Lingvodoc 2.0 / View", "ViewDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit/:page?/:sortBy?", Route("/static/templates/editDictionary.html", "Lingvodoc 2.0 / Edit", "EditDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/contributions/:page?/:sortBy?", Route("/static/templates/contributions.html", "Lingvodoc 2.0 / Contributions", "ContributionsController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
-    .when("/corpora/create", Route("/static/templates/createCorpus.html", "CreateCorpus", "CreateCorpusController"))
-    .when("/files", Route("/static/templates/files.html", "Files", "UserFilesController"))
-    .when("/map_search", Route("/static/templates/mapSearch.html", "Map", "MapSearchController"))
+    .when("/corpora/create", Route("/static/templates/createCorpus.html", "Lingvodoc 2.0 / Create corpus", "CreateCorpusController"))
+    .when("/files", Route("/static/templates/files.html", "Lingvodoc 2.0 / Files", "UserFilesController"))
+    .when("/map_search", Route("/static/templates/mapSearch.html", "Lingvodoc 2.0 / Map search", "MapSearchController"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
@@ -31,12 +33,11 @@ class DesktopApplicationConfig(routeProvider: RouteProvider, httpProvider: HttpP
 object DesktopApplication {
 
   @JSExport
-  def main() = {
+  def main(): Unit = {
   Angular.module("LingvodocDesktopModule", Seq("ngRoute", "ngSanitize", "ngAnimate", "ui.bootstrap"))
       .config[DesktopApplicationConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
-      .controller[MainController]
       .controller[desktop.NavigationController]
       .controller[desktop.LoginController]
       .controller[LogoutController]
@@ -52,7 +53,7 @@ object DesktopApplication {
       .controller[PerspectivePropertiesController]
       .controller[DictionaryPropertiesController]
       .controller[CreatePerspectiveModalController]
-      .controller[EditDictionaryController]
+      .controller[desktop.EditDictionaryController]
       .controller[PerspectiveMapController]
       .controller[ViewDictionaryController]
       .controller[SoundMarkupController]
@@ -66,11 +67,15 @@ object DesktopApplication {
       .controller[EditGroupingTagModalController]
       .controller[ContributionsController]
       .controller[CorporaController]
+      .controller[ConvertEafController]
+      .controller[DownloadEmbeddedBlobController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
       .directive[TranslatableDirective]
       .directive[WaveSurferDirective]
       .directive[IndeterminateCheckboxDirective]
+      .directive[DataLinkDirective]
+      .run[AppInitializer]
   }
 }

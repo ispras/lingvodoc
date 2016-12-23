@@ -112,12 +112,6 @@ def convert_markup(request):
     try:
         variables = {'auth': request.authenticated_userid}
         req = request.json_body
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-        if not client:
-            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
-        if not user:
-            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         # out_type = req['out_type']
         client_id = req['client_id']
         object_id = req['object_id']

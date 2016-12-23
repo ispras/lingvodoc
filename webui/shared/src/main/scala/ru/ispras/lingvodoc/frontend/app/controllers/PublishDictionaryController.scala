@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
@@ -8,7 +9,7 @@ import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -16,7 +17,6 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
-
 
 @js.native
 trait PublishDictionaryScope extends Scope {
@@ -122,12 +122,38 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
   }
 
+  @JSExport
+  def viewMarkup(markupValue: Value) = {
+
+    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+      case Success(elan) =>
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "SoundMarkupController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              markupData = elan.asInstanceOf[js.Object],
+              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
+              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[Any]]
+        val instance = modal.open[Unit](options)
+      case Failure(e) =>
+    }
+  }
 
 
   @JSExport
@@ -162,7 +188,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -199,6 +225,19 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
+  def approveAll(): Future[Any] = {
+    backend.approveAll(dictionaryId, perspectiveId) map { _ =>
+        scope.$apply(() => {
+          scope.dictionaryTable.rows.foreach { row =>
+            row.entry.entities.foreach { e =>
+              e.published = true
+            }
+          }
+        })
+    }
+  }
+
+  @JSExport
   def disapproveDisabled(value: Value): Boolean = {
     !value.getEntity.published
   }
@@ -229,7 +268,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
           values = values.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
     instance.result map { _ =>

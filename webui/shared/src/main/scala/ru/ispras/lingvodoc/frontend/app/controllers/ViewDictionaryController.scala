@@ -1,19 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.extras.facades.WaveSurfer
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
@@ -25,21 +24,23 @@ trait ViewDictionaryScope extends Scope {
   var path: String = js.native
   var size: Int = js.native
   var pageNumber: Int = js.native
-  // number of currently open page
   var pageCount: Int = js.native
-  // total number of pages
   var dictionaryTable: DictionaryTable = js.native
   var selectedEntries: js.Array[String] = js.native
   var pageLoaded: Boolean = js.native
 }
 
 @injectable("ViewDictionaryController")
-class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
-  extends AbstractController[ViewDictionaryScope](scope)
+class ViewDictionaryController(scope: ViewDictionaryScope,
+                               params: RouteParams,
+                               modal: ModalService,
+                               backend: BackendService,
+                               timeout: Timeout,
+                               val exceptionHandler: ExceptionHandler)
+  extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
     with SimplePlay
-    with Pagination
-    with LoadingPlaceholder {
+    with Pagination {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -118,7 +119,34 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
+        val instance = modal.open[Unit](options)
+      case Failure(e) =>
+    }
+  }
+
+  @JSExport
+  def viewMarkup(markupValue: Value) = {
+
+    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+      case Success(elan) =>
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "SoundMarkupController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              markupData = elan.asInstanceOf[js.Object],
+              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
+              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -156,7 +184,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -185,7 +213,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
           values = values.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
     instance.result map { _ =>
@@ -193,21 +221,32 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
     }
   }
 
-
-  override protected def onLoaded[T](result: T): Unit = {}
-
-  override protected def onError(reason: Throwable): Unit = {}
-
-  override protected def preRequestHook(): Unit = {
-    scope.pageLoaded = false
+  @JSExport
+  def phonology(): Unit = {
+    backend.phonology(perspectiveId) map { blob =>
+      val options = ModalOptions()
+      options.templateUrl = "/static/templates/modal/downloadEmbeddedBlob.html"
+      options.windowClass = "sm-modal-window"
+      options.controller = "DownloadEmbeddedBlobController"
+      options.backdrop = false
+      options.keyboard = false
+      options.size = "lg"
+      options.resolve = js.Dynamic.literal(
+        params = () => {
+          js.Dynamic.literal(
+            "fileName" -> "phonology.xls",
+            "fileType" -> "application/vnd.ms-excel",
+            "blob" -> blob
+          )
+        }
+      ).asInstanceOf[js.Dictionary[Any]]
+      modal.open[Unit](options)
+    } recover { case e: Throwable =>
+      error(e)
+    }
   }
 
-  override protected def postRequestHook(): Unit = {
-    scope.pageLoaded = true
-  }
-
-
-  doAjax(() => {
+  load(() => {
     backend.perspectiveSource(perspectiveId) flatMap {
       sources =>
         scope.path = sources.reverse.map {
@@ -269,5 +308,14 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   @JSExport
   override def getPageLink(page: Int): String = {
     s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/view/$page"
+  }
+
+  override protected def onStartRequest(): Unit = {
+    scope.pageLoaded = false
+
+  }
+
+  override protected def onCompleteRequest(): Unit = {
+    scope.pageLoaded = true
   }
 }

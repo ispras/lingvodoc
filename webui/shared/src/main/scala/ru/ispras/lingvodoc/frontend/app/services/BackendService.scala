@@ -6,19 +6,19 @@ import com.greencatsoft.angularjs.core.HttpPromise.promise2future
 import com.greencatsoft.angularjs.core._
 import org.scalajs.dom
 import org.scalajs.dom.ext.Ajax.InputData
-import org.scalajs.dom.{FormData, console}
+import org.scalajs.dom.{FormData, XMLHttpRequest}
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.LexicalEntriesType.LexicalEntriesType
-import upickle.Js
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.Any.fromString
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.{Dynamic, JSON, UndefOr}
 import scala.scalajs.js.URIUtils._
+import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}
+import scala.scalajs.js.{Dynamic, JSON}
 import scala.util.{Failure, Success}
 
 
@@ -256,6 +256,31 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+
+
+  def updateLanguage(languageId: CompositeId, parentLanguage: Option[Language], gistId: Option[CompositeId]): Future[Unit] = {
+
+    val p = Promise[Unit]()
+    val url = "language/" + encodeURI(languageId.clientId.toString) + "/" + encodeURI(languageId.objectId.toString)
+    var req = Map[String, js.Any]()
+
+    parentLanguage foreach { parent =>
+      req += ("parent_client_id" -> parent.clientId)
+      req += ("parent_object_id" -> parent.objectId)
+    }
+
+    gistId foreach { id =>
+      req += ("translation_gist_client_id" -> id.clientId)
+      req += ("translation_gist_object_id" -> id.objectId)
+    }
+
+    $http.put[js.Dynamic](getMethodUrl(url), req.toJSDictionary) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update language", e))
+    }
+
+    p.future
+  }
 
   def getDictionary(dictionaryId: CompositeId): Future[Dictionary] = {
     val p = Promise[Dictionary]()
@@ -838,6 +863,32 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def disconnectLexicalEntry(entry: LexicalEntry, fieldId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val url = s"group_entity/${entry.clientId}/${entry.objectId}"
+    val req = js.Dynamic.literal(
+      "field_client_id" -> fieldId.clientId,
+      "field_object_id" -> fieldId.objectId
+    )
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("DELETE", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(())
+      } else {
+        p.failure(new BackendException("Failed to disconnect lexical entries"))
+      }
+    }
+    xhr.send(JSON.stringify(req))
+
+    p.future
+  }
+
+
   def getEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Entity] = {
 
     val p = Promise[Entity]()
@@ -886,7 +937,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
       encodeURIComponent(perspectiveId.objectId.toString) +
       "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
-      encodeURIComponent(entryId.objectId.toString) + "/entity/" + encodeURIComponent(entityId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) + "/entity/" +
+      encodeURIComponent(entityId.clientId.toString) + "/" +
       encodeURIComponent(entityId.objectId.toString)
 
     $http.delete(getMethodUrl(url)) onComplete {
@@ -917,13 +969,39 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       if (xhr.status == 200) {
         p.success(())
       } else {
-        p.failure(new BackendException("Failed to changed approval status entities"))
+        p.failure(new BackendException("Failed to changed approval status"))
       }
     }
     xhr.send(JSON.stringify(req))
 
     p.future
   }
+
+  def approveAll(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Unit] = {
+
+    val p = Promise[Unit]()
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) + "/approve_all"
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("PATCH", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(())
+      } else {
+        p.failure(new BackendException("Failed to approve all entities"))
+      }
+    }
+    xhr.send()
+
+    p.future
+  }
+
+
 
   def acceptEntities(dictionaryId: CompositeId, perspectiveId: CompositeId, ids: Seq[CompositeId]): Future[Unit] = {
     val p = Promise[Unit]()
@@ -1098,9 +1176,23 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     * @param objectId
     * @return
     */
+  @Deprecated
   def translationAtom(clientId: Int, objectId: Int): Future[TranslationAtom] = {
     val p = Promise[TranslationAtom]()
     val url = "translationatom/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        val atom = read[TranslationAtom](js.JSON.stringify(response))
+        p.success(atom)
+      case Failure(e) => p.failure(BackendException("Failed to get translation atom", e))
+    }
+    p.future
+  }
+
+  @Deprecated
+  def translationAtom(atomId: CompositeId): Future[TranslationAtom] = {
+    val p = Promise[TranslationAtom]()
+    val url = "translationatom/" + encodeURIComponent(atomId.clientId.toString) + "/" + encodeURIComponent(atomId.objectId.toString)
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         val atom = read[TranslationAtom](js.JSON.stringify(response))
@@ -1154,6 +1246,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  @Deprecated
   def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
     val p = Promise[TranslationGist]()
     val url = "translationgist/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
@@ -1171,6 +1264,26 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
+
+  def translationGist(gistId: CompositeId): Future[TranslationGist] = {
+    val p = Promise[TranslationGist]()
+    val url = "translationgist/" + encodeURIComponent(gistId.clientId.toString) + "/" + encodeURIComponent(gistId.objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val gist = read[TranslationGist](js.JSON.stringify(response))
+          p.success(gist)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed translation gist json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed translation gist data. Missing some required fields", e))
+          case e: Throwable => p.failure(BackendException("Unexpected exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get translation gist", e))
+    }
+    p.future
+  }
+
+
 
   def createTranslationGist(gistType: String): Future[CompositeId] = {
     val p = Promise[CompositeId]()
@@ -1283,6 +1396,31 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
     p.future
   }
+
+
+  def createDictionary(languageId: CompositeId, nameId: CompositeId): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    val req = js.Dynamic.literal("translation_gist_client_id" -> nameId.clientId,
+      "translation_gist_object_id" -> nameId.objectId,
+      "parent_client_id" -> languageId.clientId,
+      "parent_object_id" -> languageId.objectId)
+
+    $http.post[js.Dynamic]("dictionary", req) onComplete {
+      case Success(response) =>
+        try {
+          val id = read[CompositeId](js.JSON.stringify(response))
+          p.success(id)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to create dictionary.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to create dictionary.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to create dictionary", e))
+    }
+    p.future
+  }
+
+
 
   def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[Seq[CompositeId]] = {
     val p = Promise[Seq[CompositeId]]()
@@ -1445,6 +1583,23 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   }
 
 
+  def sociolinguisticsBlobs: Future[Seq[File]] = {
+    val p = Promise[Seq[File]]()
+    $http.get[js.Dynamic](getMethodUrl("blobs?is_global=true&data_type=sociolinguistics")) onComplete {
+      case Success(response) =>
+        try {
+          val blobs = read[Seq[File]](js.JSON.stringify(response))
+          p.success(blobs)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to get list of sociolinguistics files.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to get list of sociolinguistics files.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of user files.", e))
+    }
+    p.future
+  }
+
+
   def uploadFile(formData: FormData): Future[CompositeId] = {
     val p = Promise[CompositeId]()
     val inputData = InputData.formdata2ajax(formData)
@@ -1469,7 +1624,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
         val id = read[CompositeId](xhr.responseText)
         p.success(id)
       } else {
-        p.failure(new BackendException("Failed to upload file: " + xhr.statusText))
+
+        p.failure(new BackendException("Failed to upload file: " + xhr.statusText + xhr.responseText))
       }
     }
 
@@ -1497,6 +1653,24 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
           case e: Throwable => p.failure(BackendException("Unknown exception", e))
         }
       case Failure(e) => p.failure(BackendException("Failed to get blob", e))
+    }
+    p.future
+  }
+
+  def removeBlob(blobId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val url = "blobs/" + encodeURIComponent(blobId.clientId.toString) +
+      "/" + encodeURIComponent(blobId.objectId.toString)
+
+    $http.delete[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(())
+        } catch {
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to remove blob", e))
     }
     p.future
   }
@@ -1670,9 +1844,97 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def sociolinguisticsQuestions(): Future[Seq[String]] = {
+    val p = Promise[Seq[String]]()
+    $http.get[js.Dynamic]("sociolinguistics/questions") onComplete {
+      case Success(response) =>
+        p.success(read[Seq[String]](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get sociolinguistics questions", e))
+    }
+    p.future
+  }
 
+  def sociolinguisticsAnswers(): Future[Seq[String]] = {
+    val p = Promise[Seq[String]]()
+    $http.get[js.Dynamic]("sociolinguistics/answers") onComplete {
+      case Success(response) =>
+        p.success(read[Seq[String]](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get sociolinguistics answers", e))
+    }
+    p.future
+  }
 
+  def sociolinguistics(): Future[Seq[SociolinguisticsEntry]] = {
+    val p = Promise[Seq[SociolinguisticsEntry]]()
+    $http.get[js.Dynamic]("sociolinguistics") onComplete {
+      case Success(response) =>
+        p.success(read[Seq[SociolinguisticsEntry]](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get sociolinguistics", e))
+    }
+    p.future
+  }
 
+  def validateEafCorpus(file: String): Future[Boolean] = {
+    val p = Promise[Boolean]()
+    $http.post[js.Dynamic]("convert_five_tiers_validate", js.Dynamic.literal("eaf_url" -> encodeURI(file))) onComplete {
+      case Success(response) =>
+        p.success(response.is_valid.asInstanceOf[js.Any].asInstanceOf[Boolean])
+      case Failure(e) => p.failure(BackendException("Failed to validate corpus", e))
+    }
+    p.future
+  }
+
+  def convertEafCorpus(corpusId: CompositeId, dictionaryId: CompositeId, soundFile: Option[String], markupFile: Option[String]): Future[Unit] = {
+    val p = Promise[Unit]()
+    var req = Map[String, js.Any](
+      "client_id" -> corpusId.clientId,
+      "object_id" -> corpusId.objectId,
+      "dictionary_client_id" -> dictionaryId.clientId,
+      "dictionary_object_id" -> dictionaryId.objectId
+    )
+
+    soundFile foreach { url =>
+      req = req + ("sound_url" -> encodeURI(url))
+    }
+
+    markupFile foreach { url =>
+      req = req + ("eaf_url" -> encodeURI(url))
+    }
+
+    $http.post[js.Dynamic]("convert_five_tiers", req.toJSDictionary) onComplete {
+      case Success(response) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to convert corpus", e))
+    }
+    p.future
+  }
+
+  def phonology(perspectiveId: CompositeId): Future[String] = {
+
+    import ru.ispras.lingvodoc.frontend.app.utils.ConversionUtils._
+
+    val p = Promise[String]()
+    val url = s"phonology?perspective_client_id=${perspectiveId.clientId}&perspective_object_id=${perspectiveId.objectId}"
+    val xhr: XMLHttpRequest = new dom.XMLHttpRequest()
+    xhr.open("GET", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+    xhr.responseType = "arraybuffer"
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(xhr.response.asInstanceOf[js.typedarray.ArrayBuffer].toBase64)
+      } else {
+        val r = xhr.response.asInstanceOf[js.typedarray.ArrayBuffer]
+        val response: Dynamic = JSON.parse(r.toStr())
+        if (!js.isUndefined(response.error)) {
+          p.failure(new BackendException(response.error.asInstanceOf[String]))
+        } else {
+          p.failure(new BackendException("Failed to obtain phonology."))
+        }
+      }
+    }
+    xhr.send()
+    p.future
+  }
 }
 
 @injectable("BackendService")

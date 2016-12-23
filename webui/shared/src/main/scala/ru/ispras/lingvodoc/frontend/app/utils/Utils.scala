@@ -1,25 +1,11 @@
 package ru.ispras.lingvodoc.frontend.app.utils
 
-import ru.ispras.lingvodoc.frontend.app.model.{Field, Language, TranslationGist}
-
-import scala.scalajs.js.URIUtils
-import scala.scalajs.js.URIUtils._
 import org.scalajs.dom
+import ru.ispras.lingvodoc.frontend.app.model.{Language, TranslationGist}
+
+import scala.scalajs.js
 
 object Utils {
-
-//  def flattenLanguages1(languages: Seq[Language]) = {
-//    var acc = Seq[Language]()
-//    var queue = Vector[Language]()
-//    queue = queue ++ languages
-//
-//    while (queue.nonEmpty) {
-//      val first +: rest = queue
-//      acc = acc :+ first
-//      queue = rest ++ first.languages
-//    }
-//    acc
-//  }
 
 
   def flattenLanguages(tree: Seq[Language]): Seq[Language] = {
@@ -66,3 +52,31 @@ object Utils {
     dataType.atoms.find(_.localeId == 2).get.content
   }
 }
+
+
+object ConversionUtils {
+  implicit class ArrayBufferBase64(val src: js.typedarray.ArrayBuffer) {
+    import com.github.marklister.base64.Base64.Encoder
+    def toBase64: String = {
+      val arr = js.Array[Byte]()
+      val data = new js.typedarray.Uint8Array(src)
+      for (i <- 0 until data.byteLength) {
+        arr.push(data(i).toByte)
+      }
+      arr.toArray.toBase64
+    }
+  }
+
+  implicit class JSArrayBufferToString(val src: js.typedarray.ArrayBuffer) {
+    def toStr(encoding: String = "UTF-8"): String = {
+      val c = new js.typedarray.Uint8Array(src)
+      val arr = js.Array[Byte]()
+      for (i <- 0 until c.byteLength) {
+        arr.push(c(i).toByte)
+      }
+      new String(arr.toArray, encoding)
+    }
+  }
+}
+
+

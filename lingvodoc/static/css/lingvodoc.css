@@ -97,7 +97,6 @@ button.control-button {
     opacity: .2;
 }
 
-
 /* animations */
 .animate-show {
     opacity: 1;
@@ -110,7 +109,6 @@ button.control-button {
 .animate-show.ng-hide {
     opacity: 0;
 }
-
 
 /* ngRepeat animation */
 .animate-repeat {
@@ -198,6 +196,17 @@ span.remove-sign {
     cursor: pointer;
 }
 
+#shaderFull {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.65);
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    position: fixed;
+    z-index: 2000;
+}
 
 #shader {
     width: 100%;
@@ -221,9 +230,8 @@ span.remove-sign {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 1000;
+    z-index: 1001;
 }
-
 
 #loader {
     display: block;
@@ -294,17 +302,54 @@ span.remove-sign {
     }
 }
 
-
-
-
-#map
-{
+#map {
     width: 100%;
-    height:400px;
+    height: 500px;
     min-height: 100%;
     min-width: 100%;
     display: block;
 }
+
+#searchMap {
+    width: 100%;
+    height: 500px;
+    min-height: 100%;
+    min-width: 100%;
+    display: block;
+}
+
+#sociolinguisticsMap {
+    width: 100%;
+    height: 500px;
+    min-height: 100%;
+    min-width: 100%;
+    display: block;
+}
+
+.top5 {
+    margin-top: 5px;
+}
+
+.top7 {
+    margin-top: 7px;
+}
+
+.top10 {
+    margin-top: 10px;
+}
+
+.top15 {
+    margin-top: 15px;
+}
+
+.top17 {
+    margin-top: 17px;
+}
+
+.top30 {
+    margin-top: 30px;
+}
+
 
 
 

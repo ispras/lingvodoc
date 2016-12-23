@@ -1,3 +1,11 @@
+# 
+# NOTE
+#
+# See information on how tests are organized and how they should work in the tests' package __init__.py file
+# (currently lingvodoc/tests/__init__.py).
+#
+
+
 from tests.tests import MyTestCase
 from tests.common import initValuesFactory
 from tests.common import load_correct_answers
@@ -17,6 +25,10 @@ from pyramid.httpexceptions import (
     HTTPForbidden
 )
 
+import pytest
+
+
+@pytest.mark.skip(reason = 'Unconverted test from the previous version.')
 class LexicalEntriesTest(MyTestCase):
 
     def setUp(self):
@@ -406,3 +418,4 @@ class LexicalEntriesTest(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         # print('correct:', response.json)
         self.assertEqual(response.json, correct_answers[test_name])
+

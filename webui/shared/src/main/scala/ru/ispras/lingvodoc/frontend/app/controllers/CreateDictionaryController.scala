@@ -1,12 +1,13 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{ExceptionHandler, Location, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.LanguageEdit
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.{Future, Promise}
@@ -35,13 +36,15 @@ trait CreateDictionaryScope extends Scope {
 }
 
 @injectable("CreateDictionaryController")
-class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
+class CreateDictionaryController(scope: CreateDictionaryScope,
+                                 modal: ModalService,
+                                 location: Location,
+                                 backend: BackendService,
+                                 val timeout: Timeout,
+                                 val exceptionHandler: ExceptionHandler)
   extends AbstractController[CreateDictionaryScope](scope)
-    with AngularExecutionContextProvider {
-
-
-  private[this] var indentation = Map[String, Int]()
-
+    with AngularExecutionContextProvider
+    with LanguageEdit {
 
   // Scope initialization
   scope.locales = js.Array[Locale]()
@@ -63,11 +66,11 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   // load data from backend
   load()
 
-  @JSExport
-  def getCurrentLocale() = {
-    val localeId = Utils.getLocale().getOrElse(2)
-    scope.locales.find(l => l.id == localeId)
-  }
+//  @JSExport
+//  def getCurrentLocale(): Option[Locale] = {
+//    val localeId = Utils.getLocale().getOrElse(2)
+//    scope.locales.find(l => l.id == localeId)
+//  }
 
   @JSExport
   def getLocaleName(localeId: Int): String = {
@@ -96,7 +99,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
 
 
   @JSExport
-  def newLanguage() = {
+  def newLanguage(): Unit = {
 
     val parentLanguage = scope.languages.find(_.getId == scope.languageId)
 
@@ -112,29 +115,26 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
           "parentLanguage" -> parentLanguage.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Language](options)
 
     instance.result foreach { _ =>
       backend.getLanguages onComplete {
         case Success(tree: Seq[Language]) =>
-          indentation = indentations(tree)
+          computeIndentation(tree)
           scope.languages = Utils.flattenLanguages(tree).toJSArray
-        case Failure(e) =>
+        case Failure(_) =>
       }
     }
   }
 
 
-  @JSExport
-  def languagePadding(language: Language) = {
-    "&nbsp;&nbsp;&nbsp;" * indentation.getOrElse(language.getId, 0)
-  }
+
 
 
   @JSExport
-  def createDictionary2() = {
+  def createDictionary2(): Any = {
 
     if (scope.creationMode == "create") {
 
@@ -159,6 +159,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
               scope.files.find(_.getId == scope.fileId) foreach { file =>
                 backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
                   scope.step = 3
+                  redirectToDashboard()
                 }
               }
             }
@@ -168,23 +169,23 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def addLayer() = {
+  def addLayer(): Unit = {
     val layer = Layer(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")), js.Array[FieldEntry]())
     scope.layers = scope.layers :+ layer
   }
 
   @JSExport
-  def addFieldType(layer: Layer) = {
+  def addFieldType(layer: Layer): Unit = {
     layer.fieldEntries = layer.fieldEntries :+ FieldEntry(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")))
   }
 
   @JSExport
-  def removeFieldType(layer: Layer, fieldType: FieldEntry) = {
+  def removeFieldType(layer: Layer, fieldType: FieldEntry): Unit = {
     layer.fieldEntries = layer.fieldEntries.filterNot(d => d.equals(fieldType))
   }
 
   @JSExport
-  def addNameTranslation[T <: Translatable](obj: T) = {
+  def addNameTranslation[T <: Translatable](obj: T): Unit = {
     val currentLocaleId = Utils.getLocale().getOrElse(2)
     if (obj.names.exists(_.localeId == currentLocaleId)) {
       // pick next available locale
@@ -200,7 +201,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def selectField(fieldEntry: FieldEntry) = {
+  def selectField(fieldEntry: FieldEntry): Unit = {
     if (fieldEntry.fieldId.equals("add_new_field")) {
       fieldEntry.fieldId = ""
       createNewField(fieldEntry)
@@ -208,7 +209,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def moveFieldTypeUp(layer: Layer, fieldType: FieldEntry) = {
+  def moveFieldTypeUp(layer: Layer, fieldType: FieldEntry): Unit = {
     def aux(lx: List[FieldEntry], acc: List[FieldEntry]): List[FieldEntry] = {
       lx match {
         case Nil => acc
@@ -220,7 +221,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def moveFieldTypeDown(layer: Layer, fieldType: FieldEntry) = {
+  def moveFieldTypeDown(layer: Layer, fieldType: FieldEntry): Unit = {
     def aux(lx: List[FieldEntry], acc: List[FieldEntry]): List[FieldEntry] = {
       lx match {
         case Nil => acc
@@ -232,7 +233,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def getLayerDisplayName(layer: Layer) = {
+  def getLayerDisplayName(layer: Layer): String = {
     val localeId = Utils.getLocale().getOrElse(2)
     layer.names.find(name => name.localeId == localeId) match {
       case Some(name) => name.str
@@ -241,7 +242,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def getLinkedLayerDisplayName(layer: Layer) = {
+  def getLinkedLayerDisplayName(layer: Layer): String = {
     val localeId = Utils.getLocale().getOrElse(2)
 
     val indexBasedName = scope.layers.zipWithIndex.find(x => layer.equals(x._1)) match {
@@ -277,9 +278,10 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def finish() = {
+  def finish(): Unit = {
     compilePerspective(scope.layers) foreach { _ =>
       scope.step = 3
+      redirectToDashboard()
     }
   }
 
@@ -292,7 +294,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def createNewField(fieldEntry: FieldEntry) = {
+  def createNewField(fieldEntry: FieldEntry): Unit = {
 
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/createField.html"
@@ -306,12 +308,12 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
           locales = scope.locales.asInstanceOf[js.Object],
           dataTypes = scope.dataTypes.asInstanceOf[js.Object])
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[FieldEntry](options)
 
-    instance.result map {
-      f => createField(f) map {
+    instance.result foreach {
+      f => createField(f) foreach {
         nf => fieldEntry.fieldId = nf.getId
       }
     }
@@ -393,9 +395,10 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
                   if (!isLink) {
                     Some(js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId, "contains" -> contains))
                   } else {
-                    scope.layers.exists(l => l.internalId == entry.linkedLayerId) match {
-                      case true => Some(js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId, "contains" -> contains, "link" -> js.Dynamic.literal("fake_id" -> entry.linkedLayerId)))
-                      case false => None
+                    if (scope.layers.exists(l => l.internalId == entry.linkedLayerId)) {
+                      Some(js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId, "contains" -> contains, "link" -> js.Dynamic.literal("fake_id" -> entry.linkedLayerId)))
+                    } else {
+                      None
                     }
                   }
                 case None => None
@@ -447,26 +450,14 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     p.future
   }
 
-  private[this] def getDepth(language: Language, tree: Seq[Language], depth: Int = 0): Option[Int] = {
-    if (tree.exists(_.getId == language.getId)) {
-      Some(depth)
-    } else {
-      for (lang <- tree) {
-        val r = getDepth(language, lang.languages.toSeq, depth + 1)
-        if (r.nonEmpty) {
-          return r
-        }
-      }
-      Option.empty[Int]
+  private[this] def redirectToDashboard(): Unit = {
+    import scala.scalajs.js.timers._
+    setTimeout(5000) {
+      location.path("/dashboard")
+      scope.$apply()
     }
   }
 
-  private[this] def indentations(tree: Seq[Language]) = {
-    val languages = Utils.flattenLanguages(tree).toJSArray
-    languages.map { language =>
-      language.getId -> getDepth(language, tree).get
-    }.toMap
-  }
 
   /**
     * Loads data from backend
@@ -481,7 +472,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     backend.fields() onComplete {
       case Success(fields) =>
         scope.fields = fields.toJSArray
-      case Failure(e) =>
+      case Failure(_) =>
     }
 
     // load list of locales
@@ -491,19 +482,19 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
         scope.locales = locales.toJSArray
         scope.names = locales.map(locale => LocalizedString(locale.id, "")).toJSArray
 
-      case Failure(e) =>
+      case Failure(_) =>
     }
 
     backend.getLanguages onComplete {
       case Success(tree: Seq[Language]) =>
-        indentation = indentations(tree)
+        computeIndentation(tree)
         scope.languages = Utils.flattenLanguages(tree).toJSArray
-      case Failure(e) =>
+      case Failure(_) =>
     }
 
     backend.userFiles onComplete {
       case Success(files) => scope.files = files.toJSArray
-      case Failure(e) =>
+      case Failure(_) =>
     }
 
   }

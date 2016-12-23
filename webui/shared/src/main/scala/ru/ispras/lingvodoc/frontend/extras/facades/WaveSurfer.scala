@@ -19,7 +19,7 @@ trait WaveSurferOpts extends js.Object {
 object WaveSurferOpts {
   def apply(container: js.Any, waveColor: String = "#999", progressColor: String = " #555",
             cursorWidth: Int = 1, cursorColor: String = "#333", scrollParent: Boolean = false,
-            minPxPerSec: Double = 50, fillParent: Boolean = true, height: Int = 128): WaveSurferOpts = {
+            minPxPerSec: Double = 50, fillParent: Boolean = true, height: Int = 128, barWidth: Int = 1): WaveSurferOpts = {
     js.Dynamic.literal(
       container = container,
       waveColor = waveColor,
@@ -29,7 +29,10 @@ object WaveSurferOpts {
       scrollParent = scrollParent,
       minPxPerSec = minPxPerSec,
       fillParent = fillParent,
-      height = height
+      height = height,
+      mediaControls = false,
+      autoplay = false,
+      barWidth = barWidth
     ).asInstanceOf[WaveSurferOpts]
   }
 }

@@ -5,13 +5,13 @@
 <div class="modal-body">
 
     <div align="right">
+        <button class="btn btn-info" type="button" ng-click="controller.convertToDictionary()">Convert to dictionary...</button>
         <button class="btn btn-primary" type="button" ng-click="controller.save()">Close</button>
-        <!--<button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>-->
     </div>
 
     <br>
 
-    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()" ng-if="controller.isWSReady">
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()" ng-show="controller.isWSReady">
         <span class="glyphicon glyphicon-play">Play/Pause full</span>
     </button>
 
@@ -23,19 +23,19 @@
         <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
     </button>
 
-    <label ng-if="controller.isWSReady">
+    <label ng-show="controller.isWSReady">
         <input type="checkbox" ng-model="spectrogramEnabled" ng-change="controller.toggleSpectrogramEnable()"/>
         Draw a spectrogram. Warning: it may take a long time.
     </label>
 
-    <label  ng-if="controller.isWSReady">
-        <input type="checkbox" ng-model="timelineEnabled" ng-change="controller.toggleTimelineEnable()"/>
+    <label  ng-show="controller.isWSReady">
+        <input type="checkbox" ng-model="timelineEnabled" ng-change="controller.toggleTimelineEnable()" />
         Draw a timeline
     </label>
 
     <div>
         <!-- tier names -->
-        <svg ng-if="controller.isDocumentLoaded"
+        <svg ng-show="controller.isDocumentLoaded"
              ng-attr-width="{{tierNameHeight}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
              style="float:left" ng-style="{'margin-top': fullWSHeight}">
             <svg x="0" ng-attr-y="{{$index * tierHeight}}" ng-repeat="tierData in elanJS.tiers">
@@ -53,7 +53,7 @@
             <div id="wavetimeline"></div>
 
             <!-- section with tiers -->
-            <svg id="soundSVG" ng-if="controller.isDocumentLoaded"
+            <svg id="soundSVG" ng-show="controller.isDocumentLoaded"
                  ng-attr-width="{{fullWSWidth}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
                  ng-click="controller.onSVGSeek($event)"
                  ng-mouseup="controller.onSVGMouseUp($event)" ng-mousedown="controller.onSVGMouseDown($event)"

@@ -1,20 +1,21 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Location, Scope, Timeout}
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService, UserService}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.{Any, Array}
+import scala.scalajs.js.Array
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils.encodeURIComponent
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
+import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
 
@@ -61,7 +62,7 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
       params = () => {
         js.Dynamic.literal(dictionary = dictionary.asInstanceOf[js.Object])
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Dictionary](options)
 
@@ -85,7 +86,7 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
           dictionary = dictionary.asInstanceOf[js.Object],
           perspective = perspective.asInstanceOf[js.Object])
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Perspective](options)
 
@@ -108,7 +109,7 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
           dictionary = dictionary.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
 
@@ -135,7 +136,7 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
           dictionary = dictionary.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
 
@@ -159,7 +160,7 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
           perspective = perspective.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
 

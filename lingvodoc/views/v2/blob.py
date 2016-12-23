@@ -1,5 +1,6 @@
 __author__ = 'alexander'
 
+from lingvodoc.views.v2.sociolinguistics import check_socio
 from lingvodoc.exceptions import CommonException
 from lingvodoc.models import (
     Client,
@@ -19,7 +20,9 @@ from pyramid.httpexceptions import (
     HTTPFound,
     HTTPInternalServerError,
     HTTPNotFound,
-    HTTPOk
+    HTTPOk,
+    HTTPForbidden,
+    HTTPUnauthorized
 )
 from pyramid.renderers import render_to_response
 from pyramid.response import Response
@@ -131,9 +134,18 @@ def upload_user_blob(request):  # TODO: remove blob Object
     current_user.userblobs.append(blob_object)
     blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob_object, blob.data_type,
                                                                        blob.filename, json_input=False)
+    if blob.data_type == "sociolinguistics":
+        try:
+            check_socio(blob_object.real_storage_path)
+        except Exception as e:
+            request.response.status = HTTPBadRequest.code
+            response = {"error": str(e)}
+            return response
+
     DBSession.add(blob_object)
     DBSession.add(current_user)
     DBSession.flush()
+
     request.response.status = HTTPOk.code
     response = {"client_id": blob_object.client_id, "object_id": blob_object.object_id, "content": blob_object.content}
     return response
@@ -152,16 +164,53 @@ def get_user_blob(request):  # TODO: test
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code
-    return {'error': str("No such blob in the system")}
+    return {'error': 'No such blob in the system'}
+
+@view_config(route_name='delete_user_blob', renderer='json', request_method='DELETE')
+def delete_user_blob(request):
+    user = get_user_by_client_id(authenticated_userid(request))
+    if user is None:
+        request.response.status = HTTPUnauthorized.code
+        return {'error': "Guests can not delete resources."}
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    if user != get_user_by_client_id(client_id):
+        request.response.status = HTTPForbidden.code
+        return {'error': "That file doesn't belong to you."}
+    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+    if not blob:
+        request.response.status = HTTPNotFound.code
+        return {'error': 'No such blob in the system'}
+
+    filelocation = blob.real_storage_path
+    DBSession.delete(blob)
+    request.response.status = HTTPOk.code
+    try:
+        os.unlink(filelocation)
+    except:
+        # NOTE: intentionally not an error
+        return {"warning": "File can not be deleted physically; deleting from DMBS only."}
+    return
 
 
 @view_config(route_name='list_user_blobs', renderer='json', request_method='GET')
 def list_user_blobs(request):  # TODO: test
     variables = {'auth': authenticated_userid(request)}
-    #    user_client_ids = [cl_id.id for cl_id in DBSession.query(Client).filter_by(id=variables['auth']).all()]
-    #    user_blobs = DBSession.query(UserBlobs).filter_by(client_id.in_(user_client_ids)).all()
+    allowed_global_types = ["sociolinguistics"]
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-    user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
+    data_type = request.params.get('data_type')
+    is_global = request.params.get('is_global')
+    if data_type:
+        if not is_global:
+            user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id, data_type=data_type).all()
+        else:
+            if data_type in allowed_global_types:
+                user_blobs = DBSession.query(UserBlobs).filter_by(data_type=data_type).all()
+            else:
+                request.response.status = HTTPForbidden.code
+                return {"error": "You can not list that data type globally."}
+    else:
+        user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
     request.response.status = HTTPOk.code
     response = [{'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
                  'client_id': blob.client_id, 'object_id': blob.object_id} for blob in user_blobs]
