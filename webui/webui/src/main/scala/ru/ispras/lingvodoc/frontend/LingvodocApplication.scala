@@ -30,6 +30,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/files", Route("/static/templates/files.html", "Lingvodoc 2.0 / Files", "UserFilesController"))
     .when("/map_search", Route("/static/templates/mapSearch.html", "Lingvodoc 2.0 / Map search", "MapSearchController"))
     .when("/sociolinguistics", Route("/static/templates/sociolinguistics.html", "Lingvodoc 2.0 / Sociolinguistics", "SociolinguisticsController"))
+    .when("/desktop_software", Route("/static/templates/desktop.html", "Lingvodoc 2.0 / Desktop software"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
