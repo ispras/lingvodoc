@@ -492,17 +492,17 @@ vowel_set = set('aeiouyæøœɐɑɒɔɘəɛɜɞɤɨɪɯɵɶʉʊʌʏ̈̽ао')
 #: with syntax highlighting and probably could mess with Python source code parsing.
 #:
 phonetic_character_list = list(map(chr, [
-    39, 46, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-    117, 118, 119, 120, 121, 122, 124, 161, 228, 230, 231, 232, 233, 234, 235, 240, 248, 259, 275, 283, 295,
-    331, 339, 448, 449, 450, 451, 517, 592, 593, 594, 595, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605,
-    606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 618, 619, 620, 621, 622, 623, 624, 625, 626, 627,
-    628, 629, 630, 632, 633, 634, 635, 637, 638, 640, 641, 642, 643, 644, 648, 649, 650, 651, 652, 653, 654,
-    655, 656, 657, 658, 660, 661, 664, 665, 667, 668, 669, 670, 671, 673, 674, 675, 676, 677, 678, 679, 680,
-    688, 690, 695, 700, 704, 712, 716, 720, 721, 724, 725, 726, 727, 734, 736, 737, 739, 740, 741, 742, 743,
-    744, 745, 768, 769, 770, 771, 772, 774, 776, 778, 779, 780, 781, 783, 785, 792, 793, 794, 796, 797, 798,
-    799, 800, 804, 805, 809, 810, 812, 814, 815, 816, 817, 820, 825, 826, 827, 828, 829, 865, 946, 952, 967,
-    1072, 1086, 7498, 7542, 7569, 7587, 7609, 7615, 7869, 8201, 8214, 8255, 8319, 8599, 8600, 11377, 42779,
-    42780]))
+    39, 40, 41, 45, 46, 58, 94, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
+    113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 161, 228, 230, 231, 232, 233, 234, 235, 240, 248,
+    259, 275, 283, 295, 331, 339, 448, 449, 450, 451, 517, 592, 593, 594, 595, 596, 597, 598, 599, 600, 601,
+    602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 618, 619, 620, 621, 622, 623,
+    624, 625, 626, 627, 628, 629, 630, 632, 633, 634, 635, 637, 638, 640, 641, 642, 643, 644, 648, 649, 650,
+    651, 652, 653, 654, 655, 656, 657, 658, 660, 661, 664, 665, 667, 668, 669, 670, 671, 673, 674, 675, 676,
+    677, 678, 679, 680, 688, 690, 695, 700, 704, 712, 716, 720, 721, 724, 725, 726, 727, 734, 736, 737, 739,
+    740, 741, 742, 743, 744, 745, 768, 769, 770, 771, 772, 774, 776, 778, 779, 780, 781, 783, 785, 792, 793,
+    794, 796, 797, 798, 799, 800, 804, 805, 809, 810, 812, 814, 815, 816, 817, 820, 825, 826, 827, 828, 829,
+    865, 946, 952, 967, 1072, 1086, 7498, 7542, 7569, 7587, 7609, 7615, 7869, 8201, 8214, 8255, 8319, 8599,
+    8600, 11377, 42779, 42780]))
 
 
 #: Regular expression defining acceptable phonetic transcription.
@@ -511,7 +511,7 @@ phonetic_character_list = list(map(chr, [
 #: of phonetic symbols of various classes see https://en.wikipedia.org/wiki/International_Phonetic_Alphabet.
 #:
 transcription_re = re.compile(
-    '[\s{0}]*'.format(''.join(phonetic_character_list)),
+    '[\s\\\\{0}]*'.format(''.join(phonetic_character_list)),
     re.DOTALL | re.IGNORECASE | re.VERBOSE)
 
 
@@ -639,11 +639,11 @@ def phonology(request):
             result_string = '\n'.join(
                 'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
                     
-                    tier_result_seq_list if not isinstance(tier_result_seq_list, list) else
-                    tier_result_seq_list[0] if len(tier_result_seq_list) <= 1 else
-                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_seq_list))
+                    tier_result_list if not isinstance(tier_result_list, list) else
+                    tier_result_list[0] if len(tier_result_list) <= 1 else
+                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
 
-                    for tier_number, tier_name, tier_result_seq_list in cache_result)
+                    for tier_number, tier_name, tier_result_list in cache_result)
 
             log.debug(
                 '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}) '
@@ -824,12 +824,12 @@ def phonology(request):
 
                 sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
 
-            tier_result_list = []
+            textgrid_result_list = []
 
             for tier_number, tier_name, tier_data in tier_data_list:
 
                 if tier_data == 'no_vowel' or tier_data == 'no_vowel_selected':
-                    tier_result_list.append((tier_number, tier_name, tier_data))
+                    textgrid_result_list.append((tier_number, tier_name, tier_data))
                     continue
 
                 # Analyzing vowel sounds of each interval sequence.
@@ -837,7 +837,7 @@ def phonology(request):
                 (raw_interval_list, raw_interval_seq_list, interval_seq_list, interval_idx_to_raw_idx,
                     transcription) = tier_data
 
-                tier_result_list.append((tier_number, tier_name, []))
+                textgrid_result_list.append((tier_number, tier_name, []))
 
                 for seq_index, (raw_interval_list, interval_list) in enumerate(zip(
                     raw_interval_seq_list, interval_seq_list)):
@@ -867,7 +867,7 @@ def phonology(request):
                         len(''.join(text for index, (begin, end, text) in
                             raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
 
-                    tier_result_list[-1][2].append([
+                    textgrid_result_list[-1][2].append([
                         ''.join(text for index, (begin, end, text) in raw_interval_list),
                         max_length_str,
                         '{0:.3f}'.format(max_length_f1_f2[0]),
@@ -879,17 +879,17 @@ def phonology(request):
 
             # Saving result.
 
-            result_list.append(tier_result_list)
-            CACHE.set(cache_key, tier_result_list)
+            result_list.append(textgrid_result_list)
+            CACHE.set(cache_key, textgrid_result_list)
 
             result_string = '\n'.join(
                 'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
                     
-                    tier_result_seq_list if not isinstance(tier_result_seq_list, list) else
-                    tier_result_seq_list[0] if len(tier_result_seq_list) <= 1 else
-                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_seq_list))
+                    tier_result_list if not isinstance(tier_result_list, list) else
+                    tier_result_list[0] if len(tier_result_list) <= 1 else
+                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
 
-                    for tier_number, tier_name, tier_result_seq_list in tier_result_list)
+                    for tier_number, tier_name, tier_result_list in textgrid_result_list)
 
             log.debug(
                 '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}):'
@@ -981,13 +981,13 @@ def phonology(request):
 
     row_counter = 1
 
-    for tier_result_list in result_list:
-        for tier_number, tier_name, tier_result_seq_list in tier_result_list:
+    for textgrid_result_list in result_list:
+        for tier_number, tier_name, tier_result in textgrid_result_list:
 
-            if tier_result_seq_list == 'no_vowel':
+            if tier_result == 'no_vowel' or tier_result == 'no_vowel_selected':
                 continue
 
-            for tier_data in tier_result_seq_list:
+            for tier_data in tier_result:
                 for index, tier_data_str in enumerate(tier_data):
                     sheet.write(row_counter, index, tier_data_str)
 
