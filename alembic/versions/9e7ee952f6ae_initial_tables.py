@@ -290,6 +290,7 @@ def upgrade():
     sa.Column('object_id', SLBigInteger(), nullable=False),
     sa.Column('client_id', SLBigInteger(), nullable=False),
     sa.Column('table_name', sa.UnicodeText(), nullable=True),
+    sa.Column('marked_for_deletion', sa.Boolean(), nullable=False),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )
     ### end Alembic commands ###
