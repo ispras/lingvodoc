@@ -1717,7 +1717,7 @@ def lexical_entries_published(request):
                 for i in response:
                     for j in i['contains']:
                         j['content'] = 'Entity hidden: you \nhave only demo access'
-                        j['contains'] = 'Entity hidden: you \nhave only demo access'
+                        j['contains'] = []
 
 
         request.response.status = HTTPOk.code
