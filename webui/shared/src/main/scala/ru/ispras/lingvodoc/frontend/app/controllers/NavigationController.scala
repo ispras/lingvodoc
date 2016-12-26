@@ -67,19 +67,7 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
     }
   }
 
-  // user logged in
-  rootScope.$on("user.login", () => {
-    backend.getCurrentUser onComplete {
-      case Success(user) =>
-        userService.setUser(user)
-      case Failure(e) => console.log("error: " + e.getMessage)
-    }
-  })
 
-  // user logged out
-  rootScope.$on("user.logout", () => {
-    userService.removeUser()
-  })
 
   rootScope.$on("$locationChangeStart", () => {
     backend.getCurrentUser onComplete {
