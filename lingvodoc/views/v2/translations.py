@@ -123,8 +123,8 @@ def create_translationgist(request):
         translationgist = TranslationGist(client_id=variables['auth'],object_id=object_id, type=type)
         DBSession.add(translationgist)
         DBSession.flush()
-        basegroups = []
-        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete translationgist").first()]
+        basegroups = list()
+        basegroups.append(DBSession.query(BaseGroup).filter_by(name="Can delete translationgist").first())
         if not object_id:
             groups = []
             for base in basegroups:

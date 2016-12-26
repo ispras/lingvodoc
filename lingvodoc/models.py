@@ -953,15 +953,10 @@ def acl_by_groups(object_id, client_id, subject):
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
-        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:  # todo: remove this and fix everything that's broken after that
+        if subject in ['approve_entities']:
             persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
                 if persp.state == 'Published' or persp.state == 'Limited access':
-                    acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
-        elif subject in ['dictionary', 'other dictionary subjects']:
-            dicty = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-            if dicty:
-                if dicty.state == 'Published' or dicty.state == 'Limited access':
                     acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id). \
         join(BaseGroup).filter_by(subject=subject).all()
