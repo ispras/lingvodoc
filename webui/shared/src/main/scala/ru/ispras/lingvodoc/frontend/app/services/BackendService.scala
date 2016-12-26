@@ -494,7 +494,11 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
   def setDPerspectiveRoles(dictionaryId: CompositeId, perspectiveId: CompositeId, roles: PerspectiveRoles): Future[Unit] = {
     val p = Promise[Unit]()
-    val url = getMethodUrl("dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/roles")
+    val url = getMethodUrl("dictionary/" +
+      encodeURIComponent(dictionaryId.clientId.toString) +
+      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/roles")
 
     $http.post[js.Dynamic](url, write(roles)) onComplete {
       case Success(response) =>
