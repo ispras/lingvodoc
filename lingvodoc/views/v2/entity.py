@@ -4,6 +4,7 @@ from lingvodoc.exceptions import CommonException
 from lingvodoc.views.v2.utils import (
     create_object
 )
+from lingvodoc.views.v2.delete import real_delete_entity
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -14,7 +15,8 @@ from lingvodoc.models import (
     TranslationGist,
     User,
     Group,
-    BaseGroup
+    BaseGroup,
+    ObjectTOC
 )
 
 from pyramid.httpexceptions import (
@@ -35,7 +37,7 @@ import hashlib
 import json
 
 
-@view_config(route_name='get_entity_indict', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='get_entity_indict', renderer='json', request_method='GET')
 @view_config(route_name='get_entity', renderer='json', request_method='GET', permission='view')
 def view_entity(request):
     response = dict()
@@ -59,7 +61,13 @@ def delete_entity(request):
     object_id = request.matchdict.get('object_id')
     entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
     if entity and not entity.marked_for_deletion:
-        entity.marked_for_deletion = True
+        if 'desktop' in request.registry.settings:
+            real_delete_entity(entity, request.registry.settings)
+        else:
+            entity.marked_for_deletion = True
+            objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=entity.client_id,
+                                                             object_id=entity.object_id).one()
+            objecttoc.marked_for_deletion = True
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code

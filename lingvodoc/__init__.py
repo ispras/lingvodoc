@@ -54,6 +54,7 @@ def configure_routes(config):
     config.add_route(name='diff_server', pattern='/sync/difference/server')
     config.add_route(name='diff_desk', pattern='/sync/difference')
     config.add_route(name='basic_sync_server', pattern='/sync/basic/server')
+    config.add_route(name='delete_sync_server', pattern='/sync/delete/server')
     config.add_route(name='basic_sync_desktop', pattern='/sync/basic/desktop')
     config.add_route(name='download_dictionary', pattern='/sync/download')
     config.add_route(name='download_all', pattern='/sync/all')
@@ -454,7 +455,7 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_published',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/published',
-                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
+                     factory='lingvodoc.models.PerspectivePublishAcl')
 
     config.add_route(name='lexical_entries_not_accepted',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
@@ -463,7 +464,7 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_published_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/published_count',
-                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
+                     factory='lingvodoc.models.PerspectivePublishAcl')
 
     config.add_route(name='lexical_entries_not_accepted_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'

@@ -127,6 +127,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
                   str(obj.client_id), '/',
                   str(obj.object_id), '/',
                   filename))
+    print(url)
     return real_location, url
 
 

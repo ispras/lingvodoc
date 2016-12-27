@@ -1,10 +1,12 @@
 
 # Standard library imports.
 
+import collections
 import io
 import logging
 import math
 import re
+import string
 import tempfile
 import traceback
 
@@ -16,6 +18,8 @@ import urllib.parse
 import cchardet as chardet
 
 import numpy
+import numpy.fft
+import numpy.linalg
 import numpy.polynomial
 
 import pydub
@@ -30,7 +34,7 @@ from pyramid.view import view_config
 from sqlalchemy import (and_,)
 from sqlalchemy.orm import aliased
 
-import xlwt
+import xlsxwriter
 
 # Project imports.
 
@@ -162,17 +166,17 @@ def burg(sample_list, coefficient_number):
         coefficient_list[i] = 2.0 * numerator / denominator
         a0 *= 1.0 - coefficient_list[i] ** 2
 
-        for j in range(i - 1):
+        for j in range(i):
             coefficient_list[j] = aa[j] - coefficient_list[i] * aa[i - j - 1]
 
-        if i < coefficient_number + 1:
+        if i < coefficient_number:
 
             for j in range(i + 1):
                 aa[j] = coefficient_list[j]
 
             for j in range(len(sample_list) - i - 2):
                 b1[j] -= aa[i] * b2[j]
-                b2[j] = b2[j + 1] - aa[i] * b1[j + 1];
+                b2[j] = b2[j + 1] - aa[i] * b1[j + 1]
 
     return a0, coefficient_list
 
@@ -232,7 +236,12 @@ class AudioPraatLike(object):
         self.formant_half_window_size = 4 * self.formant_step_size
         self.formant_window_size = 2 * self.formant_half_window_size + 1
 
-        self.formant_sound = None
+        self.formant_list = None
+
+        # Setting up formant data initialization. By default we use initialization with FFT-based resampling
+        # computed via numpy.
+
+        self.init_formant_f = self.init_formant_fft
 
     def get_intensity(self, step_index):
         """
@@ -297,10 +306,117 @@ class AudioPraatLike(object):
 
         return 10 * math.log10(energy_sum / (end_step - begin_step + 1))
 
+    def init_formant_pydub(self):
+        """
+        Initializes formant computation data using pydub's simple linear resampling.
+        """
+
+        self.formant_sound = self.intensity_sound.set_frame_rate(self.formant_frame_rate)
+        self.formant_frame_count = int(self.formant_sound.frame_count())
+
+        # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
+        # than 50 Hz.
+
+        factor = math.exp(-2.0 * math.pi * 50 / self.formant_sound.frame_rate)
+        sample_array = self.formant_sound.get_array_of_samples()
+
+        channel_count = self.formant_sound.channels
+
+        self.formant_sample_list = [
+            sum(sample_array[j] for j in range(channel_count)) / channel_count]
+
+        for i in range(1, int(self.formant_sound.frame_count())):
+
+            # During pre-emphasis we also average all channels.
+
+            self.formant_sample_list.append(sum(
+                sample_array[i * channel_count + j] -
+                factor * sample_array[(i - 1) * channel_count + j]
+                    for j in range(channel_count)) / channel_count)
+
+        # Number of formant values and formant value cache.
+
+        self.formant_step_count = int(
+            math.floor((self.formant_sound.frame_count() - 1) // self.formant_step_size + 1))
+
+        self.formant_list = [None for i in range(self.formant_step_count)]
+
+    def init_formant_fft(self):
+        """
+        Initializes formant computation data using FFT-based resampling computed via numpy.
+        """
+
+        sample_array = self.intensity_sound.get_array_of_samples()
+        channel_count = self.intensity_sound.channels
+        frame_count = int(self.intensity_sound.frame_count())
+
+        padding = 1000
+        source_count = frame_count + 2 * padding
+        factor = float(self.formant_frame_rate) / self.intensity_sound.frame_rate
+
+        resample_count = int(math.floor(factor * source_count))
+        resample_padding = int(math.ceil(factor * padding))
+
+        # Resampling source sound to a lower frame rate via FFT.
+
+        sample_list = []
+        for i in range(channel_count):
+
+            source_list = numpy.empty(source_count)
+
+            for j in range(padding):
+                source_list[j] = 0.0
+                source_list[-j - 1] = 0.0
+
+            for j in range(frame_count):
+                source_list[padding + j] = sample_array[j * channel_count + i]
+
+            channel_sample_list = numpy.fft.irfft(numpy.fft.rfft(source_list), resample_count)
+
+            #
+            # NOTE: we have to use initialization/comparison "sample_list = []; if len(sample_list) <=
+            # 0:" instead of more straightforward "sample_list = None; if sample_list == None:" because
+            # of (numpy's, it seems) warning "FutureWarning: comparison to `None` will result in an
+            # elementwise object comparison in the future."
+            #
+
+            if len(sample_list) <= 0:
+                sample_list = channel_sample_list[resample_padding : -resample_padding]
+            else:
+                sample_list += channel_sample_list[resample_padding : -resample_padding]
+
+        # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
+        # than 50 Hz.
+
+        sample_list /= channel_count
+        factor = math.exp(-2.0 * math.pi * 50 / self.formant_frame_rate)
+
+        self.formant_frame_count = len(sample_list)
+        self.formant_sample_list = [sample_list[0]]
+
+        for i in range(1, int(self.formant_frame_count)):
+
+            self.formant_sample_list.append(
+                sample_list[i] - factor * sample_list[i - 1])
+
+        # Number of formant values and formant value cache.
+
+        self.formant_step_count = int(
+            math.floor((self.formant_frame_count - 1) // self.formant_step_size + 1))
+
+        self.formant_list = [None for i in range(self.formant_step_count)]
+
     def get_formants(self, step_index):
         """
         Computes point formant values at the point specified by formant time step index.
         """
+
+        # Initializing formant computation data, if required.
+
+        if self.formant_list == None:
+            self.init_formant_f()
+
+        # Checking validity of supplied time step index.
 
         if step_index < 4 or step_index >= self.formant_step_count - 4:
             raise ValueError('step index {0} is out of bounds [4, {1})'.format(
@@ -316,8 +432,9 @@ class AudioPraatLike(object):
         window_list = get_gaussian_window(self.formant_window_size)
         sample_from = (step_index - 4) * self.formant_step_size
 
-        sample_list = [self.formant_sample_list[sample_from + i] * window_list[i]
-            for i in range(self.formant_window_size)]
+        sample_list = [
+            self.formant_sample_list[sample_from + i] * window_list[i]
+                for i in range(self.formant_window_size)]
 
         # Computing Linear Prediction coefficients via Burg method, number of coefficients is twice the
         # number of formants we want to detect (hence 2 * 5 = 10).
@@ -372,7 +489,7 @@ class AudioPraatLike(object):
         # conjugate, reflecting it about the real line and projecting it inside the unit circle. Then we
         # find formants by looking at roots above the real line.
 
-        nyquist_frequency = self.formant_sound.frame_rate * 0.5
+        nyquist_frequency = self.formant_frame_rate * 0.5
         formant_list = []
 
         for root in better_root_list:
@@ -400,53 +517,70 @@ class AudioPraatLike(object):
 
         # Initializing formant computation data, if required.
 
-        if self.formant_sound == None:
-
-            self.formant_sound = self.intensity_sound.set_frame_rate(self.formant_frame_rate)
-
-            self.formant_step_count = int(
-                math.floor((self.formant_sound.frame_count() - 1) // self.formant_step_size + 1))
-
-            self.formant_list = [None for i in range(self.formant_step_count)]
-
-            # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
-            # than 50 Hz.
-
-            factor = math.exp(-2.0 * math.pi * 50 / self.formant_sound.frame_rate)
-            sample_array = self.formant_sound.get_array_of_samples()
-
-            channel_count = self.formant_sound.channels
-
-            self.formant_sample_list = [
-                sum(sample_array[j] for j in range(channel_count)) / channel_count]
-
-            for i in range(1, int(self.formant_sound.frame_count())):
-
-                self.formant_sample_list.append(sum(
-                    sample_array[i * channel_count + j] -
-                    factor * sample_array[(i - 1) * channel_count + j]
-                        for j in range(channel_count)) / channel_count)
+        if self.formant_list == None:
+            self.init_formant_f()
 
         # Due to windowed nature of formant value computation, we can't compute them for points close to
         # the beginning and the end of the recording; such points are skipped.
 
-        factor = self.formant_sound.frame_rate / self.formant_step_size
+        factor = self.formant_frame_rate / self.formant_step_size
 
         begin_step = max(4, int(math.ceil(begin * factor)))
         end_step = min(self.formant_step_count - 5, int(math.floor(end * factor)))
 
-        # Computing interval formant values as means of point formant values.
+        # Getting point formant values.
 
-        f1_sum, f2_sum = 0.0, 0.0
+        f1_list = []
+        f2_list = []
 
         for step_index in range(begin_step, end_step + 1):
             f1, f2 = self.get_formants(step_index)
 
-            f1_sum += f1
-            f2_sum += f2
+            f1_list.append(f1)
+            f2_list.append(f2)
+
+        f1_list.sort()
+        f2_list.sort()
+
+        # Computing interval formant values as means (without highest and lowest values, if possible) and
+        # medians of point formant values.
 
         step_count = end_step - begin_step + 1
-        return f1_sum / step_count, f2_sum / step_count
+
+        f1_mean = (
+            sum(f1_list) / step_count if step_count <= 2 else
+            sum(f1_list[1:-1]) / (step_count - 2))
+
+        f2_mean = (
+            sum(f2_list) / step_count if step_count <= 2 else
+            sum(f2_list[1:-1]) / (step_count - 2))
+
+        half_step_count = step_count // 2
+
+        f1_median = (
+            f1_list[half_step_count] if step_count & 1 == 1 else
+            (f1_list[half_step_count - 1] + f1_list[half_step_count]) / 2)
+
+        f2_median = (
+            f2_list[half_step_count] if step_count & 1 == 1 else
+            (f2_list[half_step_count - 1] + f2_list[half_step_count]) / 2)
+
+        # Trying computation on just the middle third of the interval.
+
+        third_step_count = step_count // 3
+
+        f1_list = (
+            f1_list[third_step_count : -third_step_count] if step_count % 3 < 2 else
+            f1_list[third_step_count + 1 : -third_step_count - 1])
+
+        f2_list = (
+            f2_list[third_step_count : -third_step_count] if step_count % 3 < 2 else
+            f2_list[third_step_count + 1 : -third_step_count - 1])
+
+        return [f1_mean, f2_mean, f1_median, f2_median,
+            sum(f1_list) / len(f1_list), sum(f2_list) / len(f2_list)]
+
+        return f1_mean, f2_mean, f1_median, f2_median
 
 
 def find_max_interval_praat(sound, interval_list):
@@ -492,17 +626,17 @@ vowel_set = set('aeiouyæøœɐɑɒɔɘəɛɜɞɤɨɪɯɵɶʉʊʌʏ̈̽ао')
 #: with syntax highlighting and probably could mess with Python source code parsing.
 #:
 phonetic_character_list = list(map(chr, [
-    39, 46, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-    117, 118, 119, 120, 121, 122, 124, 161, 228, 230, 231, 232, 233, 234, 235, 240, 248, 259, 275, 283, 295,
-    331, 339, 448, 449, 450, 451, 517, 592, 593, 594, 595, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605,
-    606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 618, 619, 620, 621, 622, 623, 624, 625, 626, 627,
-    628, 629, 630, 632, 633, 634, 635, 637, 638, 640, 641, 642, 643, 644, 648, 649, 650, 651, 652, 653, 654,
-    655, 656, 657, 658, 660, 661, 664, 665, 667, 668, 669, 670, 671, 673, 674, 675, 676, 677, 678, 679, 680,
-    688, 690, 695, 700, 704, 712, 716, 720, 721, 724, 725, 726, 727, 734, 736, 737, 739, 740, 741, 742, 743,
-    744, 745, 768, 769, 770, 771, 772, 774, 776, 778, 779, 780, 781, 783, 785, 792, 793, 794, 796, 797, 798,
-    799, 800, 804, 805, 809, 810, 812, 814, 815, 816, 817, 820, 825, 826, 827, 828, 829, 865, 946, 952, 967,
-    1072, 1086, 7498, 7542, 7569, 7587, 7609, 7615, 7869, 8201, 8214, 8255, 8319, 8599, 8600, 11377, 42779,
-    42780]))
+    39, 40, 41, 45, 46, 58, 94, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
+    113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 161, 228, 230, 231, 232, 233, 234, 235, 240, 248,
+    259, 275, 283, 295, 331, 339, 448, 449, 450, 451, 517, 592, 593, 594, 595, 596, 597, 598, 599, 600, 601,
+    602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 618, 619, 620, 621, 622, 623,
+    624, 625, 626, 627, 628, 629, 630, 632, 633, 634, 635, 637, 638, 640, 641, 642, 643, 644, 648, 649, 650,
+    651, 652, 653, 654, 655, 656, 657, 658, 660, 661, 664, 665, 667, 668, 669, 670, 671, 673, 674, 675, 676,
+    677, 678, 679, 680, 688, 690, 695, 700, 704, 712, 716, 720, 721, 724, 725, 726, 727, 734, 736, 737, 739,
+    740, 741, 742, 743, 744, 745, 768, 769, 770, 771, 772, 774, 776, 778, 779, 780, 781, 783, 785, 792, 793,
+    794, 796, 797, 798, 799, 800, 804, 805, 809, 810, 812, 814, 815, 816, 817, 820, 825, 826, 827, 828, 829,
+    865, 946, 952, 967, 1072, 1086, 7498, 7542, 7569, 7587, 7609, 7615, 7869, 8201, 8214, 8255, 8319, 8599,
+    8600, 11377, 42779, 42780]))
 
 
 #: Regular expression defining acceptable phonetic transcription.
@@ -511,7 +645,7 @@ phonetic_character_list = list(map(chr, [
 #: of phonetic symbols of various classes see https://en.wikipedia.org/wiki/International_Phonetic_Alphabet.
 #:
 transcription_re = re.compile(
-    '[\s{0}]*'.format(''.join(phonetic_character_list)),
+    '[\s\\\\{0}]*'.format(''.join(phonetic_character_list)),
     re.DOTALL | re.IGNORECASE | re.VERBOSE)
 
 
@@ -639,11 +773,11 @@ def phonology(request):
             result_string = '\n'.join(
                 'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
                     
-                    tier_result_seq_list if not isinstance(tier_result_seq_list, list) else
-                    tier_result_seq_list[0] if len(tier_result_seq_list) <= 1 else
-                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_seq_list))
+                    tier_result_list if not isinstance(tier_result_list, list) else
+                    tier_result_list[0] if len(tier_result_list) <= 1 else
+                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
 
-                    for tier_number, tier_name, tier_result_seq_list in cache_result)
+                    for tier_number, tier_name, tier_result_list in cache_result)
 
             log.debug(
                 '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}) '
@@ -824,12 +958,12 @@ def phonology(request):
 
                 sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
 
-            tier_result_list = []
+            textgrid_result_list = []
 
             for tier_number, tier_name, tier_data in tier_data_list:
 
                 if tier_data == 'no_vowel' or tier_data == 'no_vowel_selected':
-                    tier_result_list.append((tier_number, tier_name, tier_data))
+                    textgrid_result_list.append((tier_number, tier_name, tier_data))
                     continue
 
                 # Analyzing vowel sounds of each interval sequence.
@@ -837,7 +971,7 @@ def phonology(request):
                 (raw_interval_list, raw_interval_seq_list, interval_seq_list, interval_idx_to_raw_idx,
                     transcription) = tier_data
 
-                tier_result_list.append((tier_number, tier_name, []))
+                textgrid_result_list.append((tier_number, tier_name, []))
 
                 for seq_index, (raw_interval_list, interval_list) in enumerate(zip(
                     raw_interval_seq_list, interval_seq_list)):
@@ -867,29 +1001,37 @@ def phonology(request):
                         len(''.join(text for index, (begin, end, text) in
                             raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
 
-                    tier_result_list[-1][2].append([
+                    textgrid_result_list[-1][2].append([
                         ''.join(text for index, (begin, end, text) in raw_interval_list),
                         max_length_str,
                         '{0:.3f}'.format(max_length_f1_f2[0]),
                         '{0:.3f}'.format(max_length_f1_f2[1]),
+                        '{0:.3f}'.format(max_length_f1_f2[2]),
+                        '{0:.3f}'.format(max_length_f1_f2[3]),
+                        '{0:.3f}'.format(max_length_f1_f2[4]),
+                        '{0:.3f}'.format(max_length_f1_f2[5]),
                         max_intensity_str,
                         '{0:.3f}'.format(max_intensity_f1_f2[0]),
                         '{0:.3f}'.format(max_intensity_f1_f2[1]),
+                        '{0:.3f}'.format(max_intensity_f1_f2[2]),
+                        '{0:.3f}'.format(max_intensity_f1_f2[3]),
+                        '{0:.3f}'.format(max_intensity_f1_f2[4]),
+                        '{0:.3f}'.format(max_intensity_f1_f2[5]),
                         '+' if max_intensity_index == max_length_index else '-'])
 
             # Saving result.
 
-            result_list.append(tier_result_list)
-            CACHE.set(cache_key, tier_result_list)
+            result_list.append(textgrid_result_list)
+            CACHE.set(cache_key, textgrid_result_list)
 
             result_string = '\n'.join(
                 'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
                     
-                    tier_result_seq_list if not isinstance(tier_result_seq_list, list) else
-                    tier_result_seq_list[0] if len(tier_result_seq_list) <= 1 else
-                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_seq_list))
+                    tier_result_list if not isinstance(tier_result_list, list) else
+                    tier_result_list[0] if len(tier_result_list) <= 1 else
+                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
 
-                    for tier_number, tier_name, tier_result_seq_list in tier_result_list)
+                    for tier_number, tier_name, tier_result_list in textgrid_result_list)
 
             log.debug(
                 '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}):'
@@ -967,54 +1109,177 @@ def phonology(request):
 
     # Otherwise we create and then serve Excel file.
 
-    excel_book = xlwt.Workbook(encoding = "utf-8")
-    sheet = excel_book.add_sheet("Sheet 1")
+    workbook_stream = io.BytesIO()
+    workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
 
-    sheet.write(0, 0, 'Transcription')
-    sheet.write(0, 1, 'Longest (seconds) interval')
-    sheet.write(0, 2, 'F1 (Hz)')
-    sheet.write(0, 3, 'F2 (Hz)')
-    sheet.write(0, 4, 'Highest intensity (dB) interval')
-    sheet.write(0, 5, 'F1 (Hz)')
-    sheet.write(0, 6, 'F2 (Hz)')
-    sheet.write(0, 7, 'Coincidence')
+    worksheet = workbook.add_worksheet('Results')
+    worksheet.write_row('A1', ['Transcription',
+        'Longest (seconds) interval',
+        'F1 mean (Hz)', 'F2 mean (Hz)',
+#       'F1 median (Hz)', 'F2 median (Hz)',
+#       'F1 third (Hz)', 'F2 third (Hz)',
+        'Highest intensity (dB) interval',
+        'F1 mean (Hz)', 'F2 mean (Hz)',
+#       'F1 median (Hz)', 'F2 median (Hz)',
+#       'F1 third (Hz)', 'F2 third (Hz)',
+        'Coincidence'])
 
-    row_counter = 1
+    row_counter = 2
+    vowel_formant_dict = collections.defaultdict(list)
 
-    for tier_result_list in result_list:
-        for tier_number, tier_name, tier_result_seq_list in tier_result_list:
+    # Filling in analysis results.
 
-            if tier_result_seq_list == 'no_vowel':
+    for textgrid_result_list in result_list:
+        for tier_number, tier_name, tier_result in textgrid_result_list:
+
+            if tier_result == 'no_vowel' or tier_result == 'no_vowel_selected':
                 continue
 
-            for tier_data in tier_result_seq_list:
-                for index, tier_data_str in enumerate(tier_data):
-                    sheet.write(row_counter, index, tier_data_str)
+            for tier_data in tier_result:
 
+                row_list = (tier_data[:2] +
+                    list(map(float, tier_data[2:4])) + [tier_data[8]] +
+                    list(map(float, tier_data[9:11])) + [tier_data[15]])
+
+                worksheet.write_row('A' + str(row_counter), row_list)
                 row_counter += 1
+
+                # Collecting vowel formant data.
+
+                text_a, f1_f2_list_a = tier_data[1], tier_data[2:4]
+                text_b, f1_f2_list_b = tier_data[8], tier_data[9:11]
+
+                text_a_list = text_a.split()
+                text_b_list = text_b.split()
+
+                vowel_a = ''.join(filter(lambda character: character in vowel_set, text_a_list[0]))
+                vowel_b = ''.join(filter(lambda character: character in vowel_set, text_b_list[0]))
+
+                vowel_formant_dict[vowel_a].append(tuple(map(float, f1_f2_list_a)))
+
+                if text_b_list[2] != text_a_list[2]:
+                    vowel_formant_dict[vowel_b].append(tuple(map(float, f1_f2_list_b)))
 
     # Formatting column widths.
 
-    sheet.col(0).width = 24 * 256
-    sheet.col(1).width = 24 * 256
-    sheet.col(2).width = 12 * 256
-    sheet.col(3).width = 12 * 256
-    sheet.col(4).width = 24 * 256
-    sheet.col(5).width = 12 * 256
-    sheet.col(6).width = 12 * 256
-    sheet.col(7).width = 12 * 256
+    worksheet.set_column(0, 1, 26)
+    worksheet.set_column(2, 3, 13)
+    worksheet.set_column(4, 4, 26)
+    worksheet.set_column(5, 7, 13)
 
-    excel_stream = io.BytesIO()
-    excel_book.save(excel_stream)
-    excel_stream.seek(0)
+    # And now we will produce F1/F2 scatter chart for all sufficiently frequent analysed vowels.
+
+    vowel_formant_list = []
+
+    for vowel, f1_f2_list in sorted(vowel_formant_dict.items()):
+        f1_f2_list = list(set(f1_f2_list))
+
+        if len(f1_f2_list) >= 8:
+            vowel_formant_list.append((vowel, list(map(numpy.array, f1_f2_list))))
+
+    worksheet = workbook.add_worksheet('F-table')
+
+    # Compiling data of formant value series by filtering F1/F2 2-vectors by Mahalonobis distance.
+
+    chart_data_list = []
+
+    for index, (vowel, f1_f2_list) in enumerate(vowel_formant_list):
+
+        mean = sum(f1_f2_list) / len(f1_f2_list)
+        sigma = numpy.cov(numpy.array(f1_f2_list).T)
+        inverse = numpy.linalg.inv(sigma)
+
+        distance_list = []
+        for f1_f2 in f1_f2_list:
+
+            # Calculation of squared mahalanobis distance inspired by the StackOverflow answer
+            # http://stackoverflow.com/q/27686240/2016856.
+
+            delta = f1_f2 - mean
+            distance_list.append((numpy.einsum('n,nk,k->', delta, inverse, delta), f1_f2))
+
+        distance_list.sort()
+
+        filtered_list = [f1_f2
+            for distance, f1_f2 in distance_list
+                if distance <= 2]
+
+        if len(filtered_list) < len(distance_list) // 2:
+            filtered_list = distance_list[:len(distance_list) // 2]
+
+        chart_data_list.append((len(filtered_list), vowel, filtered_list))
+
+    # Compiling info of the formant scatter chart data series.
+
+    chart_dict_list = []
+
+    column_list = list(string.ascii_uppercase) + [c1 + c2
+        for c1 in string.ascii_uppercase
+        for c2 in string.ascii_uppercase]
+
+    shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle', 'plus']
+
+    color_list = ['black', 'blue', 'brown', 'cyan', 'gray', 'green', 'lime', 'magenta', 'navy', 'orange',
+        'pink', 'purple', 'red', 'silver', 'yellow']
+
+    # It seems that we have to plot data in order of its size, from vowels with least number of F1/F2 points
+    # to vowels with the most number of F1/F2 points, otherwise scatter chart fails to generate properly.
+
+    chart_data_list.sort(reverse = True)
+
+    heading_list = []
+    for count, vowel, f1_f2_list in chart_data_list:
+        heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
+
+    worksheet.write_row('A1', heading_list)
+
+    for index, (count, vowel, f1_f2_list) in enumerate(chart_data_list):
+
+        f1_list, f2_list = zip(*f1_f2_list)
+
+        f1_column = column_list[index * 2]
+        f2_column = column_list[index * 2 + 1]
+
+        # Writing out formant data, compiling and saving chart data series info.
+
+        worksheet.write_column(f1_column + '2', f1_list)
+        worksheet.write_column(f2_column + '2', f2_list)
+
+        color = color_list[index % len(color_list)]
+
+        chart_dict_list.append({
+            'name': vowel,
+            'categories': '=F-table!${0}$2:${0}${1}'.format(f2_column, len(f2_list) + 1),
+            'values': '=F-table!${0}$2:${0}${1}'.format(f1_column, len(f1_list) + 1),
+            'marker': {
+                'type': 'circle',
+                'size': 4,
+                'border': {'color': color},
+                'fill': {'color': color}}})
+
+    # Generating formant chart.
+
+    chart = workbook.add_chart({'type': 'scatter'})
+
+    for chart_dict in chart_dict_list:
+        chart.add_series(chart_dict)
+
+    chart.set_style(11)
+
+    chartsheet = workbook.add_chartsheet('F-chart')
+    chartsheet.set_chart(chart)
+
+    workbook.close()
+    workbook_stream.seek(0)
 
     # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for Excel
     # content-type.
 
-    response = Response(content_type = 'application/vnd.ms-excel')
+    response = Response(content_type =
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-    response.app_iter = FileIter(excel_stream)
-    response.headers['Content-Disposition'] = "attachment; filename=phonology.xls"
+    response.app_iter = FileIter(workbook_stream)
+    response.headers['Content-Disposition'] = "attachment; filename=phonology.xlsx"
 
     return response
 
