@@ -41,5 +41,6 @@ zope.interface==4.3.2
 zope.sqlalchemy==0.7.7
 pathvalidate==0.8.3
 pydub==0.16.5
+xlsxwriter==0.9.6
 xlrd==1.0.0
 xlwt==1.1.2
