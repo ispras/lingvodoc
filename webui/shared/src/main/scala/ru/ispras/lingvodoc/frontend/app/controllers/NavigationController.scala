@@ -1,8 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, RootScope, Scope, Timeout, Location}
+import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
@@ -21,7 +20,13 @@ trait NavigationScope extends Scope {
 
 @JSExport
 @injectable("NavigationController")
-class NavigationController(scope: NavigationScope, rootScope: RootScope, location: Location, backend: BackendService, userService: UserService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
+class NavigationController(scope: NavigationScope,
+                           rootScope: RootScope,
+                           backend: BackendService,
+                           userService: UserService,
+                           interval: Interval,
+                           val timeout: Timeout,
+                           val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
 
   // get locale. fallback to english if no locale received from backend
   scope.locale = Utils.getLocale() match {
@@ -67,20 +72,7 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
     }
   }
 
-
-
-  rootScope.$on("$locationChangeStart", () => {
-    backend.getCurrentUser onComplete {
-      case Success(user) =>
-        userService.setUser(user)
-      case Failure(e) =>
-        userService.removeUser()
-    }
-  })
-
-  // initial
-  backend.getLocales onComplete {
-    case Success(locales) =>
+  backend.getLocales map { locales =>
       scope.locales = locales.toJSArray
       scope.selectedLocale = locales.find { locale =>
         locale.id == scope.locale
@@ -88,8 +80,6 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
         case Some(x) => x
         case None => locales.head
       }
-
-    case Failure(e) => console.log(e.getMessage)
   }
 
   backend.getCurrentUser onComplete {
@@ -99,4 +89,11 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
     case Failure(e) =>
       userService.removeUser()
   }
+
+
+//  interval(() => {
+//    // gel list of tasks
+//
+//
+//  }, 3500)
 }

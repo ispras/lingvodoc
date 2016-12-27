@@ -29,6 +29,15 @@ class AppInitializer(rootScope: RootScope,
     route.current.title foreach (title => document.title = title)
   })
 
+  rootScope.$on("$locationChangeStart", () => {
+    backend.getCurrentUser onComplete {
+      case Success(user) =>
+        userService.setUser(user)
+      case Failure(e) =>
+        userService.removeUser()
+    }
+  })
+
   // user logged in
   rootScope.$on("user.login", () => {
     backend.getCurrentUser foreach { user =>
@@ -40,6 +49,4 @@ class AppInitializer(rootScope: RootScope,
   rootScope.$on("user.logout", () => {
     userService.removeUser()
   })
-
-
 }

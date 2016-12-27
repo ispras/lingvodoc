@@ -4,47 +4,52 @@
 
 <div class="modal-body">
     <div ng-if="!error">
-        <h3>Users</h3>
-        <div ng-repeat="role in controller.getRoles()">
-            <h4 ng-click="controller.toggleAddUsers(role)" style="cursor: pointer;">{{ role }} </h4>
+        <h3></h3>
 
-            <div ng-show="controller.isAddUsersActive(role)">
-                <table class="table table-bordered">
-                    <thead>
-                    <tr>
-                        <td>
-                        </td>
-                        <td>
-                        </td>
-                        <td>
-                        </td>
-                    </tr>
-                    </thead>
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <td>Role</td>
+                <td ng-repeat="user in controller.getUsers()">{{ user.intlName }}</td>
+            </tr>
+            </thead>
 
-                    <tbody>
-                    <tr ng-repeat="user in users">
-                        <td>{{ user.login}}</td>
-                        <td>{{ user.intlName }}</td>
-                        <td> <button type="button" class="btn btn-default" ng-disabled="controller.userHasRole(user, role)" ng-click="controller.addRole(user, role)">+</button></td>
-                    </tr>
-                    </tbody>
+            <tbody>
+            <tr ng-repeat="(role, roleUsers) in permissions">
+                <td>{{ role }}</td>
+                <td ng-repeat="(user, hasRole) in roleUsers"><input type="checkbox" ng-model="roleUsers[user]"></td>
+            </tr>
+            </tbody>
 
-                </table>
+        </table>
 
-
-            </div>
-
-
-            <span class="badge" ng-repeat="user in controller.getUsers(role)">
-                {{ user.name }} <span aria-hidden="true" class="remove-sign" ng-click="controller.removeRole(user, role)">×</span>
-            </span>
-
-        </div>
     </div>
 
-    <div ng-if="error" class="animate-if alert alert-danger" >
+    <div ng-if="error" class="animate-if alert alert-danger">
         <strong>Error</strong> {{ error.message }}
     </div>
+
+    <div>
+        <input type="text" class="form-control" ng-model="searchString" ng-change="controller.searchUser()">
+
+
+        <table class="table table-bordered">
+            <tr ng-repeat="searchUser in searchUsers">
+                <td>{{ searchUser.login }}</td>
+                <td>{{ searchUser.name }}</td>
+                <td>
+                    <button type="button" class="btn btn-default" ng-click="controller.addUser(searchUser)">
+                        <span class="glyphicon glyphicon-plus-sign"></span>
+                    </button>
+                </td>
+            </tr>
+        </table>
+
+
+
+    </div>
+
+
 
 </div>
 
