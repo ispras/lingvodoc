@@ -4,6 +4,8 @@ from dogpile.cache import make_region
 from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
 
+import uuid
+import json
 
 # We initialize MEMOIZE to identity function so that if the cache is not initialized (e.g. when an
 # automatically extracted source code documentation is being compiled), it is still possible to use it.
@@ -55,3 +57,53 @@ def initialize_cache(args):
     MEMOIZE = cache_responses(region)
     CACHE = CommonCache(region)
 
+
+class TaskStatus():
+    def __init__(self, user_id, task_family, task_details, total_stages):
+        self.id = str(uuid.uuid4())
+        self.user_id = str(user_id)
+        self.key = "task:" + + self.id
+        self.current_stage = 1
+        self.total_stages = total_stages
+        self.progress = 0
+        self.task_family = task_family
+        self.task_details = task_details
+        self.status = "Starting the task"
+
+    def put_to_cache(self):
+        if CACHE:
+            CACHE.set(self.key, dill.dumps(self))
+            current_tasks = CACHE.get("current_tasks:" + self.user_id)
+            if current_tasks:
+                if self.key not in current_tasks:
+                    current_tasks.add(self.key)
+            else:
+                current_tasks = set([self.key])
+            CACHE.set(self.user_id, current_tasks)
+
+    @classmethod
+    def get_from_cache(self, task_id):
+        task = CACHE.get(task_id)
+        if task:
+            return dill.loads(task)
+        else:
+            return None
+
+    @classmethod
+    def get_user_tasks(self, user_id, serialize):
+        task_list = []
+        if CACHE:
+            current_tasks = CACHE.get("current_tasks:" + self.user_id)
+            for task_id in current_tasks:
+                task = CACHE.get(task_id)
+                if task:
+                    task_list.append(task)
+        if serialize:
+            return json.dumps(task_list)
+        else:
+            return task_list
+
+    def set(self, current_stage, progress, status):
+        self.current_stage = current_stage
+        self.progress = progress
+        self.status = status
