@@ -494,7 +494,11 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
   def setDPerspectiveRoles(dictionaryId: CompositeId, perspectiveId: CompositeId, roles: PerspectiveRoles): Future[Unit] = {
     val p = Promise[Unit]()
-    val url = getMethodUrl("dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/roles")
+    val url = getMethodUrl("dictionary/" +
+      encodeURIComponent(dictionaryId.clientId.toString) +
+      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/roles")
 
     $http.post[js.Dynamic](url, write(roles)) onComplete {
       case Success(response) =>
@@ -1910,6 +1914,9 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   }
 
   def phonology(perspectiveId: CompositeId): Future[String] = {
+
+    import ru.ispras.lingvodoc.frontend.app.utils.ConversionUtils._
+
     val p = Promise[String]()
     val url = s"phonology?perspective_client_id=${perspectiveId.clientId}&perspective_object_id=${perspectiveId.objectId}"
     val xhr: XMLHttpRequest = new dom.XMLHttpRequest()
@@ -1918,15 +1925,10 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     xhr.responseType = "arraybuffer"
     xhr.onload = { (e: dom.Event) =>
       if (xhr.status == 200) {
-        val arr = js.Array[Byte]()
-        val data = new Uint8Array(xhr.response.asInstanceOf[ArrayBuffer])
-        for (i <- 0 until data.byteLength) {
-          arr.push(data(i).toByte)
-        }
-        val b64content = dom.window.btoa(new String(arr.toArray, "Latin1"))
-        p.success(b64content)
+        p.success(xhr.response.asInstanceOf[js.typedarray.ArrayBuffer].toBase64)
       } else {
-        val response: Dynamic = JSON.parse(xhr.responseText)
+        val r = xhr.response.asInstanceOf[js.typedarray.ArrayBuffer]
+        val response: Dynamic = JSON.parse(r.toStr())
         if (!js.isUndefined(response.error)) {
           p.failure(new BackendException(response.error.asInstanceOf[String]))
         } else {

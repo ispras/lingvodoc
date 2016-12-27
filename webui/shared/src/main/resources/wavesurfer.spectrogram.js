@@ -24,6 +24,7 @@ WaveSurfer.Spectrogram = {
     init: function (params) {
         this.params = params;
         var wavesurfer = this.wavesurfer = params.wavesurfer;
+        window.wavesurfer = wavesurfer;
 
         if (!this.wavesurfer) {
             throw Error('No WaveSurfer instance provided');
@@ -47,6 +48,9 @@ WaveSurfer.Spectrogram = {
         this.noverlap = params.noverlap;
         this.windowFunc = params.windowFunc;
         this.alpha = params.alpha;
+
+        this.getColor = new chroma.scale(['navy', 'yellow']).mode('lch').domain([0, 300]);
+        this.realtime = !!this.params.realtime;
 
         this.createWrapper();
         this.createCanvas();
@@ -120,17 +124,47 @@ WaveSurfer.Spectrogram = {
 
         if (this.frequenciesDataUrl) {
             this.loadFrequenciesData(this.frequenciesDataUrl);
+            return;
         }
-        else {
-            this.getFrequencies(this.drawSpectrogram);
+        if (this.realtime) {
+            this.setupAnalyzer();
+            return;
         }
+        this.getFrequencies(this.drawSpectrogram);
     },
 
     updateCanvasStyle: function () {
-        var width = Math.round(this.width / this.pixelRatio) + 'px';
-        this.canvas.width = this.width;
+        var width = Math.round(this.drawer.width / this.pixelRatio) + 'px';
+        this.canvas.width = this.width = this.drawer.width;
         this.canvas.height = this.height;
         this.canvas.style.width = width;
+    },
+
+    setupAnalyzer: function() {
+        var analyser = this.wavesurfer.backend.analyser;
+        analyser.fftSize = this.fftSamples * 2;
+        analyser.smoothingTimeConstant = 0;
+
+        wavesurfer.on('audioprocess', function(time) {
+            var analyser = this.wavesurfer.backend.analyser;
+            var array = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(array);
+
+            this.realtimeDrawSpectrogram(array, time / this.wavesurfer.getDuration());
+        }.bind(this));
+
+        wavesurfer.on('zoom', this.updateCanvasStyle.bind(this));
+    },
+
+    realtimeDrawSpectrogram: function(array, percent) {
+        var x = this.width * percent;
+        var height = this.height;
+        var heightFactor = this.buffer ? 2 / this.buffer.numberOfChannels : 1;
+
+        for (var j = 0; j < array.length; j++) {
+            this.spectrCc.fillStyle = this.getColor(array[j]).hex();
+            this.spectrCc.fillRect(x, height - j * heightFactor, 2, heightFactor);
+        };
     },
 
     drawSpectrogram: function(frequenciesData, my) {
@@ -143,12 +177,15 @@ WaveSurfer.Spectrogram = {
 
         var heightFactor = my.buffer ? 2 / my.buffer.numberOfChannels : 1;
 
-        for (var i = 0; i < pixels.length; i++) {
-            for (var j = 0; j < pixels[i].length; j++) {
-                var colorValue = 255 - pixels[i][j];
-                my.spectrCc.fillStyle = 'rgb(' + colorValue + ', '  + colorValue + ', ' + colorValue + ')';
-                my.spectrCc.fillRect(i, height - j * heightFactor, 1, heightFactor);
+        var drawSpectrogramColumn = function(column) {
+            for (var j = 0; j < pixels[this].length; j++) {
+                my.spectrCc.fillStyle = my.getColor(pixels[this][j]).hex();
+                my.spectrCc.fillRect(this, height - j * heightFactor, 1, heightFactor);
             }
+        }
+
+        for (var i = 0; i < pixels.length; i++) {
+            setTimeout(drawSpectrogramColumn.bind(i), 0)
         }
     },
 

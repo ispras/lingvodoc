@@ -597,7 +597,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
 
         DBSession.flush()
 
-
+        dict_attributes = get_dict_attributes(sqconn)
         """
         dict_attributes = get_dict_attributes(sqconn)
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
@@ -659,8 +659,8 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
                                             parent=parent,
-                                            # import_source=req.get('import_source'),
-                                            # import_hash=req.get('import_hash'),
+                                            import_source="Lingvodoc-0.98",
+                                            import_hash=dict_attributes['dialeqt_id'],
                                             # additional_metadata=additional_metadata,
                                             translation_gist_client_id=persp_translation_gist_client_id,
                                             translation_gist_object_id=persp_translation_gist_object_id
@@ -695,8 +695,8 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
                                             parent=parent,
-                                            # import_source=req.get('import_source'),
-                                            # import_hash=req.get('import_hash'),
+                                            import_source="Lingvodoc-0.98",
+                                            import_hash=dict_attributes['dialeqt_id'],
                                             # additional_metadata=additional_metadata,
                                             translation_gist_client_id=persp_translation_gist_client_id,
                                             translation_gist_object_id=persp_translation_gist_object_id

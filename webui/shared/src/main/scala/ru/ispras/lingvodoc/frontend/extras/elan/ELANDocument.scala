@@ -85,7 +85,8 @@ class ELANDocument private(annotDocXML: JQuery, private var pxPerSec: Double) {
   }
 
   // get time of the last timeslot in milliseconds
-  def getLastTimeSlotValue: Long = timeOrder.timeSlots.values.max.getOrElse(0)
+  //def getLastTimeSlotValue: Long = timeOrder.timeSlots.values.max.getOrElse(0)
+  def getLastTimeSlotValue: Long = timeOrder.timeSlots.values.flatten.reduceOption(_ max _).getOrElse(0)
   // and in seconds
   def getLastTimeSlotValueSec: Double = Utils.millis2Sec(getLastTimeSlotValue)
 

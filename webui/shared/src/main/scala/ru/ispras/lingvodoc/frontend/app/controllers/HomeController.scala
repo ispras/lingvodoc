@@ -67,12 +67,4 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
       //}
     }
   })
-
-  backend.phonology(CompositeId(345, 2)) map {response =>
-    org.scalajs.dom.console.log("length: " + response.length)
-    scope.data = response
-  }
-
-
-
 }

@@ -6,7 +6,8 @@ from lingvodoc.models import (
     Client,
     DBSession,
     User,
-    UserBlobs
+    UserBlobs,
+    ObjectTOC
 )
 from lingvodoc.views.v2.utils import (
     create_object,
@@ -166,6 +167,7 @@ def get_user_blob(request):  # TODO: test
     request.response.status = HTTPNotFound.code
     return {'error': 'No such blob in the system'}
 
+
 @view_config(route_name='delete_user_blob', renderer='json', request_method='DELETE')
 def delete_user_blob(request):
     user = get_user_by_client_id(authenticated_userid(request))
@@ -184,6 +186,9 @@ def delete_user_blob(request):
 
     filelocation = blob.real_storage_path
     DBSession.delete(blob)
+    objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=blob.client_id,
+                                                     object_id=blob.object_id).one()
+    DBSession.delete(objecttoc)
     request.response.status = HTTPOk.code
     try:
         os.unlink(filelocation)

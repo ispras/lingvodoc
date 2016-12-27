@@ -69,7 +69,8 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       lib.angular,
       lib.bootstrap,
       lib.bootstrapUI,
-      lib.validator
+      lib.validator,
+      lib.base64
     ),
     jsDependencies ++= Seq(
       js.jquery / "2.2.1/jquery.js" minified "2.2.1/jquery.min.js",
@@ -84,7 +85,9 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
-      ProvidedJS / "leaflet.js"
+      ProvidedJS / "leaflet.js",
+      ProvidedJS / "chroma.min.js"
+
     ),
     relativeSourceMaps := true,
     skip in packageJSDependencies := false,
@@ -108,7 +111,8 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
       lib.angular,
       lib.bootstrap,
       lib.bootstrapUI,
-      lib.validator
+      lib.validator,
+      lib.base64
     ),
     jsDependencies ++= Seq(
       js.jquery / "2.2.1/jquery.js" minified "2.2.1/jquery.min.js",
@@ -123,7 +127,8 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
-      ProvidedJS / "leaflet.js"
+      ProvidedJS / "leaflet.js",
+      ProvidedJS / "chroma.min.js"
     ),
     relativeSourceMaps := true,
     skip in packageJSDependencies := false,
@@ -146,7 +151,8 @@ lazy val shared = (project in file("shared"))
       lib.angular,
       lib.bootstrap,
       lib.bootstrapUI,
-      lib.validator
+      lib.validator,
+      lib.base64
     ),
     jsDependencies ++= Seq(
       js.jquery / "2.2.1/jquery.js" minified "2.2.1/jquery.min.js",
@@ -160,6 +166,7 @@ lazy val shared = (project in file("shared"))
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
-      ProvidedJS / "leaflet.js"
+      ProvidedJS / "leaflet.js",
+      ProvidedJS / "chroma.min.js"
     )
   )

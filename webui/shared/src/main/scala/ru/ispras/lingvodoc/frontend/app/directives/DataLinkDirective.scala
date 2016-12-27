@@ -1,8 +1,8 @@
 package ru.ispras.lingvodoc.frontend.app.directives
 
 import com.greencatsoft.angularjs._
+import org.scalajs.dom.Element
 import org.scalajs.dom.raw.HTMLLinkElement
-import org.scalajs.dom.{Element, console}
 
 
 @injectable("downloadLink")
@@ -16,7 +16,6 @@ class DataLinkDirective extends AttributeDirective {
 
   override def link(scope: ScopeType, elements: Seq[Element], attrs: Attributes): Unit = {
     val element = elements.head.asInstanceOf[HTMLLinkElement]
-    console.log("linking")
     attrs("blob") foreach { blob =>
       attrs("type") foreach { mimeType =>
         setUrl(element, mimeType, blob)

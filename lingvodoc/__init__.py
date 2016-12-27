@@ -54,6 +54,7 @@ def configure_routes(config):
     config.add_route(name='diff_server', pattern='/sync/difference/server')
     config.add_route(name='diff_desk', pattern='/sync/difference')
     config.add_route(name='basic_sync_server', pattern='/sync/basic/server')
+    config.add_route(name='delete_sync_server', pattern='/sync/delete/server')
     config.add_route(name='basic_sync_desktop', pattern='/sync/basic/desktop')
     config.add_route(name='download_dictionary', pattern='/sync/download')
     config.add_route(name='download_all', pattern='/sync/all')
@@ -358,7 +359,7 @@ def configure_routes(config):
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
     config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityAcl')  # tested (no del)
+                     factory='lingvodoc.models.LexicalViewAcl')  # tested (no del)
     # tags are different there and in connected words
 
     # API #GET
@@ -454,7 +455,7 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_published',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/published',
-                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
+                     factory='lingvodoc.models.PerspectivePublishAcl')
 
     config.add_route(name='lexical_entries_not_accepted',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
@@ -463,7 +464,7 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_published_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/published_count',
-                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
+                     factory='lingvodoc.models.PerspectivePublishAcl')
 
     config.add_route(name='lexical_entries_not_accepted_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
@@ -687,6 +688,7 @@ def main(global_config, **settings):
             'storage'))
 
     if parser.has_section('app:desktop'):
+        storage = dict()
         for k, v in parser.items('app:desktop'):
             storage[k] = v
         settings['desktop'] = storage

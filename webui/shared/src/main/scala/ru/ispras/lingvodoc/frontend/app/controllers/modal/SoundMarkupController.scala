@@ -207,7 +207,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def drawSpectrogram() = {
     spectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
     spectrogram.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
-      container = "#" + SoundMarkupController.spectrogramDivName)))
+      container = "#" + SoundMarkupController.spectrogramDivName, fftSamples = 256)))
     wsSpectrogramHeight = js.Dynamic.global.document.getElementById(SoundMarkupController.spectrogramDivName).
       scrollHeight.toString.toInt
   }

@@ -59,8 +59,18 @@ log = logging.getLogger(__name__)
 import datetime
 import requests
 from sqlalchemy.dialects.postgresql import insert
+from lingvodoc.views.v2.delete import (
+real_delete_dictionary,
+real_delete_translation_gist,
+real_delete_language,
+real_delete_entity,
+real_delete_lexical_entry,
+real_delete_object,
+real_delete_perspective
+)
 
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
+dict2ids = lambda r: {'client_id': r['client_id'], 'object_id': r['object_id']}
 
 
 def create_nested_content(tmp_resp):
@@ -144,6 +154,7 @@ def basic_sync(request):
     status = session.get(path, cookies=cookies)
     server = status.json()
     new_entries = list()
+    old_langs = dict()
     langs = list()
     for table in [Locale, User, Client, BaseGroup, TranslationGist, TranslationAtom, Field, Group, Language]:
         curr_server = server[table.__tablename__]
@@ -184,24 +195,26 @@ def basic_sync(request):
                         else:
                             langs.append(table(**kwargs))
 
-        all_entries = DBSession.query(table).all()
-        if hasattr(table, 'client_id'):
-            for entry in all_entries:
-                client_id = str(entry.client_id)
-                object_id = str(entry.object_id)
-                if client_id in curr_server:
-                    if object_id in curr_server[client_id]:
-                        for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
-                            setattr(entry, key, value)
+        if table != Language:
+            all_entries = DBSession.query(table).all()
+            if hasattr(table, 'client_id'):
+                    for entry in all_entries:
+                        client_id = str(entry.client_id)
+                        object_id = str(entry.object_id)
+                        if client_id in curr_server and object_id in curr_server[client_id]:
+                            for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
+                                setattr(entry, key, value)
+            else:
+                for entry in all_entries:
+                    id = str(entry.id)
+                    if id in curr_server:
+                        for key, value in list(return_date_time(curr_server[id]).items()):
+                            if key != 'counter' and table != User:
+                                setattr(entry, key, value)
+            new_entries.extend(all_entries)
         else:
-            for entry in all_entries:
-                id = str(entry.id)
-                if id in curr_server:
-                    for key, value in list(return_date_time(curr_server[id]).items()):
-                        if key != 'counter' and table != User:
-                            setattr(entry, key, value)
-        new_entries.extend(all_entries)
-
+            old_langs = curr_server
+    DBSession.flush()
     parent_langs_ids = DBSession.query(Language.client_id, Language.object_id).all()
     parent_langs = [lang for lang in langs if not lang.parent_client_id]
     parent_langs_ids.extend([(lang.client_id, lang.object_id) for lang in langs if not lang.parent_client_id])
@@ -215,7 +228,15 @@ def basic_sync(request):
         lang.parent_client_id, lang.parent_object_id) in parent_langs_ids])
         new_langs = [lang for lang in langs if (lang.client_id, lang.object_id) not in parent_langs_ids]
     new_entries.extend(parent_langs)
+    for entry in DBSession.query(Language).all():
+        client_id = str(entry.client_id)
+        object_id = str(entry.object_id)
+        if client_id in curr_server and object_id in old_langs[client_id]:
+                for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
+                    setattr(entry, key, value)
     DBSession.bulk_save_objects(new_entries)
+    #todo: delete everything marked_for_deletion? but then next time it will download them again and again and again
+    #todo: make request to server with existing objecttocs. server will return objecttocs for deletion
     # client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     # if not client:
     #     request.response.status = HTTPNotFound.code
@@ -229,6 +250,35 @@ def basic_sync(request):
         if not DBSession.query(user_to_group_association).filter_by(user_id=entry[0], group_id=entry[1]).first():
             insertion = user_to_group_association.insert().values(user_id=entry[0], group_id=entry[1])
             DBSession.execute(insertion)
+
+    existing = [row2dict(entry) for entry in
+                DBSession.query(ObjectTOC).filter(ObjectTOC.table_name.in_(['language',
+                                                                           'field']))]
+
+    central_server = settings['desktop']['central_server']
+    for_deletion = make_request(central_server + 'sync/delete/server', 'post', existing)
+
+    language = list()
+    field = list()
+    for entry in for_deletion.json():
+        if entry['table_name'] == 'language':
+            language.append(entry)
+        if entry['table_name'] == 'field':
+            field.append(entry)
+
+    for entry in language:
+        desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_lang:
+            real_delete_language(desk_lang, settings)
+
+    for entry in field:
+        desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
+                                                      object_id=entry['object_id']).first()
+        if desk_field:
+            DBSession.delete(desk_field)
+
+
     request.response.status = HTTPOk.code
     return HTTPOk(json_body={})
 
@@ -276,6 +326,18 @@ def diff_server(request):
     return upload
 
 
+@view_config(route_name='delete_sync_server', renderer='json', request_method='POST')
+def delete_sync_server(request):
+    non_existing = [row2dict(entry) for entry in DBSession.query(ObjectTOC).filter_by(marked_for_deletion=True)]
+    req = request.json_body
+    upload = list()
+    non_existing = [dict2ids(o) for o in non_existing]
+    for entry in req:
+        if dict2ids(entry) in non_existing:
+            upload.append(entry)
+    return upload
+
+
 def make_request(path, req_type='get', json_data=None, data=None, files = None):
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
@@ -311,7 +373,14 @@ def diff_desk(request):
     existing = [row2dict(entry) for entry in DBSession.query(ObjectTOC)]
     central_server = settings['desktop']['central_server']
     path = central_server + 'sync/difference/server'
+
+
+    #todo: make request to server with existing objecttocs. server will return objecttocs for deletion
+    #todo: delete deleted objects
+
+
     server = make_request(path, 'post', existing).json()
+    for_deletion = make_request(central_server + 'sync/delete/server', 'post', existing)
     language = list()
     dictionary = list()
     perspective = list()
@@ -349,34 +418,52 @@ def diff_desk(request):
         gr_req = row2dict(group)
         gr_req['users']=[user.id]
         status = make_request(path, 'post', gr_req)
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in translationgist:
         desk_gist = DBSession.query(TranslationGist).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
         path = central_server + 'translationgist'
-        make_request(path, 'post', row2dict(desk_gist))
+        status = make_request(path, 'post', row2dict(desk_gist))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in translationatom:
         desk_atom = DBSession.query(TranslationAtom).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
         path = central_server + 'translationatom'
-        make_request(path, 'post', row2dict(desk_atom))
+        status = make_request(path, 'post', row2dict(desk_atom))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in language:
         desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).one()
         path = central_server + 'language'
-        make_request(path, 'post', row2dict(desk_lang))
+        status = make_request(path, 'post', row2dict(desk_lang))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in dictionary:
         desk_dict = DBSession.query(Dictionary).filter_by(client_id=entry['client_id'],
                                                           object_id=entry['object_id']).one()
         path = central_server + 'dictionary'
         desk_json = row2dict(desk_dict)
         desk_json['category'] = categories[desk_json['category']]
-        make_request(path, 'post', desk_json)
+        status = make_request(path, 'post', desk_json)
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in perspective:
         desk_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=entry['client_id'],
                                                                       object_id=entry['object_id']).one()
         path = central_server + 'dictionary/%s/%s/perspective' % (
             desk_persp.parent_client_id, desk_persp.parent_object_id)
         status = make_request(path, 'post', row2dict(desk_persp))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in field:
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -483,6 +570,72 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error")}
+
+
+    language = list()
+    dictionary = list()
+    perspective = list()
+    field = list()
+    dictionaryperspectivetofield = list()
+    lexicalentry = list()
+    entity = list()
+    for entry in for_deletion.json():
+        if entry['table_name'] == 'language':
+            language.append(entry)
+        if entry['table_name'] == 'dictionary':
+            dictionary.append(entry)
+        if entry['table_name'] == 'dictionaryperspective':
+            perspective.append(entry)
+        if entry['table_name'] == 'dictionaryperspectivetofield':
+            dictionaryperspectivetofield.append(entry)
+        if entry['table_name'] == 'lexicalentry':
+            lexicalentry.append(entry)
+        if entry['table_name'] == 'entity':
+            entity.append(entry)
+        if entry['table_name'] == 'field':
+            field.append(entry)
+
+    for entry in language:
+        desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_lang:
+            real_delete_language(desk_lang, settings)
+
+    for entry in dictionary:
+        desk_dict = DBSession.query(Dictionary).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_dict:
+            real_delete_dictionary(desk_dict, settings)
+
+    for entry in perspective:
+        desk_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_persp:
+            real_delete_perspective(desk_persp, settings)
+
+    for entry in field:
+        desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_field:
+            DBSession.delete(desk_field)
+
+    for entry in dictionaryperspectivetofield:
+        desk_persp_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_persp_field:
+            DBSession.delete(desk_persp_field)
+
+    for entry in lexicalentry:
+        desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_lex:
+            real_delete_lexical_entry(desk_lex, settings)
+
+    for entry in entity:
+        desk_ent = DBSession.query(Entity).filter_by(client_id=entry['client_id'],
+                                                        object_id=entry['object_id']).first()
+        if desk_ent:
+            real_delete_entity(desk_ent, settings)
     return
 
 
@@ -505,7 +658,7 @@ def download_all(request):
     resp = request.invoke_subrequest(subreq)
     if resp.status_code != 200:
         request.response.status = HTTPInternalServerError.code
-        return {'error': 'network error'}
+        return {'error': 'network error 1'}
 
     path = request.route_url('basic_sync')
     subreq = Request.blank(path)
@@ -514,7 +667,7 @@ def download_all(request):
     resp = request.invoke_subrequest(subreq)
     if resp.status_code != 200:
         request.response.status = HTTPInternalServerError.code
-        return {'error': 'network error'}
+        return {'error': 'network error 2'}
 
     path = request.route_url('diff_desk')
     subreq = Request.blank(path)
@@ -523,7 +676,8 @@ def download_all(request):
     resp = request.invoke_subrequest(subreq)
     if resp.status_code != 200:
         request.response.status = HTTPInternalServerError.code
-        return {'error': 'network error'}
+        print(resp.status_code)
+        return {'error': 'network error 3'}
 
     for dict_obj in DBSession.query(Dictionary).all():
         path = request.route_url('download_dictionary')
@@ -535,7 +689,7 @@ def download_all(request):
         resp = request.invoke_subrequest(subreq)
         if resp.status_code != 200:
             request.response.status = HTTPInternalServerError.code
-            return {'error': 'network error'}
+            return {'error': 'network error 4'}
 
     path = request.route_url('new_client')
     subreq = Request.blank(path)
@@ -544,7 +698,40 @@ def download_all(request):
     resp = request.invoke_subrequest(subreq)
     if resp.status_code != 200:
         request.response.status = HTTPInternalServerError.code
-        return {'error': 'network error'}
+        return {'error': 'network error 5'}
+    else:
 
-    request.response.status = HTTPOk.code
-    return HTTPOk(json_body={})
+            with open('shadow_cookie.json', 'r') as f:
+                cookies = json.loads(f.read())
+            # client_id = cookies['client_id']
+            client_id = resp.json['client_id']
+            headers = remember(request, principal=client_id)
+            response = Response()
+            response.headers = headers
+            locale_id = cookies['locale_id']
+            response.set_cookie(key='locale_id', value=str(locale_id))
+            response.set_cookie(key='client_id', value=str(client_id))
+            result = dict()
+            result['client_id'] = client_id
+
+            path = request.route_url('basic_sync')
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            resp = request.invoke_subrequest(subreq)
+            if resp.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': 'network error 2'}
+
+
+
+
+            request.response.status = HTTPOk.code
+
+            with open('authentication_data.json', 'w') as f:
+                f.write(json.dumps(cookies))
+
+            return HTTPOk(headers=response.headers, json_body=result)
+
+    # request.response.status = HTTPOk.code
+    # return HTTPOk(json_body={})

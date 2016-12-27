@@ -275,6 +275,7 @@ class ObjectTOC(Base, TableNameMixin):
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
     table_name = Column(UnicodeText, nullable=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class CompositeIdMixin(object):
@@ -290,7 +291,10 @@ class CompositeIdMixin(object):
             kwargs["object_id"] = client_by_id.counter
         DBSession.add(ObjectTOC(client_id=kwargs['client_id'],
                                 object_id=kwargs['object_id'],
-                                table_name=self.__tablename__))
+                                table_name=self.__tablename__,
+                                marked_for_deletion=kwargs.get('marked_for_deletion', False)
+                                )
+                      )
         super().__init__(**kwargs)
 
 
@@ -355,9 +359,10 @@ class TranslationMixin(PrimeTableArgs):
         key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
         translation = CACHE.get(key)
         if translation:
-            log.debug("Got cached")
+            log.info("Got cached %s " % str(key))
             return translation
-        log.debug("No cached value, getting from DB")
+        log.debug("No cached value, getting from DB: %s " % str(key))
+
         all_translations = DBSession.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(parent_client_id=self.translation_gist_client_id,
                                                                  parent_object_id=self.translation_gist_object_id).all()
         all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
@@ -366,12 +371,12 @@ class TranslationMixin(PrimeTableArgs):
         elif all_translations_dict.get(main_locale):
             translation = all_translations_dict.get(main_locale)
             key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
-            CACHE.set(key, translation)
+            CACHE.set(key=key, value=translation)
             return translation
         elif all_translations_dict.get(fallback_locale):
             translation = all_translations_dict.get(fallback_locale)
             key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(fallback_locale))
-            CACHE.set(key, translation)
+            CACHE.set(key=key, value=translation)
             return translation
         else:
             return "Translation missing for your locale and fallback locale"
@@ -948,15 +953,10 @@ def acl_by_groups(object_id, client_id, subject):
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
-        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:  # todo: remove this and fix everything that's broken after that
+        if subject in ['approve_entities']:
             persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
                 if persp.state == 'Published' or persp.state == 'Limited access':
-                    acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
-        elif subject in ['dictionary', 'other dictionary subjects']:
-            dicty = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-            if dicty:
-                if dicty.state == 'Published' or dicty.state == 'Limited access':
                     acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id). \
         join(BaseGroup).filter_by(subject=subject).all()
@@ -1106,7 +1106,7 @@ class PerspectiveEntityAcl(ACLMixin):
     def __acl__(self):
         object_id = self.request.matchdict.get('object_id', None)
         client_id = self.request.matchdict.get('client_id', None)
-        levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id ).first()
         perspective = levoneent.parent.parent
         return acl_by_groups(perspective.object_id, perspective.client_id, self.subject)
 
