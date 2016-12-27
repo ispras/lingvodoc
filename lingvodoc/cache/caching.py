@@ -83,9 +83,12 @@ class TaskStatus():
 
     @classmethod
     def get_from_cache(self, task_id):
-        task = CACHE.get(task_id)
-        if task:
-            return dill.loads(task)
+        if CACHE:
+            task = CACHE.get(task_id)
+            if task:
+                return dill.loads(task)
+            else:
+                return None
         else:
             return None
 
