@@ -58,7 +58,8 @@ from lingvodoc.models import (
     TranslationGist,
     Field,
     DictionaryPerspectiveToField,
-    UserBlobs
+    UserBlobs,
+    ObjectTOC
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
@@ -73,6 +74,7 @@ from lingvodoc.views.v2.utils import (
     fulfill_permissions_on_perspectives,
     FakeObject
 )
+from lingvodoc.views.v2.delete import real_delete_perspective
 
 log = logging.getLogger(__name__)
 
@@ -2337,12 +2339,19 @@ def delete_perspective(request):  # tested & in docs
         return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+
     if perspective:
         if not perspective.marked_for_deletion:
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            perspective.marked_for_deletion = True
+            if 'desktop' in request.registry.settings:
+                real_delete_perspective(perspective, request.registry.settings)
+            else:
+                perspective.marked_for_deletion = True
+                objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=perspective.client_id,
+                                                                 object_id=perspective.object_id).one()
+                objecttoc.marked_for_deletion = True
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code

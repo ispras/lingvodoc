@@ -15,7 +15,8 @@ from lingvodoc.models import (
     TranslationAtom,
     TranslationGist,
     categories,
-    Entity
+    Entity,
+    ObjectTOC
 )
 
 from lingvodoc.views.v2.utils import (
@@ -55,7 +56,7 @@ from sqlalchemy.exc import IntegrityError
 import datetime
 import json
 from lingvodoc.views.v2.utils import add_user_to_group
-
+from lingvodoc.views.v2.delete import real_delete_dictionary
 
 @view_config(route_name='create_dictionary', renderer='json', request_method='POST')
 def create_dictionary(request):  # tested & in docs
@@ -207,7 +208,13 @@ def delete_dictionary(request):  # tested & in docs
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            dictionary.marked_for_deletion = True
+            if 'desktop' in request.registry.settings:
+                real_delete_dictionary(dictionary, request.registry.settings)
+            else:
+                dictionary.marked_for_deletion = True
+                objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=dictionary.client_id,
+                                                                 object_id=dictionary.object_id).one()
+                objecttoc.marked_for_deletion = True
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -527,69 +534,6 @@ def dictionary_info(request):  # TODO: test
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
-
-# TODO: completely broken!
-@view_config(route_name='dictionary_delete', renderer='json', request_method='DELETE', permission='delete')
-def real_delete_dictionary(request):
-    response = dict()
-    parent_client_id = request.matchdict.get('client_id')
-    parent_object_id = request.matchdict.get('object_id')
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    if parent:
-        perspectives = DBSession.query(DictionaryPerspective).filter_by(parent=parent)
-        for perspective in perspectives:
-            # fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective).delete()
-            fields = list()
-            lexes = DBSession.query(LexicalEntry).filter_by(parent=perspective)
-            for lex in lexes:
-                # l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
-                l1es = list()
-                for l1e in l1es:
-                    # l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
-                    l2es = list()
-                    for l2e in l2es:
-                        # pl2es = DBSession.query(PublishLevelTwoEntity).filter_by(entity=l2e).delete()
-                        pl2es = list()
-                        DBSession.delete(l2e)
-                    # pl1es = DBSession.query(PublishLevelOneEntity).filter_by(entity=l1e).delete()
-                    pl1es = list()
-                    DBSession.delete(l1e)
-                # ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
-                ges = list()
-                for ge in ges:
-                    # pges = DBSession.query(PublishGroupingEntity).filter_by(entity=ge).delete()
-                    pges = list()
-                    DBSession.delete(ge)
-                DBSession.delete(lex)
-            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-                groups = DBSession.query(Group).filter_by(parent=base,
-                                                          subject_client_id=perspective.client_id,
-                                                          subject_object_id=perspective.object_id).all()
-                for group in groups:
-                    users = []
-                    for user in group.users:
-                        users.append(user)
-                    for user in users:
-                        group.users.remove(user)
-                    DBSession.delete(group)
-
-            DBSession.delete(perspective)
-        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-            groups = DBSession.query(Group).filter_by(parent=base,
-                                                      subject_client_id=parent.client_id,
-                                                      subject_object_id=parent.object_id).all()
-            for group in groups:
-                users = []
-                for user in group.users:
-                    users.append(user)
-                for user in users:
-                    group.users.remove(user)
-                DBSession.delete(group)
-        DBSession.delete(parent)
-        request.response.status = HTTPOk.code
-        return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such dictionary in the system")}
 
 
 @view_config(route_name='dictionary_roles', renderer='json', request_method='GET', permission='view')

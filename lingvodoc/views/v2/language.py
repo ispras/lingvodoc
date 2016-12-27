@@ -11,7 +11,8 @@ from lingvodoc.models import (
     DBSession,
     Group,
     Language,
-    User
+    User,
+    ObjectTOC
 )
 
 from pyramid.httpexceptions import (
@@ -29,7 +30,7 @@ from pyramid.view import view_config
 
 from sqlalchemy.exc import IntegrityError
 from lingvodoc.views.v2.utils import add_user_to_group
-
+from lingvodoc.views.v2.delete import real_delete_language
 
 @view_config(route_name='languages', renderer='templates/languages.pt', request_method='GET')
 def languages_get(request):
@@ -108,7 +109,13 @@ def delete_language(request):  # tested & in docs
     language = DBSession.query(Language).filter_by(client_id=client_id, object_id=object_id).first()
     if language:
         if not language.marked_for_deletion:
-            language.marked_for_deletion = True
+            if 'desktop' in request.registry.settings:
+                real_delete_language(language, request.registry.settings)
+            else:
+                language.marked_for_deletion = True
+                objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=language.client_id,
+                                                                 object_id=language.object_id).one()
+                objecttoc.marked_for_deletion = True
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code

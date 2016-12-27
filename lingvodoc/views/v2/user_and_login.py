@@ -232,8 +232,8 @@ def desk_signin(request):
             # return result
     except HTTPUnauthorized:
         return HTTPUnauthorized(json_body={'error': 'Login or password is wrong, please retry'})
-    except Exception:
-        return HTTPServiceUnavailable(json_body={'error': 'You have no internet connection or Lingvodoc server is unavailable; please retry later.'})
+    # except Exception:
+    #     return HTTPServiceUnavailable(json_body={'error': 'You have no internet connection or Lingvodoc server is unavailable; please retry later.'})
 
 
 @view_config(route_name='new_client_server', renderer='json', request_method='POST')
@@ -279,16 +279,9 @@ def new_client(request):
     status = session.post(path, cookies=cookies)
     client_id = status.json()['client_id']
     cookies = status.cookies.get_dict()
-    with open('authentication_data.json', 'w') as f:
+    with open('shadow_cookie.json', 'w') as f:
         f.write(json.dumps(cookies))
     if status.status_code == 200:
-        # path = request.route_url('basic_sync')
-        # subreq = Request.blank(path)
-        # subreq.method = 'POST'
-        # sub_headers = {'Cookie': request.headers['Cookie']}
-        # subreq.headers = sub_headers
-        # resp = request.invoke_subrequest(subreq)
-        # if resp.status_code == 200:
             headers = remember(request, principal=client_id)
             response = Response()
             response.headers = headers
@@ -298,8 +291,6 @@ def new_client(request):
             result = dict()
             result['client_id'] = client_id
             request.response.status = HTTPOk.code
-            # request.response.headers = headers
-            # return response
             return HTTPOk(headers=response.headers, json_body=result)
         # return result
     return HTTPUnauthorized(location=request.route_url('login'))

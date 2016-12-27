@@ -2,8 +2,9 @@ __author__ = 'alexander'
 
 from lingvodoc.models import (
     DBSession,
-Entity,
-Field
+    Entity,
+    Field,
+    ObjectTOC
 )
 
 from pyramid.httpexceptions import (
@@ -12,7 +13,7 @@ from pyramid.httpexceptions import (
     HTTPBadRequest
 )
 from pyramid.view import view_config
-
+from lingvodoc.views.v2.delete import real_delete_entity
 
 # TODO: completely broken!
 @view_config(route_name='get_group_entity', renderer='json', request_method='GET')
@@ -53,8 +54,6 @@ def delete_group_entity(request):  # TODO: test
     req = request.json_body
     field_client_id = req['field_client_id']
     field_object_id = req['field_object_id']
-    # entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
-    # entities = list()
     field = DBSession.query(Field).filter_by(client_id=field_client_id,
                                              object_id=field_object_id).first()
     if not field:
@@ -70,7 +69,13 @@ def delete_group_entity(request):  # TODO: test
                                                  parent_object_id=object_id, marked_for_deletion=False).all()
     if entities:
         for entity in entities:
-            entity.marked_for_deletion = True
+            if 'desktop' in request.registry.settings:
+                real_delete_entity(entity, request.registry.settings)
+            else:
+                entity.marked_for_deletion = True
+                objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=entity.client_id,
+                                                                 object_id=entity.object_id).one()
+                objecttoc.marked_for_deletion = True
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code

@@ -54,6 +54,7 @@ def configure_routes(config):
     config.add_route(name='diff_server', pattern='/sync/difference/server')
     config.add_route(name='diff_desk', pattern='/sync/difference')
     config.add_route(name='basic_sync_server', pattern='/sync/basic/server')
+    config.add_route(name='delete_sync_server', pattern='/sync/delete/server')
     config.add_route(name='basic_sync_desktop', pattern='/sync/basic/desktop')
     config.add_route(name='download_dictionary', pattern='/sync/download')
     config.add_route(name='download_all', pattern='/sync/all')
