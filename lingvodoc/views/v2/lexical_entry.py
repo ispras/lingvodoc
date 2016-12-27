@@ -11,7 +11,8 @@ from lingvodoc.models import (
     User,
     Entity,
     Field,
-    PublishingEntity
+    PublishingEntity,
+    ObjectTOC
 )
 from sqlalchemy import (
     func,
@@ -34,6 +35,7 @@ from pyramid.view import view_config
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
+from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 import logging
 import random
@@ -406,21 +408,13 @@ def create_lexical_entry_bulk(request):  # TODO: test
         return {'error': str(e)}
 
 
-@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    # entry = DBSession.query(LexicalEntry) \
-    #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-    #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-    #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-    #     .options(joinedload('publishleveloneentity')) \
-    #     .options(joinedload('publishleveltwoentity')) \
-    #     .options(joinedload('publishgroupingentity')) \
-    #     .filter_by(client_id=client_id, object_id=object_id).first()
 
     entry = DBSession.query(LexicalEntry) \
         .filter_by(client_id=client_id, object_id=object_id).first()
@@ -442,6 +436,41 @@ def view_lexical_entry(request):  # TODO: test
                 return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
+
+
+@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='lexical_entry', renderer='json', request_method='DELETE', permission='delete')
+def delete_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+
+    entry = DBSession.query(LexicalEntry) \
+        .filter_by(client_id=client_id, object_id=object_id).first()
+    if entry:
+        if entry.moved_to:
+            url = request.route_url('lexical_entry',
+                                    client_id=entry.moved_to.split("/")[0],
+                                    object_id=entry.moved_to.split("/")[1])
+            subreq = Request.blank(url)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            return request.invoke_subrequest(subreq)
+        else:
+            if not entry.marked_for_deletion:
+                if 'desktop' in request.registry.settings:
+                    real_delete_lexical_entry(entry, request.registry.settings)
+                else:
+                    entry.marked_for_deletion = True
+                    objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=entry.client_id,
+                                                                     object_id=entry.object_id).one()
+                    objecttoc.marked_for_deletion = True
+                request.response.status = HTTPOk.code
+                return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such entity in the system")}
+
 
 
 # TODO: completely broken!
@@ -492,7 +521,7 @@ def move_lexical_entry(request):
                             entity.marked_for_deletion = True
                             if real_delete:
                                 for publent in entity.publishleveloneentity:
-                                    DBSession.delete(publent)
+                                    DBSession.delete(publent)  #TODO: delete objecttoc
                                 DBSession.delete(entity)
                                 continue
                         entity.parent = parent

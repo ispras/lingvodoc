@@ -7,7 +7,8 @@ from lingvodoc.models import (
     Language,
     User,
     TranslationAtom,
-    TranslationGist
+    TranslationGist,
+    ObjectTOC
 )
 
 from lingvodoc.views.v2.utils import (
@@ -48,6 +49,7 @@ import json
 from sqlalchemy.orm.exc import NoResultFound
 from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator
 from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.views.v2.delete import real_delete_translation_gist
 # search (filter by input, type and (?) locale)
 
 
@@ -96,9 +98,18 @@ def delete_translationgist(request):
     object_id = request.matchdict.get('object_id')
     translationgist = DBSession.query(TranslationGist).filter_by(client_id=client_id, object_id=object_id).first()
     if translationgist and not translationgist.marked_for_deletion:
+        # if 'desktop' in request.registry.settings:
+        #     real_delete_translation_gist(translationgist, request.registry.settings)
+        # else:
+        translationgist.marked_for_deletion = True
+        objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=translationgist.client_id,
+                                                         object_id=translationgist.object_id).one()
+        objecttoc.marked_for_deletion = True
         for translationatom in translationgist.translationatom:
             translationatom.marked_for_deletion = True
-        translationgist.marked_for_deletion = True
+            objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=translationatom.client_id,
+                                                             object_id=translationatom.object_id).one()
+            objecttoc.marked_for_deletion = True
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code
