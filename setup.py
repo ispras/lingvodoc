@@ -12,7 +12,7 @@ requires = [
     ]
 
 setup(name='lingvodoc',
-      version='2.0b1',
+      version='2.0',
       description='lingvodoc',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
@@ -25,7 +25,7 @@ setup(name='lingvodoc',
       author_email='al@somestuff.ru',
       url='https://lingvodoc.ispras.ru/',
       keywords='web wsgi bfg pylons pyramid sqlalchemy',
-      packages=find_packages(),
+      packages=find_packages(exclude=['tests']),
       include_package_data=True,
       zip_safe=False,
       test_suite='lingvodoc',
@@ -37,4 +37,3 @@ setup(name='lingvodoc',
       initialize_lingvodoc_db = lingvodoc.scripts.initializedb:main
       """,
       )
-print(find_packages())
