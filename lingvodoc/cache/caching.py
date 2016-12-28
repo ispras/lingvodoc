@@ -5,7 +5,6 @@ from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
 
 import uuid
-import json
 
 # We initialize MEMOIZE to identity function so that if the cache is not initialized (e.g. when an
 # automatically extracted source code documentation is being compiled), it is still possible to use it.
@@ -69,6 +68,7 @@ class TaskStatus():
         self.task_family = task_family
         self.task_details = task_details
         self.status = "Starting the task"
+        self.result_link = ""
 
     def put_to_cache(self):
         if CACHE:
@@ -82,7 +82,7 @@ class TaskStatus():
             CACHE.set(self.user_id, current_tasks)
 
     @classmethod
-    def get_from_cache(self, task_id):
+    def get_from_cache(cls, task_id):
         if CACHE:
             task = CACHE.get(task_id)
             if task:
@@ -93,20 +93,32 @@ class TaskStatus():
             return None
 
     @classmethod
-    def get_user_tasks(self, user_id, serialize):
+    def get_user_tasks(cls, user_id, clear_out=False):
         task_list = []
         if CACHE:
-            current_tasks = CACHE.get("current_tasks:" + self.user_id)
+            current_tasks = CACHE.get("current_tasks:" + user_id)
             for task_id in current_tasks:
                 task = CACHE.get(task_id)
                 if task:
                     task_list.append(task)
-        if serialize:
-            return json.dumps(task_list)
+        if clear_out:
+            return [task.__dict__ for task in task_list]
         else:
             return task_list
 
-    def set(self, current_stage, progress, status):
+    def set(self, current_stage, progress, status, result_link=""):
         self.current_stage = current_stage
         self.progress = progress
         self.status = status
+        self.result_link = result_link
+
+    def delete(self):
+        if CACHE:
+            current_tasks = CACHE.get("current_tasks:" + self.user_id)
+            if current_tasks:
+                if self.key in current_tasks:
+                    current_tasks.remove(self.key)
+            # TODO: implement del operation in cache; now we delete the task only from usertasks list
+        return None
+
+

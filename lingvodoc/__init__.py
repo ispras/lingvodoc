@@ -668,6 +668,10 @@ def configure_routes(config):
 
     config.add_route(name="phonology", pattern="/phonology")
 
+    config.add_route(name="tasks", pattern="/tasks", request_method='GET')
+
+    config.add_route(name="task_delete", pattern="/tasks/{task_id}", request_method='DELETE')
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
