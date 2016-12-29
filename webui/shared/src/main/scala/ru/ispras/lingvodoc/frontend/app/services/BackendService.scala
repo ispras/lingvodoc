@@ -19,7 +19,7 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}
 import scala.scalajs.js.{Dynamic, JSON}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 
 object LexicalEntriesType extends Enumeration {
@@ -492,7 +492,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   }
 
 
-  def setDPerspectiveRoles(dictionaryId: CompositeId, perspectiveId: CompositeId, roles: PerspectiveRoles): Future[Unit] = {
+  def setPerspectiveRoles(dictionaryId: CompositeId, perspectiveId: CompositeId, roles: PerspectiveRoles): Future[Unit] = {
     val p = Promise[Unit]()
     val url = getMethodUrl("dictionary/" +
       encodeURIComponent(dictionaryId.clientId.toString) +
@@ -1939,6 +1939,31 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     xhr.send()
     p.future
   }
+
+  def tasks(): Future[Seq[Task]] = {
+    val p = Promise[Seq[Task]]()
+    $http.get[js.Dynamic](getMethodUrl("tasks")) onComplete {
+      case Success(response)  =>
+        p.success(read[Seq[Task]](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get list of tasks", e))
+    }
+    p.future
+  }
+
+  def removeTask(task: Task): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = "tasks/" + encodeURIComponent(task.id)
+    $http.delete[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to remove task", e))
+    }
+    p.future
+  }
+
+
 }
 
 @injectable("BackendService")

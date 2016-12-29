@@ -3,6 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers.modal
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
 
@@ -30,15 +31,14 @@ class EditPerspectiveRolesModalController(scope: EditPerspectiveRolesModalScope,
                                           modal: ModalService,
                                           instance: ModalInstance[Unit],
                                           backend: BackendService,
-                                          val timeout: Timeout,
+                                          timeout: Timeout,
                                           val exceptionHandler: ExceptionHandler,
                                           params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditPerspectiveRolesModalScope](scope) with AngularExecutionContextProvider {
+  extends BaseModalController(scope, modal, instance, timeout, params)
+    with AngularExecutionContextProvider {
 
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
   private[this] val perspective = params("perspective").asInstanceOf[Perspective]
-  private[this] var permissions = Map[String, Seq[UserListEntry]]()
-  //private[this] var addUsersActive = Seq[String]()
   private[this] var allUsers = Seq[UserListEntry]()
 
   scope.dictionary = dictionary
@@ -48,23 +48,21 @@ class EditPerspectiveRolesModalController(scope: EditPerspectiveRolesModalScope,
   scope.searchUsers = js.Array[UserListEntry]()
   scope.saveEnabled = true
 
-  load()
-
   @JSExport
-  def ok() = {
+  def ok(): Unit = {
     scope.saveEnabled = false
     val permissions = scope.permissions.toMap map { case (role, e) =>
       role -> e.toMap.filter(_._2).keys.map(_.toInt).toSeq
     }
     val roles = PerspectiveRoles(permissions, Map.empty[String, Seq[Int]])
-    backend.setDPerspectiveRoles(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), roles) onComplete {
+    backend.setPerspectiveRoles(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), roles) onComplete {
       case Success(_) => instance.close(())
       case Failure(e) => setError(e)
     }
   }
 
   @JSExport
-  def cancel() = {
+  def cancel(): Unit = {
     instance.dismiss(())
   }
 
@@ -82,7 +80,7 @@ class EditPerspectiveRolesModalController(scope: EditPerspectiveRolesModalScope,
   }
 
   @JSExport
-  def searchUser() = {
+  def searchUser(): Unit = {
     scope.searchString.toOption foreach { q =>
       scope.searchUsers = allUsers.filterNot(u => scope.users.exists(_.id == u.id))
         .filter(user => user.login.toLowerCase.contains(q.toLowerCase) || user.intlName.toLowerCase.contains(q.toLowerCase)).take(5).toJSArray
@@ -90,7 +88,7 @@ class EditPerspectiveRolesModalController(scope: EditPerspectiveRolesModalScope,
   }
 
   @JSExport
-  def addUser(searchUser: UserListEntry) = {
+  def addUser(searchUser: UserListEntry): Unit = {
     scope.permissions = scope.permissions.toMap.map { case (role, users) =>
       role -> (users.toMap + (searchUser.id.toString -> false)).toJSDictionary
     }.toJSDictionary
@@ -107,7 +105,7 @@ class EditPerspectiveRolesModalController(scope: EditPerspectiveRolesModalScope,
     }.toJSDictionary
   }
 
-  private[this] def load() = {
+  load(() => {
     backend.getUsers flatMap { users =>
       allUsers = users
       backend.getPerspectiveRoles(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) map { roles =>
@@ -115,6 +113,10 @@ class EditPerspectiveRolesModalController(scope: EditPerspectiveRolesModalScope,
         scope.permissions = createRoles(users, roles)
       }
     }
-  }
+  })
+
+  override protected def onStartRequest(): Unit = {}
+
+  override protected def onCompleteRequest(): Unit = {}
 }
 
