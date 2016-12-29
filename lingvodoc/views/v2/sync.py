@@ -366,6 +366,7 @@ def make_request(path, req_type='get', json_data=None, data=None, files = None):
 @view_config(route_name='diff_desk', renderer='json', request_method='POST')
 def diff_desk(request):
     log.error('in diff_desk')
+    error_happened = False
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     if not client:
         request.response.status = HTTPNotFound.code
@@ -383,7 +384,6 @@ def diff_desk(request):
 
     #todo: make request to server with existing objecttocs. server will return objecttocs for deletion
     #todo: delete deleted objects
-
 
     log.error('before recieving list for uploading in diff_desk')
     server = make_request(path, 'post', existing).json()
@@ -542,6 +542,7 @@ def diff_desk(request):
                     if content_resp.status_code != 200:
                         log.error(desk_ent.content)
                         do_not_add = True
+                        error_happened = True
 
                     content = content_resp.content
                     # print(type(content))
@@ -567,7 +568,7 @@ def diff_desk(request):
             if not do_not_add:
                 status = make_request(path, 'post', ent_req)
                 if status.status_code != 200:
-                    print('ima error')
+                    error_happened = True
                     # request.response.status = HTTPInternalServerError.code
                     # return {'error': str("internet error 11")}
     for entry in grouping_tags:
@@ -657,6 +658,10 @@ def diff_desk(request):
                                                         object_id=entry['object_id']).first()
         if desk_ent:
             real_delete_entity(desk_ent, settings)
+    if error_happened:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str("internet error")}
+
     return
 
 
@@ -708,8 +713,8 @@ def download_all(request):
         subreq = Request.blank(path)
         subreq.method = 'POST'
         subreq.headers = request.headers
-        subreq.json = {"client_id":dict_obj.client_id,
-                                                       "object_id":dict_obj.object_id}
+        subreq.json = {"client_id": dict_obj.client_id,
+                       "object_id": dict_obj.object_id}
         resp = request.invoke_subrequest(subreq)
         if resp.status_code != 200:
             request.response.status = HTTPInternalServerError.code
@@ -725,37 +730,34 @@ def download_all(request):
         return {'error': 'network error 5'}
     else:
 
-            with open('shadow_cookie.json', 'r') as f:
-                cookies = json.loads(f.read())
-            # client_id = cookies['client_id']
-            client_id = resp.json['client_id']
-            headers = remember(request, principal=client_id)
-            response = Response()
-            response.headers = headers
-            locale_id = cookies['locale_id']
-            response.set_cookie(key='locale_id', value=str(locale_id))
-            response.set_cookie(key='client_id', value=str(client_id))
-            result = dict()
-            result['client_id'] = client_id
+        with open('shadow_cookie.json', 'r') as f:
+            cookies = json.loads(f.read())
+        # client_id = cookies['client_id']
+        client_id = resp.json['client_id']
+        headers = remember(request, principal=client_id)
+        response = Response()
+        response.headers = headers
+        locale_id = cookies['locale_id']
+        response.set_cookie(key='locale_id', value=str(locale_id))
+        response.set_cookie(key='client_id', value=str(client_id))
+        result = dict()
+        result['client_id'] = client_id
 
-            path = request.route_url('basic_sync')
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            resp = request.invoke_subrequest(subreq)
-            if resp.status_code != 200:
-                request.response.status = HTTPInternalServerError.code
-                return {'error': 'network error 2'}
+        path = request.route_url('basic_sync')
+        subreq = Request.blank(path)
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if resp.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': 'network error 2'}
 
+        request.response.status = HTTPOk.code
 
+        with open('authentication_data.json', 'w') as f:
+            f.write(json.dumps(cookies))
 
+        return HTTPOk(headers=response.headers, json_body=result)
 
-            request.response.status = HTTPOk.code
-
-            with open('authentication_data.json', 'w') as f:
-                f.write(json.dumps(cookies))
-
-            return HTTPOk(headers=response.headers, json_body=result)
-
-    # request.response.status = HTTPOk.code
-    # return HTTPOk(json_body={})
+        # request.response.status = HTTPOk.code
+        # return HTTPOk(json_body={})
