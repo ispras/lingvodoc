@@ -5,6 +5,7 @@ from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
 
 import uuid
+import dill
 
 # We initialize MEMOIZE to identity function so that if the cache is not initialized (e.g. when an
 # automatically extracted source code documentation is being compiled), it is still possible to use it.
@@ -61,7 +62,7 @@ class TaskStatus():
     def __init__(self, user_id, task_family, task_details, total_stages):
         self.id = str(uuid.uuid4())
         self.user_id = str(user_id)
-        self.key = "task:" + + self.id
+        self.key = "task:" + self.id
         self.current_stage = 1
         self.total_stages = total_stages
         self.progress = 0
@@ -70,16 +71,19 @@ class TaskStatus():
         self.status = "Starting the task"
         self.result_link = ""
 
+        self.put_to_cache()
+
     def put_to_cache(self):
         if CACHE:
             CACHE.set(self.key, dill.dumps(self))
             current_tasks = CACHE.get("current_tasks:" + self.user_id)
             if current_tasks:
+                current_tasks = dill.loads(current_tasks)
                 if self.key not in current_tasks:
                     current_tasks.add(self.key)
             else:
                 current_tasks = set([self.key])
-            CACHE.set(self.user_id, current_tasks)
+            CACHE.set("current_tasks:" + self.user_id, dill.dumps(current_tasks))
 
     @classmethod
     def get_from_cache(cls, task_id):
@@ -96,10 +100,12 @@ class TaskStatus():
     def get_user_tasks(cls, user_id, clear_out=False):
         task_list = []
         if CACHE:
-            current_tasks = CACHE.get("current_tasks:" + user_id)
+            current_tasks = CACHE.get("current_tasks:" + str(user_id))
+            current_tasks = dill.loads(current_tasks) if current_tasks else []
             for task_id in current_tasks:
                 task = CACHE.get(task_id)
                 if task:
+                    task = dill.loads(task)
                     task_list.append(task)
         if clear_out:
             return [task.__dict__ for task in task_list]
@@ -107,10 +113,13 @@ class TaskStatus():
             return task_list
 
     def set(self, current_stage, progress, status, result_link=""):
-        self.current_stage = current_stage
+        if current_stage:
+            self.current_stage = current_stage
         self.progress = progress
         self.status = status
         self.result_link = result_link
+
+        self.put_to_cache()
 
     def delete(self):
         if CACHE:

@@ -28,6 +28,8 @@ from pyramid.httpexceptions import (
     HTTPOk
 )
 
+from lingvodoc.cache.caching import TaskStatus
+
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -548,11 +550,13 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
 
 
 def convert_db_new( blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage,
-                   locale_id=2):
+                   locale_id, task_status):
     log = logging.getLogger(__name__)
+    from lingvodoc.cache.caching import CACHE
     #log.setLevel(logging.DEBUG)
+    task_status.set(1, 1, "Preparing")
 
-    time.sleep(4)
+    time.sleep(3)
     field_ids = {}
     with transaction.manager:
         blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
@@ -585,6 +589,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                           "Translation of Paradigmatic forms",
                           "Sounds of Paradigmatic forms"
                          )
+        task_status.set(2, 5, "Checking fields")
         for name in all_fieldnames:
             data_type_query = DBSession.query(Field) \
                 .join(TranslationGist,
@@ -652,6 +657,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         """
         # FIRST PERSPECTIVE
         """
+        task_status.set(3, 8, "Handling words perspective")
         resp = translation_service_search_all("Lexical Entries")
         persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
@@ -685,6 +691,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         """
         # SECOND PERSPECTIVE
         """
+        task_status.set(4, 12, "Handling paradigms perspective")
         resp = translation_service_search_all("Paradigms")
         persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
@@ -725,6 +732,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         count_cursor2.execute("select count(*) from dictionary where is_a_regular_form=0")
         words_count2 = count_cursor2.fetchone()[0]
         ids_dict = dict()
+        task_status.set(5, 15, "Mapping lexical entries")
         for i in range(words_count):
             perspective = DBSession.query(DictionaryPerspective).\
                 filter_by(client_id=first_perspective_client_id, object_id = first_perspective_object_id).first()
@@ -738,9 +746,10 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
             ids_dict[i] = (lexical_entry_client_id, lexical_entry_object_id)
         DBSession.flush()
         ids_dict2 = dict()
+        task_status.set(6, 20, "Mapping paradigm entries")
         for i in range(words_count2):
             perspective = DBSession.query(DictionaryPerspective).\
-                filter_by(client_id=first_perspective_client_id, object_id = second_perspective_object_id).first()
+                filter_by(client_id=second_perspective_client_id, object_id = second_perspective_object_id).first()
             if not perspective:
                 return {'error': str("No such perspective in the system")}
             lexentr = LexicalEntry( client_id=client.id,
@@ -849,6 +858,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         columns = ("word", "Transcription", "translation")
         # First Perspective entity
         sqcursor = sqconn.cursor()
+        task_status.set(7, 25, "Creating entries")
         for column in columns:
             sqcursor.execute("select id,%s from dictionary where is_a_regular_form=1" % column)
             for row in sqcursor:
@@ -864,6 +874,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                 create_entity(ids_dict[fp_le_id_dict[row_id]][0], ids_dict[fp_le_id_dict[row_id]][1], fp_fields_dict[name][0], fp_fields_dict[name][1],
                     None, client, content, filename=None, storage=storage)
         # Second Perspective entity
+        task_status.set(7, 50, "Creating entries")
         sqcursor = sqconn.cursor()
         for column in columns:
             sqcursor.execute("select id,%s from dictionary where is_a_regular_form=0" % column)
@@ -880,6 +891,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                 create_entity(ids_dict2[sp_le_id_dict[row_id]][0], ids_dict2[sp_le_id_dict[row_id]][1], sp_fields_dict[name][0], sp_fields_dict[name][1],
                     None, client, content, filename=None, storage=storage)
         sqcursor = sqconn.cursor()
+        task_status.set(7, 55, "Creating entries")
         sqcursor.execute("select id,regular_form from dictionary where is_a_regular_form=0")
         for le_cursor in sqcursor:
             fp_id = int(le_cursor[1])
@@ -901,6 +913,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         audio_ids = set()
         paradigm_audio_ids = set()
         sound_and_markup_word_cursor = sqconn.cursor()
+        task_status.set(8, 60, "Uploading sounds and markups")
         sound_and_markup_word_cursor.execute("""select blobs.id,
                                                 blobs.secblob,
                                                 blobs.mainblob,
@@ -928,6 +941,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                                                 and dictionary.is_a_regular_form=1;""")
         upload_audio(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
                      client_id, True, client, storage)
+        task_status.set(8, 70, "Uploading sounds and markups")
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
                                                     blobs.secblob,
@@ -944,6 +958,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         folder_name = "paradigm_praat_markup"
         upload_audio_with_markup(paradigm_audio_ids, ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
                                  client_id, True, client, storage)
+        task_status.set(8, 80, "Uploading sounds and markups")
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
                                                     blobs.secblob,
@@ -960,7 +975,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         """
         Etimology_tag
         """
-
+        task_status.set(9, 90, "Handling etymology")
         etymology_cursor = sqconn.cursor()
         etymology_cursor.execute("""select id, etimology_tag
                                     FROM dictionary
@@ -978,21 +993,27 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
             # status = session.post(connect_url, json=item)
             # log.debug(status.text)
 
-
+        task_status.set(10, 100, "Finished", "")
         dictionary = {}
         return dictionary
 
 
-def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, sqlalchemy_url, storage):
+def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, sqlalchemy_url, storage, locale_id, task_key, cache_kwargs):
     log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
+    #log.setLevel(logging.DEBUG)
+    time.sleep(3)
+    from lingvodoc.cache.caching import CACHE
+    from lingvodoc.cache.caching import initialize_cache
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
     try:
         engine = create_engine(sqlalchemy_url)
         DBSession.configure(bind=engine)
-        status = convert_db_new(  blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage)
+        status = convert_db_new(  blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage, locale_id, task_status)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)
+        task_status.set(None, -1, "Conversion failed")
         raise
     log.debug(status)
     log.debug('we are the champions')

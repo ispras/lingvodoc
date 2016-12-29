@@ -3,7 +3,9 @@ from pyramid.view import view_config
 from sqlite3 import connect
 from lingvodoc.models import (
     DBSession,
-    UserBlobs
+    UserBlobs,
+    Client,
+    TranslationGist
 )
 
 from pyramid.httpexceptions import (
@@ -13,26 +15,32 @@ from pyramid.httpexceptions import (
 
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
 
-#from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.cache.caching import TaskStatus
 
 log = logging.getLogger(__name__)
 
 @view_config(route_name='convert_dictionary_dialeqt', renderer='json', request_method='POST')
 def convert_dictionary(request):  # TODO: test
-
+    # TODO: make checks for params
     req = request.json_body
+    locale_id = int(request.cookies.get('locale_id') or 2)
     client_id = request.authenticated_userid
+    user = Client.get_user_by_client_id(client_id)
     args = dict()
     args["client_id"] = client_id
     args['blob_client_id'] = req['blob_client_id']
-    args['blob_client_id'] = req['blob_object_id']
+    args['blob_object_id'] = req['blob_object_id']
     args["language_client_id"] = req["language_client_id"]
     args["language_object_id"] = req["language_object_id"]
     args["gist_client_id"] = req["gist_client_id"]
     args["gist_object_id"] = req["gist_object_id"]
     args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     args["storage"] = request.registry.settings["storage"]
-    #task = TaskStatus(user_id, task_family, task_details, total_stages)
+    args["locale_id"] = locale_id
+    args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+    gist = DBSession.query(TranslationGist).filter_by(client_id=args["gist_client_id"], object_id=args["gist_object_id"]).first()
+    task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+    args["task_key"] = task.key
     res = async_convert_dictionary_new.delay(**args)
     log.debug("Conversion started")
     request.response.status = HTTPOk.code

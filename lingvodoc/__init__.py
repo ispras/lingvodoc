@@ -670,7 +670,7 @@ def configure_routes(config):
 
     config.add_route(name="tasks", pattern="/tasks", request_method='GET')
 
-    config.add_route(name="task_delete", pattern="/tasks/{task_id}", request_method='DELETE')
+    config.add_route(name="delete_task", pattern="/tasks/{task_id}", request_method='DELETE')
 
 
 def main(global_config, **settings):
@@ -697,7 +697,6 @@ def main(global_config, **settings):
             storage[k] = v
         settings['desktop'] = storage
 
-    config = Configurator(settings=settings)
     log = logging.getLogger(__name__)
 
     # TODO: Find a more neat way
@@ -716,8 +715,13 @@ def main(global_config, **settings):
     except NoSectionError:
         log.warn("No 'cache:dogpile' or/and 'cache:dogpile:args' sections in config; disabling caching")
         initialize_cache(None)
+        settings['cache_kwargs'] = None
     else:
         initialize_cache(cache_kwargs)
+        settings['cache_kwargs'] = cache_kwargs
+
+    config = Configurator(settings=settings)
+
 
     # config.configure_celery('development_test.ini')
 
