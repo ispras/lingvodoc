@@ -127,6 +127,7 @@ def all_locales_desktop(request):
 @view_config(route_name='published_dictionaries_desktop', renderer='json', request_method='POST')
 def published_dictionaries_desktop(request):
     req = request.json_body
+    req['visible'] = True
     settings = request.registry.settings
     path = settings['desktop']['central_server'] + 'published_dictionaries'
     session = requests.Session()

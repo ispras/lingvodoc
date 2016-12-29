@@ -272,7 +272,6 @@ def upgrade():
     sa.Column('content', sa.UnicodeText(), nullable=True),
     sa.Column('additional_metadata', postgresql.JSONB(astext_type=Text()), nullable=True),
     sa.ForeignKeyConstraint(['field_client_id', 'field_object_id'], ['field.client_id', 'field.object_id'], ),
-    sa.ForeignKeyConstraint(['link_client_id', 'link_object_id'], ['lexicalentry.client_id', 'lexicalentry.object_id'], ),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['lexicalentry.object_id', 'lexicalentry.client_id'], ),
     sa.ForeignKeyConstraint(['self_client_id', 'self_object_id'], ['entity.client_id', 'entity.object_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
