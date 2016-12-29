@@ -16,6 +16,7 @@ trait NavigationScope extends Scope {
   var locale: Int = js.native
   var locales: js.Array[Locale] = js.native
   var selectedLocale: Locale = js.native
+  var tasks: js.Array[Task] = js.native
 }
 
 @JSExport
@@ -27,6 +28,9 @@ class NavigationController(scope: NavigationScope,
                            interval: Interval,
                            val timeout: Timeout,
                            val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
+
+
+  scope.tasks = js.Array[Task]()
 
   // get locale. fallback to english if no locale received from backend
   scope.locale = Utils.getLocale() match {
@@ -72,6 +76,13 @@ class NavigationController(scope: NavigationScope,
     }
   }
 
+  @JSExport
+  def removeTask(task: Task): Unit = {
+    backend.removeTask(task) map { _ =>
+      scope.tasks = scope.tasks.filterNot(_.id == task.id)
+    }
+  }
+
   backend.getLocales map { locales =>
       scope.locales = locales.toJSArray
       scope.selectedLocale = locales.find { locale =>
@@ -90,10 +101,13 @@ class NavigationController(scope: NavigationScope,
       userService.removeUser()
   }
 
+  scope.tasks = Seq[Task](Task("id1", 1, 3, 78, "dictionary", "Task1", "progress"), Task("id2", 1, 4, 18, "dictionary", "Task2", "progress")).toJSArray
 
-//  interval(() => {
-//    // gel list of tasks
-//
-//
-//  }, 3500)
+
+  interval(() => {
+    // gel list of tasks
+    backend.tasks map { tasks =>
+      scope.tasks = tasks.toJSArray
+    }
+  }, 3000)
 }
