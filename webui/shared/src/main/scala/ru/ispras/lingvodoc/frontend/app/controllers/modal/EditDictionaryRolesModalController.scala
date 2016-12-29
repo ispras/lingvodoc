@@ -3,6 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers.modal
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
 
@@ -19,8 +20,11 @@ import scala.util.{Failure, Success}
 trait EditDictionaryRolesModalScope extends Scope {
   var dictionary: Dictionary = js.native
   var users: js.Array[UserListEntry] = js.native
+  var searchString: UndefOr[String] = js.native
+  var searchUsers: js.Array[UserListEntry] = js.native
   var error: UndefOr[Throwable] = js.native
   var saveEnabled: Boolean = js.native
+  var permissions: js.Dictionary[js.Dictionary[Boolean]] = js.native
 }
 
 @injectable("EditDictionaryRolesModalController")
@@ -28,119 +32,89 @@ class EditDictionaryRolesModalController(scope: EditDictionaryRolesModalScope,
                                          modal: ModalService,
                                          instance: ModalInstance[Unit],
                                          backend: BackendService,
-                                         val timeout: Timeout,
+                                         timeout: Timeout,
                                          val exceptionHandler: ExceptionHandler,
                                          params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditDictionaryRolesModalScope](scope) with AngularExecutionContextProvider {
+  extends BaseModalController(scope, modal, instance, timeout, params)
+    with AngularExecutionContextProvider {
 
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
-  private[this] var permissions = Map[String, Seq[UserListEntry]]()
-  private[this] var addUsersActive = Seq[String]()
+  private[this] var allUsers = Seq[UserListEntry]()
 
   scope.dictionary = dictionary
   scope.users = js.Array[UserListEntry]()
+  scope.searchString = Option.empty[String].orUndefined
+  scope.searchUsers = js.Array[UserListEntry]()
   scope.saveEnabled = true
 
-  load()
-
   @JSExport
-  def getRoles(): js.Array[String] = {
-    permissions.keys.toJSArray
-  }
-
-  @JSExport
-  def getUsers(roleName: String): js.Array[UserListEntry] = {
-    permissions.find(_._1 == roleName) match {
-      case Some(e) => e._2.toJSArray
-      case None => js.Array[UserListEntry]()
-    }
-  }
-
-  @JSExport
-  def ok() = {
-    val roles = dictionaryRoles()
+  def ok(): Unit = {
     scope.saveEnabled = false
-    backend.setDictionaryRoles(CompositeId.fromObject(scope.dictionary), roles) onComplete {
+    val permissions = scope.permissions.toMap map { case (role, e) =>
+      role -> e.toMap.filter(_._2).keys.map(_.toInt).toSeq
+    }
+    val roles = DictionaryRoles(permissions, Map.empty[String, Seq[Int]])
+    backend.setDictionaryRoles(CompositeId.fromObject(dictionary), roles) onComplete {
       case Success(_) => instance.close(())
       case Failure(e) => setError(e)
     }
   }
 
   @JSExport
-  def cancel() = {
+  def cancel(): Unit = {
     instance.dismiss(())
   }
 
   @JSExport
-  def toggleAddUsers(role: String) = {
-    if (!isAddUsersActive(role)) {
-      addUsersActive = addUsersActive :+ role
+  def getUsers(): js.Array[UserListEntry] = {
+    if (!js.isUndefined(scope.permissions)) {
+      val ids = scope.permissions.headOption match {
+        case Some(p) => p._2.keys.map(_.toInt).toSeq
+        case None => Seq.empty[Int]
+      }
+      ids.flatMap(id => allUsers.find(_.id == id)).toJSArray
     } else {
-      addUsersActive = addUsersActive.filterNot(_ == role)
+      Seq.empty[UserListEntry].toJSArray
     }
   }
 
   @JSExport
-  def isAddUsersActive(role: String): Boolean = {
-    addUsersActive.contains(role)
-  }
-
-
-  @JSExport
-  def userHasRole(user: UserListEntry, role: String): Boolean = {
-    permissions.keySet.find(_ == role) match {
-      case Some(_) => permissions(role).exists(_.id == user.id)
-      case None => false
+  def searchUser(): Unit = {
+    scope.searchString.toOption foreach { q =>
+      scope.searchUsers = allUsers.filterNot(u => scope.users.exists(_.id == u.id))
+        .filter(user => user.login.toLowerCase.contains(q.toLowerCase) || user.intlName.toLowerCase.contains(q.toLowerCase)).take(5).toJSArray
     }
   }
 
   @JSExport
-  def addRole(user: UserListEntry, role: String) = {
-    permissions.keySet.find(_ == role).foreach {
-      _ =>
-        permissions = permissions + (role -> (permissions(role) :+ user))
-    }
+  def addUser(searchUser: UserListEntry): Unit = {
+    scope.permissions = scope.permissions.toMap.map { case (role, users) =>
+      role -> (users.toMap + (searchUser.id.toString -> false)).toJSDictionary
+    }.toJSDictionary
   }
 
-
-  @JSExport
-  def removeRole(user: UserListEntry, role: String) = {
-    permissions.keySet.find(_ == role).foreach {
-      _ =>
-        permissions = permissions + (role -> permissions(role).filterNot(_.id == user.id))
-    }
-  }
-
-
-  private[this] def getPermissions(users: Seq[UserListEntry], roles: DictionaryRoles): Map[String, Seq[UserListEntry]] = {
-    roles.users.map { case (roleName, ids) =>
-      roleName -> ids.flatMap(userId => users.find(_.id == userId))
-    }
-  }
-
-  private[this] def dictionaryRoles(): DictionaryRoles = {
-    val users = permissions.map { case (role, u) => role -> u.map(_.id)}
-    DictionaryRoles(users, Map[String, Seq[Int]]())
+  private[this] def createRoles(users: Seq[UserListEntry], roles: DictionaryRoles) = {
+    val activeUsers = roles.users.values.reduce(_ ++ _).distinct.sortWith(_ > _).flatMap(id => users.find(_.id == id))
+    roles.users.map { case (role, roleUsers) =>
+      role -> activeUsers.map(u => (u.id.toString, roleUsers.contains(u.id))).toMap.toJSDictionary
+    }.toJSDictionary
   }
 
   private[this] def setError(e: Throwable) = {
     scope.error = e
   }
 
-
-  private[this] def load() = {
-
-    backend.getUsers onComplete {
-      case Success(users) =>
-        scope.users = users.toJSArray
-        backend.getDictionaryRoles(CompositeId.fromObject(dictionary)) onComplete {
-          case Success(roles) =>
-            permissions = getPermissions(users, roles)
-
-
-          case Failure(e) =>
-        }
-      case Failure(e) =>
+  load(() => {
+    backend.getUsers flatMap { users =>
+      allUsers = users
+      backend.getDictionaryRoles(CompositeId.fromObject(dictionary)) map { roles =>
+        scope.users = roles.users.values.reduce(_ ++ _).distinct.sortWith(_ > _).flatMap(id => users.find(_.id == id)).toJSArray
+        scope.permissions = createRoles(users, roles)
+      }
     }
-  }
+  })
+
+  override protected def onStartRequest(): Unit = {}
+
+  override protected def onCompleteRequest(): Unit = {}
 }

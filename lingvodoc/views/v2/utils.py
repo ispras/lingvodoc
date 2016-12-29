@@ -34,7 +34,7 @@ import os
 import shutil
 from pathvalidate import sanitize_filename
 from collections import deque
-
+import urllib
 
 from pyramid.httpexceptions import (
     HTTPBadRequest,
