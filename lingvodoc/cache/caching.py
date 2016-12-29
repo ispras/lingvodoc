@@ -88,7 +88,7 @@ class TaskStatus():
     @classmethod
     def get_from_cache(cls, task_id):
         if CACHE:
-            task = CACHE.get(task_id)
+            task = CACHE.get("task:" + task_id)
             if task:
                 return dill.loads(task)
             else:
@@ -125,8 +125,10 @@ class TaskStatus():
         if CACHE:
             current_tasks = CACHE.get("current_tasks:" + self.user_id)
             if current_tasks:
+                current_tasks = dill.loads(current_tasks)
                 if self.key in current_tasks:
                     current_tasks.remove(self.key)
+                    CACHE.set("current_tasks:" + self.user_id, dill.dumps(current_tasks))
             # TODO: implement del operation in cache; now we delete the task only from usertasks list
         return None
 

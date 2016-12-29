@@ -355,7 +355,7 @@ class TranslationMixin(PrimeTableArgs):
 
         main_locale = str(locale_id)
         fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
-        
+
         key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
         translation = CACHE.get(key)
         if translation:
