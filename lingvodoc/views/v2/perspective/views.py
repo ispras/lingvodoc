@@ -1588,7 +1588,7 @@ def lexical_entries_all(request):
         return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET')
 def lexical_entries_all_count(request):  # tested
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
@@ -1627,7 +1627,7 @@ def lexical_entries_all_count(request):  # tested
 
 
 # TODO: completely broken!
-@view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='lexical_entries_published', renderer='json', request_method='GET')
 @MEMOIZE
 def lexical_entries_published(request):
     response = dict()

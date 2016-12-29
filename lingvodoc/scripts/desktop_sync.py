@@ -289,7 +289,7 @@ def create_objects(server, existing, session):
     new_entries = list()
     new_entities = list()
     publ_entities = list()
-    for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField, Entity, LexicalEntry,
+    for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField, LexicalEntry, Entity,
                   PublishingEntity]:
         curr_server = server[table.__tablename__]
         curr_existing = existing[table.__tablename__]
@@ -521,8 +521,8 @@ def download(
             perspective_json['object_id'],
             count_json['count']))
         published_json = None
+
         if all_json.status_code != 200:
-            log.error('get all fail', all_json.status_code)
             if all_json.status_code == 403:
                 count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/published_count' % (
                     client_id,
@@ -542,9 +542,24 @@ def download(
                         perspective_json['object_id'],
                         count_json['count']))
                 if published_json.status_code != 200:
+                    log.error('published fail', all_json.status_code)
                     session.rollback()
                     return
+                else:
+                    if 'entity hidden: you' in published_json.json()[0]['contains'][0]['content'].lower():
+                        published_json = make_request(
+                            central_server + 'dictionary/%s/%s/perspective/%s/%s/published?start_from=0&count=%s' % (
+                                client_id,
+                                object_id,
+                                perspective_json['client_id'],
+                                perspective_json['object_id'],
+                                20))
+                        if published_json.status_code != 200:
+                            session.rollback()
+                            return
+
             else:
+                log.error('get all fail', all_json.status_code)
                 session.rollback()
                 return
         if published_json:
@@ -571,7 +586,7 @@ def download(
     session.bulk_save_objects(new_objects)
     session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session))
     session.bulk_save_objects(publ_entities)
-    log.info('dictionary %s %s downloaded' % (client_id, object_id))
+    log.error('dictionary %s %s downloaded' % (client_id, object_id))
     session.commit()
     engine.dispose()
     return

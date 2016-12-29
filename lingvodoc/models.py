@@ -528,22 +528,24 @@ class FieldMixin(PrimeTableArgs):
 
 
 class ParentLinkMixin(PrimeTableArgs):
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            ForeignKeyConstraint(['link_client_id', 'link_object_id'],
-                                 [cls.__parentname__.lower() + '.client_id',
-                                  cls.__parentname__.lower() + '.object_id']),
-        ) + super().__table_args__
+    # @declared_attr
+    # def __table_args__(cls):
+    #     return (
+    #         ForeignKeyConstraint(['link_client_id', 'link_object_id'],
+    #                              [cls.__parentname__.lower() + '.client_id',
+    #                               cls.__parentname__.lower() + '.object_id']),
+    #     ) + super().__table_args__
     link_client_id = Column(SLBigInteger())
     link_object_id = Column(SLBigInteger())
 
     @declared_attr
     def link(cls):
         return relationship(cls.__parentname__,
-                        backref=backref('linked_from'.lower()),
-                        foreign_keys=[cls.link_client_id,
-                                      cls.link_object_id])
+                            backref=backref('linked_from'.lower()),
+                            primaryjoin=
+                            'and_(' + cls.__name__ + '.link_client_id  == ' + cls.__parentname__ + '.client_id, ' + cls.__name__ + '.link_object_id == ' + cls.__parentname__ + '.object_id)',
+                            foreign_keys=[cls.link_client_id,
+                                          cls.link_object_id])
 
 
 class DictionaryPerspectiveToField(CompositeIdMixin,
