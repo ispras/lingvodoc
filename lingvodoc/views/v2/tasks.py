@@ -25,7 +25,8 @@ def delete_task(request):
     if not client_id:
         return {}
     task_id = request.matchdict.get('task_id')
-    task = TaskStatus.get_from_cache(task_id)
+    task_key = "task:" + task_id
+    task = TaskStatus.get_from_cache(task_key)
     if task:
         task.delete()
     return {}

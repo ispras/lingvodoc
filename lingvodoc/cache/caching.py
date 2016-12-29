@@ -86,9 +86,9 @@ class TaskStatus():
             CACHE.set("current_tasks:" + self.user_id, dill.dumps(current_tasks))
 
     @classmethod
-    def get_from_cache(cls, task_id):
+    def get_from_cache(cls, task_key):
         if CACHE:
-            task = CACHE.get("task:" + task_id)
+            task = CACHE.get(task_key)
             if task:
                 return dill.loads(task)
             else:
