@@ -390,7 +390,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     return (entity.client_id, entity.object_id)
 
 def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                        user_id, is_a_regular_form, client, storage):
+                             client_id, is_a_regular_form, client, storage):
     log = logging.getLogger(__name__)
     sound_field = "Sound"
     markup_field = "Markup"
@@ -460,7 +460,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
         DBSession.flush()
 
 def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                        user_id, is_a_regular_form, client, storage):
+                 client_id, is_a_regular_form, client, storage):
     log = logging.getLogger(__name__)
     sound_field = "Sound"
     markup_field = "Markup"
@@ -547,10 +547,10 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
     return translation.content
 
 
-def convert_db_new( blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
+def convert_db_new( blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage,
                    locale_id=2):
     log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
+    #log.setLevel(logging.DEBUG)
 
     time.sleep(4)
     field_ids = {}
@@ -558,15 +558,15 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
         # DBSession.flush()
         filename = blob.real_storage_path
-        log.debug("user_id: %s" % user_id)
+        log.debug("client_id: %s" % client_id)
         log.debug("Starting convert_one")
         log.debug("Creating session")
         sqconn = sqlite3.connect(filename)
         log.debug("Connected to sqlite3 database")
-        client = DBSession.query(Client).filter_by(id=user_id).first()
+        client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                           user_id)
+                           client_id)
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             log.debug("ERROR")
@@ -629,7 +629,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
 
         resp = translation_service_search("WiP")
         state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-        dictionary = Dictionary(client_id=user_id,
+        dictionary = Dictionary(client_id=client_id,
                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                 state_translation_gist_client_id=state_translation_gist_client_id,
                                 parent=lang_parent,
@@ -914,7 +914,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
 
         folder_name = "praat_markup"
         upload_audio_with_markup(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
-                            user_id, True, client, storage)
+                                 client_id, True, client, storage)
         sound_and_markup_word_cursor = sqconn.cursor()
         sound_and_markup_word_cursor.execute("""select blobs.id,
                                                 blobs.secblob,
@@ -927,7 +927,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                                                 and dict_blobs_description.wordid=dictionary.id
                                                 and dictionary.is_a_regular_form=1;""")
         upload_audio(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
-                            user_id, True, client, storage)
+                     client_id, True, client, storage)
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
                                                     blobs.secblob,
@@ -943,7 +943,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
 
         folder_name = "paradigm_praat_markup"
         upload_audio_with_markup(paradigm_audio_ids, ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                            user_id, True, client, storage)
+                                 client_id, True, client, storage)
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
                                                     blobs.secblob,
@@ -956,7 +956,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                                                     and dict_blobs_description.wordid=dictionary.id
                                                     and dictionary.is_a_regular_form=0;""")
         upload_audio(paradigm_audio_ids, ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                            user_id, True, client, storage)
+                     client_id, True, client, storage)
         """
         Etimology_tag
         """
@@ -983,13 +983,13 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         return dictionary
 
 
-def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, sqlalchemy_url, storage):
+def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, sqlalchemy_url, storage):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     try:
         engine = create_engine(sqlalchemy_url)
         DBSession.configure(bind=engine)
-        status = convert_db_new(  blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
+        status = convert_db_new(  blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)

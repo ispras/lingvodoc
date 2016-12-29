@@ -11,25 +11,28 @@ from pyramid.httpexceptions import (
     HTTPNotFound
 )
 
+from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
 
+#from lingvodoc.cache.caching import TaskStatus
 
 log = logging.getLogger(__name__)
 
 @view_config(route_name='convert_dictionary_dialeqt', renderer='json', request_method='POST')
 def convert_dictionary(request):  # TODO: test
-    from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
+
     req = request.json_body
-    user_id = request.authenticated_userid
+    client_id = request.authenticated_userid
     args = dict()
-    args["user_id"] = user_id
-    args['client_id'] = req['blob_client_id']
-    args['object_id'] = req['blob_object_id']
+    args["client_id"] = client_id
+    args['blob_client_id'] = req['blob_client_id']
+    args['blob_client_id'] = req['blob_object_id']
     args["language_client_id"] = req["language_client_id"]
     args["language_object_id"] = req["language_object_id"]
     args["gist_client_id"] = req["gist_client_id"]
     args["gist_object_id"] = req["gist_object_id"]
     args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     args["storage"] = request.registry.settings["storage"]
+    #task = TaskStatus(user_id, task_family, task_details, total_stages)
     res = async_convert_dictionary_new.delay(**args)
     log.debug("Conversion started")
     request.response.status = HTTPOk.code
