@@ -268,6 +268,14 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             else:
                 new_meta = data_type_dict
             entity.additional_metadata = new_meta #json.dumps(new_meta)
+        if data_type == "sound":
+            data_type_dict = {"data_type": "sound"}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(data_type_dict)
+            else:
+                new_meta = data_type_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
     elif data_type == 'link':
         try:
             entity.link_client_id = link_client_id
@@ -292,6 +300,7 @@ def convert_five_tiers(
                 sqlalchemy_url,
                 storage,
                 eaf_url,
+                locale_id,
                 sound_url=None
                 ):
 
@@ -638,11 +647,12 @@ def convert_five_tiers(
                                       None,
                                       client,
                                       other_word.text,
+                                      locale_id=locale_id,
                                       filename=None,
                                       storage=storage)
                 else:
                     create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids[EAF_TIERS[other_word.tier]][0], field_ids[EAF_TIERS[other_word.tier]][1],
-                        None, client, other_word.text, filename=None, storage=storage)
+                        None, client, other_word.text, filename=None, storage=storage, locale_id=locale_id)
             if not no_sound:
                 if word.time[1] < len(full_audio):
                     with tempfile.NamedTemporaryFile() as temp:
@@ -659,9 +669,10 @@ def convert_five_tiers(
                                               None,
                                               client,
                                               filename="%s.wav" %(word.index) ,
-                                              folder_name="sound1",
+                                              folder_name="corpus_paradigm_sounds",
                                               content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                              storage=storage)
+                                              storage=storage,
+                                              locale_id=locale_id)
                         else:
                             create_entity(sp_lexical_entry_client_id,
                                           sp_lexical_entry_object_id,
@@ -670,9 +681,10 @@ def convert_five_tiers(
                                           None,
                                           client,
                                           filename="%s.wav" %(word.index) ,
-                                          folder_name="sound1",
+                                          folder_name="corpus_paradigm_sounds",
                                           content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                          storage=storage)
+                                          storage=storage,
+                                          locale_id=locale_id)
 
                         temp.flush()
             p_match_dict.clear()
@@ -715,7 +727,9 @@ def convert_five_tiers(
                                           client,
                                           other_word.text,
                                           filename=None,
-                                          storage=storage)
+                                          storage=storage,
+                                          locale_id=locale_id
+                                          )
                     else:
                         create_entity(fp_lexical_entry_client_id,
                                       fp_lexical_entry_object_id,
@@ -725,7 +739,9 @@ def convert_five_tiers(
                                       client,
                                       other_word.text,
                                       filename=None,
-                                      storage=storage)
+                                      storage=storage,
+                                      locale_id=locale_id
+                                      )
                 if not no_sound:
                     if word.time[1] < len(full_audio):
                         with tempfile.NamedTemporaryFile() as temp:
@@ -742,9 +758,10 @@ def convert_five_tiers(
                                                   None,
                                                   client,
                                                   filename="%s.wav" %(word.index) ,
-                                                  folder_name="sound1",
+                                                  folder_name="corpus_lexical_entry_sounds",
                                                   content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                                  storage=storage)
+                                                  storage=storage,
+                                                  locale_id=locale_id)
                             else:
                                 create_entity(fp_lexical_entry_client_id,
                                               fp_lexical_entry_object_id,
@@ -753,9 +770,11 @@ def convert_five_tiers(
                                               None,
                                               client,
                                               filename="%s.wav" %(word.index) ,
-                                              folder_name="sound1",
+                                              folder_name="corpus_lexical_entry_sounds",
                                               content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                              storage=storage)
+                                              storage=storage,
+                                              locale_id=locale_id
+                                              )
                             temp.flush()
                 fp_le_ids = (fp_lexical_entry_client_id, fp_lexical_entry_object_id)
                 sp_le_ids = (sp_lexical_entry_client_id, sp_lexical_entry_object_id)
@@ -773,7 +792,8 @@ def convert_five_tiers(
                                           filename=None,
                                           link_client_id=fp_lexical_entry_client_id,
                                           link_object_id=fp_lexical_entry_object_id,
-                                          storage=storage)
+                                          storage=storage,
+                                          locale_id=locale_id)
                         if not (fp_le_ids, sp_le_ids) in links:
                             create_entity(fp_lexical_entry_client_id,
                                           fp_lexical_entry_object_id,
@@ -784,7 +804,8 @@ def convert_five_tiers(
                                           filename=None,
                                           link_client_id=sp_lexical_entry_client_id,
                                           link_object_id=sp_lexical_entry_object_id,
-                                          storage=storage)
+                                          storage=storage,
+                                          locale_id=locale_id)
                     else:
                         create_entity(sp_lexical_entry_client_id,
                                       sp_lexical_entry_object_id,
@@ -795,7 +816,8 @@ def convert_five_tiers(
                                       filename=None,
                                       link_client_id=fp_lexical_entry_client_id,
                                       link_object_id=fp_lexical_entry_object_id,
-                                      storage=storage)
+                                      storage=storage,
+                                      locale_id=locale_id)
                         create_entity(fp_lexical_entry_client_id,
                                       fp_lexical_entry_object_id,
                                       field_ids["Backref"][0],
@@ -805,7 +827,8 @@ def convert_five_tiers(
                                       filename=None,
                                       link_client_id=sp_lexical_entry_client_id,
                                       link_object_id=sp_lexical_entry_object_id,
-                                      storage=storage)
+                                      storage=storage,
+                                      locale_id=locale_id)
                 column[:] = []
                 match_dict.clear()
     return
@@ -823,6 +846,7 @@ def convert_all(dictionary_client_id,
                 sqlalchemy_url,
                 storage,
                 eaf_url,
+                locale_id,
                 sound_url=None
                 ):
     engine = create_engine(sqlalchemy_url)
@@ -836,6 +860,7 @@ def convert_all(dictionary_client_id,
                 sqlalchemy_url,
                 storage,
                 eaf_url,
+                locale_id,
                 sound_url
                 )
     DBSession.flush()
