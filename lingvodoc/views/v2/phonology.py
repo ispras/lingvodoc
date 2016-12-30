@@ -40,13 +40,16 @@ import xlsxwriter
 
 # Project imports.
 
-from lingvodoc.cache.caching import CACHE
+from lingvodoc.cache.caching import CACHE, TaskStatus
 
 from lingvodoc.models import (
+    Client,
     DBSession,
+    DictionaryPerspective,
     Entity,
     LexicalEntry,
     PublishingEntity,
+    TranslationGist,
 )
 
 
@@ -1225,6 +1228,25 @@ def phonology(request):
 
     group_by_description = request.params.get('group_by_description')
 
+    # Phonology task status setup.
+
+    locale_id = int(request.cookies.get('locale_id') or 2)
+
+    client_id = request.authenticated_userid
+    user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(
+        client_id = perspective_cid, object_id = perspective_oid).first()
+
+    translation_gist = DBSession.query(TranslationGist).filter_by(
+        client_id = perspective.translation_gist_client_id,
+        object_id = perspective.translation_gist_object_id).first()
+
+    task_status = TaskStatus(user_id,
+        "Phonology compilation", translation_gist.get_translation(locale_id), 4)
+
+    task_status.set(1, 0, "Preparing")
+
     # Checking if we have limits on number of computed results.
 
     limit = (None if 'limit' not in request.params else
@@ -1239,10 +1261,35 @@ def phonology(request):
     limit_result = (None if 'limit_result' not in request.params else
         int(request.params.get('limit_result')))
 
-    # We get lexical entries of this perspective with markup'ed sounds.
+    # Before everything else we should count how many sound/markup pairs we are to process.
 
     Sound = aliased(Entity, name = "Sound")
     PublishingSound = aliased(PublishingEntity, name = "PublishingSound")
+
+    total_count = DBSession.query(
+        LexicalEntry, Entity, Sound, PublishingEntity, PublishingSound).filter(and_(
+            LexicalEntry.parent_client_id == perspective_cid,
+            LexicalEntry.parent_object_id == perspective_oid,
+            LexicalEntry.marked_for_deletion == False,
+            Entity.parent_client_id == LexicalEntry.client_id,
+            Entity.parent_object_id == LexicalEntry.object_id,
+            Entity.marked_for_deletion == False,
+            Entity.additional_metadata.contains({"data_type": "praat markup"}),
+            PublishingEntity.client_id == Entity.client_id,
+            PublishingEntity.object_id == Entity.object_id,
+            PublishingEntity.published == True,
+            PublishingEntity.accepted == True,
+            Sound.client_id == Entity.self_client_id,
+            Sound.object_id == Entity.self_object_id,
+            Sound.marked_for_deletion == False,
+            PublishingSound.client_id == Sound.client_id,
+            PublishingSound.object_id == Sound.object_id,
+            PublishingSound.published == True,
+            PublishingSound.accepted == True)).count()
+
+    task_status.set(2, 1, "Analyzing sound and markup")
+
+    # We get lexical entries of this perspective with markup'ed sounds.
 
     query = DBSession.query(LexicalEntry, Entity, Sound, PublishingEntity, PublishingSound).filter(and_(
         LexicalEntry.parent_client_id == perspective_cid,
@@ -1298,6 +1345,9 @@ def phonology(request):
 
             no_vowel_counter += 1
 
+            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                "Analyzing sound and markup")
+
             if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
                 limit and index + 1 >= limit):
                 break
@@ -1318,6 +1368,9 @@ def phonology(request):
 
             exception_counter += 1
 
+            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                "Analyzing sound and markup")
+
             if (limit_exception and exception_counter >= limit_exception or
                 limit and index + 1 >= limit):
                 break
@@ -1336,6 +1389,9 @@ def phonology(request):
 
             result_list.append(cache_result)
             result_group_set.update(group_list)
+
+            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                "Analyzing sound and markup")
 
             if (limit_result and len(result_list) >= limit_result or
                 limit and index + 1 >= limit):
@@ -1383,6 +1439,9 @@ def phonology(request):
                 CACHE.set(cache_key, 'no_vowel')
                 no_vowel_counter += 1
 
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    "Analyzing sound and markup")
+
                 if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
                     limit and index + 1 >= limit):
                     break
@@ -1425,6 +1484,9 @@ def phonology(request):
                 row_str, markup_url, sound_url,
                 format_textgrid_result(group_list, textgrid_result_list)))
 
+            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                "Analyzing sound and markup")
+
             if (limit_result and len(result_list) >= limit_result or
                 limit and index + 1 >= limit):
                 break
@@ -1463,6 +1525,9 @@ def phonology(request):
 
             exception_counter += 1
 
+            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                "Analyzing sound and markup")
+
             if (limit_exception and exception_counter >= limit_exception or
                 limit and index + 1 >= limit):
                 break
@@ -1478,6 +1543,9 @@ def phonology(request):
     if not result_list:
         request.response.status = HTTPPreconditionFailed.code
 
+        task_status.set(4, 100,
+            "Finished, no results produced")
+
         return {
             "error": "no markups for this query",
             "exception_counter": exception_counter,
@@ -1485,6 +1553,7 @@ def phonology(request):
 
     # Otherwise we create and then serve Excel file.
 
+    task_status.set(3, 99, "Compiling results")
     workbook_stream = io.BytesIO()
 
     entry_count_dict, sound_count_dict = compile_workbook(
@@ -1494,6 +1563,8 @@ def phonology(request):
 
     # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for Excel
     # content-type.
+
+    task_status.set(4, 100, "Finished")
 
     response = Response(content_type =
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
