@@ -81,41 +81,41 @@
                     </ul>
                 </li>
 
-               <li class="dropdown" ng-if="controller.isAuthenticated()">
-                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false">Tasks ({{ tasks.length }}) <span class="caret"></span></a>
-                    <div class="dropdown-menu" style="width: 450px !important;">
-                        <div class="container-fluid">
+                <li class="dropdown" ng-if="controller.isAuthenticated()">
+                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                        aria-expanded="false">Tasks ({{ tasks.length }}) <span class="caret"></span></a>
+                     <div class="dropdown-menu" style="width: 450px !important;">
+                         <div class="container-fluid">
 
-                        <div class="row" ng-show="tasks.length == 0">
-                            <div class="col-md-12">
-                                No background tasks
-                            </div>
-                        </div>
+                             <div class="row" ng-show="tasks.length == 0">
+                                 <div class="col-md-12">
+                                     No background tasks
+                                 </div>
+                             </div>
 
-                        <div class="row" ng-repeat="task in tasks">
-                            <div class="col-md-11">
-                                <div>
-                                    <span>{{ task.taskDetails }} ({{ task.currentStage }} / {{ task.totalStages }}) {{ task.status }}</span>
-                                    <div class="progress">
-                                      <div class="progress-bar" role="progressbar" aria-valuenow="{{task.progress}}" aria-valuemin="0" aria-valuemax="100" style="width: {{task.progress}}%;">
-                                        {{task.progress}}%
-                                      </div>
-                                    </div>
-                                </div>
-                            </div>
+                             <div class="row" ng-repeat="task in tasks">
+                                 <div class="col-md-11">
+                                     <div>
+                                         <h4>{{ task.taskFamily }}</h4>
+                                         <span>{{ task.taskDetails }} ({{ task.currentStage }} / {{ task.totalStages }}) <b>{{ task.status }}</b></span>
+                                         <div class="progress">
+                                           <div class="progress-bar" role="progressbar" aria-valuenow="{{task.progress}}" aria-valuemin="0" aria-valuemax="100" style="width: {{task.progress}}%;">
+                                             {{task.progress}}%
+                                           </div>
+                                         </div>
+                                     </div>
+                                 </div>
 
-                            <div class="col-md-1">
-                                <button type="button" class="close" aria-label="Remove" style="margin-top: 20px;" ng-click="controller.removeTask(task)">
-                                    <span aria-hidden="true">×</span>
-                                </button>
-                            </div>
-                        </div>
+                                 <div class="col-md-1">
+                                     <button type="button" class="close" aria-label="Remove" style="margin-top: 30px; opacity: 1 !important; color: red;" ng-click="controller.removeTask(task)">
+                                         <span aria-hidden="true">×</span>
+                                     </button>
+                                 </div>
+                             </div>
 
-
-                        </div>
-                    </div>
-                </li>
+                         </div>
+                     </div>
+                 </li>
 
                 <li class="dropdown">
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">

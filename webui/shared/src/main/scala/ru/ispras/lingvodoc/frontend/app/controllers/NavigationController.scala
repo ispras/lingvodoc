@@ -85,29 +85,16 @@ class NavigationController(scope: NavigationScope,
 
   backend.getLocales map { locales =>
       scope.locales = locales.toJSArray
-      scope.selectedLocale = locales.find { locale =>
-        locale.id == scope.locale
-      } match {
+      scope.selectedLocale = locales.find(_.id == scope.locale) match {
         case Some(x) => x
         case None => locales.head
       }
   }
 
-  backend.getCurrentUser onComplete {
-    case Success(user) =>
-      userService.setUser(user)
-
-    case Failure(e) =>
-      userService.removeUser()
-  }
-
-  scope.tasks = Seq[Task](Task("id1", 1, 3, 78, "dictionary", "Task1", "progress"), Task("id2", 1, 4, 18, "dictionary", "Task2", "progress")).toJSArray
-
-
   interval(() => {
     // gel list of tasks
     backend.tasks map { tasks =>
-      scope.tasks = tasks.toJSArray
+      scope.tasks = tasks.sortBy(_.taskFamily).toJSArray
     }
   }, 3000)
 }
