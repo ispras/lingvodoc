@@ -31,6 +31,8 @@ from pyramid.httpexceptions import HTTPPreconditionFailed
 from pyramid.response import FileIter, Response
 from pyramid.view import view_config
 
+import scipy.linalg
+
 from sqlalchemy import (and_,)
 from sqlalchemy.orm import aliased
 
@@ -835,33 +837,76 @@ def process_sound(tier_data_list, sound):
     return textgrid_result_list
 
 
-def compile_workbook(result_list, workbook_stream):
+def format_textgrid_result(group_list, textgrid_result_list):
+    """
+    A little helper function for formatting sound/markup analysis results.
+    """
+
+    return '\n'.join(
+        ['groups: {0}'.format(group_list)] +
+        ['tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
+            
+            tier_result_list if not isinstance(tier_result_list, list) else
+            tier_result_list[0] if len(tier_result_list) <= 1 else
+            ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
+
+            for tier_number, tier_name, tier_result_list in textgrid_result_list])
+
+
+def compile_workbook(result_list, result_group_set, workbook_stream):
     """
     Compiles analysis results into an Excel workbook.
     """
 
     workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
 
-    worksheet = workbook.add_worksheet('Results')
-    worksheet.write_row('A1', ['Transcription',
-        'Longest (seconds) interval',
-        'F1 mean (Hz)', 'F2 mean (Hz)',
-#       'F1 median (Hz)', 'F2 median (Hz)',
-#       'F1 third (Hz)', 'F2 third (Hz)',
-        'Highest intensity (dB) interval',
-        'F1 mean (Hz)', 'F2 mean (Hz)',
-#       'F1 median (Hz)', 'F2 median (Hz)',
-#       'F1 third (Hz)', 'F2 third (Hz)',
-        'Coincidence'])
+    group_string_dict = {group: repr(group)
+        for group in result_group_set if group != None}
 
-    row_counter = 2
-    sound_counter = 0
+    group_sorted_list = sorted([(group_string, group)
+        for group, group_string in group_string_dict.items() if group != None])
 
-    vowel_formant_dict = collections.defaultdict(list)
+    group_list = [None] + list(
+        map(lambda group_string_and_group: group_string_and_group[1], group_sorted_list))
+
+    # Creating sets of worksheets for each result group, including the universal one.
+
+    worksheet_dict = {}
+
+    for group in group_list:
+        group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
+
+        worksheet_results = workbook.add_worksheet('Results' + group_name_string)
+        worksheet_results.write_row('A1', ['Transcription',
+            'Longest (seconds) interval',
+            'F1 mean (Hz)', 'F2 mean (Hz)',
+        #   'F1 median (Hz)', 'F2 median (Hz)',
+        #   'F1 third (Hz)', 'F2 third (Hz)',
+            'Highest intensity (dB) interval',
+            'F1 mean (Hz)', 'F2 mean (Hz)',
+        #   'F1 median (Hz)', 'F2 median (Hz)',
+        #   'F1 third (Hz)', 'F2 third (Hz)',
+            'Coincidence'])
+
+        # Formatting column widths.
+
+        worksheet_results.set_column(0, 1, 26)
+        worksheet_results.set_column(2, 3, 13)
+        worksheet_results.set_column(4, 4, 26)
+        worksheet_results.set_column(5, 7, 13)
+
+        worksheet_dict[group] = (worksheet_results,
+            workbook.add_worksheet('F-table' + group_name_string),
+            workbook.add_chartsheet('F-chart' + group_name_string))
+
+    row_counter_dict = {group: 2 for group in result_group_set}
+    sound_counter_dict = {group: 0 for group in result_group_set}
+
+    vowel_formant_dict = {group: collections.defaultdict(list) for group in result_group_set}
 
     # Filling in analysis results.
 
-    for textgrid_result_list in result_list:
+    for textgrid_group_list, textgrid_result_list in result_list:
         for tier_number, tier_name, tier_result in textgrid_result_list:
 
             if tier_result == 'no_vowel' or tier_result == 'no_vowel_selected':
@@ -873,10 +918,11 @@ def compile_workbook(result_list, workbook_stream):
                     list(map(float, tier_data[2:4])) + [tier_data[8]] +
                     list(map(float, tier_data[9:11])) + [tier_data[15]])
 
-                worksheet.write_row('A' + str(row_counter), row_list)
+                for group in textgrid_group_list:
+                    worksheet_dict[group][0].write_row('A' + str(row_counter_dict[group]), row_list)
 
-                row_counter += 1
-                sound_counter += 1
+                    row_counter_dict[group] += 1
+                    sound_counter_dict[group] += 1
 
                 # Collecting vowel formant data.
 
@@ -889,126 +935,280 @@ def compile_workbook(result_list, workbook_stream):
                 vowel_a = ''.join(filter(lambda character: character in vowel_set, text_a_list[0]))
                 vowel_b = ''.join(filter(lambda character: character in vowel_set, text_b_list[0]))
 
-                vowel_formant_dict[vowel_a].append(tuple(map(float, f1_f2_list_a)))
+                for group in textgrid_group_list:
+                    vowel_formant_dict[group][vowel_a].append(tuple(map(float, f1_f2_list_a)))
 
                 if text_b_list[2] != text_a_list[2]:
+                    for group in textgrid_group_list:
 
-                    sound_counter += 1
-                    vowel_formant_dict[vowel_b].append(tuple(map(float, f1_f2_list_b)))
+                        sound_counter_dict[group] += 1
+                        vowel_formant_dict[group][vowel_b].append(tuple(map(float, f1_f2_list_b)))
 
-    # Formatting column widths.
+    # And now we will produce F1/F2 scatter charts for all sufficiently frequent analysed vowels of all
+    # result groups.
 
-    worksheet.set_column(0, 1, 26)
-    worksheet.set_column(2, 3, 13)
-    worksheet.set_column(4, 4, 26)
-    worksheet.set_column(5, 7, 13)
+    for group in group_list:
+        worksheet_table, worksheet_chart = worksheet_dict[group][1:3]
 
-    # And now we will produce F1/F2 scatter chart for all sufficiently frequent analysed vowels.
+        vowel_formant_list = []
 
-    vowel_formant_list = []
+        for vowel, f1_f2_list in sorted(vowel_formant_dict[group].items()):
+            f1_f2_list = list(set(f1_f2_list))
 
-    for vowel, f1_f2_list in sorted(vowel_formant_dict.items()):
-        f1_f2_list = list(set(f1_f2_list))
+            if len(f1_f2_list) >= 8:
+                vowel_formant_list.append((vowel, list(map(numpy.array, f1_f2_list))))
 
-        if len(f1_f2_list) >= 8:
-            vowel_formant_list.append((vowel, list(map(numpy.array, f1_f2_list))))
+        # Compiling data of formant value series by filtering F1/F2 2-vectors by Mahalonobis distance.
 
-    worksheet = workbook.add_worksheet('F-table')
+        chart_data_list = []
 
-    # Compiling data of formant value series by filtering F1/F2 2-vectors by Mahalonobis distance.
+        min_f1, max_f1 = None, None
+        min_f2, max_f2 = None, None
 
-    chart_data_list = []
+        for index, (vowel, f1_f2_list) in enumerate(vowel_formant_list):
 
-    for index, (vowel, f1_f2_list) in enumerate(vowel_formant_list):
+            mean = sum(f1_f2_list) / len(f1_f2_list)
+            sigma = numpy.cov(numpy.array(f1_f2_list).T)
+            inverse = numpy.linalg.inv(sigma)
 
-        mean = sum(f1_f2_list) / len(f1_f2_list)
-        sigma = numpy.cov(numpy.array(f1_f2_list).T)
-        inverse = numpy.linalg.inv(sigma)
+            distance_list = []
+            for f1_f2 in f1_f2_list:
 
-        distance_list = []
-        for f1_f2 in f1_f2_list:
+                # Calculation of squared Mahalanobis distance inspired by the StackOverflow answer
+                # http://stackoverflow.com/q/27686240/2016856.
 
-            # Calculation of squared mahalanobis distance inspired by the StackOverflow answer
-            # http://stackoverflow.com/q/27686240/2016856.
+                delta = f1_f2 - mean
+                distance_list.append((numpy.einsum('n,nk,k->', delta, inverse, delta), f1_f2))
 
-            delta = f1_f2 - mean
-            distance_list.append((numpy.einsum('n,nk,k->', delta, inverse, delta), f1_f2))
+            distance_list.sort()
 
-        distance_list.sort()
+            # Trying to produce one standard deviation ellipse.
 
-        filtered_list = [f1_f2
-            for distance, f1_f2 in distance_list
-                if distance <= 2]
+            sigma_one_two = scipy.linalg.sqrtm(sigma)
+            ellipse_list = []
 
-        if len(filtered_list) < len(distance_list) // 2:
-            filtered_list = distance_list[:len(distance_list) // 2]
+            for i in range(64 + 1):
+                phi = 2 * math.pi * i / 64
 
-        chart_data_list.append((len(filtered_list), vowel, filtered_list))
+                ellipse_list.append(
+                    mean + numpy.dot(numpy.array([math.cos(phi), math.sin(phi)]), sigma_one_two))
 
-    # Compiling info of the formant scatter chart data series.
+            # Splitting F1/F2 vectors into these that are close enough to the mean and the outliers.
 
-    chart_dict_list = []
+            filtered_list = []
+            outlier_list = []
 
-    column_list = list(string.ascii_uppercase) + [c1 + c2
-        for c1 in string.ascii_uppercase
-        for c2 in string.ascii_uppercase]
+            for distance_squared, f1_f2 in distance_list:
+                if distance_squared <= 2:
+                    filtered_list.append(f1_f2)
+                else:
+                    outlier_list.append(f1_f2)
 
-    shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle', 'plus']
+            if len(filtered_list) < len(distance_list) // 2:
+                f1_f2_list = [f1_f2 for distance_squared, f1_f2 in distance_list]
 
-    color_list = ['black', 'blue', 'brown', 'cyan', 'gray', 'green', 'lime', 'magenta', 'navy', 'orange',
-        'pink', 'purple', 'red', 'silver', 'yellow']
+                filtered_list = f1_f2_list[:len(distance_list) // 2]
+                outlier_list = f1_f2_list[len(distance_list) // 2:]
 
-    # It seems that we have to plot data in order of its size, from vowels with least number of F1/F2 points
-    # to vowels with the most number of F1/F2 points, otherwise scatter chart fails to generate properly.
+            chart_data_list.append((
+                len(filtered_list), len(f1_f2_list), vowel,
+                filtered_list, outlier_list, mean, ellipse_list))
 
-    chart_data_list.sort(reverse = True)
+            # Updating F1/F2 maximum/minimum info.
 
-    heading_list = []
-    for count, vowel, f1_f2_list in chart_data_list:
-        heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
+            f1_list, f2_list = zip(*filtered_list)
 
-    worksheet.write_row('A1', heading_list)
+            min_f1_list, max_f1_list = min(f1_list), max(f1_list)
 
-    for index, (count, vowel, f1_f2_list) in enumerate(chart_data_list):
+            if min_f1 == None or min_f1_list < min_f1:
+                min_f1 = min_f1_list
 
-        f1_list, f2_list = zip(*f1_f2_list)
+            if max_f1 == None or max_f1_list > max_f1:
+                max_f1 = max_f1_list
 
-        f1_column = column_list[index * 2]
-        f2_column = column_list[index * 2 + 1]
+            min_f2_list, max_f2_list = min(f2_list), max(f2_list)
 
-        # Writing out formant data, compiling and saving chart data series info.
+            if min_f2 == None or min_f2_list < min_f2:
+                min_f2 = min_f2_list
 
-        worksheet.write_column(f1_column + '2', f1_list)
-        worksheet.write_column(f2_column + '2', f2_list)
+            if max_f2 == None or max_f2_list > max_f2:
+                max_f2 = max_f2_list
 
-        color = color_list[index % len(color_list)]
+        # Compiling info of the formant scatter chart data series.
 
-        chart_dict_list.append({
-            'name': vowel,
-            'categories': '=F-table!${0}$2:${0}${1}'.format(f2_column, len(f2_list) + 1),
-            'values': '=F-table!${0}$2:${0}${1}'.format(f1_column, len(f1_list) + 1),
-            'marker': {
-                'type': 'circle',
-                'size': 4,
-                'border': {'color': color},
-                'fill': {'color': color}}})
+        chart_dict_list = []
 
-    # Generating formant chart, if we have any data.
+        column_list = list(string.ascii_uppercase) + [c1 + c2
+            for c1 in string.ascii_uppercase
+            for c2 in string.ascii_uppercase]
 
-    if chart_dict_list:
+        shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle',
+            'plus']
 
-        chart = workbook.add_chart({'type': 'scatter'})
+        color_list = ['black', 'blue', 'brown', 'cyan', 'gray', 'green', 'lime', 'magenta', 'navy',
+            'orange', 'pink', 'purple', 'red', 'silver', 'yellow']
 
-        for chart_dict in chart_dict_list:
-            chart.add_series(chart_dict)
+        # It seems that we have to plot data in order of its size, from vowels with least number of F1/F2 points
+        # to vowels with the most number of F1/F2 points, otherwise scatter chart fails to generate properly.
 
-        chart.set_style(11)
+        chart_data_list.sort(reverse = True)
 
-        chartsheet = workbook.add_chartsheet('F-chart')
-        chartsheet.set_chart(chart)
+        max_f1_f2_list_length = max(len(f1_f2_list)
+            for count, total_count, vowel, f1_f2_list, outlier_list, mean, ellipse_list in chart_data_list)
+
+        heading_list = []
+        for count, total_count, vowel, f1_f2_list, outlier_list, mean, ellipse_list in chart_data_list:
+            heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
+
+        worksheet_table.write_row('A1', heading_list)
+        worksheet_table.write_row('A2', ['main part', ''] * len(chart_data_list))
+
+        # Removing outliers that outlie too much.
+
+        f1_limit = max_f1 + min_f1 / 2
+        f2_limit = max_f2 + min_f2 / 2
+
+        for i in range(len(chart_data_list)):
+            chart_data_list[i] = list(chart_data_list[i])
+
+            chart_data_list[i][4] = list(filter(
+                lambda f1_f2: f1_f2[0] <= f1_limit and f1_f2[1] <= f2_limit,
+                chart_data_list[i][4]))
+
+        max_outlier_list_length = max(len(outlier_list)
+            for count, total_count, vowel, f1_f2_list, outlier_list, mean, ellipse_list in chart_data_list)
+
+        # Writing out chart data and compiling chart data series info.
+
+        for index, (count, total_count, vowel,
+            f1_f2_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_list):
+
+            f1_list, f2_list = zip(*f1_f2_list)
+
+            f1_outlier_list, f2_outlier_list = zip(*outlier_list)
+            x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
+
+            f1_column = column_list[index * 2]
+            f2_column = column_list[index * 2 + 1]
+
+            # Writing out formant data.
+
+            worksheet_table.write(f1_column + '3',
+                '{0}/{1} ({2:.1f}%) points'.format(
+                    count, total_count, 100.0 * count / total_count))
+
+            worksheet_table.write_column(f1_column + '4',
+                list(f1_list) +
+                [''] * (max_f1_f2_list_length - len(f1_list)) +
+                [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
+                    len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
+                list(f1_outlier_list) +
+                [''] * (max_outlier_list_length - len(f1_outlier_list)) +
+                [vowel + ' mean', mean[0], vowel + ' stdev ellipse'] +
+                list(x1_ellipse_list))
+
+            worksheet_table.write_column(f2_column + '4',
+                list(f2_list) +
+                [''] * (max_f1_f2_list_length - len(f2_list)) +
+                ['', ''] + list(f2_outlier_list) +
+                [''] * (max_outlier_list_length - len(f2_outlier_list)) +
+                ['', mean[1], ''] + list(x2_ellipse_list))
+
+            worksheet_table.set_column(index * 2, index * 2 + 1, 11)
+
+            # Compiling and saving chart data series info.
+
+            group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
+            color = color_list[index % len(color_list)]
+
+            chart_dict_list.append({
+                'name': vowel,
+                'categories': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
+                    group_name_string, f2_column, len(f2_list) + 3),
+                'values': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
+                    group_name_string, f1_column, len(f1_list) + 3),
+                'marker': {
+                    'type': 'circle',
+                    'size': 5,
+                    'border': {'color': color},
+                    'fill': {'color': color}}})
+
+            # And additional outliers data series.
+
+            chart_dict_list.append({
+                'name': vowel + ' outliers',
+                'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                    group_name_string, f2_column,
+                    max_f1_f2_list_length + 6, max_f1_f2_list_length + len(f2_outlier_list) + 5),
+                'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                    group_name_string, f1_column,
+                    max_f1_f2_list_length + 6, max_f1_f2_list_length + len(f1_outlier_list) + 5),
+                'marker': {
+                    'type': 'circle',
+                    'size': 2,
+                    'border': {'color': color},
+                    'fill': {'color': color}}})
+
+            # Mean data point.
+
+            shift = max_f1_f2_list_length + max_outlier_list_length
+
+            chart_dict_list.append({
+                'name': vowel + ' mean',
+                'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                    group_name_string, f2_column, shift + 7, shift + 7),
+                'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                    group_name_string, f1_column, shift + 7, shift + 7),
+                'marker': {
+                    'type': 'x',
+                    'size': 12,
+                    'border': {'color': color},
+                    'fill': {'color': color}}})
+
+            # Finally, one standard deviation ellipse data series.
+
+            chart_dict_list.append({
+                'name': vowel + ' stdev ellipse',
+                'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                    group_name_string, f2_column, shift + 9, shift + len(x2_ellipse_list) + 8),
+                'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                    group_name_string, f1_column, shift + 9, shift + len(x1_ellipse_list) + 8),
+                'marker': {
+                    'type': 'none',
+                    'size': 1,
+                    'border': {'color': color},
+                    'fill': {'color': color}},
+                'line': {'color': color, 'width': 0.5},
+                'smooth': True})
+
+        # Generating formant chart, if we have any data.
+
+        if chart_dict_list:
+
+            chart = workbook.add_chart({'type': 'scatter'})
+
+            chart.set_x_axis({
+                'major_gridlines': {'visible': True},
+                'name': 'F2 (Hz)',
+                'reverse': True})
+
+            chart.set_y_axis({
+                'major_gridlines': {'visible': True},
+                'name': 'F1 (Hz)',
+                'reverse': True})
+
+            for chart_dict in chart_dict_list:
+                chart.add_series(chart_dict)
+
+            chart.set_style(11)
+            worksheet_chart.set_chart(chart)
 
     workbook.close()
-    return (row_counter - 2, sound_counter)
+
+    entity_counter_dict = {group: row_counter - 2
+        for group, row_counter in row_counter_dict.items()}
+
+    return (entity_counter_dict, sound_counter_dict)
 
 
 @view_config(route_name="phonology", renderer='json')
@@ -1023,6 +1223,8 @@ def phonology(request):
     perspective_cid = request.params.get('perspective_client_id')
     perspective_oid = request.params.get('perspective_object_id')
 
+    group_by_description = request.params.get('group_by_description')
+
     # Checking if we have limits on number of computed results.
 
     limit = (None if 'limit' not in request.params else
@@ -1036,8 +1238,6 @@ def phonology(request):
 
     limit_result = (None if 'limit_result' not in request.params else
         int(request.params.get('limit_result')))
-
-    # TODO: get perspective's translation and language it belongs to.
 
     # We get lexical entries of this perspective with markup'ed sounds.
 
@@ -1069,7 +1269,9 @@ def phonology(request):
 
     exception_counter = 0
     no_vowel_counter = 0
+
     result_list = list()
+    result_group_set = set()
 
     for index, row in enumerate(query.yield_per(100)):
 
@@ -1125,21 +1327,15 @@ def phonology(request):
         # If we actually have the result, we use it and continue.
 
         elif cache_result:
-
-            result_string = '\n'.join(
-                'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
-                    
-                    tier_result_list if not isinstance(tier_result_list, list) else
-                    tier_result_list[0] if len(tier_result_list) <= 1 else
-                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
-
-                    for tier_number, tier_name, tier_result_list in cache_result)
+            group_list, textgrid_result_list = cache_result
 
             log.debug(
                 '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
-                row_str, cache_key, markup_url, sound_url, result_string))
+                row_str, cache_key, markup_url, sound_url,
+                format_textgrid_result(group_list, textgrid_result_list)))
 
             result_list.append(cache_result)
+            result_group_set.update(group_list)
 
             if (limit_result and len(result_list) >= limit_result or
                 limit and index + 1 >= limit):
@@ -1207,25 +1403,27 @@ def phonology(request):
 
             textgrid_result_list = process_sound(tier_data_list, sound)
 
-            # Saving result.
+            # Saving analysis results.
 
-            result_list.append(textgrid_result_list)
-            CACHE.set(cache_key, textgrid_result_list)
+            group_list = [None]
 
-            result_string = '\n'.join(
-                'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
-                    
-                    tier_result_list if not isinstance(tier_result_list, list) else
-                    tier_result_list[0] if len(tier_result_list) <= 1 else
-                    ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
+            if group_by_description == 'true' and 'blob_description' in row.Entity.additional_metadata:
+                group_list.append(row.Entity.additional_metadata['blob_description'])
 
-                    for tier_number, tier_name, tier_result_list in textgrid_result_list)
+                print(row.Entity.additional_metadata['blob_description'])
+                print(row.Sound.additional_metadata['blob_description'])
+
+            result_list.append((group_list, textgrid_result_list))
+            result_group_set.update(group_list)
+
+            CACHE.set(cache_key, (group_list, textgrid_result_list))
+
+            # Showing results for this sound/markup pair, stopping earlier, if required.
 
             log.debug(
                 '{0}:\n{1}\n{2}\n{3}'.format(
-                row_str, markup_url, sound_url, result_string))
-
-            # Stopping earlier, if required.
+                row_str, markup_url, sound_url,
+                format_textgrid_result(group_list, textgrid_result_list)))
 
             if (limit_result and len(result_list) >= limit_result or
                 limit and index + 1 >= limit):
@@ -1288,7 +1486,9 @@ def phonology(request):
     # Otherwise we create and then serve Excel file.
 
     workbook_stream = io.BytesIO()
-    entry_count, sound_count = compile_workbook(result_list, workbook_stream)
+
+    entry_count_dict, sound_count_dict = compile_workbook(
+        result_list, result_group_set, workbook_stream)
 
     workbook_stream.seek(0)
 
