@@ -429,7 +429,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             markup = cursor[2]
         common_name = str(cursor[3])
         word_id = cursor[4]
-        blob_description = cursor[5]
+        blob_description = cursor[6]
         sound_metadata = {}
         if blob_description is not None:
             sound_metadata.update({"blob_description": blob_description, "original_filename": common_name})
@@ -506,7 +506,7 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
             markup = cursor[1]
         common_name = str(cursor[3])
         word_id = cursor[4]
-        blob_description = cursor[5]
+        blob_description = cursor[6]
         sound_metadata = {}
         if blob_description is not None:
             sound_metadata.update({"blob_description": blob_description, "original_filename": common_name})
