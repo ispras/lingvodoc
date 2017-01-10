@@ -2,6 +2,7 @@
 # Standard library imports.
 
 import collections
+import datetime
 import io
 import logging
 import math
@@ -27,7 +28,8 @@ from pydub.utils import ratio_to_db
 
 import pympi
 
-from pyramid.httpexceptions import HTTPPreconditionFailed
+from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFailed
+from pyramid.request import Request
 from pyramid.response import FileIter, Response
 from pyramid.view import view_config
 
@@ -45,8 +47,10 @@ from lingvodoc.cache.caching import CACHE, TaskStatus
 from lingvodoc.models import (
     Client,
     DBSession,
+    Dictionary,
     DictionaryPerspective,
     Entity,
+    Field,
     LexicalEntry,
     PublishingEntity,
     TranslationGist,
@@ -771,7 +775,7 @@ def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
     return tier_data_list, vowel_flag
 
 
-def process_sound(tier_data_list, sound):
+def process_sound(tier_data_list, sound, translation = None):
     """
     Analyzes sound intervals corresponding to vowel-containing markup.
     """
@@ -821,6 +825,7 @@ def process_sound(tier_data_list, sound):
 
             textgrid_result_list[-1][2].append([
                 ''.join(text for index, (begin, end, text) in raw_interval_list),
+                translation,
                 max_length_str,
                 '{0:.3f}'.format(max_length_f1_f2[0]),
                 '{0:.3f}'.format(max_length_f1_f2[1]),
@@ -880,7 +885,9 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
         group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
 
         worksheet_results = workbook.add_worksheet('Results' + group_name_string)
-        worksheet_results.write_row('A1', ['Transcription',
+        worksheet_results.write_row('A1', [
+            'Transcription',
+            'Translation',
             'Longest (seconds) interval',
             'F1 mean (Hz)', 'F2 mean (Hz)',
         #   'F1 median (Hz)', 'F2 median (Hz)',
@@ -893,14 +900,14 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
 
         # Formatting column widths.
 
-        worksheet_results.set_column(0, 1, 26)
-        worksheet_results.set_column(2, 3, 13)
-        worksheet_results.set_column(4, 4, 26)
-        worksheet_results.set_column(5, 7, 13)
+        worksheet_results.set_column(0, 2, 26)
+        worksheet_results.set_column(3, 4, 13)
+        worksheet_results.set_column(5, 5, 26)
+        worksheet_results.set_column(6, 8, 13)
 
         worksheet_dict[group] = (worksheet_results,
             workbook.add_worksheet('F-table' + group_name_string),
-            workbook.add_chartsheet('F-chart' + group_name_string))
+            workbook.add_worksheet('F-chart' + group_name_string))
 
     row_counter_dict = {group: 2 for group in result_group_set}
     sound_counter_dict = {group: 0 for group in result_group_set}
@@ -917,9 +924,9 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
 
             for tier_data in tier_result:
 
-                row_list = (tier_data[:2] +
-                    list(map(float, tier_data[2:4])) + [tier_data[8]] +
-                    list(map(float, tier_data[9:11])) + [tier_data[15]])
+                row_list = (tier_data[:3] +
+                    list(map(float, tier_data[3:5])) + [tier_data[9]] +
+                    list(map(float, tier_data[10:12])) + [tier_data[16]])
 
                 for group in textgrid_group_list:
                     worksheet_dict[group][0].write_row('A' + str(row_counter_dict[group]), row_list)
@@ -929,8 +936,8 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
 
                 # Collecting vowel formant data.
 
-                text_a, f1_f2_list_a = tier_data[1], tier_data[2:4]
-                text_b, f1_f2_list_b = tier_data[8], tier_data[9:11]
+                text_a, f1_f2_list_a = tier_data[2], tier_data[3:5]
+                text_b, f1_f2_list_b = tier_data[9], tier_data[10:12]
 
                 text_a_list = text_a.split()
                 text_b_list = text_b.split()
@@ -1037,7 +1044,10 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
             if max_f2 == None or max_f2_list > max_f2:
                 max_f2 = max_f2_list
 
-        # Compiling info of the formant scatter chart data series.
+        # Compiling info of the formant scatter chart data series, unless we actually don't have any.
+
+        if len(chart_data_list) <= 0:
+            continue
 
         chart_dict_list = []
 
@@ -1048,8 +1058,8 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
         shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle',
             'plus']
 
-        color_list = ['black', 'blue', 'brown', 'cyan', 'gray', 'green', 'lime', 'magenta', 'navy',
-            'orange', 'pink', 'purple', 'red', 'silver', 'yellow']
+        color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red', 'orange', 'gray', 'cyan',
+            'lime', 'magenta', 'silver', 'yellow']
 
         # It seems that we have to plot data in order of its size, from vowels with least number of F1/F2 points
         # to vowels with the most number of F1/F2 points, otherwise scatter chart fails to generate properly.
@@ -1200,11 +1210,15 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
                 'name': 'F1 (Hz)',
                 'reverse': True})
 
+            chart.set_legend({'position': 'top'})
+
             for chart_dict in chart_dict_list:
                 chart.add_series(chart_dict)
 
             chart.set_style(11)
-            worksheet_chart.set_chart(chart)
+            chart.set_size({'width': 1024, 'height': 768})
+
+            worksheet_chart.insert_chart('A1', chart)
 
     workbook.close()
 
@@ -1238,14 +1252,66 @@ def phonology(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(
         client_id = perspective_cid, object_id = perspective_oid).first()
 
-    translation_gist = DBSession.query(TranslationGist).filter_by(
+    perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
         client_id = perspective.translation_gist_client_id,
         object_id = perspective.translation_gist_object_id).first()
 
     task_status = TaskStatus(user_id,
-        "Phonology compilation", translation_gist.get_translation(locale_id), 4)
+        "Phonology compilation", perspective_translation_gist.get_translation(locale_id), 4)
 
     task_status.set(1, 0, "Preparing")
+
+    # We also get perspective's dictionary data.
+
+    dictionary = DBSession.query(Dictionary).filter_by(
+        client_id = perspective.parent_client_id,
+        object_id = perspective.parent_object_id).first()
+
+    dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
+        client_id = dictionary.translation_gist_client_id,
+        object_id = dictionary.translation_gist_object_id).first()
+
+    # Getting 'Translation' field ids.
+
+    subrequest = Request.blank('/translation_search')
+
+    subrequest.method = 'POST'
+    subrequest.headers = {}
+    subrequest.json = {'searchstring': 'Translation'}
+
+    if request.headers.get('Cookie'):
+        subrequest.headers = {'Cookie': request.headers['Cookie']}
+
+    response = request.invoke_subrequest(subrequest)
+
+    field_translation_gist_client_id = None
+    field_translation_gist_object_id = None
+
+    # Looking through all translations we've got, getting field translation data.
+
+    for gist_data in response.json:
+
+        if gist_data['type'] != 'Field':
+            continue
+
+        for atom_data in gist_data['contains']:
+            if atom_data['locale_id'] == 2 and atom_data['content'] == 'Translation':
+
+                field_translation_gist_client_id = gist_data['client_id']
+                field_translation_gist_object_id = gist_data['object_id']
+                break
+
+    if not field_translation_gist_client_id or not field_translation_gist_object_id:
+        raise Exception('Missing \'Translation\' field data.')
+
+    # Finding required field by its translation.
+
+    field = DBSession.query(Field).filter_by(
+        translation_gist_client_id = field_translation_gist_client_id,
+        translation_gist_object_id = field_translation_gist_object_id).first()
+
+    if not field:
+        raise Exception('Missing \'Translation\' field.')
 
     # Checking if we have limits on number of computed results.
 
@@ -1263,56 +1329,42 @@ def phonology(request):
 
     # Before everything else we should count how many sound/markup pairs we are to process.
 
+    Markup = aliased(Entity, name = "Markup")
     Sound = aliased(Entity, name = "Sound")
+    Translation = aliased(Entity, name = "Translation")
     PublishingSound = aliased(PublishingEntity, name = "PublishingSound")
 
-    total_count = DBSession.query(
-        LexicalEntry, Entity, Sound, PublishingEntity, PublishingSound).filter(and_(
+    count_query = DBSession.query(
+        LexicalEntry, Markup, Sound, PublishingEntity, PublishingSound).filter(and_(
             LexicalEntry.parent_client_id == perspective_cid,
             LexicalEntry.parent_object_id == perspective_oid,
             LexicalEntry.marked_for_deletion == False,
-            Entity.parent_client_id == LexicalEntry.client_id,
-            Entity.parent_object_id == LexicalEntry.object_id,
-            Entity.marked_for_deletion == False,
-            Entity.additional_metadata.contains({"data_type": "praat markup"}),
-            PublishingEntity.client_id == Entity.client_id,
-            PublishingEntity.object_id == Entity.object_id,
+            Markup.parent_client_id == LexicalEntry.client_id,
+            Markup.parent_object_id == LexicalEntry.object_id,
+            Markup.marked_for_deletion == False,
+            Markup.additional_metadata.contains({"data_type": "praat markup"}),
+            PublishingEntity.client_id == Markup.client_id,
+            PublishingEntity.object_id == Markup.object_id,
             PublishingEntity.published == True,
             PublishingEntity.accepted == True,
-            Sound.client_id == Entity.self_client_id,
-            Sound.object_id == Entity.self_object_id,
+            Sound.client_id == Markup.self_client_id,
+            Sound.object_id == Markup.self_object_id,
             Sound.marked_for_deletion == False,
             PublishingSound.client_id == Sound.client_id,
             PublishingSound.object_id == Sound.object_id,
             PublishingSound.published == True,
-            PublishingSound.accepted == True)).count()
+            PublishingSound.accepted == True))
 
+    total_count = count_query.count()
     task_status.set(2, 1, "Analyzing sound and markup")
 
-    # We get lexical entries of this perspective with markup'ed sounds.
+    # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations.
 
-    query = DBSession.query(LexicalEntry, Entity, Sound, PublishingEntity, PublishingSound).filter(and_(
-        LexicalEntry.parent_client_id == perspective_cid,
-        LexicalEntry.parent_object_id == perspective_oid,
-        LexicalEntry.marked_for_deletion == False,
-        Entity.parent_client_id == LexicalEntry.client_id,
-        Entity.parent_object_id == LexicalEntry.object_id,
-        Entity.marked_for_deletion == False,
-        Entity.additional_metadata.contains({"data_type": "praat markup"}),
-        PublishingEntity.client_id == Entity.client_id,
-        PublishingEntity.object_id == Entity.object_id,
-        PublishingEntity.published == True,
-        PublishingEntity.accepted == True,
-        Sound.client_id == Entity.self_client_id,
-        Sound.object_id == Entity.self_object_id,
-        Sound.marked_for_deletion == False,
-        PublishingSound.client_id == Sound.client_id,
-        PublishingSound.object_id == Sound.object_id,
-        PublishingSound.published == True,
-        PublishingSound.accepted == True))
-
-    # We process these lexical entries in batches. Just in case, it seems that perspectives rarely have more
-    # then several hundred such lexical entries.
+    data_query = count_query.outerjoin(Translation, and_(
+        LexicalEntry.client_id == Translation.parent_client_id,
+        LexicalEntry.object_id == Translation.parent_object_id)).filter(and_(
+            Translation.field_client_id == field.client_id,
+            Translation.field_object_id == field.object_id)).add_entity(Translation)
 
     exception_counter = 0
     no_vowel_counter = 0
@@ -1320,84 +1372,102 @@ def phonology(request):
     result_list = list()
     result_group_set = set()
 
-    for index, row in enumerate(query.yield_per(100)):
+    # We process these lexical entries in batches. Just in case, it seems that perspectives rarely have more
+    # then several hundred such lexical entries.
 
-        markup_url = row.Entity.content
+    for index, row in enumerate(data_query.yield_per(100)):
+
+        markup_url = row.Markup.content
         sound_url = row.Sound.content
 
         row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(index,
             row.LexicalEntry.client_id, row.LexicalEntry.object_id,
             row.Sound.client_id, row.Sound.object_id,
-            row.Entity.client_id, row.Entity.object_id)
+            row.Markup.client_id, row.Markup.object_id)
 
         cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
             row.Sound.client_id, row.Sound.object_id,
-            row.Entity.client_id, row.Entity.object_id)
+            row.Markup.client_id, row.Markup.object_id)
 
         # Checking if we have cached result for this pair of sound/markup.
 
         cache_result = CACHE.get(cache_key)
 
-        if cache_result == 'no_vowel':
+        try:
+            if cache_result == 'no_vowel':
 
-            log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}'.format(
-                row_str, cache_key, markup_url, sound_url))
+                log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}'.format(
+                    row_str, cache_key, markup_url, sound_url))
 
-            no_vowel_counter += 1
+                no_vowel_counter += 1
 
-            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                "Analyzing sound and markup")
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    "Analyzing sound and markup")
 
-            if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
-                limit and index + 1 >= limit):
-                break
+                if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                    limit and index + 1 >= limit):
+                    break
 
-            continue
+                continue
 
-        # If we have cached exception, we do the same as with absence of vowels, show its info and
-        # continue.
+            # If we have cached exception, we do the same as with absence of vowels, show its info and
+            # continue.
 
-        elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
-            exception, traceback_string = cache_result[1:3]
+            elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
+                exception, traceback_string = cache_result[1:3]
 
-            log.debug(
-                '{0} [CACHE {1}]: exception\n{2}\n{3}'.format(
-                row_str, cache_key, markup_url, sound_url))
+                log.debug(
+                    '{0} [CACHE {1}]: exception\n{2}\n{3}'.format(
+                    row_str, cache_key, markup_url, sound_url))
 
-            log.debug(traceback_string)
+                log.debug(traceback_string)
 
-            exception_counter += 1
+                exception_counter += 1
 
-            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                "Analyzing sound and markup")
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    "Analyzing sound and markup")
 
-            if (limit_exception and exception_counter >= limit_exception or
-                limit and index + 1 >= limit):
-                break
+                if (limit_exception and exception_counter >= limit_exception or
+                    limit and index + 1 >= limit):
+                    break
 
-            continue
+                continue
 
-        # If we actually have the result, we use it and continue.
+            # If we actually have the result, we use it and continue.
 
-        elif cache_result:
-            group_list, textgrid_result_list = cache_result
+            elif cache_result:
+                group_list, textgrid_result_list = cache_result
 
-            log.debug(
-                '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
-                row_str, cache_key, markup_url, sound_url,
-                format_textgrid_result(group_list, textgrid_result_list)))
+                log.debug(
+                    '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
+                    row_str, cache_key, markup_url, sound_url,
+                    format_textgrid_result(group_list, textgrid_result_list)))
 
-            result_list.append(cache_result)
-            result_group_set.update(group_list)
+                result_list.append(cache_result)
+                result_group_set.update(group_list)
 
-            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                "Analyzing sound and markup")
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    "Analyzing sound and markup")
 
-            if (limit_result and len(result_list) >= limit_result or
-                limit and index + 1 >= limit):
-                break
+                if (limit_result and len(result_list) >= limit_result or
+                    limit and index + 1 >= limit):
+                    break
 
-            continue
+                continue
+
+        # If we have an exception while processing cache results, we stop and terminate with error.
+
+        except:
+            request.response.status = HTTPInternalServerError.code
+
+            task_status.set(4, 100,
+                "Finished (ERROR), cache processing error")
+
+            return {
+                "error": "cache processing error",
+                "exception_counter": exception_counter,
+                "no_vowel_counter": no_vowel_counter,
+                "result_counter": len(result_list)}
 
         try:
             # Getting markup, checking for each tier if it needs to be processed.
@@ -1460,16 +1530,17 @@ def phonology(request):
 
                 sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
 
-            textgrid_result_list = process_sound(tier_data_list, sound)
+            textgrid_result_list = process_sound(tier_data_list, sound,
+                row.Translation.content if row.Translation else None)
 
             # Saving analysis results.
 
             group_list = [None]
 
-            if group_by_description == 'true' and 'blob_description' in row.Entity.additional_metadata:
-                group_list.append(row.Entity.additional_metadata['blob_description'])
+            if group_by_description == 'true' and 'blob_description' in row.Markup.additional_metadata:
+                group_list.append(row.Markup.additional_metadata['blob_description'])
 
-                print(row.Entity.additional_metadata['blob_description'])
+                print(row.Markup.additional_metadata['blob_description'])
                 print(row.Sound.additional_metadata['blob_description'])
 
             result_list.append((group_list, textgrid_result_list))
@@ -1556,10 +1627,43 @@ def phonology(request):
     task_status.set(3, 99, "Compiling results")
     workbook_stream = io.BytesIO()
 
-    entry_count_dict, sound_count_dict = compile_workbook(
-        result_list, result_group_set, workbook_stream)
+    try:
+        entry_count_dict, sound_count_dict = compile_workbook(
+            result_list, result_group_set, workbook_stream)
 
-    workbook_stream.seek(0)
+        workbook_stream.seek(0)
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('compile_workbook: exception')
+        log.debug(traceback_string)
+
+        # If we failed to create an Excel file, we terminate with error.
+
+        request.response.status = HTTPInternalServerError.code
+
+        task_status.set(4, 100,
+            "Finished (ERROR), result compilation error")
+
+        return {
+            "error": "result compilation error",
+            "exception_counter": exception_counter,
+            "no_vowel_counter": no_vowel_counter,
+            "result_counter": len(result_list)}
+
+    # Name of the resulting file includes dictionary name, perspective name and current date.
+
+    current_datetime = datetime.datetime.now(datetime.timezone.utc)
+
+    result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+        dictionary_translation_gist.get_translation(2),
+        perspective_translation_gist.get_translation(2),
+        current_datetime.year,
+        current_datetime.month,
+        current_datetime.day)
 
     # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for Excel
     # content-type.
@@ -1570,7 +1674,7 @@ def phonology(request):
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     response.app_iter = FileIter(workbook_stream)
-    response.headers['Content-Disposition'] = "attachment; filename=phonology.xlsx"
+    response.headers['Content-Disposition'] = 'attachment; filename="{0}"'.format(result_filename)
 
     return response
 
