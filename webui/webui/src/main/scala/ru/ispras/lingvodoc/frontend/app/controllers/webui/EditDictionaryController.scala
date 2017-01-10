@@ -270,9 +270,9 @@ class EditDictionaryController(scope: EditDictionaryScope,
             backend.getEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), entityId) onComplete {
               case Success(updatedEntity) =>
                 scope.dictionaryTable.updateEntity(entry, entity, updatedEntity)
-              case Failure(ex) => console.log(ex.getMessage)
+              case Failure(ex) => error(ControllerException("Probably you don't have permissions to edit entities", ex))
             }
-          case Failure(ex) => console.log(ex.getMessage)
+          case Failure(ex) => error(ControllerException("Probably you don't have permissions to edit entities", ex))
         }
       }
     }
