@@ -260,16 +260,17 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
             .filter_by(parent=perspective)\
             .all()
         DBSession.flush()
-        for field in fields: ## ?
-            DBSession.delete(field)
-        position = 1
-        for field in req:
-            create_nested_field(field=field,
-                                perspective=perspective,
-                                client_id=client.id,
-                                upper_level=None,
-                                link_ids=link_ids, position=position)
-            position += 1
+        #for field in fields: ## ?
+        #    DBSession.delete(field)
+        if not int(len(fields)):
+            position = 1
+            for field in req:
+                create_nested_field(field=field,
+                                    perspective=perspective,
+                                    client_id=client.id,
+                                    upper_level=None,
+                                    link_ids=link_ids, position=position)
+                position += 1
 
         return response
     else:
@@ -1272,7 +1273,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
 
         task_status.set(10, 100, "Finished", "")
         dictionary = {}
-        print("Finished")
         return dictionary
 
 
