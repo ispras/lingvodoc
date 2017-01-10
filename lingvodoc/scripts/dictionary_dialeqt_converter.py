@@ -982,9 +982,12 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         if update_flag:
             audio_hashes = hashes
             markup_hashes = markups
+            lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text"]
+            p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text"]
         else:
             audio_hashes = set()
             markup_hashes = set()
+
         ###################
         ## Lexical entries
         ###################
@@ -1006,7 +1009,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             if update_flag:
                 match_dict = defaultdict(list)
                 #match = [x for x in lexes if x[2].content == word]
-                lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text"]
+
                 for lex in lexes_with_text:
                     if lex[2].content == word:
                         if field_ids["Word"] == (lex[2].field.client_id, lex[2].field.object_id):
@@ -1091,7 +1094,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             regular_form = row[4]
             if update_flag:
                 p_match_dict = defaultdict(list)
-                p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text"]
                 for lex in p_lexes_with_text:
                     if lex[2].content == word:
                         if field_ids["Word of Paradigmatic forms"] == (lex[2].field.client_id, lex[2].field.object_id):
