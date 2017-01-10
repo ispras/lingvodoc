@@ -37,10 +37,18 @@ def convert_dictionary(request):  # TODO: test
     args["client_id"] = client_id
     args['blob_client_id'] = req['blob_client_id']
     args['blob_object_id'] = req['blob_object_id']
-    args["language_client_id"] = req["language_client_id"]
-    args["language_object_id"] = req["language_object_id"]
-    args["gist_client_id"] = req["gist_client_id"]
-    args["gist_object_id"] = req["gist_object_id"]
+    if "language_client_id" in req and "language_object_id" in req:
+        args["language_client_id"] = req["language_client_id"]
+        args["language_object_id"] = req["language_object_id"]
+    else:
+        args["language_client_id"] = None
+        args["language_object_id"] = None
+    if "gist_client_id" in req and "gist_object_id" in req:
+        args["gist_client_id"] = req["gist_client_id"]
+        args["gist_object_id"] = req["gist_object_id"]
+    else:
+        args["gist_client_id"] = None
+        args["gist_object_id"] = None
     args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     args["storage"] = request.registry.settings["storage"]
     args["locale_id"] = locale_id
