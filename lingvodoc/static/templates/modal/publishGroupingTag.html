@@ -39,6 +39,7 @@
                     <tr>
                         <td></td>
                         <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
+                        <td><!-- approve button --></td>
                     </tr>
                     </thead>
 
@@ -249,6 +250,16 @@
 
                         </td>
 
+                        <td>
+                            <div ng-show="controller.baseEntry(row.entry)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled()" ng-click="controller.approve()">
+                                    <span class="glyphicon glyphicon-ok-circle"></span>
+                                </button>
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled()" ng-click="controller.disapprove()">
+                                    <span class="glyphicon glyphicon-ban-circle"></span>
+                                </button>
+                            </div>
+                        </td>
                     </tr>
 
                     </tbody>

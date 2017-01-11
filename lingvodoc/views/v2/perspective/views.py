@@ -2002,7 +2002,7 @@ def disapprove_entity(request):
                 BaseGroup.action == 'delete').one()
             if user in group.users:
                 if entity:
-                    entity.publishingentity.published = True
+                    entity.publishingentity.published = False
                 else:
                     raise CommonException("no such entity in system")
             else:
