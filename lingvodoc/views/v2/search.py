@@ -9,7 +9,9 @@ from lingvodoc.models import (
     Entity,
     TranslationAtom,
     Field,
-    PublishingEntity
+    PublishingEntity,
+    Dictionary,
+    DictionaryPerspectiveToField
 )
 
 from pyramid.httpexceptions import (
@@ -34,8 +36,14 @@ def basic_search(request):
     searchstring = request.params.get('searchstring')
     perspective_client_id = request.params.get('perspective_client_id')
     perspective_object_id = request.params.get('perspective_object_id')
+    field_client_id = request.params.get('field_client_id')
+    field_object_id = request.params.get('field_object_id')
     if searchstring:
         if len(searchstring) >= 1:
+            field = None
+            if field_client_id and field_object_id:
+                field = DBSession.query(Field).filter_by(client_id=field_client_id, object_id=field_object_id).first()
+
             searchstring = request.params.get('searchstring')
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
                     .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
@@ -44,7 +52,8 @@ def basic_search(request):
             # print(group)
             # if not group:
             #     group = 1
-            if  group: # todo: change!!!!!
+            published_cursor = None
+            if group: # todo: change!!!!!
                 results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'))
                 # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
@@ -56,34 +65,76 @@ def basic_search(request):
                 results_cursor = DBSession.query(Entity)\
                     .join(Entity.parent)\
                     .join(DictionaryPerspective)
+
+                if not perspective_client_id or not perspective_object_id:
+                    published_cursor = results_cursor
                 # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
+                else:
+                    published_cursor = results_cursor
                 results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
                     .join(BaseGroup)\
                     .join(User, Group.users)\
                     .join(Client)\
                     .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
+                if published_cursor:
+                    subreq = Request.blank('/translation_service_search')
+                    subreq.method = 'POST'
+                    subreq.headers = request.headers
+                    subreq.json = {'searchstring': 'Published'}
+                    headers = dict()
+                    if request.headers.get('Cookie'):
+                        headers = {'Cookie': request.headers['Cookie']}
+                    subreq.headers = headers
+                    resp = request.invoke_subrequest(subreq)
+
+                    if 'error' not in resp.json:
+                        state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+                    else:
+                        raise KeyError("Something wrong with the base", resp.json['error'])
+
+                    published_cursor = published_cursor \
+                        .join(DictionaryPerspective.parent).filter(
+                        Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                        Dictionary.state_translation_gist_client_id == state_translation_gist_client_id,
+                        DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                        DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
+                     Entity.content.like('%'+searchstring+'%'))
             results = []
             entries = list()
             if can_add_tags:
-                results_cursor = results_cursor\
-                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
-                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+                results_cursor = results_cursor \
+                    .filter(BaseGroup.subject == 'lexical_entries_and_entities',
+                            or_(BaseGroup.action == 'create', BaseGroup.action =='view'))\
                     .group_by(Entity).having(func.count('*') == 2)
                 # results_cursor = list()
             else:
                 results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
             # print(results_cursor)
+            if field:
+                results_cursor = results_cursor.join(DictionaryPerspective.dictionaryperspectivetofield).filter(
+                    DictionaryPerspectiveToField.field == field)
+                if published_cursor:
+                    published_cursor = published_cursor.join(DictionaryPerspective.dictionaryperspectivetofield).filter(
+                        DictionaryPerspectiveToField.field == field)
             for item in results_cursor:
                 if item.parent not in entries:
                     entries.append(item.parent)
-            # print(entries)
+            if published_cursor:
+                for item in published_cursor:
+                    if item.parent not in entries:
+                        entries.append(item.parent)
             for entry in entries:
                 if not entry.marked_for_deletion:
-                    result = dict()
                     # print(entry.__class__)
+                    if (entry.parent_client_id, entry.parent_object_id) in DictionaryPerspective.get_deleted():
+                        continue
+                    if (entry.parent_client_id, entry.parent_object_id) in DictionaryPerspective.get_hidden():
+                        continue
+                    # if (entry.parent_client_id, entry.parent_object_id) in DictionaryPerspective.get_etymology():
+                    #     continue
                     url = request.route_url('perspective',
                                             dictionary_client_id=entry.parent.parent.client_id,
                                             dictionary_object_id=entry.parent.parent.object_id,
