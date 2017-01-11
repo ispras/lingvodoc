@@ -524,6 +524,25 @@ class DictionaryPerspective(CompositeIdMixin,
             deleted_set.add((i.client_id, i.object_id))
         return deleted_set
 
+    @classmethod
+    def get_hidden(cls):
+        gist = DBSession.query(TranslationGist.client_id,
+                               TranslationGist.object_id).join(TranslationAtom) \
+            .filter(TranslationAtom.content == 'Hidden', TranslationGist.type == 'Service',
+                    TranslationAtom.locale_id == 2).first()
+        gist_client_id, gist_object_id = (gist.client_id, gist.object_id)
+        hidden = DBSession.query(DictionaryPerspective.client_id,
+                                 DictionaryPerspective.object_id).join(Dictionary).filter(
+            or_(and_(Dictionary.state_translation_gist_client_id == gist_client_id,
+                     Dictionary.state_translation_gist_object_id == gist_object_id),
+                and_(DictionaryPerspective.state_translation_gist_client_id == gist_client_id,
+                     DictionaryPerspective.state_translation_gist_object_id == gist_object_id))
+        ).all()
+        hidden_set = set()
+        for i in hidden:
+            hidden_set.add((i.client_id, i.object_id))
+        return hidden_set
+
 
 class SelfMixin(PrimeTableArgs):
     @declared_attr
