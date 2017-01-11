@@ -666,6 +666,102 @@ transcription_re = re.compile(
     re.DOTALL | re.IGNORECASE | re.VERBOSE)
 
 
+#: Praat character escape sequences, extracted from Praat sources via main_praat_escape().
+character_escape_list = [
+    ('\\  ', 32), ('\\! ', 33), ('\\!d', 161), ('\\# ', 35), ('\\$ ', 36), ('\\% ', 37), ('\\& ', 38),
+    ('\\( ', 40), ('\\) ', 41), ('\\* ', 42), ('\\+ ', 43), ('\\+-', 177), ('\\+v', 799), ('\\, ', 44),
+    ('\\- ', 45), ('\\--', 8211), ('\\->', 8594), ('\\-^', 772), ('\\-h', 173), ('\\-m', 8722),
+    ('\\-v', 800), ('\\. ', 46), ('\\..', 8943), ('\\.3', 8756), ('\\.c', 183), ('\\.f', 721), ('\\/ ', 47),
+    ('\\/d', 8725), ('\\0 ', 48), ('\\0^', 778), ('\\0v', 805), ('\\1 ', 49), ('\\2 ', 50), ('\\3 ', 51),
+    ('\\3v', 825), ('\\4 ', 52), ('\\5 ', 53), ('\\6 ', 54), ('\\7 ', 55), ('\\8 ', 56), ('\\9 ', 57),
+    ('\\9+', 1506), ('\\9-', 674), ('\\9e', 661), ('\\: ', 58), ('\\:-', 247), ('\\:^', 776), ('\\:f', 720),
+    ('\\:v', 804), ('\\; ', 59), ('\\< ', 60), ('\\<-', 8592), ('\\<<', 171), ('\\<=', 8656),
+    ('\\<>', 8596), ('\\<_', 8804), ('\\= ', 61), ('\\=/', 8800), ('\\=3', 8801), ('\\=>', 8658),
+    ('\\=~', 8773), ('\\> ', 62), ('\\>>', 187), ('\\>_', 8805), ('\\? ', 63), ('\\?+', 1488),
+    ('\\?-', 673), ('\\?d', 191), ('\\?g', 660), ('\\@ ', 64), ('\\A ', 65), ('\\A;', 260), ('\\A^', 194),
+    ('\\A`', 192), ('\\Ae', 198), ('\\Al', 913), ('\\Ao', 197), ('\\At', 8704), ('\\A~', 195), ('\\B ', 66),
+    ('\\B+', 1489), ('\\Be', 914), ('\\C ', 67), ('\\C%', 1509), ('\\C+', 1510), ('\\C,', 199),
+    ('\\C<', 268), ('\\Ci', 935), ('\\D ', 68), ('\\D+', 1491), ('\\D-', 272), ('\\D<', 270), ('\\De', 916),
+    ('\\Dv', 827), ('\\E ', 69), ('\\E;', 280), ('\\E<', 282), ('\\E^', 202), ('\\E`', 200), ('\\Ep', 917),
+    ('\\Er', 8707), ('\\Et', 919), ('\\F ', 70), ('\\FI', 64257), ('\\FL', 64258), ('\\Fi', 934),
+    ('\\G ', 71), ('\\G+', 1490), ('\\G<', 486), ('\\G^', 667), ('\\Ga', 915), ('\\H ', 72), ('\\H+', 1492),
+    ('\\I ', 73), ('\\I^', 206), ('\\I`', 204), ('\\Io', 921), ('\\J ', 74), ('\\J+', 1497), ('\\K ', 75),
+    ('\\K%', 1498), ('\\K+', 1499), ('\\Ka', 922), ('\\L ', 76), ('\\L+', 1500), ('\\L/', 321),
+    ('\\La', 923), ('\\Lp', 163), ('\\M ', 77), ('\\M%', 1501), ('\\M+', 1502), ('\\Mu', 924), ('\\N ', 78),
+    ('\\N%', 1503), ('\\N+', 1504), ('\\N<', 327), ('\\N^', 774), ('\\Nu', 925), ('\\Nv', 810),
+    ('\\N~', 209), ('\\O ', 79), ('\\O.', 664), ('\\O/', 216), ('\\O:', 336), ('\\O^', 212), ('\\O`', 210),
+    ('\\Oe', 630), ('\\Om', 937), ('\\On', 927), ('\\O|', 8709), ('\\O~', 213), ('\\P ', 80),
+    ('\\P%', 1507), ('\\P+', 1508), ('\\Pi', 928), ('\\Ps', 936), ('\\Q ', 81), ('\\Q+', 1511),
+    ('\\R ', 82), ('\\R+', 1512), ('\\R<', 344), ('\\Ro', 929), ('\\S ', 83), ('\\S+', 1505), ('\\S<', 352),
+    ('\\SS', 167), ('\\Si', 931), ('\\T ', 84), ('\\T(', 792), ('\\T)', 793), ('\\T+', 1514), ('\\T<', 356),
+    ('\\TM', 8482), ('\\T^', 797), ('\\Ta', 932), ('\\Te', 920), ('\\Th', 222), ('\\Tt', 8869),
+    ('\\Tv', 798), ('\\U ', 85), ('\\U:', 368), ('\\U^', 219), ('\\U`', 217), ('\\Uo', 366), ('\\Up', 933),
+    ('\\Uv', 826), ('\\V ', 86), ('\\V+', 1493), ('\\Vr', 8730), ('\\W ', 87), ('\\W+', 1513), ('\\X ', 88),
+    ('\\X+', 1495), ('\\Xi', 926), ('\\Y ', 89), ('\\Y+', 1496), ('\\Y=', 165), ('\\Z ', 90), ('\\Z!', 379),
+    ('\\Z+', 1494), ('\\Z<', 381), ('\\Ze', 918), ('\\[ ', 91), ('\\[f', 91), ('\\] ', 93), ('\\]f', 93),
+    ('\\^ ', 94), ('\\^#', 8657), ('\\^9', 705), ('\\^?', 704), ('\\^G', 7597), ('\\^H', 689),
+    ('\\^M', 7514), ('\\^N', 7505), ('\\^Y', 7587), ('\\^^', 770), ('\\^f', 7584), ('\\^g', 736),
+    ('\\^h', 688), ('\\^j', 690), ('\\^l', 737), ('\\^m', 7504), ('\\^n', 8319), ('\\^s', 738),
+    ('\\^w', 695), ('\\^x', 739), ('\\^y', 696), ('\\^|', 8593), ('\\_ ', 95), ('\\_#', 8659),
+    ('\\_u', 8255), ('\\_|', 8595), ('\\` ', 8216), ('\\`^', 768), ('\\a ', 97), ('\\a;', 261),
+    ('\\a^', 226), ('\\a_', 170), ('\\a`', 224), ('\\ab', 594), ('\\ae', 230), ('\\al', 945),
+    ('\\an', 8743), ('\\ao', 229), ('\\ap', 700), ('\\as', 593), ('\\at', 592), ('\\ay', 594),
+    ('\\a~', 227), ('\\b ', 98), ('\\b^', 595), ('\\bc', 665), ('\\be', 946), ('\\bf', 946), ('\\bs', 92),
+    ('\\bu', 8226), ('\\c ', 99), ('\\c,', 231), ('\\c/', 162), ('\\c<', 269), ('\\c=', 8834),
+    ('\\cE', 1461), ('\\cc', 597), ('\\cf', 967), ('\\ci', 967), ('\\cl', 9827), ('\\cn', 794),
+    ('\\co', 169), ('\\ct', 596), ('\\cu', 164), ('\\cv', 796), ('\\d ', 100), ('\\d-', 273), ('\\d.', 598),
+    ('\\d<', 271), ('\\d^', 599), ('\\dd', 8706), ('\\de', 948), ('\\dg', 176), ('\\dh', 240),
+    ('\\di', 9830), ('\\dq', 1468), ('\\e ', 101), ('\\e-', 600), ('\\e;', 281), ('\\e<', 283),
+    ('\\e=', 8712), ('\\e^', 234), ('\\e`', 232), ('\\ef', 603), ('\\ep', 949), ('\\eq', 8660),
+    ('\\er', 604), ('\\et', 951), ('\\eu', 8364), ('\\f ', 102), ('\\f.', 637), ('\\f2', 981),
+    ('\\f5', 10048), ('\\fd', 402), ('\\ff', 632), ('\\fh', 638), ('\\fi', 966), ('\\g ', 103),
+    ('\\g<', 487), ('\\g^', 608), ('\\ga', 947), ('\\gc', 610), ('\\gf', 611), ('\\gs', 609), ('\\h ', 104),
+    ('\\h-', 295), ('\\hI', 1460), ('\\hO', 1465), ('\\h^', 614), ('\\hc', 668), ('\\he', 9829),
+    ('\\hj', 615), ('\\hr', 734), ('\\hs', 650), ('\\ht', 613), ('\\i ', 105), ('\\i-', 616), ('\\i^', 238),
+    ('\\i`', 236), ('\\ic', 618), ('\\id', 639), ('\\in', 8747), ('\\io', 953), ('\\ir', 645),
+    ('\\j ', 106), ('\\j-', 607), ('\\j^', 644), ('\\jc', 669), ('\\k ', 107), ('\\ka', 954), ('\\kb', 606),
+    ('\\l ', 108), ('\\l-', 620), ('\\l.', 621), ('\\l/', 322), ('\\la', 955), ('\\lc', 671), ('\\li', 865),
+    ('\\lz', 622), ('\\l~', 619), ('\\m ', 109), ('\\mj', 625), ('\\ml', 624), ('\\mt', 623), ('\\mu', 956),
+    ('\\n ', 110), ('\\n.', 627), ('\\n<', 328), ('\\nc', 628), ('\\ng', 331), ('\\ni', 8745),
+    ('\\nj', 626), ('\\no', 172), ('\\nu', 957), ('\\nv', 815), ('\\n~', 241), ('\\o ', 111),
+    ('\\o+', 8853), ('\\o-', 629), ('\\o/', 248), ('\\o2', 982), ('\\o:', 337), ('\\o^', 244),
+    ('\\o_', 186), ('\\o`', 242), ('\\oc', 8733), ('\\oe', 339), ('\\om', 969), ('\\on', 959),
+    ('\\oo', 8734), ('\\or', 8744), ('\\ox', 8855), ('\\o~', 245), ('\\p ', 112), ('\\pA', 1463),
+    ('\\pf', 9758), ('\\pi', 960), ('\\ps', 968), ('\\q ', 113), ('\\qA', 1464), ('\\qU', 1467),
+    ('\\r ', 114), ('\\r.', 635), ('\\r<', 345), ('\\rc', 640), ('\\re', 174), ('\\rh', 612), ('\\ri', 641),
+    ('\\rl', 634), ('\\ro', 961), ('\\rt', 633), ('\\s ', 115), ('\\s.', 642), ('\\s2', 962), ('\\s<', 353),
+    ('\\sE', 1462), ('\\sU', 64309), ('\\sh', 643), ('\\si', 963), ('\\sp', 9824), ('\\sr', 602),
+    ('\\ss', 223), ('\\su', 8721), ('\\sw', 601), ('\\t ', 116), ('\\t.', 648), ('\\t2', 977),
+    ('\\t<', 357), ('\\tS', 679), ('\\ta', 964), ('\\te', 952), ('\\tf', 952), ('\\th', 254),
+    ('\\tm', 8482), ('\\ts', 678), ('\\u ', 117), ('\\u-', 649), ('\\u:', 369), ('\\u^', 251),
+    ('\\u`', 249), ('\\uo', 367), ('\\up', 965), ('\\uu', 8746), ('\\v ', 118), ('\\vO', 64331),
+    ('\\v^', 780), ('\\vs', 651), ('\\vt', 652), ('\\w ', 119), ('\\wt', 653), ('\\x ', 120), ('\\xi', 958),
+    ('\\xx', 215), ('\\y ', 121), ('\\yc', 655), ('\\yt', 654), ('\\z ', 122), ('\\z!', 380), ('\\z.', 656),
+    ('\\z<', 382), ('\\zc', 657), ('\\ze', 950), ('\\zh', 658), ('\\{ ', 123), ('\\| ', 124), ('\\|-', 450),
+    ('\\|1', 448), ('\\|2', 449), ('\\|f', 124), ('\\|v', 809), ('\\||', 182), ('\\} ', 125), ('\\~ ', 126),
+    ('\\~<', 820), ('\\~^', 771), ('\\~v', 816), ('\\~~', 8776)]
+
+
+#: Substitutions of Praat character escape sequences.
+character_escape_dict = {escape_string: chr(character_code)
+    for escape_string, character_code in character_escape_list}
+
+
+#: Regular expression for substitution of Praat character escape sequences, based on info in http://
+#: stackoverflow.com/questions/6116978/python-replace-multiple-strings and https://gist.github.com/bgusach/
+#: a967e0587d6e01e889fd1d776c5f3729
+character_escape_re = re.compile('|'.join(
+    map(re.escape, sorted(character_escape_dict.keys(), key = len, reverse = True))))
+
+
+def character_escape(string):
+    """
+    Substitutes Praat charater escape sequences by corresponding Unicode characters.
+    """
+
+    return character_escape_re.sub(lambda match: character_escape_dict[match.group(0)], string)
+
+
 def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
     """
     Processes TextGrid markup, checking for each tier if it should be analyzed.
@@ -676,7 +772,9 @@ def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
 
     for tier_number, tier_name in textgrid.get_tier_name_num():
 
-        raw_interval_list = textgrid.get_tier(tier_number).get_all_intervals()
+        raw_interval_list = [(begin, end, character_escape(text))
+            for begin, end, text in textgrid.get_tier(tier_number).get_all_intervals()]
+
         raw_interval_seq_list = [[]]
 
         # Splitting interval sequence on empty intervals.
@@ -1936,8 +2034,84 @@ def test_profile():
         total_elapsed_cpu_time / total_pair_count))
 
 
-# A little bit of local testing.
+def main_praat_escape():
+    """
+    Extracts data of valid character escape sequences from Praat sources (at the moment source files
+    kar/UnicodeData.h, kar/longchar.cpp), constructs regular expression replacer, checks that it works.
+    """
+
+    character_dict = {}
+    unicode_re = re.compile('\\s*#define (UNICODE_\\S*?)\\s+(\\S*)\\s*')
+
+    with open(sys.argv[1], 'r', encoding = 'utf-8') as unicode_data_file:
+        for line in unicode_data_file:
+
+            match = unicode_re.fullmatch(line)
+
+            if match:
+                character_dict[match.group(1)] = chr(int(match.group(2), 0))
+
+    # Parsing escape sequence substitution data.
+
+    replace_dict = {}
+    longchar_re = re.compile('\\s*{\\s*\'(.)\'\\s*,\\s*\'(.)\',.*?(UNICODE_\\S*?)\\s*}\\s*,')
+
+    with open(sys.argv[2], 'r', encoding = 'utf-8') as longchar_file:
+        for line in longchar_file:
+
+            match = longchar_re.match(line)
+
+            if match:
+                replace_dict['\\' + match.group(1) + match.group(2)] = character_dict[match.group(3)]
+
+    # Multireplacement via regular expressions along the lines of http://stackoverflow.com/questions/
+    # 6116978/python-replace-multiple-strings and https://gist.github.com/bgusach/
+    # a967e0587d6e01e889fd1d776c5f3729.
+
+    print(len(character_dict))
+    print(list(sorted(character_dict.items()))[:4])
+
+    print(len(replace_dict))
+    print(list(sorted(replace_dict.items()))[:4])
+
+    substitution_list = sorted(replace_dict.keys(), key = len, reverse = True)
+    substitution_re = re.compile('|'.join(map(re.escape, substitution_list)))
+
+    print(len(substitution_list))
+    print(len('|'.join(map(re.escape, substitution_list))))
+
+    # Testing substitution.
+
+    print(substitution_re.sub(
+        lambda match: replace_dict[match.group(0)],
+        'b\\^j\\ae\\tf\\i-'))
+
+    replace_list = list(
+        sorted((escape_string, ord(character))
+            for escape_string, character in replace_dict.items()))
+
+    # Showing escape substitution data.
+
+    print('[')
+    current_line = '   '
+
+    for index, (escape_string, character_code) in enumerate(replace_list):
+
+        current_string = ' ({0}, {1}){2}'.format(
+            repr(escape_string), character_code, ',' if index < len(replace_list) - 1 else ']')
+
+        if len(current_line + current_string) <= 108:
+            current_line += current_string
+            continue
+
+        print(current_line)
+        current_line = '   ' + current_string
+
+    print(current_line)
+
+
+# Some additional local computations.
 
 if __name__ == '__main__':
-    test_profile()
+    main_praat_escape()
 
