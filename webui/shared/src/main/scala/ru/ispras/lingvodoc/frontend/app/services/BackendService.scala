@@ -973,7 +973,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       if (xhr.status == 200) {
         p.success(())
       } else {
-        p.failure(new BackendException("Failed to changed approval status"))
+        p.failure(new BackendException("Failed to change approval status"))
       }
     }
     xhr.send(JSON.stringify(req))

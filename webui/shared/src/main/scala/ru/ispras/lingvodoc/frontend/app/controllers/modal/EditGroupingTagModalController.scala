@@ -18,7 +18,7 @@ import scala.scalajs.js.annotation.JSExport
 @js.native
 trait EditGroupingTagScope extends Scope {
   var pageLoaded: Boolean = js.native
-  var dictionaryTable: DictionaryTable = js.native
+  var dictionaryTables: js.Array[DictionaryTable] = js.native
   var searchQuery: String = js.native
   var searchResults: js.Array[DictionaryTable] = js.native
   var size: Int = js.native
@@ -43,9 +43,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
   private[this] val perspectiveClientId = params("perspectiveClientId").asInstanceOf[Int]
   private[this] val perspectiveObjectId = params("perspectiveObjectId").asInstanceOf[Int]
-  private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
+  private[this] var lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
-  //private[this] val values = params("values").asInstanceOf[js.Array[Value]]
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
@@ -69,7 +68,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   scope.resultEntriesCount = -1
 
   @JSExport
-  def getSource(entry: LexicalEntry): UndefOr[String]= {
+  def getSource(entry: LexicalEntry): UndefOr[String] = {
     perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
       dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
         s"${dictionary.translation} / ${perspective.translation}"
@@ -78,7 +77,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   @JSExport
-  def getSearchSource(entry: LexicalEntry): UndefOr[String]= {
+  def getSearchSource(entry: LexicalEntry): UndefOr[String] = {
     searchPerspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
       searchDictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
         s"${dictionary.translation} / ${perspective.translation}"
@@ -88,32 +87,70 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   @JSExport
   def search(): Unit = {
-    foundEntries = Seq[Seq[LexicalEntry]]()
-    backend.search(scope.searchQuery, None, tagsOnly = false) map { results =>
-      //val entries = results map (_.lexicalEntry)
-      foundEntries = results.map(_.lexicalEntry).groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq
-      getPage(1)
-    }
+    load(() => {
+      foundEntries = Seq[Seq[LexicalEntry]]()
+      backend.search(scope.searchQuery, None, tagsOnly = false) map { results =>
+        foundEntries = results.map(_.lexicalEntry).groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq
+        getPage(1)
+      }
+    })
   }
 
   @JSExport
   def connect(entry: LexicalEntry): Unit = {
     backend.connectLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(field), lexicalEntry, entry).foreach { _ =>
-      scope.dictionaryTable.addEntry(entry)
+      loadConnectedEntries()
     }
   }
 
   @JSExport
   def remove(entry: LexicalEntry): Unit = {
     backend.disconnectLexicalEntry(entry, CompositeId.fromObject(field)).foreach { _ =>
-      scope.dictionaryTable.removeEntry(entry)
-      scope.$apply()
+      loadConnectedEntries()
     }
   }
 
   @JSExport
-  def close() = {
+  def baseEntry(entry: LexicalEntry): Boolean = {
+    lexicalEntry.getId == entry.getId
+  }
+
+
+  @JSExport
+  def close(): Unit = {
     instance.dismiss(())
+  }
+
+  private[this] def changeApproval(entry: LexicalEntry, approve: Boolean) = {
+    entry.entities.find(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId) foreach { entity =>
+      backend.changedApproval(dictionaryId, perspectiveId, CompositeId
+        .fromObject(lexicalEntry), CompositeId.fromObject(entity) :: Nil, approve) map { _ =>
+        scope.$apply(() => {
+          entity.published = approve
+        })
+      }
+    }
+  }
+
+
+  @JSExport
+  def approve(): Unit = {
+    changeApproval(lexicalEntry, approve = true)
+  }
+
+  @JSExport
+  def disapprove(): Unit = {
+    changeApproval(lexicalEntry, approve = false)
+  }
+
+  @JSExport
+  def disapproveDisabled(): Boolean = {
+    !lexicalEntry.entities.find(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId).exists(_.published)
+  }
+
+  @JSExport
+  def approveDisabled(): Boolean = {
+    lexicalEntry.entities.find(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId).exists(_.published)
   }
 
   @JSExport
@@ -219,26 +256,44 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
     }
   }
 
+  private[this] def loadConnectedEntries() = {
+
+
+    backend.getLexicalEntry(dictionaryId, perspectiveId, lexicalEntryId) map { entry =>
+      lexicalEntry = entry
+    }
+
+
+
+    backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
+      val tf = connectedEntries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq map { entryGroup =>
+        val firstEntry = entryGroup.head
+        backend.getPerspective(CompositeId(firstEntry.parentClientId, firstEntry.parentObjectId)) flatMap { connectedPerspective =>
+          backend.getFields(CompositeId(connectedPerspective.parentClientId, connectedPerspective.parentObjectId), CompositeId.fromObject(connectedPerspective)) map { connectedFields =>
+            DictionaryTable.build(connectedFields, dataTypes, entryGroup)
+          }
+        }
+      }
+
+      Future.sequence(connectedEntries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId))}) map { connectedPerspectives =>
+        perspectives = connectedPerspectives
+
+        Future.sequence(connectedPerspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId))}) map { connectedDictionaries =>
+          dictionaries = connectedDictionaries
+        }
+      }
+
+      Future.sequence(tf) map { tables =>
+        scope.dictionaryTables = tables.toJSArray
+      }
+    }
+  }
 
 
   load(() => {
     backend.dataTypes() flatMap { allDataTypes =>
       dataTypes = allDataTypes
-      // get fields of main perspective
-      backend.getFields(dictionaryId, perspectiveId) flatMap { fields =>
-        perspectiveFields = fields
-        backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
-          scope.dictionaryTable = DictionaryTable.build(perspectiveFields, dataTypes, connectedEntries)
-
-          Future.sequence(connectedEntries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId))}) map { connectedPerspectives =>
-            perspectives = connectedPerspectives
-
-            Future.sequence(connectedPerspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId))}) map { connectedDictionaries =>
-              dictionaries = connectedDictionaries
-            }
-          }
-        }
-      }
+      loadConnectedEntries()
     }
   })
 
