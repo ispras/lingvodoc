@@ -41,24 +41,23 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li class="dropdown" ng-if="controller.isAuthenticated()">
+                <li class="dropdown">
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">
                         <translatable str="Dashboard">Dashboard</translatable><span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="#/dashboard"><translatable str="My dictionaries">My dictionaries</translatable></a></li>
-                        <li><a href="#/dictionary/create"><translatable str="Create dictionary">Create dictionary</translatable></a></li>
-                        <li><a href="#/corpora"><translatable str="My corpora">My corpora</translatable></a></li>
-                        <li><a href="#/corpora/create"><translatable str="Create corpus">Create corpus</translatable></a></li>
-                        <!--?<li><a href="#/merge_master">Merge master</a></li>-->
+                        <li><a href="#/languages"><translatable str="Languages">Languages</translatable></a></li>
+                        <li ng-if="controller.isAuthenticated()"><a href="#/dashboard"><translatable str="My dictionaries">My dictionaries</translatable></a></li>
+                        <li ng-if="controller.isAuthenticated()"><a href="#/dictionary/create"><translatable str="Create dictionary">Create dictionary</translatable></a></li>
+                        <li ng-if="controller.isAuthenticated()"><a href="#/corpora"><translatable str="My corpora">My corpora</translatable></a></li>
+                        <li ng-if="controller.isAuthenticated()"><a href="#/corpora/create"><translatable str="Create corpus">Create corpus</translatable></a></li>
+                        <li ng-if="controller.isAuthenticated()"><a href="#/files"><translatable str="My files">My files</translatable></a></li>
                     </ul>
                 </li>
 
-                <li ng-if="controller.isAuthenticated()"><a href="#/languages"><translatable str="Languages">Languages</translatable></a></li>
-                <!--?<li ng-if="controller.isAuthenticated()"><a href="#/organizations">Organizations</a></li>-->
                 <li ng-if="controller.isAuthenticated()"><a href="#/map_search">Maps search</a></li>
-                <li ng-if="controller.isAuthenticated()"><a href="#/files"><translatable str="My files">My files</translatable></a></li>
+
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
