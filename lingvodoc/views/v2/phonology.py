@@ -90,7 +90,7 @@ def bessel_i0_approximation(x):
             t * (-0.00157565 + t * (0.00916281 + t * (-0.02057706 + t * (0.02635537 + t * (-0.01647633 +
             t * 0.00392377))))))))
 
-    raise "Unimplemented."
+    raise Exception('Unimplemented.')
 
 
 #: Dictionary used for memoization of Kaiser window function computation.
@@ -1326,7 +1326,7 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
     return (entity_counter_dict, sound_counter_dict)
 
 
-@view_config(route_name="phonology", renderer='json')
+@view_config(route_name = 'phonology', renderer = 'json')
 def phonology(request):
     """
     Computes phonology of a specified perspective.
@@ -1343,12 +1343,7 @@ def phonology(request):
 
         group_by_description = request.params.get('group_by_description')
 
-        # Phonology task status setup.
-
-        locale_id = int(request.cookies.get('locale_id') or 2)
-
-        client_id = request.authenticated_userid
-        user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
+        # Getting perspective and perspective's dictionary info.
 
         perspective = DBSession.query(DictionaryPerspective).filter_by(
             client_id = perspective_cid, object_id = perspective_oid).first()
@@ -1357,13 +1352,6 @@ def phonology(request):
             client_id = perspective.translation_gist_client_id,
             object_id = perspective.translation_gist_object_id).first()
 
-        task_status = TaskStatus(user_id,
-            "Phonology compilation", perspective_translation_gist.get_translation(locale_id), 4)
-
-        task_status.set(1, 0, "Preparing")
-
-        # We also get perspective's dictionary data.
-
         dictionary = DBSession.query(Dictionary).filter_by(
             client_id = perspective.parent_client_id,
             object_id = perspective.parent_object_id).first()
@@ -1371,6 +1359,21 @@ def phonology(request):
         dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
             client_id = dictionary.translation_gist_client_id,
             object_id = dictionary.translation_gist_object_id).first()
+
+        # Phonology task status setup.
+
+        locale_id = int(request.cookies.get('locale_id') or 2)
+
+        dictionary_name = dictionary_translation_gist.get_translation(locale_id)
+        perspective_name = perspective_translation_gist.get_translation(locale_id)
+
+        client_id = request.authenticated_userid
+        user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
+
+        task_status = TaskStatus(user_id,
+            'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
+
+        task_status.set(1, 0, 'Preparing')
 
         # Getting 'Translation' field ids.
 
@@ -1430,10 +1433,10 @@ def phonology(request):
 
         # Before everything else we should count how many sound/markup pairs we are to process.
 
-        Markup = aliased(Entity, name = "Markup")
-        Sound = aliased(Entity, name = "Sound")
-        Translation = aliased(Entity, name = "Translation")
-        PublishingSound = aliased(PublishingEntity, name = "PublishingSound")
+        Markup = aliased(Entity, name = 'Markup')
+        Sound = aliased(Entity, name = 'Sound')
+        Translation = aliased(Entity, name = 'Translation')
+        PublishingSound = aliased(PublishingEntity, name = 'PublishingSound')
 
         count_query = DBSession.query(
             LexicalEntry, Markup, Sound, PublishingEntity, PublishingSound).filter(and_(
@@ -1443,7 +1446,7 @@ def phonology(request):
                 Markup.parent_client_id == LexicalEntry.client_id,
                 Markup.parent_object_id == LexicalEntry.object_id,
                 Markup.marked_for_deletion == False,
-                Markup.additional_metadata.contains({"data_type": "praat markup"}),
+                Markup.additional_metadata.contains({'data_type': 'praat markup'}),
                 PublishingEntity.client_id == Markup.client_id,
                 PublishingEntity.object_id == Markup.object_id,
                 PublishingEntity.published == True,
@@ -1457,7 +1460,7 @@ def phonology(request):
                 PublishingSound.accepted == True))
 
         total_count = count_query.count()
-        task_status.set(2, 1, "Analyzing sound and markup")
+        task_status.set(2, 1, 'Analyzing sound and markup')
 
         # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations.
 
@@ -1504,7 +1507,7 @@ def phonology(request):
                     no_vowel_counter += 1
 
                     task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        "Analyzing sound and markup")
+                        'Analyzing sound and markup')
 
                     if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
                         limit and index + 1 >= limit):
@@ -1527,7 +1530,7 @@ def phonology(request):
                     exception_counter += 1
 
                     task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        "Analyzing sound and markup")
+                        'Analyzing sound and markup')
 
                     if (limit_exception and exception_counter >= limit_exception or
                         limit and index + 1 >= limit):
@@ -1549,7 +1552,7 @@ def phonology(request):
                     result_group_set.update(group_list)
 
                     task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        "Analyzing sound and markup")
+                        'Analyzing sound and markup')
 
                     if (limit_result and len(result_list) >= limit_result or
                         limit and index + 1 >= limit):
@@ -1563,13 +1566,13 @@ def phonology(request):
                 request.response.status = HTTPInternalServerError.code
 
                 task_status.set(4, 100,
-                    "Finished (ERROR), cache processing error")
+                    'Finished (ERROR), cache processing error')
 
                 return {
-                    "error": "cache processing error",
-                    "exception_counter": exception_counter,
-                    "no_vowel_counter": no_vowel_counter,
-                    "result_counter": len(result_list)}
+                    'error': 'cache processing error',
+                    'exception_counter': exception_counter,
+                    'no_vowel_counter': no_vowel_counter,
+                    'result_counter': len(result_list)}
 
             try:
                 # Getting markup, checking for each tier if it needs to be processed.
@@ -1612,7 +1615,7 @@ def phonology(request):
                     no_vowel_counter += 1
 
                     task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        "Analyzing sound and markup")
+                        'Analyzing sound and markup')
 
                     if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
                         limit and index + 1 >= limit):
@@ -1658,7 +1661,7 @@ def phonology(request):
                     format_textgrid_result(group_list, textgrid_result_list)))
 
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                    "Analyzing sound and markup")
+                    'Analyzing sound and markup')
 
                 if (limit_result and len(result_list) >= limit_result or
                     limit and index + 1 >= limit):
@@ -1700,7 +1703,7 @@ def phonology(request):
                 exception_counter += 1
 
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                    "Analyzing sound and markup")
+                    'Analyzing sound and markup')
 
                 if (limit_exception and exception_counter >= limit_exception or
                     limit and index + 1 >= limit):
@@ -1718,16 +1721,16 @@ def phonology(request):
             request.response.status = HTTPPreconditionFailed.code
 
             task_status.set(4, 100,
-                "Finished, no results produced")
+                'Finished, no results produced')
 
             return {
-                "error": "no markups for this query",
-                "exception_counter": exception_counter,
-                "no_vowel_counter": no_vowel_counter}
+                'error': 'no markups for this query',
+                'exception_counter': exception_counter,
+                'no_vowel_counter': no_vowel_counter}
 
         # Otherwise we create and then serve Excel file.
 
-        task_status.set(3, 99, "Compiling results")
+        task_status.set(3, 99, 'Compiling results')
         workbook_stream = io.BytesIO()
 
         try:
@@ -1749,21 +1752,20 @@ def phonology(request):
             request.response.status = HTTPInternalServerError.code
 
             task_status.set(4, 100,
-                "Finished (ERROR), result compilation error")
+                'Finished (ERROR), result compilation error')
 
             return {
-                "error": "result compilation error",
-                "exception_counter": exception_counter,
-                "no_vowel_counter": no_vowel_counter,
-                "result_counter": len(result_list)}
+                'error': 'result compilation error',
+                'exception_counter': exception_counter,
+                'no_vowel_counter': no_vowel_counter,
+                'result_counter': len(result_list)}
 
         # Name of the resulting file includes dictionary name, perspective name and current date.
 
         current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
         result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
-            dictionary_translation_gist.get_translation(2),
-            perspective_translation_gist.get_translation(2),
+            dictionary_name, perspective_name,
             current_datetime.year,
             current_datetime.month,
             current_datetime.day)
@@ -1771,7 +1773,7 @@ def phonology(request):
         # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for
         # Excel content-type.
 
-        task_status.set(4, 100, "Finished")
+        task_status.set(4, 100, 'Finished')
 
         response = Response(content_type =
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -1813,9 +1815,9 @@ def phonology(request):
         request.response.status = HTTPInternalServerError.code
 
         if task_status is not None:
-            task_status.set(4, 100, "Finished (ERROR), external error")
+            task_status.set(4, 100, 'Finished (ERROR), external error')
 
-        return {"error": "external error"}
+        return {'error': 'external error'}
 
 def cpu_time(reference_cpu_time = 0.0):
     """
