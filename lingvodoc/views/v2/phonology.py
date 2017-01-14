@@ -373,11 +373,22 @@ class AudioPraatLike(object):
         source_list[:padding] = 0.0
         source_list[-padding:] = 0.0
 
-        for i in range(frame_count):
+        if channel_count == 1:
+            source_list[padding:-padding] = sample_array
 
-            source_list[padding + i] = sum(
-                sample_array[i * channel_count + j]
-                  for j in range(channel_count)) / channel_count
+        elif channel_count == 2:
+
+            for i in range(frame_count):
+                source_list[padding + i] = (sample_array[i * 2] + sample_array[i * 2 + 1]) / 2.0
+
+        # General case.
+
+        else:
+            for i in range(frame_count):
+
+                source_list[padding + i] = sum(
+                    sample_array[i * channel_count + j]
+                      for j in range(channel_count)) / channel_count
 
         sample_list = numpy.fft.irfft(numpy.fft.rfft(source_list), resample_count)
 
@@ -1818,6 +1829,7 @@ def phonology(request):
             task_status.set(4, 100, 'Finished (ERROR), external error')
 
         return {'error': 'external error'}
+
 
 def cpu_time(reference_cpu_time = 0.0):
     """
