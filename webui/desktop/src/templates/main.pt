@@ -48,10 +48,13 @@
                     </a>
                     <ul class="dropdown-menu">
                         <li><a href="#/languages"><translatable str="Languages">Languages</translatable></a></li>
+                        <li role="separator" class="divider"></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/dashboard"><translatable str="My dictionaries">My dictionaries</translatable></a></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/dictionary/create"><translatable str="Create dictionary">Create dictionary</translatable></a></li>
+                        <li role="separator" class="divider"></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/corpora"><translatable str="My corpora">My corpora</translatable></a></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/corpora/create"><translatable str="Create corpus">Create corpus</translatable></a></li>
+                        <li role="separator" class="divider"></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/files"><translatable str="My files">My files</translatable></a></li>
                     </ul>
                 </li>
