@@ -89,7 +89,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   def search(): Unit = {
     load(() => {
       foundEntries = Seq[Seq[LexicalEntry]]()
-      backend.search(scope.searchQuery, None, tagsOnly = false) map { results =>
+      backend.search(scope.searchQuery, None, tagsOnly = false, Some(fieldId)) map { results =>
         foundEntries = results.map(_.lexicalEntry).groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq
         getPage(1)
       }

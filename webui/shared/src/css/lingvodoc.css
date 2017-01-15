@@ -1,6 +1,18 @@
+@font-face {
+    font-family: "Noto Sans";
+    src: url("/static/fonts/NotoSans-Regular.ttf") format('truetype');
+}
+
+@font-face {
+    font-family: "Noto Sans";
+    src: url("/static/fonts/NotoSans-Bold.ttf") format('truetype');
+    font-weight: bold;
+}
+
 .page-content {
     padding-top: 60px;
     padding-bottom: 60px;
+    font-family: "Noto Sans", sans-serif;
 }
 
 .form-signin {
