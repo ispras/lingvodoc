@@ -251,7 +251,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
 
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
+    options.templateUrl = "/static/templates/modal/publishGroupingTag.html"
     options.controller = "EditGroupingTagModalController"
     options.backdrop = false
     options.keyboard = false

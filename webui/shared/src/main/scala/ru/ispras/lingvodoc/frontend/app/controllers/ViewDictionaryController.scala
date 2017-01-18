@@ -234,7 +234,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
       options.resolve = js.Dynamic.literal(
         params = () => {
           js.Dynamic.literal(
-            "fileName" -> "phonology.xls",
+            "fileName" -> "phonology.xlsx",
             "fileType" -> "application/vnd.ms-excel",
             "blob" -> blob
           )
