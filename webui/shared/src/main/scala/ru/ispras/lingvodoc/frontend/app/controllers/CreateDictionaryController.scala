@@ -7,7 +7,7 @@ import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LanguageEdit
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.{Future, Promise}
@@ -32,6 +32,8 @@ trait CreateDictionaryScope extends Scope {
   var fields: js.Array[Field] = js.native
   var dataTypes: js.Array[TranslationGist] = js.native
   var dictionaryId: Option[CompositeId] = js.native
+  var updateDictionaryName: String = js.native
+  var updateDictionaries: js.Array[Dictionary] = js.native
   var step: Int = js.native
 }
 
@@ -40,11 +42,16 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
                                  modal: ModalService,
                                  location: Location,
                                  backend: BackendService,
+                                 userService: UserService,
                                  val timeout: Timeout,
                                  val exceptionHandler: ExceptionHandler)
   extends AbstractController[CreateDictionaryScope](scope)
     with AngularExecutionContextProvider
     with LanguageEdit {
+
+  private[this] var allDictionaries: Seq[Dictionary] = Seq[Dictionary]()
+  private[this] var selectedUpdateDictionary: Option[Dictionary] = Option.empty[Dictionary]
+
 
   // Scope initialization
   scope.locales = js.Array[Locale]()
@@ -59,18 +66,13 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
   scope.fields = js.Array[Field]()
   scope.dataTypes = js.Array[TranslationGist]()
   scope.dictionaryId = None
-
+  scope.updateDictionaryName = ""
+  scope.updateDictionaries = js.Array[Dictionary]()
   scope.step = 1
 
 
   // load data from backend
   load()
-
-//  @JSExport
-//  def getCurrentLocale(): Option[Locale] = {
-//    val localeId = Utils.getLocale().getOrElse(2)
-//    scope.locales.find(l => l.id == localeId)
-//  }
 
   @JSExport
   def getLocaleName(localeId: Int): String = {
@@ -87,9 +89,14 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
     */
   @JSExport
   def step1NextDisabled(): Boolean = {
-    scope.languageId.isEmpty || scope.names.forall(name => {
-      name.str.isEmpty
-    })
+
+    if (scope.creationMode == "update") {
+      selectedUpdateDictionary.isEmpty
+    } else {
+      scope.languageId.isEmpty || scope.names.forall(name => {
+        name.str.isEmpty
+      })
+    }
   }
 
   @JSExport
@@ -136,25 +143,25 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
   @JSExport
   def createDictionary2(): Any = {
 
-    if (scope.creationMode == "create") {
 
+    scope.creationMode match {
+      case "create" =>
+        scope.languages.find(language => language.getId == scope.languageId) match {
+          case Some(language) =>
 
-      scope.languages.find(language => language.getId == scope.languageId) match {
-        case Some(language) =>
+            backend.createDictionary(scope.names, language) map {
+              dictionaryId =>
+                scope.dictionaryId = Some(dictionaryId)
+                scope.step = 2
+            }
 
-          backend.createDictionary(scope.names, language) map {
-            dictionaryId =>
-              scope.dictionaryId = Some(dictionaryId)
-              scope.step = 2
-          }
+          case None =>
+          // TODO: Add user friendly error message
+        }
 
-        case None =>
-        // TODO: Add user friendly error message
-      }
-    } else {
-      // import sqlite dictionary
-      scope.languages.find(language => language.getId == scope.languageId) foreach { language =>
-        backend.createTranslationGist("Dictionary") map { gistId =>
+      case "import" =>
+        scope.languages.find(language => language.getId == scope.languageId) foreach { language =>
+          backend.createTranslationGist("Dictionary") map { gistId =>
             Future.sequence(scope.names.filter(_.str.nonEmpty).toSeq.map(name => backend.createTranslationAtom(gistId, name))) map { _ =>
               scope.files.find(_.getId == scope.fileId) foreach { file =>
                 backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
@@ -163,8 +170,18 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
                 }
               }
             }
+          }
         }
-      }
+
+      case "update" =>
+        scope.files.find(_.getId == scope.fileId) foreach { file =>
+          selectedUpdateDictionary.foreach { dictionary =>
+            backend.convertDialeqtDictionary(CompositeId.fromObject(file), CompositeId.fromObject(dictionary)) map { _ =>
+              scope.step = 3
+              redirectToDashboard()
+            }
+          }
+        }
     }
   }
 
@@ -322,6 +339,31 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
   @JSExport
   def availableLayers(layer: Layer): js.Array[Layer] = {
     scope.layers.filterNot(_.equals(layer)).toJSArray
+  }
+
+
+  @JSExport
+  def onUpdateDictionaryName(): Unit = {
+    scope.updateDictionaries = allDictionaries.filter(_.translation.toLowerCase.contains(scope.updateDictionaryName.toLowerCase)).take(10).toJSArray
+  }
+
+
+  @JSExport
+  def toggleUpdateDictionary(updateDictionary: Dictionary): Unit = {
+    selectedUpdateDictionary = selectedUpdateDictionary match {
+      case Some(dictionary) =>
+        if (dictionary.getId == updateDictionary.getId) {
+          None
+        } else {
+          Some(updateDictionary)
+        }
+      case None => Some(updateDictionary)
+    }
+  }
+
+  @JSExport
+  def isUpdateDictionarySelected(updateDictionary: Dictionary): Boolean = {
+    selectedUpdateDictionary.exists(_.getId == updateDictionary.getId)
   }
 
 
@@ -497,5 +539,13 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
       case Failure(_) =>
     }
 
+
+    backend.getCurrentUser map { user =>
+      val query = DictionaryQuery()
+      query.author = Some(user.id)
+      backend.getDictionaries(query) map { dictionaries =>
+        allDictionaries = dictionaries
+      }
+    }
   }
 }

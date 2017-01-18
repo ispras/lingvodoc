@@ -1757,6 +1757,25 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def convertDialeqtDictionary(fileId: CompositeId, dictionaryId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "blob_client_id" -> fileId.clientId,
+      "blob_object_id" -> fileId.objectId,
+      "dictionary_client_id" -> dictionaryId.clientId,
+      "dictionary_object_id" -> dictionaryId.objectId
+    )
+
+    $http.post(getMethodUrl("convert_dictionary_dialeqt"), req) onComplete {
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to convert dialeqt dictionary.", e))
+    }
+    p.future
+  }
+
+
+
   def corporaFields(): Future[Seq[Field]] = {
     val p = Promise[Seq[Field]]()
 
