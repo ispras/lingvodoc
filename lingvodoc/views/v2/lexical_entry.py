@@ -66,7 +66,7 @@ def view_connected_words(request):
             subreq.headers = request.headers
             try:
                 resp = request.invoke_subrequest(subreq)
-                if resp.json not in response:
+                if resp.json and resp.json not in response:
                     response.append(resp.json)
             except HTTPForbidden:
                 pass
