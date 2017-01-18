@@ -428,8 +428,10 @@ def convert_five_tiers(
                  for x in lexes if x[2].field.data_type == "Link"]
         links = links[:] + [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
                  for x in p_lexes if x[2].field.data_type == "Link"]
-        lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text"]
-        p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text"]
+        lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+        p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text" and
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         resp = translation_service_search("WiP")
         state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):

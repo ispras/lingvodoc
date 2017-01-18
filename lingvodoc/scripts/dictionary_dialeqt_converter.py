@@ -982,8 +982,10 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         if update_flag:
             audio_hashes = hashes
             markup_hashes = markups
-            lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text"]
-            p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text"]
+            lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
+                               (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+            p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text"
+                                 and (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         else:
             audio_hashes = set()
             markup_hashes = set()
