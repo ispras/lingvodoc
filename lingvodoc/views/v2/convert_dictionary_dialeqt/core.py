@@ -1,7 +1,9 @@
 from lingvodoc.scripts.dictionary_dialeqt_converter import convert_all
 from lingvodoc.queue.celery import celery
 @celery.task
-def async_convert_dictionary_new(blob_client_id,
+def async_convert_dictionary_new(dictionary_client_id,
+                                 dictionary_object_id,
+                                 blob_client_id,
                                  blob_object_id,
                                  client_id,
                                  language_client_id,
@@ -14,7 +16,9 @@ def async_convert_dictionary_new(blob_client_id,
                                  task_key,
                                  cache_kwargs):
 
-    convert_all(blob_client_id,
+    convert_all(dictionary_client_id,
+                dictionary_object_id,
+                blob_client_id,
                 blob_object_id,
                 language_client_id,
                 language_object_id,
