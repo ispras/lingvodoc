@@ -83,7 +83,7 @@ def create_dictionary(request):  # tested & in docs
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        additional_metadata = req.get('additional_metadata')
+        additional_metadata = req.get('additional_metadata', None)
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
@@ -104,8 +104,9 @@ def create_dictionary(request):  # tested & in docs
                                 state_translation_gist_client_id=state_translation_gist_client_id,
                                 parent=parent,
                                 translation_gist_client_id=translation_gist_client_id,
-                                translation_gist_object_id=translation_gist_object_id,
-                                additional_metadata=additional_metadata)
+                                translation_gist_object_id=translation_gist_object_id)
+        if additional_metadata:
+            dictionary.additional_metadata=additional_metadata
         if req.get('category'):
             if req['category'] == 'lingvodoc.ispras.ru/corpora':
                 dictionary.category = 1  # this is really wrong
