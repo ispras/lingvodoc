@@ -2002,7 +2002,7 @@ def disapprove_entity(request):
                 BaseGroup.action == 'delete').one()
             if user in group.users:
                 if entity:
-                    entity.publishingentity.published = True
+                    entity.publishingentity.published = False
                 else:
                     raise CommonException("no such entity in system")
             else:
@@ -2119,63 +2119,6 @@ def approve_outer(request):  # TODO: create test.
     request.response.status = HTTPOk.code
     return {"status": "Your dictionary is being approved."
                       " Wait 5-15 minutes."}
-
-
-@view_config(route_name='edit_dictionary', renderer='../templates/edit_dictionary.pt', request_method='GET')
-def edit_dictionary_get(request):
-    client_id = authenticated_userid(request)
-    user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
-
-    dictionary_client_id = request.matchdict.get('dictionary_client_id')
-    dictionary_object_id = request.matchdict.get('dictionary_object_id')
-    perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_object_id = request.matchdict.get('perspective_object_id')
-
-    variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
-                 'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
-                 'perspective_object_id': perspective_object_id}
-
-    return render_to_response('../templates/edit_dictionary.pt', variables, request=request)
-
-
-@view_config(route_name='view_dictionary', renderer='../templates/view_dictionary.pt', request_method='GET')
-def view_dictionary_get(request):
-    client_id = authenticated_userid(request)
-    user = get_user_by_client_id(client_id)
-
-    dictionary_client_id = request.matchdict.get('dictionary_client_id')
-    dictionary_object_id = request.matchdict.get('dictionary_object_id')
-    perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_object_id = request.matchdict.get('perspective_object_id')
-
-    variables = {'user': user, 'dictionary_client_id': dictionary_client_id,
-                 'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
-                 'perspective_object_id': perspective_object_id}
-
-    return render_to_response('../templates/view_dictionary.pt', variables, request=request)
-
-
-@view_config(route_name='publish_dictionary', renderer='../templates/publish_dictionary.pt', request_method='GET')
-def publish_dictionary_get(request):
-    client_id = authenticated_userid(request)
-    user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
-
-    dictionary_client_id = request.matchdict.get('dictionary_client_id')
-    dictionary_object_id = request.matchdict.get('dictionary_object_id')
-    perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_object_id = request.matchdict.get('perspective_object_id')
-
-    variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
-                 'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
-                 'perspective_object_id': perspective_object_id}
-
-    return render_to_response('../templates/publish_dictionary.pt', variables, request=request)
 
 
 @view_config(route_name='create_entities_bulk', renderer='json', request_method='POST', permission='create')

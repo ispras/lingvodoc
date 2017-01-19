@@ -428,8 +428,10 @@ def convert_five_tiers(
                  for x in lexes if x[2].field.data_type == "Link"]
         links = links[:] + [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
                  for x in p_lexes if x[2].field.data_type == "Link"]
-        lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text"]
-        p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text"]
+        lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+        p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text" and
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         resp = translation_service_search("WiP")
         state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -594,6 +596,8 @@ def convert_five_tiers(
             converter.parse()
             final_dicts = converter.proc()
             temp.flush()
+
+        lex_rows = {}
         for phrase in final_dicts:
             curr_dict = None
             paradigm_words = []
@@ -601,7 +605,7 @@ def convert_five_tiers(
                 if type(word_translation) is not list:
                     curr_dict = word_translation
                     mt_words = [word_translation[i][1].text for i in word_translation
-                                if len(word_translation[i]) > 1 and type(word_translation[i][1].text) is str]
+                                if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
                     main_tier_text = " ".join(mt_words)
                     if main_tier_text:
                         paradigm_words.append(elan_parser.Word(text=main_tier_text,
@@ -611,15 +615,17 @@ def convert_five_tiers(
                 else:
                     word = word_translation[0]
                     tier_name = word.tier
-                    new = " ".join([i.text for i in word_translation])
-                    paradigm_words.append(elan_parser.Word(text=new, tier=tier_name, time=word.time))
+                    new = " ".join([i.text for i in word_translation if i.text is not None])
+                    if new:
+                        paradigm_words.append(elan_parser.Word(text=new, tier=tier_name, time=word.time))
             p_match_dict = defaultdict(list)
             for pword in paradigm_words:
                 match = [x for x in p_lexes_with_text if x[2].content == pword.text]  #LEX COUNT OR RANDOM
                 for t in match:
                     if field_ids[EAF_TIERS[pword.tier]] == (t[2].field.client_id, t[2].field.object_id):
                        p_match_dict[t[1]].append(t)
-            p_match_dict = { k: v for k, v in p_match_dict.items() if len(v) >= 2 or len(v) == 1 and [x[1] for x in p_lexes_with_text].count(k) == 1}
+            p_match_dict = { k: v for k, v in p_match_dict.items() if len(v) >= 2 or len(v) == 1 and
+                             [x[1] for x in p_lexes_with_text].count(k) == 1}
             max_sim = None
             for le in p_match_dict:
                 if max_sim is None:
@@ -656,8 +662,16 @@ def convert_five_tiers(
                                           storage=storage)
                 else:
                     if other_word.text:
-                        create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids[EAF_TIERS[other_word.tier]][0], field_ids[EAF_TIERS[other_word.tier]][1],
-                            None, client, other_word.text, filename=None, storage=storage, locale_id=locale_id)
+                        create_entity(sp_lexical_entry_client_id,
+                                      sp_lexical_entry_object_id,
+                                      field_ids[EAF_TIERS[other_word.tier]][0],
+                                      field_ids[EAF_TIERS[other_word.tier]][1],
+                                      None,
+                                      client,
+                                      other_word.text,
+                                      filename=None,
+                                      storage=storage,
+                                      locale_id=locale_id)
             if not no_sound:
                 if word.time[1] < len(full_audio):
                     with tempfile.NamedTemporaryFile() as temp:
@@ -696,34 +710,55 @@ def convert_five_tiers(
             paradigm_words[:] = []
             for word in curr_dict:
                 column = [word] + curr_dict[word]
-                match_dict = defaultdict(list)
-                for crt in tuple(i for i in column):
-                    match = [x for x in lexes_with_text if x[2].content == crt.text]
-                    for t in match:
-                        if field_ids[EAF_TIERS[crt.tier]] == (t[2].field.client_id, t[2].field.object_id):
-                           match_dict[t[1]].append(t)
-                match_dict = { k: v for k, v in match_dict.items() if len(v) >= 2 or len(v) == 1 and [x[1] for x in lexes_with_text].count(k) == 1}
-                max_sim = None
-                for le in match_dict:
-                    if max_sim is None:
-                        max_sim = le
-                    else:
-                        if len(match_dict[le]) >= len(match_dict[max_sim]):
+                lex_row = tuple([x.text for x in column])
+                if not [x.text for x in column if x.text is not None]:
+                    column[:] = []
+                    continue
+                if not lex_row in lex_rows:
+                    match_dict = defaultdict(list)
+                    for crt in tuple(i for i in column):
+                        match = [x for x in lexes_with_text if x[2].content == crt.text]
+                        for t in match:
+                            if field_ids[EAF_TIERS[crt.tier]] == (t[2].field.client_id, t[2].field.object_id):
+                               match_dict[t[1]].append(t)
+                    match_dict = { k: v for k, v in match_dict.items() if len(v) >= 2 or len(v) == 1 and
+                                   [x[1] for x in lexes_with_text].count(k) == 1}
+                    max_sim = None
+                    for le in match_dict:
+                        if max_sim is None:
                             max_sim = le
-                if max_sim:
-                    fp_lexical_entry_client_id = max_sim.client_id
-                    fp_lexical_entry_object_id = max_sim.object_id
-                else:
-                    lexentr = LexicalEntry(client_id=client.id,
-                                           parent_object_id=first_perspective_object_id, parent=first_perspective)
-                    DBSession.add(lexentr)
-                    fp_lexical_entry_client_id = lexentr.client_id
-                    fp_lexical_entry_object_id = lexentr.object_id
-                for other_word in column:
+                        else:
+                            if len(match_dict[le]) >= len(match_dict[max_sim]):
+                                max_sim = le
                     if max_sim:
-                        text_and_field = (other_word.text, field_ids[EAF_TIERS[other_word.tier]])
-                        sim = [(x[2].content, (x[2].field.client_id, x[2].field.object_id)) for x in match_dict[max_sim]]
-                        if text_and_field not in sim:
+                        fp_lexical_entry_client_id = max_sim.client_id
+                        fp_lexical_entry_object_id = max_sim.object_id
+                    else:
+                        lexentr = LexicalEntry(client_id=client.id,
+                                               parent_object_id=first_perspective_object_id, parent=first_perspective)
+                        DBSession.add(lexentr)
+                        fp_lexical_entry_client_id = lexentr.client_id
+                        fp_lexical_entry_object_id = lexentr.object_id
+                    lex_rows[lex_row] = (fp_lexical_entry_client_id, fp_lexical_entry_object_id)
+                    for other_word in column:
+                        if max_sim:
+                            text_and_field = (other_word.text, field_ids[EAF_TIERS[other_word.tier]])
+                            sim = [(x[2].content, (x[2].field.client_id, x[2].field.object_id))
+                                   for x in match_dict[max_sim]]
+                            if text_and_field not in sim:
+                                if other_word.text:
+                                    create_entity(fp_lexical_entry_client_id,
+                                                  fp_lexical_entry_object_id,
+                                                  field_ids[EAF_TIERS[other_word.tier]][0],
+                                                  field_ids[EAF_TIERS[other_word.tier]][1],
+                                                  None,
+                                                  client,
+                                                  other_word.text,
+                                                  filename=None,
+                                                  storage=storage,
+                                                  locale_id=locale_id
+                                                  )
+                        else:
                             if other_word.text:
                                 create_entity(fp_lexical_entry_client_id,
                                               fp_lexical_entry_object_id,
@@ -736,19 +771,8 @@ def convert_five_tiers(
                                               storage=storage,
                                               locale_id=locale_id
                                               )
-                    else:
-                        if other_word.text:
-                            create_entity(fp_lexical_entry_client_id,
-                                          fp_lexical_entry_object_id,
-                                          field_ids[EAF_TIERS[other_word.tier]][0],
-                                          field_ids[EAF_TIERS[other_word.tier]][1],
-                                          None,
-                                          client,
-                                          other_word.text,
-                                          filename=None,
-                                          storage=storage,
-                                          locale_id=locale_id
-                                          )
+                else:
+                    fp_lexical_entry_client_id, fp_lexical_entry_object_id = lex_rows[lex_row]
                 if not no_sound:
                     if word.time[1] < len(full_audio):
                         with tempfile.NamedTemporaryFile() as temp:
@@ -838,6 +862,7 @@ def convert_five_tiers(
                                       locale_id=locale_id)
                 column[:] = []
                 match_dict.clear()
+
     return
 
 

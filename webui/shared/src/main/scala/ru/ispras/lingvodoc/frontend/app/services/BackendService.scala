@@ -973,7 +973,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       if (xhr.status == 200) {
         p.success(())
       } else {
-        p.failure(new BackendException("Failed to changed approval status"))
+        p.failure(new BackendException("Failed to change approval status"))
       }
     }
     xhr.send(JSON.stringify(req))
@@ -1507,7 +1507,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def search(query: String, perspectiveId: Option[CompositeId], tagsOnly: Boolean): Future[Seq[SearchResult]] = {
+  def search(query: String, perspectiveId: Option[CompositeId], tagsOnly: Boolean, fieldId: Option[CompositeId] = None): Future[Seq[SearchResult]] = {
     val p = Promise[Seq[SearchResult]]()
 
     var url = "basic_search?searchstring=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent(tagsOnly.toString)
@@ -1515,6 +1515,10 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     perspectiveId match {
       case Some(id) => url = url + "&perspective_client_id=" + encodeURIComponent(id.clientId.toString) + "&perspective_object_id=" + encodeURIComponent(id.objectId.toString)
       case None =>
+    }
+
+    fieldId foreach { id =>
+      url = url + "&field_client_id=" + encodeURIComponent(id.clientId.toString) + "&field_object_id=" + encodeURIComponent(id.objectId.toString)
     }
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {

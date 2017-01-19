@@ -524,6 +524,25 @@ class DictionaryPerspective(CompositeIdMixin,
             deleted_set.add((i.client_id, i.object_id))
         return deleted_set
 
+    @classmethod
+    def get_hidden(cls):
+        gist = DBSession.query(TranslationGist.client_id,
+                               TranslationGist.object_id).join(TranslationAtom) \
+            .filter(TranslationAtom.content == 'Hidden', TranslationGist.type == 'Service',
+                    TranslationAtom.locale_id == 2).first()
+        gist_client_id, gist_object_id = (gist.client_id, gist.object_id)
+        hidden = DBSession.query(DictionaryPerspective.client_id,
+                                 DictionaryPerspective.object_id).join(Dictionary).filter(
+            or_(and_(Dictionary.state_translation_gist_client_id == gist_client_id,
+                     Dictionary.state_translation_gist_object_id == gist_object_id),
+                and_(DictionaryPerspective.state_translation_gist_client_id == gist_client_id,
+                     DictionaryPerspective.state_translation_gist_object_id == gist_object_id))
+        ).all()
+        hidden_set = set()
+        for i in hidden:
+            hidden_set.add((i.client_id, i.object_id))
+        return hidden_set
+
 
 class SelfMixin(PrimeTableArgs):
     @declared_attr
@@ -690,15 +709,16 @@ class LexicalEntry(CompositeIdMixin,
         pub_filter = ""
         if publish or accept:
             if publish and accept is None:
-                pub_filter = " WHERE publishingentity.published = True "
+                pub_filter = " WHERE publishingentity.published = True and cte_expr.marked_for_deletion = False"
             elif accept and publish is None:
-                pub_filter = " WHERE publishingentity.accepted = True "
+                pub_filter = " WHERE publishingentity.accepted = True"
             elif accept and publish:
-                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True"
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True and cte_expr.marked_for_deletion = False"
             elif publish and not accept:
-                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True"
+                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True" # should not be used anywhere, just in case
             elif accept and not publish:
                 pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False"
+
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
