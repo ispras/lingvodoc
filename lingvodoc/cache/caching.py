@@ -92,9 +92,9 @@ class TaskStatus():
             if task:
                 return dill.loads(task)
             else:
-                return None
+                return TaskStatus(0, "Dummy task", "task not found", 1)
         else:
-            return None
+            return TaskStatus(0, "Dummy task", "cache failure", 1)
 
     @classmethod
     def get_user_tasks(cls, user_id, clear_out=False):
