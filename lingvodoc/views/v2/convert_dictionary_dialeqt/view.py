@@ -3,6 +3,7 @@ from pyramid.view import view_config
 from sqlite3 import connect
 from lingvodoc.models import (
     DBSession,
+    Dictionary,
     UserBlobs,
     Client,
     TranslationGist
@@ -27,19 +28,40 @@ def convert_dictionary(request):  # TODO: test
     client_id = request.authenticated_userid
     user = Client.get_user_by_client_id(client_id)
     args = dict()
+    if "dictionary_client_id" in req and "dictionary_object_id" in req:
+        args["dictionary_client_id"] = req["dictionary_client_id"]
+        args["dictionary_object_id"] = req["dictionary_object_id"]
+    else:
+        args["dictionary_client_id"] = None
+        args["dictionary_object_id"] = None
     args["client_id"] = client_id
     args['blob_client_id'] = req['blob_client_id']
     args['blob_object_id'] = req['blob_object_id']
-    args["language_client_id"] = req["language_client_id"]
-    args["language_object_id"] = req["language_object_id"]
-    args["gist_client_id"] = req["gist_client_id"]
-    args["gist_object_id"] = req["gist_object_id"]
+    if "language_client_id" in req and "language_object_id" in req:
+        args["language_client_id"] = req["language_client_id"]
+        args["language_object_id"] = req["language_object_id"]
+    else:
+        args["language_client_id"] = None
+        args["language_object_id"] = None
+    if "gist_client_id" in req and "gist_object_id" in req:
+        args["gist_client_id"] = req["gist_client_id"]
+        args["gist_object_id"] = req["gist_object_id"]
+    else:
+        args["gist_client_id"] = None
+        args["gist_object_id"] = None
     args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     args["storage"] = request.registry.settings["storage"]
     args["locale_id"] = locale_id
     args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     gist = DBSession.query(TranslationGist).filter_by(client_id=args["gist_client_id"], object_id=args["gist_object_id"]).first()
-    task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+    if gist:
+        task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+    else:
+        dictionary_obj = DBSession.query(Dictionary).filter_by(client_id=req["dictionary_client_id"],
+                                                       object_id=req["dictionary_object_id"]).first()
+        gist = DBSession.query(TranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                                                          object_id=dictionary_obj.translation_gist_object_id).first()
+        task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
     args["task_key"] = task.key
     res = async_convert_dictionary_new.delay(**args)
     log.debug("Conversion started")
