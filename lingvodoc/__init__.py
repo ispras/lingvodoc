@@ -483,6 +483,11 @@ def configure_routes(config):
     # API #PATCH
     # Publishers view: this can approve word versions.
     # "type": "leveloneentity", "leveltwoentity"
+    config.add_route(name='approve_lexical_entry', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                           '/perspective/{perspective_client_id}/{perspective_object_id}/'
+                                                           'lexical_entry/{client_id}/{object_id}/approve',
+                     factory='lingvodoc.models.PerspectivePublishAcl')
+
     # {"entity": [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>}, ] }
     config.add_route(name='approve_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                     '/perspective/{perspective_client_id}/{perspective_object_id}/approve',

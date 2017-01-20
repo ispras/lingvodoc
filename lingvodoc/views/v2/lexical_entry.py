@@ -454,7 +454,7 @@ def delete_entity(request):
                                     client_id=entry.moved_to.split("/")[0],
                                     object_id=entry.moved_to.split("/")[1])
             subreq = Request.blank(url)
-            subreq.method = 'GET'
+            subreq.method = 'DELETE'
             subreq.headers = request.headers
             return request.invoke_subrequest(subreq)
         else:
@@ -472,6 +472,24 @@ def delete_entity(request):
     return {'error': str("No such entity in the system")}
 
 
+@view_config(route_name='approve_lexical_entry', renderer='json', request_method='PATCH', permission='create')
+def approve_lexical_entry(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id,
+                                                    object_id=object_id,
+                                                    marked_for_deletion=False).first()
+    if entry:
+        entities = DBSession.query(Entity).filter_by(parent_client_id=client_id,
+                                                     parent_object_id=object_id,
+                                                     marked_for_deletion=False)
+        for entity in entities.all():
+            entity.publishingentity.published = True
+
+    request.response.status = HTTPOk.code
+    return response
 
 # TODO: completely broken!
 @view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH', permission='create')

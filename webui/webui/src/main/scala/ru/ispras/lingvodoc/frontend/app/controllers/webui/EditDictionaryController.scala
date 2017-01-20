@@ -33,7 +33,6 @@ trait EditDictionaryScope extends Scope {
   var pageCount: Int = js.native
   // total number of pages
   var dictionaryTable: DictionaryTable = js.native
-  var selectedEntries: js.Array[String] = js.native
   var pageLoaded: Boolean = js.native
 }
 
@@ -68,7 +67,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
   private[this] var perspectiveRoles: Option[PerspectiveRoles] = Option.empty[PerspectiveRoles]
-
+  private[this] var selectedEntries = Seq[String]()
 
   scope.filter = true
 
@@ -77,11 +76,11 @@ class EditDictionaryController(scope: EditDictionaryScope,
   scope.pageCount = 0
   scope.size = 20
 
-  scope.selectedEntries = js.Array[String]()
+
   scope.pageLoaded = false
 
   @JSExport
-  def filterKeypress(event: Event) = {
+  def filterKeypress(event: Event): Unit = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
     if (e.keyCode == 13) {
       val query = e.target.asInstanceOf[HTMLInputElement].value
@@ -91,7 +90,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
 
   @JSExport
-  def loadSearch(query: String) = {
+  def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
         val entries = results map (_.lexicalEntry)
@@ -100,7 +99,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
+  def viewSoundMarkup(soundValue: Value, markupValue: Value): Unit = {
 
     val soundAddress = soundValue.getContent()
 
@@ -129,7 +128,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def viewMarkup(markupValue: Value) = {
+  def viewMarkup(markupValue: Value): Unit = {
 
     backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
@@ -156,7 +155,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def getActionLink(action: String) = {
+  def getActionLink(action: String): String = {
     "#/dictionary/" +
       encodeURIComponent(dictionaryClientId.toString) + '/' +
       encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
@@ -166,23 +165,48 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def toggleSelectedEntries(id: String) = {
-    if (scope.selectedEntries.contains(id)) {
-      scope.selectedEntries = scope.selectedEntries.filterNot(_ == id)
+  def toggleSelectedEntries(id: String): Unit = {
+    if (selectedEntries.contains(id)) {
+      selectedEntries = selectedEntries.filterNot(_ == id)
     } else {
-      scope.selectedEntries.push(id)
+      selectedEntries = selectedEntries :+ id
     }
   }
 
   @JSExport
-  def mergeEntries() = {
-    val entries = scope.selectedEntries.flatMap {
+  def selectedEntriesCount(): Int = {
+    selectedEntries.length
+  }
+
+
+  @JSExport
+  def mergeEntries(): Unit = {
+    val entries = selectedEntries.flatMap {
       id => scope.dictionaryTable.rows.find(_.entry.getId == id) map (_.entry)
     }
   }
 
   @JSExport
-  def addNewLexicalEntry() = {
+  def removeEntries(): Unit = {
+    val entries = selectedEntries.flatMap {
+      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map (_.entry)
+    }
+
+    val reqs = entries.map { entry =>
+      backend.removeLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(entry))
+    }
+
+    Future.sequence(reqs) map { _ =>
+      entries.foreach { entry =>
+        scope.dictionaryTable.removeEntry(entry)
+      }
+    }
+  }
+
+
+
+  @JSExport
+  def addNewLexicalEntry(): Unit = {
     backend.createLexicalEntry(dictionaryId, perspectiveId) onComplete {
       case Success(entryId) =>
         backend.getLexicalEntry(dictionaryId, perspectiveId, entryId) onComplete {

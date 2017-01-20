@@ -892,6 +892,54 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def removeLexicalEntry(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId): Future[Unit] = {
+
+    val p = Promise[Unit]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) +
+      "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString)
+
+    $http.delete(getMethodUrl(url)) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to remove entry", e))
+    }
+    p.future
+  }
+
+
+  def approveLexicalEntry(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId): Future[Unit] = {
+
+    val p = Promise[Unit]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) +
+      "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) + "/approve"
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("PATCH", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(())
+      } else {
+        p.failure(new BackendException("Failed to approve lexical entry"))
+      }
+    }
+    xhr.send()
+
+    p.future
+  }
+
+
+
 
   def getEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Entity] = {
 
@@ -1756,6 +1804,25 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
+
+  def convertDialeqtDictionary(fileId: CompositeId, dictionaryId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "blob_client_id" -> fileId.clientId,
+      "blob_object_id" -> fileId.objectId,
+      "dictionary_client_id" -> dictionaryId.clientId,
+      "dictionary_object_id" -> dictionaryId.objectId
+    )
+
+    $http.post(getMethodUrl("convert_dictionary_dialeqt"), req) onComplete {
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to convert dialeqt dictionary.", e))
+    }
+    p.future
+  }
+
+
 
   def corporaFields(): Future[Seq[Field]] = {
     val p = Promise[Seq[Field]]()

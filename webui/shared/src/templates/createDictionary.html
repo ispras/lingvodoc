@@ -5,24 +5,30 @@
 
             <!-- First step -->
             <div ng-show="step==1">
+
+
                 <!-- List of all languages -->
-                <label for="language"><translatable str="Language">Language</translatable></label>
+                <div ng-show="creationMode != 'update'">
+                    <label for="language"><translatable str="Language">Language</translatable></label>
 
-                <select class="form-control" id="language"  ng-model="languageId">
-                    <option ng-repeat="language in languages" value="{{ language.getId }}" ng-bind-html="controller.languagePadding(language) + language.translation">
-		    </option>
-                </select>
+                    <select class="form-control" id="language"  ng-model="languageId">
+                        <option ng-repeat="language in languages" value="{{ language.getId }}" ng-bind-html="controller.languagePadding(language) + language.translation">
+                </option>
+                    </select>
 
-                <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
-                <hr>
+                    <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
+                    <hr>
+                </div>
+
 
                 <ol>
                     <li><label><input type="radio" name="mode" ng-model="creationMode" value="create"> <translatable str="Create new dictionary">Create new dictionary</translatable></label></li>
                     <li><label><input type="radio" name="mode" ng-model="creationMode" value="import"> <translatable str="Import dictionary">Import dictionary</translatable></label>
+                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="update"> <translatable str="Update dictionary">Update dictionary</translatable></label>
                     </li>
                 </ol>
 
-                <div>
+                <div ng-show="creationMode != 'update'">
 
                     <div ng-repeat="name in names">
                         <label for="localized-name-{{$index}}"
@@ -32,12 +38,26 @@
                     </div>
                 </div>
 
-                <div class="ng-hide" ng-show="creationMode == 'import'">
+                <div class="ng-hide" ng-show="creationMode == 'import' || creationMode == 'update'">
                     <label for="selectFile"><translatable str="Select uploaded file">Select uploaded file</translatable></label> (<a href="#/files"><translatable str="Upload dictionary">Upload dictionary</translatable></a>)
 
                     <select id="selectFile" ng-model="fileId" class="form-control">
                         <option ng-repeat="file in files" value="{{ file.getId }}">{{ file.name }}</option>
                     </select>
+
+
+                    <div class="ng-hide" ng-show="creationMode == 'update'">
+
+                        <label for="updateDictionaryName"><translatable str="Select dictionary">Select dictionary</translatable></label>
+                        <input type="text" id="updateDictionaryName" class="form-control" placeholder="" ng-model="updateDictionaryName" ng-change="controller.onUpdateDictionaryName()">
+
+
+                        <div ng-repeat="updateDictionary in updateDictionaries" ng-click="controller.toggleUpdateDictionary(updateDictionary)">
+                            <span class="glyphicon glyphicon-ok" ng-show="controller.isUpdateDictionarySelected(updateDictionary)"></span>
+                            {{ updateDictionary.translation }}
+                        </div>
+
+                    </div>
 
                 </div>
 

@@ -3,6 +3,8 @@
 
     <div class="col-md-4">
         <button type="button" class="btn btn-default" ng-click="controller.approveAll()">Approve all</button>
+        <button type="button" class="btn btn-default" ng-click="controller.approveEntries()" ng-disabled="controller.selectedEntriesCount() < 1">Approve</button>
+
     </div>
 
 
@@ -25,6 +27,7 @@
         <table class="table table-striped table-bordered">
             <thead>
             <tr>
+                <td></td>
                 <td ng-repeat="column in dictionaryTable.header">
                     <a ng-href="{{controller.getSortByPageLink(column.getName())}}">{{ column.getName() }}</a>
                 </td>
@@ -34,6 +37,10 @@
             <tbody>
 
             <tr ng-repeat="row in dictionaryTable.rows">
+
+                <td>
+                    <input type="checkbox" ng-checked="selectedEntries.indexOf(row.entry.getId) >= 0" ng-click="controller.toggleSelectedEntries(row.entry.getId)">
+                </td>
 
                 <td ng-repeat="cell in row.cells" ng-init="rowIndex=$parent.$index; cellIndex=$index; column=dictionaryTable.header[$index]">
 
