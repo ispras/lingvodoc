@@ -9,10 +9,37 @@
     font-weight: bold;
 }
 
+@font-face {
+    font-family: "Noto Serif";
+    src: url("/static/fonts/NotoSerif-Regular.ttf") format('truetype');
+}
+
+@font-face {
+    font-family: "Noto Serif";
+    src: url("/static/fonts/NotoSerif-Bold.ttf") format('truetype');
+    font-weight: bold;
+}
+
+
+@font-face {
+    font-family: "GentiumPlus";
+    src: url("/static/fonts/GentiumPlus-R.woff") format('woff');
+
+}
+
+@font-face {
+    font-family: "GentiumPlus";
+    src: url("/static/fonts/GentiumPlus-I.woff") format('woff');
+    font-style: italic;
+}
+
+body {
+    font-family: "Helvetica Neue", "Noto Sans", sans-serif;
+}
+
 .page-content {
     padding-top: 60px;
     padding-bottom: 60px;
-    font-family: "Noto Sans", sans-serif;
 }
 
 .form-signin {
@@ -194,8 +221,10 @@ ul.tree li {
     padding: 0 12px;
     line-height: 20px;
     background: url(../images/node.png) no-repeat;
-    color: #369;
-    font-weight: bold;
+    color: #333;
+    font-family: "GentiumPlus", sans-serif;
+    font-size: 1.3em;
+
 }
 
 ul.tree li.last {

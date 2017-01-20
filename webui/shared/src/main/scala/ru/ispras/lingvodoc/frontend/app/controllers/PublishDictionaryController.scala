@@ -58,6 +58,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
   private[this] var perspectiveRoles: Option[PerspectiveRoles] = Option.empty[PerspectiveRoles]
+  private[this] var selectedEntries = Seq[String]()
 
 
   // Current page number. Defaults to 1
@@ -80,7 +81,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
 
 
   @JSExport
-  def loadSearch(query: String) = {
+  def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
         console.log(results.toJSArray)
@@ -90,7 +91,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def getActionLink(action: String) = {
+  def getActionLink(action: String): String = {
     "#/dictionary/" +
       encodeURIComponent(dictionaryClientId.toString) + '/' +
       encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
@@ -100,7 +101,22 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
+  def toggleSelectedEntries(id: String): Unit = {
+    if (selectedEntries.contains(id)) {
+      selectedEntries = selectedEntries.filterNot(_ == id)
+    } else {
+      selectedEntries = selectedEntries :+ id
+    }
+  }
+
+  @JSExport
+  def selectedEntriesCount(): Int = {
+    selectedEntries.length
+  }
+
+
+  @JSExport
+  def viewSoundMarkup(soundValue: Value, markupValue: Value): Unit = {
 
     val soundAddress = soundValue.getContent()
 
@@ -129,7 +145,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def viewMarkup(markupValue: Value) = {
+  def viewMarkup(markupValue: Value): Unit = {
 
     backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
@@ -166,7 +182,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
@@ -197,7 +213,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def approve(entry: LexicalEntry, value: Value) = {
+  def approve(entry: LexicalEntry, value: Value): Unit = {
     val entity = value.getEntity()
     if (!entity.published) {
       backend.changedApproval(dictionaryId, perspectiveId, CompositeId
@@ -211,7 +227,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def disapprove(entry: LexicalEntry, value: Value) = {
+  def disapprove(entry: LexicalEntry, value: Value): Unit = {
     val entity = value.getEntity()
     if (entity.published) {
       backend.changedApproval(dictionaryId, perspectiveId, CompositeId
@@ -236,6 +252,26 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
         })
     }
   }
+
+  @JSExport
+  def approveEntries(): Unit = {
+    val entries = selectedEntries.flatMap {
+      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map (_.entry)
+    }
+
+    val reqs = entries.map { entry =>
+      backend.approveLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(entry))
+    }
+
+    Future.sequence(reqs) map { _ =>
+      entries.foreach { entry =>
+        entry.entities.foreach { entity =>
+          entity.published = true
+        }
+      }
+    }
+  }
+
 
   @JSExport
   def disapproveDisabled(value: Value): Boolean = {

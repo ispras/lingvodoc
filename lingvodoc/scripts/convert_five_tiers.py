@@ -596,6 +596,8 @@ def convert_five_tiers(
             converter.parse()
             final_dicts = converter.proc()
             temp.flush()
+
+        lex_rows = {}
         for phrase in final_dicts:
             curr_dict = None
             paradigm_words = []
@@ -708,39 +710,55 @@ def convert_five_tiers(
             paradigm_words[:] = []
             for word in curr_dict:
                 column = [word] + curr_dict[word]
+                lex_row = tuple([x.text for x in column])
                 if not [x.text for x in column if x.text is not None]:
                     column[:] = []
                     continue
-                match_dict = defaultdict(list)
-                for crt in tuple(i for i in column):
-                    match = [x for x in lexes_with_text if x[2].content == crt.text]
-                    for t in match:
-                        if field_ids[EAF_TIERS[crt.tier]] == (t[2].field.client_id, t[2].field.object_id):
-                           match_dict[t[1]].append(t)
-                match_dict = { k: v for k, v in match_dict.items() if len(v) >= 2 or len(v) == 1 and
-                               [x[1] for x in lexes_with_text].count(k) == 1}
-                max_sim = None
-                for le in match_dict:
-                    if max_sim is None:
-                        max_sim = le
-                    else:
-                        if len(match_dict[le]) >= len(match_dict[max_sim]):
+                if not lex_row in lex_rows:
+                    match_dict = defaultdict(list)
+                    for crt in tuple(i for i in column):
+                        match = [x for x in lexes_with_text if x[2].content == crt.text]
+                        for t in match:
+                            if field_ids[EAF_TIERS[crt.tier]] == (t[2].field.client_id, t[2].field.object_id):
+                               match_dict[t[1]].append(t)
+                    match_dict = { k: v for k, v in match_dict.items() if len(v) >= 2 or len(v) == 1 and
+                                   [x[1] for x in lexes_with_text].count(k) == 1}
+                    max_sim = None
+                    for le in match_dict:
+                        if max_sim is None:
                             max_sim = le
-                if max_sim:
-                    fp_lexical_entry_client_id = max_sim.client_id
-                    fp_lexical_entry_object_id = max_sim.object_id
-                else:
-                    lexentr = LexicalEntry(client_id=client.id,
-                                           parent_object_id=first_perspective_object_id, parent=first_perspective)
-                    DBSession.add(lexentr)
-                    fp_lexical_entry_client_id = lexentr.client_id
-                    fp_lexical_entry_object_id = lexentr.object_id
-                for other_word in column:
+                        else:
+                            if len(match_dict[le]) >= len(match_dict[max_sim]):
+                                max_sim = le
                     if max_sim:
-                        text_and_field = (other_word.text, field_ids[EAF_TIERS[other_word.tier]])
-                        sim = [(x[2].content, (x[2].field.client_id, x[2].field.object_id))
-                               for x in match_dict[max_sim]]
-                        if text_and_field not in sim:
+                        fp_lexical_entry_client_id = max_sim.client_id
+                        fp_lexical_entry_object_id = max_sim.object_id
+                    else:
+                        lexentr = LexicalEntry(client_id=client.id,
+                                               parent_object_id=first_perspective_object_id, parent=first_perspective)
+                        DBSession.add(lexentr)
+                        fp_lexical_entry_client_id = lexentr.client_id
+                        fp_lexical_entry_object_id = lexentr.object_id
+                    lex_rows[lex_row] = (fp_lexical_entry_client_id, fp_lexical_entry_object_id)
+                    for other_word in column:
+                        if max_sim:
+                            text_and_field = (other_word.text, field_ids[EAF_TIERS[other_word.tier]])
+                            sim = [(x[2].content, (x[2].field.client_id, x[2].field.object_id))
+                                   for x in match_dict[max_sim]]
+                            if text_and_field not in sim:
+                                if other_word.text:
+                                    create_entity(fp_lexical_entry_client_id,
+                                                  fp_lexical_entry_object_id,
+                                                  field_ids[EAF_TIERS[other_word.tier]][0],
+                                                  field_ids[EAF_TIERS[other_word.tier]][1],
+                                                  None,
+                                                  client,
+                                                  other_word.text,
+                                                  filename=None,
+                                                  storage=storage,
+                                                  locale_id=locale_id
+                                                  )
+                        else:
                             if other_word.text:
                                 create_entity(fp_lexical_entry_client_id,
                                               fp_lexical_entry_object_id,
@@ -753,19 +771,8 @@ def convert_five_tiers(
                                               storage=storage,
                                               locale_id=locale_id
                                               )
-                    else:
-                        if other_word.text:
-                            create_entity(fp_lexical_entry_client_id,
-                                          fp_lexical_entry_object_id,
-                                          field_ids[EAF_TIERS[other_word.tier]][0],
-                                          field_ids[EAF_TIERS[other_word.tier]][1],
-                                          None,
-                                          client,
-                                          other_word.text,
-                                          filename=None,
-                                          storage=storage,
-                                          locale_id=locale_id
-                                          )
+                else:
+                    fp_lexical_entry_client_id, fp_lexical_entry_object_id = lex_rows[lex_row]
                 if not no_sound:
                     if word.time[1] < len(full_audio):
                         with tempfile.NamedTemporaryFile() as temp:
@@ -855,6 +862,7 @@ def convert_five_tiers(
                                       locale_id=locale_id)
                 column[:] = []
                 match_dict.clear()
+
     return
 
 
