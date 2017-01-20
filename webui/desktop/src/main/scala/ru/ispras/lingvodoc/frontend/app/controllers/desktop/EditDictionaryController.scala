@@ -192,16 +192,12 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
 
     val reqs = entries.map { entry =>
-      entry.entities.toSeq.map { entity =>
-        backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), CompositeId.fromObject(entity))
-      }
-    }.foldLeft(Seq[Future[Unit]]())(_ ++ _)
+      backend.removeLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(entry))
+    }
 
-    Future.sequence(reqs) map { r =>
+    Future.sequence(reqs) map { _ =>
       entries.foreach { entry =>
-        entry.entities.foreach { entity =>
-          entity.markedForDeletion = true
-        }
+        scope.dictionaryTable.removeEntry(entry)
       }
     }
   }

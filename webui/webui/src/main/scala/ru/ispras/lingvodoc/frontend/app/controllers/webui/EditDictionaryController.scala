@@ -80,7 +80,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   scope.pageLoaded = false
 
   @JSExport
-  def filterKeypress(event: Event) = {
+  def filterKeypress(event: Event): Unit = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
     if (e.keyCode == 13) {
       val query = e.target.asInstanceOf[HTMLInputElement].value
@@ -90,7 +90,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
 
   @JSExport
-  def loadSearch(query: String) = {
+  def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
         val entries = results map (_.lexicalEntry)
@@ -99,7 +99,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
+  def viewSoundMarkup(soundValue: Value, markupValue: Value): Unit = {
 
     val soundAddress = soundValue.getContent()
 
@@ -128,7 +128,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def viewMarkup(markupValue: Value) = {
+  def viewMarkup(markupValue: Value): Unit = {
 
     backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
@@ -155,7 +155,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def getActionLink(action: String) = {
+  def getActionLink(action: String): String = {
     "#/dictionary/" +
       encodeURIComponent(dictionaryClientId.toString) + '/' +
       encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
@@ -193,16 +193,12 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
 
     val reqs = entries.map { entry =>
-      entry.entities.toSeq.map { entity =>
-        backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), CompositeId.fromObject(entity))
-      }
-    }.foldLeft(Seq[Future[Unit]]())(_ ++ _)
+      backend.removeLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(entry))
+    }
 
-    Future.sequence(reqs) map { r =>
+    Future.sequence(reqs) map { _ =>
       entries.foreach { entry =>
-        entry.entities.foreach { entity =>
-          entity.markedForDeletion = true
-        }
+        scope.dictionaryTable.removeEntry(entry)
       }
     }
   }
