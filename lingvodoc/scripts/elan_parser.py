@@ -9,11 +9,16 @@ except ImportError: from xml.etree import ElementTree
 class Word:
     def __init__(self, index=None, text=None, tier=None, time=None):
         self.index = index
-        self.text = text
+        self.text = self.strip(text)
         self.tier = tier
         self.time = time
 
-    def _print(self):
+    def strip(self, string):
+        if type(string) is str:
+            return string.strip()
+        return string
+
+    def get_tuple(self):
         return((self.index, self.text, self.tier, self.time))
 
 class Elan:
@@ -23,7 +28,6 @@ class Elan:
         self.result = collections.OrderedDict()
         self.word_tier = {}
         self.tiers = []
-        #self.tier_names = {}
         self.tier_refs = collections.defaultdict(list)
         self.word = {}
         self.main_tier_elements = []
@@ -80,35 +84,19 @@ class Elan:
     def get_word_aid(self, word):
         return word.attrib['ANNOTATION_ID']
 
-
-
     def proc(self):
-        # print(self.result)
         for tier in self.tiers:
             tier_data = self.get_annotation_data_for_tier(tier)
 
             if tier_data:
                 self.noref_tiers.append(tier)
-                # print(tier_data)
-                # print(tier)
         res = {}
         for aid in self.main_tier_elements:
             res[aid] = []
             if aid in self.result:
                 for next_id in self.result[aid]:
                     res[aid].append(next_id)
-            else:
-                pass # 1st paradigm has 1 column
-
-            # print(self.word[aid])
-            # while next_id in self.result:
-            #     print(self.result[next_id])
-            #     next_id = self.result[next_id][0]
-            #
-            #     print(self.word[next_id])
-            #     res[aid].append(next_id)
-        #print(res["a1"])
-
+            #else: 1st paradigm has 1 column
 
         perspectives = []
         ans = sorted(self.eafob.get_annotation_data_for_tier("text"), key=lambda t: t[0]) # text
@@ -124,11 +112,10 @@ class Elan:
                         if new_list:
                             perspectives2[Word(z, self.word[z], cur_tier, (t[0], t[1]))] = new_list
                     next.append(perspectives2)
-                    #print(perspectives2)
                 else:
-                    # next.append([Word(i[2] , self.word[i[2]], cur_tier, (i[0], i[1]))])
                     if cur_tier == "text":
-                        next.append([Word(i[2] , self.word[i[2]], cur_tier, (i[0], i[1])) for i in self.get_annotation_data_between_times("text", x[0], x[1])])
+                        next.append([Word(i[2] , self.word[i[2]], cur_tier, (i[0], i[1]))
+                                     for i in self.get_annotation_data_between_times("text", x[0], x[1])])
                     elif cur_tier == "literary translation":
                         for i in self.get_annotation_data_between_times("text", x[0], x[1]):
                             if i[2] in self.result:
@@ -136,21 +123,7 @@ class Elan:
                                     next.append([Word(j , self.word[j], cur_tier, (i[0], i[1])) ]) #time from text
 
             perspectives.append(next)
-        # for x in res:
-        #     print( self.word[x], [ self.word[i] for i in res[x]])
-        final_dicts = perspectives
-        # for x in final_dicts:
-        #     print("=========")
-        #     for y in x:
-        #         if type(y) == list:
-        #             for j in y:
-        #                 print(j._print())
-        #             #print(y)
-        #         else:
-        #             for j in y:
-        #                 print(j._print(), y[j][0]._print(), y[j][1]._print())
         return perspectives
-            # return perspectives
 
 
 class ElanCheck:
@@ -171,7 +144,10 @@ class ElanCheck:
                 tier_id = element.attrib['TIER_ID']
                 if 'PARENT_REF' in element.attrib:
                     tier_ref = element.attrib['PARENT_REF']
-                    self.edges.add((self.get_word_number(tier_ref), self.get_word_number(tier_id), element.attrib["LINGUISTIC_TYPE_REF"], tier_id))
+                    self.edges.add((self.get_word_number(tier_ref),
+                                    self.get_word_number(tier_id),
+                                    element.attrib["LINGUISTIC_TYPE_REF"],
+                                    tier_id))
                     self.tier_refs[tier_ref].append(tier_id)
             elif element.tag == "LINGUISTIC_TYPE":
                 at = element.attrib
@@ -208,42 +184,3 @@ class ElanCheck:
         if new_graph != graph_structure:
             return False
         return True
-
-# def main():
-#     elan_check = ElanCheck("/home/igor/objects/bible.eaf")
-#     elan_check.parse()
-#     check = elan_check.check()
-#     print(check)
-#
-#
-#     converter = Elan("/home/igor/objects/bible.eaf")
-#     #converter = Elan("/home/igor/ELAN_4.9.4/katushka3.eaf")
-#     main_tier = converter.parse()
-#     print("!!!!!!")
-#     # print(main_tier)
-#     # print(converter.tiers[0])
-#     print("!!!!!!")
-#     final_dicts = converter.proc()
-#
-#     for x in final_dicts:
-#         print("=========")
-#         for y in x:
-#             if type(y) == list:
-#                 for j in y:
-#                     print(j._print())
-#                 #print(y)
-#             else:
-#                 for j in y:
-#                     print(j._print())
-#                     for k in y[j]:
-#                         print(k._print())
-#                     #print(j._print(), y[j][0]._print(), y[j][1]._print())
-#                 #print(j._print() , y[j][0]._print() )
-#
-#
-#
-#
-#
-# if __name__ == "__main__":
-#     main()
-#
