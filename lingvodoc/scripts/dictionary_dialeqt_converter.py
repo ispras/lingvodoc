@@ -446,12 +446,13 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
         if audio_hash not in audio_hashes:
             ###filename = common_name + ".wav"
             if common_name:
-                fname = os.path.splitext(common_name)[0]
+                fname = [x for x in os.path.splitext(common_name) if x][0]
                 ext = "wav"
-                if len(os.path.splitext(common_name)) > 1:
-                    ext = os.path.splitext(common_name)[-1]
+                if len([x for x in os.path.splitext(common_name) if x]) > 1:
+                    ext = [x for x in os.path.splitext(common_name) if x][-1]
                 fname = fname.replace(".", "_")
                 filename = "%s.%s" % (fname, ext)
+                filename.replace("..", ".")
             else:
                 filename = 'noname.wav'
             audio_hashes.add(audio_hash)
@@ -464,14 +465,14 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             if lvl:
                 if common_name:
                     ext = "TextGrid"
-                    if len(os.path.splitext(common_name)) > 1:
-                        ext = os.path.splitext(common_name)[-1]
-                    fname = os.path.splitext(common_name)[0]
+                    if len([x for x in os.path.splitext(common_name) if x]) > 1:
+                        ext = [x for x in os.path.splitext(common_name) if x][-1]
+                    fname = [x for x in os.path.splitext(common_name) if x][0]
                     fname = fname.replace(".", "_")
                     filename = "%s.%s" % (fname, ext)
+                    filename.replace("..", ".")
                 else:
                     filename = 'noname.TextGrid'
-
                 markup_hashes.add(markup_hash)
                 create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[markup_field][0], fields_dict[markup_field][1],
                         sound_metadata, client, locale_id=locale_id, filename=filename, content=base64.urlsafe_b64encode(markup).decode(),  folder_name="%s_markup"%folder_name, up_lvl=lvl, storage=storage)
@@ -521,12 +522,13 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
         if audio_hash not in audio_hashes:
             ###filename = common_name + ".wav"
             if common_name:
-                fname = os.path.splitext(common_name)[0]
+                fname = [x for x in os.path.splitext(common_name) if x][0]
                 ext = "wav"
-                if len(os.path.splitext(common_name)) > 1:
-                    ext = os.path.splitext(common_name)[-1]
+                if len([x for x in os.path.splitext(common_name) if x]) > 1:
+                    ext = [x for x in os.path.splitext(common_name) if x][-1]
                 fname = fname.replace(".", "_")
                 filename = "%s.%s" % (fname, ext)
+                filename.replace("..", ".")
             else:
                 filename = 'noname.wav'
             audio_hashes.add(audio_hash)
