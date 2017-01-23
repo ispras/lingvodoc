@@ -1,6 +1,7 @@
 import logging
 from pyramid.view import view_config
 from sqlite3 import connect
+from sqlite3 import DatabaseError
 from lingvodoc.models import (
     DBSession,
     Dictionary,
@@ -95,7 +96,10 @@ def convert_dictionary_dialeqt_get_info(request):  # TODO: test
     if blob:
         filename = blob.real_storage_path
         sqconn = connect(filename)
-        dict_attributes = get_dict_attributes(sqconn)
+        try:
+            dict_attributes = get_dict_attributes(sqconn)
+        except:
+            return {'error': str("database disk image is malformed")}
         dictionary_name = dict_attributes["dictionary_name"]
         request.response.status = HTTPOk.code
         return {"dictionary_name": dictionary_name}
