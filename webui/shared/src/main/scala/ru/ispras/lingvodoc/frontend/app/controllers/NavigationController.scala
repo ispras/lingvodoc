@@ -25,7 +25,6 @@ class NavigationController(scope: NavigationScope,
                            rootScope: RootScope,
                            backend: BackendService,
                            userService: UserService,
-                           interval: Interval,
                            val timeout: Timeout,
                            val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
 
@@ -83,6 +82,14 @@ class NavigationController(scope: NavigationScope,
     }
   }
 
+
+  private[this] def loadTasks(): Unit = {
+    backend.tasks map { tasks =>
+      scope.tasks = tasks.sortBy(_.taskFamily).toJSArray
+    }
+    timeout(loadTasks _, 10000)
+  }
+
   backend.getLocales map { locales =>
       scope.locales = locales.toJSArray
       scope.selectedLocale = locales.find(_.id == scope.locale) match {
@@ -91,10 +98,5 @@ class NavigationController(scope: NavigationScope,
       }
   }
 
-  interval(() => {
-    // gel list of tasks
-    backend.tasks map { tasks =>
-      scope.tasks = tasks.sortBy(_.taskFamily).toJSArray
-    }
-  }, 3000)
+  loadTasks()
 }

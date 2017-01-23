@@ -56,8 +56,6 @@ class CreateCorpusController(scope: CreateCorpusScope,
   scope.fileId = ""
   scope.creationMode = "create"
   scope.layers = js.Array[Layer]()
-  //scope.fields = js.Array[Field]()
-  //scope.dataTypes = js.Array[TranslationGist]()
   scope.dictionaryId = None
 
   scope.step = 1
