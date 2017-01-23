@@ -652,21 +652,11 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         if author is not None:
             for word in author.split(","):
                 if word:
-                    if word[0] == " ":
-                        authors_set.add(word[1:])
-                    elif word[-1] == " ":
-                        authors_set.add(word[:-1])
-                    else:
-                        authors_set.add(word)
+                    authors_set.add(word.strip())
         if coauthors is not None:
             for word in coauthors.split(","):
                 if word:
-                    if word[0] == " ":
-                        authors_set.add(word[1:])
-                    elif word[-1] == " ":
-                        authors_set.add(word[:-1])
-                    else:
-                        authors_set.add(word)
+                    authors_set.add(word.strip())
         authors_string = ", ".join(authors_set)
         if authors_string:
             perspective_metadata = {"authors": {"type": "authors", "content": authors_string}}
@@ -815,14 +805,12 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             new_authors_set = set()
                             for old_word in old_authors_str.split(","):
                                 if old_word:
-                                    old_word = old_word.strip()
-                                    new_authors_set.add(old_word)
+                                    new_authors_set.add(old_word.strip())
                             old_authors_set = new_authors_set.copy()
                             for author in authors_set:
                                 if not author in new_authors_set:
                                     if author:
-                                        author = author.strip()
-                                        new_authors_set.add(author)
+                                        new_authors_set.add(author.strip())
                             if new_authors_set != old_authors_set:
                                 new_authors_string = ", ".join(new_authors_set)
                                 first_perspective.additional_metadata["authors"]["content"] = new_authors_string
@@ -838,14 +826,12 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             new_authors_set = set()
                             for old_word in old_authors_str.split(","):
                                 if old_word:
-                                    old_word = old_word.strip()
-                                    new_authors_set.add(old_word)
+                                    new_authors_set.add(old_word.strip())
                             old_authors_set = new_authors_set.copy()
                             for author in authors_set:
                                 if not author in new_authors_set:
                                     if author:
-                                        author = author.strip()
-                                        new_authors_set.add(author)
+                                        new_authors_set.add(author.strip())
                             if new_authors_set != old_authors_set:
                                 new_authors_string = ", ".join(new_authors_set)
                                 second_perspective.additional_metadata["authors"]["content"] = new_authors_string
