@@ -2,7 +2,6 @@
 import os
 import sqlite3
 import base64
-import json
 import hashlib
 import random
 import string
@@ -16,19 +15,6 @@ from sqlalchemy import create_engine
 from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.orm import (
-    scoped_session,
-    sessionmaker
-)
-
-from pyramid.paster import (
-    get_appsettings,
-    )
-
-from pyramid.httpexceptions import (
-    HTTPNotFound,
-    HTTPOk
-)
 
 from lingvodoc.cache.caching import TaskStatus
 
@@ -192,10 +178,8 @@ def translationgist_contents(translationgist):
 def create_field(translation_gist_client_id, translation_gist_object_id, data_type_translation_gist_client_id,
                  data_type_translation_gist_object_id, client):
     try:
-
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
         field = Field(client_id=client.id, ###
                                             data_type_translation_gist_client_id=data_type_translation_gist_client_id,
                                             data_type_translation_gist_object_id=data_type_translation_gist_object_id,
@@ -209,7 +193,6 @@ def create_field(translation_gist_client_id, translation_gist_object_id, data_ty
         return {'object_id': field.object_id,
                 'client_id': field.client_id}
     except KeyError as e:
-
         return {'error': str(e)}
 
 
@@ -240,12 +223,11 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids, po
 
 def update_perspective_fields(req, perspective_client_id, perspective_object_id, client):
     response = dict()
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
+                                                                   object_id=perspective_object_id).first()
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-
-
     if perspective and not perspective.marked_for_deletion:
         try:
             link_gist = DBSession.query(TranslationGist)\
@@ -260,7 +242,7 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
             .filter_by(parent=perspective)\
             .all()
         DBSession.flush()
-        #for field in fields: ## ?
+        #for field in fields:
         #    DBSession.delete(field)
         if not int(len(fields)):
             position = 1
@@ -271,12 +253,9 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
                                     upper_level=None,
                                     link_ids=link_ids, position=position)
                 position += 1
-
         return response
     else:
         return {'error': str("No such perspective in the system")}
-
-
 
 
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
@@ -319,10 +298,7 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content= None, filename=None,
-                  link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):  # tested
-    log = logging.getLogger(__name__)
-    ##print(content)
-    log.setLevel(logging.DEBUG)
+                  link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):
     parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
     if not parent:
         return {'error': str("No such lexical entry in the system")}
@@ -352,13 +328,8 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                         locale_id=locale_id,
                         #additional_metadata=additional_metadata,
                         parent=parent)
-
     if upper_level:
         entity.upper_level = upper_level
-
-    hash = None
-    real_location = None
-    url = None
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
         ##entity.data_type = data_type
         real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
@@ -366,38 +337,37 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         old_meta = entity.additional_metadata
         need_hash = True
         if old_meta:
-            new_meta = old_meta #json.loads(old_meta)
+            new_meta = old_meta
             if new_meta.get('hash'):
                 need_hash = False
         if need_hash:
             hash = hashlib.sha224(base64.urlsafe_b64decode(content)).hexdigest()
             hash_dict = {'hash': hash}
             if old_meta:
-                new_meta = old_meta #json.loads(old_meta)
+                new_meta = old_meta
                 new_meta.update(hash_dict)
             else:
                 new_meta = hash_dict
-            entity.additional_metadata = new_meta #json.dumps(new_meta)
+            entity.additional_metadata = new_meta
         old_meta = entity.additional_metadata
         if data_type == "markup":
             data_type_dict = {"data_type": "praat markup"}
             if old_meta:
-                new_meta = old_meta #json.loads(old_meta)
+                new_meta = old_meta
                 new_meta.update(data_type_dict)
             else:
                 new_meta = data_type_dict
-            entity.additional_metadata = new_meta #json.dumps(new_meta)
+            entity.additional_metadata = new_meta
         if data_type == "sound":
             data_type_dict = {"data_type": "sound"}
             if old_meta:
-                new_meta = old_meta #json.loads(old_meta)
+                new_meta = old_meta
                 new_meta.update(data_type_dict)
             else:
                 new_meta = data_type_dict
-            entity.additional_metadata = new_meta #json.dumps(new_meta)
+            entity.additional_metadata = new_meta
     elif data_type == 'link':
         try:
-            pass
             entity.link_client_id = link_client_id
             entity.link_object_id = link_object_id
         except (KeyError, TypeError):
@@ -406,11 +376,10 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         entity.content = content
     entity.publishingentity.accepted = True
     DBSession.add(entity)
-    #log.debug(filename)
     return (entity.client_id, entity.object_id)
 
-def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                             client_id, is_a_regular_form, client, storage, locale_id=2):
+def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes,
+                             folder_name, client_id, is_a_regular_form, client, storage, locale_id=2):
     log = logging.getLogger(__name__)
     sound_field = "Sound"
     markup_field = "Markup"
@@ -418,9 +387,8 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
         sound_field = "Sounds of Paradigmatic forms"
     if "Paradigm Markup" in fields_dict:
         markup_field = "Paradigm Markup"
-
-    markup__without_audio_sequence = []
-    audio_sequence = []
+    markup_counter = 0
+    audio_counter = 0
     for cursor in sound_and_markup_cursor:
         lvl = None
         blob_id = cursor[0]
@@ -437,72 +405,73 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
         sound_metadata = {}
         if blob_description is not None:
             sound_metadata.update({"blob_description": blob_description, "original_filename": common_name})
-        #print(audio, markup)
         if not audio or not markup:
             continue
         sound_ids.add(word_id)
         audio_hash = hashlib.sha224(audio).hexdigest()
         markup_hash = hashlib.sha224(markup).hexdigest()
         if audio_hash not in audio_hashes:
-            ###filename = common_name + ".wav"
             if common_name:
-                fname = [x for x in os.path.splitext(common_name) if x][0]
-                ext = "wav"
-                if len([x for x in os.path.splitext(common_name) if x]) > 1:
-                    ext = [x for x in os.path.splitext(common_name) if x][-1]
+                fname, ext = os.path.splitext(common_name)
+                ext = ext.replace(".", "").replace(" ", "")
                 fname = fname.replace(".", "_")
+                if not ext:
+                    ext = "wav"
                 filename = "%s.%s" % (fname, ext)
-                filename.replace("..", ".")
             else:
                 filename = 'noname.wav'
-            audio_hashes.add(audio_hash)
-            audio_sequence.append((ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
-                                    None, client, filename, audio))
-            lvl = create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
-                                sound_metadata, client, locale_id=locale_id, filename=filename, content=base64.urlsafe_b64encode(audio).decode(), folder_name="%s_sounds"%folder_name, storage=storage)
-            #markup_hashes.add(markup_hash)
+            audio_counter += 1
+            lvl = create_entity(ids_map[int(word_id)][0],
+                                ids_map[int(word_id)][1],
+                                fields_dict[sound_field][0],
+                                fields_dict[sound_field][1],
+                                sound_metadata,
+                                client,
+                                locale_id=locale_id,
+                                filename=filename,
+                                content=base64.urlsafe_b64encode(audio).decode(),
+                                folder_name="%s_sounds"%folder_name,
+                                storage=storage)
         if markup and markup_hash not in markup_hashes:
             if lvl:
                 if common_name:
-                    ext = "TextGrid"
-                    if len([x for x in os.path.splitext(common_name) if x]) > 1:
-                        ext = [x for x in os.path.splitext(common_name) if x][-1]
-                    fname = [x for x in os.path.splitext(common_name) if x][0]
+                    fname, ext = os.path.splitext(common_name)
+                    ext = ext.replace(".", "").replace(" ", "")
                     fname = fname.replace(".", "_")
+                    if not ext:
+                        ext = "TextGrid"
                     filename = "%s.%s" % (fname, ext)
-                    filename.replace("..", ".")
                 else:
                     filename = 'noname.TextGrid'
                 markup_hashes.add(markup_hash)
-                create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[markup_field][0], fields_dict[markup_field][1],
-                        sound_metadata, client, locale_id=locale_id, filename=filename, content=base64.urlsafe_b64encode(markup).decode(),  folder_name="%s_markup"%folder_name, up_lvl=lvl, storage=storage)
-                markup__without_audio_sequence.append((audio_hash, markup_hash))
-
-            if len(markup__without_audio_sequence) > 50:
+                create_entity(ids_map[int(word_id)][0],
+                              ids_map[int(word_id)][1],
+                              fields_dict[markup_field][0],
+                              fields_dict[markup_field][1],
+                              sound_metadata,
+                              client,
+                              locale_id=locale_id,
+                              filename=filename,
+                              content=base64.urlsafe_b64encode(markup).decode(),
+                              folder_name="%s_markup"%folder_name,
+                              up_lvl=lvl,
+                              storage=storage)
+                markup_counter += 1
+            if markup_counter > 50:
                 DBSession.flush()
-        if len(audio_sequence) > 50:
+        if audio_counter > 50:
             DBSession.flush()
-            audio_sequence = []
-            if len(markup__without_audio_sequence) > 50:
+            audio_counter = 0
+            if markup_counter > 50:
                 DBSession.flush()
-    if len(audio_sequence) != 0:
-        DBSession.flush()
-        audio_sequence = []
-    if len(markup__without_audio_sequence) != 0:
-        DBSession.flush()
+    DBSession.flush()
 
 def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
                  client_id, is_a_regular_form, client, storage, locale_id=2):
-    log = logging.getLogger(__name__)
     sound_field = "Sound"
-    markup_field = "Markup"
     if "Sounds of Paradigmatic forms" in fields_dict:
         sound_field = "Sounds of Paradigmatic forms"
-    if "Paradigm Markup" in fields_dict:
-        markup_field = "Paradigm Markup"
-
-    markup__without_audio_sequence = []
-    audio_sequence = []
+    audio_counter = 0
     for cursor in sound_and_markup_cursor:
         blob_id = cursor[0]
         description_type = int(cursor[5])
@@ -520,34 +489,33 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
         sound_ids.add(word_id)
         audio_hash = hashlib.sha224(audio).hexdigest()
         if audio_hash not in audio_hashes:
-            ###filename = common_name + ".wav"
             if common_name:
-                fname = [x for x in os.path.splitext(common_name) if x][0]
-                ext = "wav"
-                if len([x for x in os.path.splitext(common_name) if x]) > 1:
-                    ext = [x for x in os.path.splitext(common_name) if x][-1]
+                fname, ext = os.path.splitext(common_name)
+                ext = ext.replace(".", "").replace(" ", "")
                 fname = fname.replace(".", "_")
+                if not ext:
+                    ext = "wav"
                 filename = "%s.%s" % (fname, ext)
-                filename.replace("..", ".")
             else:
                 filename = 'noname.wav'
             audio_hashes.add(audio_hash)
-            audio_sequence.append((ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
-                                    None, client, filename, audio))
-            lvl = create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
-                    sound_metadata, client, locale_id=locale_id, filename=filename, content=base64.urlsafe_b64encode(audio).decode(),  folder_name="%s_sounds"%folder_name, storage=storage)
-            if len(markup__without_audio_sequence) > 50:
-                DBSession.flush()
-        if len(audio_sequence) > 50:
+            audio_counter += 1
+            lvl = create_entity(ids_map[int(word_id)][0],
+                                ids_map[int(word_id)][1],
+                                fields_dict[sound_field][0],
+                                fields_dict[sound_field][1],
+                                sound_metadata,
+                                client,
+                                locale_id=locale_id,
+                                filename=filename,
+                                content=base64.urlsafe_b64encode(audio).decode(),
+                                folder_name="%s_sounds" % folder_name,
+                                storage=storage)
+        if audio_counter > 50:
             DBSession.flush()
-            audio_sequence = []
-            if len(markup__without_audio_sequence) > 50:
-                DBSession.flush()
-    if len(audio_sequence) != 0:
-        DBSession.flush()
-        audio_sequence = []
-    if len(markup__without_audio_sequence) != 0:
-        DBSession.flush()
+            audio_counter = 0
+    DBSession.flush()
+
 
 
 
@@ -590,8 +558,7 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
 def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage,
                    locale_id, task_status):
     log = logging.getLogger(__name__)
-    from lingvodoc.cache.caching import CACHE
-    #log.setLevel(logging.DEBUG)
+    #from lingvodoc.cache.caching import CACHE
     task_status.set(1, 1, "Preparing")
     hashes = set()
     markups = set()
@@ -599,7 +566,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
     field_ids = {}
     with transaction.manager:
         blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
-        # DBSession.flush()
         filename = blob.real_storage_path
         log.debug("client_id: %s" % client_id)
         log.debug("Starting convert_one")
@@ -613,8 +579,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             log.debug("ERROR")
-
-
         all_fieldnames = ("Markup",
                           "Paradigm Markup",
                           "Word",
@@ -635,8 +599,9 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                       and_(Field.translation_gist_object_id == TranslationGist.object_id,
                            Field.translation_gist_client_id == TranslationGist.client_id))\
                 .join(TranslationGist.translationatom)
+            #todo: a way to find this fields if wwe cannot use one
             field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                                 TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
+                                                 TranslationAtom.content == name).one()
             field_ids[name] = (field.client_id, field.object_id)
         fp_fields = ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")
         sp_fields = ("Word of Paradigmatic forms",
@@ -653,12 +618,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             update_flag = True
         dict_attributes = get_dict_attributes(sqconn)
         if not update_flag:
-            parent_client_id = gist_client_id
-            parent_object_id = gist_object_id
-
-            parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-
-            lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
+            lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id,
+                                                              object_id=language_object_id).first()
 
             resp = translation_service_search("WiP")
             state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
@@ -677,12 +638,12 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             dictionary_object_id = dictionary.object_id
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
                 new_group = Group(parent=base,
-                                  subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
+                                  subject_object_id=dictionary.object_id,
+                                  subject_client_id=dictionary.client_id)
                 if user not in new_group.users:
                     new_group.users.append(user)
                 DBSession.add(new_group)
                 DBSession.flush()
-
         perspective_metadata = {"authors": {"type": "authors", "content": ""}}
         authors = sqconn.cursor()
         authors.execute("select dict_author, dict_coauthors from dict_attributes  where id=1;")
@@ -691,26 +652,16 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         if author is not None:
             for word in author.split(","):
                 if word:
-                    if word[0] == " ":
-                        authors_set.add(word[1:])
-                    elif word[-1] == " ":
-                        authors_set.add(word[:-1])
-                    else:
-                        authors_set.add(word)
+                    authors_set.add(word.strip())
         if coauthors is not None:
             for word in coauthors.split(","):
                 if word:
-                    if word[0] == " ":
-                        authors_set.add(word[1:])
-                    elif word[-1] == " ":
-                        authors_set.add(word[:-1])
-                    else:
-                        authors_set.add(word)
+                    authors_set.add(word.strip())
         authors_string = ", ".join(authors_set)
         if authors_string:
             perspective_metadata = {"authors": {"type": "authors", "content": authors_string}}
-
-        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
+                                                       object_id=dictionary_object_id).first()
         if not parent:
             return {'error': str("No such dictionary in the system")}
         if not update_flag:
@@ -738,7 +689,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
-                                  subject_object_id=first_perspective.object_id, subject_client_id=first_perspective.client_id)
+                                  subject_object_id=first_perspective.object_id,
+                                  subject_client_id=first_perspective.client_id)
                 if user not in new_group.users:
                     new_group.users.append(user)
                 if owner not in new_group.users:
@@ -747,15 +699,12 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 DBSession.flush()
             first_perspective_client_id = first_perspective.client_id
             first_perspective_object_id = first_perspective.object_id
-
             """
             # SECOND PERSPECTIVE
             """
             task_status.set(4, 12, "Handling paradigms perspective")
             resp = translation_service_search_all("Paradigms")
             persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
-
-
             second_perspective = DictionaryPerspective(client_id=client.id, ### variables['auth']
                                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                                 state_translation_gist_client_id=state_translation_gist_client_id,
@@ -773,7 +722,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
-                                  subject_object_id=second_perspective.object_id, subject_client_id=second_perspective.client_id)
+                                  subject_object_id=second_perspective.object_id,
+                                  subject_client_id=second_perspective.client_id)
                 if user not in new_group.users:
                     new_group.users.append(user)
                 if owner not in new_group.users:
@@ -784,7 +734,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         else:
             first_perspective = None
             second_perspective = None
-            for perspective in DBSession.query(DictionaryPerspective).filter_by(parent=parent, marked_for_deletion=False):
+            for perspective in DBSession.query(DictionaryPerspective).filter_by(parent=parent,
+                                                                                marked_for_deletion=False):
                 structure = set()
                 fields = DBSession.query(DictionaryPerspectiveToField)\
                             .filter_by(parent=perspective)\
@@ -808,6 +759,9 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                        LexicalEntry.client_id==Entity.parent_client_id))
                 first_perspective_client_id = first_perspective.client_id
                 first_perspective_object_id = first_perspective.object_id
+            else:
+                task_status.set(None, -1, "Conversion failed")
+                return {}
             p_lexes = []
             if second_perspective:
                 p_lexes = DBSession.query(DictionaryPerspective, LexicalEntry, Entity)\
@@ -819,26 +773,29 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                        LexicalEntry.client_id==Entity.parent_client_id))
                 second_perspective_client_id = second_perspective.client_id
                 second_perspective_object_id = second_perspective.object_id
+            else:
+                task_status.set(None, -1, "Conversion failed")
+                return task_status.set(None, -1, "Conversion failed")
             hashes = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Sound"]
-            hashes = hashes[:] + [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Sound"]
+            hashes = hashes[:] + \
+                     [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Sound"]
             hashes = set(hashes)
             markups = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Markup"]
-            markups = markups[:] + [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Markup"]
+            markups = markups[:] + \
+                      [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Markup"]
             markups = set(markups)
             links = [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
                      for x in lexes if x[2].field.data_type == "Link"]
             links = links[:] + [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
                      for x in p_lexes if x[2].field.data_type == "Link"]
-            resp = translation_service_search("WiP")
-            state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):  # TODO: check it
                 new_group = Group(parent=base,
-                                  subject_object_id=dictionary_object_id, subject_client_id=dictionary_client_id)
+                                  subject_object_id=dictionary_object_id,
+                                  subject_client_id=dictionary_client_id)
                 if user not in new_group.users:
                     new_group.users.append(user)
                 DBSession.add(new_group)
                 DBSession.flush()
-
             if first_perspective.additional_metadata:
                 old_meta = first_perspective.additional_metadata
                 if authors_set:
@@ -848,26 +805,15 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             new_authors_set = set()
                             for old_word in old_authors_str.split(","):
                                 if old_word:
-                                    if old_word[0] == " ":
-                                        new_authors_set.add(old_word[1:])
-                                    elif old_word[-1] == " ":
-                                        new_authors_set.add(old_word[:-1])
-                                    else:
-                                        new_authors_set.add(old_word)
+                                    new_authors_set.add(old_word.strip())
                             old_authors_set = new_authors_set.copy()
                             for author in authors_set:
                                 if not author in new_authors_set:
                                     if author:
-                                        if author[0] == " ":
-                                            new_authors_set.add(author[1:])
-                                        elif author[-1] == " ":
-                                            new_authors_set.add(author[:-1])
-                                        else:
-                                            new_authors_set.add(author)
+                                        new_authors_set.add(author.strip())
                             if new_authors_set != old_authors_set:
                                 new_authors_string = ", ".join(new_authors_set)
                                 first_perspective.additional_metadata["authors"]["content"] = new_authors_string
-
             else:
                 first_perspective.additional_metadata = perspective_metadata
             flag_modified(first_perspective, 'additional_metadata')
@@ -880,26 +826,15 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             new_authors_set = set()
                             for old_word in old_authors_str.split(","):
                                 if old_word:
-                                    if old_word[0] == " ":
-                                        new_authors_set.add(old_word[1:])
-                                    elif old_word[-1] == " ":
-                                        new_authors_set.add(old_word[:-1])
-                                    else:
-                                        new_authors_set.add(old_word)
+                                    new_authors_set.add(old_word.strip())
                             old_authors_set = new_authors_set.copy()
                             for author in authors_set:
                                 if not author in new_authors_set:
                                     if author:
-                                        if author[0] == " ":
-                                            new_authors_set.add(author[1:])
-                                        elif author[-1] == " ":
-                                            new_authors_set.add(author[:-1])
-                                        else:
-                                            new_authors_set.add(author)
+                                        new_authors_set.add(author.strip())
                             if new_authors_set != old_authors_set:
                                 new_authors_string = ", ".join(new_authors_set)
                                 second_perspective.additional_metadata["authors"]["content"] = new_authors_string
-
             else:
                 second_perspective.additional_metadata = perspective_metadata
             flag_modified(second_perspective, 'additional_metadata')
@@ -975,9 +910,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             sp_fields_dict[fieldname] = (field_ids[fieldname][0], field_ids[fieldname][1])
         sp_fields_dict["Paradigm Markup"] = (field_ids["Paradigm Markup"][0], field_ids["Paradigm Markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
-        columns = ("word", "Transcription", "translation")
-
-
         ###################
         ## Entities
         ###################
@@ -991,12 +923,10 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         else:
             audio_hashes = set()
             markup_hashes = set()
-
         ###################
         ## Lexical entries
         ###################
         ids_mapping = {}
-        #select id.dictionary as id1,
         sqcursor = sqconn.cursor()
         sqcursor.execute("""select
                   id,
@@ -1012,8 +942,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             translation = row[3]
             if update_flag:
                 match_dict = defaultdict(list)
-                #match = [x for x in lexes if x[2].content == word]
-
                 for lex in lexes_with_text:
                     if lex[2].content == word:
                         if field_ids["Word"] == (lex[2].field.client_id, lex[2].field.object_id):
@@ -1024,7 +952,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     if lex[2].content == translation:
                         if field_ids["Translation"] == (lex[2].field.client_id, lex[2].field.object_id):
                             match_dict[lex[1]].append(lex)
-                match_dict = { k: v for k, v in match_dict.items() if len(v) >= 2 or len(v) == 1 and [x[1] for x in lexes_with_text].count(k) == 1}
+                match_dict = { k: v for k, v in match_dict.items()
+                               if len(v) >= 2 or len(v) == 1 and [x[1] for x in lexes_with_text].count(k) == 1}
                 max_sim = None
                 for le in match_dict:
                     if max_sim is None:
@@ -1037,14 +966,35 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     lexical_entry_object_id = max_sim.object_id
                     sim = [x[2].content for x in match_dict[max_sim]]
                     if not word in sim and word:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Word"][0], fp_fields_dict["Word"][1],
-                            None, client, word, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      fp_fields_dict["Word"][0],
+                                      fp_fields_dict["Word"][1],
+                                      None,
+                                      client,
+                                      word,
+                                      filename=None,
+                                      storage=storage)
                     if not transcription in sim and transcription:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Transcription"][0], fp_fields_dict["Transcription"][1],
-                            None, client, transcription, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      fp_fields_dict["Transcription"][0],
+                                      fp_fields_dict["Transcription"][1],
+                                      None,
+                                      client,
+                                      transcription,
+                                      filename=None,
+                                      storage=storage)
                     if not translation in sim and translation:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Translation"][0], fp_fields_dict["Translation"][1],
-                            None, client, translation, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      fp_fields_dict["Translation"][0],
+                                      fp_fields_dict["Translation"][1],
+                                      None,
+                                      client,
+                                      translation,
+                                      filename=None,
+                                      storage=storage)
                 else:
                     lexentr = LexicalEntry( client_id=client.id,
                                            parent_object_id=first_perspective_object_id, parent=first_perspective)
@@ -1052,29 +1002,72 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     lexical_entry_client_id = lexentr.client_id
                     lexical_entry_object_id = lexentr.object_id
                     if word:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Word"][0], fp_fields_dict["Word"][1],
-                            None, client, word, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      fp_fields_dict["Word"][0],
+                                      fp_fields_dict["Word"][1],
+                                      None,
+                                      client,
+                                      word,
+                                      filename=None,
+                                      storage=storage)
                     if transcription:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Transcription"][0], fp_fields_dict["Transcription"][1],
-                            None, client, transcription, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      fp_fields_dict["Transcription"][0],
+                                      fp_fields_dict["Transcription"][1],
+                                      None,
+                                      client,
+                                      transcription,
+                                      filename=None,
+                                      storage=storage)
                     if translation:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Translation"][0], fp_fields_dict["Translation"][1],
-                            None, client, translation, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      fp_fields_dict["Translation"][0],
+                                      fp_fields_dict["Translation"][1],
+                                      None,
+                                      client,
+                                      translation,
+                                      filename=None,
+                                      storage=storage)
             else:
-                lexentr = LexicalEntry( client_id=client.id,
-                                       parent_object_id=first_perspective_object_id, parent=first_perspective)
+                lexentr = LexicalEntry(client_id=client.id,
+                                       parent_object_id=first_perspective_object_id,
+                                       parent=first_perspective)
                 DBSession.add(lexentr)
                 lexical_entry_client_id = lexentr.client_id
                 lexical_entry_object_id = lexentr.object_id
                 if word:
-                    create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Word"][0], fp_fields_dict["Word"][1],
-                        None, client, word, filename=None, storage=storage)
+                    create_entity(lexical_entry_client_id,
+                                  lexical_entry_object_id,
+                                  fp_fields_dict["Word"][0],
+                                  fp_fields_dict["Word"][1],
+                                  None,
+                                  client,
+                                  word,
+                                  filename=None,
+                                  storage=storage)
                 if transcription:
-                    create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Transcription"][0], fp_fields_dict["Transcription"][1],
-                        None, client, transcription, filename=None, storage=storage)
+                    create_entity(lexical_entry_client_id,
+                                  lexical_entry_object_id,
+                                  fp_fields_dict["Transcription"][0],
+                                  fp_fields_dict["Transcription"][1],
+                                  None,
+                                  client,
+                                  transcription,
+                                  filename=None,
+                                  storage=storage)
                 if translation:
-                    create_entity(lexical_entry_client_id, lexical_entry_object_id, fp_fields_dict["Translation"][0], fp_fields_dict["Translation"][1],
-                        None, client, translation, filename=None, storage=storage)
+                    create_entity(lexical_entry_client_id,
+                                  lexical_entry_object_id,
+                                  fp_fields_dict["Translation"][0],
+                                  fp_fields_dict["Translation"][1],
+                                  None,
+                                  client,
+                                  translation,
+                                  filename=None,
+                                  storage=storage)
             ids_mapping[wordid] = (lexical_entry_client_id, lexical_entry_object_id)
         ###################
         ## Paradigms
@@ -1088,9 +1081,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                   regular_form
                   from dictionary
             where dictionary.is_a_regular_form=0""")
-
         for row in sqcursor:
-            #lvl = None
             wordid = row[0]
             word = row[1]
             transcription = row[2]
@@ -1099,16 +1090,19 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             if update_flag:
                 p_match_dict = defaultdict(list)
                 for lex in p_lexes_with_text:
-                    if lex[2].content == word:
-                        if field_ids["Word of Paradigmatic forms"] == (lex[2].field.client_id, lex[2].field.object_id):
+                    entity = lex[2]
+                    field_ids = (entity.field.client_id, entity.field.object_id)
+                    if entity.content == word:
+                        if field_ids["Word of Paradigmatic forms"] == field_ids:
                             p_match_dict[lex[1]].append(lex)
-                    if lex[2].content == transcription:
-                        if field_ids["Transcription of Paradigmatic forms"] == (lex[2].field.client_id, lex[2].field.object_id):
+                    if entity.content == transcription:
+                        if field_ids["Transcription of Paradigmatic forms"] == field_ids:
                             p_match_dict[lex[1]].append(lex)
-                    if lex[2].content == translation:
-                        if field_ids["Translation of Paradigmatic forms"] == (lex[2].field.client_id, lex[2].field.object_id):
+                    if entity.content == translation:
+                        if field_ids["Translation of Paradigmatic forms"] == field_ids:
                             p_match_dict[lex[1]].append(lex)
-                p_match_dict = { k: v for k, v in p_match_dict.items() if len(v) >= 2 or len(v) == 1 and [x[1] for x in p_lexes_with_text].count(k) == 1}
+                p_match_dict = { k: v for k, v in p_match_dict.items()
+                                 if len(v) >= 2 or len(v) == 1 and [x[1] for x in p_lexes_with_text].count(k) == 1}
                 max_sim = None
                 for le in p_match_dict:
                     if max_sim is None:
@@ -1121,50 +1115,110 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     lexical_entry_object_id = max_sim.object_id
                     sim = [x[2].content for x in p_match_dict[max_sim]]
                     if not word in sim and word:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Word of Paradigmatic forms"][0], sp_fields_dict["Word of Paradigmatic forms"][1],
-                            None, client, word, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      sp_fields_dict["Word of Paradigmatic forms"][0],
+                                      sp_fields_dict["Word of Paradigmatic forms"][1],
+                                      None,
+                                      client,
+                                      word,
+                                      filename=None,
+                                      storage=storage)
                     if not transcription in sim and transcription:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Transcription of Paradigmatic forms"][0], sp_fields_dict["Transcription of Paradigmatic forms"][1],
-                            None, client, transcription, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      sp_fields_dict["Transcription of Paradigmatic forms"][0],
+                                      sp_fields_dict["Transcription of Paradigmatic forms"][1],
+                                      None,
+                                      client,
+                                      transcription,
+                                      filename=None,
+                                      storage=storage)
                     if not translation in sim and translation:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Translation of Paradigmatic forms"][0], sp_fields_dict["Translation of Paradigmatic forms"][1],
-                            None, client, translation, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      sp_fields_dict["Translation of Paradigmatic forms"][0],
+                                      sp_fields_dict["Translation of Paradigmatic forms"][1],
+                                      None,
+                                      client,
+                                      translation,
+                                      filename=None,
+                                      storage=storage)
                 else:
-                    lexentr = LexicalEntry( client_id=client.id,
-                                           parent_object_id=second_perspective_object_id, parent=second_perspective)
+                    lexentr = LexicalEntry(client_id=client.id,
+                                           parent_object_id=second_perspective_object_id,
+                                           parent=second_perspective)
                     DBSession.add(lexentr)
                     lexical_entry_client_id = lexentr.client_id
                     lexical_entry_object_id = lexentr.object_id
                     if word:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Word of Paradigmatic forms"][0], sp_fields_dict["Word of Paradigmatic forms"][1],
-                            None, client, word, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      sp_fields_dict["Word of Paradigmatic forms"][0],
+                                      sp_fields_dict["Word of Paradigmatic forms"][1],
+                                      None,
+                                      client,
+                                      word,
+                                      filename=None,
+                                      storage=storage)
                     if transcription:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Transcription of Paradigmatic forms"][0], sp_fields_dict["Transcription of Paradigmatic forms"][1],
-                            None, client, transcription, filename=None, storage=storage)
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      sp_fields_dict["Transcription of Paradigmatic forms"][0],
+                                      sp_fields_dict["Transcription of Paradigmatic forms"][1],
+                                      None,
+                                      client,
+                                      transcription,
+                                      filename=None,
+                                      storage=storage)
                     if translation:
-                        create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Translation of Paradigmatic forms"][0], sp_fields_dict["Translation of Paradigmatic forms"][1],
-                            None, client, translation, filename=None, storage=storage)
-
+                        create_entity(lexical_entry_client_id,
+                                      lexical_entry_object_id,
+                                      sp_fields_dict["Translation of Paradigmatic forms"][0],
+                                      sp_fields_dict["Translation of Paradigmatic forms"][1],
+                                      None,
+                                      client,
+                                      translation,
+                                      filename=None,
+                                      storage=storage)
             else:
-                lexentr = LexicalEntry( client_id=client.id,
-                                       parent_object_id=second_perspective_object_id, parent=second_perspective)
+                lexentr = LexicalEntry(client_id=client.id,
+                                       parent_object_id=second_perspective_object_id,
+                                       parent=second_perspective)
                 DBSession.add(lexentr)
                 lexical_entry_client_id = lexentr.client_id
                 lexical_entry_object_id = lexentr.object_id
                 if word:
-                    create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Word of Paradigmatic forms"][0], sp_fields_dict["Word of Paradigmatic forms"][1],
-                        None, client, word, filename=None, storage=storage)
+                    create_entity(lexical_entry_client_id,
+                                  lexical_entry_object_id,
+                                  sp_fields_dict["Word of Paradigmatic forms"][0],
+                                  sp_fields_dict["Word of Paradigmatic forms"][1],
+                                  None,
+                                  client,
+                                  word,
+                                  filename=None,
+                                  storage=storage)
                 if transcription:
-                    create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Transcription of Paradigmatic forms"][0], sp_fields_dict["Transcription of Paradigmatic forms"][1],
-                        None, client, transcription, filename=None, storage=storage)
+                    create_entity(lexical_entry_client_id,
+                                  lexical_entry_object_id,
+                                  sp_fields_dict["Transcription of Paradigmatic forms"][0],
+                                  sp_fields_dict["Transcription of Paradigmatic forms"][1],
+                                  None,
+                                  client,
+                                  transcription,
+                                  filename=None,
+                                  storage=storage)
                 if translation:
-                    create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Translation of Paradigmatic forms"][0], sp_fields_dict["Translation of Paradigmatic forms"][1],
-                        None, client, translation, filename=None, storage=storage)
+                    create_entity(lexical_entry_client_id,
+                                  lexical_entry_object_id,
+                                  sp_fields_dict["Translation of Paradigmatic forms"][0],
+                                  sp_fields_dict["Translation of Paradigmatic forms"][1],
+                                  None,
+                                  client,
+                                  translation,
+                                  filename=None,
+                                  storage=storage)
             ids_mapping[wordid] = lexical_entry_client_id, lexical_entry_object_id
-            #print(word, translation)
-            # LE
-
-            #if fp_id in ids_mapping:
             if regular_form in ids_mapping:
                 if update_flag:
                     if max_sim:
@@ -1172,18 +1226,50 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                         fp_le_ids = (lexical_entry_client_id, lexical_entry_object_id)
                         sp_le_ids = (sp_le_client_id, sp_le_object_id)
                         if not (sp_le_ids, fp_le_ids) in links:
-                            create_entity(sp_le_client_id, sp_le_object_id, fp_fields_dict["Backref"][0], fp_fields_dict["Backref"][1],
-                                None, client, filename=None, link_client_id=lexical_entry_client_id, link_object_id=lexical_entry_object_id, storage=storage)
-                            create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Backref"][0], sp_fields_dict["Backref"][1],
-                                None, client, filename=None, link_client_id=sp_le_client_id, link_object_id=sp_le_object_id, storage=storage)
+                            create_entity(sp_le_client_id,
+                                          sp_le_object_id,
+                                          fp_fields_dict["Backref"][0],
+                                          fp_fields_dict["Backref"][1],
+                                          None,
+                                          client,
+                                          filename=None,
+                                          link_client_id=lexical_entry_client_id,
+                                          link_object_id=lexical_entry_object_id,
+                                          storage=storage)
+                            create_entity(lexical_entry_client_id,
+                                          lexical_entry_object_id,
+                                          sp_fields_dict["Backref"][0],
+                                          sp_fields_dict["Backref"][1],
+                                          None,
+                                          client,
+                                          filename=None,
+                                          link_client_id=sp_le_client_id,
+                                          link_object_id=sp_le_object_id,
+                                          storage=storage)
                 else:
                     sp_le_client_id, sp_le_object_id = ids_mapping[regular_form]
                     fp_le_ids = (lexical_entry_client_id, lexical_entry_object_id)
                     sp_le_ids = (sp_le_client_id, sp_le_object_id)
-                    create_entity(sp_le_client_id, sp_le_object_id, fp_fields_dict["Backref"][0], fp_fields_dict["Backref"][1],
-                        None, client, filename=None, link_client_id=lexical_entry_client_id, link_object_id=lexical_entry_object_id, storage=storage)
-                    create_entity(lexical_entry_client_id, lexical_entry_object_id, sp_fields_dict["Backref"][0], sp_fields_dict["Backref"][1],
-                        None, client, filename=None, link_client_id=sp_le_client_id, link_object_id=sp_le_object_id, storage=storage)
+                    create_entity(sp_le_client_id,
+                                  sp_le_object_id,
+                                  fp_fields_dict["Backref"][0],
+                                  fp_fields_dict["Backref"][1],
+                                  None,
+                                  client,
+                                  filename=None,
+                                  link_client_id=lexical_entry_client_id,
+                                  link_object_id=lexical_entry_object_id,
+                                  storage=storage)
+                    create_entity(lexical_entry_client_id,
+                                  lexical_entry_object_id,
+                                  sp_fields_dict["Backref"][0],
+                                  sp_fields_dict["Backref"][1],
+                                  None,
+                                  client,
+                                  filename=None,
+                                  link_client_id=sp_le_client_id,
+                                  link_object_id=sp_le_object_id,
+                                  storage=storage)
         # if req.get('is_translatable', None):
         #         field.is_translatable = bool(req['is_translatable'])
         DBSession.flush()
@@ -1207,8 +1293,16 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                 and dictionary.is_a_regular_form=1;""")
 
         folder_name = "lexical_entry"
-        upload_audio_with_markup(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
-                                 client_id, True, client, storage)
+        upload_audio_with_markup(audio_ids,
+                                 ids_mapping,
+                                 fp_fields_dict,
+                                 sound_and_markup_word_cursor,
+                                 audio_hashes, markup_hashes,
+                                 folder_name,
+                                 client_id,
+                                 True,
+                                 client,
+                                 storage)
         sound_and_markup_word_cursor = sqconn.cursor()
         sound_and_markup_word_cursor.execute("""select blobs.id,
                                                 blobs.secblob,
@@ -1221,8 +1315,18 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                 where dict_blobs_description.blobid=blobs.id
                                                 and dict_blobs_description.wordid=dictionary.id
                                                 and dictionary.is_a_regular_form=1;""")
-        upload_audio(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
-                     client_id, True, client, storage, locale_id=locale_id)
+        upload_audio(audio_ids,
+                     ids_mapping,
+                     fp_fields_dict,
+                     sound_and_markup_word_cursor,
+                     audio_hashes,
+                     markup_hashes,
+                     folder_name,
+                     client_id,
+                     True,
+                     client,
+                     storage,
+                     locale_id=locale_id)
         task_status.set(8, 70, "Uploading sounds and markups")
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
@@ -1236,11 +1340,19 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                     where dict_blobs_description.blobid=blobs.id
                                                     and dict_blobs_description.wordid=dictionary.id
                                                     and dictionary.is_a_regular_form=0;""")
-
-
         folder_name = "paradigm"
-        upload_audio_with_markup(paradigm_audio_ids, ids_mapping, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                                 client_id, True, client, storage, locale_id=locale_id)
+        upload_audio_with_markup(paradigm_audio_ids,
+                                 ids_mapping,
+                                 sp_fields_dict,
+                                 paradigm_sound_and_markup_cursor,
+                                 audio_hashes,
+                                 markup_hashes,
+                                 folder_name,
+                                 client_id,
+                                 True,
+                                 client,
+                                 storage,
+                                 locale_id=locale_id)
         task_status.set(8, 80, "Uploading sounds and markups")
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
@@ -1254,8 +1366,17 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                     where dict_blobs_description.blobid=blobs.id
                                                     and dict_blobs_description.wordid=dictionary.id
                                                     and dictionary.is_a_regular_form=0;""")
-        upload_audio(paradigm_audio_ids, ids_mapping, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                     client_id, True, client, storage)
+        upload_audio(paradigm_audio_ids,
+                     ids_mapping,
+                     sp_fields_dict,
+                     paradigm_sound_and_markup_cursor,
+                     audio_hashes,
+                     markup_hashes,
+                     folder_name,
+                     client_id,
+                     True,
+                     client,
+                     storage)
         """
         Etimology_tag
         """
@@ -1274,35 +1395,32 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     "field_object_id": field_ids["Etymology"][1],
                     "connections": [{"client_id": client_id, "object_id": object_id}]}
             create_group_entity(item, client, user)
-            # status = session.post(connect_url, json=item)
-            # log.debug(status.text)
-
         task_status.set(10, 100, "Finished", "")
-        dictionary = {}
-        return dictionary
+        return {}
 
-
-def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, sqlalchemy_url, storage, locale_id, task_key, cache_kwargs):
+def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
+                language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
+                sqlalchemy_url, storage, locale_id, task_key, cache_kwargs):
     log = logging.getLogger(__name__)
-    #log.setLevel(logging.DEBUG)
     time.sleep(3)
-    from lingvodoc.cache.caching import CACHE
+    #from lingvodoc.cache.caching import CACHE
     from lingvodoc.cache.caching import initialize_cache
     initialize_cache(cache_kwargs)
     task_status = TaskStatus.get_from_cache(task_key)
     try:
         engine = create_engine(sqlalchemy_url)
         DBSession.configure(bind=engine)
-        status = convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage, locale_id, task_status)
+        status = convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
+                                language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
+                                storage, locale_id, task_status)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)
         task_status.set(None, -1, "Conversion failed")
         raise
     log.debug(status)
-    log.debug('we are the champions')
+    log.debug('Finished')
     return status
-
 
 if __name__ == "__main__":
     log = logging.getLogger(__name__)
