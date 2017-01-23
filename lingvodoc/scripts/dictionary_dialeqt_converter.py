@@ -815,22 +815,14 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             new_authors_set = set()
                             for old_word in old_authors_str.split(","):
                                 if old_word:
-                                    if old_word[0] == " ":
-                                        new_authors_set.add(old_word[1:])
-                                    elif old_word[-1] == " ":
-                                        new_authors_set.add(old_word[:-1])
-                                    else:
-                                        new_authors_set.add(old_word)
+                                    old_word = old_word.strip()
+                                    new_authors_set.add(old_word)
                             old_authors_set = new_authors_set.copy()
                             for author in authors_set:
                                 if not author in new_authors_set:
                                     if author:
-                                        if author[0] == " ":
-                                            new_authors_set.add(author[1:])
-                                        elif author[-1] == " ":
-                                            new_authors_set.add(author[:-1])
-                                        else:
-                                            new_authors_set.add(author)
+                                        author = author.strip()
+                                        new_authors_set.add(author)
                             if new_authors_set != old_authors_set:
                                 new_authors_string = ", ".join(new_authors_set)
                                 first_perspective.additional_metadata["authors"]["content"] = new_authors_string
@@ -846,22 +838,14 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             new_authors_set = set()
                             for old_word in old_authors_str.split(","):
                                 if old_word:
-                                    if old_word[0] == " ":
-                                        new_authors_set.add(old_word[1:])
-                                    elif old_word[-1] == " ":
-                                        new_authors_set.add(old_word[:-1])
-                                    else:
-                                        new_authors_set.add(old_word)
+                                    old_word = old_word.strip()
+                                    new_authors_set.add(old_word)
                             old_authors_set = new_authors_set.copy()
                             for author in authors_set:
                                 if not author in new_authors_set:
                                     if author:
-                                        if author[0] == " ":
-                                            new_authors_set.add(author[1:])
-                                        elif author[-1] == " ":
-                                            new_authors_set.add(author[:-1])
-                                        else:
-                                            new_authors_set.add(author)
+                                        author = author.strip()
+                                        new_authors_set.add(author)
                             if new_authors_set != old_authors_set:
                                 new_authors_string = ", ".join(new_authors_set)
                                 second_perspective.additional_metadata["authors"]["content"] = new_authors_string
