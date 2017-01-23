@@ -9,10 +9,12 @@ from lingvodoc.models import (
     Client,
     TranslationGist
 )
-
+from lingvodoc.exceptions import CommonException
 from pyramid.httpexceptions import (
     HTTPOk,
-    HTTPNotFound
+    HTTPNotFound,
+    HTTPBadRequest,
+    HTTPConflict
 )
 
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
@@ -23,53 +25,62 @@ log = logging.getLogger(__name__)
 
 @view_config(route_name='convert_dictionary_dialeqt', renderer='json', request_method='POST')
 def convert_dictionary(request):  # TODO: test
-    # TODO: make checks for params
-    req = request.json_body
-    locale_id = int(request.cookies.get('locale_id') or 2)
-    client_id = request.authenticated_userid
-    user = Client.get_user_by_client_id(client_id)
-    args = dict()
-    if "dictionary_client_id" in req and "dictionary_object_id" in req:
-        args["dictionary_client_id"] = req["dictionary_client_id"]
-        args["dictionary_object_id"] = req["dictionary_object_id"]
-    else:
-        args["dictionary_client_id"] = None
-        args["dictionary_object_id"] = None
-    args["client_id"] = client_id
-    args['blob_client_id'] = req['blob_client_id']
-    args['blob_object_id'] = req['blob_object_id']
-    if "language_client_id" in req and "language_object_id" in req:
-        args["language_client_id"] = req["language_client_id"]
-        args["language_object_id"] = req["language_object_id"]
-    else:
-        args["language_client_id"] = None
-        args["language_object_id"] = None
-    if "gist_client_id" in req and "gist_object_id" in req:
-        args["gist_client_id"] = req["gist_client_id"]
-        args["gist_object_id"] = req["gist_object_id"]
-    else:
-        args["gist_client_id"] = None
-        args["gist_object_id"] = None
-    args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
-    args["storage"] = request.registry.settings["storage"]
-    args["locale_id"] = locale_id
-    args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-    gist = DBSession.query(TranslationGist).filter_by(client_id=args["gist_client_id"], object_id=args["gist_object_id"]).first()
-    if gist:
-        task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
-    else:
-        dictionary_obj = DBSession.query(Dictionary).filter_by(client_id=req["dictionary_client_id"],
-                                                       object_id=req["dictionary_object_id"]).first()
-        gist = DBSession.query(TranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
-                                                          object_id=dictionary_obj.translation_gist_object_id).first()
-        task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
-    args["task_key"] = task.key
-    res = async_convert_dictionary_new.delay(**args)
-    log.debug("Conversion started")
-    request.response.status = HTTPOk.code
-    return {"status": "Your dictionary is being converted."
-                      " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
-
+    try:
+        req = request.json_body
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        client_id = request.authenticated_userid
+        user = Client.get_user_by_client_id(client_id)
+        args = dict()
+        if "dictionary_client_id" in req and "dictionary_object_id" in req:
+            args["dictionary_client_id"] = req["dictionary_client_id"]
+            args["dictionary_object_id"] = req["dictionary_object_id"]
+        else:
+            args["dictionary_client_id"] = None
+            args["dictionary_object_id"] = None
+        args["client_id"] = client_id
+        args['blob_client_id'] = req['blob_client_id']
+        args['blob_object_id'] = req['blob_object_id']
+        if "language_client_id" in req and "language_object_id" in req:
+            args["language_client_id"] = req["language_client_id"]
+            args["language_object_id"] = req["language_object_id"]
+        else:
+            args["language_client_id"] = None
+            args["language_object_id"] = None
+        if "gist_client_id" in req and "gist_object_id" in req:
+            args["gist_client_id"] = req["gist_client_id"]
+            args["gist_object_id"] = req["gist_object_id"]
+        else:
+            args["gist_client_id"] = None
+            args["gist_object_id"] = None
+        args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
+        args["storage"] = request.registry.settings["storage"]
+        args["locale_id"] = locale_id
+        args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+        gist = DBSession.query(TranslationGist).filter_by(client_id=args["gist_client_id"], object_id=args["gist_object_id"]).first()
+        try:
+            if gist:
+                task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+            else:
+                dictionary_obj = DBSession.query(Dictionary).filter_by(client_id=req["dictionary_client_id"],
+                                                               object_id=req["dictionary_object_id"]).first()
+                gist = DBSession.query(TranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                                                                  object_id=dictionary_obj.translation_gist_object_id).first()
+                task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+        except:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "wrong parameters"}
+        args["task_key"] = task.key
+        res = async_convert_dictionary_new.delay(**args)
+        log.debug("Conversion started")
+        request.response.status = HTTPOk.code
+        return {"status": "Your dictionary is being converted."
+                          " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
 
 def get_dict_attributes(sqconn):
     dict_trav = sqconn.cursor()
