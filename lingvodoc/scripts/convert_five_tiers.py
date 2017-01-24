@@ -16,26 +16,21 @@ from sqlalchemy import and_
 from lingvodoc.models import (
     Client,
     DBSession,
-    UserBlobs,
     TranslationAtom,
     TranslationGist,
     Field,
     Entity,
     LexicalEntry,
     Dictionary,
-    Language,
     User,
     DictionaryPerspectiveToField,
     DictionaryPerspective,
     BaseGroup,
-    Group,
-    PublishingEntity
+    Group
 
 )
-from pyramid.httpexceptions import (
-    HTTPError
-)
-
+from pyramid.httpexceptions import HTTPError
+from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.scripts import elan_parser
 
 EAF_TIERS = {
@@ -208,9 +203,6 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content= None, filename=None,
                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):
-    # return ##DBG
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
     parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
     if not parent:
         return {'error': str("No such lexical entry in the system")}
@@ -288,26 +280,23 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     entity.publishingentity.accepted = True
 
     DBSession.add(entity)
-    #log.debug(filename)
     return (entity.client_id, entity.object_id)
 
 
 def convert_five_tiers(
                 dictionary_client_id,
                 dictionary_object_id,
-                user_id,
+                client_id,
                 origin_client_id,
                 origin_object_id,
                 sqlalchemy_url,
                 storage,
                 eaf_url,
+                task_status,
                 locale_id,
                 sound_url=None
                 ):
-
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-
+    task_status.set(1, 1, "Preparing")
     no_sound = True
     if sound_url:
         no_sound = False
@@ -330,12 +319,14 @@ def convert_five_tiers(
 
     field_ids = {}
     with transaction.manager:
-        client = DBSession.query(Client).filter_by(id=user_id).first()
-
+        client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                           user_id)
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
+                           client_id)
+        user = client.user
+        if not user:
+            log.debug("ERROR")
+            return {}
         all_fieldnames = ("Markup",
                           "Paradigm Markup",
                           "Word",
@@ -349,6 +340,7 @@ def convert_five_tiers(
                           "Translation of Paradigmatic forms",
                           "Sounds of Paradigmatic forms"
                          )
+        task_status.set(2, 5, "Checking fields")
         for name in all_fieldnames:
             data_type_query = DBSession.query(Field) \
                 .join(TranslationGist,
@@ -368,8 +360,6 @@ def convert_five_tiers(
         fp_structure = set([field_ids[x] for x in fp_fields])
         sp_structure = set([field_ids[x] for x in sp_fields])
         DBSession.flush()
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
                               subject_object_id=dictionary_object_id, subject_client_id=dictionary_client_id)
@@ -441,10 +431,10 @@ def convert_five_tiers(
                 new_group.users.append(user)
             DBSession.add(new_group)
             DBSession.flush()
-
         """
         # FIRST PERSPECTIVE
         """
+        task_status.set(3, 8, "Handling words perspective")
         if first_perspective is None:
             resp = translation_service_search_all("Lexical Entries")
             persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
@@ -478,6 +468,7 @@ def convert_five_tiers(
         """
         # SECOND PERSPECTIVE
         """
+        task_status.set(4, 12, "Handling paradigms perspective")
         resp = translation_service_search_all("Paradigms")
         persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
         if second_perspective is None:
@@ -506,6 +497,7 @@ def convert_five_tiers(
             if owner not in new_group.users:
                 new_group.users.append(owner)
             DBSession.add(new_group)
+
         second_perspective_client_id = second_perspective.client_id
         second_perspective_object_id = second_perspective.object_id
 
@@ -595,9 +587,8 @@ def convert_five_tiers(
             converter = elan_parser.Elan(temp.name)
             converter.parse()
             final_dicts = converter.proc()
-            temp.flush()
-
         lex_rows = {}
+        task_status.set(8, 60, "Uploading sounds and words")
         for phrase in final_dicts:
             curr_dict = None
             paradigm_words = []
@@ -863,7 +854,7 @@ def convert_five_tiers(
                 column[:] = []
                 match_dict.clear()
 
-    return
+    task_status.set(10, 100, "Finished", "")
 
 
 
@@ -872,27 +863,39 @@ def convert_five_tiers(
 
 def convert_all(dictionary_client_id,
                 dictionary_object_id,
-                user_id,
                 client_id,
-                object_id,
+                origin_client_id,
+                origin_object_id,
                 sqlalchemy_url,
                 storage,
                 eaf_url,
                 locale_id,
+                task_key,
+                cache_kwargs,
                 sound_url=None
                 ):
+    from lingvodoc.cache.caching import initialize_cache
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
-    convert_five_tiers(
-                dictionary_client_id,
-                dictionary_object_id,
-                user_id,
-                client_id,
-                object_id,
-                sqlalchemy_url,
-                storage,
-                eaf_url,
-                locale_id,
-                sound_url
-                )
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
+    try:
+        convert_five_tiers(
+                    dictionary_client_id,
+                    dictionary_object_id,
+                    client_id,
+                    origin_client_id,
+                    origin_object_id,
+                    sqlalchemy_url,
+                    storage,
+                    eaf_url,
+                    task_status,
+                    locale_id,
+                    sound_url
+                    )
+    except Exception as e:
+        log.error("Converting failed")
+        log.error(e.__traceback__)
+        task_status.set(None, -1, "Conversion failed")
+        raise
     DBSession.flush()

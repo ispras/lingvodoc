@@ -15,7 +15,6 @@ from sqlalchemy import create_engine
 from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
-
 from lingvodoc.cache.caching import TaskStatus
 
 from lingvodoc.models import (
@@ -576,9 +575,10 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            client_id)
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        user = client.user
         if not user:
             log.debug("ERROR")
+            return {}
         all_fieldnames = ("Markup",
                           "Paradigm Markup",
                           "Word",
@@ -616,7 +616,11 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         update_flag = False
         if dictionary_client_id is not None and dictionary_object_id is not None:
             update_flag = True
-        dict_attributes = get_dict_attributes(sqconn)
+        try:
+            dict_attributes = get_dict_attributes(sqconn)
+        except:
+            task_status.set(None, -1, "Conversion failed: database disk image is malformed")
+            return {}
         if not update_flag:
             lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id,
                                                               object_id=language_object_id).first()
@@ -760,7 +764,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 first_perspective_client_id = first_perspective.client_id
                 first_perspective_object_id = first_perspective.object_id
             else:
-                task_status.set(None, -1, "Conversion failed")
+                task_status.set(None, -1, "Conversion failed: Lexical Entries perspective not found")
                 return {}
             p_lexes = []
             if second_perspective:
@@ -774,8 +778,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 second_perspective_client_id = second_perspective.client_id
                 second_perspective_object_id = second_perspective.object_id
             else:
-                task_status.set(None, -1, "Conversion failed")
-                return task_status.set(None, -1, "Conversion failed")
+                task_status.set(None, -1, "Conversion failed: Paradigms perspective not found")
+                return {}
             hashes = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Sound"]
             hashes = hashes[:] + \
                      [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Sound"]
@@ -880,7 +884,11 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         """
         sp_fields_dict = {}
         fields_list = []
-        sp_field_names = ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Backref")
+        sp_field_names = ("Word of Paradigmatic forms",
+                          "Transcription of Paradigmatic forms",
+                          "Translation of Paradigmatic forms",
+                          "Sounds of Paradigmatic forms",
+                          "Backref")
         for fieldname in sp_field_names: #
             if fieldname == "Backref":
                 fields_list.append(
@@ -1276,60 +1284,36 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         """
         Sound and Markup
         """
-        audio_ids = set()
-        paradigm_audio_ids = set()
-        sound_and_markup_word_cursor = sqconn.cursor()
-        task_status.set(8, 60, "Uploading sounds and markups")
-        sound_and_markup_word_cursor.execute("""select blobs.id,
-                                                blobs.secblob,
-                                                blobs.mainblob,
-                                                dict_blobs_description.name,
-                                                dictionary.id,
-                                                dict_blobs_description.type,
-                                                dict_blobs_description.description
-                                                from blobs, dict_blobs_description, dictionary
-                                                where dict_blobs_description.blobid=blobs.id
-                                                and dict_blobs_description.wordid=dictionary.id
-                                                and dictionary.is_a_regular_form=1;""")
+        try:
+            audio_ids = set()
+            paradigm_audio_ids = set()
+            sound_and_markup_word_cursor = sqconn.cursor()
+            task_status.set(8, 60, "Uploading sounds and markups")
+            sound_and_markup_word_cursor.execute("""select blobs.id,
+                                                    blobs.secblob,
+                                                    blobs.mainblob,
+                                                    dict_blobs_description.name,
+                                                    dictionary.id,
+                                                    dict_blobs_description.type,
+                                                    dict_blobs_description.description
+                                                    from blobs, dict_blobs_description, dictionary
+                                                    where dict_blobs_description.blobid=blobs.id
+                                                    and dict_blobs_description.wordid=dictionary.id
+                                                    and dictionary.is_a_regular_form=1;""")
 
-        folder_name = "lexical_entry"
-        upload_audio_with_markup(audio_ids,
-                                 ids_mapping,
-                                 fp_fields_dict,
-                                 sound_and_markup_word_cursor,
-                                 audio_hashes, markup_hashes,
-                                 folder_name,
-                                 client_id,
-                                 True,
-                                 client,
-                                 storage)
-        sound_and_markup_word_cursor = sqconn.cursor()
-        sound_and_markup_word_cursor.execute("""select blobs.id,
-                                                blobs.secblob,
-                                                blobs.mainblob,
-                                                dict_blobs_description.name,
-                                                dictionary.id,
-                                                dict_blobs_description.type,
-                                                dict_blobs_description.description
-                                                from blobs, dict_blobs_description, dictionary
-                                                where dict_blobs_description.blobid=blobs.id
-                                                and dict_blobs_description.wordid=dictionary.id
-                                                and dictionary.is_a_regular_form=1;""")
-        upload_audio(audio_ids,
-                     ids_mapping,
-                     fp_fields_dict,
-                     sound_and_markup_word_cursor,
-                     audio_hashes,
-                     markup_hashes,
-                     folder_name,
-                     client_id,
-                     True,
-                     client,
-                     storage,
-                     locale_id=locale_id)
-        task_status.set(8, 70, "Uploading sounds and markups")
-        paradigm_sound_and_markup_cursor = sqconn.cursor()
-        paradigm_sound_and_markup_cursor.execute("""select blobs.id,
+            folder_name = "lexical_entry"
+            upload_audio_with_markup(audio_ids,
+                                     ids_mapping,
+                                     fp_fields_dict,
+                                     sound_and_markup_word_cursor,
+                                     audio_hashes, markup_hashes,
+                                     folder_name,
+                                     client_id,
+                                     True,
+                                     client,
+                                     storage)
+            sound_and_markup_word_cursor = sqconn.cursor()
+            sound_and_markup_word_cursor.execute("""select blobs.id,
                                                     blobs.secblob,
                                                     blobs.mainblob,
                                                     dict_blobs_description.name,
@@ -1339,44 +1323,72 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                     from blobs, dict_blobs_description, dictionary
                                                     where dict_blobs_description.blobid=blobs.id
                                                     and dict_blobs_description.wordid=dictionary.id
-                                                    and dictionary.is_a_regular_form=0;""")
-        folder_name = "paradigm"
-        upload_audio_with_markup(paradigm_audio_ids,
-                                 ids_mapping,
-                                 sp_fields_dict,
-                                 paradigm_sound_and_markup_cursor,
-                                 audio_hashes,
-                                 markup_hashes,
-                                 folder_name,
-                                 client_id,
-                                 True,
-                                 client,
-                                 storage,
-                                 locale_id=locale_id)
-        task_status.set(8, 80, "Uploading sounds and markups")
-        paradigm_sound_and_markup_cursor = sqconn.cursor()
-        paradigm_sound_and_markup_cursor.execute("""select blobs.id,
-                                                    blobs.secblob,
-                                                    blobs.mainblob,
-                                                    dict_blobs_description.name,
-                                                    dictionary.id,
-                                                    dict_blobs_description.type,
-                                                    dict_blobs_description.description
-                                                    from blobs, dict_blobs_description, dictionary
-                                                    where dict_blobs_description.blobid=blobs.id
-                                                    and dict_blobs_description.wordid=dictionary.id
-                                                    and dictionary.is_a_regular_form=0;""")
-        upload_audio(paradigm_audio_ids,
-                     ids_mapping,
-                     sp_fields_dict,
-                     paradigm_sound_and_markup_cursor,
-                     audio_hashes,
-                     markup_hashes,
-                     folder_name,
-                     client_id,
-                     True,
-                     client,
-                     storage)
+                                                    and dictionary.is_a_regular_form=1;""")
+            upload_audio(audio_ids,
+                         ids_mapping,
+                         fp_fields_dict,
+                         sound_and_markup_word_cursor,
+                         audio_hashes,
+                         markup_hashes,
+                         folder_name,
+                         client_id,
+                         True,
+                         client,
+                         storage,
+                         locale_id=locale_id)
+            task_status.set(8, 70, "Uploading sounds and markups")
+            paradigm_sound_and_markup_cursor = sqconn.cursor()
+            paradigm_sound_and_markup_cursor.execute("""select blobs.id,
+                                                        blobs.secblob,
+                                                        blobs.mainblob,
+                                                        dict_blobs_description.name,
+                                                        dictionary.id,
+                                                        dict_blobs_description.type,
+                                                        dict_blobs_description.description
+                                                        from blobs, dict_blobs_description, dictionary
+                                                        where dict_blobs_description.blobid=blobs.id
+                                                        and dict_blobs_description.wordid=dictionary.id
+                                                        and dictionary.is_a_regular_form=0;""")
+            folder_name = "paradigm"
+            upload_audio_with_markup(paradigm_audio_ids,
+                                     ids_mapping,
+                                     sp_fields_dict,
+                                     paradigm_sound_and_markup_cursor,
+                                     audio_hashes,
+                                     markup_hashes,
+                                     folder_name,
+                                     client_id,
+                                     True,
+                                     client,
+                                     storage,
+                                     locale_id=locale_id)
+            task_status.set(8, 80, "Uploading sounds and markups")
+            paradigm_sound_and_markup_cursor = sqconn.cursor()
+            paradigm_sound_and_markup_cursor.execute("""select blobs.id,
+                                                        blobs.secblob,
+                                                        blobs.mainblob,
+                                                        dict_blobs_description.name,
+                                                        dictionary.id,
+                                                        dict_blobs_description.type,
+                                                        dict_blobs_description.description
+                                                        from blobs, dict_blobs_description, dictionary
+                                                        where dict_blobs_description.blobid=blobs.id
+                                                        and dict_blobs_description.wordid=dictionary.id
+                                                        and dictionary.is_a_regular_form=0;""")
+            upload_audio(paradigm_audio_ids,
+                         ids_mapping,
+                         sp_fields_dict,
+                         paradigm_sound_and_markup_cursor,
+                         audio_hashes,
+                         markup_hashes,
+                         folder_name,
+                         client_id,
+                         True,
+                         client,
+                         storage)
+        except:
+            task_status.set(None, -1, "Conversion failed: Uploading sounds and markups failed")
+            return {}
         """
         Etimology_tag
         """
