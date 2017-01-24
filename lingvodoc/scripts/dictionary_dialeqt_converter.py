@@ -15,7 +15,6 @@ from sqlalchemy import create_engine
 from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
-
 from lingvodoc.cache.caching import TaskStatus
 
 from lingvodoc.models import (
@@ -576,9 +575,10 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            client_id)
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        user = client.user
         if not user:
             log.debug("ERROR")
+            return {}
         all_fieldnames = ("Markup",
                           "Paradigm Markup",
                           "Word",

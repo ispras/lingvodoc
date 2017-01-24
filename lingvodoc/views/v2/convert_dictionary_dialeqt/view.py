@@ -16,12 +16,8 @@ from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict
 )
-
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
-
 from lingvodoc.cache.caching import TaskStatus
-
-log = logging.getLogger(__name__)
 
 @view_config(route_name='convert_dictionary_dialeqt', renderer='json', request_method='POST')
 def convert_dictionary(request):  # TODO: test
@@ -56,22 +52,23 @@ def convert_dictionary(request):  # TODO: test
         args["storage"] = request.registry.settings["storage"]
         args["locale_id"] = locale_id
         args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-        gist = DBSession.query(TranslationGist).filter_by(client_id=args["gist_client_id"], object_id=args["gist_object_id"]).first()
+        gist = DBSession.query(TranslationGist).filter_by(client_id=args["gist_client_id"],
+                                                          object_id=args["gist_object_id"]).first()
         try:
             if gist:
                 task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
             else:
                 dictionary_obj = DBSession.query(Dictionary).filter_by(client_id=req["dictionary_client_id"],
                                                                object_id=req["dictionary_object_id"]).first()
-                gist = DBSession.query(TranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
-                                                                  object_id=dictionary_obj.translation_gist_object_id).first()
+                gist = DBSession.query(TranslationGist).\
+                    filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                              object_id=dictionary_obj.translation_gist_object_id).first()
                 task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
         except:
             request.response.status = HTTPBadRequest.code
             return {'error': "wrong parameters"}
         args["task_key"] = task.key
         res = async_convert_dictionary_new.delay(**args)
-        log.debug("Conversion started")
         request.response.status = HTTPOk.code
         return {"status": "Your dictionary is being converted."
                           " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
