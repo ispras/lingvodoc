@@ -19,10 +19,15 @@ import scala.util.{Failure, Success}
 @js.native
 trait ConvertEafScope extends Scope {
   var locales: js.Array[Locale] = js.native
+  var mode: String = js.native
   var languages: js.Array[Language] = js.native
   var language: Option[Language] = js.native
   var languageId: String = js.native
+  var files: js.Array[File] = js.native
   var names: js.Array[LocalizedString] = js.native
+  var fileId: String = js.native
+  var updateDictionaryName: String = js.native
+  var updateDictionaries: js.Array[Dictionary] = js.native
   var validated: Boolean = js.native
   var errorMessage: String = js.native
   var complete: Boolean = js.native
@@ -44,13 +49,17 @@ class ConvertEafController(scope: ConvertEafScope,
   private[this] val corpusId = params("corpusId").asInstanceOf[CompositeId]
   private[this] val markupUrl = params("markupUrl").asInstanceOf[Option[String]]
   private[this] val soundUrl = params("soundUrl").asInstanceOf[Option[String]]
-
+  private[this] var allDictionaries: Seq[Dictionary] = Seq[Dictionary]()
+  private[this] var selectedUpdateDictionary: Option[Dictionary] = Option.empty[Dictionary]
 
   scope.locales = js.Array[Locale]()
+  scope.mode = "create"
   scope.languages = js.Array[Language]()
   scope.language = None
   scope.languageId = ""
   scope.names = js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), ""))
+  scope.updateDictionaryName = ""
+  scope.updateDictionaries = js.Array[Dictionary]()
   scope.validated = false
   scope.errorMessage = ""
   scope.complete = false
@@ -134,34 +143,48 @@ class ConvertEafController(scope: ConvertEafScope,
   def convert(): Unit = {
     load(() => {
       scope.errorMessage = ""
-      scope.languages.find(_.getId == scope.languageId) match {
-        case Some(language) =>
-          // make sure there is at least one non-empty name
-          if (scope.names.exists(_.str.nonEmpty)) {
-            // create dictionary name
-            createDictionaryName() map { gistId =>
-              // create dictionary
-              backend.createDictionary(CompositeId.fromObject(language), gistId) map { dictionaryId =>
-                // start conversion process
-                backend.convertEafCorpus(corpusId, dictionaryId, soundUrl, markupUrl) map { _ =>
 
-                  scope.complete = true
+      scope.mode match {
+        case "create" =>
+          scope.languages.find(_.getId == scope.languageId) match {
+            case Some(language) =>
+              // make sure there is at least one non-empty name
+              if (scope.names.exists(_.str.nonEmpty)) {
+                // create dictionary name
+                createDictionaryName() map { gistId =>
+                  // create dictionary
+                  backend.createDictionary(CompositeId.fromObject(language), gistId) map { dictionaryId =>
+                    // start conversion process
+                    backend.convertEafCorpus(corpusId, dictionaryId, soundUrl, markupUrl) map { _ =>
 
-                  // close modal
-                  import scala.scalajs.js.timers._
-                  setTimeout(5000) {
-                    instance.dismiss(())
-                  }
+                      scope.complete = true
 
+                      // close modal
+                      import scala.scalajs.js.timers._
+                      setTimeout(5000) {
+                        instance.dismiss(())
+                      }
+
+                    } recover { case e => error(e) }
+                  } recover { case e => error(e) }
                 } recover { case e => error(e) }
-              } recover { case e => error(e) }
-            } recover { case e => error(e) }
-          } else {
-            scope.errorMessage = "Please enter at least one name!"
-            Future.successful(())
+              } else {
+                scope.errorMessage = "Please enter at least one name!"
+                Future.successful(())
+              }
+            case None => scope.errorMessage = "Please select parent language!"
+              Future.successful(())
           }
-        case None => scope.errorMessage = "Please select parent language!"
-          Future.successful(())
+        case "update" =>
+          backend.convertEafCorpus(corpusId, CompositeId.fromObject(selectedUpdateDictionary.get), soundUrl, markupUrl) map { _ =>
+            scope.complete = true
+
+            // close modal
+            import scala.scalajs.js.timers._
+            setTimeout(5000) {
+              instance.dismiss(())
+            }
+          }
       }
     })
     ()
@@ -172,6 +195,39 @@ class ConvertEafController(scope: ConvertEafScope,
     instance.dismiss(())
   }
 
+  @JSExport
+  def onUpdateDictionaryName(): Unit = {
+    scope.updateDictionaries = allDictionaries.filter(_.translation.toLowerCase.contains(scope.updateDictionaryName.toLowerCase)).take(10).toJSArray
+  }
+
+
+  @JSExport
+  def toggleUpdateDictionary(updateDictionary: Dictionary): Unit = {
+    selectedUpdateDictionary = selectedUpdateDictionary match {
+      case Some(dictionary) =>
+        if (dictionary.getId == updateDictionary.getId) {
+          None
+        } else {
+          Some(updateDictionary)
+        }
+      case None => Some(updateDictionary)
+    }
+  }
+
+  @JSExport
+  def isUpdateDictionarySelected(updateDictionary: Dictionary): Boolean = {
+    selectedUpdateDictionary.exists(_.getId == updateDictionary.getId)
+  }
+
+  @JSExport
+  def isConvertDisabled(): Boolean = {
+    scope.mode match {
+      case "create" =>
+        scope.languageId.isEmpty || scope.names.forall(_.str.isEmpty)
+      case "update" =>
+        selectedUpdateDictionary.isEmpty || scope.files.forall(_.getId != scope.fileId)
+    }
+  }
 
   private[this] def createDictionaryName() = {
     backend.createTranslationGist("Dictionary") flatMap { gist =>
@@ -208,6 +264,21 @@ class ConvertEafController(scope: ConvertEafScope,
   }
 
   load(() => {
+
+
+    backend.getCurrentUser map { user =>
+      val query = DictionaryQuery()
+      query.author = Some(user.id)
+      backend.getDictionaries(query) map { dictionaries =>
+        allDictionaries = dictionaries
+      }
+    }
+
+    backend.userFiles map { files =>
+      scope.files = files.toJSArray
+    }
+
+
     backend.getLanguages flatMap { tree =>
       indentation = indentations(tree)
       scope.languages = Utils.flattenLanguages(tree).toJSArray
