@@ -31,6 +31,7 @@
         </button>
 
         <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
+        <div id="spectrogram"></div>
 
     </div>
 
@@ -41,7 +42,14 @@
 
             <div class="btn-group" role="group" aria-label="...">
                 <a class="btn btn-default" ng-href='{{controller.getActionLink("edit")}}'>Edit</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("publish")}}'>Publish</a>
                 <a class="btn btn-default" ng-href='{{controller.getActionLink("view")}}' disabled>View published</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("contributions")}}'>View contributions</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("merge")}}'>Merge suggestions</a>
+            </div>
+
+            <div class="btn-group" role="group" aria-label="phonology">
+                <button type="button" class="btn btn-default" ng-click="controller.phonology()">Phonology</button>
             </div>
 
         </div>
