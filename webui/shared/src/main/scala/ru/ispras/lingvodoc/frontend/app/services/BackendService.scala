@@ -1,4 +1,3 @@
-
 package ru.ispras.lingvodoc.frontend.app.services
 
 
@@ -29,7 +28,6 @@ object LexicalEntriesType extends Enumeration {
   val All = Value("all")
   val NotAccepted = Value("not_accepted")
 }
-
 
 @injectable("BackendService")
 class BackendService($http: HttpService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Service with AngularExecutionContextProvider {
@@ -2036,111 +2034,10 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  /**
-    * Requests mergeable lexical entries for a perspective.
-    */
-  def mergeSuggestions(perspectiveId: CompositeId):
-    Future[(Seq[LexicalEntry], Seq[(CompositeId, CompositeId, Double)], Boolean)] =
-  {
-    val p = Promise[(Seq[LexicalEntry], Seq[(CompositeId, CompositeId, Double)], Boolean)]()
 
-    val url = getMethodUrl("merge/suggestions/" +
-      encodeURIComponent(perspectiveId.clientId.toString) + "/" +
-      encodeURIComponent(perspectiveId.objectId.toString))
-
-    val request = JSON.stringify(js.Dynamic.literal())
-
-    $http.post[js.Dynamic](url, request) onComplete
-    {
-      case Success(response) =>
-
-        try
-        {
-          /* Returning merge data we've got. */
-
-          val entry_seq = read[Seq[LexicalEntry]](
-            js.JSON.stringify(response.entry_data))
-
-          val match_seq = read[Seq[(CompositeId, CompositeId, Double)]](
-            js.JSON.stringify(response.match_result))
-
-          val user_has_permissions = read[Boolean](
-            js.JSON.stringify(response.user_has_permissions))
-
-          p.success((entry_seq, match_seq, user_has_permissions))
-        }
-
-        catch
-        {
-          /* Returning with error. */
-
-          case e: upickle.Invalid.Json => p.failure(
-            BackendException("Malformed lexical entries json", e))
-
-          case e: upickle.Invalid.Data => p.failure(
-            BackendException("Malformed lexical entries data. Missing some required fields", e))
-
-          case e: Throwable => p.failure(
-            BackendException("Unknown exception", e))
-        }
-
-      case Failure(e) => p.failure(new BackendException("Failed to get merge suggestions: " + e.getMessage))
-    }
-
-    p.future
-  }
-
-  /**
-    * Merges multiple groups of lexical entries, provided that each group is a subset of a single
-    * perspective, returns client/object ids of new lexical entries, a new entry for each merged group.
-    */
-  def bulkMerge(group_seq: Seq[Seq[CompositeId]]): Future[Seq[CompositeId]] =
-  {
-    val p = Promise[Seq[CompositeId]]
-
-    val request =
-
-      JSON.stringify(js.Dynamic.literal(
-        "group_list" ->
-
-        js.Array(group_seq map { entry_id_seq =>
-          js.Array(entry_id_seq map { entry_id =>
-
-          js.Dynamic.literal(
-            "client_id" -> entry_id.clientId,
-            "object_id" -> entry_id.objectId)}: _*)}: _*)))
-
-    dom.console.log("bulkMerge: " + request)
-
-    $http.post[js.Dynamic](getMethodUrl("merge/bulk"), request) onComplete
-    {
-      case Success(response) =>
-
-        try
-          p.success(read[Seq[CompositeId]](js.JSON.stringify(response)))
-
-        catch
-        {
-          case e: upickle.Invalid.Json => p.failure(
-            BackendException("Malformed json", e))
-
-          case e: upickle.Invalid.Data => p.failure(
-            BackendException("Malformed data. Missing some required fields", e))
-
-          case e: Throwable => p.failure(
-            BackendException("Unknown exception", e))
-        }
-
-      case Failure(e) => p.failure(new BackendException("Failed to perform bulk merge: " + e.getMessage))
-    }
-
-    p.future
-  }
 }
-
 
 @injectable("BackendService")
 class BackendServiceFactory($http: HttpService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Factory[BackendService] {
   override def apply(): BackendService = new BackendService($http, timeout, exceptionHandler)
 }
-

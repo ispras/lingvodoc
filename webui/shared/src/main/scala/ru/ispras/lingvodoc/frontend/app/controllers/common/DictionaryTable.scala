@@ -124,9 +124,6 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
   @JSExport
   var rows: js.Array[Row] = js.Array()
 
-  /** Optional tag holding additional dictionary table info. */
-  @JSExport
-  var tag: js.Any = js.Object()
 
   protected def getContent(entities: Seq[Entity], column: SimpleColumn): GenericCell = {
     val values: js.Array[Value] = entities.toJSArray.filter(entity => entity.fieldClientId == column.field.clientId && entity.fieldObjectId == column.field.objectId).map(entity => {
@@ -313,12 +310,8 @@ object DictionaryTable {
     }
   }
 
-  def build(
-    fields: Seq[Field],
-    dataTypes: Seq[TranslationGist],
-    entries: Seq[LexicalEntry],
-    tag: Option[js.Any] = None): DictionaryTable =
-  {
+  def build(fields: Seq[Field], dataTypes: Seq[TranslationGist], entries: Seq[LexicalEntry]): DictionaryTable = {
+
     val table = new DictionaryTable(fields, dataTypes)
 
     val columns = buildHeader(fields, dataTypes)
@@ -334,10 +327,6 @@ object DictionaryTable {
 
     table.header = columns.toJSArray
     table.rows = rows.toJSArray
-
-    if (tag.isDefined)
-      table.tag = tag.get
-
     table
   }
 
