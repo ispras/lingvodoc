@@ -886,7 +886,7 @@ def merge_bulk(request):
                 # Processing each lexical entry to be merged.
 
                 if len(set(entry_data.keys()).difference(set([
-                    'client_id', 'contains', 'level', 'marked_for_deletion',
+                    'additional_metadata', 'client_id', 'contains', 'level', 'marked_for_deletion',
                     'object_id', 'parent_client_id', 'parent_object_id', 'published']))) > 0:
                     return {'error': 'Unexpected lexical entry data keys.'}
 
