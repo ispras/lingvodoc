@@ -178,41 +178,12 @@ class EditDictionaryController(scope: EditDictionaryScope,
     selectedEntries.length
   }
 
+
   @JSExport
-  def mergeEntries(): Unit =
-  {
-    console.log("mergeEntries")
-
-    val entry_list = selectedEntries flatMap { id =>
-      scope.dictionaryTable.rows.find(_.entry.getId == id) map (_.entry) }
-
-    val entry_id_list = entry_list map { entry =>
-      CompositeId(entry.clientId, entry.objectId) }
-
-    backend.bulkMerge(Seq.fill(1)(entry_id_list)).map
-    {
-      case entry_id_seq =>
-        val entry_id = entry_id_seq(0)
-
-        /* If we successfully merged lexical entries, we remove them from the table and try to show the new
-         * lexical entry. */
-
-        selectedEntries = Seq[String]()
-
-        entry_list foreach { entry =>
-          scope.dictionaryTable.removeEntry(entry) }
-
-        backend.getLexicalEntry(dictionaryId, perspectiveId, entry_id) onComplete
-        {
-          case Success(entry) =>
-            scope.dictionaryTable.addEntry(entry)
-            createdLexicalEntries = createdLexicalEntries :+ entry
-
-          case Failure(e) => error(e)
-        }
+  def mergeEntries(): Unit = {
+    val entries = selectedEntries.flatMap {
+      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map (_.entry)
     }
-
-    .recover { case e: Throwable => error(e) }
   }
 
   @JSExport

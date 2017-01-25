@@ -25,11 +25,6 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit/:page?/:sortBy?", Route("/static/templates/editDictionary.html", "Lingvodoc 2.0 / Edit", "EditDictionaryController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish/:page?/:sortBy?", Route("/static/templates/publishDictionary.html", "Lingvodoc 2.0 / Publish", "PublishDictionaryController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/contributions/:page?/:sortBy?", Route("/static/templates/contributions.html", "Lingvodoc 2.0 / Contributions", "ContributionsController"))
-
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId" +
-        "/perspective/:perspectiveClientId/:perspectiveObjectId/merge",
-      Route("/static/templates/mergeDictionary.html", "Lingvodoc 2.0 / Merge suggestions", "MergeDictionaryController"))
-
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "Lingvodoc 2.0 / Create dictionary", "CreateDictionaryController"))
     .when("/corpora/create", Route("/static/templates/createCorpus.html", "Lingvodoc 2.0 / Create corpus", "CreateCorpusController"))
     .when("/files", Route("/static/templates/files.html", "Lingvodoc 2.0 / Files", "UserFilesController"))
@@ -69,7 +64,6 @@ object LingvodocApplication {
       .controller[webui.EditDictionaryController]
       .controller[PerspectiveMapController]
       .controller[ViewDictionaryController]
-      .controller[MergeDictionaryController]
       .controller[PublishDictionaryController]
       .controller[SoundMarkupController]
       .controller[ExceptionHandlerController]
