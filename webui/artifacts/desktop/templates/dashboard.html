@@ -88,6 +88,11 @@
                                    ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}">
                                 <translatable str="Edit">Edit</translatable>
                             </a></li>
+                            <li><a href=""
+                                   ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}">
+                                <translatable str="Publish">Publish</translatable>
+                            </a>
+                            </li>
                             <li role="separator" class="divider"></li>
                             <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)">
                                 <translatable str="Edit roles">Roles</translatable>

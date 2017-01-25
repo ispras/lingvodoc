@@ -1,23 +1,16 @@
 <div class="container">
 
-
-    <div ng-show="!pageLoaded">
-        <div id="loader-wrapper">
-            <div id="loader"></div>
-        </div>
-
-        <div class="text-center">
-            Wait a minute, please. Initial data synchronization in progress.
-        </div>
-
-    </div>
-
-    <form role="form" class="form-signin" ng-show="pageLoaded">
-        <h2 class="form-signin-heading">Desktop signin</h2>
+    <form role="form" class="form-signin">
+        <h2 class="form-signin-heading">Please sign in | <a href="#/signup">Sign up</a></h2>
         <label for="login" class="sr-only">Login</label>
         <input id="login" type="text" class="form-control" placeholder="Login" required autofocus ng-model="username">
         <label for="password" class="sr-only">Password</label>
         <input id="password" type="password" class="form-control" placeholder="Password" required ng-model="password">
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" value="remember-me"> Remember me
+            </label>
+        </div>
         <button class="btn btn-lg btn-primary btn-block" ng-click="controller.login()">Sign in</button>
     </form>
 
