@@ -135,7 +135,7 @@ def entity_content(xx, publish, root, delete_self=False):
             'published': published,
             'accepted': accepted,
             'marked_for_deletion': xx.marked_for_deletion,
-            'created_at': str(xx.created_at),
+            'created_at': xx.created_at,
             'entity_type':xx.field.get_translation(2)}
     if xx.link_client_id and xx.link_object_id:
         info['link_client_id'] = xx.link_client_id
@@ -193,6 +193,9 @@ class PrimeTableArgs(object):
 
 class AdditionalMetadataMixin(object):
     additional_metadata = Column(JSONB)
+
+class MarkedForDeletionMixin(object):
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class TableNameMixin(object):
@@ -268,14 +271,13 @@ def get_client_counter(check_id):
     return DBSession.query(Client).filter_by(id=check_id).with_for_update(of=Client).first()
 
 
-class ObjectTOC(Base, TableNameMixin):
+class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin):
     """
     This is base of translations
     """
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
     table_name = Column(UnicodeText, nullable=False)
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class CompositeIdMixin(object):
@@ -383,11 +385,10 @@ class TranslationMixin(PrimeTableArgs):
         # TODO: continue iterating to get any translation
 
 
-class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
+class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedForDeletionMixin):
     """
     This is base of translations
     """
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     type = Column(UnicodeText)
 
     def get_translation(self, locale_id):
@@ -423,24 +424,22 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
             # TODO: continue iterating to get any translation
 
 
-class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin,
+class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, MarkedForDeletionMixin,
                       AdditionalMetadataMixin):
     """
     This is translations
     """
     __parentname__ = 'TranslationGist'
     locale_id = Column(SLBigInteger(), nullable=False)
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     content = Column(UnicodeText, nullable=False)
 
 
-class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, RelationshipMixin,
+class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, MarkedForDeletionMixin, RelationshipMixin,
                AdditionalMetadataMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
     __parentname__ = 'Language'
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
@@ -478,7 +477,7 @@ class Dictionary(CompositeIdMixin,
                  RelationshipMixin,
                  CreatedAtMixin,
                  TranslationMixin,
-                 StateMixin,
+                 StateMixin, MarkedForDeletionMixin,
                  AdditionalMetadataMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
@@ -487,7 +486,6 @@ class Dictionary(CompositeIdMixin,
     for the same language so we use some grouping. This grouping is provided via Language objects.
     """
     __parentname__ = 'Language'
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     category = Column(Integer, default=0)
     domain = Column(Integer, default=0)
 
@@ -497,7 +495,7 @@ class DictionaryPerspective(CompositeIdMixin,
                             RelationshipMixin,
                             CreatedAtMixin,
                             TranslationMixin,
-                            StateMixin,
+                            StateMixin, MarkedForDeletionMixin,
                             AdditionalMetadataMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
@@ -508,7 +506,6 @@ class DictionaryPerspective(CompositeIdMixin,
     Parent: Dictionary.
     """
     __parentname__ = 'Dictionary'
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     is_template = Column(Boolean, default=False, nullable=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
@@ -606,13 +603,12 @@ class DictionaryPerspectiveToField(CompositeIdMixin,
                                    RelationshipMixin,
                                    SelfMixin,
                                    FieldMixin,
-                                   ParentLinkMixin
+                                   ParentLinkMixin, MarkedForDeletionMixin
                                    ):
     """
     """
     __parentname__ = 'DictionaryPerspective'
     position = Column(Integer, nullable=False)
-    marked_for_deletion = Column(Boolean, default=False)
 
 
 class DataTypeMixin(PrimeTableArgs):
@@ -644,7 +640,7 @@ class Field(CompositeIdMixin,
             TableNameMixin,
             CreatedAtMixin,
             TranslationMixin,
-            DataTypeMixin,
+            DataTypeMixin, MarkedForDeletionMixin,
             AdditionalMetadataMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
@@ -658,7 +654,6 @@ class Field(CompositeIdMixin,
 
     Parent: DictionaryPerspective.
     """
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     is_translatable = Column(Boolean, default=False, nullable=False)
 
 
@@ -666,7 +661,7 @@ class LexicalEntry(CompositeIdMixin,
                    Base,
                    TableNameMixin,
                    RelationshipMixin,
-                   CreatedAtMixin,
+                   CreatedAtMixin, MarkedForDeletionMixin,
                    AdditionalMetadataMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
@@ -676,7 +671,6 @@ class LexicalEntry(CompositeIdMixin,
     """
     __parentname__ = 'DictionaryPerspective'
     moved_to = Column(UnicodeText)
-    marked_for_deletion = Column(Boolean, default=False)
 
     def track(self, publish, locale_id):
         metadata = self.additional_metadata if self.additional_metadata else None
@@ -853,13 +847,12 @@ class Entity(CompositeIdMixin,
              RelationshipMixin,
              SelfMixin,
              FieldMixin,
-             ParentLinkMixin,
+             ParentLinkMixin, MarkedForDeletionMixin,
              AdditionalMetadataMixin):
     __parentname__ = "LexicalEntry"
 
     content = Column(UnicodeText)
     locale_id = Column(SLBigInteger())
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -947,13 +940,12 @@ class Group(Base, TableNameMixin, CreatedAtMixin):
     parent = relationship(__parentname__, backref=backref('group'))
 
 
-class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
     name = Column(UnicodeText)
     users = relationship("User",
                          secondary=user_to_organization_association,
                          backref=backref("organizations"))
     about = Column(UnicodeText)
-    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     # locale_id = Column(ForeignKey("locale.id"))
 
 
@@ -990,13 +982,12 @@ class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMi
             return None
 
 
-class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):  # TODO: decide what is nullable
+class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):  # TODO: decide what is nullable
     name = Column(UnicodeText, nullable=False)
     # content holds url for the object
     content = Column(UnicodeText, nullable=False)
     real_storage_path = Column(UnicodeText, nullable=False)
     data_type = Column(UnicodeText, nullable=False)
-    marked_for_deletion = Column(Boolean, default=False)
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(SLBigInteger(), ForeignKey('user.id'))
     user = relationship("User", backref='userblobs')
