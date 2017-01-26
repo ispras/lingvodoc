@@ -153,6 +153,9 @@ def view_dictionary(request):  # tested & in docs
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
         response['additional_metadata'] = dictionary.additional_metadata
         response['category'] = categories.get(dictionary.category)
+        response['created_at'] = dictionary.created_at
+        response['domain'] = dictionary.domain
+        response['marked_for_deletion'] = dictionary.marked_for_deletion
         if request.cookies.get('locale_id'):
             locale_id = request.cookies['locale_id']
         else:

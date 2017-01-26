@@ -578,7 +578,17 @@ def configure_routes(config):
     # 'client_id' : <client_id>,
     # 'object_id' : <object_id>
     # }
-    config.add_route(name='merge_suggestions', pattern='/merge/suggestions')  # TODO: test
+    config.add_route(name = 'merge_suggestions',
+        pattern = '/merge/suggestions/{perspective_client_id}/{perspective_object_id}',
+        factory = 'lingvodoc.models.LexicalEntriesEntitiesAcl')
+
+    # API #POST
+    # {'group_list': <group_list>}
+    #
+    # Merges multiple groups of lexical entries, provided that each group is a subset of a single
+    # perspective, returns client/object ids of new lexical entries, a new entry for each merged group.
+    #
+    config.add_route(name = 'merge_bulk', pattern = '/merge/bulk')
 
     config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'  # should be removed?
                                                            '{dictionary_client_id_1}/{dictionary_object_id_1}/'

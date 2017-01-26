@@ -179,11 +179,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def mergeEntries(): Unit = {
-    val entries = selectedEntries.flatMap {
-      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map (_.entry)
-    }
-  }
+  def mergeEntries(): Unit = {}
 
   @JSExport
   def removeEntries(): Unit = {
