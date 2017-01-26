@@ -304,9 +304,9 @@ def all_languages_with_dicts(dicts, request):
         dictionary = row2dict(i)
         dictionary['translation'] = i.get_translation(request.cookies.get('locale_id', 1))
         dictionary['category'] = categories[i.category]
-        del dictionary['created_at']
-        del dictionary['domain']
-        del dictionary['marked_for_deletion']
+        # del dictionary['created_at']
+        # del dictionary['domain']
+        # del dictionary['marked_for_deletion']
         lang_to_dict_mapping[i.parent_client_id][i.parent_object_id].append(dictionary)
 
     top_level_langs = DBSession.query(Language).filter_by(marked_for_deletion=False, parent=None).all()
@@ -505,6 +505,7 @@ def view_perspective_from_object(request, perspective):
                 response['status'] = atom.content
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
+            response['created_at'] = perspective.created_at
             # response['additional_metadata'] = perspective.additional_metadata
             if perspective.additional_metadata:
                 response['additional_metadata'] = [key for key in perspective.additional_metadata]

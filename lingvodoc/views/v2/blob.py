@@ -161,7 +161,7 @@ def get_user_blob(request):  # TODO: test
     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
     if blob:
         response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
-                    'client_id': blob.client_id, 'object_id': blob.object_id}
+                    'client_id': blob.client_id, 'object_id': blob.object_id, 'created_at': blob.created_at}
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code
@@ -218,7 +218,8 @@ def list_user_blobs(request):  # TODO: test
         user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
     request.response.status = HTTPOk.code
     response = [{'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
-                 'client_id': blob.client_id, 'object_id': blob.object_id} for blob in user_blobs]
+                 'client_id': blob.client_id, 'object_id': blob.object_id, 'created_at': blob.created_at}
+                for blob in user_blobs]
     return response
 
 
