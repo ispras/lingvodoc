@@ -997,8 +997,8 @@ def merge_bulk(request):
 
                 # Creating subentities, if required.
 
-                for entity_key_data in sorted(entity_data['contains'].items()):
-                    merge_entities(*entity_key_data, merge_entity)
+                for key, data in sorted(entity_data['contains'].items()):
+                    merge_entities(key, data, merge_entity)
 
             # Recursively creating new entities from merged entities.
 
