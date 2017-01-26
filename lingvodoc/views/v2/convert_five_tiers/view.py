@@ -1,3 +1,5 @@
+import base64
+from hashlib import md5
 from pyramid.view import view_config
 from lingvodoc.models import (
     DBSession,
@@ -43,7 +45,15 @@ def convert_dictionary(request):  # TODO: test
                                                    object_id=req["dictionary_object_id"]).first()
     gist = DBSession.query(TranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
                                                       object_id=dictionary_obj.translation_gist_object_id).first()
-    task = TaskStatus(user.id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
+
+    if not client_id:
+        ip = request.client_addr if request.client_addr else ""
+        useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+        unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+        user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+        task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
+    else:
+        task = TaskStatus(user.id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
     args["task_key"] = task.key
     args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     res = async_convert_dictionary_new.delay(**args)

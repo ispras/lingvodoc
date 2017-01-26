@@ -15,7 +15,8 @@ import urllib.request
 import urllib.parse
 
 # External imports.
-
+import base64
+from hashlib import md5
 import cchardet as chardet
 
 import numpy
@@ -1379,7 +1380,14 @@ def phonology(request):
         perspective_name = perspective_translation_gist.get_translation(locale_id)
 
         client_id = request.authenticated_userid
-        user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
+        #user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
+        if not client_id:
+            ip = request.client_addr if request.client_addr else ""
+            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+            unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+            user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+        else:
+            user_id = Client.get_user_by_client_id(client_id).id
 
         task_status = TaskStatus(user_id,
             'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
