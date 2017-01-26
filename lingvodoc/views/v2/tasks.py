@@ -3,7 +3,7 @@ from lingvodoc.models import Client
 from pyramid.response import Response
 from pyramid.security import authenticated_userid
 from pyramid.view import view_config
-from hashlib import sha224
+from hashlib import sha1
 import logging
 log = logging.getLogger(__name__)
 
@@ -11,15 +11,15 @@ log = logging.getLogger(__name__)
 @view_config(route_name='tasks', renderer='json', request_method='GET')
 def get_tasks(request):
     client_id = authenticated_userid(request)
-    if not client_id:
-        ip = request.client_addr
-        useragent = request.headers["User-Agent"]
-        unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-        user_id = sha224(unique_string.encode('utf-8')).hexdigest()
-        tasks = TaskStatus.get_user_tasks(user_id, clear_out=True)
-        return tasks
     # if not client_id:
     #     return []
+    if not client_id:
+        ip = request.client_addr if request.client_addr else ""
+        useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+        unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+        user_id = sha1(unique_string.encode('utf-8')).hexdigest()
+        tasks = TaskStatus.get_user_tasks(user_id, clear_out=True)
+        return tasks
     user = Client.get_user_by_client_id(authenticated_userid(request))
     tasks = TaskStatus.get_user_tasks(user.id, clear_out=True)
     return tasks

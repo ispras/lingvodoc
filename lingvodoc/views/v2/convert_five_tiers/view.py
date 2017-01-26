@@ -1,4 +1,4 @@
-from hashlib import sha224
+from hashlib import sha1
 from pyramid.view import view_config
 from lingvodoc.models import (
     DBSession,
@@ -46,10 +46,10 @@ def convert_dictionary(request):  # TODO: test
                                                       object_id=dictionary_obj.translation_gist_object_id).first()
 
     if not client_id:
-        ip = request.client_addr
-        useragent = request.headers["User-Agent"]
+        ip = request.client_addr if request.client_addr else ""
+        useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
         unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-        user_id = sha224(unique_string.encode('utf-8')).hexdigest()
+        user_id = sha1(unique_string.encode('utf-8')).hexdigest()
         task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
     else:
         task = TaskStatus(user.id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)

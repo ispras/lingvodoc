@@ -15,7 +15,7 @@ import urllib.request
 import urllib.parse
 
 # External imports.
-from hashlib import sha224
+from hashlib import sha1
 import cchardet as chardet
 
 import numpy
@@ -1381,10 +1381,10 @@ def phonology(request):
         client_id = request.authenticated_userid
         #user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
         if not client_id:
-            ip = request.client_addr
-            useragent = request.headers["User-Agent"]
+            ip = request.client_addr if request.client_addr else ""
+            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
             unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-            user_id = sha224(unique_string.encode('utf-8')).hexdigest()
+            user_id = sha1(unique_string.encode('utf-8')).hexdigest()
         else:
             user_id = Client.get_user_by_client_id(client_id).id
 

@@ -1,7 +1,12 @@
-import logging
-from pyramid.view import view_config
+from hashlib import sha1
 from sqlite3 import connect
-from sqlite3 import DatabaseError
+from pyramid.view import view_config
+from pyramid.httpexceptions import (
+    HTTPOk,
+    HTTPNotFound,
+    HTTPBadRequest,
+    HTTPConflict
+)
 from lingvodoc.models import (
     DBSession,
     Dictionary,
@@ -10,12 +15,6 @@ from lingvodoc.models import (
     TranslationGist
 )
 from lingvodoc.exceptions import CommonException
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPNotFound,
-    HTTPBadRequest,
-    HTTPConflict
-)
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
 from lingvodoc.cache.caching import TaskStatus
 
@@ -25,6 +24,11 @@ def convert_dictionary(request):  # TODO: test
         req = request.json_body
         locale_id = int(request.cookies.get('locale_id') or 2)
         client_id = request.authenticated_userid
+        if not client_id:
+            ip = request.client_addr if request.client_addr else ""
+            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+            unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+            user_id = sha1(unique_string.encode('utf-8')).hexdigest()
         user = Client.get_user_by_client_id(client_id)
         args = dict()
         if "dictionary_client_id" in req and "dictionary_object_id" in req:
