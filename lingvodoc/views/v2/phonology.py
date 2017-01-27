@@ -14,9 +14,12 @@ import traceback
 import urllib.request
 import urllib.parse
 
-# External imports.
 import base64
 from hashlib import md5
+from os import makedirs
+from os import path
+from errno import EEXIST
+# External imports.
 import cchardet as chardet
 
 import numpy
@@ -29,21 +32,25 @@ from pydub.utils import ratio_to_db
 
 import pympi
 
-from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFailed
-from pyramid.request import Request
-from pyramid.response import FileIter, Response
+from shutil import copyfileobj
+from pathvalidate import sanitize_filename
+
+from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFailed, HTTPOk
+##from pyramid.request import Request
+##from pyramid.response import FileIter, Response
 from pyramid.view import view_config
 
 import scipy.linalg
 
 from sqlalchemy import (and_,)
 from sqlalchemy.orm import aliased
+from sqlalchemy import create_engine
 
 import xlsxwriter
 
 # Project imports.
-
-from lingvodoc.cache.caching import CACHE, TaskStatus
+from lingvodoc.queue.celery import celery
+from lingvodoc.cache.caching import TaskStatus
 
 from lingvodoc.models import (
     Client,
@@ -55,6 +62,7 @@ from lingvodoc.models import (
     LexicalEntry,
     PublishingEntity,
     TranslationGist,
+    TranslationAtom
 )
 
 
@@ -1349,106 +1357,107 @@ def phonology(request):
 
     task_status = None
 
-    try:
-        perspective_cid = request.params.get('perspective_client_id')
-        perspective_oid = request.params.get('perspective_object_id')
+    #try:
+    perspective_cid = request.params.get('perspective_client_id')
+    perspective_oid = request.params.get('perspective_object_id')
 
-        group_by_description = request.params.get('group_by_description')
+    group_by_description = request.params.get('group_by_description')
 
-        # Getting perspective and perspective's dictionary info.
+    # Getting perspective and perspective's dictionary info.
 
-        perspective = DBSession.query(DictionaryPerspective).filter_by(
-            client_id = perspective_cid, object_id = perspective_oid).first()
+    perspective = DBSession.query(DictionaryPerspective).filter_by(
+        client_id = perspective_cid, object_id = perspective_oid).first()
 
-        perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
-            client_id = perspective.translation_gist_client_id,
-            object_id = perspective.translation_gist_object_id).first()
+    perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
+        client_id = perspective.translation_gist_client_id,
+        object_id = perspective.translation_gist_object_id).first()
 
-        dictionary = DBSession.query(Dictionary).filter_by(
-            client_id = perspective.parent_client_id,
-            object_id = perspective.parent_object_id).first()
+    dictionary = DBSession.query(Dictionary).filter_by(
+        client_id = perspective.parent_client_id,
+        object_id = perspective.parent_object_id).first()
 
-        dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
-            client_id = dictionary.translation_gist_client_id,
-            object_id = dictionary.translation_gist_object_id).first()
+    dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
+        client_id = dictionary.translation_gist_client_id,
+        object_id = dictionary.translation_gist_object_id).first()
 
-        # Phonology task status setup.
+    # Phonology task status setup.
 
-        locale_id = int(request.cookies.get('locale_id') or 2)
+    locale_id = int(request.cookies.get('locale_id') or 2)
 
-        dictionary_name = dictionary_translation_gist.get_translation(locale_id)
-        perspective_name = perspective_translation_gist.get_translation(locale_id)
+    dictionary_name = dictionary_translation_gist.get_translation(locale_id)
+    perspective_name = perspective_translation_gist.get_translation(locale_id)
 
-        client_id = request.authenticated_userid
-        #user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
-        if not client_id:
-            ip = request.client_addr if request.client_addr else ""
-            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
-            unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-            user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
-        else:
-            user_id = Client.get_user_by_client_id(client_id).id
+    client_id = request.authenticated_userid
+    #user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
+    if not client_id:
+        ip = request.client_addr if request.client_addr else ""
+        useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+        unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+        user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+    else:
+        user_id = Client.get_user_by_client_id(client_id).id
 
-        task_status = TaskStatus(user_id,
-            'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
+    task_status = TaskStatus(user_id,
+        'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
+    # Checking if we have limits on number of computed results.
 
+    limit = (None if 'limit' not in request.params else
+        int(request.params.get('limit')))
+
+    limit_exception = (None if 'limit_exception' not in request.params else
+        int(request.params.get('limit_exception')))
+
+    limit_no_vowel = (None if 'limit_no_vowel' not in request.params else
+        int(request.params.get('limit_no_vowel')))
+
+    limit_result = (None if 'limit_result' not in request.params else
+        int(request.params.get('limit_result')))
+    task_key = task_status.key
+    cache_kwargs = request.registry.settings["cache_kwargs"]
+    sqlalchemy_url = request.registry.settings["sqlalchemy.url"]
+    storage = request.registry.settings["storage"]
+    async_phonology.delay(
+        task_key, perspective_cid, perspective_oid, dictionary_name, perspective_name, cache_kwargs, storage,
+        group_by_description, limit, limit_exception, limit_no_vowel, limit_result, sqlalchemy_url
+    )
+    request.response.status = HTTPOk.code
+
+@celery.task
+def async_phonology(
+        task_key, perspective_cid, perspective_oid, dictionary_name, perspective_name, cache_kwargs, storage,
+        group_by_description, limit, limit_exception, limit_no_vowel, limit_result, sqlalchemy_url
+    ):
+    from lingvodoc.cache.caching import initialize_cache
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind=engine)
+    print(cache_kwargs)
+    initialize_cache(cache_kwargs)
+    from lingvodoc.cache.caching import CACHE
+    print(CACHE)
+    task_status = TaskStatus.get_from_cache(task_key)
+    print("start")
+    ##try:
+    if True:
+        print("start *")
         task_status.set(1, 0, 'Preparing')
-
+        print("start **")
         # Getting 'Translation' field ids.
-
-        subrequest = Request.blank('/translation_search')
-
-        subrequest.method = 'POST'
-        subrequest.headers = {}
-        subrequest.json = {'searchstring': 'Translation'}
-
-        if request.headers.get('Cookie'):
-            subrequest.headers = {'Cookie': request.headers['Cookie']}
-
-        response = request.invoke_subrequest(subrequest)
 
         field_translation_gist_client_id = None
         field_translation_gist_object_id = None
 
         # Looking through all translations we've got, getting field translation data.
 
-        for gist_data in response.json:
-
-            if gist_data['type'] != 'Field':
-                continue
-
-            for atom_data in gist_data['contains']:
-                if atom_data['locale_id'] == 2 and atom_data['content'] == 'Translation':
-
-                    field_translation_gist_client_id = gist_data['client_id']
-                    field_translation_gist_object_id = gist_data['object_id']
-                    break
-
-        if not field_translation_gist_client_id or not field_translation_gist_object_id:
-            raise Exception('Missing \'Translation\' field data.')
-
+        data_type_query = DBSession.query(Field) \
+            .join(TranslationGist,
+                  and_(Field.translation_gist_object_id == TranslationGist.object_id,
+                       Field.translation_gist_client_id == TranslationGist.client_id))\
+            .join(TranslationGist.translationatom)
         # Finding required field by its translation.
-
-        field = DBSession.query(Field).filter_by(
-            translation_gist_client_id = field_translation_gist_client_id,
-            translation_gist_object_id = field_translation_gist_object_id).first()
-
+        field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                             TranslationAtom.content == 'Translation').one()
         if not field:
             raise Exception('Missing \'Translation\' field.')
-
-        # Checking if we have limits on number of computed results.
-
-        limit = (None if 'limit' not in request.params else
-            int(request.params.get('limit')))
-
-        limit_exception = (None if 'limit_exception' not in request.params else
-            int(request.params.get('limit_exception')))
-
-        limit_no_vowel = (None if 'limit_no_vowel' not in request.params else
-            int(request.params.get('limit_no_vowel')))
-
-        limit_result = (None if 'limit_result' not in request.params else
-            int(request.params.get('limit_result')))
 
         # Before everything else we should count how many sound/markup pairs we are to process.
 
@@ -1480,6 +1489,7 @@ def phonology(request):
 
         total_count = count_query.count()
         task_status.set(2, 1, 'Analyzing sound and markup')
+        print("start 2")
 
         # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations.
 
@@ -1582,7 +1592,7 @@ def phonology(request):
             # If we have an exception while processing cache results, we stop and terminate with error.
 
             except:
-                request.response.status = HTTPInternalServerError.code
+                ##request.response.status = HTTPInternalServerError.code
 
                 task_status.set(4, 100,
                     'Finished (ERROR), cache processing error')
@@ -1737,7 +1747,7 @@ def phonology(request):
         # markups with no vowels.
 
         if not result_list:
-            request.response.status = HTTPPreconditionFailed.code
+            ##request.response.status = HTTPPreconditionFailed.code
 
             task_status.set(4, 100,
                 'Finished, no results produced')
@@ -1768,7 +1778,7 @@ def phonology(request):
 
             # If we failed to create an Excel file, we terminate with error.
 
-            request.response.status = HTTPInternalServerError.code
+            ##request.response.status = HTTPInternalServerError.code
 
             task_status.set(4, 100,
                 'Finished (ERROR), result compilation error')
@@ -1792,18 +1802,40 @@ def phonology(request):
         # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for
         # Excel content-type.
 
-        task_status.set(4, 100, 'Finished')
+        filename = sanitize_filename(result_filename)
+        storage_dir = path.join(storage["path"], "phonology", task_key.split(":")[1].split("-")[0],)
+        makedirs(storage_dir, exist_ok=True)
+        storage_path = path.join(storage_dir, filename)
+        directory = path.dirname(storage_path)
+        try:
+            makedirs(directory)
+        except OSError as exception:
+            if exception.errno != EEXIST:
+                raise
+        workbook_stream.seek(0)
+        with open(storage_path, 'wb+') as f:
+            copyfileobj(workbook_stream, f)
 
-        response = Response(content_type =
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        #real_location = storage_path
 
-        response.app_iter = FileIter(workbook_stream)
+        url = "".join((storage["prefix"],
+                      storage["static_route"],
+                      "phonology",
+                      '/',
+                      task_key.split(":")[1].split("-")[0],
+                      '/',
+                      filename))
+        task_status.set(4, 100, 'Finished', result_link=url)
+        ##response = Response(content_type =
+        ##    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+        ##response.app_iter = FileIter(workbook_stream)
 
         # Encoding filename, which can contain non-ascii characters, according to answer http://
         # stackoverflow.com/a/6745788/2016856 of http://stackoverflow.com/questions/93551/how-to-encode-the-
         # filename-parameter-of-content-disposition-header-in-http.
 
-        user_agent = request.user_agent.lower()
+        ##user_agent = request.user_agent.lower()
 
         #
         # NOTE:
@@ -1816,13 +1848,13 @@ def phonology(request):
         # extended notation <filename*=...> with url-encoded filename.
         #
 
-        response.headers['Content-Disposition'] = \
-            'attachment; filename*={0}'.format(urllib.parse.quote(result_filename))
+        ##response.headers['Content-Disposition'] = \
+        ##    'attachment; filename*={0}'.format(urllib.parse.quote(result_filename))
 
-        return response
+        ##return response
 
     # Some unknown external exception.
-
+    """
     except Exception as exception:
 
         traceback_string = ''.join(traceback.format_exception(
@@ -1831,13 +1863,13 @@ def phonology(request):
         log.debug('phonology: exception')
         log.debug(traceback_string)
 
-        request.response.status = HTTPInternalServerError.code
+        ##request.response.status = HTTPInternalServerError.code
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
 
         return {'error': 'external error'}
-
+    """
 
 def cpu_time(reference_cpu_time = 0.0):
     """
