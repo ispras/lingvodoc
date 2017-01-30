@@ -874,7 +874,7 @@ def merge_bulk(request):
                 index + 1, len(group_list), pprint.pformat(entry_data_list)))
 
             entry_dict = {
-                'additional_metadata': {'merge_tag': len(entry_list)},
+                'additional_metadata': {},
                 'contains': {},
                 'merge_entry_dict': {},
                 'merge_entity_set': set(),
@@ -903,6 +903,10 @@ def merge_bulk(request):
                 merge_contains(
                     entry_dict['contains'], entry_dict['merge_entity_set'],
                     entry_data['contains'], (entry_data['client_id'], entry_data['object_id']))
+
+            # If merged entries were themselves merge results, we don't care.
+
+            entry_dict['additional_metadata']['merge_tag'] = len(entry_list)
 
             # Creating new lexical entry.
 
