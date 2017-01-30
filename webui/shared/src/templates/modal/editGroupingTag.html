@@ -31,242 +31,6 @@
         </div>
 
 
-        <div class="row" ng-repeat="dictionaryTable in dictionaryTables">
-            <div class="col-md-12 ">
-
-                <!-- table -->
-                <table class="table table-striped table-bordered">
-                    <thead>
-                    <tr>
-                        <td><!-- dictionary name --></td>
-                        <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
-                        <td><!-- remove button --></td>
-                    </tr>
-                    </thead>
-
-                    <tbody>
-
-                    <tr ng-repeat="row in dictionaryTable.rows">
-
-                        <td>{{ controller.getSource(row.entry) }}</td>
-                        <td ng-repeat="cell in row.cells" ng-init="rowIndex=$parent.$index; cellIndex=$index; column=dictionaryTable.header[$index]">
-
-
-                            <!-- text values -->
-                            <div ng-if="column.checkDataTypeName('Text')">
-
-                                <!-- simple column -->
-                                <ul class="tree" ng-if="column.getType()=='Simple'">
-                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
-                                        {{ value.getContent() }}
-                                    </li>
-                                </ul>
-
-                                <!-- column has sub columns -->
-                                <ul class="tree" ng-if="column.getType()=='Master'">
-
-                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
-                                        <!-- display value -->
-                                        {{ value.getContent() }}
-
-                                        <!-- display values from sub columns -->
-                                        <ul>
-                                            <li ng-repeat="linkedValue in value.values"  ng-class="{last: $index==value.values.length-1}">
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
-                                                    {{ linkedValue.getContent() }}
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
-                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
-                                                        <span class="glyphicon glyphicon-play">Play</span>
-                                                    </button>
-                                                </div>
-
-                                            </li>
-
-                                        </ul>
-
-                                    </li>
-                                </ul>
-                            </div>
-
-
-                            <!-- Sound values -->
-                            <div ng-if="column.checkDataTypeName('Sound')">
-
-                                <!-- simple column -->
-                                <ul class="tree" ng-if="column.getType()=='Simple'">
-                                    <li ng-repeat="value in cell.values"  ng-class="{last: $index==cell.values.length-1}">
-
-                                        <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
-                                            <span class="glyphicon glyphicon-play">Play</span>
-                                        </button>
-                                    </li>
-
-                                </ul>
-
-                                <!-- column has sub columns -->
-                                <ul class="tree" ng-if="column.getType()=='Master'">
-
-                                    <li ng-repeat="value in cell.values"  ng-class="{last: $index==cell.values.length-1}">
-                                        <!-- display value -->
-                                        <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
-                                            <span class="glyphicon glyphicon-play">Play</span>
-                                        </button>
-
-                                        <!-- display values from sub columns -->
-                                        <ul class="tree">
-                                            <li ng-repeat="linkedValue in value.values"  ng-class="{last: $index==value.values.length-1}">
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
-                                                    {{ linkedValue.getContent() }}
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
-                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
-                                                        <span class="glyphicon glyphicon-play">Play</span>
-                                                    </button>
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Markup')">
-                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value, linkedValue)">
-                                                        <span class="glyphicon glyphicon-play">Markup</span>
-                                                    </button>
-                                                </div>
-
-                                            </li>
-
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-
-
-                            <!-- Image values -->
-                            <div ng-if="column.checkDataTypeName('Image')">
-
-                                <!-- simple column -->
-                                <ul class="tree" ng-if="column.getType()=='Simple'">
-                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
-                                        <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
-                                    </li>
-
-                                </ul>
-
-                                <!-- column has sub columns -->
-                                <ul class="tree" ng-if="column.getType()=='Master'">
-
-                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
-                                        <!-- display value -->
-                                        <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
-
-
-                                        <!-- display values from sub columns -->
-                                        <ul class="tree">
-                                            <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==value.values.length-1}">
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
-                                                    {{ linkedValue.getContent() }}
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
-                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
-
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
-                                                        <span class="glyphicon glyphicon-play">Play</span>
-                                                    </button>
-                                                </div>
-
-                                            </li>
-
-                                        </ul>
-                                    </li>
-
-                                </ul>
-                            </div>
-
-
-                            <!-- Markup values -->
-                            <div ng-if="column.checkDataTypeName('Markup')">
-
-                                <!-- simple column -->
-                                <ul class="tree" ng-if="column.getType()=='Simple'">
-                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
-                                        <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewMarkup(value)">
-                                            <span class="glyphicon glyphicon-play">Markup</span>
-                                        </button>
-                                    </li>
-                                </ul>
-
-                                <!-- column has sub columns -->
-                                <ul class="tree" ng-if="column.getType()=='Master'">
-
-                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
-                                        <!-- display value -->
-                                        <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
-
-
-                                        <!-- display values from sub columns -->
-                                        <ul class="tree">
-                                            <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==value.values.length-1}">
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
-                                                    {{ linkedValue.getContent() }}
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
-                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
-                                                </div>
-
-                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
-                                                        <span class="glyphicon glyphicon-play">Play</span>
-                                                    </button>
-                                                </div>
-                                            </li>
-
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <!-- Link values, e.g. paradigms  -->
-                            <div ng-if="column.checkDataTypeName('Link')">
-                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.viewLinkedPerspective(row.entry, column.field, cell.values)">
-                                    <span class="glyphicon glyphicon-list">View ({{cell.values.length}})</span>
-                                </button>
-                            </div>
-
-                            <!-- Grouping tag values  -->
-                            <div ng-if="column.checkDataTypeName('Grouping Tag')">
-                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.editGroupingTag(row.entry, column.field, cell.values)">
-                                    <span class="glyphicon glyphicon-list">Edit ({{cell.values.length }})</span>
-                                </button>
-                            </div>
-
-                        </td>
-
-                        <td><button type="button" class="btn btn-danger" ng-click="controller.remove(row.entry)" ng-show="controller.baseEntry(row.entry)">Disconnect</button></td>
-
-                    </tr>
-
-                    </tbody>
-
-                </table>
-
-
-            </div>
-
-
-        </div>
 
         <div class="row">
             <div class="col-md-12">
@@ -509,6 +273,252 @@
 
                 </table>
             </div>
+        </div>
+
+
+
+        <div class="row" ng-show="pageNumber == 1">
+            <div class="col-md-12">
+                <h2>Connected lexical entries</h2>
+            </div>
+        </div>
+
+
+        <div class="row" ng-repeat="dictionaryTable in dictionaryTables" ng-show="pageNumber == 1">
+            <div class="col-md-12 ">
+
+                <!-- table -->
+                <table class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <td><!-- dictionary name --></td>
+                        <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
+                        <td><!-- remove button --></td>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr ng-repeat="row in dictionaryTable.rows">
+
+                        <td>{{ controller.getSource(row.entry) }}</td>
+                        <td ng-repeat="cell in row.cells" ng-init="rowIndex=$parent.$index; cellIndex=$index; column=dictionaryTable.header[$index]">
+
+
+                            <!-- text values -->
+                            <div ng-if="column.checkDataTypeName('Text')">
+
+                                <!-- simple column -->
+                                <ul class="tree" ng-if="column.getType()=='Simple'">
+                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                        {{ value.getContent() }}
+                                    </li>
+                                </ul>
+
+                                <!-- column has sub columns -->
+                                <ul class="tree" ng-if="column.getType()=='Master'">
+
+                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                        <!-- display value -->
+                                        {{ value.getContent() }}
+
+                                        <!-- display values from sub columns -->
+                                        <ul>
+                                            <li ng-repeat="linkedValue in value.values"  ng-class="{last: $index==value.values.length-1}">
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+                                                    {{ linkedValue.getContent() }}
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
+                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
+                                                        <span class="glyphicon glyphicon-play">Play</span>
+                                                    </button>
+                                                </div>
+
+                                            </li>
+
+                                        </ul>
+
+                                    </li>
+                                </ul>
+                            </div>
+
+
+                            <!-- Sound values -->
+                            <div ng-if="column.checkDataTypeName('Sound')">
+
+                                <!-- simple column -->
+                                <ul class="tree" ng-if="column.getType()=='Simple'">
+                                    <li ng-repeat="value in cell.values"  ng-class="{last: $index==cell.values.length-1}">
+
+                                        <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
+                                            <span class="glyphicon glyphicon-play">Play</span>
+                                        </button>
+                                    </li>
+
+                                </ul>
+
+                                <!-- column has sub columns -->
+                                <ul class="tree" ng-if="column.getType()=='Master'">
+
+                                    <li ng-repeat="value in cell.values"  ng-class="{last: $index==cell.values.length-1}">
+                                        <!-- display value -->
+                                        <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
+                                            <span class="glyphicon glyphicon-play">Play</span>
+                                        </button>
+
+                                        <!-- display values from sub columns -->
+                                        <ul class="tree">
+                                            <li ng-repeat="linkedValue in value.values"  ng-class="{last: $index==value.values.length-1}">
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+                                                    {{ linkedValue.getContent() }}
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
+                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
+                                                        <span class="glyphicon glyphicon-play">Play</span>
+                                                    </button>
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Markup')">
+                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value, linkedValue)">
+                                                        <span class="glyphicon glyphicon-play">Markup</span>
+                                                    </button>
+                                                </div>
+
+                                            </li>
+
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+
+
+                            <!-- Image values -->
+                            <div ng-if="column.checkDataTypeName('Image')">
+
+                                <!-- simple column -->
+                                <ul class="tree" ng-if="column.getType()=='Simple'">
+                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                        <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
+                                    </li>
+
+                                </ul>
+
+                                <!-- column has sub columns -->
+                                <ul class="tree" ng-if="column.getType()=='Master'">
+
+                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                        <!-- display value -->
+                                        <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
+
+
+                                        <!-- display values from sub columns -->
+                                        <ul class="tree">
+                                            <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==value.values.length-1}">
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+                                                    {{ linkedValue.getContent() }}
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
+                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
+
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
+                                                        <span class="glyphicon glyphicon-play">Play</span>
+                                                    </button>
+                                                </div>
+
+                                            </li>
+
+                                        </ul>
+                                    </li>
+
+                                </ul>
+                            </div>
+
+
+                            <!-- Markup values -->
+                            <div ng-if="column.checkDataTypeName('Markup')">
+
+                                <!-- simple column -->
+                                <ul class="tree" ng-if="column.getType()=='Simple'">
+                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                        <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewMarkup(value)">
+                                            <span class="glyphicon glyphicon-play">Markup</span>
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <!-- column has sub columns -->
+                                <ul class="tree" ng-if="column.getType()=='Master'">
+
+                                    <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                        <!-- display value -->
+                                        <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
+
+
+                                        <!-- display values from sub columns -->
+                                        <ul class="tree">
+                                            <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==value.values.length-1}">
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+                                                    {{ linkedValue.getContent() }}
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
+                                                    <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
+                                                </div>
+
+                                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
+                                                        <span class="glyphicon glyphicon-play">Play</span>
+                                                    </button>
+                                                </div>
+                                            </li>
+
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Link values, e.g. paradigms  -->
+                            <div ng-if="column.checkDataTypeName('Link')">
+                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.viewLinkedPerspective(row.entry, column.field, cell.values)">
+                                    <span class="glyphicon glyphicon-list">View ({{cell.values.length}})</span>
+                                </button>
+                            </div>
+
+                            <!-- Grouping tag values  -->
+                            <div ng-if="column.checkDataTypeName('Grouping Tag')">
+                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.editGroupingTag(row.entry, column.field, cell.values)">
+                                    <span class="glyphicon glyphicon-list">Edit ({{cell.values.length }})</span>
+                                </button>
+                            </div>
+
+                        </td>
+
+                        <td><button type="button" class="btn btn-danger" ng-click="controller.remove(row.entry)" ng-show="controller.baseEntry(row.entry)">Disconnect</button></td>
+
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+
+            </div>
+
+
         </div>
 
 

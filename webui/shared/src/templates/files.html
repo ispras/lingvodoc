@@ -20,6 +20,11 @@
                     </td>
 
                     <td>
+                        Created
+                    </td>
+
+
+                    <td>
 
                     </td>
                 </tr>
@@ -40,6 +45,10 @@
 
                     <td>
                         <a ng-href="{{ file.url }}"><span class="glyphicon glyphicon-download"></span></a>
+                    </td>
+
+                    <td>
+                        {{ file.createdAt.dateString() }}
                     </td>
 
                     <td>

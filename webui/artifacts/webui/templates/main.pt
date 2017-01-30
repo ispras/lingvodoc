@@ -120,6 +120,11 @@
                                             {{task.progress}}%
                                           </div>
                                         </div>
+
+                                        <div ng-if="task.resultLink.length > 0">
+                                            <a ng-href="task.resultLink" target="_blank">{{ task.resultLink }}</a>
+                                        </div>
+
                                     </div>
                                 </div>
 
