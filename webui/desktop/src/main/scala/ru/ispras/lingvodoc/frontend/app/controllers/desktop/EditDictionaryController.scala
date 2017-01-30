@@ -465,20 +465,19 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
   @JSExport
   def phonology(): Unit = {
-    backend.phonology(perspectiveId) map { blob =>
+    backend.phonology(perspectiveId) map { _ =>
       val options = ModalOptions()
-      options.templateUrl = "/static/templates/modal/downloadEmbeddedBlob.html"
+      options.templateUrl = "/static/templates/modal/message.html"
       options.windowClass = "sm-modal-window"
-      options.controller = "DownloadEmbeddedBlobController"
+      options.controller = "MessageController"
       options.backdrop = false
       options.keyboard = false
       options.size = "lg"
       options.resolve = js.Dynamic.literal(
         params = () => {
           js.Dynamic.literal(
-            "fileName" -> "phonology.xlsx",
-            "fileType" -> "application/vnd.ms-excel",
-            "blob" -> blob
+            "title" -> "",
+            "message" -> "Background task created. Check tasks menu for details."
           )
         }
       ).asInstanceOf[js.Dictionary[Any]]
