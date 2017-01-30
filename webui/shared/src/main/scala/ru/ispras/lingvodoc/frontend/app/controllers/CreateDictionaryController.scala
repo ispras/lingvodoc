@@ -534,9 +534,8 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
       case Failure(_) =>
     }
 
-    backend.userFiles onComplete {
-      case Success(files) => scope.files = files.toJSArray
-      case Failure(_) =>
+    backend.userFiles map { files =>
+      scope.files = files.filter(_.dataType == "dialeqt_dictionary").toJSArray
     }
 
 

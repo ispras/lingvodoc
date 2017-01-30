@@ -90,7 +90,11 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
     load(() => {
       foundEntries = Seq[Seq[LexicalEntry]]()
       backend.search(scope.searchQuery, None, tagsOnly = false, Some(fieldId)) map { results =>
-        foundEntries = results.map(_.lexicalEntry).groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq
+        foundEntries = results.map(_.lexicalEntry)
+          .filterNot(entry => scope.dictionaryTables.exists(_.rows.exists(_.entry.getId == entry.getId)))
+          .groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId)
+          .values
+          .toSeq
         getPage(1)
       }
     })

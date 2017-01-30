@@ -747,9 +747,9 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 DBSession.flush()
                 for p_to_field in fields:
                     structure.add((p_to_field.field_client_id, p_to_field.field_object_id))
-                if structure == fp_structure:
+                if not fp_structure.difference(structure):
                     first_perspective = perspective
-                elif structure == sp_structure:
+                elif not sp_structure.difference(structure):
                     second_perspective = perspective
                 structure.clear()
             lexes = []

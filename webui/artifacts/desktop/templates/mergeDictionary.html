@@ -1,0 +1,97 @@
+<div id="shader" class="animate-show" ng-show="!pageLoaded">
+    <div id="loader-wrapper-fullscreen">
+        <div id="loader"></div>
+    </div>
+</div>
+
+<div class="container-fluid animate-show" style="padding-top: 20px" ng-show="pageLoaded">
+
+    <div class="row">
+        <div class="col-md-12">
+            <h4>
+                {{ path }}
+            </h4>
+        </div>
+    </div>
+
+    <br>
+
+    <div class="row" style="margin: 30px 0">
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+            <span class="glyphicon glyphicon-play">Play/Pause full</span>
+        </button>
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
+            <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
+        </button>
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
+            <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
+        </button>
+
+        <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
+        <div id="spectrogram"></div>
+
+    </div>
+
+
+    <div class="row" style="margin: 30px 0">
+
+        <div class="col-md-12">
+
+            <div class="btn-group" role="group" aria-label="...">
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("edit")}}'>Edit</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("publish")}}'>Publish</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("view")}}'>View published</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("contributions")}}'>View contributions</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("merge")}}' disabled>Merge suggestions</a>
+            </div>
+
+            <div class="btn-group" role="group" aria-label="phonology">
+                <button type="button" class="btn btn-default" ng-click="controller.phonology()">Phonology</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="row top30" ng-show="dictionaryTables.length >= 0 && !progressBar">
+        <h3 class="text-center">Found {{ result_count }} matching entry groups</h3>
+    </div>
+
+    <a class="btn btn-default"
+        ng-click="controller.performMerge()"
+        ng-href='{{controller.getActionLink("view")}}'
+        ng-disabled="!user_has_permissions || selected_group_count <= 0">Perform merge</a>
+
+    <span ng-if="!user_has_permissions">
+        You don't have create/delete permissions required to perform suggested merges.
+    </span>
+
+    <!-- A table for each mergable lexical entry group. -->
+
+    <div ng-repeat="dictionaryTable in dictionaryTables">
+      <div ng-include="'/static/templates/include/mergeDictionary.html'"></div>
+    </div>
+
+    <!-- Pagination, like in 'mapSearch.html'. -->
+
+    <div class="row">
+        <div class="col-lg-12">
+
+            <div class="text-center">
+                <nav>
+                    <ul class="pagination pagination-sm">
+                        <li ng-repeat="p in controller.range(1, pageCount, 1)"
+                            ng-class="{active: pageNumber == p}">
+                            <a href="" ng-click="controller.getPage(p)">{{ p }}</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+        </div>
+    </div>
+
+</div>
