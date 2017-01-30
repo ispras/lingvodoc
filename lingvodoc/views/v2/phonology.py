@@ -10,6 +10,7 @@ import re
 import string
 import tempfile
 import traceback
+from time import time
 
 import urllib.request
 import urllib.parse
@@ -34,6 +35,7 @@ import pympi
 
 from shutil import copyfileobj
 from pathvalidate import sanitize_filename
+from transaction import manager
 
 from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFailed, HTTPOk
 ##from pyramid.request import Request
@@ -1357,69 +1359,82 @@ def phonology(request):
 
     task_status = None
 
-    #try:
-    perspective_cid = request.params.get('perspective_client_id')
-    perspective_oid = request.params.get('perspective_object_id')
+    try:
+        perspective_cid = request.params.get('perspective_client_id')
+        perspective_oid = request.params.get('perspective_object_id')
 
-    group_by_description = request.params.get('group_by_description')
+        group_by_description = request.params.get('group_by_description')
 
-    # Getting perspective and perspective's dictionary info.
+        # Getting perspective and perspective's dictionary info.
 
-    perspective = DBSession.query(DictionaryPerspective).filter_by(
-        client_id = perspective_cid, object_id = perspective_oid).first()
+        perspective = DBSession.query(DictionaryPerspective).filter_by(
+            client_id = perspective_cid, object_id = perspective_oid).first()
 
-    perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
-        client_id = perspective.translation_gist_client_id,
-        object_id = perspective.translation_gist_object_id).first()
+        perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
+            client_id = perspective.translation_gist_client_id,
+            object_id = perspective.translation_gist_object_id).first()
 
-    dictionary = DBSession.query(Dictionary).filter_by(
-        client_id = perspective.parent_client_id,
-        object_id = perspective.parent_object_id).first()
+        dictionary = DBSession.query(Dictionary).filter_by(
+            client_id = perspective.parent_client_id,
+            object_id = perspective.parent_object_id).first()
 
-    dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
-        client_id = dictionary.translation_gist_client_id,
-        object_id = dictionary.translation_gist_object_id).first()
+        dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
+            client_id = dictionary.translation_gist_client_id,
+            object_id = dictionary.translation_gist_object_id).first()
 
-    # Phonology task status setup.
+        # Phonology task status setup.
 
-    locale_id = int(request.cookies.get('locale_id') or 2)
+        locale_id = int(request.cookies.get('locale_id') or 2)
 
-    dictionary_name = dictionary_translation_gist.get_translation(locale_id)
-    perspective_name = perspective_translation_gist.get_translation(locale_id)
+        dictionary_name = dictionary_translation_gist.get_translation(locale_id)
+        perspective_name = perspective_translation_gist.get_translation(locale_id)
 
-    client_id = request.authenticated_userid
-    #user_id = 0 if not client_id else Client.get_user_by_client_id(client_id).id
-    if not client_id:
-        ip = request.client_addr if request.client_addr else ""
-        useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
-        unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-        user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
-    else:
-        user_id = Client.get_user_by_client_id(client_id).id
+        client_id = request.authenticated_userid
+        if not client_id:
+            ip = request.client_addr if request.client_addr else ""
+            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+            unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+            user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+        else:
+            user_id = Client.get_user_by_client_id(client_id).id
 
-    task_status = TaskStatus(user_id,
-        'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
-    # Checking if we have limits on number of computed results.
+        task_status = TaskStatus(user_id,
+            'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
+        # Checking if we have limits on number of computed results.
 
-    limit = (None if 'limit' not in request.params else
-        int(request.params.get('limit')))
+        limit = (None if 'limit' not in request.params else
+            int(request.params.get('limit')))
 
-    limit_exception = (None if 'limit_exception' not in request.params else
-        int(request.params.get('limit_exception')))
+        limit_exception = (None if 'limit_exception' not in request.params else
+            int(request.params.get('limit_exception')))
 
-    limit_no_vowel = (None if 'limit_no_vowel' not in request.params else
-        int(request.params.get('limit_no_vowel')))
+        limit_no_vowel = (None if 'limit_no_vowel' not in request.params else
+            int(request.params.get('limit_no_vowel')))
 
-    limit_result = (None if 'limit_result' not in request.params else
-        int(request.params.get('limit_result')))
-    task_key = task_status.key
-    cache_kwargs = request.registry.settings["cache_kwargs"]
-    sqlalchemy_url = request.registry.settings["sqlalchemy.url"]
-    storage = request.registry.settings["storage"]
-    async_phonology.delay(
-        task_key, perspective_cid, perspective_oid, dictionary_name, perspective_name, cache_kwargs, storage,
-        group_by_description, limit, limit_exception, limit_no_vowel, limit_result, sqlalchemy_url
-    )
+        limit_result = (None if 'limit_result' not in request.params else
+            int(request.params.get('limit_result')))
+        task_key = task_status.key
+        cache_kwargs = request.registry.settings["cache_kwargs"]
+        sqlalchemy_url = request.registry.settings["sqlalchemy.url"]
+        storage = request.registry.settings["storage"]
+        async_phonology.delay(
+            task_key, perspective_cid, perspective_oid, dictionary_name, perspective_name, cache_kwargs, storage,
+            group_by_description, limit, limit_exception, limit_no_vowel, limit_result, sqlalchemy_url
+        )
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('phonology: exception')
+        log.debug(traceback_string)
+
+        request.response.status = HTTPInternalServerError.code
+
+        if task_status is not None:
+            task_status.set(4, 100, 'Finished (ERROR), external error')
+
+        return {'error': 'external error'}
     request.response.status = HTTPOk.code
 
 @celery.task
@@ -1430,131 +1445,298 @@ def async_phonology(
     from lingvodoc.cache.caching import initialize_cache
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
-    print(cache_kwargs)
     initialize_cache(cache_kwargs)
     from lingvodoc.cache.caching import CACHE
-    print(CACHE)
     task_status = TaskStatus.get_from_cache(task_key)
-    print("start")
-    ##try:
-    if True:
-        print("start *")
-        task_status.set(1, 0, 'Preparing')
-        print("start **")
-        # Getting 'Translation' field ids.
+    with manager:
+        try:
+            task_status.set(1, 0, 'Preparing')
+            # Getting 'Translation' field ids.
 
-        field_translation_gist_client_id = None
-        field_translation_gist_object_id = None
+            field_translation_gist_client_id = None
+            field_translation_gist_object_id = None
 
-        # Looking through all translations we've got, getting field translation data.
+            # Looking through all translations we've got, getting field translation data.
 
-        data_type_query = DBSession.query(Field) \
-            .join(TranslationGist,
-                  and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                       Field.translation_gist_client_id == TranslationGist.client_id))\
-            .join(TranslationGist.translationatom)
-        # Finding required field by its translation.
-        field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                             TranslationAtom.content == 'Translation').one()
-        if not field:
-            raise Exception('Missing \'Translation\' field.')
+            data_type_query = DBSession.query(Field) \
+                .join(TranslationGist,
+                      and_(Field.translation_gist_object_id == TranslationGist.object_id,
+                           Field.translation_gist_client_id == TranslationGist.client_id))\
+                .join(TranslationGist.translationatom)
+            # Finding required field by its translation.
+            field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                                 TranslationAtom.content == 'Translation').one()
+            if not field:
+                raise Exception('Missing \'Translation\' field.')
 
-        # Before everything else we should count how many sound/markup pairs we are to process.
+            # Before everything else we should count how many sound/markup pairs we are to process.
 
-        Markup = aliased(Entity, name = 'Markup')
-        Sound = aliased(Entity, name = 'Sound')
-        Translation = aliased(Entity, name = 'Translation')
-        PublishingSound = aliased(PublishingEntity, name = 'PublishingSound')
+            Markup = aliased(Entity, name = 'Markup')
+            Sound = aliased(Entity, name = 'Sound')
+            Translation = aliased(Entity, name = 'Translation')
+            PublishingSound = aliased(PublishingEntity, name = 'PublishingSound')
 
-        count_query = DBSession.query(
-            LexicalEntry, Markup, Sound, PublishingEntity, PublishingSound).filter(and_(
-                LexicalEntry.parent_client_id == perspective_cid,
-                LexicalEntry.parent_object_id == perspective_oid,
-                LexicalEntry.marked_for_deletion == False,
-                Markup.parent_client_id == LexicalEntry.client_id,
-                Markup.parent_object_id == LexicalEntry.object_id,
-                Markup.marked_for_deletion == False,
-                Markup.additional_metadata.contains({'data_type': 'praat markup'}),
-                PublishingEntity.client_id == Markup.client_id,
-                PublishingEntity.object_id == Markup.object_id,
-                PublishingEntity.published == True,
-                PublishingEntity.accepted == True,
-                Sound.client_id == Markup.self_client_id,
-                Sound.object_id == Markup.self_object_id,
-                Sound.marked_for_deletion == False,
-                PublishingSound.client_id == Sound.client_id,
-                PublishingSound.object_id == Sound.object_id,
-                PublishingSound.published == True,
-                PublishingSound.accepted == True))
+            count_query = DBSession.query(
+                LexicalEntry, Markup, Sound, PublishingEntity, PublishingSound).filter(and_(
+                    LexicalEntry.parent_client_id == perspective_cid,
+                    LexicalEntry.parent_object_id == perspective_oid,
+                    LexicalEntry.marked_for_deletion == False,
+                    Markup.parent_client_id == LexicalEntry.client_id,
+                    Markup.parent_object_id == LexicalEntry.object_id,
+                    Markup.marked_for_deletion == False,
+                    Markup.additional_metadata.contains({'data_type': 'praat markup'}),
+                    PublishingEntity.client_id == Markup.client_id,
+                    PublishingEntity.object_id == Markup.object_id,
+                    PublishingEntity.published == True,
+                    PublishingEntity.accepted == True,
+                    Sound.client_id == Markup.self_client_id,
+                    Sound.object_id == Markup.self_object_id,
+                    Sound.marked_for_deletion == False,
+                    PublishingSound.client_id == Sound.client_id,
+                    PublishingSound.object_id == Sound.object_id,
+                    PublishingSound.published == True,
+                    PublishingSound.accepted == True))
 
-        total_count = count_query.count()
-        task_status.set(2, 1, 'Analyzing sound and markup')
-        print("start 2")
+            total_count = count_query.count()
+            task_status.set(2, 1, 'Analyzing sound and markup')
 
-        # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations.
+            # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations.
 
-        data_query = count_query.outerjoin(Translation, and_(
-            LexicalEntry.client_id == Translation.parent_client_id,
-            LexicalEntry.object_id == Translation.parent_object_id)).filter(and_(
-                Translation.field_client_id == field.client_id,
-                Translation.field_object_id == field.object_id)).add_entity(Translation)
+            data_query = count_query.outerjoin(Translation, and_(
+                LexicalEntry.client_id == Translation.parent_client_id,
+                LexicalEntry.object_id == Translation.parent_object_id)).filter(and_(
+                    Translation.field_client_id == field.client_id,
+                    Translation.field_object_id == field.object_id)).add_entity(Translation)
 
-        exception_counter = 0
-        no_vowel_counter = 0
+            exception_counter = 0
+            no_vowel_counter = 0
 
-        result_list = list()
-        result_group_set = set()
+            result_list = list()
+            result_group_set = set()
 
-        # We process these lexical entries in batches. Just in case, it seems that perspectives rarely have
-        # more then several hundred such lexical entries.
+            # We process these lexical entries in batches. Just in case, it seems that perspectives rarely have
+            # more then several hundred such lexical entries.
 
-        for index, row in enumerate(data_query.yield_per(100)):
+            for index, row in enumerate(data_query.yield_per(100)):
 
-            markup_url = row.Markup.content
-            sound_url = row.Sound.content
+                markup_url = row.Markup.content
+                sound_url = row.Sound.content
 
-            row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(
-                index,
-                row.LexicalEntry.client_id, row.LexicalEntry.object_id,
-                row.Sound.client_id, row.Sound.object_id,
-                row.Markup.client_id, row.Markup.object_id)
+                row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(
+                    index,
+                    row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                    row.Sound.client_id, row.Sound.object_id,
+                    row.Markup.client_id, row.Markup.object_id)
 
-            cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
-                row.Sound.client_id, row.Sound.object_id,
-                row.Markup.client_id, row.Markup.object_id)
+                cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
+                    row.Sound.client_id, row.Sound.object_id,
+                    row.Markup.client_id, row.Markup.object_id)
 
-            # Checking if we have cached result for this pair of sound/markup.
+                # Checking if we have cached result for this pair of sound/markup.
 
-            cache_result = CACHE.get(cache_key)
+                cache_result = CACHE.get(cache_key)
 
-            try:
-                if cache_result == 'no_vowel':
+                try:
+                    if cache_result == 'no_vowel':
 
-                    log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}'.format(
-                        row_str, cache_key, markup_url, sound_url))
+                        log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}'.format(
+                            row_str, cache_key, markup_url, sound_url))
 
-                    no_vowel_counter += 1
+                        no_vowel_counter += 1
+
+                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                            'Analyzing sound and markup')
+
+                        if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                            limit and index + 1 >= limit):
+                            break
+
+                        continue
+
+                    # If we have cached exception, we do the same as with absence of vowels, show its info and
+                    # continue.
+
+                    elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
+                        exception, traceback_string = cache_result[1:3]
+
+                        log.debug(
+                            '{0} [CACHE {1}]: exception\n{2}\n{3}'.format(
+                            row_str, cache_key, markup_url, sound_url))
+
+                        log.debug(traceback_string)
+
+                        exception_counter += 1
+
+                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                            'Analyzing sound and markup')
+
+                        if (limit_exception and exception_counter >= limit_exception or
+                            limit and index + 1 >= limit):
+                            break
+
+                        continue
+
+                    # If we actually have the result, we use it and continue.
+
+                    elif cache_result:
+                        group_list, textgrid_result_list = cache_result
+
+                        log.debug(
+                            '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
+                            row_str, cache_key, markup_url, sound_url,
+                            format_textgrid_result(group_list, textgrid_result_list)))
+
+                        result_list.append(cache_result)
+                        result_group_set.update(group_list)
+
+                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                            'Analyzing sound and markup')
+
+                        if (limit_result and len(result_list) >= limit_result or
+                            limit and index + 1 >= limit):
+                            break
+
+                        continue
+
+                # If we have an exception while processing cache results, we stop and terminate with error.
+
+                except:
+                    ##request.response.status = HTTPInternalServerError.code
+
+                    task_status.set(4, 100,
+                        'Finished (ERROR), cache processing error')
+
+                    return {
+                        'error': 'cache processing error',
+                        'exception_counter': exception_counter,
+                        'no_vowel_counter': no_vowel_counter,
+                        'result_counter': len(result_list)}
+
+                try:
+                    # Getting markup, checking for each tier if it needs to be processed.
+
+                    markup_bytes = urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')).read()
+
+                    textgrid = pympi.Praat.TextGrid(xmax = 0)
+                    textgrid.from_file(
+                        io.BytesIO(markup_bytes),
+                        codec = chardet.detect(markup_bytes)['encoding'])
+
+                    def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
+
+                        log.debug(
+                            '{0}: tier {1} \'{2}\' has interval(s) with unusual transcription text: '
+                            '{3} / {4}'.format(
+                            row_str, tier_number, tier_name, transcription, unusual_markup_dict))
+
+                    def no_vowel_f(tier_number, tier_name, transcription_list):
+
+                        log.debug(
+                            '{0}: tier {1} \'{2}\' doesn\'t have any vowel markup: {3}'.format(
+                            row_str, tier_number, tier_name, transcription_list))
+
+                    def no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list):
+
+                        log.debug(
+                            '{0}: tier {1} \'{2}\' intervals to be processed don\'t have any vowel markup: '
+                            'markup {3}, selected {4}'.format(
+                            row_str, tier_number, tier_name, transcription_list, selected_list))
+
+                    tier_data_list, vowel_flag = process_textgrid(
+                        textgrid, unusual_f, no_vowel_f, no_vowel_selected_f)
+
+                    # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
+
+                    if not vowel_flag:
+
+                        CACHE.set(cache_key, 'no_vowel')
+                        no_vowel_counter += 1
+
+                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                            'Analyzing sound and markup')
+
+                        if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                            limit and index + 1 >= limit):
+                            break
+
+                        continue
+
+                    # Otherwise we retrieve the sound file and analyze each vowel-containing markup.
+                    # Partially inspired by source code at scripts/convert_five_tiers.py:307.
+
+                    sound = None
+                    with tempfile.NamedTemporaryFile() as temp_file:
+
+                        sound_file = urllib.request.urlopen(urllib.parse.quote(sound_url, safe = '/:'))
+                        temp_file.write(sound_file.read())
+                        temp_file.flush()
+
+                        sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
+
+                    textgrid_result_list = process_sound(tier_data_list, sound,
+                        row.Translation.content if row.Translation else None)
+
+                    # Saving analysis results.
+
+                    group_list = [None]
+
+                    if group_by_description == 'true' and 'blob_description' in row.Markup.additional_metadata:
+                        group_list.append(row.Markup.additional_metadata['blob_description'])
+
+                        print(row.Markup.additional_metadata['blob_description'])
+                        print(row.Sound.additional_metadata['blob_description'])
+
+                    result_list.append((group_list, textgrid_result_list))
+                    result_group_set.update(group_list)
+
+                    CACHE.set(cache_key, (group_list, textgrid_result_list))
+
+                    # Showing results for this sound/markup pair, stopping earlier, if required.
+
+                    log.debug(
+                        '{0}:\n{1}\n{2}\n{3}'.format(
+                        row_str, markup_url, sound_url,
+                        format_textgrid_result(group_list, textgrid_result_list)))
 
                     task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                         'Analyzing sound and markup')
 
-                    if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                    if (limit_result and len(result_list) >= limit_result or
                         limit and index + 1 >= limit):
                         break
 
-                    continue
+                except Exception as exception:
 
-                # If we have cached exception, we do the same as with absence of vowels, show its info and
-                # continue.
-
-                elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
-                    exception, traceback_string = cache_result[1:3]
+                    #
+                    # NOTE
+                    #
+                    # Exceptional situations encountered so far:
+                    #
+                    #   1. TextGrid file actually contains sound, and wav file actually contains textgrid
+                    #     markup.
+                    #
+                    #     Perspective 330/4, LexicalEntry 330/7, sound-Entity 330/2328, markup-Entity 330/6934
+                    #
+                    #   2. Markup for one of the intervals contains a newline "\n", and pympi fails to parse it.
+                    #     Praat parses such files without problems.
+                    #
+                    #     Perspective 330/4, LexicalEntry 330/20, sound-Entity 330/6297, markup-Entity 330/6967
+                    #
 
                     log.debug(
-                        '{0} [CACHE {1}]: exception\n{2}\n{3}'.format(
-                        row_str, cache_key, markup_url, sound_url))
+                        '{0}: exception\n{1}\n{2}'.format(
+                        row_str, markup_url, sound_url))
+
+                    # if we encountered an exception, we show its info and remember not to try offending
+                    # sound/markup pair again.
+
+                    traceback_string = ''.join(traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1]
 
                     log.debug(traceback_string)
+
+                    CACHE.set(cache_key, ('exception', exception,
+                        traceback_string.replace('Traceback', 'CACHEd traceback')))
 
                     exception_counter += 1
 
@@ -1565,311 +1747,110 @@ def async_phonology(
                         limit and index + 1 >= limit):
                         break
 
-                    continue
+            log.debug('phonology {0}/{1}: {2} result{3}, {4} no vowels, {5} exceptions'.format(
+                perspective_cid, perspective_oid,
+                len(result_list), '' if len(result_list) == 1 else 's',
+                no_vowel_counter, exception_counter))
 
-                # If we actually have the result, we use it and continue.
+            # If we have no results, we indicate the situation and also show number of failures and number of
+            # markups with no vowels.
 
-                elif cache_result:
-                    group_list, textgrid_result_list = cache_result
-
-                    log.debug(
-                        '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
-                        row_str, cache_key, markup_url, sound_url,
-                        format_textgrid_result(group_list, textgrid_result_list)))
-
-                    result_list.append(cache_result)
-                    result_group_set.update(group_list)
-
-                    task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        'Analyzing sound and markup')
-
-                    if (limit_result and len(result_list) >= limit_result or
-                        limit and index + 1 >= limit):
-                        break
-
-                    continue
-
-            # If we have an exception while processing cache results, we stop and terminate with error.
-
-            except:
-                ##request.response.status = HTTPInternalServerError.code
+            if not result_list:
+                ##request.response.status = HTTPPreconditionFailed.code
 
                 task_status.set(4, 100,
-                    'Finished (ERROR), cache processing error')
+                    'Finished, no results produced')
 
                 return {
-                    'error': 'cache processing error',
+                    'error': 'no markups for this query',
                     'exception_counter': exception_counter,
-                    'no_vowel_counter': no_vowel_counter,
-                    'result_counter': len(result_list)}
+                    'no_vowel_counter': no_vowel_counter}
+
+            # Otherwise we create and then serve Excel file.
+
+            task_status.set(3, 99, 'Compiling results')
+            workbook_stream = io.BytesIO()
 
             try:
-                # Getting markup, checking for each tier if it needs to be processed.
+                entry_count_dict, sound_count_dict = compile_workbook(
+                    result_list, result_group_set, workbook_stream)
 
-                markup_bytes = urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')).read()
-
-                textgrid = pympi.Praat.TextGrid(xmax = 0)
-                textgrid.from_file(
-                    io.BytesIO(markup_bytes),
-                    codec = chardet.detect(markup_bytes)['encoding'])
-
-                def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
-
-                    log.debug(
-                        '{0}: tier {1} \'{2}\' has interval(s) with unusual transcription text: '
-                        '{3} / {4}'.format(
-                        row_str, tier_number, tier_name, transcription, unusual_markup_dict))
-
-                def no_vowel_f(tier_number, tier_name, transcription_list):
-
-                    log.debug(
-                        '{0}: tier {1} \'{2}\' doesn\'t have any vowel markup: {3}'.format(
-                        row_str, tier_number, tier_name, transcription_list))
-
-                def no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list):
-
-                    log.debug(
-                        '{0}: tier {1} \'{2}\' intervals to be processed don\'t have any vowel markup: '
-                        'markup {3}, selected {4}'.format(
-                        row_str, tier_number, tier_name, transcription_list, selected_list))
-
-                tier_data_list, vowel_flag = process_textgrid(
-                    textgrid, unusual_f, no_vowel_f, no_vowel_selected_f)
-
-                # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
-
-                if not vowel_flag:
-
-                    CACHE.set(cache_key, 'no_vowel')
-                    no_vowel_counter += 1
-
-                    task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        'Analyzing sound and markup')
-
-                    if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
-                        limit and index + 1 >= limit):
-                        break
-
-                    continue
-
-                # Otherwise we retrieve the sound file and analyze each vowel-containing markup.
-                # Partially inspired by source code at scripts/convert_five_tiers.py:307.
-
-                sound = None
-                with tempfile.NamedTemporaryFile() as temp_file:
-
-                    sound_file = urllib.request.urlopen(urllib.parse.quote(sound_url, safe = '/:'))
-                    temp_file.write(sound_file.read())
-                    temp_file.flush()
-
-                    sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
-
-                textgrid_result_list = process_sound(tier_data_list, sound,
-                    row.Translation.content if row.Translation else None)
-
-                # Saving analysis results.
-
-                group_list = [None]
-
-                if group_by_description == 'true' and 'blob_description' in row.Markup.additional_metadata:
-                    group_list.append(row.Markup.additional_metadata['blob_description'])
-
-                    print(row.Markup.additional_metadata['blob_description'])
-                    print(row.Sound.additional_metadata['blob_description'])
-
-                result_list.append((group_list, textgrid_result_list))
-                result_group_set.update(group_list)
-
-                CACHE.set(cache_key, (group_list, textgrid_result_list))
-
-                # Showing results for this sound/markup pair, stopping earlier, if required.
-
-                log.debug(
-                    '{0}:\n{1}\n{2}\n{3}'.format(
-                    row_str, markup_url, sound_url,
-                    format_textgrid_result(group_list, textgrid_result_list)))
-
-                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                    'Analyzing sound and markup')
-
-                if (limit_result and len(result_list) >= limit_result or
-                    limit and index + 1 >= limit):
-                    break
+                workbook_stream.seek(0)
 
             except Exception as exception:
-
-                #
-                # NOTE
-                #
-                # Exceptional situations encountered so far:
-                #
-                #   1. TextGrid file actually contains sound, and wav file actually contains textgrid
-                #     markup.
-                #
-                #     Perspective 330/4, LexicalEntry 330/7, sound-Entity 330/2328, markup-Entity 330/6934
-                #
-                #   2. Markup for one of the intervals contains a newline "\n", and pympi fails to parse it.
-                #     Praat parses such files without problems.
-                #
-                #     Perspective 330/4, LexicalEntry 330/20, sound-Entity 330/6297, markup-Entity 330/6967
-                #
-
-                log.debug(
-                    '{0}: exception\n{1}\n{2}'.format(
-                    row_str, markup_url, sound_url))
-
-                # if we encountered an exception, we show its info and remember not to try offending
-                # sound/markup pair again.
 
                 traceback_string = ''.join(traceback.format_exception(
                     exception, exception, exception.__traceback__))[:-1]
 
+                log.debug('compile_workbook: exception')
                 log.debug(traceback_string)
 
-                CACHE.set(cache_key, ('exception', exception,
-                    traceback_string.replace('Traceback', 'CACHEd traceback')))
+                # If we failed to create an Excel file, we terminate with error.
 
-                exception_counter += 1
+                ##request.response.status = HTTPInternalServerError.code
 
-                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                    'Analyzing sound and markup')
+                task_status.set(4, 100,
+                    'Finished (ERROR), result compilation error')
 
-                if (limit_exception and exception_counter >= limit_exception or
-                    limit and index + 1 >= limit):
-                    break
+                return {
+                    'error': 'result compilation error',
+                    'exception_counter': exception_counter,
+                    'no_vowel_counter': no_vowel_counter,
+                    'result_counter': len(result_list)}
 
-        log.debug('phonology {0}/{1}: {2} result{3}, {4} no vowels, {5} exceptions'.format(
-            perspective_cid, perspective_oid,
-            len(result_list), '' if len(result_list) == 1 else 's',
-            no_vowel_counter, exception_counter))
+            # Name of the resulting file includes dictionary name, perspective name and current date.
 
-        # If we have no results, we indicate the situation and also show number of failures and number of
-        # markups with no vowels.
+            current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
-        if not result_list:
-            ##request.response.status = HTTPPreconditionFailed.code
+            result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+                dictionary_name, perspective_name,
+                current_datetime.year,
+                current_datetime.month,
+                current_datetime.day)
 
-            task_status.set(4, 100,
-                'Finished, no results produced')
+            # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for
+            # Excel content-type.
 
-            return {
-                'error': 'no markups for this query',
-                'exception_counter': exception_counter,
-                'no_vowel_counter': no_vowel_counter}
-
-        # Otherwise we create and then serve Excel file.
-
-        task_status.set(3, 99, 'Compiling results')
-        workbook_stream = io.BytesIO()
-
-        try:
-            entry_count_dict, sound_count_dict = compile_workbook(
-                result_list, result_group_set, workbook_stream)
-
+            filename = sanitize_filename(result_filename)
+            cur_time = time()
+            storage_dir = path.join(storage["path"], "phonology", str(cur_time))
+            makedirs(storage_dir, exist_ok=True)
+            storage_path = path.join(storage_dir, filename)
+            directory = path.dirname(storage_path)
+            try:
+                makedirs(directory)
+            except OSError as exception:
+                if exception.errno != EEXIST:
+                    raise
             workbook_stream.seek(0)
+            with open(storage_path, 'wb+') as f:
+                copyfileobj(workbook_stream, f)
+
+            #real_location = storage_path
+
+            url = "".join((storage["prefix"],
+                          storage["static_route"],
+                          "phonology",
+                          '/',
+                          str(cur_time),
+                          '/',
+                          filename))
+            task_status.set(4, 100, 'Finished', result_link=url)
+
+        # Some unknown external exception.
 
         except Exception as exception:
-
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug('compile_workbook: exception')
+            log.debug('phonology: exception')
             log.debug(traceback_string)
+            print(traceback_string)
+            if task_status is not None:
+                task_status.set(4, 100, 'Finished (ERROR), external error')
 
-            # If we failed to create an Excel file, we terminate with error.
+            return {'error': 'external error'}
 
-            ##request.response.status = HTTPInternalServerError.code
-
-            task_status.set(4, 100,
-                'Finished (ERROR), result compilation error')
-
-            return {
-                'error': 'result compilation error',
-                'exception_counter': exception_counter,
-                'no_vowel_counter': no_vowel_counter,
-                'result_counter': len(result_list)}
-
-        # Name of the resulting file includes dictionary name, perspective name and current date.
-
-        current_datetime = datetime.datetime.now(datetime.timezone.utc)
-
-        result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
-            dictionary_name, perspective_name,
-            current_datetime.year,
-            current_datetime.month,
-            current_datetime.day)
-
-        # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for
-        # Excel content-type.
-
-        filename = sanitize_filename(result_filename)
-        storage_dir = path.join(storage["path"], "phonology", task_key.split(":")[1].split("-")[0],)
-        makedirs(storage_dir, exist_ok=True)
-        storage_path = path.join(storage_dir, filename)
-        directory = path.dirname(storage_path)
-        try:
-            makedirs(directory)
-        except OSError as exception:
-            if exception.errno != EEXIST:
-                raise
-        workbook_stream.seek(0)
-        with open(storage_path, 'wb+') as f:
-            copyfileobj(workbook_stream, f)
-
-        #real_location = storage_path
-
-        url = "".join((storage["prefix"],
-                      storage["static_route"],
-                      "phonology",
-                      '/',
-                      task_key.split(":")[1].split("-")[0],
-                      '/',
-                      filename))
-        task_status.set(4, 100, 'Finished', result_link=url)
-        ##response = Response(content_type =
-        ##    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-        ##response.app_iter = FileIter(workbook_stream)
-
-        # Encoding filename, which can contain non-ascii characters, according to answer http://
-        # stackoverflow.com/a/6745788/2016856 of http://stackoverflow.com/questions/93551/how-to-encode-the-
-        # filename-parameter-of-content-disposition-header-in-http.
-
-        ##user_agent = request.user_agent.lower()
-
-        #
-        # NOTE:
-        #
-        # At the moment we don't know if we should handle some user agents in a special way, so we just try
-        # to handle all of them according to standard.
-        #
-        # And, actually, handling according to the https://tools.ietf.org/html/rfc5987 (see page 6) fails,
-        # UTF-8'' specifier is recognized as part of the filename by at least Firefox 50.1.0, so we just use
-        # extended notation <filename*=...> with url-encoded filename.
-        #
-
-        ##response.headers['Content-Disposition'] = \
-        ##    'attachment; filename*={0}'.format(urllib.parse.quote(result_filename))
-
-        ##return response
-
-    # Some unknown external exception.
-    """
-    except Exception as exception:
-
-        traceback_string = ''.join(traceback.format_exception(
-            exception, exception, exception.__traceback__))[:-1]
-
-        log.debug('phonology: exception')
-        log.debug(traceback_string)
-
-        ##request.response.status = HTTPInternalServerError.code
-
-        if task_status is not None:
-            task_status.set(4, 100, 'Finished (ERROR), external error')
-
-        return {'error': 'external error'}
-    """
 
 def cpu_time(reference_cpu_time = 0.0):
     """
