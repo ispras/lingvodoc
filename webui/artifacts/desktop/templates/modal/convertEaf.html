@@ -94,7 +94,7 @@
 
                     <div ng-repeat="updateDictionary in updateDictionaries" ng-click="controller.toggleUpdateDictionary(updateDictionary)">
                         <span class="glyphicon glyphicon-ok" ng-show="controller.isUpdateDictionarySelected(updateDictionary)"></span>
-                        {{ updateDictionary.translation }}
+                        {{ updateDictionary.translation }} ({{ updateDictionary.createdAt.dateString() }})
                     </div>
 
                 </div>
