@@ -34,9 +34,9 @@ object DesktopApplication {
 
   @JSExport
   def main(): Unit = {
-  Angular.module("LingvodocDesktopModule", Seq("ngRoute", "ngSanitize", "ngAnimate", "ui.bootstrap"))
+    Angular.module("LingvodocDesktopModule", Seq("ngRoute", "ngSanitize", "ngAnimate", "ui.bootstrap"))
       .config[DesktopApplicationConfig]
-	    .factory[BackendServiceFactory]
+      .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
       .controller[desktop.NavigationController]
       .controller[desktop.LoginController]
@@ -69,6 +69,7 @@ object DesktopApplication {
       .controller[CorporaController]
       .controller[ConvertEafController]
       .controller[DownloadEmbeddedBlobController]
+      .controller[MessageController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

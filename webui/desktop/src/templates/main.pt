@@ -83,7 +83,7 @@
                     </ul>
                 </li>
 
-                <li class="dropdown" ng-if="controller.isAuthenticated()">
+                <li class="dropdown">
                      <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                         aria-expanded="false">Tasks ({{ tasks.length }}) <span class="caret"></span></a>
                      <div class="dropdown-menu" style="width: 450px !important;">
@@ -95,7 +95,7 @@
                                  </div>
                              </div>
 
-                             <div class="row" ng-repeat="task in tasks">
+                             <div class="row" ng-repeat="task in tasks" style="border-bottom: solid 1px;">
                                  <div class="col-md-11">
                                      <div>
                                          <h4>{{ task.taskFamily }}</h4>
@@ -105,6 +105,12 @@
                                              {{task.progress}}%
                                            </div>
                                          </div>
+
+                                         <div ng-if="task.resultLink.length > 0">
+                                             Result:
+                                             <a ng-href="{{ task.resultLink }}" target="_blank">{{ task.resultLink }}</a>
+                                         </div>
+
                                      </div>
                                  </div>
 

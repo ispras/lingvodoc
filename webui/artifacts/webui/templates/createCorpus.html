@@ -15,12 +15,6 @@
                 <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
                 <hr>
 
-                <ol>
-                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="create"> <translatable str="Create new dictionary">Create new corpus</translatable></label></li>
-                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="import" disabled> <translatable str="Import dictionary">Import corpus</translatable></label>
-                    </li>
-                </ol>
-
                 <div>
 
                     <div ng-repeat="name in names">
@@ -30,15 +24,6 @@
                                placeholder="">
                     </div>
 
-
-                </div>
-
-                <div class="ng-hide" ng-show="creationMode == 'import'">
-                    <label for="selectFile"><translatable str="Select uploaded file">Select uploaded file</translatable></label> (<a href="#/files"><translatable str="Upload dictionary">Upload dictionary</translatable></a>)
-
-                    <select id="selectFile" ng-model="fileId" class="form-control">
-                        <option ng-repeat="file in files" value="{{ file.getId }}">{{ file.name }}</option>
-                    </select>
 
                 </div>
 
