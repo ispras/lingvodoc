@@ -18,7 +18,6 @@ object DateTime {
     date: DateTime => Js.Num(date.timestamp() / 1000.0)
   }, {
     case value: Js.Num => DateTime(new Date(value.value * 1000.0))
-    case _ =>
-      DateTime(new Date(0))
+    case _ => DateTime(new Date(0))
   })
 }

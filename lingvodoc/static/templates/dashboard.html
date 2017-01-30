@@ -29,7 +29,7 @@
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <button type="button" class="btn btn-default dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9"
-                            data-toggle="dropdown">{{ dictionary.translation }}
+                            data-toggle="dropdown">{{ dictionary.translation }} ({{ dictionary.createdAt.dateString() }})
                     </button>
                     <ul class="dropdown-menu">
                         <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)">
