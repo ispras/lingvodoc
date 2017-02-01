@@ -7,7 +7,7 @@ import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -32,6 +32,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
                                      modal: ModalService,
                                      instance: ModalInstance[Unit],
                                      backend: BackendService,
+                                     userService: UserService,
                                      timeout: Timeout,
                                      val exceptionHandler: ExceptionHandler,
                                      params: js.Dictionary[js.Function0[js.Any]])
@@ -52,7 +53,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   private[this] var foundEntries = Seq[Seq[LexicalEntry]]()
   private[this] var dataTypes = Seq[TranslationGist]()
-  private[this] var perspectiveFields = Seq[Field]()
+  //private[this] var perspectiveFields = Seq[Field]()
   private[this] var dictionaries = Seq[Dictionary]()
   private[this] var perspectives = Seq[Perspective]()
   private[this] var searchDictionaries = Seq[Dictionary]()
@@ -104,6 +105,9 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   def connect(entry: LexicalEntry): Unit = {
     backend.connectLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(field), lexicalEntry, entry).foreach { _ =>
       loadConnectedEntries()
+      scope.dictionaryTables.foreach { table =>
+        table.removeEntry(entry)
+      }
     }
   }
 
@@ -262,13 +266,6 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   private[this] def loadConnectedEntries() = {
 
-
-    backend.getLexicalEntry(dictionaryId, perspectiveId, lexicalEntryId) map { entry =>
-      lexicalEntry = entry
-    }
-
-
-
     backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
       val tf = connectedEntries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq map { entryGroup =>
         val firstEntry = entryGroup.head
@@ -278,15 +275,6 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
           }
         }
       }
-
-      Future.sequence(connectedEntries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId))}) map { connectedPerspectives =>
-        perspectives = connectedPerspectives
-
-        Future.sequence(connectedPerspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId))}) map { connectedDictionaries =>
-          dictionaries = connectedDictionaries
-        }
-      }
-
       Future.sequence(tf) map { tables =>
         scope.dictionaryTables = tables.toJSArray
       }
@@ -295,6 +283,22 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
 
   load(() => {
+
+    backend.getLexicalEntry(dictionaryId, perspectiveId, lexicalEntryId) map { entry =>
+      lexicalEntry = entry
+    }
+
+    val user = userService.getUser()
+    val query = DictionaryQuery()
+    query.author = Some(user.id)
+    backend.getDictionaries(query) map { d =>
+      dictionaries = d
+    }
+
+    backend.perspectives() map { p =>
+      perspectives = p
+    }
+
     backend.dataTypes() flatMap { allDataTypes =>
       dataTypes = allDataTypes
       loadConnectedEntries()
