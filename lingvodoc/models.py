@@ -87,7 +87,6 @@ def bi_c(element, compiler, **kw):
 categories = {0: 'lingvodoc.ispras.ru/dictionary',
               1: 'lingvodoc.ispras.ru/corpora'}
 
-
 from collections import deque
 
 
@@ -162,7 +161,6 @@ def recursive_content(self, publish, root=True, delete_self=False):  # TODO: com
     return vec
 
 
-
 # TODO: make this part detecting the engine automatically or from config (need to get after engine_from_config)
 # DANGER: This pragma should be turned off for all the bases except sqlite3: it produces unpredictable bugs
 # In this variant it leads to overhead on each connection establishment.
@@ -194,6 +192,7 @@ class PrimeTableArgs(object):
 class AdditionalMetadataMixin(object):
     additional_metadata = Column(JSONB)
 
+
 class MarkedForDeletionMixin(object):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
@@ -221,6 +220,7 @@ class EpochType(TypeDecorator):
             return datetime.datetime.fromtimestamp(value)
         return value
 
+
 class EpochTypeForDate(TypeDecorator):
     impl = Date
 
@@ -229,6 +229,7 @@ class EpochTypeForDate(TypeDecorator):
             return str(value)
         else:
             return None
+
 
 class UUIDType(TypeDecorator):
     impl = UUID(as_uuid=True)
@@ -432,6 +433,7 @@ class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin,
     __parentname__ = 'TranslationGist'
     locale_id = Column(SLBigInteger(), nullable=False)
     content = Column(UnicodeText, nullable=False)
+    Index('parent_translation_atom_idx', 'parent_client_id', 'parent_object_id')
 
 
 class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, MarkedForDeletionMixin, RelationshipMixin,
@@ -439,7 +441,7 @@ class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, Translati
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
-    __parentname__ = 'Language'
+    __parentname__ = 'Language' #todo: sort by metadata  #todo: protected
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
@@ -488,6 +490,7 @@ class Dictionary(CompositeIdMixin,
     __parentname__ = 'Language'
     category = Column(Integer, default=0)
     domain = Column(Integer, default=0)
+
 
 class DictionaryPerspective(CompositeIdMixin,
                             Base,
@@ -991,6 +994,17 @@ class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedFo
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(SLBigInteger(), ForeignKey('user.id'))
     user = relationship("User", backref='userblobs')
+
+# todo: make indexes detectable by alembic
+Index('parent_lexical_entry_idx', LexicalEntry.parent_client_id, LexicalEntry.parent_object_id)
+Index('gist_field_idx', Field.translation_gist_client_id, Field.translation_gist_object_id)
+Index('gist_field_data_type_idx', Field.data_type_translation_gist_client_id,
+      Field.data_type_translation_gist_object_id)
+Index('self_entity_idx', Entity.self_client_id, Entity.self_object_id)
+Index('parent_entity_idx', Entity.parent_client_id, Entity.parent_object_id)
+Index('parent_perspective_idx', DictionaryPerspective.parent_client_id, DictionaryPerspective.parent_object_id)
+Index('parent_dictionary_idx', Dictionary.parent_client_id, Dictionary.parent_object_id)
+Index('parent_language_idx', Language.parent_client_id, Language.parent_object_id)
 
 
 def acl_by_groups(object_id, client_id, subject):
