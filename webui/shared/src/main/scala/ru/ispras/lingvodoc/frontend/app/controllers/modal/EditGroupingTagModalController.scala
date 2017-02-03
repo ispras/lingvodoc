@@ -103,11 +103,14 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   @JSExport
   def connect(entry: LexicalEntry): Unit = {
+
     backend.connectLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(field), lexicalEntry, entry).foreach { _ =>
       loadConnectedEntries()
-      scope.dictionaryTables.foreach { table =>
+      scope.searchResults.foreach { table =>
         table.removeEntry(entry)
       }
+
+      scope.searchResults = scope.searchResults.filter(_.rows.nonEmpty)
     }
   }
 
