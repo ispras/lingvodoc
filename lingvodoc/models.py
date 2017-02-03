@@ -821,7 +821,7 @@ class LexicalEntry(CompositeIdMixin,
                     continue
                 cur_nodegroup = i['tree_numbering_scheme'] if prev_nodegroup != i['tree_numbering_scheme'] else prev_nodegroup
                 dictionary_form = dict(i)
-                dictionary_form['created_at'] = str(i['created_at'])
+                dictionary_form['created_at'] = int(i['created_at'].timestamp())
                 dictionary_form['level'] = 'entity'
                 dictionary_form['contains'] = []
                 if not dictionary_form.get('locale_id'):

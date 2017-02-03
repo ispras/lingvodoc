@@ -86,6 +86,7 @@ object LingvodocApplication {
       .controller[ViewSociolinguisticsInfoController]
       .controller[ConvertEafController]
       .controller[DownloadEmbeddedBlobController]
+      .controller[MessageController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

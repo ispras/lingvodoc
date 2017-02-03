@@ -747,9 +747,9 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 DBSession.flush()
                 for p_to_field in fields:
                     structure.add((p_to_field.field_client_id, p_to_field.field_object_id))
-                if structure == fp_structure:
+                if not fp_structure.difference(structure):
                     first_perspective = perspective
-                elif structure == sp_structure:
+                elif not sp_structure.difference(structure):
                     second_perspective = perspective
                 structure.clear()
             lexes = []
@@ -1099,15 +1099,15 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 p_match_dict = defaultdict(list)
                 for lex in p_lexes_with_text:
                     entity = lex[2]
-                    field_ids = (entity.field.client_id, entity.field.object_id)
+                    entity_field_ids = (entity.field.client_id, entity.field.object_id)
                     if entity.content == word:
-                        if field_ids["Word of Paradigmatic forms"] == field_ids:
+                        if field_ids["Word of Paradigmatic forms"] == entity_field_ids:
                             p_match_dict[lex[1]].append(lex)
                     if entity.content == transcription:
-                        if field_ids["Transcription of Paradigmatic forms"] == field_ids:
+                        if field_ids["Transcription of Paradigmatic forms"] == entity_field_ids:
                             p_match_dict[lex[1]].append(lex)
                     if entity.content == translation:
-                        if field_ids["Translation of Paradigmatic forms"] == field_ids:
+                        if field_ids["Translation of Paradigmatic forms"] == entity_field_ids:
                             p_match_dict[lex[1]].append(lex)
                 p_match_dict = { k: v for k, v in p_match_dict.items()
                                  if len(v) >= 2 or len(v) == 1 and [x[1] for x in p_lexes_with_text].count(k) == 1}

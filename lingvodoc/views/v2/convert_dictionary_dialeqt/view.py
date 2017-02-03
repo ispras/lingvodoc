@@ -1,7 +1,13 @@
-import logging
-from pyramid.view import view_config
+import base64
+from hashlib import md5
 from sqlite3 import connect
-from sqlite3 import DatabaseError
+from pyramid.view import view_config
+from pyramid.httpexceptions import (
+    HTTPOk,
+    HTTPNotFound,
+    HTTPBadRequest,
+    HTTPConflict
+)
 from lingvodoc.models import (
     DBSession,
     Dictionary,
@@ -10,12 +16,6 @@ from lingvodoc.models import (
     TranslationGist
 )
 from lingvodoc.exceptions import CommonException
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPNotFound,
-    HTTPBadRequest,
-    HTTPConflict
-)
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
 from lingvodoc.cache.caching import TaskStatus
 
@@ -25,7 +25,13 @@ def convert_dictionary(request):  # TODO: test
         req = request.json_body
         locale_id = int(request.cookies.get('locale_id') or 2)
         client_id = request.authenticated_userid
-        user = Client.get_user_by_client_id(client_id)
+        if not client_id:
+            ip = request.client_addr if request.client_addr else ""
+            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+            unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+            user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+        else:
+            user_id = Client.get_user_by_client_id(client_id).id
         args = dict()
         if "dictionary_client_id" in req and "dictionary_object_id" in req:
             args["dictionary_client_id"] = req["dictionary_client_id"]
@@ -56,14 +62,14 @@ def convert_dictionary(request):  # TODO: test
                                                           object_id=args["gist_object_id"]).first()
         try:
             if gist:
-                task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+                task = TaskStatus(user_id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
             else:
                 dictionary_obj = DBSession.query(Dictionary).filter_by(client_id=req["dictionary_client_id"],
                                                                object_id=req["dictionary_object_id"]).first()
                 gist = DBSession.query(TranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()
-                task = TaskStatus(user.id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+                task = TaskStatus(user_id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
         except:
             request.response.status = HTTPBadRequest.code
             return {'error': "wrong parameters"}

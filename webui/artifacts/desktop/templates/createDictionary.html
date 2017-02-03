@@ -42,7 +42,7 @@
                     <label for="selectFile"><translatable str="Select uploaded file">Select uploaded file</translatable></label> (<a href="#/files"><translatable str="Upload dictionary">Upload dictionary</translatable></a>)
 
                     <select id="selectFile" ng-model="fileId" class="form-control">
-                        <option ng-repeat="file in files" value="{{ file.getId }}">{{ file.name }}</option>
+                        <option ng-repeat="file in files" value="{{ file.getId }}">{{ file.name }} ({{ file.createdAt.dateString() }})</option>
                     </select>
 
 
@@ -54,7 +54,7 @@
 
                         <div ng-repeat="updateDictionary in updateDictionaries" ng-click="controller.toggleUpdateDictionary(updateDictionary)">
                             <span class="glyphicon glyphicon-ok" ng-show="controller.isUpdateDictionarySelected(updateDictionary)"></span>
-                            {{ updateDictionary.translation }}
+                            {{ updateDictionary.translation }} ({{ updateDictionary.createdAt.dateString() }})
                         </div>
 
                     </div>

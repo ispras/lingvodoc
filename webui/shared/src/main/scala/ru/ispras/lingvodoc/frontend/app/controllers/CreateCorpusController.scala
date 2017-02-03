@@ -22,7 +22,7 @@ trait CreateCorpusScope extends Scope {
   var languages: js.Array[Language] = js.native
   var language: Option[Language] = js.native
   var languageId: String = js.native
-  var files: js.Array[File] = js.native
+  //var files: js.Array[File] = js.native
   var fileId: String = js.native
   var creationMode: String = js.native
   var names: js.Array[LocalizedString] = js.native
@@ -52,7 +52,7 @@ class CreateCorpusController(scope: CreateCorpusScope,
   scope.names = js.Array[LocalizedString]()
   scope.language = None
   scope.languageId = ""
-  scope.files = js.Array[File]()
+  //scope.files = js.Array[File]()
   scope.fileId = ""
   scope.creationMode = "create"
   scope.layers = js.Array[Layer]()
@@ -149,20 +149,6 @@ class CreateCorpusController(scope: CreateCorpusScope,
 
         case None =>
         // TODO: Add user friendly error message
-      }
-    } else {
-      // import sqlite dictionary
-      scope.languages.find(language => language.getId == scope.languageId) foreach { language =>
-        backend.createTranslationGist("Dictionary") map { gistId =>
-          Future.sequence(scope.names.filter(_.str.nonEmpty).toSeq.map(name => backend.createTranslationAtom(gistId, name))) map { _ =>
-            scope.files.find(_.getId == scope.fileId) foreach { file =>
-              backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
-                scope.step = 3
-                redirectToDashboard()
-              }
-            }
-          }
-        }
       }
     }
   }
@@ -394,10 +380,10 @@ class CreateCorpusController(scope: CreateCorpusScope,
       case Failure(e) =>
     }
 
-    backend.userFiles onComplete {
-      case Success(files) => scope.files = files.toJSArray
-      case Failure(e) =>
-    }
+//    backend.userFiles onComplete {
+//      case Success(files) => scope.files = files.toJSArray
+//      case Failure(e) =>
+//    }
 
   }
 }

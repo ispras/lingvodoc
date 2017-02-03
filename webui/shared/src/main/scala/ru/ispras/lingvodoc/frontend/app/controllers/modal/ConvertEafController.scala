@@ -23,7 +23,6 @@ trait ConvertEafScope extends Scope {
   var languages: js.Array[Language] = js.native
   var language: Option[Language] = js.native
   var languageId: String = js.native
-  var files: js.Array[File] = js.native
   var names: js.Array[LocalizedString] = js.native
   var fileId: String = js.native
   var updateDictionaryName: String = js.native
@@ -225,7 +224,7 @@ class ConvertEafController(scope: ConvertEafScope,
       case "create" =>
         scope.languageId.isEmpty || scope.names.forall(_.str.isEmpty)
       case "update" =>
-        selectedUpdateDictionary.isEmpty || scope.files.forall(_.getId != scope.fileId)
+        selectedUpdateDictionary.isEmpty
     }
   }
 
@@ -265,7 +264,6 @@ class ConvertEafController(scope: ConvertEafScope,
 
   load(() => {
 
-
     backend.getCurrentUser map { user =>
       val query = DictionaryQuery()
       query.author = Some(user.id)
@@ -273,11 +271,6 @@ class ConvertEafController(scope: ConvertEafScope,
         allDictionaries = dictionaries
       }
     }
-
-    backend.userFiles map { files =>
-      scope.files = files.toJSArray
-    }
-
 
     backend.getLanguages flatMap { tree =>
       indentation = indentations(tree)
