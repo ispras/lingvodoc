@@ -1094,7 +1094,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             word = row[1]
             transcription = row[2]
             translation = row[3]
-            regular_form = row[4]
+            regular_form = int(row[4])
             if update_flag:
                 p_match_dict = defaultdict(list)
                 for lex in p_lexes_with_text:
