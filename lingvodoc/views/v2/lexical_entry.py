@@ -66,7 +66,7 @@ def view_connected_words(request):
             subreq.headers = request.headers
             try:
                 resp = request.invoke_subrequest(subreq)
-                if resp.json and resp.json not in response:
+                if resp.json and resp.json not in response and 'error' not in resp.json:
                     response.append(resp.json)
             except HTTPForbidden:
                 pass
@@ -434,6 +434,9 @@ def view_lexical_entry(request):  # TODO: test
                 # response['object_id'] = entry.object_id
                 request.response.status = HTTPOk.code
                 return response
+            else:
+                request.response.status = HTTPNotFound.code
+                return {'error': 'Lexical entry is marked as deleted'}
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
 
