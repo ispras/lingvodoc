@@ -730,7 +730,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                                                 marked_for_deletion=False):
                 structure = set()
                 fields = DBSession.query(DictionaryPerspectiveToField)\
-                            .filter_by(parent=perspective)\
+                            .filter_by(parent=perspective,
+                                       marked_for_deletion=False)\
                             .all()
                 DBSession.flush()
                 for p_to_field in fields:
