@@ -524,7 +524,8 @@ def translation_service_search(searchstring):
         filter(TranslationAtom.content == searchstring,
                TranslationAtom.locale_id == 2,
                TranslationGist.type == 'Service')\
-        .one()
+        .order_by(TranslationAtom.client_id)\
+        .first()
     response = translationgist_contents(translationatom.parent)
     return response
 
@@ -533,7 +534,8 @@ def translation_service_search_all(searchstring):
         .join(TranslationGist).\
         filter(TranslationAtom.content == searchstring,
                TranslationAtom.locale_id == 2)\
-        .one()
+        .order_by(TranslationAtom.client_id)\
+        .first()
     response = translationgist_contents(translationatom.parent)
     return response
 
