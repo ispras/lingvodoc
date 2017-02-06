@@ -233,7 +233,7 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
                 .join(TranslationAtom)\
                 .filter(TranslationGist.type == 'Service',
                         TranslationAtom.content == 'Link',
-                        TranslationAtom.locale_id == 2).one()
+                        TranslationAtom.locale_id == 2).first()
             link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
         except NoResultFound:
             return {'error': str("Something wrong with the base")}
@@ -524,35 +524,21 @@ def translation_service_search(searchstring):
         filter(TranslationAtom.content == searchstring,
                TranslationAtom.locale_id == 2,
                TranslationGist.type == 'Service')\
-        .one()
+        .order_by(TranslationAtom.client_id)\
+        .first()
     response = translationgist_contents(translationatom.parent)
     return response
 
 def translation_service_search_all(searchstring):
-    translationatom = DBSession.query(TranslationAtom)\
-        .join(TranslationGist).\
+    tralationgist = DBSession.query(TranslationGist)\
+        .join(TranslationAtom).\
         filter(TranslationAtom.content == searchstring,
                TranslationAtom.locale_id == 2)\
-        .one()
-    response = translationgist_contents(translationatom.parent)
+        .order_by(TranslationGist.client_id)\
+        .first()
+    response = {"client_id": tralationgist.client_id, "object_id": tralationgist.object_id}
+    #response = translationgist_contents(translationatom.parent)
     return response
-
-def create_gist(client_id, type):
-    gist = TranslationGist(client_id=client_id, type=type)
-    #DBSession.add(gist)
-    #DBSession.flush()
-    return gist
-
-
-def get_translation(translation_gist_client_id, translation_gist_object_id, locale_id):
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-    translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=translation_gist_client_id,
-                                                             parent_object_id=translation_gist_object_id,
-                                                             locale_id=locale_id).first()
-    DBSession.flush()
-    return translation.content
-
 
 def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage,
                    locale_id, task_status):
@@ -601,7 +587,9 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 .join(TranslationGist.translationatom)
             #todo: a way to find this fields if wwe cannot use one
             field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                                 TranslationAtom.content == name).one()
+                                           TranslationAtom.content == name)\
+                                   .order_by(TranslationAtom.client_id)\
+                                   .first()
             field_ids[name] = (field.client_id, field.object_id)
         fp_fields = ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")
         sp_fields = ("Word of Paradigmatic forms",
@@ -742,7 +730,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                                                 marked_for_deletion=False):
                 structure = set()
                 fields = DBSession.query(DictionaryPerspectiveToField)\
-                            .filter_by(parent=perspective)\
+                            .filter_by(parent=perspective,
+                                       marked_for_deletion=False)\
                             .all()
                 DBSession.flush()
                 for p_to_field in fields:
@@ -944,7 +933,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                   from dictionary
             where dictionary.is_a_regular_form=1""")
         for row in sqcursor:
-            wordid = row[0]
+            wordid = int(row[0])
             word = row[1]
             transcription = row[2]
             translation = row[3]
@@ -1090,7 +1079,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                   from dictionary
             where dictionary.is_a_regular_form=0""")
         for row in sqcursor:
-            wordid = row[0]
+            wordid = int(row[0])
             word = row[1]
             transcription = row[2]
             translation = row[3]
