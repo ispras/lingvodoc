@@ -7,7 +7,7 @@ import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -43,7 +43,8 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
                                     val exceptionHandler: ExceptionHandler,
                                     params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController(scope, modal, instance, timeout, params)
-    with SimplePlay {
+    with SimplePlay
+    with LinkEntities {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]

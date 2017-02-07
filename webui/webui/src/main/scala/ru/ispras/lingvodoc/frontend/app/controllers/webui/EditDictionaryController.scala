@@ -7,7 +7,7 @@ import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -47,7 +47,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
     with SimplePlay
-    with Pagination {
+    with Pagination
+    with LinkEntities {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt

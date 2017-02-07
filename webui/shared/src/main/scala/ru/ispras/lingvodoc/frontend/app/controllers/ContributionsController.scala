@@ -6,7 +6,7 @@ import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextPr
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
@@ -44,7 +44,8 @@ class ContributionsController(scope: ContributionsScope,
     with AngularExecutionContextProvider
     with SimplePlay
     with Pagination
-    with LoadingPlaceholder {
+    with LoadingPlaceholder
+    with LinkEntities {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
