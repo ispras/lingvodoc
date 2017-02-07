@@ -7,11 +7,16 @@ import com.greencatsoft.angularjs.{AbstractController, injectable}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
+import org.scalajs.dom.console
+
 @js.native
 trait ExceptionHandlerScope extends Scope {
   var message: String = js.native
+  var messageHtml: String = js.native
   var causeMessage: String = js.native
+  var causeMessageHtml: String = js.native
   var stackTrace: String = js.native
+  var stackTraceHtml: String = js.native
 }
 
 @injectable("ExceptionHandlerController")
@@ -20,6 +25,7 @@ class ExceptionHandlerController(scope: ExceptionHandlerScope,
                                  params: js.Dictionary[js.Function0[js.Any]]) extends AbstractController[ExceptionHandlerScope](scope) {
 
   params("exception") match {
+
     case e: Throwable =>
       scope.message = e.getMessage
 
@@ -32,11 +38,23 @@ class ExceptionHandlerController(scope: ExceptionHandlerScope,
           scope.stackTrace = e.getStackTrace.mkString("\n")
       }
 
+      scope.messageHtml = scope.message.replaceAll("\n", "<br>")
+
+      scope.causeMessageHtml =
+        if (scope.causeMessage != null)
+          scope.causeMessage.replaceAll("\n", "<br>")
+        else "null"
+
+      scope.stackTraceHtml = scope.stackTrace.replaceAll("\n", "<br>")
+
     case _ =>
       scope.message = ""
       scope.causeMessage = ""
       scope.stackTrace = ""
 
+      scope.messageHtml = ""
+      scope.causeMessageHtml = ""
+      scope.stackTraceHtml = ""
   }
 
   @JSExport
