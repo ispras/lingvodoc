@@ -5,17 +5,13 @@
 <div class="modal-body">
 
     <h3>Oops, something went wrong.</h3>
-    <input type="text" class="form-control" ng-model="message" disabled="true">
+    <div id="message" style="word-wrap: break-word;" ng-bind-html="messageHtml"></div>
 
     <h3>Cause:</h3>
-    <input type="text" class="form-control" ng-model="causeMessage" disabled="true">
-
+    <div id="causeMessage" style="word-wrap: break-word;" ng-bind-html="causeMessageHtml"></div>
 
     <h3>Stack trace:</h3>
-
-    <div id="stackTrace" style="word-wrap: break-word;">
-        {{ stackTrace }}
-    </div>
+    <div id="stackTrace" style="word-wrap: break-word;" ng-bind-html="stackTraceHtml"></div>
 
 </div>
 

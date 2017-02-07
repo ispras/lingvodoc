@@ -249,9 +249,8 @@
                         <button
                             type="button"
                             class="btn btn-default btn-sm"
-                            ng-click="controller.viewLinkedPerspective(row.entry, column.field, cell.values)"
-                            disabled>
-                            <span class="glyphicon glyphicon-list">View ({{controller.linksCount(cell.values)}})</span>
+                            ng-click="controller.viewLinkedPerspective(dictionaryTable.tag, row.entry, column.field, cell.values)">
+                            <span class="glyphicon glyphicon-list">View ({{cell.values.length}})</span>
                         </button>
 
                     </div>

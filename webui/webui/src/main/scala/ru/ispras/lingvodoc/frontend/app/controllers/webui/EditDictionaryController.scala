@@ -33,6 +33,15 @@ trait EditDictionaryScope extends Scope {
   var pageCount: Int = js.native
   // total number of pages
   var dictionaryTable: DictionaryTable = js.native
+
+  /** 
+    * How we set publishing state of merged entities, either when any merged entity is published (value
+    * "any"), or when all merged entities are published (value "all").
+    *
+    * Default value is "any".
+    */
+  var publishMergeMode: String = js.native
+
   var pageLoaded: Boolean = js.native
 }
 
@@ -56,9 +65,10 @@ class EditDictionaryController(scope: EditDictionaryScope,
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
-
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+
+  private[this] var user_has_permissions: Boolean = false
 
   private[this] var enabledInputs: Seq[String] = Seq[String]()
   private[this] var editInputs: Seq[String] = Seq[String]()
@@ -77,6 +87,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   scope.pageCount = 0
   scope.size = 20
 
+  scope.publishMergeMode = "any"
 
   scope.pageLoaded = false
 
@@ -190,7 +201,9 @@ class EditDictionaryController(scope: EditDictionaryScope,
     val entry_id_list = entry_list map { entry =>
       CompositeId(entry.clientId, entry.objectId) }
 
-    backend.bulkMerge(Seq.fill(1)(entry_id_list)).map
+    backend.mergeBulk(
+      scope.publishMergeMode == "any",
+      Seq.fill(1)(entry_id_list)) .map
     {
       case entry_id_seq =>
         val entry_id = entry_id_seq(0)
@@ -524,6 +537,13 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
   }
 
+  /** Checks if the user has permissions required to merge lexical entries and entities. */
+  @JSExport
+  def userHasMergePermissions(): Boolean =
+  {
+    user_has_permissions
+  }
+
   override protected def onStartRequest(): Unit = {
     scope.pageLoaded = false
   }
@@ -546,17 +566,27 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
         backend.dataTypes() flatMap { d =>
           dataTypes = d
+
           backend.getFields(dictionaryId, perspectiveId) flatMap { f =>
             fields = f
+
             backend.getLexicalEntriesCount(dictionaryId, perspectiveId, LexicalEntriesType.All) flatMap { count =>
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
+
               backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size, sortBy) flatMap { entries =>
                 scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
 
                 backend.getPerspectiveRoles(dictionaryId, perspectiveId) map { roles =>
                   perspectiveRoles = Some(roles)
-                  roles
+
+                  backend.mergePermissions(perspectiveId) map { merge_permissions =>
+                    user_has_permissions = merge_permissions
+                    merge_permissions
+
+                  } recover {
+                    case e: Throwable => Future.failed(e)
+                  }
                 } recover {
                   case e: Throwable => Future.failed(e)
                 }
