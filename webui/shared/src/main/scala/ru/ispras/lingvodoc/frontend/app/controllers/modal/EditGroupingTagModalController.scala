@@ -5,7 +5,7 @@ import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, Modal
 import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 
@@ -38,7 +38,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
                                      params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
-    with SimplePlay {
+    with SimplePlay
+    with LinkEntities {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
@@ -53,7 +54,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   private[this] var foundEntries = Seq[Seq[LexicalEntry]]()
   private[this] var dataTypes = Seq[TranslationGist]()
-  //private[this] var perspectiveFields = Seq[Field]()
+  private[this] var statuses = Seq[TranslationGist]()
   private[this] var dictionaries = Seq[Dictionary]()
   private[this] var perspectives = Seq[Perspective]()
   private[this] var searchDictionaries = Seq[Dictionary]()
@@ -302,10 +303,17 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
       perspectives = p
     }
 
-    backend.dataTypes() flatMap { allDataTypes =>
-      dataTypes = allDataTypes
-      loadConnectedEntries()
+    backend.allStatuses() map { s =>
+      statuses = s
+
+      backend.dataTypes() flatMap { allDataTypes =>
+        dataTypes = allDataTypes
+        loadConnectedEntries()
+      }
+
     }
+
+
   })
 
 

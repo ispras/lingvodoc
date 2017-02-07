@@ -9,7 +9,7 @@ import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
@@ -102,7 +102,8 @@ class MergeDictionaryController(
 
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
-    with SimplePlay {
+    with SimplePlay
+    with LinkEntities {
 
   private[this] val __debug__ = false
 
