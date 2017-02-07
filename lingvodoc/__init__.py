@@ -571,12 +571,21 @@ def configure_routes(config):
     config.add_route(name='merge_perspectives', pattern='/merge/perspectives')  # TODO: test
 
     # API #POST
-    # {'entity_type_primary':<entity_type_primary>,
-    # 'entity_type_secondary' : <entity_type_secondary>,
+    #
+    # Checks if the user has create/delete permissions required to merge lexical entries and entities.
+    #
+    config.add_route(name = 'merge_permissions',
+        pattern = '/merge/permissions/{perspective_client_id}/{perspective_object_id}',
+        factory = 'lingvodoc.models.LexicalEntriesEntitiesAcl')
+
+    # API #POST
+    # {
+    # 'algorithm': <algorithm>,
+    # 'entity_type_primary': <entity_type_primary>,
+    # 'entity_type_secondary': <entity_type_secondary>,
+    # 'field_selection_list': <field_selection_list>,
     # 'threshold': <threshold>,
-    # 'levenstein' : <levenstein>,
-    # 'client_id' : <client_id>,
-    # 'object_id' : <object_id>
+    # 'levenshtein': <levenshtein>,
     # }
     config.add_route(name = 'merge_suggestions',
         pattern = '/merge/suggestions/{perspective_client_id}/{perspective_object_id}',

@@ -1,10 +1,43 @@
 
 __author__ = 'alexander'
 
+# Standard library imports.
+
+import collections
+import itertools
+import json
+import logging
+import pprint
+import traceback
+
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPInternalServerError,
+    HTTPOk
+)
+
+# External imports.
+
+import pylev
+
+from pyramid.request import Request
+from pyramid.security import authenticated_userid
+from pyramid.view import view_config
+
+from sqlalchemy import and_, tuple_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.attributes import flag_modified
+
+# Lingvodoc imports.
+
 from lingvodoc.exceptions import CommonException
+
+import lingvodoc.merge_perspectives as merge_perspectives
 from lingvodoc.merge_perspectives import (
     mergeDicts
     )
+
 from lingvodoc.models import (
     BaseGroup,
     Client,
@@ -20,32 +53,30 @@ from lingvodoc.models import (
     user_to_group_association,
     user_to_organization_association
 )
+
 from lingvodoc.views.v2.utils import (
     remove_deleted
 )
 
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPInternalServerError,
-    HTTPOk
-)
-from pyramid.request import Request
-from pyramid.security import authenticated_userid
-from pyramid.view import view_config
-
-from sqlalchemy import and_, tuple_
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.attributes import flag_modified
-
-import collections
-import itertools
-import json
-import logging
-import pprint
-import traceback
-
 log = logging.getLogger(__name__)
+
+
+def unimplemented():
+    """
+    Formats message about unimplemented features with filename, line number and function name info.
+    """
+
+    filename, line, function, statement = traceback.extract_stack()[-2]
+    return '{0}:{1}: {2}: Unimplemented.'.format(filename, line, function)
+
+
+def message(message):
+    """
+    Formats message with filename, line number and function name info.
+    """
+
+    filename, line, function, statement = traceback.extract_stack()[-2]
+    return '{0}:{1}: {2}: {3}'.format(filename, line, function, message)
 
 
 @view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
@@ -436,63 +467,73 @@ def check_user_merge_permissions(user_id, perspective_client_id, perspective_obj
 
 
 @view_config(
-    route_name = 'merge_suggestions',
+    route_name = 'merge_permissions',
     renderer = 'json',
     request_method = 'POST',
     permission = 'view')
-def merge_suggestions(request):
+def merge_permissions(request):
     """
-    Finds groups of mergeable lexical entries according to specified criteria.
+    Checks if the user has create/delete permissions required to merge lexical entries and entities.
     """
-
-    log.debug('merge_suggestions')
 
     perspective_client_id = request.matchdict.get('perspective_client_id')
     perspective_object_id = request.matchdict.get('perspective_object_id')
-
-    req = request.json
-
-    entity_type_primary = req.get('entity_type_primary') or 'Transcription'
-    entity_type_secondary = req.get('entity_type_secondary') or 'Translation'
-
-    threshold = req.get('threshold') or 0.2
-    levenstein = req.get('levenstein') or 1
-
-    locale_id = int(request.cookies.get('locale_id') or 2)
-
-    # Checking if the user has sufficient permissions to perform suggested merges.
 
     user = Client.get_user_by_client_id(request.authenticated_userid)
 
     user_has_permissions = check_user_merge_permissions(
         user.id, perspective_client_id, perspective_object_id)
 
-    # Getting data of the undeleted lexical entries of the perspective.
+    log.debug('merge_permissions {0}/{1}: {2}'.format(
+        perspective_client_id, perspective_object_id, user_has_permissions))
 
-    lexical_entry_list = list(DBSession.query(LexicalEntry).filter_by(
-        parent_client_id = perspective_client_id,
-        parent_object_id = perspective_object_id,
-        marked_for_deletion = False).all())
+    return {'user_has_permissions': user_has_permissions}
 
-    if not lexical_entry_list:
-        return []
 
-    entry_data_list = [l.track(False, locale_id) for l in lexical_entry_list]
-    remove_deleted(entry_data_list)
+def match_simple(entry_data_list, entity_type_primary, entity_type_secondary, threshold, levenshtein):
+    """
+    Matches lexical entries via an old, simple algorithm.
 
-    log.debug('merge_suggestions {0}/{1}: {2} lexical entries'.format(
-        perspective_client_id, perspective_object_id, len(entry_data_list)))
+    Approximate description of the simple matching algorithm was reconstructed from the source code of
+    functions parse_response and mergeDicts. Algorithms works as follows.
+
+    Each lexical entry L is transformed into a feature vector V(L) given two text entity fields F1, F2:
+
+    V(L) = [(f1, f2) | f1 in parts(E1), E1 in F1(L), f2 in parts(E2), E2 in F2(L)]
+
+    E1 in F1(L) means that entity E1 is an entity of lexical entry L belonging to the field F1.
+
+    parts(E) takes text contents of an entity E, removes all parenthesized substrings, splits by a set of
+    punctuation characters and removes beginning/ending whitespace, see function getWordParts of the module
+    merge_perspectives.
+
+    Matching degree M(L1, L2) of a pair of lexical entries L1, L2:
+
+    M(L1, L2) =
+      count[(f11, f12) ~= (f21, f22) | (f11, f12) in V(L1), (f21, f22) in V(L2)] /
+        (length(V(L1)) + length(V(L2)))
+
+    f11, f12, f21, f22 --- feature strings.
+    ~= --- feature matching relation.
+
+    Features (f11, f12), (f21, f22) match if f11 == f21 и levenshtein(f12, f22) <= d.
+
+    L1 and L2 are deemed sufficiently similar of M(L1, L2) >= t, where t is a matching threshold (with
+    default value of 0.2).
+
+    Matching result is a list of all similar enough pairs of lexical entries with their matching degrees.
+    """
 
     def parse_response(entry_data):
         """
         Contructs description of a lexical entry to be used for matching.
         """
 
-        word_list = map(lambda x: x['content'], filter(
+        word_list = map(lambda x: x.get('content', ''), filter(
             lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'],
             entry_data['contains']))
 
-        translation_list = map(lambda x: x['content'], filter(
+        translation_list = map(lambda x: x.get('content', ''), filter(
             lambda x: x['entity_type'] == entity_type_secondary and not x['marked_for_deletion'],
             entry_data['contains']))
 
@@ -509,10 +550,256 @@ def merge_suggestions(request):
     if not match_data_list:
         return []
 
-    # Compiling match graph.
+    return mergeDicts(
+        match_data_list, match_data_list, float(threshold), int(levenshtein))
 
-    match_result_list = mergeDicts(
-        match_data_list, match_data_list, float(threshold), int(levenstein))
+
+def match_fields(entry_data_list, field_selection_list, threshold):
+    """
+    Matches lexical entries via a newer, more flexible algorithm (cf. match_simple).
+
+    Description of this algorithm follows.
+
+    Each lexical entry L transformed into a feature vector V(L) given fields F1, ..., Fn:
+
+    V(L) = V(F1, L) + ... + V(Fn, L)
+
+    V(F, L) | F is a text field = [(F, x) | x in parts(F, E), E in F(L)]
+    V(F, L) | F is a link field = [(F, link_id(E)) | E in F(L)]
+    V(F, L) | F is a hash field = [(F, hash(E)) | E in F(L)]
+
+    parts(F, E) should take contents of an entity E, remove all parenthesized substring, split by
+    punctuation characters and/or by whitespace and remove beginning/ending whitespace.
+
+    Matching degree M(L1, L2) of a pair of lexical entries L1, L2:
+
+    M(L1, L2) =
+      count[(f1, x1) ~= (f2, x2) | (f1, x1) in V(L1), (f2, x2) in V(L2)] /
+        (length(V(L1)) + length(V(L2)))
+
+    f1, f2 --- fields from the list F1, ..., Fn.
+    x1, x2 --- feature strings, link ids or hashes depending on fields f1 and f2.
+    ~= --- feature matching relation.
+
+    Features (f1, x1), (f2, x2) match, if f1 = f2 = F and
+      case F is a text field: levenshtein(x1, x2) <= d(F),
+      case F is a link or hash field: x1 = x2.
+
+    L1 and L2 are deemed sufficiently similar of M(L1, L2) >= t, where t is a matching threshold (with
+    default value of 0.2).
+
+    Matching result is a list of all similar enough pairs of lexical entries with their matching degrees.
+    """
+
+    def make_extractor(field_selection):
+        """
+        Makes feature extractor based on field selection info.
+        """
+
+        def extract_text(entity_data):
+            """
+            Extracts list of text features based on field selection options.
+            """
+
+            content, n = merge_perspectives.braces.subn("", entity_data.get('content', ''))
+            while n > 0:
+                content, n = merge_perspectives.braces.subn("", content)
+
+            content_list = [content]
+
+            if field_selection['split_punctuation']:
+                content_list = itertools.chain(*[
+                    merge_perspectives.punct.split(content) for content in content_list])
+
+            if field_selection['split_space']:
+                content_list = itertools.chain(*[
+                    merge_perspectives.punct.split(content) for content in content_list])
+
+            for feature in set(content.strip() for content in content_list):
+                yield feature
+
+        # Choosing extractor based on field selection type.
+
+        if field_selection['type'] == 'text':
+            return extract_text
+
+        elif field_selection['type'] == 'hash':
+            return (lambda entity_data: (yield entity_data['additional_metadata']['hash']))
+
+        else:
+            raise Exception('Unknown field type \'{0}\'.'.format(field_selection['type']))
+
+    # Sorting field selections by fields.
+
+    field_data_dict = {}
+
+    for field_selection in field_selection_list:
+        field_id = (field_selection['client_id'], field_selection['object_id'])
+
+        if field_id not in field_data_dict:
+            field_data_dict[field_id] = ([field_selection], [])
+
+        else:
+            field_data_dict[field_id][0].append(field_selection)
+
+    # Sorting entities by fields.
+
+    for entry_data in entry_data_list:
+        for entity_data in entry_data['contains']:
+
+            maybe_field_data = field_data_dict.get(
+                (entity_data['field_client_id'], entity_data['field_object_id']))
+
+            if maybe_field_data is not None:
+                maybe_field_data[1].append(entity_data)
+
+    # Memoized computation of Levenshtein distance.
+
+    levenshtein_cache = {}
+
+    def levenshtein(string_a, string_b):
+        """
+        Computes Levenshtein distances with memoization.
+        """
+
+        if string_a > string_b:
+            string_a, string_b = string_b, string_a
+
+        result = levenshtein_cache.get((string_a, string_b))
+
+        if result is not None:
+            return result
+
+        result = pylev.levenshtein(string_a, string_b)
+        levenshtein_cache[(string_a, string_b)] = result
+
+        return result
+
+    # Processing entity data by fields and fields selections.
+
+    count_dict = collections.Counter()
+    match_dict = collections.Counter()
+
+    for field_id, (field_selection_list, entity_data_list) in field_data_dict.items():
+
+        for field_selection in field_selection_list:
+            extractor = make_extractor(field_selection)
+
+            # Processing discrete features.
+
+            if (field_selection['type'] != 'text' or
+                field_selection['levenshtein'] <= 0):
+
+                feature_dict = collections.defaultdict(set)
+
+                for entity_data in entity_data_list:
+                    entry_id = (entity_data['parent_client_id'], entity_data['parent_object_id'])
+
+                    for feature in extractor(entity_data):
+                        feature_dict[feature].add(entry_id)
+
+                log.debug('\n' + pprint.pformat(feature_dict))
+
+                for entry_id_set in feature_dict.values():
+                    entry_id_list = sorted(entry_id_set)
+
+                    for index, entry_id in enumerate(entry_id_list):
+                        count_dict[entry_id] += 1
+
+                        for other_id in entry_id_list[index + 1:]:
+                            match_dict[(entry_id, other_id)] += 1
+
+            # Processing Levenshtein-comparable features.
+
+            else:
+                limit = field_selection['levenshtein']
+
+                entry_feature_dict = collections.defaultdict(set)
+                feature_entry_dict = collections.defaultdict(set)
+
+                for entity_data in entity_data_list:
+                    entry_id = (entity_data['parent_client_id'], entity_data['parent_object_id'])
+
+                    for feature in extractor(entity_data):
+                        entry_feature_dict[entry_id].add(feature)
+                        feature_entry_dict[feature].add(entry_id)
+
+                for entry_id, feature_set in entry_feature_dict.items():
+                    count_dict[entry_id] += len(feature_set)
+
+                log.debug('\n' + pprint.pformat(entry_feature_dict))
+                log.debug('\n' + pprint.pformat(feature_entry_dict))
+
+                # At the moment we have to compute N^2/2 Levenshtein distances. If such computations will be
+                # found too time consuming, we can try optimized Levenshtein distance computation with
+                # prefix sharing and lazy evaluations.
+
+                levenshtein_dict = collections.defaultdict(list)
+                feature_list = sorted(feature_entry_dict.keys())
+
+                for index, feature_a in enumerate(feature_list):
+                    for feature_b in feature_list[index + 1:]:
+
+                        if levenshtein(feature_a, feature_b) <= limit:
+                            levenshtein_dict[feature_a].append(feature_b)
+
+                log.debug('\n' + pprint.pformat(feature_list))
+                log.debug('\n' + pprint.pformat(levenshtein_dict))
+
+                # Any match between features is a match between their corresponding entries. At first we
+                # process matches on equal features.
+
+                for feature in feature_list:
+                    entry_id_list = sorted(feature_entry_dict[feature])
+
+                    for index, entry_id in enumerate(entry_id_list):
+                        for other_id in entry_id_list[index + 1:]:
+
+                            match_dict[(entry_id, other_id)] += 1
+
+                # Then we process matches on different, but sifficiently Levenshtein-similar, features.
+
+                for feature, match_list in levenshtein_dict.items():
+
+                    entry_id_set = feature_entry_dict[feature]
+
+                    other_id_list = list(itertools.chain(
+                        *[feature_entry_dict[match] for match in match_list]))
+                        
+                    for entry_id in entry_id_set:
+                        for other_id in other_id_list:
+
+                            if entry_id == other_id:
+                                continue
+
+                            key = ((entry_id, other_id)
+                                if entry_id <= other_id else (other_id, entry_id))
+
+                            match_dict[key] += 1
+
+    # Compiling and returning matching result.
+
+    log.debug('\n' + pprint.pformat(count_dict))
+    log.debug('\n' + pprint.pformat(match_dict))
+
+    result_list = []
+
+    for (id_a, id_b), count in match_dict.items():
+        score = float(count) / (count_dict[id_a] + count_dict[id_b])
+
+        if score >= threshold:
+            result_list.append((id_a, id_b, score))
+
+    result_list.sort()
+    log.debug('\n' + pprint.pformat(result_list))
+
+    return result_list
+
+
+def match_graph(match_result_list):
+    """
+    Compiles lexical entry match graph based on results of lexical entry matching.
+    """
 
     confidence_dict = collections.defaultdict(lambda: 0.0)
     weight_dict = collections.defaultdict(lambda: 0.0)
@@ -577,13 +864,100 @@ def merge_suggestions(request):
             'group {0}, {1} lexical entries:\n'.format(group_index, len(group_set)) +
             pprint.pformat(group_entry_list))
 
+
+@view_config(
+    route_name = 'merge_suggestions',
+    renderer = 'json',
+    request_method = 'POST',
+    permission = 'view')
+def merge_suggestions(request):
+    """
+    Finds groups of mergeable lexical entries according to specified criteria.
+    """
+
+    perspective_client_id = request.matchdict.get('perspective_client_id')
+    perspective_object_id = request.matchdict.get('perspective_object_id')
+
+    request_json = request.json
+
+    algorithm = request_json.get('algorithm')
+    threshold = request_json.get('threshold') or 0.1
+
+    if algorithm not in set(['simple', 'fields']):
+        return {'error': message('Unknown entity matching algorithm \'{0}\'.'.format(algorithm))}
+
+    # Getting merge suggestions options.
+
+    if algorithm == 'simple':
+
+        entity_type_primary = request_json.get('entity_type_primary') or 'Transcription'
+        entity_type_secondary = request_json.get('entity_type_secondary') or 'Translation'
+
+        levenshtein = request_json.get('levenshtein') or 1
+
+    else:
+        field_selection_list = request_json['field_selection_list']
+
+    log.debug('merge_suggestions {0}/{1}'.format(
+        perspective_client_id, perspective_object_id))
+
+    locale_id = int(request.cookies.get('locale_id') or 2)
+
+    # Checking if the user has sufficient permissions to perform suggested merges.
+
+    user = Client.get_user_by_client_id(request.authenticated_userid)
+
+    user_has_permissions = check_user_merge_permissions(
+        user.id, perspective_client_id, perspective_object_id)
+
+    # Getting data of the undeleted lexical entries of the perspective.
+
+    lexical_entry_list = list(DBSession.query(LexicalEntry).filter_by(
+        parent_client_id = perspective_client_id,
+        parent_object_id = perspective_object_id,
+        marked_for_deletion = False).all())
+
+    if not lexical_entry_list:
+
+        return {
+            'entry_data': [],
+            'match_result': [],
+            'user_has_permissions': user_has_permissions}
+
+    entry_data_list = [l.track(False, locale_id) for l in lexical_entry_list]
+    remove_deleted(entry_data_list)
+
+    log.debug('merge_suggestions {0}/{1}: {2} lexical entries'.format(
+        perspective_client_id, perspective_object_id, len(entry_data_list)))
+
+    # Matching lexical entries.
+
+    if algorithm == 'simple':
+
+        match_result_list = match_simple(entry_data_list,
+            entity_type_primary, entity_type_secondary, threshold, levenshtein)
+
+    else: 
+        match_result_list = match_fields(entry_data_list, field_selection_list, threshold)
+
+    if not match_result_list:
+
+        return {
+            'entry_data': [],
+            'match_result': [],
+            'user_has_permissions': user_has_permissions}
+
     # Returning match data together with data of matching lexical entries.
+
+    match_id_set = set(id
+        for id_a, id_b, confidence in match_result_list
+            for id in (id_a, id_b))
 
     return {
 
         'entry_data': [
             entry_data for entry_data in entry_data_list
-                if (entry_data['client_id'], entry_data['object_id']) in adjacency_dict],
+                if (entry_data['client_id'], entry_data['object_id']) in match_id_set],
 
         'match_result': [
             ({'client_id': id_a[0], 'object_id': id_a[1]},
@@ -608,13 +982,13 @@ def merge_bulk(request):
     client_id = request.authenticated_userid
 
     if not client_id:
-        return {'error': 'Unrecognized client.'}
+        return {'error': message('Unrecognized client.')}
 
     user = Client.get_user_by_client_id(client_id)
     user_permission_dict = {}
 
     if not user:
-        return {'error': 'User authentification failure.'}
+        return {'error': message('User authentification failure.')}
 
     def check_permissions(perspective_client_id, perspective_object_id):
         """
@@ -631,7 +1005,7 @@ def merge_bulk(request):
         user_permission_dict[(perspective_client_id, perspective_object_id)] = user_has_permissions
         return user_has_permissions
 
-    def new_entity_dict(merge_entity_set, entity_data):
+    def new_entity_dict(merge_entity_set, entity_data, publish_any):
         """
         Creates new entity merge data.
         """
@@ -665,11 +1039,12 @@ def merge_bulk(request):
 
         merge_contains(
             entity_dict['contains'], merge_entity_set,
-            entity_data['contains'], (entity_data['client_id'], entity_data['object_id']))
+            entity_data['contains'], (entity_data['client_id'], entity_data['object_id']),
+            publish_any)
 
         return entity_dict
 
-    def merge_entity_dict(entity_dict, merge_entity_set, entity_data):
+    def merge_entity_dict(entity_dict, merge_entity_set, entity_data, publish_any):
         """
         Updates entity merge data.
         """
@@ -677,8 +1052,14 @@ def merge_bulk(request):
         entity_dict['merge_set'].add((entity_data['client_id'], entity_data['object_id']))
         merge_entity_set.add((entity_data['client_id'], entity_data['object_id']))
 
-        entity_dict['accepted'] = entity_dict['accepted'] and entity_data['accepted']
-        entity_dict['published'] = entity_dict['published'] and entity_data['published']
+        # Acceptedness of is processed via logical OR, publishing status either via OR or AND depending on
+        # settings.
+
+        entity_dict['accepted'] = entity_dict['accepted'] or entity_data['accepted']
+
+        entity_dict['published'] = (
+            entity_dict['published'] or entity_data['published'] if publish_any else
+            entity_dict['published'] and entity_data['published'])
 
         additional_metadata = entity_data.get('additional_metadata', {})
 
@@ -686,14 +1067,17 @@ def merge_bulk(request):
             raise Exception('Unsupported additional metadata '
                 'type \'{0}\'.'.format(type(additional_metadata)))
 
+        # Merging metadata and subordinate entities.
+
         metadata_merge(entity_dict['additional_metadata'], additional_metadata)
 
         merge_contains(
             entity_dict['contains'], merge_entity_set,
-            entity_data['contains'], (entity_data['client_id'], entity_data['object_id']))
+            entity_data['contains'], (entity_data['client_id'], entity_data['object_id']),
+            publish_any)
 
     def merge_contains(
-        contains_dict, merge_entity_set, contains_list, container_id):
+        contains_dict, merge_entity_set, contains_list, container_id, publish_any):
 
         """
         Merges entities contained in a lexical entry or another entity to already merged entities.
@@ -708,13 +1092,18 @@ def merge_bulk(request):
                 continue
 
             if entity_data['data_type'] == 'Grouping Tag' or entity_data['data_type'] == 'Text':
-                entity_key = (entity_data['entity_type'], entity_data['content'])
+                entity_key = (entity_data['entity_type'], entity_data.get('content', ''))
 
             elif entity_data['data_type'] == 'Link':
                 entity_key = (entity_data['entity_type'],
                     (entity_data['link_client_id'], entity_data['link_object_id']))
 
-            elif entity_data['data_type'] == 'Sound' or entity_data['data_type'] == 'Markup':
+            # Images, text markup and sound recordings are compared by hash.
+
+            elif (entity_data['data_type'] == 'Image' or
+                    entity_data['data_type'] == 'Markup' or
+                    entity_data['data_type'] == 'Sound'):
+
                 entity_key = (entity_data['entity_type'], entity_data['additional_metadata']['hash'])
 
             else:
@@ -725,10 +1114,10 @@ def merge_bulk(request):
             # into it.
 
             if entity_key in contains_dict:
-                merge_entity_dict(contains_dict[entity_key], merge_entity_set, entity_data)
+                merge_entity_dict(contains_dict[entity_key], merge_entity_set, entity_data, publish_any)
 
             else:
-                contains_dict[entity_key] = new_entity_dict(merge_entity_set, entity_data)
+                contains_dict[entity_key] = new_entity_dict(merge_entity_set, entity_data, publish_any)
 
     def metadata_merge(metadata_dict, another_dict):
         """
@@ -829,7 +1218,7 @@ def merge_bulk(request):
     # Processing lexical entries group by group.
 
     try:
-        json_data = request.json
+        publish_any = request.json['publish_any']
         group_list = request.json['group_list']
         result_list = []
 
@@ -852,12 +1241,16 @@ def merge_bulk(request):
                     perspective_id = (entry.parent_client_id, entry.parent_object_id)
 
                 elif perspective_id != (entry.parent_client_id, entry.parent_object_id):
-                    return {'error': 'Entries {0} are from different perspectives.'.format(
-                        entry_id_list)}
+
+                    DBSession.rollback()
+                    return {'error': message('Entries {0} are from different perspectives.'.format(
+                        entry_id_list))}
 
             if not check_permissions(*perspective_id):
-                return {'error': 'No create/delete permissions for perspective {0}/{1}.'.format(
-                    *perspective_id)}
+
+                DBSession.rollback()
+                return {'error': message('No create/delete permissions for perspective {0}/{1}.'.format(
+                    *perspective_id))}
 
             log.debug('merge_bulk: group {0}/{1}, {2} lexical entries, perspective {3}/{4}'.format(
                 index + 1, len(group_list), len(entry_id_list), *perspective_id))
@@ -878,7 +1271,7 @@ def merge_bulk(request):
                 'contains': {},
                 'merge_entry_dict': {},
                 'merge_entity_set': set(),
-                'published': True}
+                'published': False if publish_any else True}
 
             for entry, entry_data in zip(entry_list, entry_data_list):
                 entry_dict['merge_entry_dict'][(entry.client_id, entry.object_id)] = entry
@@ -888,21 +1281,28 @@ def merge_bulk(request):
                 if len(set(entry_data.keys()).difference(set([
                     'additional_metadata', 'client_id', 'contains', 'level', 'marked_for_deletion',
                     'object_id', 'parent_client_id', 'parent_object_id', 'published']))) > 0:
-                    return {'error': 'Unexpected lexical entry data keys.'}
+
+                    DBSession.rollback()
+                    return {'error': message('Unexpected lexical entry data keys.')}
 
                 additional_metadata = entry_data.get('additional_metadata', {})
 
                 if not isinstance(additional_metadata, dict):
-                    return {'error': 'Unsupported additional metadata type \'{0}\'.'.format(
-                        type(additional_metadata))}
 
-                entry_dict['published'] = entry_dict['published'] and entry_data['published']
+                    DBSession.rollback()
+                    return {'error': message('Unsupported additional metadata type \'{0}\'.'.format(
+                        type(additional_metadata)))}
+
+                entry_dict['published'] = (
+                    entry_dict['published'] or entry_data['published'] if publish_any else
+                    entry_dict['published'] and entry_data['published'])
 
                 metadata_merge(entry_dict['additional_metadata'], additional_metadata)
 
                 merge_contains(
                     entry_dict['contains'], entry_dict['merge_entity_set'],
-                    entry_data['contains'], (entry_data['client_id'], entry_data['object_id']))
+                    entry_data['contains'], (entry_data['client_id'], entry_data['object_id']),
+                    publish_any)
 
             # If merged entries were themselves merge results, we don't care.
 
@@ -1148,10 +1548,11 @@ def merge_bulk(request):
                     if (self_id in entry_dict['merge_entity_set'] or
                         parent_id in entry_dict['merge_entry_dict']):
 
-                        return {'error':
+                        DBSession.rollback()
+                        return {'error': message(
                             'Unexpected additional reference from entity {0}/{1} (lexical '
                             'entry group {2}), please contact developers.'.format(
-                                link_entity.client_id, link_entity.object_id, entry_id_list)}
+                                link_entity.client_id, link_entity.object_id, entry_id_list))}
 
                     # Creating new entity to replace link entity.
 
@@ -1188,10 +1589,10 @@ def merge_bulk(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('merge_bulk: exception')
-        log.debug(traceback_string)
+        log.debug('\n' + traceback_string)
 
-        request.response.status = HTTPInternalServerError.code
-        return {'error': str(exception)}
+        DBSession.rollback()
+        return {'error': message('\n' + traceback_string)}
 
     # Returning identifiers of new lexical entries.
 

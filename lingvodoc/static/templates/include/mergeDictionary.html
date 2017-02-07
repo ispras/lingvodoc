@@ -244,13 +244,10 @@
                     <!-- Link values, e.g. paradigms  -->
                     <div ng-if="column.checkDataTypeName('Link')">
 
-                        <!-- View button disabled, as viewLinkedPerspective is not supported for
-                            MergeDictionaryController yet. -->
                         <button
                             type="button"
                             class="btn btn-default btn-sm"
-                            ng-click="controller.viewLinkedPerspective(row.entry, column.field, cell.values)"
-                            disabled>
+                            ng-click="controller.viewLinkedPerspective(dictionaryTable.tag, row.entry, column.field, cell.values)">
                             <span class="glyphicon glyphicon-list">View ({{cell.values.length}})</span>
                         </button>
 
