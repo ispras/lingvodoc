@@ -44,7 +44,6 @@ trait LinkEntities {
           perspectiveId = perspectiveId.asInstanceOf[js.Object],
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
-          //links = values.map { _.asInstanceOf[GroupValue].link },
           entities = values.map { _.getEntity() }.filterNot(_.markedForDeletion)
         )
       }
@@ -72,7 +71,7 @@ trait LinkEntities {
           perspectiveId = perspectiveId.asInstanceOf[js.Object],
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
+          entities = values.map { _.getEntity() }.filterNot(_.markedForDeletion)
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]
