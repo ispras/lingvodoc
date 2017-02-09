@@ -102,8 +102,7 @@ class MergeDictionaryController(
 
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
-    with SimplePlay
-    with LinkEntities {
+    with SimplePlay {
 
   private[this] val __debug__ = false
 

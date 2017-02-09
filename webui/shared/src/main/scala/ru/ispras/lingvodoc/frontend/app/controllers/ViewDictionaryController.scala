@@ -33,7 +33,7 @@ trait ViewDictionaryScope extends Scope {
 @injectable("ViewDictionaryController")
 class ViewDictionaryController(scope: ViewDictionaryScope,
                                params: RouteParams,
-                               modal: ModalService,
+                               val modal: ModalService,
                                backend: BackendService,
                                timeout: Timeout,
                                val exceptionHandler: ExceptionHandler)
@@ -49,8 +49,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -64,10 +64,6 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   scope.pageCount = 0
   scope.size = 20
   scope.pageLoaded = false
-
-
-
-
 
   @JSExport
   def filterKeypress(event: Event) = {
@@ -159,37 +155,6 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
       case Some(atom) =>
         atom.content
       case None => throw new ControllerException("")
-    }
-  }
-
-  @JSExport
-  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
-
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
-    options.controller = "ViewDictionaryModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          linkPerspectiveClientId = field.link.get.clientId,
-          linkPerspectiveObjectId = field.link.get.objectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
-        )
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Seq[Entity]](options)
-    instance.result map { entities =>
-      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
     }
   }
 
@@ -291,8 +256,6 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
     }
   })
 
-
-
   @JSExport
   def getFullPageLink(page: Int): String = {
     var url = getPageLink(page)
@@ -318,4 +281,6 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   override protected def onCompleteRequest(): Unit = {
     scope.pageLoaded = true
   }
+
+  override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 }

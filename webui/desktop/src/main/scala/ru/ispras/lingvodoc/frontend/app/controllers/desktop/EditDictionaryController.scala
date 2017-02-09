@@ -39,7 +39,7 @@ trait EditDictionaryScope extends Scope {
 @injectable("EditDictionaryController")
 class EditDictionaryController(scope: EditDictionaryScope,
                                params: RouteParams,
-                               modal: ModalService,
+                               val modal: ModalService,
                                userService: UserService,
                                backend: BackendService,
                                timeout: Timeout,
@@ -56,9 +56,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
-
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var enabledInputs: Seq[String] = Seq[String]()
   private[this] var editInputs: Seq[String] = Seq[String]()
@@ -386,39 +385,6 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def editLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
-
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/editLinkedDictionary.html"
-    options.controller = "EditDictionaryModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          linkPerspectiveClientId = field.link.get.clientId,
-          linkPerspectiveObjectId = field.link.get.objectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          links = values.map {
-            _.asInstanceOf[GroupValue].link
-          }
-        )
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Seq[Entity]](options)
-    instance.result map { entities =>
-      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
-    }
-  }
-
-  @JSExport
   def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
 
     val options = ModalOptions()
@@ -540,4 +506,6 @@ class EditDictionaryController(scope: EditDictionaryScope,
       case e: Throwable => Future.failed(e)
     }
   })
+
+  override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 }
