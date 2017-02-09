@@ -40,21 +40,18 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
     with SimplePlay
     with LinkEntities {
 
-  private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
-  private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
-  private[this] val perspectiveClientId = params("perspectiveClientId").asInstanceOf[Int]
-  private[this] val perspectiveObjectId = params("perspectiveObjectId").asInstanceOf[Int]
-  private[this] val linkPerspectiveClientId = params("linkPerspectiveClientId").asInstanceOf[Int]
-  private[this] val linkPerspectiveObjectId = params("linkPerspectiveObjectId").asInstanceOf[Int]
-  //private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
+  protected[this] val dictionaryId: CompositeId = params("dictionaryId").asInstanceOf[CompositeId]
+  protected[this] val perspectiveId: CompositeId = params("perspectiveId").asInstanceOf[CompositeId]
+  private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
-  private[this] val links = params("links").asInstanceOf[js.Array[Link]]
+  private[this] val entities = params("entities").asInstanceOf[js.Array[Entity]]
 
-  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
-  private[this] val linkPerspectiveId = CompositeId(linkPerspectiveClientId, linkPerspectiveObjectId)
+  private[this] val linkPerspectiveId = field.link.map { link =>
+    CompositeId(link.clientId, link.objectId)
+  }.ensuring(_.nonEmpty, "Field has no linked perspective!").get
 
   private[this] var perspectiveTranslation: Option[TranslationGist] = None
+
 
   scope.count = 0
   scope.offset = 0
@@ -90,8 +87,8 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
             js.Dynamic.literal(
               soundAddress = soundAddress.asInstanceOf[js.Object],
               markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
             )
           }
         ).asInstanceOf[js.Dictionary[Any]]
@@ -101,7 +98,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
   }
 
   @JSExport
-  def viewMarkup(markupValue: Value) = {
+  def viewMarkup(markupValue: Value): Unit = {
 
     backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
@@ -117,8 +114,8 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
             js.Dynamic.literal(
               markupData = elan.asInstanceOf[js.Object],
               markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
             )
           }
         ).asInstanceOf[js.Dictionary[Any]]
@@ -151,10 +148,9 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
 
 
   @JSExport
-  def close() = {
+  def close(): Unit = {
     instance.close(createdEntities)
   }
-
 
   private[this] def load() = {
 
@@ -188,7 +184,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
             backend.getFields(dictionaryId, linkPerspectiveId) onComplete {
               case Success(linkedFields) =>
                 linkedPerspectiveFields = linkedFields
-                val reqs = links.toSeq.map { link => backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) }
+                val reqs =  entities.flatMap(_.link).toSeq.map { link => backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) }
                 Future.sequence(reqs) onComplete {
                   case Success(lexicalEntries) =>
                     scope.dictionaryTable = DictionaryTable.build(linkedFields, dataTypes, lexicalEntries)
