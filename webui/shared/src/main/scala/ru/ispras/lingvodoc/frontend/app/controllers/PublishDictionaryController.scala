@@ -20,7 +20,6 @@ import scala.util.{Failure, Success}
 
 @js.native
 trait PublishDictionaryScope extends Scope {
-  //var filter: Boolean = js.native
   var path: String = js.native
   var size: Int = js.native
   var pageNumber: Int = js.native
@@ -35,7 +34,7 @@ trait PublishDictionaryScope extends Scope {
 @injectable("PublishDictionaryController")
 class PublishDictionaryController(scope: PublishDictionaryScope,
                                   params: RouteParams,
-                                  modal: ModalService,
+                                  val modal: ModalService,
                                   backend: BackendService,
                                   val timeout: Timeout,
                                   val exceptionHandler: ExceptionHandler)
@@ -52,9 +51,8 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
-
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -179,37 +177,6 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
       case Some(atom) =>
         atom.content
       case None => throw new ControllerException("")
-    }
-  }
-
-  @JSExport
-  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
-
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
-    options.controller = "ViewDictionaryModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          linkPerspectiveClientId = field.link.get.clientId,
-          linkPerspectiveObjectId = field.link.get.objectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
-        )
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Seq[Entity]](options)
-    instance.result map { entities =>
-      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
     }
   }
 
@@ -385,4 +352,6 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   override def getPageLink(page: Int): String = {
     s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/publish/$page"
   }
+
+  override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 }

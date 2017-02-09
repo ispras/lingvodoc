@@ -29,7 +29,7 @@ trait EditGroupingTagScope extends Scope {
 
 @injectable("EditGroupingTagModalController")
 class EditGroupingTagModalController(scope: EditGroupingTagScope,
-                                     modal: ModalService,
+                                     val modal: ModalService,
                                      instance: ModalInstance[Unit],
                                      backend: BackendService,
                                      userService: UserService,
@@ -38,8 +38,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
                                      params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
-    with SimplePlay
-    with LinkEntities {
+    with SimplePlay {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
@@ -47,8 +46,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   private[this] val perspectiveObjectId = params("perspectiveObjectId").asInstanceOf[Int]
   private[this] var lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
   private[this] val fieldId = CompositeId.fromObject(field)
 
@@ -285,7 +284,6 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
     }
   }
 
-
   load(() => {
 
     backend.getLexicalEntry(dictionaryId, perspectiveId, lexicalEntryId) map { entry =>
@@ -315,7 +313,6 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
 
   })
-
 
   override protected def onModalClose(): Unit = {
     waveSurfer.foreach(w => w.destroy())

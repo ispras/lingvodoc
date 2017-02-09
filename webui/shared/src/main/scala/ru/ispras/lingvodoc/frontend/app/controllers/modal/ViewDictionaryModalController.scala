@@ -29,7 +29,7 @@ trait ViewDictionaryModalScope extends Scope {
 
 @injectable("ViewDictionaryModalController")
 class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
-                                    modal: ModalService,
+                                    val modal: ModalService,
                                     instance: ModalInstance[Seq[Entity]],
                                     backend: BackendService,
                                     timeout: Timeout,
@@ -46,12 +46,12 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
   private[this] val perspectiveObjectId = params("perspectiveObjectId").asInstanceOf[Int]
   private[this] val linkPerspectiveClientId = params("linkPerspectiveClientId").asInstanceOf[Int]
   private[this] val linkPerspectiveObjectId = params("linkPerspectiveObjectId").asInstanceOf[Int]
-  private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
+  //private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
   private[this] val links = params("links").asInstanceOf[js.Array[Link]]
 
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val linkPerspectiveId = CompositeId(linkPerspectiveClientId, linkPerspectiveObjectId)
 
   private[this] var perspectiveTranslation: Option[TranslationGist] = None
@@ -137,37 +137,6 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
   }
 
   @JSExport
-  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
-
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
-    options.controller = "ViewDictionaryModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          linkPerspectiveClientId = field.link.get.clientId,
-          linkPerspectiveObjectId = field.link.get.objectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
-        )
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Seq[Entity]](options)
-    instance.result map { entities =>
-      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
-    }
-  }
-
-  @JSExport
   def linkedPerspectiveName(): String = {
     perspectiveTranslation match {
       case Some(gist) =>
@@ -243,4 +212,6 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
   override protected def onStartRequest(): Unit = {}
 
   override protected def onCompleteRequest(): Unit = {}
+
+  override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 }
