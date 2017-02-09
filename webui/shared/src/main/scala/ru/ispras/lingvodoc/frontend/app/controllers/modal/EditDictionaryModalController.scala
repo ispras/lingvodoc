@@ -375,6 +375,18 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
         // get fields of this perspective
         backend.getFields(dictionaryId, linkPerspectiveId) map { linkedFields =>
           linkedPerspectiveFields = linkedFields
+
+          backend.getLexicalEntriesCount(dictionaryId, linkPerspectiveId, LexicalEntriesType.All) map { count =>
+              scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
+              backend.getLexicalEntries(dictionaryId, linkPerspectiveId, LexicalEntriesType.All, scope.offset, scope.size) map { entries =>
+                  scope.linkedDictionaryTable = DictionaryTable.build(linkedFields, dataTypes, entries)
+              } recover {
+                case e: Throwable => error(e)
+              }
+          } recover {
+            case e: Throwable => error(e)
+          }
+
           val reqs =  entities.flatMap(_.link).toSeq.map { link =>
             backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) map { entry =>
               Option(entry)
