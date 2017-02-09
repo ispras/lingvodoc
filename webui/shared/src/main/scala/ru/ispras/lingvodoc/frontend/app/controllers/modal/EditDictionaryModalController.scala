@@ -367,44 +367,34 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
         }
     }
 
-
-    backend.dataTypes() onComplete {
-      case Success(allDataTypes) =>
-        dataTypes = allDataTypes
-
-        // get fields of main perspective
-        backend.getFields(dictionaryId, perspectiveId) onComplete {
-          case Success(fields) =>
-            perspectiveFields = fields
-
-            // get fields of this perspective
-            backend.getFields(dictionaryId, linkPerspectiveId) onComplete {
-              case Success(linkedFields) =>
-
-                backend.getLexicalEntriesCount(dictionaryId, linkPerspectiveId, LexicalEntriesType.All) onComplete {
-                  case Success(count) =>
-                    scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-                    backend.getLexicalEntries(dictionaryId, linkPerspectiveId, LexicalEntriesType.All, scope.offset, scope.size) onComplete {
-                      case Success(entries) =>
-                        scope.linkedDictionaryTable = DictionaryTable.build(linkedFields, dataTypes, entries)
-                      case Failure(e) => error(e)
-                    }
-                  case Failure(e) => error(e)
-                }
-
-                linkedPerspectiveFields = linkedFields
-                val reqs = entities.flatMap(_.link).toSeq.map { link => backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) }
-                Future.sequence(reqs) onComplete {
-                  case Success(lexicalEntries) =>
-                    scope.dictionaryTable = DictionaryTable.build(linkedFields, dataTypes, lexicalEntries)
-                  case Failure(e) => error(e)
-                }
-              case Failure(e) => error(e)
+    backend.dataTypes() map { allDataTypes =>
+      dataTypes = allDataTypes
+      // get fields of main perspective
+      backend.getFields(dictionaryId, perspectiveId) map { fields =>
+        perspectiveFields = fields
+        // get fields of this perspective
+        backend.getFields(dictionaryId, linkPerspectiveId) map { linkedFields =>
+          linkedPerspectiveFields = linkedFields
+          val reqs =  entities.flatMap(_.link).toSeq.map { link =>
+            backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) map { entry =>
+              Option(entry)
+            } recover { case e: Throwable =>
+              Option.empty[LexicalEntry]
             }
-          case Failure(e) => error(e)
+          }
+          Future.sequence(reqs) map { lexicalEntries =>
+            scope.dictionaryTable = DictionaryTable.build(linkedFields, dataTypes, lexicalEntries.flatten)
+          } recover {
+            case e: Throwable => error(e)
+          }
+        } recover {
+          case e: Throwable => error(e)
         }
-
-      case Failure(e) => error(e)
+      } recover {
+        case e: Throwable => error(e)
+      }
+    } recover {
+      case e: Throwable => error(e)
     }
   }
 
