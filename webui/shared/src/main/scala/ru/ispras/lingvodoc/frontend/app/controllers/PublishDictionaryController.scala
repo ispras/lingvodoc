@@ -83,8 +83,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
-        console.log(results.toJSArray)
-        val entries = results map (_.lexicalEntry)
+        val entries = results.map(_.lexicalEntry).filterNot(_.markedForDeletion)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
   }
