@@ -2,12 +2,12 @@ package ru.ispras.lingvodoc.frontend.app.controllers.webui
 
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, LoadingPlaceholder, Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -16,8 +16,6 @@ import ru.ispras.lingvodoc.frontend.app.utils.Utils
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
-import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
@@ -50,30 +48,28 @@ class EditDictionaryController(scope: EditDictionaryScope,
                                params: RouteParams,
                                val modal: ModalService,
                                userService: UserService,
-                               backend: BackendService,
+                               val backend: BackendService,
                                timeout: Timeout,
                                val exceptionHandler: ExceptionHandler)
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
     with SimplePlay
     with Pagination
-    with LinkEntities {
+    with LinkEntities
+    with Edit {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
+
+
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
   protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var user_has_permissions: Boolean = false
-
-  private[this] var enabledInputs: Seq[String] = Seq[String]()
-  private[this] var editInputs: Seq[String] = Seq[String]()
-
-  private[this] var createdLexicalEntries: Seq[LexicalEntry] = Seq[LexicalEntry]()
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -247,31 +243,12 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
 
   @JSExport
-  def addNewLexicalEntry(): Unit = {
-    backend.createLexicalEntry(dictionaryId, perspectiveId) onComplete {
-      case Success(entryId) =>
-        backend.getLexicalEntry(dictionaryId, perspectiveId, entryId) onComplete {
-          case Success(entry) =>
-            scope.dictionaryTable.addEntry(entry)
-            createdLexicalEntries = createdLexicalEntries :+ entry
-          case Failure(e) =>
-        }
-      case Failure(e) => throw ControllerException("Attempt to create a new lexical entry failed", e)
-    }
-  }
-
-  @JSExport
-  def createdByUser(lexicalEntry: LexicalEntry): Boolean = {
-    createdLexicalEntries.contains(lexicalEntry)
-  }
-
-  @JSExport
-  def removeEntry(lexicalEntry: LexicalEntry) = {
+  def removeEntry(lexicalEntry: LexicalEntry): Unit = {
     lexicalEntry.markedForDeletion = true
   }
 
   @JSExport
-  def removeEntity(lexicalEntry: LexicalEntry, entity: Entity) = {
+  def removeEntity(lexicalEntry: LexicalEntry, entity: Entity): Unit = {
     backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity)) map { _=>
       entity.markedForDeletion = true
     }
@@ -287,34 +264,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
   }
 
-  @JSExport
-  def enableInput(id: String) = {
-    if (!isInputEnabled(id)) {
-      enabledInputs = enabledInputs :+ id
-    }
-  }
 
-  @JSExport
-  def disableInput(id: String) = {
-    if (isInputEnabled(id)) {
-      enabledInputs = enabledInputs.filterNot(_.equals(id))
-    }
-  }
-
-  @JSExport
-  def isInputEnabled(id: String): Boolean = {
-    enabledInputs.contains(id)
-  }
-
-  @JSExport
-  def editEntity(id: String, entity: Entity): Unit = {
-    editInputs = editInputs :+ entity.getId
-  }
-
-  @JSExport
-  def isEditActive(entity: Entity): Boolean = {
-    editInputs.contains(entity.getId)
-  }
 
   @JSExport
   def updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, event: Event): Unit = {
@@ -344,8 +294,6 @@ class EditDictionaryController(scope: EditDictionaryScope,
     editInputs = editInputs.filterNot(_ == entity.getId)
   }
 
-
-
   @JSExport
   def isRemovable(entry: LexicalEntry, entity: Entity): Boolean = {
     perspectiveRoles match {
@@ -356,108 +304,6 @@ class EditDictionaryController(scope: EditDictionaryScope,
           case None => false
         }
       case None => false
-    }
-  }
-
-
-
-
-  @JSExport
-  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
-
-    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
-    val textValue = e.target.asInstanceOf[HTMLInputElement].value
-
-    val entryId = CompositeId.fromObject(entry)
-
-    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(Left(textValue))
-
-    // self
-    parent map {
-      parentValue =>
-        entity.selfClientId = Some(parentValue.getEntity.clientId)
-        entity.selfObjectId = Some(parentValue.getEntity.objectId)
-    }
-
-    backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
-      case Success(entityId) =>
-        backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
-          case Success(newEntity) =>
-
-            parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
-              case None => scope.dictionaryTable.addEntity(entry, newEntity)
-            }
-
-            disableInput(inputId)
-
-          case Failure(ex) => console.log(ex.getMessage)
-        }
-      case Failure(ex) => console.log(ex.getMessage)
-    }
-  }
-
-  @JSExport
-  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
-
-    val entryId = CompositeId.fromObject(entry)
-
-    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
-
-    // self
-    parent map {
-      parentValue =>
-        entity.selfClientId = Some(parentValue.getEntity.clientId)
-        entity.selfObjectId = Some(parentValue.getEntity.objectId)
-    }
-
-    backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
-      case Success(entityId) =>
-        backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
-          case Success(newEntity) =>
-
-            parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
-              case None => scope.dictionaryTable.addEntity(entry, newEntity)
-            }
-
-            disableInput(inputId)
-
-          case Failure(ex) => console.log(ex.getMessage)
-        }
-      case Failure(ex) => console.log(ex.getMessage)
-    }
-
-  }
-
-  @JSExport
-  def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
-
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/editGroupingTag.html"
-    options.controller = "EditGroupingTagModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId,
-          dictionaryObjectId = dictionaryObjectId,
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          values = values.asInstanceOf[js.Object]
-        )
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Unit](options)
-    instance.result map { _ =>
-
     }
   }
 
