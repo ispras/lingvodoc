@@ -7,7 +7,7 @@ import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Edit, LinkEntities, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -38,20 +38,20 @@ trait EditDictionaryModalScope extends Scope {
 class EditDictionaryModalController(scope: EditDictionaryModalScope,
                                     val modal: ModalService,
                                     instance: ModalInstance[Seq[Entity]],
-                                    backend: BackendService,
+                                    val backend: BackendService,
                                     timeout: Timeout,
                                     val exceptionHandler: ExceptionHandler,
                                     params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController(scope, modal, instance, timeout, params)
     with SimplePlay
-    with LinkEntities {
+    with LinkEntities
+    with Edit {
 
   protected[this] val dictionaryId: CompositeId = params("dictionaryId").asInstanceOf[CompositeId]
   protected[this] val perspectiveId: CompositeId = params("perspectiveId").asInstanceOf[CompositeId]
   private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
   private[this] val entities = params("entities").asInstanceOf[js.Array[Entity]]
-
 
   private[this] val linkPerspectiveId = field.link.map { link =>
     CompositeId(link.clientId, link.objectId)
@@ -134,7 +134,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
   @JSExport
-  def addNewLexicalEntry() = {
+  override def addNewLexicalEntry(): Unit = {
 
     backend.createLexicalEntry(dictionaryId, linkPerspectiveId) onComplete {
       case Success(entryId) =>
@@ -210,26 +210,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
 
   @JSExport
-  def enableInput(id: String) = {
-    if (!isInputEnabled(id)) {
-      enabledInputs = enabledInputs :+ id
-    }
-  }
-
-  @JSExport
-  def disableInput(id: String) = {
-    if (isInputEnabled(id)) {
-      enabledInputs = enabledInputs.filterNot(_.equals(id))
-    }
-  }
-
-  @JSExport
-  def isInputEnabled(id: String): Boolean = {
-    enabledInputs.contains(id)
-  }
-
-  @JSExport
-  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+  override def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
 
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
@@ -265,7 +246,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
   @JSExport
-  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
+  override def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
 
 
     val entryId = CompositeId.fromObject(entry)
