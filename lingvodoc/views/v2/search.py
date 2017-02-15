@@ -288,7 +288,8 @@ def advanced_search(request):
     # #     .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(results))
     results = list()
 
-    lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+    lexes_composite_list = [(lex.created_at,
+                             lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
                              lex.marked_for_deletion, lex.additional_metadata,
                              lex.additional_metadata.get('came_from')
                              if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)

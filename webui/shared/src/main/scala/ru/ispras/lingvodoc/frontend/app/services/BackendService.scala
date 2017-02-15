@@ -2061,7 +2061,12 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
         try
         {
-          p.success(read[Boolean](
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while checking merge permissions:\n" + response.error))
+
+          else p.success(read[Boolean](
             js.JSON.stringify(response.user_has_permissions)))
         }
 
@@ -2180,14 +2185,21 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
             "client_id" -> entry_id.clientId,
             "object_id" -> entry_id.objectId)}: _*)}: _*)))
 
-    dom.console.log("bulkMerge: " + request)
+    dom.console.log("mergeBulk: " + request)
 
     $http.post[js.Dynamic](getMethodUrl("merge/bulk"), request) onComplete
     {
       case Success(response) =>
 
         try
-          p.success(read[Seq[CompositeId]](js.JSON.stringify(response)))
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while performing merges:\n" + response.error))
+
+          else p.success(read[Seq[CompositeId]](js.JSON.stringify(response.result)))
+        }
 
         catch
         {
