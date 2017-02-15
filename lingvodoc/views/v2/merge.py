@@ -4,6 +4,7 @@ __author__ = 'alexander'
 # Standard library imports.
 
 import collections
+import copy
 import itertools
 import json
 import logging
@@ -411,10 +412,12 @@ def merge_suggestions_old(request):
     return json.dumps(results)
 
 
-def check_user_merge_permissions(user_id, perspective_client_id, perspective_object_id):
+def check_user_merge_permissions_direct(user_id, perspective_client_id, perspective_object_id):
     """
     Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
-    create and delete them.
+    create and delete them, by direct DB query.
+
+    NOTE: replaced by check_user_merge_permissions.
     """
 
     create_base_group = DBSession.query(BaseGroup).filter_by(
@@ -466,6 +469,71 @@ def check_user_merge_permissions(user_id, perspective_client_id, perspective_obj
     return (user_create or organization_create and user_delete or organization_delete)
 
 
+def check_user_merge_permissions(
+    request, user,
+    dictionary_client_id, dictionary_object_id,
+    perspective_client_id, perspective_object_id):
+    """
+    Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
+    create and delete them, via perspective user role subrequest.
+    """
+
+    create_base_group = DBSession.query(BaseGroup).filter_by(
+        subject = 'lexical_entries_and_entities', action = 'create').first()
+
+    delete_base_group = DBSession.query(BaseGroup).filter_by(
+        subject = 'lexical_entries_and_entities', action = 'delete').first()
+
+    #
+    # Getting perspective permissions for all users.
+    #
+    # NOTE:
+    #
+    # Obviously theoretically we can make this check more efficient by querying for the specified user, but
+    # at the moment we need correctness provided by a subrequest more then efficiency provided by a direct
+    # DB query.
+    #
+    # If the need arises, we would add to roles REST API user-specific perspective roles method.
+    #
+
+    url = request.route_url('perspective_roles',
+        client_id = dictionary_client_id,
+        object_id = dictionary_object_id,
+        perspective_client_id = perspective_client_id,
+        perspective_object_id = perspective_object_id)
+
+    subrequest = Request.blank(url)
+    subrequest.method = 'GET'
+    subrequest.headers = request.headers
+
+    result = request.invoke_subrequest(subrequest)
+
+    log.debug('check_user_merge_permissions: user {0}, perspective {1}/{2}: roles\n{3}'.format(
+        user.id, perspective_client_id, perspective_object_id, pprint.pformat(result.json)))
+
+    # Checking if the user themselves can create and delete lexical entries and entities.
+
+    if (user.id in result.json['roles_users'][create_base_group.name] and
+        user.id in result.json['roles_users'][delete_base_group.name]):
+
+        return True
+
+    # Checking if the user has required permissions through one of their organizations.
+
+    organization_create = any(organization_id in user.organizations
+        for organization_id in result.json['roles_organizations'][create_base_group.name])
+
+    organization_delete = any(organization_id in user.organizations
+        for organization_id in result.json['roles_organizations'][delete_base_group.name])
+
+    if organization_create and organization_delete:
+        return True
+
+    # Ok, so the user doesn't have permissions.
+
+    return False
+
+
 @view_config(
     route_name = 'merge_permissions',
     renderer = 'json',
@@ -479,13 +547,33 @@ def merge_permissions(request):
     perspective_client_id = request.matchdict.get('perspective_client_id')
     perspective_object_id = request.matchdict.get('perspective_object_id')
 
-    user = Client.get_user_by_client_id(request.authenticated_userid)
+    # Trying to check user's merge permissions.
 
-    user_has_permissions = check_user_merge_permissions(
-        user.id, perspective_client_id, perspective_object_id)
+    try:
+        user = Client.get_user_by_client_id(request.authenticated_userid)
 
-    log.debug('merge_permissions {0}/{1}: {2}'.format(
-        perspective_client_id, perspective_object_id, user_has_permissions))
+        perspective = DBSession.query(DictionaryPerspective).filter_by(
+            client_id = perspective_client_id, object_id = perspective_object_id).first()
+
+        user_has_permissions = check_user_merge_permissions(
+            request, user,
+            perspective.parent_client_id, perspective.parent_object_id,
+            perspective_client_id, perspective_object_id)
+
+        log.debug('merge_permissions {0}/{1}: {2}'.format(
+            perspective_client_id, perspective_object_id, user_has_permissions))
+
+    # If something is not right, we report it.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('merge_permissions: exception')
+        log.debug('\n' + traceback_string)
+
+        return {'error': message('\n' + traceback_string)}
 
     return {'user_has_permissions': user_has_permissions}
 
@@ -615,8 +703,10 @@ def match_fields(entry_data_list, field_selection_list, threshold):
                 content_list = itertools.chain(*[
                     merge_perspectives.punct.split(content) for content in content_list])
 
-            for feature in set(content.strip() for content in content_list):
-                yield feature
+            feature_set = set(content.strip() for content in content_list)
+            feature_set.discard('')
+
+            return feature_set
 
         # Choosing extractor based on field selection type.
 
@@ -698,7 +788,7 @@ def match_fields(entry_data_list, field_selection_list, threshold):
                     for feature in extractor(entity_data):
                         feature_dict[feature].add(entry_id)
 
-                log.debug('\n' + pprint.pformat(feature_dict))
+                log.debug('feature_dict:\n' + pprint.pformat(feature_dict))
 
                 for entry_id_set in feature_dict.values():
                     entry_id_list = sorted(entry_id_set)
@@ -727,8 +817,8 @@ def match_fields(entry_data_list, field_selection_list, threshold):
                 for entry_id, feature_set in entry_feature_dict.items():
                     count_dict[entry_id] += len(feature_set)
 
-                log.debug('\n' + pprint.pformat(entry_feature_dict))
-                log.debug('\n' + pprint.pformat(feature_entry_dict))
+                log.debug('entry_feature_dict:\n' + pprint.pformat(entry_feature_dict))
+                log.debug('feature_entry_dict:\n' + pprint.pformat(feature_entry_dict))
 
                 # At the moment we have to compute N^2/2 Levenshtein distances. If such computations will be
                 # found too time consuming, we can try optimized Levenshtein distance computation with
@@ -743,8 +833,8 @@ def match_fields(entry_data_list, field_selection_list, threshold):
                         if levenshtein(feature_a, feature_b) <= limit:
                             levenshtein_dict[feature_a].append(feature_b)
 
-                log.debug('\n' + pprint.pformat(feature_list))
-                log.debug('\n' + pprint.pformat(levenshtein_dict))
+                log.debug('feature_list:\n' + pprint.pformat(feature_list))
+                log.debug('levenshtein_dict:\n' + pprint.pformat(levenshtein_dict))
 
                 # Any match between features is a match between their corresponding entries. At first we
                 # process matches on equal features.
@@ -779,8 +869,8 @@ def match_fields(entry_data_list, field_selection_list, threshold):
 
     # Compiling and returning matching result.
 
-    log.debug('\n' + pprint.pformat(count_dict))
-    log.debug('\n' + pprint.pformat(match_dict))
+    log.debug('count_dict:\n' + pprint.pformat(count_dict))
+    log.debug('match_dict:\n' + pprint.pformat(match_dict))
 
     result_list = []
 
@@ -791,7 +881,7 @@ def match_fields(entry_data_list, field_selection_list, threshold):
             result_list.append((id_a, id_b, score))
 
     result_list.sort()
-    log.debug('\n' + pprint.pformat(result_list))
+    log.debug('result_list:\n' + pprint.pformat(result_list))
 
     return result_list
 
@@ -907,8 +997,13 @@ def merge_suggestions(request):
 
     user = Client.get_user_by_client_id(request.authenticated_userid)
 
+    perspective = DBSession.query(DictionaryPerspective).filter_by(
+        client_id = perspective_client_id, object_id = perspective_object_id).first()
+
     user_has_permissions = check_user_merge_permissions(
-        user.id, perspective_client_id, perspective_object_id)
+        request, user,
+        perspective.parent_client_id, perspective.parent_object_id,
+        perspective_client_id, perspective_object_id)
 
     # Getting data of the undeleted lexical entries of the perspective.
 
@@ -968,6 +1063,74 @@ def merge_suggestions(request):
         'user_has_permissions': user_has_permissions}
 
 
+def build_merge_tree(entry):
+    """
+    Recursively builds merge tree of a first version merged lexical entry, compiles merge authorship info.
+    """
+
+    source_list = DBSession.query(LexicalEntry).filter(
+        LexicalEntry.additional_metadata['merged_to'] == [entry.client_id, entry.object_id]).all()
+
+    source_list.sort(key = lambda source: (source.client_id, source.object_id))
+
+    log.debug('build_merge_tree {0}/{1}: {2} source entr{3}'.format(
+        entry.client_id, entry.object_id, len(source_list), 'y' if len(source_list) == 1 else 'ies'))
+
+    entry_min_created_at = None
+    entry_original_author = None
+    entry_merge_tree = []
+
+    # Looking through all lexical entries merged into the given one.
+
+    for index, source in enumerate(source_list):
+
+        if 'merge_tag' in source.additional_metadata:
+            source_type = '\'merge_tag\' (version 1)'
+
+            min_created_at, original_author, merge_tree = build_merge_tree(source)
+
+        elif 'merge' in source.additional_metadata:
+            source_type = '\'merge\' (version 2)'
+
+            # NOTE: This should be impossible, but just in case.
+
+            min_created_at = source.additional_metadata['merge']['min_created_at']
+            original_author = source.additional_metadata['merge']['original_author']
+            merge_tree = copy.deepcopy(source.additional_metadata['merge']['merge_tree'])
+
+        else:
+            source_type = None
+
+            min_created_at = source.created_at
+            original_author = Client.get_user_by_client_id(source.client_id).id
+            merge_tree = [source.client_id, source.object_id]
+
+        # Updating merge tree and merge authorship info.
+
+        if (entry_min_created_at is None or
+            min_created_at < entry_min_created_at):
+
+            entry_min_created_at = min_created_at
+            entry_original_author = original_author
+
+        entry_merge_tree.append(merge_tree)
+
+        log.debug('build_merge_tree {0}/{1}: source {2}/{3} [{4}]: {5}'.format(
+            entry.client_id, entry.object_id, source.client_id, source.object_id, index, source_type))
+
+    # Returning merge tree data.
+
+    log.debug('build_merge_tree {0}/{1}: result\n{2}'.format(
+        entry.client_id, entry.object_id,
+        
+        pprint.pformat({
+            'min_created_at': entry_min_created_at,
+            'original_author': entry_original_author,
+            'merge_tree': entry_merge_tree})))
+
+    return entry_min_created_at, entry_original_author, entry_merge_tree
+
+
 @view_config(route_name = 'merge_bulk', renderer = 'json', request_method = 'POST')
 def merge_bulk(request):
     """
@@ -999,10 +1162,16 @@ def merge_bulk(request):
         if (perspective_client_id, perspective_object_id) in user_permission_dict:
             return user_permission_dict[(perspective_client_id, perspective_object_id)]
 
+        perspective = DBSession.query(DictionaryPerspective).filter_by(
+            client_id = perspective_client_id, object_id = perspective_object_id).first()
+
         user_has_permissions = check_user_merge_permissions(
-            user.id, perspective_client_id, perspective_object_id)
+            request, user,
+            perspective.parent_client_id, perspective.parent_object_id,
+            perspective_client_id, perspective_object_id)
 
         user_permission_dict[(perspective_client_id, perspective_object_id)] = user_has_permissions
+
         return user_has_permissions
 
     def new_entity_dict(merge_entity_set, entity_data, publish_any):
@@ -1052,8 +1221,8 @@ def merge_bulk(request):
         entity_dict['merge_set'].add((entity_data['client_id'], entity_data['object_id']))
         merge_entity_set.add((entity_data['client_id'], entity_data['object_id']))
 
-        # Acceptedness of is processed via logical OR, publishing status either via OR or AND depending on
-        # settings.
+        # Acceptedness of entities is processed via logical OR, publishing status either via OR or AND
+        # depending on settings.
 
         entity_dict['accepted'] = entity_dict['accepted'] or entity_data['accepted']
 
@@ -1273,17 +1442,26 @@ def merge_bulk(request):
                 'merge_entity_set': set(),
                 'published': False if publish_any else True}
 
+            entry_min_created_at = None
+            entry_original_author = None
+            entry_merge_tree = []
+
             for entry, entry_data in zip(entry_list, entry_data_list):
                 entry_dict['merge_entry_dict'][(entry.client_id, entry.object_id)] = entry
 
                 # Processing each lexical entry to be merged.
 
                 if len(set(entry_data.keys()).difference(set([
-                    'additional_metadata', 'client_id', 'contains', 'level', 'marked_for_deletion',
-                    'object_id', 'parent_client_id', 'parent_object_id', 'published']))) > 0:
+                    'additional_metadata', 'client_id', 'contains', 'created_at', 'level',
+                    'marked_for_deletion', 'object_id', 'parent_client_id', 'parent_object_id',
+                    'published']))) > 0:
 
                     DBSession.rollback()
                     return {'error': message('Unexpected lexical entry data keys.')}
+
+                entry_dict['published'] = (
+                    entry_dict['published'] or entry_data['published'] if publish_any else
+                    entry_dict['published'] and entry_data['published'])
 
                 additional_metadata = entry_data.get('additional_metadata', {})
 
@@ -1293,9 +1471,40 @@ def merge_bulk(request):
                     return {'error': message('Unsupported additional metadata type \'{0}\'.'.format(
                         type(additional_metadata)))}
 
-                entry_dict['published'] = (
-                    entry_dict['published'] or entry_data['published'] if publish_any else
-                    entry_dict['published'] and entry_data['published'])
+                # Getting merge metadata of the lexical entry.
+
+                if 'merge_tag' in additional_metadata:
+
+                    min_created_at, original_author, merge_tree = build_merge_tree(entry)
+                    del additional_metadata['merge_tag']
+
+                elif 'merge' in additional_metadata:
+
+                    min_created_at = additional_metadata['merge']['min_created_at']
+                    original_author = additional_metadata['merge']['original_author']
+                    merge_tree = copy.deepcopy(additional_metadata['merge']['merge_tree'])
+
+                    del additional_metadata['merge']
+
+                else:
+                    min_created_at = entry_data['created_at']
+                    original_author = Client.get_user_by_client_id(entry_data['client_id']).id
+                    merge_tree = [entry_data['client_id'], entry_data['object_id']]
+
+                # Updating merge metadata, merging metadata and entities of the lexical entry.
+
+                if (entry_min_created_at is None or
+                    min_created_at < entry_min_created_at):
+
+                    entry_min_created_at = min_created_at
+                    entry_original_author = original_author
+
+                entry_merge_tree.append(merge_tree)
+
+                log.debug('entry {0}/{1} merge_tree: {2}'.format(
+                    entry.client_id, entry.object_id, pprint.pformat(merge_tree)))
+
+                log.debug('entry_merge_tree: {0}'.format(pprint.pformat(entry_merge_tree)))
 
                 metadata_merge(entry_dict['additional_metadata'], additional_metadata)
 
@@ -1304,9 +1513,15 @@ def merge_bulk(request):
                     entry_data['contains'], (entry_data['client_id'], entry_data['object_id']),
                     publish_any)
 
-            # If merged entries were themselves merge results, we don't care.
+            # Finalizing merge metadata.
 
-            entry_dict['additional_metadata']['merge_tag'] = len(entry_list)
+            if 'merge_tag' in entry_dict['additional_metadata']:
+                del entry_dict['additional_metadata']['merge_tag']
+
+            entry_dict['additional_metadata']['merge'] = {
+                'min_created_at': entry_min_created_at,
+                'original_author': entry_original_author,
+                'merge_tree': entry_merge_tree}
 
             # Creating new lexical entry.
 
@@ -1581,7 +1796,7 @@ def merge_bulk(request):
 
                     self_reference_replace(link_entity, merge_entity)
 
-    # If something is not write, we report it.
+    # If something is not right, we report it.
 
     except Exception as exception:
 
@@ -1591,7 +1806,6 @@ def merge_bulk(request):
         log.debug('merge_bulk: exception')
         log.debug('\n' + traceback_string)
 
-        DBSession.rollback()
         return {'error': message('\n' + traceback_string)}
 
     # Returning identifiers of new lexical entries.
@@ -1599,5 +1813,5 @@ def merge_bulk(request):
     log.debug('merge_bulk: result{0}{1}'.format(
         '\n' if len(result_list) > 1 else ' ', pprint.pformat(result_list)))
 
-    return result_list
+    return {'result': result_list}
 

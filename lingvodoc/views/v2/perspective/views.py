@@ -1571,7 +1571,8 @@ def lexical_entries_all(request):
 
         result = deque()
         # print([o.client_id for o in lexes.all()])
-        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+        lexes_composite_list = [(lex.created_at,
+                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
                                  lex.marked_for_deletion, lex.additional_metadata,
                                  lex.additional_metadata.get('came_from')
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
@@ -1705,7 +1706,8 @@ def lexical_entries_published(request):
 
         result = deque()
 
-        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+        lexes_composite_list = [(lex.created_at,
+                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
                                  lex.marked_for_deletion, lex.additional_metadata,
                                  lex.additional_metadata.get('came_from')
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
@@ -1780,7 +1782,8 @@ def lexical_entries_not_accepted(request):
 
         result = deque()
 
-        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+        lexes_composite_list = [(lex.created_at,
+                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
                                  lex.marked_for_deletion, lex.additional_metadata,
                                  lex.additional_metadata.get('came_from')
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)

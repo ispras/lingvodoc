@@ -157,15 +157,29 @@ class MergeDictionaryController(
     console.log(exception.toString)
     console.log(exception.getMessage)
 
+    val http_message_map = Map(
+      403 -> "Forbidden")
+
     val stack_trace =
       exception.getCause match
       {
+        /* HTTP exceptions are processed separately. */
+
+        case cause: HttpException =>
+
+          console.log(s"HTTP ${cause.status.code} " +
+            http_message_map.getOrElse(cause.status.code, ""))
+
+          cause.getStackTrace.mkString("\n")
+
+        /* Other exceptions. */
+
         case cause: Throwable =>
 
-          console.log(exception.getCause.toString)
-          console.log(exception.getCause.getMessage)
+          console.log(cause.toString)
+          console.log(cause.getMessage)
 
-          exception.getCause.getStackTrace.mkString("\n")
+          cause.getStackTrace.mkString("\n")
 
         case _ =>
           exception.getStackTrace.mkString("\n")

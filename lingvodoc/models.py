@@ -682,8 +682,9 @@ class LexicalEntry(CompositeIdMixin,
         metadata = self.additional_metadata if self.additional_metadata else None
         came_from = metadata.get('came_from') if metadata and 'came_from' in metadata else None
 
-        lexes_composite_list = [(self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
-                                 self.marked_for_deletion, metadata, came_from)]
+        lexes_composite_list = [(self.created_at,
+            self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
+            self.marked_for_deletion, metadata, came_from)]
 
         res_list = self.track_multiple(lexes_composite_list, locale_id, publish)
 
@@ -696,12 +697,12 @@ class LexicalEntry(CompositeIdMixin,
 
         deleted_persps = DictionaryPerspective.get_deleted()
         for i in lexs:
-            if (i[2], i[3]) not in deleted_persps:
+            if (i[3], i[4]) not in deleted_persps:
                 filtered_lexes.append(i)
         ls = []
 
         for i, x in enumerate(filtered_lexes):
-            ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
+            ls.append({'traversal_lexical_order': i, 'client_id': x[1], 'object_id': x[2]})
 
         if not ls:
             return []
@@ -806,21 +807,22 @@ class LexicalEntry(CompositeIdMixin,
         for k in filtered_lexes:
             a = []
             entry = {
-                'client_id': k[0],
-                'object_id': k[1],
-                'parent_client_id': k[2],
-                'parent_object_id': k[3],
+                'created_at': k[0],
+                'client_id': k[1],
+                'object_id': k[2],
+                'parent_client_id': k[3],
+                'parent_object_id': k[4],
                 'contains': a,
-                'marked_for_deletion': k[4],
-                'additional_metadata': k[5],
-                'came_from': k[6],
+                'marked_for_deletion': k[5],
+                'additional_metadata': k[6],
+                'came_from': k[7],
                 'level': 'lexicalentry',
                 'published': False
             }
 
             prev_nodegroup = -1
             for i in entries:
-                if i['parent_client_id'] != k[0] or i['parent_object_id'] != k[1]:
+                if i['parent_client_id'] != k[1] or i['parent_object_id'] != k[2]:
                     continue
                 cur_nodegroup = i['tree_numbering_scheme'] if prev_nodegroup != i['tree_numbering_scheme'] else prev_nodegroup
                 dictionary_form = dict(i)
