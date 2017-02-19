@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend
 import com.greencatsoft.angularjs.{Angular, Config, Module}
 import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.modal._
-import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal.ViewSociolinguisticsInfoController
+import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal.{ContributionsLinkedDictionaryModalController, PublishLinkedDictionaryModalController, ViewSociolinguisticsInfoController}
 import ru.ispras.lingvodoc.frontend.app.controllers.webui.{PerspectivePropertiesController, SociolinguisticsController}
 import ru.ispras.lingvodoc.frontend.app.controllers._
 import ru.ispras.lingvodoc.frontend.app.directives._
@@ -76,11 +76,13 @@ object LingvodocApplication {
       .controller[CreateFieldController]
       .controller[EditDictionaryRolesModalController]
       .controller[EditPerspectiveRolesModalController]
+      .controller[PublishLinkedDictionaryModalController]
       .controller[UserFilesController]
       .controller[MapSearchController]
       .controller[ViewInfoBlobsController]
       .controller[EditGroupingTagModalController]
       .controller[ContributionsController]
+      .controller[ContributionsLinkedDictionaryModalController]
       .controller[CorporaController]
       .controller[SociolinguisticsController]
       .controller[ViewSociolinguisticsInfoController]

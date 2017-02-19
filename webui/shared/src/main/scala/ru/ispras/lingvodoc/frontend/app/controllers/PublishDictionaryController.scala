@@ -27,7 +27,6 @@ trait PublishDictionaryScope extends Scope {
   var pageCount: Int = js.native
   // total number of pages
   var dictionaryTable: DictionaryTable = js.native
-  var selectedEntries: js.Array[String] = js.native
   var pageLoaded: Boolean = js.native
 }
 
@@ -64,13 +63,11 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   scope.pageNumber = params.get("page").toOption.getOrElse(1).toString.toInt
   scope.pageCount = 0
   scope.size = 20
-
-  scope.selectedEntries = js.Array[String]()
   scope.pageLoaded = false
 
 
   @JSExport
-  def filterKeypress(event: Event) = {
+  def filterKeypress(event: Event): Unit = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
     if (e.keyCode == 13) {
       val query = e.target.asInstanceOf[HTMLInputElement].value
@@ -164,7 +161,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
             )
           }
         ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
+        modal.open[Unit](options)
       case Failure(e) =>
     }
   }
@@ -251,7 +248,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/publishGroupingTag.html"
