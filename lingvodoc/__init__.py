@@ -599,6 +599,13 @@ def configure_routes(config):
     #
     config.add_route(name = 'merge_bulk', pattern = '/merge/bulk')
 
+    # API #GET
+    #
+    # Changes format of metadata of lexical entries created from merges of other lexical entries from the
+    # first version (with 'merge_tag' key) to the second version (with 'merge' key).
+    #
+    config.add_route(name = 'merge_update_2', pattern = '/merge/update2')
+
     config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'  # should be removed?
                                                            '{dictionary_client_id_1}/{dictionary_object_id_1}/'
                                                            '{perspective_client_id_1}/{perspective_object_id_1}/'

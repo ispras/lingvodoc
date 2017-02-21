@@ -1092,7 +1092,7 @@ def build_merge_tree(entry):
         elif 'merge' in source.additional_metadata:
             source_type = '\'merge\' (version 2)'
 
-            # NOTE: This should be impossible, but just in case.
+            # NOTE: For possible use by merge metadata updater merge_update_2.
 
             min_created_at = source.additional_metadata['merge']['min_created_at']
             original_author = source.additional_metadata['merge']['original_author']
@@ -1806,6 +1806,7 @@ def merge_bulk(request):
         log.debug('merge_bulk: exception')
         log.debug('\n' + traceback_string)
 
+        DBSession.rollback()
         return {'error': message('\n' + traceback_string)}
 
     # Returning identifiers of new lexical entries.
@@ -1814,4 +1815,63 @@ def merge_bulk(request):
         '\n' if len(result_list) > 1 else ' ', pprint.pformat(result_list)))
 
     return {'result': result_list}
+
+
+@view_config(route_name = 'merge_update_2', renderer = 'json', request_method = 'GET')
+def merge_update_2(request):
+    """
+    Changes format of metadata of lexical entries created from merges of other lexical entries from the
+    first version (with 'merge_tag' key) to the second version (with 'merge' key).
+    """
+
+    log.debug('merge_update_2')
+
+    try:
+        user = Client.get_user_by_client_id(request.authenticated_userid)
+
+        if user is None or user.id != 1:
+            return {'error': 'Not an administrator.'}
+
+        entry_list = DBSession.query(LexicalEntry).filter(
+            LexicalEntry.additional_metadata.has_key('merge_tag')).all()
+
+        log.debug('merge_update_2: {0} lexical entries'.format(len(entry_list)))
+
+        # Going through all lexical entries with metadata in version 1 format, assuming that repeated
+        # queries of the same row return the same object.
+
+        for entry in entry_list:
+
+            log.debug('merge_update_2 {0}/{1} additional_metadata:\n{2}'.format(
+                entry.client_id, entry.object_id, pprint.pformat(entry.additional_metadata)))
+
+            min_created_at, original_author, merge_tree = build_merge_tree(entry)
+
+            entry.additional_metadata['merge'] = {
+                'min_created_at': min_created_at,
+                'original_author': original_author,
+                'merge_tree': merge_tree}
+
+            del entry.additional_metadata['merge_tag']
+            flag_modified(entry, 'additional_metadata')
+
+            # Showing updated merge metadata.
+
+            log.debug('merge_update_2 {0}/{1} additional_metadata:\n{2}'.format(
+                entry.client_id, entry.object_id, pprint.pformat(entry.additional_metadata)))
+
+        return len(entry_list)
+
+    # If something is not right, we report it.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('merge_update_2: exception')
+        log.debug('\n' + traceback_string)
+
+        DBSession.rollback()
+        return {'error': message('\n' + traceback_string)}
 
