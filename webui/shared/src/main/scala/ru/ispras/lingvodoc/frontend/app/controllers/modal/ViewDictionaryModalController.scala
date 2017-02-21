@@ -42,7 +42,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
 
   protected[this] val dictionaryId: CompositeId = params("dictionaryId").asInstanceOf[CompositeId]
   protected[this] val perspectiveId: CompositeId = params("perspectiveId").asInstanceOf[CompositeId]
-  private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
+  //private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
   private[this] val entities = params("entities").asInstanceOf[js.Array[Entity]]
 
