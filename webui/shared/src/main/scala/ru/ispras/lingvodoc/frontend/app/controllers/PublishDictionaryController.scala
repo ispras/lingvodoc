@@ -3,20 +3,17 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, LoadingPlaceholder, Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
-import scala.util.{Failure, Success}
 
 @js.native
 trait PublishDictionaryScope extends Scope {
@@ -34,7 +31,7 @@ trait PublishDictionaryScope extends Scope {
 class PublishDictionaryController(scope: PublishDictionaryScope,
                                   params: RouteParams,
                                   val modal: ModalService,
-                                  backend: BackendService,
+                                  val backend: BackendService,
                                   val timeout: Timeout,
                                   val exceptionHandler: ExceptionHandler)
   extends AbstractController[PublishDictionaryScope](scope)
@@ -42,7 +39,8 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
     with SimplePlay
     with Pagination
     with LoadingPlaceholder
-    with LinkEntities {
+    with LinkEntities
+    with ViewMarkup {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -108,64 +106,6 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   def selectedEntriesCount(): Int = {
     selectedEntries.length
   }
-
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value): Unit = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value): Unit = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {

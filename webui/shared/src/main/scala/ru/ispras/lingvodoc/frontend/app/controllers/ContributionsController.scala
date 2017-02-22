@@ -6,7 +6,7 @@ import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextPr
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, LoadingPlaceholder, Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
@@ -37,7 +37,7 @@ trait ContributionsScope extends Scope {
 class ContributionsController(scope: ContributionsScope,
                               params: RouteParams,
                               val modal: ModalService,
-                              backend: BackendService,
+                              val backend: BackendService,
                               val timeout: Timeout,
                               val exceptionHandler: ExceptionHandler)
   extends AbstractController[ContributionsScope](scope)
@@ -45,7 +45,8 @@ class ContributionsController(scope: ContributionsScope,
     with SimplePlay
     with Pagination
     with LoadingPlaceholder
-    with LinkEntities {
+    with LinkEntities
+    with ViewMarkup {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -99,63 +100,6 @@ class ContributionsController(scope: ContributionsScope,
       encodeURIComponent(perspectiveObjectId.toString) + "/" +
       action
   }
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value): Unit = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value) = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {

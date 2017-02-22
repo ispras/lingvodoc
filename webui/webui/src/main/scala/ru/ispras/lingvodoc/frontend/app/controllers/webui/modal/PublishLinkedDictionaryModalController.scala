@@ -1,15 +1,15 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.webui.modal
 
-import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay, ViewMarkup}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, UserService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
@@ -33,7 +33,7 @@ trait PublishLinkedDictionaryModalScope extends Scope {
 class PublishLinkedDictionaryModalController(scope: PublishLinkedDictionaryModalScope,
                                                 val modal: ModalService,
                                                 instance: ModalInstance[Unit],
-                                                backend: BackendService,
+                                                val backend: BackendService,
                                                 userService: UserService,
                                                 timeout: Timeout,
                                                 val exceptionHandler: ExceptionHandler,
@@ -41,7 +41,8 @@ class PublishLinkedDictionaryModalController(scope: PublishLinkedDictionaryModal
   extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
     with SimplePlay
-    with LinkEntities {
+    with LinkEntities
+    with ViewMarkup {
 
   protected[this] val dictionaryId: CompositeId = params("dictionaryId").asInstanceOf[CompositeId]
   protected[this] val perspectiveId: CompositeId = params("perspectiveId").asInstanceOf[CompositeId]
@@ -68,62 +69,6 @@ class PublishLinkedDictionaryModalController(scope: PublishLinkedDictionaryModal
 
   override def spectrogramId: String = "#spectrogram-modal"
 
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value): Unit = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value): Unit = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {

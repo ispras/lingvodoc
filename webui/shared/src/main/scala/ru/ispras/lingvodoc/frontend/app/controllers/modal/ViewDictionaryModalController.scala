@@ -1,12 +1,12 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay, ViewMarkup}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -31,14 +31,15 @@ trait ViewDictionaryModalScope extends Scope {
 class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
                                     val modal: ModalService,
                                     instance: ModalInstance[Seq[Entity]],
-                                    backend: BackendService,
+                                    val backend: BackendService,
                                     timeout: Timeout,
                                     val exceptionHandler: ExceptionHandler,
                                     params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
     with SimplePlay
-    with LinkEntities {
+    with LinkEntities
+    with ViewMarkup {
 
   protected[this] val dictionaryId: CompositeId = params("dictionaryId").asInstanceOf[CompositeId]
   protected[this] val perspectiveId: CompositeId = params("perspectiveId").asInstanceOf[CompositeId]
@@ -67,62 +68,6 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
 
 
   load()
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value): Unit = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {
