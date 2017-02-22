@@ -2,8 +2,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers.desktop
 
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.console
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
@@ -16,8 +15,6 @@ import ru.ispras.lingvodoc.frontend.app.utils.Utils
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
-import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
@@ -49,7 +46,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
     with SimplePlay
     with Pagination
     with LinkEntities
-    with Edit {
+    with Edit
+    with ViewMarkup {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -74,7 +72,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
   scope.pageLoaded = false
 
   @JSExport
-  def filterKeypress(event: Event) = {
+  def filterKeypress(event: Event): Unit = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
     if (e.keyCode == 13) {
       val query = e.target.asInstanceOf[HTMLInputElement].value
@@ -84,67 +82,11 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
 
   @JSExport
-  def loadSearch(query: String) = {
+  def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
         val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-    }
-  }
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value) = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
     }
   }
 
@@ -193,12 +135,12 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def removeEntry(lexicalEntry: LexicalEntry) = {
+  def removeEntry(lexicalEntry: LexicalEntry): Unit = {
     lexicalEntry.markedForDeletion = true
   }
 
   @JSExport
-  def removeEntity(lexicalEntry: LexicalEntry, entity: Entity) = {
+  def removeEntity(lexicalEntry: LexicalEntry, entity: Entity): Unit = {
     backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity)) map { _=>
       entity.markedForDeletion = true
     }
@@ -222,7 +164,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
     if (newTextValue != oldTextValue) {
 
-      backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), CompositeId.fromObject(entity)) map { removedEntity =>
+      backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), CompositeId.fromObject(entity)) map { _ =>
         entity.markedForDeletion = true
 
         val newEntity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))

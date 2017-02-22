@@ -1,13 +1,13 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
 import com.greencatsoft.angularjs.core.{Event, ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
+import com.greencatsoft.angularjs.injectable
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Edit, LinkEntities, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Edit, LinkEntities, SimplePlay, ViewMarkup}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -45,7 +45,8 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   extends BaseModalController(scope, modal, instance, timeout, params)
     with SimplePlay
     with LinkEntities
-    with Edit {
+    with Edit
+    with ViewMarkup {
 
   protected[this] val dictionaryId: CompositeId = params("dictionaryId").asInstanceOf[CompositeId]
   protected[this] val perspectiveId: CompositeId = params("perspectiveId").asInstanceOf[CompositeId]
@@ -78,62 +79,6 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   load()
 
   @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value) = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
   override def addNewLexicalEntry(): Unit = {
 
     backend.createLexicalEntry(dictionaryId, linkPerspectiveId) onComplete {
@@ -164,7 +109,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
   @JSExport
-  def loadPage(page: Int) = {
+  def loadPage(page: Int): Unit = {
     val offset = (page - 1) * scope.size
     backend.getLexicalEntries(dictionaryId, linkPerspectiveId, LexicalEntriesType.All, offset, scope.size) onComplete {
       case Success(entries) =>
@@ -175,7 +120,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
   @JSExport
-  def range(min: Int, max: Int, step: Int) = {
+  def range(min: Int, max: Int, step: Int): js.Array[Int] = {
     (min to max by step).toSeq.toJSArray
   }
 
@@ -189,7 +134,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
   @JSExport
-  def addLinkToLexicalEntry(entry: LexicalEntry) = {
+  def addLinkToLexicalEntry(entry: LexicalEntry): Unit = {
     // add link to this lexical entry
     scope.dictionaryTable.addEntry(entry)
     // create corresponding entity in main perspective
@@ -210,7 +155,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
 
   @JSExport
-  override def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+  override def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]): Unit = {
 
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
@@ -246,7 +191,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
   @JSExport
-  override def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
+  override def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]): Unit = {
 
 
     val entryId = CompositeId.fromObject(entry)

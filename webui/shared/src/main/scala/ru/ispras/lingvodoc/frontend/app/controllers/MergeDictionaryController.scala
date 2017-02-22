@@ -4,15 +4,14 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, LoadingPlaceholder, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{SimplePlay, ViewMarkup}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -20,7 +19,6 @@ import scala.scalajs.js
 import scala.scalajs.js.JSON
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
-import scala.util.{Failure, Success}
 
 
 @js.native
@@ -95,14 +93,15 @@ trait MergeDictionaryScope extends Scope
 class MergeDictionaryController(
   scope: MergeDictionaryScope,
   params: RouteParams,
-  modal: ModalService,
-  backend: BackendService,
+  val modal: ModalService,
+  val backend: BackendService,
   timeout: Timeout,
   val exceptionHandler: ExceptionHandler)
 
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
-    with SimplePlay {
+    with SimplePlay
+    with ViewMarkup {
 
   private[this] val __debug__ = false
 
@@ -113,8 +112,8 @@ class MergeDictionaryController(
 
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -190,7 +189,7 @@ class MergeDictionaryController(
   }
 
   @JSExport
-  def getActionLink(action: String) = {
+  def getActionLink(action: String): String = {
     "#/dictionary/" +
       encodeURIComponent(dictionaryClientId.toString) + '/' +
       encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
@@ -207,7 +206,7 @@ class MergeDictionaryController(
   }
 
   @JSExport
-  def range() =
+  def range(): js.Array[Int] =
   {
     js.Array((1 to table_group_array.length.toInt by 1).toSeq: _*)
   }
@@ -314,62 +313,6 @@ class MergeDictionaryController(
 
       console.log(scope.selectedGroups)
       console.log(scope.selected_group_count)
-    }
-  }
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value) = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
     }
   }
 
