@@ -3,11 +3,29 @@
 
         <div class="btn-toolbar" role="toolbar" aria-label="">
             <div class="btn-group" role="group" aria-label="">
+
                 <button type="button" class="btn btn-default" ng-click="controller.addNewLexicalEntry()">
                     <span class="glyphicon glyphicon-plus"></span>
                 </button>
-                <!--<button type="button" class="btn btn-default" ng-click="controller.detectDuplicates()" ng-disabled="true">Detect duplicates</button>-->
-                <button type="button" class="btn btn-default" ng-click="controller.mergeEntries()" ng-disabled="controller.selectedEntriesCount() < 2">Merge</button>
+
+                <button
+                    type="button"
+                    class="btn btn-default"
+                    ng-click="controller.mergeEntries()"
+                    ng-disabled="!controller.userHasMergePermissions() || controller.selectedEntriesCount() < 2">Merge</button>
+
+                <div style="display: inline-block; padding-left: 1em; padding-bottom: 0.5em;">
+                    <label style="font-weight: normal">
+                        <input type="radio" name="publishMode" ng-model="publishMergeMode" value="any">
+                        Publish result of entity merge if any merged entity is published
+                    </label><br>
+
+                    <label style="font-weight: normal">
+                        <input type="radio" name="publishMode" ng-model="publishMergeMode" value="all">
+                        Publish result of entity merge if all merged entities are published
+                    </label>
+                </div>
+
                 <button type="button" class="btn btn-default" style="margin-left: 40px !important;" ng-click="controller.removeEntries()" ng-disabled="controller.selectedEntriesCount() < 1">Remove</button>
             </div>
         </div>
@@ -19,8 +37,14 @@
             <input type="text" class="form-control" id="filter" aria-describedby="filter-addon" ng-keypress="controller.filterKeypress($event)">
         </div>
     </div>
+</div>
 
-
+<div class="row">
+    <div class="col-md-8" ng-if="!controller.userHasMergePermissions()">
+        <h4>
+            You don't have create/delete permissions required to merge lexical entries and entities.
+        </h4>
+    </div>
 </div>
 
 <div class="row">
@@ -598,7 +622,7 @@
                     <!-- Link values, e.g. paradigms  -->
                     <div ng-if="column.checkDataTypeName('Link')">
                         <button type="button" class="btn btn-default btn-sm" ng-click="controller.editLinkedPerspective(row.entry, column.field, cell.values)">
-                            <span class="glyphicon glyphicon-list">Edit ({{cell.values.length}})</span>
+                            <span class="glyphicon glyphicon-list">Edit ({{ controller.linksCount(cell.values) }})</span>
                         </button>
                     </div>
 

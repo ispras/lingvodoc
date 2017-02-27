@@ -6,6 +6,7 @@ import com.greencatsoft.angularjs._
 import com.greencatsoft.angularjs.core.HttpPromise.promise2future
 import com.greencatsoft.angularjs.core._
 import org.scalajs.dom
+import org.scalajs.dom.console
 import org.scalajs.dom.ext.Ajax.InputData
 import org.scalajs.dom.{FormData, XMLHttpRequest}
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
@@ -686,7 +687,6 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       "/perspective/" + encodeURIComponent(perspective.clientId.toString) +
       "/" + encodeURIComponent(perspective.objectId.toString) + "/fields"
 
-
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
@@ -742,7 +742,13 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
-          p.success(read[Seq[Source[_]]](js.JSON.stringify(response)))
+
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+            p.failure(new BackendException(
+              "Error while getting perspective source:\n" + response.error))
+
+          else p.success(read[Seq[Source[_]]](js.JSON.stringify(response)))
+
         } catch {
           case e: Throwable => p.failure(BackendException("Unknown exception", e))
         }
@@ -2037,14 +2043,13 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   }
 
   /**
-    * Requests mergeable lexical entries for a perspective.
+    * Checks if the user has create/delete permissions required to merge lexical entries and entities.
     */
-  def mergeSuggestions(perspectiveId: CompositeId):
-    Future[(Seq[LexicalEntry], Seq[(CompositeId, CompositeId, Double)], Boolean)] =
+  def mergePermissions(perspectiveId: CompositeId): Future[Boolean] =
   {
-    val p = Promise[(Seq[LexicalEntry], Seq[(CompositeId, CompositeId, Double)], Boolean)]()
+    val p = Promise[Boolean]()
 
-    val url = getMethodUrl("merge/suggestions/" +
+    val url = getMethodUrl("merge/permissions/" +
       encodeURIComponent(perspectiveId.clientId.toString) + "/" +
       encodeURIComponent(perspectiveId.objectId.toString))
 
@@ -2056,35 +2061,97 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
         try
         {
-          /* Returning merge data we've got. */
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
 
-          val entry_seq = read[Seq[LexicalEntry]](
-            js.JSON.stringify(response.entry_data))
+            p.failure(new BackendException(
+              "Error while checking merge permissions:\n" + response.error))
 
-          val match_seq = read[Seq[(CompositeId, CompositeId, Double)]](
-            js.JSON.stringify(response.match_result))
-
-          val user_has_permissions = read[Boolean](
-            js.JSON.stringify(response.user_has_permissions))
-
-          p.success((entry_seq, match_seq, user_has_permissions))
+          else p.success(read[Boolean](
+            js.JSON.stringify(response.user_has_permissions)))
         }
 
         catch
         {
-          /* Returning with error. */
-
           case e: upickle.Invalid.Json => p.failure(
-            BackendException("Malformed lexical entries json", e))
-
-          case e: upickle.Invalid.Data => p.failure(
-            BackendException("Malformed lexical entries data. Missing some required fields", e))
+            BackendException("Malformed JSON", e))
 
           case e: Throwable => p.failure(
             BackendException("Unknown exception", e))
         }
 
-      case Failure(e) => p.failure(new BackendException("Failed to get merge suggestions: " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to get merge permissions: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
+  /**
+    * Requests mergeable lexical entries for a perspective.
+    */
+  def mergeSuggestions(
+    perspectiveId: CompositeId,
+    algorithm: String,
+    field_selection_list: js.Array[js.Dynamic],
+    threshold: Double):
+    Future[(Seq[LexicalEntry], Seq[(CompositeId, CompositeId, Double)], Boolean)] =
+  {
+    val p = Promise[(Seq[LexicalEntry], Seq[(CompositeId, CompositeId, Double)], Boolean)]()
+
+    val url = getMethodUrl("merge/suggestions/" +
+      encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString))
+
+    val request = JSON.stringify(js.Dynamic.literal(
+      "algorithm" -> algorithm,
+      "field_selection_list" -> field_selection_list,
+      "levenshtein" -> 1,
+      "threshold" -> threshold))
+
+    /* Trying to get merge suggestions. */
+
+    $http.post[js.Dynamic](url, request) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while getting merge suggestions:\n" + response.error))
+
+          else
+          {
+            /* Returning merge suggestions we've got. */
+
+            val entry_seq = read[Seq[LexicalEntry]](
+              js.JSON.stringify(response.entry_data))
+
+            val match_seq = read[Seq[(CompositeId, CompositeId, Double)]](
+              js.JSON.stringify(response.match_result))
+
+            val user_has_permissions = read[Boolean](
+              js.JSON.stringify(response.user_has_permissions))
+
+            p.success((entry_seq, match_seq, user_has_permissions))
+          }
+        }
+
+        catch
+        {
+          /* Terminating with error. */
+
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed merge suggestions JSON", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException("Failed to get merge suggestions: " + e.getMessage, e))
     }
 
     p.future
@@ -2093,14 +2160,22 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   /**
     * Merges multiple groups of lexical entries, provided that each group is a subset of a single
     * perspective, returns client/object ids of new lexical entries, a new entry for each merged group.
+    *
+    * @param publish_any
+    *   If this flag is true, we publish results of entity merge if any merged entity is published. If this
+    *   flag is false, we publish results of entity merge if all merged entity are published.
     */
-  def bulkMerge(group_seq: Seq[Seq[CompositeId]]): Future[Seq[CompositeId]] =
+  def mergeBulk(
+    publish_any: Boolean,
+    group_seq: Seq[Seq[CompositeId]]):
+    Future[Seq[CompositeId]] =
   {
     val p = Promise[Seq[CompositeId]]
 
     val request =
 
       JSON.stringify(js.Dynamic.literal(
+        "publish_any" -> publish_any,
         "group_list" ->
 
         js.Array(group_seq map { entry_id_seq =>
@@ -2110,14 +2185,21 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
             "client_id" -> entry_id.clientId,
             "object_id" -> entry_id.objectId)}: _*)}: _*)))
 
-    dom.console.log("bulkMerge: " + request)
+    dom.console.log("mergeBulk: " + request)
 
     $http.post[js.Dynamic](getMethodUrl("merge/bulk"), request) onComplete
     {
       case Success(response) =>
 
         try
-          p.success(read[Seq[CompositeId]](js.JSON.stringify(response)))
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while performing merges:\n" + response.error))
+
+          else p.success(read[Seq[CompositeId]](js.JSON.stringify(response.result)))
+        }
 
         catch
         {
@@ -2131,7 +2213,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
             BackendException("Unknown exception", e))
         }
 
-      case Failure(e) => p.failure(new BackendException("Failed to perform bulk merge: " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to perform bulk merge: " + e.getMessage, e))
     }
 
     p.future

@@ -5,7 +5,7 @@ import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, Modal
 import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LinkEntities, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 
@@ -29,7 +29,7 @@ trait EditGroupingTagScope extends Scope {
 
 @injectable("EditGroupingTagModalController")
 class EditGroupingTagModalController(scope: EditGroupingTagScope,
-                                     modal: ModalService,
+                                     val modal: ModalService,
                                      instance: ModalInstance[Unit],
                                      backend: BackendService,
                                      userService: UserService,
@@ -46,14 +46,14 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   private[this] val perspectiveObjectId = params("perspectiveObjectId").asInstanceOf[Int]
   private[this] var lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
   private[this] val fieldId = CompositeId.fromObject(field)
 
   private[this] var foundEntries = Seq[Seq[LexicalEntry]]()
   private[this] var dataTypes = Seq[TranslationGist]()
-  //private[this] var perspectiveFields = Seq[Field]()
+  private[this] var statuses = Seq[TranslationGist]()
   private[this] var dictionaries = Seq[Dictionary]()
   private[this] var perspectives = Seq[Perspective]()
   private[this] var searchDictionaries = Seq[Dictionary]()
@@ -284,7 +284,6 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
     }
   }
 
-
   load(() => {
 
     backend.getLexicalEntry(dictionaryId, perspectiveId, lexicalEntryId) map { entry =>
@@ -302,12 +301,18 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
       perspectives = p
     }
 
-    backend.dataTypes() flatMap { allDataTypes =>
-      dataTypes = allDataTypes
-      loadConnectedEntries()
-    }
-  })
+    backend.allStatuses() map { s =>
+      statuses = s
 
+      backend.dataTypes() flatMap { allDataTypes =>
+        dataTypes = allDataTypes
+        loadConnectedEntries()
+      }
+
+    }
+
+
+  })
 
   override protected def onModalClose(): Unit = {
     waveSurfer.foreach(w => w.destroy())

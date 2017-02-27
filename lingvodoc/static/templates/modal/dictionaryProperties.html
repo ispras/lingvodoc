@@ -4,21 +4,51 @@
 
 <div class="modal-body">
 
-    <select id="language" ng-model="selectedLanguageId" class="form-control">
-        <option ng-repeat="language in languages" value="{{language.getId}}" ng-selected="language.getId == selectedLanguageId">{{ language.translation }}</option>
-    </select>
+    <div class="row">
 
-    <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
-    <hr>
+        <div class="col-md-12">
+            <select id="language" ng-model="selectedLanguageId" class="form-control">
+                <option ng-repeat="language in languages" value="{{language.getId}}" ng-selected="language.getId == selectedLanguageId">{{ language.translation }}</option>
+            </select>
 
-    <div>
-        <div ng-repeat="name in translations">
-            <label for="localized-name-{{$index}}"
-                   ng-bind="controller.getLocaleName(name.localeId)"></label>
-            <input type="text" id="localized-name-{{$index}}" class="form-control" ng-model="name.str"
-                   placeholder="">
+            <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
+            <hr>
+
         </div>
     </div>
+
+
+    <div class="row" ng-repeat="name in translations">
+
+        <div class="col-lg-6">
+
+            <div class="input-group"><span class="input-group-addon">Name</span>
+                <input type="text" id="name-{{$index}}" class="form-control"
+                       ng-model="name.str" placeholder="">
+            </div>
+
+        </div>
+
+        <div class="col-lg-6">
+            <div class="input-group"><span class="input-group-addon">Language</span>
+                <select id="layer-name-locale-{{$index}}" class="form-control"
+                        ng-model="name.localeId" convert-to-number>
+                    <option ng-repeat="locale in controller.getAvailableLocales(translations, name)"
+                            ng-attr-value="{{ locale.id }}">{{ locale.name }}
+                    </option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <button class="btn btn-info" ng-click="controller.addNameTranslation()">
+                <span class="glyphicon glyphicon-plus-sign">Add translation</span>
+            </button>
+        </div>
+    </div>
+
 
 
 

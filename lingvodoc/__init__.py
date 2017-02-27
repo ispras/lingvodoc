@@ -571,12 +571,21 @@ def configure_routes(config):
     config.add_route(name='merge_perspectives', pattern='/merge/perspectives')  # TODO: test
 
     # API #POST
-    # {'entity_type_primary':<entity_type_primary>,
-    # 'entity_type_secondary' : <entity_type_secondary>,
+    #
+    # Checks if the user has create/delete permissions required to merge lexical entries and entities.
+    #
+    config.add_route(name = 'merge_permissions',
+        pattern = '/merge/permissions/{perspective_client_id}/{perspective_object_id}',
+        factory = 'lingvodoc.models.LexicalEntriesEntitiesAcl')
+
+    # API #POST
+    # {
+    # 'algorithm': <algorithm>,
+    # 'entity_type_primary': <entity_type_primary>,
+    # 'entity_type_secondary': <entity_type_secondary>,
+    # 'field_selection_list': <field_selection_list>,
     # 'threshold': <threshold>,
-    # 'levenstein' : <levenstein>,
-    # 'client_id' : <client_id>,
-    # 'object_id' : <object_id>
+    # 'levenshtein': <levenshtein>,
     # }
     config.add_route(name = 'merge_suggestions',
         pattern = '/merge/suggestions/{perspective_client_id}/{perspective_object_id}',
@@ -589,6 +598,13 @@ def configure_routes(config):
     # perspective, returns client/object ids of new lexical entries, a new entry for each merged group.
     #
     config.add_route(name = 'merge_bulk', pattern = '/merge/bulk')
+
+    # API #GET
+    #
+    # Changes format of metadata of lexical entries created from merges of other lexical entries from the
+    # first version (with 'merge_tag' key) to the second version (with 'merge' key).
+    #
+    config.add_route(name = 'merge_update_2', pattern = '/merge/update2')
 
     config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'  # should be removed?
                                                            '{dictionary_client_id_1}/{dictionary_object_id_1}/'

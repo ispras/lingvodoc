@@ -5,8 +5,8 @@ import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
@@ -36,15 +36,17 @@ trait ContributionsScope extends Scope {
 @injectable("ContributionsController")
 class ContributionsController(scope: ContributionsScope,
                               params: RouteParams,
-                              modal: ModalService,
-                              backend: BackendService,
+                              val modal: ModalService,
+                              val backend: BackendService,
                               val timeout: Timeout,
                               val exceptionHandler: ExceptionHandler)
   extends AbstractController[ContributionsScope](scope)
     with AngularExecutionContextProvider
     with SimplePlay
     with Pagination
-    with LoadingPlaceholder {
+    with LoadingPlaceholder
+    with LinkEntities
+    with ViewMarkup {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -52,9 +54,8 @@ class ContributionsController(scope: ContributionsScope,
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
-
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -71,7 +72,7 @@ class ContributionsController(scope: ContributionsScope,
 
 
   @JSExport
-  def filterKeypress(event: Event) = {
+  def filterKeypress(event: Event): Unit = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
     if (e.keyCode == 13) {
       val query = e.target.asInstanceOf[HTMLInputElement].value
@@ -81,7 +82,7 @@ class ContributionsController(scope: ContributionsScope,
 
 
   @JSExport
-  def loadSearch(query: String) = {
+  def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
         console.log(results.toJSArray)
@@ -91,7 +92,7 @@ class ContributionsController(scope: ContributionsScope,
   }
 
   @JSExport
-  def getActionLink(action: String) = {
+  def getActionLink(action: String): String = {
     "#/dictionary/" +
       encodeURIComponent(dictionaryClientId.toString) + '/' +
       encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
@@ -99,63 +100,6 @@ class ContributionsController(scope: ContributionsScope,
       encodeURIComponent(perspectiveObjectId.toString) + "/" +
       action
   }
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value) = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {
@@ -167,38 +111,7 @@ class ContributionsController(scope: ContributionsScope,
   }
 
   @JSExport
-  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
-
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
-    options.controller = "ViewDictionaryModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          linkPerspectiveClientId = field.link.get.clientId,
-          linkPerspectiveObjectId = field.link.get.objectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
-        )
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Seq[Entity]](options)
-    instance.result map { entities =>
-      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
-    }
-  }
-
-  @JSExport
-  def accept(entry: LexicalEntry, value: Value) = {
+  def accept(entry: LexicalEntry, value: Value): Unit = {
     val entity = value.getEntity()
     if (!entity.accepted) {
       backend.acceptEntities(dictionaryId, perspectiveId, CompositeId.fromObject(entity) :: Nil) map { _ =>
@@ -215,7 +128,7 @@ class ContributionsController(scope: ContributionsScope,
   }
 
   @JSExport
-  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
@@ -315,4 +228,6 @@ class ContributionsController(scope: ContributionsScope,
   override def getPageLink(page: Int): String = {
     s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/publish/$page"
   }
+
+  override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 }

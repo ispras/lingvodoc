@@ -2,11 +2,11 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
@@ -15,7 +15,6 @@ import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
-import scala.util.{Failure, Success}
 
 
 @js.native
@@ -33,14 +32,16 @@ trait ViewDictionaryScope extends Scope {
 @injectable("ViewDictionaryController")
 class ViewDictionaryController(scope: ViewDictionaryScope,
                                params: RouteParams,
-                               modal: ModalService,
-                               backend: BackendService,
+                               val modal: ModalService,
+                               val backend: BackendService,
                                timeout: Timeout,
                                val exceptionHandler: ExceptionHandler)
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
     with SimplePlay
-    with Pagination {
+    with Pagination
+    with LinkEntities
+    with ViewMarkup {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -48,8 +49,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
   private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
-  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
+  protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -64,12 +65,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   scope.size = 20
   scope.pageLoaded = false
 
-
-
-
-
   @JSExport
-  def filterKeypress(event: Event) = {
+  def filterKeypress(event: Event): Unit = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
     if (e.keyCode == 13) {
       val query = e.target.asInstanceOf[HTMLInputElement].value
@@ -78,78 +75,22 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   }
 
   @JSExport
-  def loadSearch(query: String) = {
+  def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map { results =>
-        val entries = results map (_.lexicalEntry)
+        val entries = results.map(_.lexicalEntry).filterNot(_.markedForDeletion)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
   }
 
 
   @JSExport
-  def getActionLink(action: String) = {
+  def getActionLink(action: String): String = {
     "#/dictionary/" +
       encodeURIComponent(dictionaryClientId.toString) + '/' +
       encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
       encodeURIComponent(perspectiveClientId.toString) + "/" +
       encodeURIComponent(perspectiveObjectId.toString) + "/" +
       action
-  }
-
-  @JSExport
-  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
-
-    val soundAddress = soundValue.getContent()
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              soundAddress = soundAddress.asInstanceOf[js.Object],
-              markupData = elan.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
-  }
-
-  @JSExport
-  def viewMarkup(markupValue: Value) = {
-
-    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
-      case Success(elan) =>
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
-        options.windowClass = "sm-modal-window"
-        options.controller = "SoundMarkupController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              markupData = elan.asInstanceOf[js.Object],
-              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
-              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-            )
-          }
-        ).asInstanceOf[js.Dictionary[Any]]
-        val instance = modal.open[Unit](options)
-      case Failure(e) =>
-    }
   }
 
   @JSExport
@@ -162,38 +103,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   }
 
   @JSExport
-  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
-
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
-    options.controller = "ViewDictionaryModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          linkPerspectiveClientId = field.link.get.clientId,
-          linkPerspectiveObjectId = field.link.get.objectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
-        )
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Seq[Entity]](options)
-    instance.result map { entities =>
-      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
-    }
-  }
-
-  @JSExport
-  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
@@ -290,8 +200,6 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
     }
   })
 
-
-
   @JSExport
   def getFullPageLink(page: Int): String = {
     var url = getPageLink(page)
@@ -317,4 +225,6 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   override protected def onCompleteRequest(): Unit = {
     scope.pageLoaded = true
   }
+
+  override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 }

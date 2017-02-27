@@ -4,10 +4,12 @@ import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.app.controllers.common.Translatable
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils
+import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -56,7 +58,33 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
   }
 
   @JSExport
-  def ok() = {
+  def getAvailableLocales(translations: js.Array[LocalizedString], currentTranslation: LocalizedString): js.Array[Locale] = {
+    val currentLocale = locales.find(_.id == currentTranslation.localeId).get
+    val otherTranslations = translations.filterNot(translation => translation.equals(currentTranslation))
+    val availableLocales = locales.filterNot(_.equals(currentLocale)).filter(locale => !otherTranslations.exists(translation => translation.localeId == locale.id)).toList
+    (currentLocale :: availableLocales).toJSArray
+  }
+
+  @JSExport
+  def addNameTranslation(): Unit = {
+    val currentLocaleId = Utils.getLocale().getOrElse(2)
+    if (scope.translations.exists(_.localeId == currentLocaleId)) {
+      // pick next available locale
+      locales.filterNot(locale => scope.translations.exists(name => name.localeId == locale.id)).toList match {
+        case firstLocale :: otherLocales =>
+          scope.translations = scope.translations :+ LocalizedString(firstLocale.id, "")
+        case Nil =>
+      }
+    } else {
+      // add translation with current locale pre-selected
+      scope.translations = scope.translations :+ LocalizedString(currentLocaleId, "")
+    }
+  }
+
+
+
+  @JSExport
+  def ok(): Unit = {
 
     var updateRequests = Seq[Future[Unit]]()
 
@@ -73,14 +101,23 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
       case None => throw new ControllerException("Dictionary contains reference to non-existent language.")
     }
 
+    val createdAtoms = scope.translations.filterNot(translation => translationGist.exists(_.atoms.exists(atom => atom.localeId == translation.localeId)))
+
+    createdAtoms.foreach { atom =>
+      translationGist.foreach { gist =>
+        backend.createTranslationAtom(CompositeId.fromObject(gist), atom)
+      }
+    }
+
     // create a list of updated translation atoms
     // Array of (atom, updatedString)
     val updatedAtoms = translationGist.map { gist =>
-      gist.atoms.sortBy(_.localeId).map(atom => (atom, LocalizedString(atom.localeId, atom.content))) zip scope.translations flatMap {
+      gist.atoms.sortBy(_.localeId).map(atom => (atom, LocalizedString(atom.localeId, atom.content))) zip scope.translations.filter(t => gist.atoms.exists(_.localeId == t.localeId)).sortBy(_.localeId) flatMap {
         case (original, updated) =>
           if (!original._2.str.equals(updated.str) && updated.str.nonEmpty) Some(original._1, updated) else None
       }
     }
+
     // update atoms
     updatedAtoms.foreach { updated =>
       updateRequests = updateRequests ++ updated.map { case (atom, str) =>
@@ -89,9 +126,8 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
       }.toSeq
     }
 
-    Future.sequence(updateRequests) onComplete {
-      case Success(_) => modalInstance.close(scope.dictionary)
-      case Failure(e) =>
+    Future.sequence(updateRequests) map { _ =>
+      modalInstance.close(scope.dictionary)
     }
   }
 

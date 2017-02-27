@@ -596,7 +596,7 @@
                     <!-- Link values, e.g. paradigms  -->
                     <div ng-if="column.checkDataTypeName('Link')">
                         <button type="button" class="btn btn-default btn-sm" ng-click="controller.editLinkedPerspective(row.entry, column.field, cell.values)">
-                            <span class="glyphicon glyphicon-list">Edit ({{cell.values.length}})</span>
+                            <span class="glyphicon glyphicon-list">Edit ({{ controller.linksCount(cell.values) }})</span>
                         </button>
                     </div>
 
