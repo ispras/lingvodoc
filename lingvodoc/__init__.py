@@ -667,6 +667,9 @@ def configure_routes(config):
     # config.add_route(name='test_queue_set', pattern='/test_queue_set')
     # config.add_route(name='test_queue_get', pattern='/test_queue_get')
 
+    config.add_route(name='all_translationgists', pattern='/all_translationgists',
+                     factory='lingvodoc.models.AdminAcl')
+
     config.add_route(name='create_translationgist', pattern='/translationgist',
                      factory='lingvodoc.models.AuthenticatedAcl')
     config.add_route(name='translationgist', pattern='/translationgist/{client_id}/{object_id}',
