@@ -78,6 +78,14 @@ def translationatom_contents(translationatom):
     return result
 
 
+@view_config(route_name='all_translationgists', renderer='json', request_method='GET', permission='view')
+def all_translationgists(request):
+    response = list()
+    gists = DBSession.query(TranslationGist).order_by(TranslationGist.type).all()
+    for translation_gist in gists:
+        response.append(translationgist_contents(translation_gist))
+    return response
+
 @view_config(route_name='translationgist', renderer='json', request_method='GET')
 def view_translationgist(request):
     response = dict()
