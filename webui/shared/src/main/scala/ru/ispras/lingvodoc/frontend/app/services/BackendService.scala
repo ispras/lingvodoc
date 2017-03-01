@@ -1229,6 +1229,18 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+
+  def allTranslationGists(): Future[Seq[TranslationGist]] = {
+    val p = Promise[Seq[TranslationGist]]()
+    $http.get[js.Dynamic]("all_translationgists") onComplete {
+      case Success(response) =>
+        p.success(read[Seq[TranslationGist]](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get all gists", e))
+    }
+    p.future
+  }
+
+
   /**
     * Gets translation atom by id
     *
@@ -1249,7 +1261,6 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  @Deprecated
   def translationAtom(atomId: CompositeId): Future[TranslationAtom] = {
     val p = Promise[TranslationAtom]()
     val url = "translationatom/" + encodeURIComponent(atomId.clientId.toString) + "/" + encodeURIComponent(atomId.objectId.toString)

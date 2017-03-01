@@ -1,0 +1,60 @@
+<div>
+    <div class="" ng-repeat="gistGroup in groupedGists">
+
+        <h3>{{ gistGroup.type }}</h3>
+
+        <div class="panel panel-default" ng-repeat="gist in gistGroup.gists">
+
+            <div class="panel-heading">
+
+                {{ controller.getCurrentTranslation(gist) }}
+
+            </div>
+
+
+            <div class="panel-body">
+
+                <div class="row" ng-repeat="atom in gist.atoms">
+
+                    <div class="col-md-12">
+
+                        <div class="col-md-6">
+
+                            <div class="input-group"><span class="input-group-addon">Atom</span>
+                                <input type="text" id="atom-{{$parent.$index}}-{{$index}}" class="form-control"
+                                       ng-model="atom.content" placeholder="">
+                            </div>
+
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div class="input-group"><span class="input-group-addon">Language</span>
+                                <select id="layer-name-locale-{{$parent.$index}}-{{$index}}" class="form-control"
+                                        ng-model="atom.localeId" ng-disabled="controller.atomExists(atom)" convert-to-number>
+                                    <!-- available locales -->
+                                    <option ng-repeat="locale in controller.getAvailableLocales(gist, atom)"
+                                            ng-attr-value="{{ locale.id }}">{{ locale.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="row text-center" style="padding-top: 20px;">
+
+                    <button type="button" class="btn btn-default" ng-click="controller.addAtom(gist)">Add translation</button>
+                    <button type="button" class="btn btn-default" ng-click="controller.updateGist(gist)">Save</button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>
