@@ -4,7 +4,7 @@ import com.greencatsoft.angularjs.{Angular, Config, Module}
 import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.modal._
 import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal.{ContributionsLinkedDictionaryModalController, PublishLinkedDictionaryModalController, ViewSociolinguisticsInfoController}
-import ru.ispras.lingvodoc.frontend.app.controllers.webui.{PerspectivePropertiesController, SociolinguisticsController}
+import ru.ispras.lingvodoc.frontend.app.controllers.webui.{EditTranslationsController, PerspectivePropertiesController, SociolinguisticsController}
 import ru.ispras.lingvodoc.frontend.app.controllers._
 import ru.ispras.lingvodoc.frontend.app.directives._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -36,6 +36,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/map_search", Route("/static/templates/mapSearch.html", "Lingvodoc 2.0 / Map search", "MapSearchController"))
     .when("/sociolinguistics", Route("/static/templates/sociolinguistics.html", "Lingvodoc 2.0 / Sociolinguistics", "SociolinguisticsController"))
     .when("/desktop_software", Route("/static/templates/desktop.html", "Lingvodoc 2.0 / Desktop software"))
+    .when("/edit_translations", Route("/static/templates/editTranslations.html", "Lingvodoc 2.0 / Edit translations", "EditTranslationsController"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
@@ -89,6 +90,7 @@ object LingvodocApplication {
       .controller[ConvertEafController]
       .controller[DownloadEmbeddedBlobController]
       .controller[MessageController]
+      .controller[EditTranslationsController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
