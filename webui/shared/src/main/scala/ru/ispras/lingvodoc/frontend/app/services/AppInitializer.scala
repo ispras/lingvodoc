@@ -1,6 +1,6 @@
 package ru.ispras.lingvodoc.frontend.app.services
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, RootScope, Route, Timeout}
+import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.{AngularExecutionContextProvider, Runnable, injectable}
 
 import scala.scalajs.js

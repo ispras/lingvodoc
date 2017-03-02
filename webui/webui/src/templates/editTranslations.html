@@ -1,7 +1,17 @@
-<div>
+<div ng-cloak>
+
+    <ul>
+        <li ng-repeat="gistType in gistTypes">
+            <a ng-click="controller.show(gistType)">{{ gistType }}</a>
+        </li>
+        <li ng-click="controller.showAll()">
+            <a ng-click="controller.showAll()">All</a>
+        </li>
+    </ul>
+
     <div class="" ng-repeat="gistGroup in groupedGists">
 
-        <h3>{{ gistGroup.type }}</h3>
+        <h3><a id="{{ gistGroup.type }}">{{ gistGroup.type }}</a></h3>
 
         <div class="panel panel-default" ng-repeat="gist in gistGroup.gists">
 

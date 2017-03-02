@@ -18,10 +18,9 @@ import scala.scalajs.js.{Dynamic, Object}
 
 @js.native
 trait EditTranslationsScope extends Scope {
+  var gistTypes: js.Array[String] = js.native
   var groupedGists: js.Array[Object with Dynamic] = js.native
-
 }
-
 
 @injectable("EditTranslationsController")
 class EditTranslationsController(scope: EditTranslationsScope,
@@ -37,7 +36,9 @@ class EditTranslationsController(scope: EditTranslationsScope,
 
   private[this] var locales: Seq[Locale] = Seq[Locale]()
   private[this] var existingAtoms: Seq[TranslationAtom] = Seq[TranslationAtom]()
+  private[this] var allGists: Seq[TranslationGist] = Seq[TranslationGist]()
 
+  scope.gistTypes = js.Array[String]()
   scope.groupedGists = js.Array[Object with Dynamic]()
 
 
@@ -94,22 +95,33 @@ class EditTranslationsController(scope: EditTranslationsScope,
   }
 
   @JSExport
-  def atomExists(atom: TranslationAtom): Boolean = existingAtoms.exists(a => a.clientId == atom.clientId && a.objectId == atom.objectId)
+  def show(gistType: String): Unit = {
+    scope.groupedGists = allGists.filter(_.gistType == gistType).groupBy(_.gistType).toSeq.map(s => js.Dynamic.literal("type" -> s._1, "gists" -> s._2.toJSArray)).toJSArray
+  }
 
+  @JSExport
+  def showAll(): Unit = {
+    scope.groupedGists = allGists.groupBy(_.gistType).toSeq.map(s => js.Dynamic.literal("type" -> s._1, "gists" -> s._2.toJSArray)).toJSArray
+  }
+
+  @JSExport
+  def atomExists(atom: TranslationAtom): Boolean = existingAtoms.exists(a => a.clientId == atom.clientId && a.objectId == atom.objectId)
 
   load(() => {
 
     backend.getLocales() map { l =>
       locales = l
-    }
 
-    backend.allTranslationGists() map { gists =>
-      scope.groupedGists = gists.groupBy(_.gistType).toSeq.map(s => js.Dynamic.literal("type" -> s._1, "gists" -> s._2.toJSArray)).toJSArray
-      existingAtoms = gists.map(_.atoms).flatMap(_.toSeq)
-    } recover {
-      case e: Throwable =>
-        console.error("This page is not available!")
-        location.path("/")
+      backend.allTranslationGists() map { gists =>
+        allGists = gists.filter(_.atoms.nonEmpty)
+        scope.gistTypes = allGists.map(_.gistType).toSet.toJSArray
+        scope.groupedGists = allGists.groupBy(_.gistType).toSeq.map(s => js.Dynamic.literal("type" -> s._1, "gists" -> s._2.toJSArray)).toJSArray
+        existingAtoms = allGists.map(_.atoms).flatMap(_.toSeq)
+      } recover {
+        case e: Throwable =>
+          console.error("This page is not available!")
+          location.path("/")
+      }
     }
   })
 

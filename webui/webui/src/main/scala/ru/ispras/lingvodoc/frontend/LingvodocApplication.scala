@@ -36,7 +36,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/map_search", Route("/static/templates/mapSearch.html", "Lingvodoc 2.0 / Map search", "MapSearchController"))
     .when("/sociolinguistics", Route("/static/templates/sociolinguistics.html", "Lingvodoc 2.0 / Sociolinguistics", "SociolinguisticsController"))
     .when("/desktop_software", Route("/static/templates/desktop.html", "Lingvodoc 2.0 / Desktop software"))
-    .when("/edit_translations", Route("/static/templates/editTranslations.html", "Lingvodoc 2.0 / Edit translations", "EditTranslationsController"))
+    .when("/edit_translations/:anchor", Route("/static/templates/editTranslations.html", "Lingvodoc 2.0 / Edit translations", "EditTranslationsController"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
