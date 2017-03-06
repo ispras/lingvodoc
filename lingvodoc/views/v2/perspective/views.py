@@ -75,6 +75,7 @@ from lingvodoc.views.v2.utils import (
     FakeObject
 )
 from lingvodoc.views.v2.delete import real_delete_perspective
+from pdb import set_trace
 
 log = logging.getLogger(__name__)
 
@@ -828,7 +829,6 @@ def create_perspective(request):  # tested & in docs
 @view_config(route_name='complex_create', renderer='json', request_method='POST', permission='create')
 def complex_create(request):
     try:
-        from pdb import set_trace
         parent_client_id = request.matchdict.get('dictionary_client_id')
         parent_object_id = request.matchdict.get('dictionary_object_id')
         result = list()
@@ -841,7 +841,6 @@ def complex_create(request):
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
         fake_ids = dict()
-        # set_trace()
         for perspective_json in req:
             path = request.route_url('create_perspective',
                                      dictionary_client_id=parent_client_id,
@@ -876,7 +875,7 @@ def complex_create(request):
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
-            return result
+        return result
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
