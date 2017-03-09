@@ -27,7 +27,13 @@ class AppInitializer(rootScope: RootScope,
   // update page title
   rootScope.$on("$routeChangeSuccess", () => {
     route.current.title foreach (title => document.title = title)
+    rootScope.$broadcast("route.changeSuccess")
   })
+
+  rootScope.$on("$routeChangeStart", () => {
+    rootScope.$broadcast("route.changeStart")
+  })
+
 
   rootScope.$on("$locationChangeStart", () => {
     backend.getCurrentUser onComplete {

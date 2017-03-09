@@ -4,6 +4,7 @@ import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.raw.HTMLInputElement
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
@@ -32,13 +33,12 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
                                   params: RouteParams,
                                   val modal: ModalService,
                                   val backend: BackendService,
-                                  val timeout: Timeout,
+                                  timeout: Timeout,
                                   val exceptionHandler: ExceptionHandler)
-  extends AbstractController[PublishDictionaryScope](scope)
+  extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
     with SimplePlay
     with Pagination
-    with LoadingPlaceholder
     with LinkEntities
     with ViewMarkup {
 
@@ -216,19 +216,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
     }
   }
 
-  override protected def onLoaded[T](result: T): Unit = {}
-
-  override protected def onError(reason: Throwable): Unit = {}
-
-  override protected def preRequestHook(): Unit = {
-    scope.pageLoaded = false
-  }
-
-  override protected def postRequestHook(): Unit = {
-    scope.pageLoaded = true
-  }
-
-  doAjax(() => {
+  load(() => {
     backend.perspectiveSource(perspectiveId) flatMap {
       sources =>
         scope.path = sources.reverse.map {
@@ -272,6 +260,14 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
     }
   })
 
+  override protected def onStartRequest(): Unit = {
+    scope.pageLoaded = false
+  }
+
+  override protected def onCompleteRequest(): Unit = {
+    scope.pageLoaded = true
+  }
+
   @JSExport
   def getFullPageLink(page: Int): String = {
     var url = getPageLink(page)
@@ -290,4 +286,11 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
+
+  override protected def onOpen(): Unit = {}
+
+  override protected def onClose(): Unit = {
+    waveSurfer foreach {w =>
+      w.destroy()}
+  }
 }

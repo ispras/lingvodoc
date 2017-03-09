@@ -821,5 +821,12 @@ class MergeDictionaryController(
       .map { entry_id_seq => () }
       .recover { case e: Throwable => recover_with_log(e) }
   }
+
+  override protected def onOpen(): Unit = {}
+
+  override protected def onClose(): Unit = {
+    waveSurfer foreach {w =>
+      w.destroy()}
+  }
 }
 

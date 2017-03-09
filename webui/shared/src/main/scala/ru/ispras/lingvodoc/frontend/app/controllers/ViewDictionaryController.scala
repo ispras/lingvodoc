@@ -227,4 +227,11 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   }
 
   override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
+
+  override protected def onOpen(): Unit = {}
+
+  override protected def onClose(): Unit = {
+    waveSurfer foreach {w =>
+      w.destroy()}
+  }
 }

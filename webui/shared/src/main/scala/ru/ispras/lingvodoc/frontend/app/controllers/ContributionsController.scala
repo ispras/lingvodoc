@@ -226,4 +226,11 @@ class ContributionsController(scope: ContributionsScope,
   override protected def onCompleteRequest(): Unit = {
     scope.pageLoaded = true
   }
+
+  override protected def onOpen(): Unit = {}
+
+  override protected def onClose(): Unit = {
+    waveSurfer foreach {w =>
+      w.destroy()}
+  }
 }
