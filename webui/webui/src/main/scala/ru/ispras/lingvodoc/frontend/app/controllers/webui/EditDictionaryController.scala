@@ -210,7 +210,6 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
 
-
   @JSExport
   def updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, event: Event): Unit = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
@@ -364,4 +363,11 @@ class EditDictionaryController(scope: EditDictionaryScope,
   })
 
   override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
+
+  override protected def onOpen(): Unit = {}
+
+  override protected def onClose(): Unit = {
+    waveSurfer foreach {w =>
+      w.destroy()}
+  }
 }
