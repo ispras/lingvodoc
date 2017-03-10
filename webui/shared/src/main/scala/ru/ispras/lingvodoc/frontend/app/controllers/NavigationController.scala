@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
@@ -25,8 +26,11 @@ class NavigationController(scope: NavigationScope,
                            rootScope: RootScope,
                            backend: BackendService,
                            userService: UserService,
+                           modal: ModalService,
                            val timeout: Timeout,
-                           val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
+                           val exceptionHandler: ExceptionHandler)
+  extends AbstractController[NavigationScope](scope)
+    with AngularExecutionContextProvider {
 
 
   scope.tasks = js.Array[Task]()
@@ -81,6 +85,25 @@ class NavigationController(scope: NavigationScope,
       scope.tasks = scope.tasks.filterNot(_.id == task.id)
     }
   }
+
+
+  @JSExport
+  def editProfile(): Unit = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/userProfile.html"
+    options.windowClass = "sm-modal-window"
+    options.controller = "UserProfileController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal()
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+    modal.open[Unit](options)
+  }
+
 
 
   private[this] def loadTasks(): Unit = {

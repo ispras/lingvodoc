@@ -91,6 +91,7 @@ object LingvodocApplication {
       .controller[DownloadEmbeddedBlobController]
       .controller[MessageController]
       .controller[EditTranslationsController]
+      .controller[UserProfileController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

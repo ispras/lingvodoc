@@ -70,6 +70,7 @@ object DesktopApplication {
       .controller[ConvertEafController]
       .controller[DownloadEmbeddedBlobController]
       .controller[MessageController]
+      .controller[UserProfileController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
