@@ -617,6 +617,20 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+
+  def updateCurrentUser(user: User): Future[Unit] = {
+    val p = Promise[Unit]()
+    $http.put[js.Object](getMethodUrl("user"), write(user)) onComplete {
+      case Success(js) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update current user", e))
+    }
+    p.future
+  }
+
+
+
+
   def getUser(userId: Int): Future[User] = {
     val p = Promise[User]()
     $http.get[js.Object](getMethodUrl("user/" + encodeURIComponent(userId.toString))) onComplete {
