@@ -30,7 +30,7 @@ trait ViewMarkup {
   def viewSoundMarkup(soundValue: Value, markupValue: Value): Unit = {
 
     val soundAddress = soundValue.getContent()
-
+    val markupAddress = markupValue.getContent()
     backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
         val options = ModalOptions()
@@ -44,6 +44,7 @@ trait ViewMarkup {
           params = () => {
             js.Dynamic.literal(
               soundAddress = soundAddress.asInstanceOf[js.Object],
+              markupAddress = markupAddress.asInstanceOf[js.Object],
               markupData = elan.asInstanceOf[js.Object],
               dictionaryClientId = dictionaryId.clientId.asInstanceOf[js.Object],
               dictionaryObjectId = dictionaryId.objectId.asInstanceOf[js.Object]
