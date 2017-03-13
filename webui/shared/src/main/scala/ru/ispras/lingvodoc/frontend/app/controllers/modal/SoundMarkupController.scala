@@ -435,6 +435,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   @JSExport
   def convertToDictionary(): Unit = {
+
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/convertEaf.html"
     options.windowClass = "sm-modal-window"
@@ -451,8 +452,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]
-    val instance = modalService.open[Unit](options)
-
+    modalService.open[Unit](options)
   }
 }
 
