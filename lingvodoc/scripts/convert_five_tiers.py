@@ -84,18 +84,21 @@ def translation_service_search(searchstring):
         filter(TranslationAtom.content == searchstring,
                TranslationAtom.locale_id == 2,
                TranslationGist.type == 'Service')\
-        .one()
+        .order_by(TranslationAtom.client_id)\
+        .first()
     response = translationgist_contents(translationatom.parent)
     return response
 
 
 def translation_service_search_all(searchstring):
-    translationatom = DBSession.query(TranslationAtom)\
-        .join(TranslationGist).\
+    tralationgist = DBSession.query(TranslationGist)\
+        .join(TranslationAtom).\
         filter(TranslationAtom.content == searchstring,
                TranslationAtom.locale_id == 2)\
-        .one()
-    response = translationgist_contents(translationatom.parent)
+        .order_by(TranslationGist.client_id)\
+        .first()
+    response = {"client_id": tralationgist.client_id, "object_id": tralationgist.object_id}
+    #response = translationgist_contents(translationatom.parent)
     return response
 
 
@@ -115,7 +118,9 @@ def update_perspective_fields(req,
                 .join(TranslationAtom)\
                 .filter(TranslationGist.type == 'Service',
                         TranslationAtom.content == 'Link',
-                        TranslationAtom.locale_id == 2).one()
+                        TranslationAtom.locale_id == 2)\
+                .order_by(TranslationGist.client_id)\
+                .first()
             link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
         except NoResultFound:
             return {'error': str("Something wrong with the base")}
@@ -348,7 +353,9 @@ def convert_five_tiers(
                            Field.translation_gist_client_id == TranslationGist.client_id))\
                 .join(TranslationGist.translationatom)
             field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                                 TranslationAtom.content == name).one()
+                                           TranslationAtom.content == name)\
+                                   .order_by(TranslationAtom.client_id)\
+                                   .first()
             field_ids[name] = (field.client_id, field.object_id)
         fp_fields = ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")
         sp_fields = ("Word of Paradigmatic forms",
