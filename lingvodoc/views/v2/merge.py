@@ -1130,7 +1130,6 @@ def merge_bulk(request):
     """
 
     log.debug('merge_bulk')
-    return {'error': message('Temporary disabled.')}
 
     # Getting client and user data.
 
