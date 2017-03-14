@@ -335,7 +335,7 @@ def stat_perspective(request):
                     if p_string not in entity_data:
                         entity_data[p_string] = {}
 
-                    for d_string in [data_type, 'total']:
+                    for d_string in [field.get_translation(locale_id), 'total']:
 
                         if d_string not in entity_data[p_string]:
                             entity_data[p_string][d_string] = {'web': 0, 'desktop': 0, 'total': 0}
