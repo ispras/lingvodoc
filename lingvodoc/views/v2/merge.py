@@ -35,9 +35,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.exceptions import CommonException
 
 import lingvodoc.merge_perspectives as merge_perspectives
-from lingvodoc.merge_perspectives import (
-    mergeDicts
-    )
+from lingvodoc.merge_perspectives import mergeDicts
 
 from lingvodoc.models import (
     BaseGroup,
@@ -56,28 +54,13 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.views.v2.utils import (
-    remove_deleted
+    message,
+    remove_deleted,
+    unimplemented
 )
 
+
 log = logging.getLogger(__name__)
-
-
-def unimplemented():
-    """
-    Formats message about unimplemented features with filename, line number and function name info.
-    """
-
-    filename, line, function, statement = traceback.extract_stack()[-2]
-    return '{0}:{1}: {2}: Unimplemented.'.format(filename, line, function)
-
-
-def message(message):
-    """
-    Formats message with filename, line number and function name info.
-    """
-
-    filename, line, function, statement = traceback.extract_stack()[-2]
-    return '{0}:{1}: {2}: {3}'.format(filename, line, function, message)
 
 
 @view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
@@ -855,7 +838,7 @@ def match_fields(entry_data_list, field_selection_list, threshold):
 
                     other_id_list = list(itertools.chain(
                         *[feature_entry_dict[match] for match in match_list]))
-                        
+
                     for entry_id in entry_id_set:
                         for other_id in other_id_list:
 
@@ -1032,7 +1015,7 @@ def merge_suggestions(request):
         match_result_list = match_simple(entry_data_list,
             entity_type_primary, entity_type_secondary, threshold, levenshtein)
 
-    else: 
+    else:
         match_result_list = match_fields(entry_data_list, field_selection_list, threshold)
 
     if not match_result_list:
@@ -1065,7 +1048,8 @@ def merge_suggestions(request):
 
 def build_merge_tree(entry):
     """
-    Recursively builds merge tree of a first version merged lexical entry, compiles merge authorship info.
+    Recursively builds merge tree of a 1st or 2nd version merged lexical entry, compiles merge authorship
+    info.
     """
 
     source_list = DBSession.query(LexicalEntry).filter(
@@ -1077,7 +1061,7 @@ def build_merge_tree(entry):
         entry.client_id, entry.object_id, len(source_list), 'y' if len(source_list) == 1 else 'ies'))
 
     entry_min_created_at = None
-    entry_original_author = None
+    entry_original_client_id = None
     entry_merge_tree = []
 
     # Looking through all lexical entries merged into the given one.
@@ -1085,24 +1069,31 @@ def build_merge_tree(entry):
     for index, source in enumerate(source_list):
 
         if 'merge_tag' in source.additional_metadata:
-            source_type = '\'merge_tag\' (version 1)'
 
-            min_created_at, original_author, merge_tree = build_merge_tree(source)
+            source_type = '\'merge_tag\' (version 1)'
+            min_created_at, original_client_id, merge_tree = build_merge_tree(source)
+
+        elif ('merge' in source.additional_metadata and
+            'original_author' in source.additional_metadata['merge']):
+
+            source_type = '\'merge\' (version 2)'
+            min_created_at, original_client_id, merge_tree = build_merge_tree(source)
 
         elif 'merge' in source.additional_metadata:
-            source_type = '\'merge\' (version 2)'
 
-            # NOTE: For possible use by merge metadata updater merge_update_2.
+            source_type = '\'merge\' (version 3)'
+
+            # NOTE: For possible use by merge metadata updaters.
 
             min_created_at = source.additional_metadata['merge']['min_created_at']
-            original_author = source.additional_metadata['merge']['original_author']
+            original_client_id = source.additional_metadata['merge']['original_client_id']
             merge_tree = copy.deepcopy(source.additional_metadata['merge']['merge_tree'])
 
         else:
             source_type = None
 
             min_created_at = source.created_at
-            original_author = Client.get_user_by_client_id(source.client_id).id
+            original_client_id = source.client_id
             merge_tree = [source.client_id, source.object_id]
 
         # Updating merge tree and merge authorship info.
@@ -1111,7 +1102,7 @@ def build_merge_tree(entry):
             min_created_at < entry_min_created_at):
 
             entry_min_created_at = min_created_at
-            entry_original_author = original_author
+            entry_original_client_id = original_client_id
 
         entry_merge_tree.append(merge_tree)
 
@@ -1122,13 +1113,13 @@ def build_merge_tree(entry):
 
     log.debug('build_merge_tree {0}/{1}: result\n{2}'.format(
         entry.client_id, entry.object_id,
-        
+
         pprint.pformat({
             'min_created_at': entry_min_created_at,
-            'original_author': entry_original_author,
+            'original_client_id': entry_original_client_id,
             'merge_tree': entry_merge_tree})))
 
-    return entry_min_created_at, entry_original_author, entry_merge_tree
+    return entry_min_created_at, entry_original_client_id, entry_merge_tree
 
 
 @view_config(route_name = 'merge_bulk', renderer = 'json', request_method = 'POST')
@@ -1139,6 +1130,7 @@ def merge_bulk(request):
     """
 
     log.debug('merge_bulk')
+    return {'error': message('Temporary disabled.')}
 
     # Getting client and user data.
 
@@ -1179,8 +1171,36 @@ def merge_bulk(request):
         Creates new entity merge data.
         """
 
-        entity_dict = {'additional_metadata': {}, 'contains': {}, 'merge_set': set([
-            (entity_data['client_id'], entity_data['object_id'])])}
+        additional_metadata = entity_data.get('additional_metadata', {})
+
+        # As of now (Sun Jan 22 15:20:57 UTC 2017), we only support dicts as additional metadata.
+
+        if not isinstance(additional_metadata, dict):
+            raise Exception('Unsupported additional metadata '
+                'type \'{0}\'.'.format(type(additional_metadata)))
+
+        min_created_at = entity_data['created_at']
+        original_client_id = entity_data['client_id']
+
+        if 'merge' in additional_metadata:
+
+            merge_metadata = additional_metadata['merge']
+            del additional_metadata['merge']
+
+            min_created_at = merge_metadata['min_created_at']
+            original_client_id = merge_metadata['original_client_id']
+
+        # Initializing merged entity data.
+
+        entity_dict = {
+
+            'additional_metadata': {
+                'merge': {
+                    'min_created_at': min_created_at,
+                    'original_client_id': original_client_id}},
+
+            'contains': {},
+            'merge_set': set([(entity_data['client_id'], entity_data['object_id'])])}
 
         merge_entity_set.add((entity_data['client_id'], entity_data['object_id']))
 
@@ -1189,13 +1209,7 @@ def merge_bulk(request):
 
             entity_dict[name] = entity_data[name]
 
-        # As of now (Sun Jan 22 15:20:57 UTC 2017), we only support dicts as additional metadata.
-
-        additional_metadata = entity_data.get('additional_metadata', {})
-
-        if not isinstance(additional_metadata, dict):
-            raise Exception('Unsupported additional metadata '
-                'type \'{0}\'.'.format(type(additional_metadata)))
+        # Merging metadata, entity contents and containing entities.
 
         metadata_merge(entity_dict['additional_metadata'], additional_metadata)
 
@@ -1218,8 +1232,10 @@ def merge_bulk(request):
         Updates entity merge data.
         """
 
-        entity_dict['merge_set'].add((entity_data['client_id'], entity_data['object_id']))
-        merge_entity_set.add((entity_data['client_id'], entity_data['object_id']))
+        entity_id = (entity_data['client_id'], entity_data['object_id'])
+
+        entity_dict['merge_set'].add(entity_id)
+        merge_entity_set.add(entity_id)
 
         # Acceptedness of entities is processed via logical OR, publishing status either via OR or AND
         # depending on settings.
@@ -1235,6 +1251,25 @@ def merge_bulk(request):
         if not isinstance(additional_metadata, dict):
             raise Exception('Unsupported additional metadata '
                 'type \'{0}\'.'.format(type(additional_metadata)))
+
+        # Updating merge metadata.
+
+        min_created_at = entity_data['created_at']
+        original_client_id = entity_data['client_id']
+
+        if 'merge' in additional_metadata:
+
+            merge_metadata = additional_metadata['merge']
+            del additional_metadata['merge']
+
+            min_created_at = merge_metadata['min_created_at']
+            original_client_id = merge_metadata['original_client_id']
+
+        merge_dict = entity_dict['additional_metadata']['merge']
+
+        if min_created_at < merge_dict['min_created_at']:
+            merge_dict['min_created_at'] = min_created_at
+            merge_dict['original_client_id'] = original_client_id
 
         # Merging metadata and subordinate entities.
 
@@ -1443,7 +1478,7 @@ def merge_bulk(request):
                 'published': False if publish_any else True}
 
             entry_min_created_at = None
-            entry_original_author = None
+            entry_original_client_id = None
             entry_merge_tree = []
 
             for entry, entry_data in zip(entry_list, entry_data_list):
@@ -1475,20 +1510,27 @@ def merge_bulk(request):
 
                 if 'merge_tag' in additional_metadata:
 
-                    min_created_at, original_author, merge_tree = build_merge_tree(entry)
+                    min_created_at, original_client_id, merge_tree = build_merge_tree(entry)
                     del additional_metadata['merge_tag']
+
+                elif 'merge' in additional_metadata and 'original_author' in additional_metadata['merge']:
+
+                    min_created_at, original_client_id, merge_tree = build_merge_tree(entry)
+                    del additional_metadata['merge']
 
                 elif 'merge' in additional_metadata:
 
+                    # Current (the 3rd) version of merge metadata.
+
                     min_created_at = additional_metadata['merge']['min_created_at']
-                    original_author = additional_metadata['merge']['original_author']
+                    original_client_id = additional_metadata['merge']['original_client_id']
                     merge_tree = copy.deepcopy(additional_metadata['merge']['merge_tree'])
 
                     del additional_metadata['merge']
 
                 else:
                     min_created_at = entry_data['created_at']
-                    original_author = Client.get_user_by_client_id(entry_data['client_id']).id
+                    original_client_id = entry_data['client_id']
                     merge_tree = [entry_data['client_id'], entry_data['object_id']]
 
                 # Updating merge metadata, merging metadata and entities of the lexical entry.
@@ -1497,7 +1539,7 @@ def merge_bulk(request):
                     min_created_at < entry_min_created_at):
 
                     entry_min_created_at = min_created_at
-                    entry_original_author = original_author
+                    entry_original_client_id = original_client_id
 
                 entry_merge_tree.append(merge_tree)
 
@@ -1520,7 +1562,7 @@ def merge_bulk(request):
 
             entry_dict['additional_metadata']['merge'] = {
                 'min_created_at': entry_min_created_at,
-                'original_author': entry_original_author,
+                'original_client_id': entry_original_client_id,
                 'merge_tree': entry_merge_tree}
 
             # Creating new lexical entry.
@@ -1534,7 +1576,9 @@ def merge_bulk(request):
                 'parent_object_id': perspective_id[1]}
 
             if len(entry_dict['additional_metadata']) > 0:
+
                 metadata = metadata_restore(entry_dict['additional_metadata'])
+
                 entry_dict['additional_metadata'] = metadata
                 entry_kwargs['additional_metadata'] = metadata
 
@@ -1570,7 +1614,9 @@ def merge_bulk(request):
                 # Optional attributes.
 
                 if len(entity_data['additional_metadata']) > 0:
+
                     metadata = metadata_restore(entity_data['additional_metadata'])
+
                     entity_data['additional_metadata'] = metadata
                     entity_kwargs['additional_metadata'] = metadata
 
@@ -1653,6 +1699,7 @@ def merge_bulk(request):
                 for self_entity in self_entity_list:
 
                     entity_kwargs = {
+                        'additional_metadata': {},
                         'client_id': client_id,
                         'field_client_id': self_entity.field_client_id,
                         'field_object_id': self_entity.field_object_id,
@@ -1684,6 +1731,10 @@ def merge_bulk(request):
                                 self_entity.client_id, self_entity.object_id, entry_id_list))
 
                     # Creating new entity to replace reference entity.
+
+                    entity_kwargs['additional_metadata']['merge'] = {
+                        'min_created_at': self_entity.created_at,
+                        'original_client_id': self_entity.client_id}
 
                     merge_entity = Entity(**entity_kwargs)
                     DBSession.add(merge_entity)
@@ -1738,6 +1789,7 @@ def merge_bulk(request):
                 for link_entity in link_entity_list:
 
                     entity_kwargs = {
+                        'additional_metadata': {},
                         'client_id': client_id,
                         'field_client_id': link_entity.field_client_id,
                         'field_object_id': link_entity.field_object_id,
@@ -1770,6 +1822,10 @@ def merge_bulk(request):
                                 link_entity.client_id, link_entity.object_id, entry_id_list))}
 
                     # Creating new entity to replace link entity.
+
+                    entity_kwargs['additional_metadata']['merge'] = {
+                        'min_created_at': link_entity.created_at,
+                        'original_client_id': link_entity.client_id}
 
                     merge_entity = Entity(**entity_kwargs)
                     DBSession.add(merge_entity)
@@ -1870,6 +1926,167 @@ def merge_update_2(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('merge_update_2: exception')
+        log.debug('\n' + traceback_string)
+
+        DBSession.rollback()
+        return {'error': message('\n' + traceback_string)}
+
+
+@view_config(route_name = 'merge_update_3', renderer = 'json', request_method = 'GET')
+def merge_update_3(request):
+    """
+    Changes format of metadata of merged lexical entries from the 2nd version to the 3rd version by removing
+    'original_author' merge metadata key and adding 'original_client_id' merge metadata key, and adding
+    merge metadata to merged entities.
+    """
+
+    log.debug('merge_update_3')
+
+    try:
+        user = Client.get_user_by_client_id(request.authenticated_userid)
+
+        if user is None or user.id != 1:
+            return {'error': 'Not an administrator.'}
+
+        entry_list = DBSession.query(LexicalEntry).filter(
+            LexicalEntry.additional_metadata.has_key('merge')).all()
+
+        log.debug('merge_update_3: {0} lexical entries'.format(len(entry_list)))
+
+        # Going through all merged lexical entries, updating metadata if required.
+
+        entry_count = 0
+        for entry in entry_list:
+
+            log.debug('merge_update_3: entry {0}/{1}: additional_metadata before:\n{2}'.format(
+                entry.client_id, entry.object_id, pprint.pformat(entry.additional_metadata)))
+
+            if 'original_author' not in entry.additional_metadata['merge']:
+                continue
+
+            min_created_at, original_client_id, merge_tree = build_merge_tree(entry)
+
+            entry.additional_metadata['merge'] = {
+                'min_created_at': min_created_at,
+                'original_client_id': original_client_id,
+                'merge_tree': merge_tree}
+
+            flag_modified(entry, 'additional_metadata')
+
+            # Showing updated merge metadata, counting another updated entity.
+
+            log.debug('merge_update_3: entry {0}/{1}: additional_metadata after:\n{2}'.format(
+                entry.client_id, entry.object_id, pprint.pformat(entry.additional_metadata)))
+
+            entry_count += 1
+
+        log.debug('merge_update_3: updated {0} lexical entries'.format(entry_count))
+
+        # And now we should update merged entity metadata.
+
+        entity_list_a = DBSession.query(Entity).filter(
+            Entity.additional_metadata.has_key('merged_to')).all()
+
+        entity_list_b = DBSession.query(Entity).filter(
+            Entity.additional_metadata.has_key('merged_by')).all()
+
+        entity_list = entity_list_a + entity_list_b
+
+        log.debug('merge_update_3: {0} merged entities ({1} \'merged_to\', {2} \'merged_by\')'.format(
+            len(entity_list), len(entity_list_a), len(entity_list_b)))
+
+        # Gathering entities by merge results.
+
+        entity_dict = {}
+        merge_dict = collections.defaultdict(set)
+
+        for entity in entity_list_a:
+            entity_id = (entity.client_id, entity.object_id)
+
+            entity_dict[entity_id] = entity
+            merge_dict[tuple(entity.additional_metadata['merged_to'])].add(entity_id)
+
+        for entity in entity_list_b:
+            entity_id = (entity.client_id, entity.object_id)
+
+            entity_dict[entity_id] = entity
+            merge_dict[tuple(entity.additional_metadata['merged_by'])].add(entity_id)
+
+        # NOTE: making local variable referencable from a local function by wrapping it in a singleton list.
+
+        entity_count = [0]
+
+        def update(entity_id, source_id_set):
+            """
+            Recursively updates merged entities.
+            """
+
+            if entity_id in entity_dict:
+                entity = entity_dict[entity_id]
+
+            else:
+                entity_client_id, entity_object_id = entity_id
+
+                entity = DBSession.query(Entity).filter_by(
+                    client_id = entity_client_id, object_id = entity_object_id).first()
+
+                entity_dict[entity_id] = entity
+
+            if not entity.additional_metadata:
+                entity.additional_metadata = {}
+
+            if 'merge' in entity.additional_metadata:
+                return
+
+            # Updating source entities, if required, compiling merge metadata.
+
+            min_created_at = None
+            original_client_id = None
+
+            for source_id in sorted(source_id_set):
+
+                if source_id in merge_dict:
+                    update(source_id, merge_dict[source_id])
+
+                source = entity_dict[source_id]
+
+                if min_created_at is None or source.created_at < min_created_at:
+
+                    min_created_at = source.created_at
+                    original_client_id = source.client_id
+
+            # Updating the merge entity.
+
+            log.debug('merge_update_3: entity {0}/{1}: additional_metadata before:\n{2}'.format(
+                entity.client_id, entity.object_id, pprint.pformat(entity.additional_metadata)))
+
+            entity.additional_metadata['merge'] = {
+                'min_created_at': min_created_at,
+                'original_client_id': original_client_id}
+
+            flag_modified(entity, 'additional_metadata')
+
+            log.debug('merge_update_3: entity {0}/{1}: additional_metadata after:\n{2}'.format(
+                entity.client_id, entity.object_id, pprint.pformat(entity.additional_metadata)))
+
+            entity_count[0] += 1
+
+        # Updating all merged entities.
+
+        for merge_id, source_id_set in merge_dict.items():
+            update(merge_id, source_id_set)
+
+        log.debug('merge_update_3: updated {0} entities'.format(entity_count[0]))
+        return {'entries': entry_count, 'entities': entity_count[0]}
+
+    # If something is not right, we report it.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('merge_update_3: exception')
         log.debug('\n' + traceback_string)
 
         DBSession.rollback()
