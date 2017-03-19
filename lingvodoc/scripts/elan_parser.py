@@ -108,10 +108,40 @@ class Elan:
                     for k in self.get_annotation_data_between_times(cur_tier, x[0], x[1]):
                         t = (k[0], k[1])
                         z = k[2]
-                        new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]]
-                        if new_list:
-                            perspectives2[Word(z, self.word[z], cur_tier, (t[0], t[1]))] = new_list
-                    next.append(perspectives2)
+                        te = ""
+                        tr = ""
+                        lt = ""
+                        try:
+                            te = res[z][0]
+                        except: pass
+                        tr = z
+                        try:
+                            lt = res[z][1]
+                        except: pass
+                        tr_text = self.word[tr]
+                        if type(tr_text) is str:
+                            if "-" in tr_text in tr_text and not "NOM" in tr_text and not "INF" in tr_text:
+                                #new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]] #new_list -> next
+                                #if new_list:
+                                coldict = collections.OrderedDict()
+                                nextlist = []
+                                #coldict[Word(tr, self.word[tr], "translation", (t[0], t[1]))] = []
+                                #nextlist.append(coldict)
+
+                                nextlist.append([Word(lt , self.word[lt], "Word of Paradigmatic forms", (t[0], t[1])) ])
+                                nextlist.append([Word(te , self.word[te], "text", (t[0], t[1])) ])
+                                nextlist.append([Word(tr , self.word[tr], "literary translation", (t[0], t[1])) ])
+                                perspectives.append(nextlist)
+                            else:
+                                new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]]
+                                if new_list:
+                                    perspectives2[Word(z, self.word[z], cur_tier, (t[0], t[1]))] = new_list
+                        else:
+                            new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]]
+                            if new_list:
+                                perspectives2[Word(z, self.word[z], cur_tier, (t[0], t[1]))] = new_list
+                    if perspectives2:
+                        next.append(perspectives2)
                 else:
                     if cur_tier == "text":
                         next.append([Word(i[2] , self.word[i[2]], cur_tier, (i[0], i[1]))
