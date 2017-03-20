@@ -886,24 +886,17 @@ def convert_five_tiers(
                                           LexicalEntry.parent_client_id==DictionaryPerspective.client_id))\
                 .join(Entity, and_(LexicalEntry.object_id==Entity.parent_object_id,
                                    LexicalEntry.client_id==Entity.parent_client_id))
-
-        #hashes = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Sound"]
-        #hashes = hashes[:] + [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Sound"]
-        #links = [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
-        #         for x in lexes if x[2].field.data_type == "Link"]
-        #links = links[:] + [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
-        #         for x in p_lexes if x[2].field.data_type == "Link"]
         lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
                            (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text" and
                            (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
 
-        noms = []
+        noms = []  # words with NOM/INF mark
         for t in lexes_with_text:
             t_fids = (t[2].field.client_id, t[2].field.object_id)
             if field_ids["Translation"] == t_fids:
                 translation_text = t[2].content
-                if "-NOM" in translation_text or "INF" in translation_text:
+                if re.search("[-.]NOM+", translation_text) or re.search("[-.]INF+", translation_text):
                     noms.append(t)
         for t in p_lexes_with_text:
             t_fids = (t[2].field.client_id, t[2].field.object_id)
@@ -911,11 +904,11 @@ def convert_five_tiers(
                 translation_text = t[2].content
                 if "-" in translation_text:
                     for x in noms:
-                        reg = re.search('-[\dA-Z]+', t[2].content)
+                        reg = re.search('[-.][\dA-Z]+', t[2].content)
                         if reg:
-                            mark = reg.group(0)
-                            nom_mark = re.search('-[\dA-Z]+', x[2].content).group(0)
-                            if x[2].content.split(nom_mark)[0] == t[2].content.split(mark)[0]:
+                            mark_w_text = reg.start()
+                            nom_clean_text = re.search('[-.][\dA-Z]+', x[2].content).start()
+                            if x[2].content[:nom_clean_text] == t[2].content[:mark_w_text]:
                                 sp_le_ids = (t[1].client_id, t[1].object_id)
                                 fp_le_ids = (x[1].client_id, x[1].object_id)
                                 if not (sp_le_ids, fp_le_ids) in links:
