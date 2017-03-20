@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import re
 import pympi
 
 import collections
@@ -109,7 +110,6 @@ class Elan:
                         t = (k[0], k[1])
                         z = k[2]
                         te = ""
-                        tr = ""
                         lt = ""
                         try:
                             te = res[z][0]
@@ -120,18 +120,22 @@ class Elan:
                         except: pass
                         tr_text = self.word[tr]
                         if type(tr_text) is str:
-                            if "-" in tr_text in tr_text and not "NOM" in tr_text and not "INF" in tr_text:
-                                #new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]] #new_list -> next
-                                #if new_list:
-                                coldict = collections.OrderedDict()
-                                nextlist = []
-                                #coldict[Word(tr, self.word[tr], "translation", (t[0], t[1]))] = []
-                                #nextlist.append(coldict)
-
-                                nextlist.append([Word(lt , self.word[lt], "Word of Paradigmatic forms", (t[0], t[1])) ])
-                                nextlist.append([Word(te , self.word[te], "text", (t[0], t[1])) ])
-                                nextlist.append([Word(tr , self.word[tr], "literary translation", (t[0], t[1])) ])
-                                perspectives.append(nextlist)
+                            if re.search('[-.][\dA-Z]+', tr_text) and \
+                                    not re.search("[-.]INF", tr_text) and \
+                                    not re.search("[-.]NOM", tr_text):
+                                le_to_paradigms = []
+                                le_to_paradigms.append([Word(lt ,
+                                                             self.word[lt],
+                                                             "Word of Paradigmatic forms",
+                                                             (t[0], t[1])) ])
+                                le_to_paradigms.append([Word(te ,
+                                                             self.word[te], "text",
+                                                             (t[0], t[1])) ])
+                                le_to_paradigms.append([Word(tr ,
+                                                             self.word[tr],
+                                                             "literary translation",
+                                                             (t[0], t[1])) ])
+                                perspectives.append(le_to_paradigms)
                             else:
                                 new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]]
                                 if new_list:
