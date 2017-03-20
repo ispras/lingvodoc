@@ -121,8 +121,9 @@ class Elan:
                         tr_text = self.word[tr]
                         if type(tr_text) is str:
                             if re.search('[-.][\dA-Z]+', tr_text) and \
-                                    not re.search("[-.]INF", tr_text) and \
-                                    not re.search("[-.]NOM", tr_text):
+                                    not re.search("[-]INF", tr_text) and \
+                                    not re.search("[^\dA-Za-z]SG.NOM+", tr_text) and \
+                                    not re.search("[-]NOM", tr_text):
                                 le_to_paradigms = []
                                 le_to_paradigms.append([Word(lt ,
                                                              self.word[lt],

@@ -890,25 +890,28 @@ def convert_five_tiers(
                            (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text" and
                            (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+        task_status.set(9, 90, "Uploading translations with marks")
 
         noms = []  # words with NOM/INF mark
         for t in lexes_with_text:
             t_fids = (t[2].field.client_id, t[2].field.object_id)
             if field_ids["Translation"] == t_fids:
                 translation_text = t[2].content
-                if re.search("[-.]NOM+", translation_text) or re.search("[-.]INF+", translation_text):
+                if re.search("[-]NOM|[-]INF|[-]SG.NOM", translation_text):
                     noms.append(t)
         for t in p_lexes_with_text:
             t_fids = (t[2].field.client_id, t[2].field.object_id)
             if field_ids["Translation of Paradigmatic forms"] == t_fids:
                 translation_text = t[2].content
                 if "-" in translation_text:
+                    create_le_flag = True
                     for x in noms:
                         reg = re.search('[-.][\dA-Z]+', t[2].content)
                         if reg:
                             mark_w_text = reg.start()
                             nom_clean_text = re.search('[-.][\dA-Z]+', x[2].content).start()
                             if x[2].content[:nom_clean_text] == t[2].content[:mark_w_text]:
+                                create_le_flag = False
                                 sp_le_ids = (t[1].client_id, t[1].object_id)
                                 fp_le_ids = (x[1].client_id, x[1].object_id)
                                 if not (sp_le_ids, fp_le_ids) in links:
@@ -936,6 +939,80 @@ def convert_five_tiers(
                                                   link_object_id=t[1].object_id,
                                                   storage=storage,
                                                   locale_id=locale_id)
+                    if create_le_flag:
+                        before_dash = re.search("(.*?)-", translation_text)
+                        if before_dash:
+                            translation_text = translation_text[:before_dash.end() - 1]
+                        lexentr = LexicalEntry(client_id=client.id,
+                                               parent_object_id=first_perspective_object_id, parent=first_perspective)
+                        DBSession.add(lexentr)
+                        new_fp_lexical_entry_client_id = lexentr.client_id
+                        new_fp_lexical_entry_object_id = lexentr.object_id
+
+
+                        create_entity(new_fp_lexical_entry_client_id,
+                                      new_fp_lexical_entry_object_id,
+                                      field_ids["Translation"][0],
+                                      field_ids["Translation"][1],
+                                      None,
+                                      client,
+                                      translation_text,
+                                      filename=None,
+                                      storage=storage,
+                                      locale_id=locale_id
+                                      )
+
+                        transcription_text = ""
+                        # transcription text searching
+                        for entity_tuple in p_lexes_with_text:
+                            entity_field_ids = (entity_tuple[2].field.client_id, entity_tuple[2].field.object_id)
+                            if field_ids["Transcription of Paradigmatic forms"] == entity_field_ids:
+                                if entity_tuple[1].client_id == t[1].client_id \
+                                        and entity_tuple[1].object_id == t[1].object_id:
+                                    transcription_text = entity_tuple[2].content
+                        if transcription_text:
+                            before_dash = re.search("(.*?)-", transcription_text)
+                            if before_dash:
+                                transcription_text = transcription_text[:before_dash.end()]
+                            create_entity(new_fp_lexical_entry_client_id,
+                                          new_fp_lexical_entry_object_id,
+                                          field_ids["Transcription"][0],
+                                          field_ids["Transcription"][1],
+                                          None,
+                                          client,
+                                          transcription_text,
+                                          filename=None,
+                                          storage=storage,
+                                          locale_id=locale_id
+                                      )
+
+                            sp_le_ids = (t[1].client_id, t[1].object_id)
+                            fp_le_ids = (new_fp_lexical_entry_client_id, new_fp_lexical_entry_object_id)
+                            if not (sp_le_ids, fp_le_ids) in links:
+                                create_entity(t[1].client_id,
+                                              t[1].object_id,
+                                              field_ids["Backref"][0],
+                                              field_ids["Backref"][1],
+                                              None,
+                                              client,
+                                              filename=None,
+                                              link_client_id=new_fp_lexical_entry_client_id,
+                                              link_object_id=new_fp_lexical_entry_object_id,
+                                              storage=storage,
+                                              locale_id=locale_id)
+
+                            if not (fp_le_ids, sp_le_ids) in links:
+                                create_entity(new_fp_lexical_entry_client_id,
+                                              new_fp_lexical_entry_object_id,
+                                              field_ids["Backref"][0],
+                                              field_ids["Backref"][1],
+                                              None,
+                                              client,
+                                              filename=None,
+                                              link_client_id=t[1].client_id,
+                                              link_object_id=t[1].object_id,
+                                              storage=storage,
+                                              locale_id=locale_id)
 
     task_status.set(10, 100, "Finished", "")
 
