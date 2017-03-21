@@ -718,6 +718,11 @@ def configure_routes(config):
     config.add_route(name = 'stat_perspective',
       pattern = '/statistics/perspective/{perspective_client_id}/{perspective_object_id}')
 
+    # Cumulative user participation statistics for all perspectives of a specified dictionary in a given
+    # time interval. Time interval is specified in the same way as for 'stat_perspective'.
+    config.add_route(name = 'stat_dictionary',
+      pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
