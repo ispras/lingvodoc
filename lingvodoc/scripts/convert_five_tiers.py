@@ -686,25 +686,45 @@ def convert_five_tiers(
                             hash = hashlib.sha224(audio_slice).hexdigest()
                             if not hash in hashes:
                                 hashes.append(hash)
+                                common_name = word.index
+                                if common_name:
+                                    fname, ext = os.path.splitext(common_name)
+                                    ext = ext.replace(".", "").replace(" ", "")
+                                    fname = fname.replace(".", "_")
+                                    if not ext:
+                                        ext = "wav"
+                                    filename = "%s.%s" % (fname, ext)
+                                else:
+                                    filename = 'noname.wav'
                                 create_entity(sp_lexical_entry_client_id,
                                               sp_lexical_entry_object_id,
                                               field_ids["Sounds of Paradigmatic forms"][0],
                                               field_ids["Sounds of Paradigmatic forms"][1],
                                               None,
                                               client,
-                                              filename="%s.wav" %(word.index) ,
+                                              filename=filename,
                                               folder_name="corpus_paradigm_sounds",
                                               content=base64.urlsafe_b64encode(audio_slice).decode(),
                                               storage=storage,
                                               locale_id=locale_id)
                         else:
+                            common_name = word.index
+                            if common_name:
+                                fname, ext = os.path.splitext(common_name)
+                                ext = ext.replace(".", "").replace(" ", "")
+                                fname = fname.replace(".", "_")
+                                if not ext:
+                                    ext = "wav"
+                                filename = "%s.%s" % (fname, ext)
+                            else:
+                                filename = 'noname.wav'
                             create_entity(sp_lexical_entry_client_id,
                                           sp_lexical_entry_object_id,
                                           field_ids["Sounds of Paradigmatic forms"][0],
                                           field_ids["Sounds of Paradigmatic forms"][1],
                                           None,
                                           client,
-                                          filename="%s.wav" %(word.index) ,
+                                          filename=filename,
                                           folder_name="corpus_paradigm_sounds",
                                           content=base64.urlsafe_b64encode(audio_slice).decode(),
                                           storage=storage,
@@ -784,6 +804,16 @@ def convert_five_tiers(
                             full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
                             audio_slice = temp.read()
                             hash = hashlib.sha224(audio_slice).hexdigest()
+                            common_name = word.index
+                            if common_name:
+                                fname, ext = os.path.splitext(common_name)
+                                ext = ext.replace(".", "").replace(" ", "")
+                                fname = fname.replace(".", "_")
+                                if not ext:
+                                    ext = "wav"
+                                filename = "%s.%s" % (fname, ext)
+                            else:
+                                filename = 'noname.wav'
                             if max_sim:
                                 if not hash in hashes:
                                     hashes.append(hash)
@@ -793,7 +823,7 @@ def convert_five_tiers(
                                                   field_ids["Sound"][1],
                                                   None,
                                                   client,
-                                                  filename="%s.wav" %(word.index) ,
+                                                  filename=filename ,
                                                   folder_name="corpus_lexical_entry_sounds",
                                                   content=base64.urlsafe_b64encode(audio_slice).decode(),
                                                   storage=storage,
@@ -805,7 +835,7 @@ def convert_five_tiers(
                                               field_ids["Sound"][1],
                                               None,
                                               client,
-                                              filename="%s.wav" %(word.index) ,
+                                              filename=filename,
                                               folder_name="corpus_lexical_entry_sounds",
                                               content=base64.urlsafe_b64encode(audio_slice).decode(),
                                               storage=storage,
