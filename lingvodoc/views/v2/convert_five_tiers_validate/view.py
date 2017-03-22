@@ -29,7 +29,7 @@ def convert_dictionary(req):  # TODO: test
         temp.write(eaffile.read())
         elan_check = elan_parser.ElanCheck(temp.name)
         elan_check.parse()
-        if elan_check.check:
+        if elan_check.check():
             result = True
         temp.flush()
     req.response.status = HTTPOk.code
