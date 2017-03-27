@@ -365,7 +365,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def playPause() = waveSurfer.foreach(_.playPause())
 
   def play(start: Double, end: Double) = {
-    console.log("playing"); waveSurfer.foreach(_.play(start, end))
+    console.log("playing")
+    waveSurfer.foreach(_.play(start, end))
   }
 
   @JSExport
