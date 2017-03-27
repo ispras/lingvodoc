@@ -69,31 +69,41 @@ def basic_search(request):
                 if not perspective_client_id or not perspective_object_id:
                     published_cursor = results_cursor
                 # results_cursor = list()
+                ignore_groups = False
+
+                subreq = Request.blank('/translation_service_search')
+                subreq.method = 'POST'
+                subreq.headers = request.headers
+                subreq.json = {'searchstring': 'Published'}
+                headers = dict()
+                if request.headers.get('Cookie'):
+                    headers = {'Cookie': request.headers['Cookie']}
+                subreq.headers = headers
+                resp = request.invoke_subrequest(subreq)
+
+                if 'error' not in resp.json:
+                    state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+                else:
+                    raise KeyError("Something wrong with the base", resp.json['error'])
+
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
+                    persp = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
+                    if persp and persp.state_translation_gist_client_id == state_translation_gist_client_id and persp.state_translation_gist_object_id == state_translation_gist_object_id:
+                        ignore_groups = True
                 else:
                     published_cursor = results_cursor
-                results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
-                    .join(BaseGroup)\
-                    .join(User, Group.users)\
-                    .join(Client)\
-                    .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
-                if published_cursor:
-                    subreq = Request.blank('/translation_service_search')
-                    subreq.method = 'POST'
-                    subreq.headers = request.headers
-                    subreq.json = {'searchstring': 'Published'}
-                    headers = dict()
-                    if request.headers.get('Cookie'):
-                        headers = {'Cookie': request.headers['Cookie']}
-                    subreq.headers = headers
-                    resp = request.invoke_subrequest(subreq)
 
-                    if 'error' not in resp.json:
-                        state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
-                    else:
-                        raise KeyError("Something wrong with the base", resp.json['error'])
+                if not ignore_groups:
+                    results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+                        .join(BaseGroup)\
+                        .join(User, Group.users)\
+                        .join(Client)\
+                        .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
+                else:
+                    results_cursor = results_cursor.filter(Entity.content.like('%'+searchstring+'%'))
+                if published_cursor:
 
                     published_cursor = published_cursor \
                         .join(DictionaryPerspective.parent).filter(
