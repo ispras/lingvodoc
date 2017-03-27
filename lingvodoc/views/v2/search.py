@@ -87,18 +87,15 @@ def basic_search(request):
                     raise KeyError("Something wrong with the base", resp.json['error'])
 
                 if perspective_client_id and perspective_object_id:
-                    print('have ids')
                     results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
                     persp = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
                     if persp and persp.state_translation_gist_client_id == state_translation_gist_client_id and persp.state_translation_gist_object_id == state_translation_gist_object_id:
-                        print('ignoring')
                         ignore_groups = True
                 else:
                     published_cursor = results_cursor
 
                 if not ignore_groups:
-                    print('filtering by groups')
                     results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
                         .join(BaseGroup)\
                         .join(User, Group.users)\
