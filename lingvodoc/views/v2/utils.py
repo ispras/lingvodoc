@@ -27,13 +27,14 @@ from sqlalchemy.orm import joinedload
 
 #import swiftclient.client as swiftclient
 
-import datetime
+from collections import deque
 import base64
+import datetime
 import json
 import os
-import shutil
 from pathvalidate import sanitize_filename
-from collections import deque
+import shutil
+import traceback
 import urllib
 
 from pyramid.httpexceptions import (
@@ -651,3 +652,22 @@ def fulfill_permissions_on_perspectives(intermediate, perspective, pairs):
 
 class FakeObject(object):
     pass
+
+
+def unimplemented():
+    """
+    Formats message about unimplemented feature with filename, line number and function name info.
+    """
+
+    filename, line, function, statement = traceback.extract_stack()[-2]
+    return '{0}:{1}: {2}: Unimplemented.'.format(filename, line, function)
+
+
+def message(message):
+    """
+    Formats message with filename, line number and function name info.
+    """
+
+    filename, line, function, statement = traceback.extract_stack()[-2]
+    return '{0}:{1}: {2}: {3}'.format(filename, line, function, message)
+

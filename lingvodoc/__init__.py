@@ -606,6 +606,14 @@ def configure_routes(config):
     #
     config.add_route(name = 'merge_update_2', pattern = '/merge/update2')
 
+    # API #GET
+    #
+    # Changes format of metadata of merged lexical entries from the 2nd version to the 3rd version by
+    # removing 'original_author' merge metadata key and adding 'original_client_id' merge metadata key, and
+    # adding merge metadata to merged entities.
+    #
+    config.add_route(name = 'merge_update_3', pattern = '/merge/update3')
+
     config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'  # should be removed?
                                                            '{dictionary_client_id_1}/{dictionary_object_id_1}/'
                                                            '{perspective_client_id_1}/{perspective_object_id_1}/'
@@ -696,6 +704,24 @@ def configure_routes(config):
     config.add_route(name="tasks", pattern="/tasks", request_method='GET')
 
     config.add_route(name="delete_task", pattern="/tasks/{task_id}", request_method='DELETE')
+
+    #
+    # Gathers user participation statistics for a specified perspective in a given time interval
+    # [time_begin, time_end), with time interval endpoints 'time_begin', 'time_end' specified as Unix
+    # timestamps through URL parameters 'time_begin', 'time_end' as either YYYY-MM-DDtHH:MM:SS-formatted
+    # dates or Unix timestamps as Python numeric literals.
+    #
+    # URL parameters: {
+    #   'time_begin': <YYYY-MM-DDtHH:MM:SS or unix_timestamp_number>,
+    #   'time_end': <YYYY-MM-DDtHH:MM:SS or unix_timestamp_number>}
+    #
+    config.add_route(name = 'stat_perspective',
+      pattern = '/statistics/perspective/{perspective_client_id}/{perspective_object_id}')
+
+    # Cumulative user participation statistics for all perspectives of a specified dictionary in a given
+    # time interval. Time interval is specified in the same way as for 'stat_perspective'.
+    config.add_route(name = 'stat_dictionary',
+      pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
 
 
 def main(global_config, **settings):
