@@ -289,10 +289,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
     backend.getLexicalEntry(dictionaryId, perspectiveId, lexicalEntryId) map { entry =>
       lexicalEntry = entry
     }
-
-    val user = userService.getUser()
-    val query = DictionaryQuery()
-    query.author = Some(user.id)
+    
     backend.getDictionaries() map { d =>
       dictionaries = d
     }
