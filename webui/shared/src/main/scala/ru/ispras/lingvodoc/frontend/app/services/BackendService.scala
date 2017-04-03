@@ -109,6 +109,29 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   }
 
   /**
+    * Get list of dictionaries
+    *
+    * @return
+    */
+  def getDictionaries(): Future[Seq[Dictionary]] = {
+    val p = Promise[Seq[Dictionary]]()
+
+    $http.post[js.Dynamic](getMethodUrl("dictionaries"), "{}") onComplete {
+      case Success(response) =>
+        try {
+          val dictionaries = read[Seq[Dictionary]](js.JSON.stringify(response.dictionaries))
+          p.success(dictionaries)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed dictionary json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed dictionary data. Missing some " +
+            "required fields: " + e.getMessage))
+        }
+      case Failure(e) => p.failure(new BackendException("Failed to get list of dictionaries: " + e.getMessage))
+    }
+    p.future
+  }
+
+  /**
     * Get list of dictionaries with perspectives
     *
     * @param query

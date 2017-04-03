@@ -175,6 +175,7 @@ class ConvertEafController(scope: ConvertEafScope,
               Future.successful(())
           }
         case "update" =>
+
           backend.convertEafCorpus(corpusId, CompositeId.fromObject(selectedUpdateDictionary.get), soundUrl, markupUrl) map { _ =>
             scope.complete = true
 
