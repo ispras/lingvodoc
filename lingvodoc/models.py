@@ -62,6 +62,8 @@ import logging
 
 import uuid
 
+from time import sleep
+
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -246,11 +248,12 @@ class UUIDType(TypeDecorator):
         return value
 
 
+
 class CreatedAtMixin(object):
     """
     It's used for automatically set created_at column.
     """
-    created_at = Column(EpochType, default=datetime.datetime.utcnow(), nullable=False)
+    created_at = Column(EpochType, default=datetime.datetime.utcnow, nullable=False)
 
 
 class IdMixin(object):

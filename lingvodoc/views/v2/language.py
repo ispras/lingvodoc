@@ -29,8 +29,9 @@ from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 
 from sqlalchemy.exc import IntegrityError
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.views.v2.utils import add_user_to_group, check_client_id
 from lingvodoc.views.v2.delete import real_delete_language
+
 
 @view_config(route_name='languages', renderer='templates/languages.pt', request_method='GET')
 def languages_get(request):
@@ -138,6 +139,15 @@ def create_language(request):  # tested & in docs
         translation_gist_object_id = req['translation_gist_object_id']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         object_id = req.get('object_id', None)
+
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            variables['auth'])
@@ -148,7 +158,7 @@ def create_language(request):  # tested & in docs
         parent = None
         if parent_client_id and parent_object_id:
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        language = Language(client_id=variables['auth'],
+        language = Language(client_id=client_id,
                             object_id=object_id,
                                 translation_gist_client_id=translation_gist_client_id,
                                 translation_gist_object_id=translation_gist_object_id)

@@ -67,7 +67,8 @@ from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
     user_counter,
     view_perspective_from_object,
-    view_field_from_object
+    view_field_from_object,
+    check_client_id
 )
 from lingvodoc.views.v2.utils import (
     add_user_to_group,
@@ -754,6 +755,14 @@ def create_perspective(request):  # tested & in docs
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
         parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent:
             request.response.status = HTTPNotFound.code
@@ -785,7 +794,7 @@ def create_perspective(request):  # tested & in docs
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
 
-        perspective = DictionaryPerspective(client_id=variables['auth'],
+        perspective = DictionaryPerspective(client_id=client_id,
                                             object_id=object_id,
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
@@ -1296,6 +1305,7 @@ def create_field(request):
             print('invalid json')
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
+
         translation_gist_client_id = req['translation_gist_client_id']
         translation_gist_object_id = req['translation_gist_object_id']
         data_type_translation_gist_client_id = req['data_type_translation_gist_client_id']
@@ -1311,7 +1321,15 @@ def create_field(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
-        field = Field(client_id=variables['auth'],
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
+        field = Field(client_id=client_id,
                       object_id=object_id,
                       data_type_translation_gist_client_id=data_type_translation_gist_client_id,
                       data_type_translation_gist_object_id=data_type_translation_gist_object_id,
@@ -2142,7 +2160,16 @@ def create_entities_bulk(request):
             if item['level'] == 'leveloneentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'],
                                                                  object_id=item['parent_object_id']).first()
-                entity = Entity(client_id=client.id,
+
+                client_id = variables['auth']
+                if 'client_id' in item:
+                    if check_client_id(authenticated=client.id, client_id=item['client_id']):
+                        client_id = item['client_id']
+                    else:
+                        request.response.status_code = HTTPBadRequest
+                        return {'error': 'client_id from another user'}
+
+                entity = Entity(client_id=client_id,
                                         object_id=item.get('object_id', None),
                                         entity_type=item['entity_type'],
                                         locale_id=item['locale_id'],

@@ -36,6 +36,7 @@ from pyramid.view import view_config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
+from lingvodoc.views.v2.utils import check_client_id
 
 import logging
 import random
@@ -285,7 +286,7 @@ def create_group_entity(request):  # tested
                 if not tag_entity:
                     tag_entity = Entity(client_id=client.id,
                                         object_id=object_id,
-                                        field=field, content=tag, parent=lex)
+                                        field=field, content=tag, parent=lex)   # wait, what? this shouldn't work if given object i and more than one tag is created
 
                     group = DBSession.query(Group).join(BaseGroup).filter(
                         BaseGroup.subject == 'lexical_entries_and_entities',
@@ -336,7 +337,20 @@ def create_lexical_entry(request):  # tested
             request.response.status = HTTPNotFound.code
             return {'error': str("No such perspective in the system")}
 
-        lexentr = LexicalEntry(object_id=object_id, client_id=variables['auth'],
+        client_id = variables['auth']
+        try:
+
+            object_id = request.json_body.get('object_id', None)
+            if 'client_id' in request.json_body:
+                if check_client_id(authenticated = client.id, client_id=request.json_body['client_id']):
+                    client_id = request.json_body['client_id']
+                else:
+                    request.response.status_code = HTTPBadRequest
+                    return {'error': 'client_id from another user'}
+        except ValueError:
+            client_id = variables['auth']
+
+        lexentr = LexicalEntry(object_id=object_id, client_id=client_id,
                                parent_object_id=perspective_object_id, parent=perspective)
         DBSession.add(lexentr)
         DBSession.flush()

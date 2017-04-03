@@ -55,10 +55,9 @@ import datetime
 import logging
 import json
 import base64
+import os
 from lingvodoc.models import categories
 from lingvodoc.views.v2.utils import add_user_to_group
-
-log = logging.getLogger(__name__)
 import datetime
 import requests
 from sqlalchemy.dialects.postgresql import insert
@@ -72,7 +71,9 @@ real_delete_object,
 real_delete_perspective
 )
 import urllib
+from pdb import set_trace
 
+log = logging.getLogger(__name__)
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
 dict2ids = lambda r: {'client_id': r['client_id'], 'object_id': r['object_id']}
 
@@ -149,8 +150,9 @@ def basic_sync(request):
     settings = request.registry.settings
     existing = basic_tables_content()
     path = settings['desktop']['central_server'] + 'sync/basic/server'
-    with open('authentication_data.json', 'r') as f:
-        cookies = json.loads(f.read())
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
+    cookies = json.loads(request.cookies.get('server_cookies'))
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
@@ -257,10 +259,11 @@ def basic_sync(request):
 
     existing = [row2dict(entry) for entry in
                 DBSession.query(ObjectTOC).filter(ObjectTOC.table_name.in_(['language',
-                                                                           'field']))]
+                                                                            'field']))]
 
     central_server = settings['desktop']['central_server']
-    for_deletion = make_request(central_server + 'sync/delete/server', 'post', existing)
+    for_deletion = make_request(central_server + 'sync/delete/server', cookies,
+                                'post', existing)
 
     language = list()
     field = list()
@@ -321,7 +324,8 @@ def all_toc(request):
 
 @view_config(route_name='diff_server', renderer='json', request_method='POST')
 def diff_server(request):
-    existing = [row2dict(entry) for entry in DBSession.query(ObjectTOC)]
+    tmp_list = DBSession.query(ObjectTOC).yield_per(10000).enable_eagerloads(False)
+    existing = [row2dict(entry) for entry in tmp_list]
     req = request.json_body
     upload = list()
     existing = [dict2ids(o) for o in existing]
@@ -330,6 +334,18 @@ def diff_server(request):
         if dict2ids(entry) not in existing:
             upload.append(entry)
     log.error('after looking through giant list')
+    return upload
+
+
+@view_config(route_name='diff_group_server', renderer='json', request_method='POST')
+def diff_group_server(request):
+    upload = list()
+    groups = DBSession.query(Group).all()
+    existing = [entry.id for entry in groups]
+    req = request.json_body
+    for entry in req:
+        if entry not in existing:
+            upload.append(entry)
     return upload
 
 
@@ -345,12 +361,10 @@ def delete_sync_server(request):
     return for_deletion
 
 
-def make_request(path, req_type='get', json_data=None, data=None, files = None):
+def make_request(path, cookies, req_type='get', json_data=None, data=None, files = None):
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
-    with open('authentication_data.json', 'r') as f:
-        cookies = json.loads(f.read())
     session.mount('http://', adapter)
     if req_type == 'get':
         status = session.get(path, cookies=cookies)
@@ -381,14 +395,14 @@ def diff_desk(request):
     central_server = settings['desktop']['central_server']
     path = central_server + 'sync/difference/server'
 
-
     #todo: make request to server with existing objecttocs. server will return objecttocs for deletion
     #todo: delete deleted objects
 
+    cookies = json.loads(request.cookies.get('server_cookies'))
     log.error('before recieving list for uploading in diff_desk')
-    server = make_request(path, 'post', existing).json()
+    server = make_request(path, cookies, 'post', existing).json()
     log.error('before recieving list for deletion in diff_desk')
-    for_deletion = make_request(central_server + 'sync/delete/server', 'post', existing)
+    for_deletion = make_request(central_server + 'sync/delete/server', cookies, 'post', existing)
     language = list()
     dictionary = list()
     perspective = list()
@@ -422,19 +436,34 @@ def diff_desk(request):
             field.append(entry)
     # todo: batches
     log.error('before uploading in diff_desk')
-    for group in DBSession.query(Group).filter_by(subject_client_id=authenticated_userid(request)).all():
-        path = central_server + 'group'
-        gr_req = row2dict(group)
-        gr_req['users']=[user.id]
-        status = make_request(path, 'post', gr_req)
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 1")}
+    counter = 0
+    groups = list()
+    for group in DBSession.query(Group).all():
+        print(counter)
+        counter += 1
+        groups.append(group.id)
+
+    path = central_server + 'sync/difference/server/group'
+    upload_groups = make_request(path, cookies, 'post', groups)
+    upload_groups = upload_groups.json()
+
+
+    for entry in upload_groups:
+        group = DBSession.query(Group).filter_by(id=entry).first()
+        if group:
+            path = central_server + 'group'
+            gr_req = row2dict(group)
+            gr_req['users']=[user.id]
+            status = make_request(path, cookies, 'post', gr_req)
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 1")}
+    print(translationgist)
     for entry in translationgist:
         desk_gist = DBSession.query(TranslationGist).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
         path = central_server + 'translationgist'
-        status = make_request(path, 'post', row2dict(desk_gist))
+        status = make_request(path, cookies, 'post', row2dict(desk_gist))
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 2")}
@@ -442,7 +471,7 @@ def diff_desk(request):
         desk_atom = DBSession.query(TranslationAtom).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
         path = central_server + 'translationatom'
-        status = make_request(path, 'post', row2dict(desk_atom))
+        status = make_request(path, cookies, 'post', row2dict(desk_atom))
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 3")}
@@ -450,7 +479,7 @@ def diff_desk(request):
         desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).one()
         path = central_server + 'language'
-        status = make_request(path, 'post', row2dict(desk_lang))
+        status = make_request(path, cookies, 'post', row2dict(desk_lang))
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 4")}
@@ -460,7 +489,7 @@ def diff_desk(request):
         path = central_server + 'dictionary'
         desk_json = row2dict(desk_dict)
         desk_json['category'] = categories[desk_json['category']]
-        status = make_request(path, 'post', desk_json)
+        status = make_request(path, cookies, 'post', desk_json)
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 5")}
@@ -469,7 +498,7 @@ def diff_desk(request):
                                                                       object_id=entry['object_id']).one()
         path = central_server + 'dictionary/%s/%s/perspective' % (
             desk_persp.parent_client_id, desk_persp.parent_object_id)
-        status = make_request(path, 'post', row2dict(desk_persp))
+        status = make_request(path, cookies, 'post', row2dict(desk_persp))
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 6")}
@@ -477,23 +506,24 @@ def diff_desk(request):
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
         path = central_server + 'field'
-        status = make_request(path, 'post', row2dict(desk_field))
+        status = make_request(path, cookies, 'post', row2dict(desk_field))
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 7")}
+    # set_trace()
     for entry in dictionaryperspectivetofield:
         desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
-        if desk_field.parent_client_id == client.id:
-            persp = desk_field.parent
-            path = central_server + 'dictionary/%s/%s/perspective/%s/%s/field' % (persp.parent_client_id,
-                                                                                          persp.parent_object_id,
-                                                                                          persp.client_id,
-                                                                                          persp.object_id)
-            status = make_request(path, 'post', row2dict(desk_field))
-            if status.status_code != 200:
-                request.response.status = HTTPInternalServerError.code
-                return {'error': str("internet error 8")}
+        # if desk_field.parent_client_id == client.id:
+        persp = desk_field.parent
+        path = central_server + 'dictionary/%s/%s/perspective/%s/%s/field' % (persp.parent_client_id,
+                                                                                      persp.parent_object_id,
+                                                                                      persp.client_id,
+                                                                                      persp.object_id)
+        status = make_request(path, cookies, 'post', row2dict(desk_field))
+        if status.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error 8")}
     for entry in lexicalentry:
         desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -502,7 +532,7 @@ def diff_desk(request):
                                                                                       persp.parent_object_id,
                                                                                       persp.client_id,
                                                                                       persp.object_id)
-        status = make_request(path, 'post', row2dict(desk_lex))
+        status = make_request(path, cookies, 'post', row2dict(desk_lex))
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 9")}
@@ -521,7 +551,7 @@ def diff_desk(request):
             lex.client_id,
             lex.object_id)  # todo: normal content upload
         ent_req = row2dict(desk_ent)
-        content = desk_ent.content
+        changed_content = False
         filename = None
         if desk_ent.additional_metadata:
             tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
@@ -538,21 +568,21 @@ def diff_desk(request):
                 if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
                     full_name = desk_ent.content.split('/')
                     filename = full_name[len(full_name) - 1]
-                    content_resp = make_request(desk_ent.content)
+                    content_resp = make_request(desk_ent.content, cookies)
                     if content_resp.status_code != 200:
                         log.error(desk_ent.content)
                         do_not_add = True
                         error_happened = True
+                    else:
+                        content = content_resp.content
+                        content = base64.urlsafe_b64encode(content)
+                        changed_content = True
 
-                    content = content_resp.content
-                    # print(type(content))
-                    # print(content)
-                    content = base64.urlsafe_b64encode(content)
-
-        # ent_req['content'] = content
-        # print(type(content))
-        # print(content)
-        ent_req['content'] = urllib.parse.quote(content, safe = '/:')
+        # if ent_req['content']:   # todo: find out, why if content is failing
+        #     ent_req['content'] = urllib.parse.quote(content, safe = '/:')
+        if changed_content:
+            # ent_req['content'] = urllib.parse.quote(content)
+            ent_req['content'] = content
         ent_req['filename'] = filename
         if desk_ent.field.data_type == 'Grouping Tag':
             field_ids = str(desk_ent.field.client_id) + '_' + str(desk_ent.field.object_id)
@@ -566,8 +596,9 @@ def diff_desk(request):
                 grouping_tags[field_ids]['tag_groups'][desk_ent.content].append(row2dict(desk_ent))
         else:
             if not do_not_add:
-                status = make_request(path, 'post', ent_req)
+                status = make_request(path, cookies, 'post', ent_req)
                 if status.status_code != 200:
+                    set_trace()
                     error_happened = True
                     # request.response.status = HTTPInternalServerError.code
                     # return {'error': str("internet error 11")}
@@ -575,20 +606,20 @@ def diff_desk(request):
         path = central_server + 'group_entity/bulk'
         req = grouping_tags[entry]
         req['counter'] = client.counter
-        status = make_request(path, 'post', req)
+        status = make_request(path, cookies, 'post', req)
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error")}
+            return {'error': str("internet error 42")}
         client.counter = status.json()['counter']
         DBSession.flush()
     for entry in userblobs:
         desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
                                                          object_id=entry['object_id']).one()
         path = central_server + 'blob'
-        data = {'object_id': desk_blob.object_id, 'data_type': desk_blob.data_type}
+        data = {'object_id': desk_blob.object_id, 'data_type': desk_blob.data_type, 'client_id': desk_blob.client_id}
         files = {'blob': open(desk_blob.real_storage_path, 'rb')}
 
-        status = make_request(path, 'post', data=data, files=files)
+        status = make_request(path, cookies, 'post', data=data, files=files)
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 12")}
@@ -660,7 +691,7 @@ def diff_desk(request):
             real_delete_entity(desk_ent, settings)
     if error_happened:
         request.response.status = HTTPInternalServerError.code
-        return {'error': str("internet error")}
+        return {'error': str("internet error 43")}
 
     return
 
@@ -704,8 +735,6 @@ def download_all(request):
     log.error('after diff_desk')
     if resp.status_code != 200:
         request.response.status = HTTPInternalServerError.code
-        print(resp.status_code)
-        print(resp.body)
         return {'error': 'network error 3'}
 
     for dict_obj in DBSession.query(Dictionary).all():
@@ -729,17 +758,16 @@ def download_all(request):
         request.response.status = HTTPInternalServerError.code
         return {'error': 'network error 5'}
     else:
-
-        with open('shadow_cookie.json', 'r') as f:
-            cookies = json.loads(f.read())
+        cookies = resp.json['server_cookies']
         # client_id = cookies['client_id']
         client_id = resp.json['client_id']
         headers = remember(request, principal=client_id)
         response = Response()
         response.headers = headers
         locale_id = cookies['locale_id']
-        response.set_cookie(key='locale_id', value=str(locale_id))
-        response.set_cookie(key='client_id', value=str(client_id))
+        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
         result = dict()
         result['client_id'] = client_id
 
@@ -753,9 +781,6 @@ def download_all(request):
             return {'error': 'network error 2'}
 
         request.response.status = HTTPOk.code
-
-        with open('authentication_data.json', 'w') as f:
-            f.write(json.dumps(cookies))
 
         return HTTPOk(headers=response.headers, json_body=result)
 

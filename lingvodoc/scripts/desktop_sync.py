@@ -45,6 +45,7 @@ from sqlalchemy.orm import (
 )
 
 from lingvodoc.scripts import elan_parser
+from pdb import set_trace
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -58,12 +59,12 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 
-def make_request(path, req_type='get', json_data=None):
+def make_request(path, cookies, req_type='get', json_data=None):
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
-    with open('authentication_data.json', 'r') as f:
-        cookies = json.loads(f.read())
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
     session.mount('http://', adapter)
     # log.error(path)
     if req_type == 'get':
@@ -114,7 +115,7 @@ def translation_service_search(searchstring):
 def update_perspective_fields(req, perspective_client_id, perspective_object_id, client):
     response = dict()
     perspective = SyncDBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
-                                                                   object_id=perspective_object_id).first()
+                                                                       object_id=perspective_object_id).first()
     client = SyncDBSession.query(Client).filter_by(id=client.id).first()  # variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -215,7 +216,7 @@ def create_entity(session, le_client_id, le_object_id, field_client_id, field_ob
                   additional_metadata, client_id, object_id, content=None, filename=None,
                   link_client_id=None, link_object_id=None,
                   self_client_id=None, self_object_id=None, up_lvl=None, locale_id=2,
-                  storage=None, published = False, accepted = False):  # tested
+                  storage=None, published=False, accepted=False):  # tested
     upper_level = None
     tr_atom = session.query(TranslationAtom).join(TranslationGist, and_(
         TranslationAtom.locale_id == 2,
@@ -268,6 +269,7 @@ def create_entity(session, le_client_id, le_object_id, field_client_id, field_ob
         entity.additional_metadata['data_type'] = data_type
     elif data_type == 'link':
         try:
+
             entity.link_client_id = link_client_id
             entity.link_object_id = link_object_id
         except (KeyError, TypeError):
@@ -306,7 +308,7 @@ def create_objects(server, existing, session):
                         if table == Entity:
                             new_entities.append(kwargs)
                         elif table == PublishingEntity:
-                            if existing['entity'].get(client_id) and existing['entity'][client_id].get(object_id) :
+                            if existing['entity'].get(client_id) and existing['entity'][client_id].get(object_id):
                                 publ_entities.append(table(**kwargs))
                         else:
                             new_entries.append(table(**kwargs))
@@ -317,7 +319,7 @@ def create_objects(server, existing, session):
                     if table == Entity:
                         new_entities.append(kwargs)
                     elif table == PublishingEntity:
-                        if existing['entity'].get(client_id) and existing['entity'][client_id].get(object_id) :
+                        if existing['entity'].get(client_id) and existing['entity'][client_id].get(object_id):
                             publ_entities.append(table(**kwargs))
                     else:
                         new_entries.append(table(**kwargs))
@@ -354,7 +356,6 @@ def create_nested_content(tmp_resp):
 
 
 def create_tmp_resp(table, query, response):
-
     tmp_resp = [row2dict(entry) for entry in query]
     if tmp_resp:
         tmp_resp = create_nested_content(tmp_resp)
@@ -366,10 +367,10 @@ def create_tmp_resp(table, query, response):
 def basic_tables_content(client_id, object_id, session):
     response = dict()
     query = session.query(Dictionary).filter_by(client_id=client_id,
-                                                       object_id=object_id).all()
+                                                object_id=object_id).all()
     create_tmp_resp(Dictionary, query, response)
     query = session.query(DictionaryPerspective).filter_by(parent_client_id=client_id,
-                                                             parent_object_id=object_id).all()
+                                                           parent_object_id=object_id).all()
     create_tmp_resp(DictionaryPerspective, query, response)
     query = session.query(DictionaryPerspectiveToField).join(DictionaryPerspectiveToField.parent) \
         .filter(DictionaryPerspective.parent_client_id == client_id,
@@ -390,11 +391,12 @@ def basic_tables_content(client_id, object_id, session):
     create_tmp_resp(PublishingEntity, query, response)
     return response
 
+
 #                    folder_name=None, up_lvl=None, locale_id=2,
 #                   storage=None)
 
 
-def create_new_entities(new_entities, storage, session):  # add queue
+def create_new_entities(new_entities, storage, session, cookies):  # add queue
     entities_objects = list()
     for entity in new_entities:
         content = entity.get('content')
@@ -403,7 +405,7 @@ def create_new_entities(new_entities, storage, session):  # add queue
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
             full_name = content.split('/')
             filename = full_name[len(full_name) - 1]
-            content = make_request(content)
+            content = make_request(content, cookies)
             if content.status_code != 200:
                 log.error(entity['content'])
                 session.rollback()
@@ -413,29 +415,26 @@ def create_new_entities(new_entities, storage, session):  # add queue
             content = base64.urlsafe_b64encode(content)
 
         entity_obj, publ_obj = create_entity(session,
-                      entity['parent_client_id'],
-                      entity['parent_object_id'],
-                      entity['field_client_id'],
-                      entity['field_object_id'],
-                      entity.get('additional_metadata'),
-                      entity['client_id'],
-                      entity['object_id'],
-                      content,
-                      filename,
-                      entity.get('link_client_id'),
-                      entity.get('link_object_id'),
-                      locale_id=entity.get('locale_id'),
-                      storage=storage,
-                      published = entity.get('published'),
-                      accepted = entity.get('accepted'),
-                      )
+                                             entity['parent_client_id'],
+                                             entity['parent_object_id'],
+                                             entity['field_client_id'],
+                                             entity['field_object_id'],
+                                             entity.get('additional_metadata'),
+                                             entity['client_id'],
+                                             entity['object_id'],
+                                             content,
+                                             filename,
+                                             entity.get('link_client_id'),
+                                             entity.get('link_object_id'),
+                                             locale_id=entity.get('locale_id'),
+                                             storage=storage,
+                                             published=entity.get('published'),
+                                             accepted=entity.get('accepted'),
+                                             )
 
         entities_objects.append(entity_obj)
         entities_objects.append(publ_obj)
     return entities_objects
-
-
-
 
 
 def download(
@@ -443,7 +442,8 @@ def download(
         object_id,
         central_server,
         storage,
-        sqlalchemy_url
+        sqlalchemy_url,
+        cookies
 ):  # :(
 
     engine = create_engine(sqlalchemy_url)
@@ -458,7 +458,7 @@ def download(
                   LexicalEntry, Entity, PublishingEntity]:
         new_jsons[table.__tablename__] = list()
     # new_entity_jsons = list()
-    dictionary_json = make_request(central_server + 'dictionary/%s/%s' % (client_id, object_id))
+    dictionary_json = make_request(central_server + 'dictionary/%s/%s' % (client_id, object_id), cookies)
     if dictionary_json.status_code != 200:
         log.error('dict fail', dictionary_json.status_code)
         session.rollback()
@@ -469,7 +469,7 @@ def download(
     else:
         dictionary_json['category'] = 0
     new_jsons['dictionary'].append(dict2strippeddict(dictionary_json, Dictionary))
-    perspectives_json = make_request(central_server + 'dictionary/%s/%s/perspectives' % (client_id, object_id))
+    perspectives_json = make_request(central_server + 'dictionary/%s/%s/perspectives' % (client_id, object_id), cookies)
     if perspectives_json.status_code != 200:
         log.error('pesrps fail', perspectives_json.status_code)
         session.rollback()
@@ -484,7 +484,8 @@ def download(
             client_id,
             object_id,
             perspective_json['client_id'],
-            perspective_json['object_id']), 'post', json_data=perspective_json.get('additional_metadata', dict()))
+            perspective_json['object_id']), cookies, 'post',
+                                 json_data=perspective_json.get('additional_metadata', dict()))
         if meta_json.status_code != 200:
             log.error('meta fail', meta_json.status_code)
             session.rollback()
@@ -495,20 +496,21 @@ def download(
             client_id,
             object_id,
             perspective_json['client_id'],
-            perspective_json['object_id']), 'get')
+            perspective_json['object_id']), cookies, 'get')
         if fields_json.status_code != 200:
             log.error('fields fail', fields_json.status_code)
             session.rollback()
             return
         for field_json in fields_json.json():
-            new_jsons['dictionaryperspectivetofield'].append(dict2strippeddict(field_json, DictionaryPerspectiveToField))  # todo: think about it
+            new_jsons['dictionaryperspectivetofield'].append(
+                dict2strippeddict(field_json, DictionaryPerspectiveToField))  # todo: think about it
 
         new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
         count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
             client_id,
             object_id,
             perspective_json['client_id'],
-            perspective_json['object_id']))
+            perspective_json['object_id']), cookies)
         if count_json.status_code != 200:
             log.error('count fail', count_json.status_code)
             session.rollback()
@@ -519,7 +521,7 @@ def download(
             object_id,
             perspective_json['client_id'],
             perspective_json['object_id'],
-            count_json['count']))
+            count_json['count']), cookies)
         published_json = None
 
         if all_json.status_code != 200:
@@ -528,7 +530,7 @@ def download(
                     client_id,
                     object_id,
                     perspective_json['client_id'],
-                    perspective_json['object_id']))
+                    perspective_json['object_id']), cookies)
                 if count_json.status_code != 200:
                     log.error('count fail', count_json.status_code)
                     session.rollback()
@@ -540,20 +542,23 @@ def download(
                         object_id,
                         perspective_json['client_id'],
                         perspective_json['object_id'],
-                        count_json['count']))
+                        count_json['count']), cookies)
                 if published_json.status_code != 200:
                     log.error('published fail', all_json.status_code)
                     session.rollback()
                     return
                 else:
-                    if 'entity hidden: you' in published_json.json()[0]['contains'][0]['content'].lower():
+                    publ_json = published_json.json()
+                    if len(publ_json) > 0 and publ_json[0].get('contains') and len(publ_json[0]['contains']) > 0 and \
+                            published_json.json()[0]['contains'][0].get('content') and 'entity hidden: you' in \
+                            published_json.json()[0]['contains'][0]['content'].lower():
                         published_json = make_request(
                             central_server + 'dictionary/%s/%s/perspective/%s/%s/published?start_from=0&count=%s' % (
                                 client_id,
                                 object_id,
                                 perspective_json['client_id'],
                                 perspective_json['object_id'],
-                                20))
+                                20), cookies)
                         if published_json.status_code != 200:
                             session.rollback()
                             return
@@ -569,6 +574,7 @@ def download(
             new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))
             for entity_json in lexical_entry_json['contains']:
                 if not entity_json.get('self_client_id'):
+                    # if entity.json.get('link_client_id') and entity.json.get('link_object_id'):s
 
                     new_jsons['entity'].append(entity_json)
 
@@ -584,7 +590,8 @@ def download(
     new_objects, new_entities, publ_entities = create_objects(new_jsons, response, session)
 
     session.bulk_save_objects(new_objects)
-    session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session))
+
+    session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session, cookies=cookies))
     session.bulk_save_objects(publ_entities)
     log.error('dictionary %s %s downloaded' % (client_id, object_id))
     session.commit()
@@ -597,12 +604,14 @@ def download_dictionary(
         object_id,
         central_server,
         storage,
-        sqlalchemy_url
+        sqlalchemy_url,
+        cookies
 ):
     download(
         client_id,
         object_id,
         central_server,
         storage,
-        sqlalchemy_url
+        sqlalchemy_url,
+        cookies
     )

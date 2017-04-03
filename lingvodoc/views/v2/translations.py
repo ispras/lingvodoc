@@ -47,8 +47,7 @@ from sqlalchemy.exc import IntegrityError
 import datetime
 import json
 from sqlalchemy.orm.exc import NoResultFound
-from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator, add_user_to_group, check_client_id
 from lingvodoc.views.v2.delete import real_delete_translation_gist
 # search (filter by input, type and (?) locale)
 
@@ -133,13 +132,21 @@ def create_translationgist(request):
         object_id = req.get('object_id', None)
         type = req['type']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            variables['auth'])
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        translationgist = TranslationGist(client_id=variables['auth'],object_id=object_id, type=type)
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+        translationgist = TranslationGist(client_id=client_id,object_id=object_id, type=type)
         DBSession.add(translationgist)
         DBSession.flush()
         basegroups = list()
@@ -211,8 +218,17 @@ def create_translationatom(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
         if not parent.marked_for_deletion:
-            translationatom = TranslationAtom(client_id=variables['auth'],
+            translationatom = TranslationAtom(client_id=client_id,
                                               object_id=object_id,
                                               parent=parent,
                                               locale_id=locale_id,
