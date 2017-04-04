@@ -23,7 +23,7 @@ trait DownloadEmbeddedBlobScope extends Scope {
 
 @injectable("DownloadEmbeddedBlobController")
 class DownloadEmbeddedBlobController(scope: DownloadEmbeddedBlobScope,
-                                     modal: ModalService,
+                                     val modal: ModalService,
                                      instance: ModalInstance[Seq[Entity]],
                                      backend: BackendService,
                                      timeout: Timeout,

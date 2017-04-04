@@ -8,9 +8,12 @@ import org.scalajs.dom.{Event, document}
 import scala.concurrent.Future
 import scala.scalajs.js
 
-abstract class BaseController[ScopeClass <: Scope](scope: ScopeClass, modalService: ModalService, val timeout: Timeout)
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{ErrorModalHandler}
+
+abstract class BaseController[ScopeClass <: Scope](scope: ScopeClass, modal: ModalService, val timeout: Timeout)
   extends AbstractController[ScopeClass](scope)
-    with AngularExecutionContextProvider {
+    with AngularExecutionContextProvider
+    with ErrorModalHandler {
 
 
   protected def onStartRequest()
@@ -21,20 +24,7 @@ abstract class BaseController[ScopeClass <: Scope](scope: ScopeClass, modalServi
 
   protected def onClose(): Unit = {}
 
-  protected def error(exception: Throwable): Unit = {
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/exceptionHandler.html"
-    options.controller = "ExceptionHandlerController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(exception = exception.asInstanceOf[js.Any])
-      }
-    ).asInstanceOf[js.Dictionary[Any]]
-    modalService.open[Unit](options)
-  }
+  protected def error(exception: Throwable): Unit = { showError(exception) }
 
   protected def load(loadFunction: () => Future[_]): Future[Any] = {
     onStartRequest()

@@ -23,7 +23,7 @@ trait UserFilesScope extends Scope {
 
 
 @injectable("UserFilesController")
-class UserFilesController(scope: UserFilesScope, backend: BackendService, val modalService: ModalService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
+class UserFilesController(scope: UserFilesScope, backend: BackendService, val modal: ModalService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
   extends AbstractController[UserFilesScope](scope)
     with AngularExecutionContextProvider
     with ErrorModalHandler {

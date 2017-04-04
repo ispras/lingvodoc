@@ -41,7 +41,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
     with SimplePlay
     with Pagination
     with LinkEntities
-    with ViewMarkup {
+    with ViewMarkup
+    with Tools {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -128,30 +129,6 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
     val instance = modal.open[Unit](options)
     instance.result map { _ =>
 
-    }
-  }
-
-  @JSExport
-  def phonology(): Unit = {
-    backend.phonology(perspectiveId) map { blob =>
-      val options = ModalOptions()
-      options.templateUrl = "/static/templates/modal/message.html"
-      options.windowClass = "sm-modal-window"
-      options.controller = "MessageController"
-      options.backdrop = false
-      options.keyboard = false
-      options.size = "lg"
-      options.resolve = js.Dynamic.literal(
-        params = () => {
-          js.Dynamic.literal(
-            "title" -> "",
-            "message" -> "Background task created. Check tasks menu for details."
-          )
-        }
-      ).asInstanceOf[js.Dictionary[Any]]
-      modal.open[Unit](options)
-    } recover { case e: Throwable =>
-      error(e)
     }
   }
 

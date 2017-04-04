@@ -2233,8 +2233,6 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
             "client_id" -> entry_id.clientId,
             "object_id" -> entry_id.objectId)}: _*)}: _*)))
 
-    dom.console.log("mergeBulk: " + request)
-
     $http.post[js.Dynamic](getMethodUrl("merge/bulk"), request) onComplete
     {
       case Success(response) =>
@@ -2262,6 +2260,108 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
         }
 
       case Failure(e) => p.failure(BackendException("Failed to perform bulk merge: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
+  /** 
+    * Gathers user participation statistics for a specified perspective in a given time interval
+    * [time_begin, time_end), with time interval endpoints 'time_begin', 'time_end' specified as Unix
+    * timestamps formatted as YYYY-MM-DDtHH:MM:SS strings.
+    */
+  def perspectiveStatistics(
+    perspective_id: CompositeId, date_from: String, date_to: String):
+    Future[js.Dictionary[js.Dictionary[js.Object]]] =
+  {
+    val p = Promise[js.Dictionary[js.Dictionary[js.Object]]]
+
+    var url = getMethodUrl("statistics/perspective/" +
+      encodeURIComponent(perspective_id.clientId.toString) + "/" +
+      encodeURIComponent(perspective_id.objectId.toString))
+
+    url = addUrlParameter(url, "time_begin", date_from)
+    url = addUrlParameter(url, "time_end", date_to)
+
+    $http.get[js.Dynamic](url) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while gathering perspective statistics:\n" + response.error))
+
+          else p.success(response.asInstanceOf[js.Dictionary[js.Dictionary[js.Object]]])
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to gather perspective statistics: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
+  /** 
+    * Gathers user participation statistics for a specified dictionary in a given time interval
+    * [time_begin, time_end), with time interval endpoints 'time_begin', 'time_end' specified as Unix
+    * timestamps formatted as YYYY-MM-DDtHH:MM:SS strings.
+    */
+  def dictionaryStatistics(
+    dictionary_id: CompositeId, date_from: String, date_to: String):
+    Future[js.Dictionary[js.Dictionary[js.Object]]] =
+  {
+    val p = Promise[js.Dictionary[js.Dictionary[js.Object]]]
+
+    var url = getMethodUrl("statistics/dictionary/" +
+      encodeURIComponent(dictionary_id.clientId.toString) + "/" +
+      encodeURIComponent(dictionary_id.objectId.toString))
+
+    url = addUrlParameter(url, "time_begin", date_from)
+    url = addUrlParameter(url, "time_end", date_to)
+
+    $http.get[js.Dynamic](url) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while gathering dictionary statistics:\n" + response.error))
+
+          else p.success(response.asInstanceOf[js.Dictionary[js.Dictionary[js.Object]]])
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to gather dictionary statistics: " + e.getMessage, e))
     }
 
     p.future

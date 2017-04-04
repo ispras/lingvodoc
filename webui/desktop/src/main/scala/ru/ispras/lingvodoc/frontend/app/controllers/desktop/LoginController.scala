@@ -24,7 +24,7 @@ class LoginController(scope: LoginScope,
                       val rootScope: RootScope,
                       val location: Location,
                       val backend: BackendService,
-                      val modalService: ModalService,
+                      val modal: ModalService,
                       val timeout: Timeout,
                       val exceptionHandler: ExceptionHandler)
   extends AbstractController(scope)
