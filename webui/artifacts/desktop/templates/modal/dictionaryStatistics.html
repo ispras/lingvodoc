@@ -1,0 +1,146 @@
+<div class="modal-header">
+    <h3 class="modal-title">Dictionary statistics</h3>
+</div>
+
+<div class="modal-body">
+
+    <!--
+        NOTE:
+
+        We can't place input form inside the <div ng-if="!error"> container, because it somehow breakes
+        ng-model's view -> controller linking.
+    -->
+
+    <form name="statisticsform">
+        Please enter starting and ending dates and times of the statistical period in the
+        "YYYY-MM-DD hh:mm:ss" format, e.g. 1987-12-23 23:54:06.
+
+        <br>
+
+        <label style="font-weight: normal">
+            Starting date and time:
+
+            <input
+                type="text"
+                name="from_string"
+                ng-model="from_string"
+                ng-pattern="/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]$/"
+                ng-change="controller.change_from()"/>
+
+            <span
+                ng-show="statisticsform.from_string.$error.pattern || !from_string"
+                style="color: DarkRed; font-weight: bold;">
+                Please input properly formatted date.
+            </span>
+        </label>
+
+        <br>
+
+        <label style="font-weight: normal">
+            Ending date and time:
+
+            <input
+                type="text"
+                name="to_string"
+                ng-model="to_string"
+                ng-pattern="/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]$/"
+                ng-change="controller.change_to()"/>
+
+            <span
+                ng-show="statisticsform.to_string.$error.pattern || !to_string"
+                style="color: DarkRed; font-weight: bold;">
+                Please input properly formatted date.
+            </span>
+        </label>
+    </form>
+
+    <div style="text-align: center">
+        <button
+            class="btn btn-primary"
+            type="button"
+            ng-click="controller.gather()"
+            ng-disabled="
+                statisticsform.from_string.$error.pattern ||
+                statisticsform.to_string.$error.pattern">
+            Gather statistics
+        </button>
+    <div>
+
+    <div ng-if="!error" style="text-align: left">
+        <div
+            ng-if="statistics_data && statistics_data.length <= 0"
+            style="font-size: 125%; margin-top: 1em; text-align: center;">
+            No user activity in the specified period.
+        </div>
+
+        <div
+            ng-repeat="user_data in statistics_data"
+            style="margin-top: 1em">
+
+            <p>{{ user_data.name }} ({{ user_data.login }})
+
+            <div ng-if="user_data.hasOwnProperty('lexical entries')">
+                Lexical entries:
+
+                <table class="table table-bordered" style="margin-top: 0.25em">
+                    <tr>
+                        <td rowspan=2 style="padding: 0.2em">Perspective state</td>
+                        <td colspan=3 style="padding: 0.2em; text-align: center;">Client type</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.2em">desktop</td>
+                        <td style="padding: 0.2em">web</td>
+                        <td style="padding: 0.2em">total</td>
+                    </tr>
+                    <tr ng-repeat="row in user_data.entry_table">
+                        <td ng-repeat="data in row track by $index"
+                            style="padding: 0.2em">{{ data }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p ng-if="!user_data.hasOwnProperty('lexical entries')">
+                Lexical entries: none.
+            </p>
+
+            <div ng-if="user_data.hasOwnProperty('entities')">
+                Entities:
+
+                <table class="table table-bordered" style="margin-top: 0.25em">
+                    <tr>
+                        <td rowspan=2 style="padding: 0.2em">Perspective state</td>
+                        <td rowspan=2 style="padding: 0.2em">Entity status</td>
+                        <td rowspan=2 style="padding: 0.2em">Entity type</td>
+                        <td colspan=3 style="padding: 0.2em; text-align: center;">Client type</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.2em">desktop</td>
+                        <td style="padding: 0.2em">web</td>
+                        <td style="padding: 0.2em">total</td>
+                    </tr>
+                    <tr ng-repeat-start="row_group in user_data.entity_table">
+                        <td style="border-right-width: 0px; padding: 0.25em;"/>
+                    </tr>
+                    <tr ng-repeat-end ng-repeat="row in row_group">
+                        <td ng-repeat="data in row track by $index"
+                            style="padding: 0.2em">{{ data }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p ng-if="!user_data.hasOwnProperty('entities')">
+                Entities: none.
+            </p>
+        </div>
+    </div>
+
+    <div ng-if="error" class="animate-if alert alert-danger">
+        <strong>Error</strong> {{ error.message }}
+    </div>
+</div>
+
+<div class="modal-footer" style="margin-top: 1em">
+    <button class="btn btn-primary" type="button" ng-click="controller.close()">Close</button>
+</div>

@@ -74,7 +74,7 @@ def try_parse_datetime(time_string):
     return None
 
 
-@view_config(route_name = 'stat_perspective', renderer = 'string')
+@view_config(route_name = 'stat_perspective', renderer = 'json', request_method = 'GET')
 def stat_perspective(request):
     """
     Gathers user participation statistics for a specified perspective in a given time interval
@@ -107,7 +107,7 @@ def stat_perspective(request):
             return {'error': message('Invalid time representation \'{0}\'.'.format(time_end_string))}
 
         log.debug('stat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5})'.format(
-            perspective_client_id, perspective_client_id,
+            perspective_client_id, perspective_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
             datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end))
 
@@ -335,9 +335,15 @@ def stat_perspective(request):
                         for c_string in [client_string, 'total']:
                             entity_data[p_string][f_string][c_string] += entity_count
 
-        # As of now (Tue Mar 14 22:29:29 UTC 2017), returning formatted textual JSON representation.
+        # Returning gathered statistics.
 
-        return pprint.pformat(user_data_dict, width = 144)
+        log.debug('stat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
+            perspective_client_id, perspective_object_id,
+            datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
+            datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,
+            pprint.pformat(user_data_dict, width = 144)))
+
+        return user_data_dict
 
     # If something is not right, we report it.
 
@@ -352,7 +358,7 @@ def stat_perspective(request):
         return {'error': message('\n' + traceback_string)}
 
 
-@view_config(route_name = 'stat_dictionary', renderer = 'string')
+@view_config(route_name = 'stat_dictionary', renderer = 'json', request_method = 'GET')
 def stat_dictionary(request):
     """
     Gathers cumulative user participation statistics for all perspectives of a specified dictionary in a
@@ -384,7 +390,7 @@ def stat_dictionary(request):
             return {'error': message('Invalid time representation \'{0}\'.'.format(time_end_string))}
 
         log.debug('stat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5})'.format(
-            dictionary_client_id, dictionary_client_id,
+            dictionary_client_id, dictionary_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
             datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end))
 
@@ -787,9 +793,15 @@ def stat_dictionary(request):
                             for c_string in [client_string, 'total']:
                                 local_entity_data[f_string][c_string] += int(entity_count)
 
-        # As of now (Mon Mar 20 21:26:53 UTC 2017), returning formatted textual JSON representation.
+        # Returning gathered statistics.
 
-        return pprint.pformat(user_data_dict, width = 144)
+        log.debug('stat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
+            dictionary_client_id, dictionary_object_id,
+            datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
+            datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,
+            pprint.pformat(user_data_dict, width = 144)))
+
+        return user_data_dict
 
     # If something is not right, we report it.
 

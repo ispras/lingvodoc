@@ -8,7 +8,7 @@ import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{SimplePlay, ViewMarkup}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{SimplePlay, Tools, ViewMarkup}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
@@ -101,7 +101,8 @@ class MergeDictionaryController(
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
     with SimplePlay
-    with ViewMarkup {
+    with ViewMarkup
+    with Tools {
 
   private[this] val __debug__ = false
 
@@ -389,29 +390,6 @@ class MergeDictionaryController(
     instance.result map { _ =>
 
     }
-  }
-
-  @JSExport
-  def phonology(): Unit = {
-    backend.phonology(perspectiveId) map { blob =>
-      val options = ModalOptions()
-      options.templateUrl = "/static/templates/modal/downloadEmbeddedBlob.html"
-      options.windowClass = "sm-modal-window"
-      options.controller = "DownloadEmbeddedBlobController"
-      options.backdrop = false
-      options.keyboard = false
-      options.size = "lg"
-      options.resolve = js.Dynamic.literal(
-        params = () => {
-          js.Dynamic.literal(
-            "fileName" -> "phonology.xlsx",
-            "fileType" -> "application/vnd.ms-excel",
-            "blob" -> blob
-          )
-        }
-      ).asInstanceOf[js.Dictionary[Any]]
-      modal.open[Unit](options)
-    } recover {case e: Throwable => recover_with_log(e)}
   }
 
   /** Processes selection of a field used for entity matching. */

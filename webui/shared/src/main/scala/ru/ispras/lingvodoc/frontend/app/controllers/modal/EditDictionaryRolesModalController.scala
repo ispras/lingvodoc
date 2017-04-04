@@ -29,7 +29,7 @@ trait EditDictionaryRolesModalScope extends Scope {
 
 @injectable("EditDictionaryRolesModalController")
 class EditDictionaryRolesModalController(scope: EditDictionaryRolesModalScope,
-                                         modal: ModalService,
+                                         val modal: ModalService,
                                          instance: ModalInstance[Unit],
                                          backend: BackendService,
                                          timeout: Timeout,

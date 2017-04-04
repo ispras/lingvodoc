@@ -8,11 +8,11 @@ import scala.scalajs.js
 
 
 abstract class BaseModalController[ScopeClass <: Scope, ResultType](scope: ScopeClass,
-                                                                    modalService: ModalService,
-                                                                    modalInstance: ModalInstance[ResultType],
+                                                                    modal: ModalService,
+                                                                    instance: ModalInstance[ResultType],
                                                                     timeout: Timeout,
                                                                     params: js.Dictionary[js.Function0[js.Any]])
-  extends BaseController[ScopeClass](scope, modalService, timeout)
+  extends BaseController[ScopeClass](scope, modal, timeout)
     with AngularExecutionContextProvider
 {
   protected def onModalOpen(): Unit = {}
@@ -20,7 +20,7 @@ abstract class BaseModalController[ScopeClass <: Scope, ResultType](scope: Scope
   protected def onModalClose(): Unit = {}
 
   // bind on open event handler
-  modalInstance.rendered map { f =>
+  instance.rendered map { f =>
     onModalOpen()
   }
 

@@ -45,7 +45,7 @@ trait SoundMarkupScope extends Scope {
 @injectable("SoundMarkupController")
 class SoundMarkupController(scope: SoundMarkupScope,
                             instance: ModalInstance[Unit],
-                            val modalService: ModalService,
+                            val modal: ModalService,
                             backend: BackendService,
                             val timeout: Timeout,
                             val exceptionHandler: ExceptionHandler,
@@ -453,7 +453,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]
-    modalService.open[Unit](options)
+    modal.open[Unit](options)
   }
 }
 

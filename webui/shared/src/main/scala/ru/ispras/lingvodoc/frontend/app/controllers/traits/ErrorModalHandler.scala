@@ -7,7 +7,7 @@ import scala.scalajs.js
 
 trait ErrorModalHandler {
 
-  def modalService: ModalService
+  def modal: ModalService
 
   def showError(e: Throwable) = {
     val options = ModalOptions()
@@ -22,6 +22,6 @@ trait ErrorModalHandler {
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modalService.open[Unit](options)
+    val instance = modal.open[Unit](options)
   }
 }

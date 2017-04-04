@@ -35,13 +35,13 @@ trait ConvertEafScope extends Scope {
 
 @injectable("ConvertEafController")
 class ConvertEafController(scope: ConvertEafScope,
-                           val modalService: ModalService,
+                           val modal: ModalService,
                            instance: ModalInstance[Unit],
                            backend: BackendService,
                            timeout: Timeout,
                            val exceptionHandler: ExceptionHandler,
                            params: js.Dictionary[js.Function0[js.Any]])
-  extends BaseModalController(scope, modalService, instance, timeout, params)
+  extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider {
 
   private[this] var indentation = Map[String, Int]()
@@ -84,7 +84,7 @@ class ConvertEafController(scope: ConvertEafScope,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modalService.open[Language](options)
+    val instance = modal.open[Language](options)
 
     instance.result foreach { _ =>
       backend.getLanguages onComplete {
