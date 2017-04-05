@@ -36,12 +36,13 @@ from pyramid.view import view_config
 from sqlalchemy import (
     or_
 )
-
-import datetime
 import logging
 import json
 from lingvodoc.views.v2.utils import add_user_to_group
 from pyramid.request import Request
+import datetime
+from time import sleep
+import requests
 
 log = logging.getLogger(__name__)
 
@@ -132,16 +133,16 @@ def login_post(request):  # tested
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
-        headers = remember(request, principal=client.id)
+        headers = remember(request, principal=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
         locale_id = user.default_locale_id
         if not locale_id:
             locale_id = 1
-        response.set_cookie(key='locale_id', value=str(locale_id))
-        response.set_cookie(key='client_id', value=str(client.id))
-        headers = remember(request, principal=client.id)
-        # return HTTPFound(location=next, headers=response.headers)
+        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='client_id', value=str(client.id), max_age=datetime.timedelta(days=3650))
+        # headers = remember(request, principal=client.id, max_age=315360000)
+        # # return HTTPFound(location=next, headers=response.headers)
         return HTTPOk(headers=response.headers, json_body={})
         # return {}
     return HTTPUnauthorized(location=request.route_url('login'))
@@ -207,14 +208,30 @@ def desk_signin(request):
         status = session.post(path, json=req)
         client_id = status.json()['client_id']
         cookies = status.cookies.get_dict()
-        with open('authentication_data.json', 'w') as f:
-            f.write(json.dumps(cookies))
+
+        response = Response()
+        headers = remember(request, principal=client_id, max_age=315360000)
+        response.headers = headers
+        locale_id = cookies['locale_id']
+        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
+        sub_headers = response.headers
+        sub_headers = dict(sub_headers)
+        sub_headers['Cookie'] = sub_headers['Set-Cookie']
+        # with open('authentication_data.json', 'w') as f:
+        #     f.write(json.dumps(cookies))
         if status.status_code == 200:
             path = request.route_url('basic_sync')
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            sub_headers = {'Cookie': request.headers['Cookie']}
+            # sub_cookies = request.headers['Cookie']
+            # print(sub_cookies)
+            # sub_cookies += '; server_cookies=\'%s\'' % json.dumps(cookies)
+            # print('subcookies:', sub_cookies)
+            # sub_headers = {'Cookie': sub_cookies}
             subreq.headers = sub_headers
+            print('headers', subreq.headers)
             resp = request.invoke_subrequest(subreq)
             if resp.status_code == 200:
                 headers = remember(request, principal=client_id, max_age=315360000)
@@ -223,6 +240,7 @@ def desk_signin(request):
                 locale_id = cookies['locale_id']
                 response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
                 response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
+                response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
                 result = dict()
                 result['client_id'] = client_id
                 request.response.status = HTTPOk.code
@@ -242,18 +260,18 @@ def new_client_server(request):
     if old_client:
         user = old_client.user
         if user:
-            client = Client(user_id=user.id, is_browser_client= False)
+            client = Client(user_id=user.id, is_browser_client=True)
             user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
-            headers = remember(request, principal=client.id)
+            headers = remember(request, principal=client.id, max_age=315360000)
             response = Response()
             response.headers = headers
             locale_id = user.default_locale_id
             if not locale_id:
                 locale_id = 1
-            response.set_cookie(key='locale_id', value=str(locale_id))
-            response.set_cookie(key='client_id', value=str(client.id))
+            response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
+            response.set_cookie(key='client_id', value=str(client.id), max_age=datetime.timedelta(days=3650))
             result = dict()
             result['client_id'] = client.id
             request.response.status = HTTPOk.code
@@ -266,7 +284,6 @@ def new_client_server(request):
 
 @view_config(route_name='new_client', renderer='json', request_method='POST')
 def new_client(request):
-    import requests
     settings = request.registry.settings
 
     path = settings['desktop']['central_server'] + 'sync/client/server'
@@ -274,28 +291,31 @@ def new_client(request):
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
-    with open('authentication_data.json', 'r') as f:
-        cookies = json.loads(f.read())
-    status = session.post(path, cookies=cookies)
-    client_id = status.json()['client_id']
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
+    status = session.post(path, cookies=json.loads(request.cookies.get('server_cookies')))
     cookies = status.cookies.get_dict()
-    with open('shadow_cookie.json', 'w') as f:
-        f.write(json.dumps(cookies))
+    client_id = status.json()['client_id']
+
+    # with open('shadow_cookie.json', 'w') as f:
+    #     f.write(json.dumps(cookies))
     if status.status_code == 200:
-            headers = remember(request, principal=client_id)
-            response = Response()
-            response.headers = headers
-            locale_id = cookies['locale_id']
-            response.set_cookie(key='locale_id', value=str(locale_id))
-            response.set_cookie(key='client_id', value=str(client_id))
-            result = dict()
-            result['client_id'] = client_id
-            request.response.status = HTTPOk.code
-            return HTTPOk(headers=response.headers, json_body=result)
+        headers = remember(request, principal=client_id)
+        response = Response()
+        response.headers = headers
+        locale_id = cookies['locale_id']
+        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
+        result = dict()
+        result['client_id'] = client_id
+        result['server_cookies'] = cookies
+        request.response.status = HTTPOk.code
+        response.status = HTTPOk.code
+        response.json_body = result
+        return HTTPOk(headers=response.headers, json_body=result)
         # return result
     return HTTPUnauthorized(location=request.route_url('login'))
-
-
 
 
 # @view_config(route_name='test', renderer='json', request_method='GET')

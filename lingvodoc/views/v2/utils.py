@@ -46,7 +46,9 @@ from pyramid.httpexceptions import (
 )
 from lingvodoc.exceptions import CommonException
 from sqlalchemy.exc import IntegrityError
-
+import pdb
+from pdb import set_trace
+import binascii
 
 def add_user_to_group(user, group):
     if user not in group.users:
@@ -112,6 +114,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
             if exception.errno != errno.EEXIST:
                 raise
         with open(storage_path, 'wb+') as f:
+            # set_trace()
             if json_input:
                 f.write(base64.urlsafe_b64decode(content))
             else:
@@ -138,6 +141,18 @@ def get_user_by_client_id(client_id):
     if client is not None:
         user = DBSession.query(User).filter_by(id=client.user_id).first()
     return user
+
+
+def check_client_id(authenticated, client_id):
+    print(authenticated, client_id)
+    client = DBSession.query(Client).filter_by(id=authenticated).first()
+    if not client:
+        return False
+    user_id = client.user_id
+    req_client = DBSession.query(Client).filter_by(id=client_id).first()
+    if not req_client or req_client.user_id != user_id:
+        return False
+    return True
 
 
 def group_by_languages(dicts, request):
@@ -368,6 +383,8 @@ def object_file_path(obj, settings, data_type, filename, create_dir=False):
     base_path = settings['storage']['path']
     storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
     if create_dir:
+        # pdb.set_trace()
+        storage_dir = os.path.normpath(storage_dir)
         os.makedirs(storage_dir, exist_ok=True)
     storage_path = os.path.join(storage_dir, filename)
 

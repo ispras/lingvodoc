@@ -52,6 +52,7 @@ def configure_routes(config):
     config.add_route(name='basic_sync', pattern='/sync/basic')
     config.add_route(name='all_toc', pattern='/sync/toc')
     config.add_route(name='diff_server', pattern='/sync/difference/server')
+    config.add_route(name='diff_group_server', pattern='/sync/difference/server/group')
     config.add_route(name='diff_desk', pattern='/sync/difference')
     config.add_route(name='basic_sync_server', pattern='/sync/basic/server')
     config.add_route(name='delete_sync_server', pattern='/sync/delete/server')

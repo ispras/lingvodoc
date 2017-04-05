@@ -1,6 +1,7 @@
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
-    view_field_from_object
+    view_field_from_object,
+    check_client_id
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -119,7 +120,7 @@ def all_locales_desktop(request):
         request.response.status = HTTPOk.code
         return status.json()
     else:
-        print(status.status_code)
+        # print(status.status_code)
         request.response.status = HTTPInternalServerError.code
         return {'error': 'no connection'}
 
@@ -135,8 +136,9 @@ def published_dictionaries_desktop(request):
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
 
-    with open('authentication_data.json', 'r') as f:
-        cookies = json.loads(f.read())
+    cookies = json.loads(request.cookies.get('server_cookies'))
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
     status = session.post(path, json=req, cookies=cookies)
     if status.status_code == 200:
         request.response.status = HTTPOk.code
@@ -159,8 +161,9 @@ def all_perspectives_desktop(request):
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
-    with open('authentication_data.json', 'r') as f:
-        cookies = json.loads(f.read())
+    cookies = json.loads(request.cookies.get('server_cookies'))
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
     status = session.get(path, cookies=cookies)
     if status.status_code == 200:
         request.response.status = HTTPOk.code
@@ -180,8 +183,9 @@ def permissions_on_perspectives_desktop(request):
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
-    with open('authentication_data.json', 'r') as f:
-        cookies = json.loads(f.read())
+    cookies = json.loads(request.cookies.get('server_cookies'))
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
     status = session.get(path, cookies=cookies)
     server_perms = status.json()
     path = request.route_url('permissions_on_perspectives')
@@ -299,8 +303,27 @@ def create_persp_to_field(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
+
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
+
         if not DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=req['client_id'], object_id=req['object_id']).first():
-            field_object = DictionaryPerspectiveToField(client_id=req['client_id'],
+            field_object = DictionaryPerspectiveToField(client_id=client_id,
                                                         object_id=req['object_id'],
                                                         parent_client_id=req['parent_client_id'],
                                                         parent_object_id=req['parent_object_id'],
@@ -308,8 +331,13 @@ def create_persp_to_field(request):
                                                         field_object_id=req['field_object_id'],
                                                         self_client_id=req['self_client_id'],
                                                         self_object_id=req['self_object_id'],
+                                                        link_client_id=req.get('link_client_id'),
+                                                        link_object_id=req.get('link_object_id'),
                                                         position=req['position'])
             DBSession.add(field_object)
+        else:
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'This field already exists'}
 
         return {}
     except KeyError as e:

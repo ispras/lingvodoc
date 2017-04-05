@@ -47,6 +47,7 @@ def groupfinder(client_id, request):
         groups = groups.all()
 
     except AttributeError as e:
+            log.error('forget in acl.py')
             forget(request)
             return None
 

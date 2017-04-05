@@ -26,7 +26,8 @@ from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
     group_by_languages,
     group_by_organizations,
-    user_counter
+    user_counter,
+    check_client_id
 )
 
 from pyramid.httpexceptions import (
@@ -57,6 +58,8 @@ import datetime
 import json
 from lingvodoc.views.v2.utils import add_user_to_group
 from lingvodoc.views.v2.delete import real_delete_dictionary
+from pdb import set_trace
+
 
 @view_config(route_name='create_dictionary', renderer='json', request_method='POST')
 def create_dictionary(request):  # tested & in docs
@@ -82,23 +85,33 @@ def create_dictionary(request):  # tested & in docs
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         additional_metadata = req.get('additional_metadata', None)
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
         subreq.headers = request.headers
-        subreq.json = {'searchstring': 'WiP'}
+        subreq.json = {"searchstring": "WiP"}
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
 
+        resp = request.invoke_subrequest(subreq)
+        # set_trace()
         if 'error' not in resp.json:
             state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
 
-        dictionary = Dictionary(client_id=variables['auth'],
+        dictionary = Dictionary(client_id=client_id,
                                 object_id=object_id,
                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                 state_translation_gist_client_id=state_translation_gist_client_id,
@@ -151,7 +164,8 @@ def view_dictionary(request):  # tested & in docs
         response['object_id'] = dictionary.object_id
         response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
-        response['additional_metadata'] = dictionary.additional_metadata
+        if dictionary.additional_metadata:
+            response['additional_metadata'] = dictionary.additional_metadata
         response['category'] = categories.get(dictionary.category)
         response['created_at'] = dictionary.created_at
         response['domain'] = dictionary.domain
@@ -228,6 +242,7 @@ def delete_dictionary(request):  # tested & in docs
 # TODO: completely broken! (and unnecessary)
 @view_config(route_name='dictionary_copy', renderer='json', request_method='POST', permission='edit')
 def copy_dictionary(request):
+
     response = dict()
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')

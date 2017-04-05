@@ -2,7 +2,8 @@ __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
 from lingvodoc.views.v2.utils import (
-    create_object
+    create_object,
+    check_client_id
 )
 from lingvodoc.views.v2.delete import real_delete_entity
 from lingvodoc.models import (
@@ -35,7 +36,7 @@ from sqlalchemy import and_
 import base64
 import hashlib
 import json
-
+import os
 
 @view_config(route_name='get_entity_indict', renderer='json', request_method='GET')
 @view_config(route_name='get_entity', renderer='json', request_method='GET', permission='view')
@@ -94,9 +95,19 @@ def create_entity(request):  # tested
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
-        if 'content' not in req is None:
-            request.response.status = HTTPBadRequest.code
-            return {'error': 'Missing value: content'}
+
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
+
+        # if 'content' not in req is None:  # in link entity there is no content
+        #     request.response.status = HTTPBadRequest.code
+        #     return {'error': 'Missing value: content'}
+
         additional_metadata = req.get('additional_metadata')
         upper_level = None
         # import pdb
@@ -120,7 +131,7 @@ def create_entity(request):  # tested
                                                               object_id=req['self_object_id']).first()
             if not upper_level:
                 return {'error': str("No such upper level in the system")}
-        entity = Entity(client_id=client.id,
+        entity = Entity(client_id=client_id,
                         object_id = object_id,
                         field_client_id=req['field_client_id'],
                         field_object_id=req['field_object_id'],

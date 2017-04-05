@@ -11,7 +11,8 @@ from lingvodoc.models import (
 )
 from lingvodoc.views.v2.utils import (
     create_object,
-    get_user_by_client_id
+    get_user_by_client_id,
+    check_client_id
 )
 from lingvodoc.scripts.convert_rules import rules
 
@@ -116,12 +117,22 @@ def upload_user_blob(request):  # TODO: remove blob Object
     class Object(object):
         pass
 
+    client_id = variables['auth']
+    if request.POST.get('client_id', None):
+        if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']):
+            client_id = request.POST['client_id']
+        else:
+            request.response.status_code = HTTPBadRequest
+            return {'error': 'client_id from another user'}
+
     blob = Object()
-    blob.client_id = variables['auth']
+    blob.client_id = client_id
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
     blob.data_type = request.POST['data_type']
 
     blob.filename = filename
+
+
 
     current_user = DBSession.query(User).filter_by(id=client.user_id).first()
     object_id = request.POST.get('object_id', None)
