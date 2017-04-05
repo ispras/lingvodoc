@@ -118,7 +118,7 @@ def upload_user_blob(request):  # TODO: remove blob Object
         pass
 
     client_id = variables['auth']
-    if 'client_id' in request.POST.get('client_id', None):
+    if request.POST.get('client_id', None):
         if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']):
             client_id = request.POST['client_id']
         else:

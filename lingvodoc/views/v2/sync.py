@@ -761,7 +761,7 @@ def download_all(request):
         cookies = resp.json['server_cookies']
         # client_id = cookies['client_id']
         client_id = resp.json['client_id']
-        headers = remember(request, principal=client_id)
+        headers = remember(request, principal=client_id, max_age=315360000)
         response = Response()
         response.headers = headers
         locale_id = cookies['locale_id']

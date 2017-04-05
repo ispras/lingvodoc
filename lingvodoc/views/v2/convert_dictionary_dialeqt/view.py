@@ -69,7 +69,7 @@ def convert_dictionary(request):  # TODO: test
                 gist = DBSession.query(TranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()
-                task = TaskStatus(user_id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 4)
+                task = TaskStatus(user_id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
         except:
             request.response.status = HTTPBadRequest.code
             return {'error': "wrong parameters"}

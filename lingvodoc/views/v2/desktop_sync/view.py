@@ -39,10 +39,13 @@ def download_dictionary(request):  # TODO: test
     try:
         dictionary_obj = DBSession.query(Dictionary).filter_by(client_id=req["client_id"],
                                                                object_id=req["object_id"]).first()
-        gist = DBSession.query(TranslationGist). \
-            filter_by(client_id=dictionary_obj.translation_gist_client_id,
-                      object_id=dictionary_obj.translation_gist_object_id).first()
-        task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
+        if not dictionary_obj:
+            task = TaskStatus(user_id, "Dictionary sync with server", "dictionary name placeholder", 5)
+        else:
+            gist = DBSession.query(TranslationGist). \
+                filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                          object_id=dictionary_obj.translation_gist_object_id).first()
+            task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
     except:
         request.response.status = HTTPBadRequest.code
         return {'error': "wrong parameters"}
