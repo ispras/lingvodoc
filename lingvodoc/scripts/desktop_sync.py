@@ -39,6 +39,7 @@ from lingvodoc.models import (
     PublishingEntity
 
 )
+from lingvodoc.cache.caching import TaskStatus, initialize_cache
 
 from sqlalchemy.orm import (
     sessionmaker,
@@ -443,8 +444,13 @@ def download(
         central_server,
         storage,
         sqlalchemy_url,
-        cookies
+        cookies,
+        task_key,
+        cache_kwargs
 ):  # :(
+
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
 
     engine = create_engine(sqlalchemy_url)
     register_after_fork(engine, engine.dispose)
@@ -589,11 +595,14 @@ def download(
 
     new_objects, new_entities, publ_entities = create_objects(new_jsons, response, session)
 
+    task_status.set(2, 30, "Got objects from server", "")
     session.bulk_save_objects(new_objects)
-
+    task_status.set(3, 40, "Created objects until entities", "")
     session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session, cookies=cookies))
+    task_status.set(4, 90, "Created entities", "")
     session.bulk_save_objects(publ_entities)
     log.error('dictionary %s %s downloaded' % (client_id, object_id))
+    task_status.set(5, 100, "Finished", "")
     session.commit()
     engine.dispose()
     return
@@ -605,7 +614,9 @@ def download_dictionary(
         central_server,
         storage,
         sqlalchemy_url,
-        cookies
+        cookies,
+        task_key,
+        cache_kwargs
 ):
     download(
         client_id,
@@ -613,5 +624,7 @@ def download_dictionary(
         central_server,
         storage,
         sqlalchemy_url,
-        cookies
+        cookies,
+        task_key,
+        cache_kwargs
     )

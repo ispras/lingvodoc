@@ -164,7 +164,8 @@ def view_dictionary(request):  # tested & in docs
         response['object_id'] = dictionary.object_id
         response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
-        response['additional_metadata'] = dictionary.additional_metadata
+        if dictionary.additional_metadata:
+            response['additional_metadata'] = dictionary.additional_metadata
         response['category'] = categories.get(dictionary.category)
         response['created_at'] = dictionary.created_at
         response['domain'] = dictionary.domain

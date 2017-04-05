@@ -318,8 +318,6 @@ def new_client(request):
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
-
-
 # @view_config(route_name='test', renderer='json', request_method='GET')
 # def test(request):
 #     client = Client(user_id=1, counter = 2147483647123)

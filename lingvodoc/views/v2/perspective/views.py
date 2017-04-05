@@ -340,7 +340,10 @@ def perspectives_meta_list(request):  # tested
     for perspective in persps:
         # resp = view_perspective_from_object(request, perspective)
         resp = perspective.additional_metadata
-        resp.update({'client_id': perspective.client_id, 'object_id': perspective.object_id})
+        if resp:
+            resp.update({'client_id': perspective.client_id, 'object_id': perspective.object_id})
+        else:
+            resp = {'client_id': perspective.client_id, 'object_id': perspective.object_id}
         if 'error' not in resp:
             perspectives.append(resp)
     response = perspectives
@@ -1817,7 +1820,7 @@ def lexical_entries_not_accepted(request):
         return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET')
 def lexical_entries_published_count(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
