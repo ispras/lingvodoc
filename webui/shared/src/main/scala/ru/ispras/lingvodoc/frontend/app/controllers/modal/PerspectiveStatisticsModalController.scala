@@ -59,12 +59,7 @@ class PerspectiveStatisticsModalController(
   private[this] val perspectiveId = params("perspectiveId").asInstanceOf[CompositeId]
 
   /** Starting date/time of the statistics gathering period. */
-  private[this] var from_date_time: js.Date = new js.Date(js.Date.now())
-  
-  from_date_time.setDate(1)
-  from_date_time.setHours(0)
-  from_date_time.setMinutes(0)
-  from_date_time.setSeconds(0)
+  private[this] var from_date_time: js.Date = new js.Date(2010, 0, 1)
 
   /** Ending date/time of the statistics gathering period. */
   private[this] var to_date_time: js.Date = new js.Date(js.Date.now())
