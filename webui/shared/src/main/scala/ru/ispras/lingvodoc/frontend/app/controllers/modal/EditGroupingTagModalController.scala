@@ -289,7 +289,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
     backend.getLexicalEntry(dictionaryId, perspectiveId, lexicalEntryId) map { entry =>
       lexicalEntry = entry
     }
-    
+
     backend.getDictionaries() map { d =>
       dictionaries = d
     }
