@@ -48,9 +48,9 @@ class Elan:
         tier_data = self.eafob.tiers[id_tier][0]
         anns = ((self.eafob.timeslots[tier_data[a][0]], self.eafob.timeslots[tier_data[a][1]], a)
                 for a in tier_data)
-        sorted_words = sorted([a for a in anns if a[0] >= start and a[1] <= end],  key=lambda t: t[1] )
+        sorted_words = sorted([a for a in anns if a[0] >= start and a[1] <= end],  key=lambda time_tup: time_tup[1] )
         return [x for x in sorted_words]
-        #sorted([a[2] for a in anns if a[1] >= start and a[0] <= end],  key=lambda t: t[0] )
+        #sorted([a[2] for a in anns if a[1] >= start and a[0] <= end],  key=lambda time_tup: time_tup[0] )
 
 
     def parse(self):
@@ -100,59 +100,59 @@ class Elan:
             #else: 1st paradigm has 1 column
 
         perspectives = []
-        ans = sorted(self.eafob.get_annotation_data_for_tier("text"), key=lambda t: t[0]) # text
-        for x in ans:
+        ans = sorted(self.eafob.get_annotation_data_for_tier("text"), key=lambda time_tup: time_tup[0]) # text
+        for text_an in ans:
             next = []
             for cur_tier in ["text", "translation", "literary translation"]:
                 perspectives2 = collections.OrderedDict()
                 if cur_tier == "translation":
-                    for k in self.get_annotation_data_between_times(cur_tier, x[0], x[1]):
-                        t = (k[0], k[1])
-                        z = k[2]
-                        te = ""
-                        lt = ""
-                        try:
-                            te = res[z][0]
-                        except: pass
-                        tr = z
-                        try:
-                            lt = res[z][1]
-                        except: pass
-                        tr_text = self.word[tr]
+                    for data in self.get_annotation_data_between_times(cur_tier, text_an[0], text_an[1]):
+                        time_tup = (data[0], data[1])
+                        translation_data = data[2]
+                        text_data = ""
+                        lit_transl_data = ""
+                        if res[translation_data]:
+                            text_data = res[translation_data][0]
+                        if len(res[translation_data]) > 1:
+                            lit_transl_data = res[translation_data][1]
+                        tr_text = self.word[translation_data]
                         if type(tr_text) is str:
                             if re.search('[-.][\dA-Z]+', tr_text) and \
                                     not re.search("[-]INF", tr_text) and \
                                     not re.search("[-]SG.NOM", tr_text) and \
                                     not re.search("[-]NOM", tr_text):
                                 le_to_paradigms = []
-                                le_to_paradigms.append([Word(lt ,
-                                                             self.word[lt],
-                                                             "Word of Paradigmatic forms",
-                                                             (t[0], t[1])) ])
-                                le_to_paradigms.append([Word(te ,
-                                                             self.word[te], "text",
-                                                             (t[0], t[1])) ])
-                                le_to_paradigms.append([Word(tr ,
-                                                             self.word[tr],
-                                                             "literary translation",
-                                                             (t[0], t[1])) ])
+                                if lit_transl_data:
+                                    le_to_paradigms.append([Word(lit_transl_data ,
+                                                                 self.word[lit_transl_data],
+                                                                 "Word of Paradigmatic forms",
+                                                                 (time_tup[0], time_tup[1])) ])
+                                if text_data:
+                                    le_to_paradigms.append([Word(text_data ,
+                                                                 self.word[text_data], "text",
+                                                                 (time_tup[0], time_tup[1])) ])
+                                if translation_data:
+                                    le_to_paradigms.append([Word(translation_data ,
+                                                                 self.word[translation_data],
+                                                                 "literary translation",
+                                                                 (time_tup[0], time_tup[1])) ])
                                 perspectives.append(le_to_paradigms)
                             else:
-                                new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]]
+                                new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
                                 if new_list:
-                                    perspectives2[Word(z, self.word[z], cur_tier, (t[0], t[1]))] = new_list
+                                    perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
                         else:
-                            new_list = [Word(i, self.word[i], self.word_tier[i], (t[0], t[1])) for i in res[z]]
+                            new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
                             if new_list:
-                                perspectives2[Word(z, self.word[z], cur_tier, (t[0], t[1]))] = new_list
+                                perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
                     if perspectives2:
                         next.append(perspectives2)
                 else:
                     if cur_tier == "text":
                         next.append([Word(i[2] , self.word[i[2]], cur_tier, (i[0], i[1]))
-                                     for i in self.get_annotation_data_between_times("text", x[0], x[1])])
+                                     for i in self.get_annotation_data_between_times("text", text_an[0], text_an[1])])
                     elif cur_tier == "literary translation":
-                        for i in self.get_annotation_data_between_times("text", x[0], x[1]):
+                        for i in self.get_annotation_data_between_times("text", text_an[0], text_an[1]):
                             if i[2] in self.result:
                                 for j in self.result[i[2]]:
                                     next.append([Word(j , self.word[j], cur_tier, (i[0], i[1])) ]) #time from text
