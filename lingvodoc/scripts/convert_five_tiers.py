@@ -313,6 +313,9 @@ def convert_five_tiers(
         except Warning as e:
             no_sound = True
     if not no_sound:
+        sound_format = "wav"
+        if ".mp3" in sound_url:
+            sound_format = "mp3"
         with tempfile.NamedTemporaryFile() as temp:
             try:
                sound_file = request.urlopen(sound_url)
@@ -320,7 +323,10 @@ def convert_five_tiers(
                 return {'error': str(e.read().decode("utf8", 'ignore'))}
             with open(temp.name,'wb') as output:
                 output.write(sound_file.read())
-            full_audio = AudioSegment.from_wav(temp.name)
+            if sound_format == "wav":
+                full_audio = AudioSegment.from_wav(temp.name)
+            elif sound_format == "mp3":
+                full_audio = AudioSegment.from_mp3(temp.name)
             temp.flush()
 
     field_ids = {}
@@ -680,7 +686,7 @@ def convert_five_tiers(
             if not no_sound:
                 if word.time[1] < len(full_audio):
                     with tempfile.NamedTemporaryFile() as temp:
-                        full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
+                        full_audio[ word.time[0]: word.time[1]].export(temp.name, format=sound_format)
                         audio_slice = temp.read()
                         if max_sim:
                             hash = hashlib.sha224(audio_slice).hexdigest()
@@ -801,7 +807,7 @@ def convert_five_tiers(
                 if not no_sound:
                     if word.time[1] < len(full_audio):
                         with tempfile.NamedTemporaryFile() as temp:
-                            full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
+                            full_audio[ word.time[0]: word.time[1]].export(temp.name, format=sound_format)
                             audio_slice = temp.read()
                             hash = hashlib.sha224(audio_slice).hexdigest()
                             common_name = word.index
