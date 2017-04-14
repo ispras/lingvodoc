@@ -351,6 +351,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
         // load dictionary list
         val query = DictionaryQuery()
         query.author = Some(user.id)
+        query.corpora = Some(false)
         backend.getDictionariesWithPerspectives(query) map {
           dictionaries => scope.dictionaries = dictionaries.toJSArray
             dictionaries
