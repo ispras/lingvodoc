@@ -18,7 +18,6 @@ PG_CTL = "%s\\PostgreSQLPortable_9.6.1\\App\\PgSQL\\bin\\pg_ctl.exe" % cur_path
 CHROME_PATH = "%s\\ChromiumPortable\\App\\Chromium\\32\\chrome.exe" % cur_path
 LINGVODOC_PATH = "%s\\PostgreSQLPortable_9.6.1\\lingvodoc.py" % cur_path
 
-
 def get_env():
     venv = os.environ.copy()
     venv["PATH"] = "%s\\PostgreSQLPortable_9.6.1\\App\\PgSQL\\bin;%s" % (cur_path, venv["PATH"])
@@ -57,6 +56,7 @@ def main():
     app = QApplication(sys.argv)
     processes = list()
     try:
+        # sys.path.append("%s\\new_ffmpeg" % cur_path)
         # postgres_backup = "%s\\postgres_data_backup" % cur_path
         restore_lock = "%s\\restore_fail" % cur_path
         restore_fail = False
@@ -84,7 +84,11 @@ def main():
         # proc_2.wait()
         # proc_2.terminate()
         sleep(5)
-        proc_3 = Popen([python, pserve, development])
+        my_env = os.environ.copy()
+        # my_env["PATH"] = my_env["PATH"] + "; %s\\ffmpeg-3.2.4-win32-static\\bin" % cur_path
+        my_env["PATH"] = my_env["PATH"] + ";D:\\projects\\Lingvodoc-desktop\\new_ffmpeg\\bin"
+        message('title', my_env["PATH"])
+        proc_3 = Popen([python, pserve, development], env=my_env)
         sleep(1)
         proc_4 = Popen([memcached], creationflags=DETACHED_PROCESS)
         # sleep(1)
