@@ -268,6 +268,7 @@ class ConvertEafController(scope: ConvertEafScope,
     backend.getCurrentUser map { user =>
       val query = DictionaryQuery()
       query.author = Some(user.id)
+      query.corpora = Some(false)
       backend.getDictionaries(query) map { dictionaries =>
         allDictionaries = dictionaries
       }
