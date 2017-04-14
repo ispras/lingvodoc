@@ -71,6 +71,8 @@ object DesktopApplication {
       .controller[DownloadEmbeddedBlobController]
       .controller[MessageController]
       .controller[UserProfileController]
+      .controller[PerspectiveStatisticsModalController]
+      .controller[DictionaryStatisticsModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

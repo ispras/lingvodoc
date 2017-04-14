@@ -87,7 +87,6 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js",
       ProvidedJS / "chroma.min.js"
-
     ),
     relativeSourceMaps := true,
     skip in packageJSDependencies := false,

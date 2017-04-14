@@ -28,7 +28,7 @@ trait EditPerspectiveRolesModalScope extends Scope {
 
 @injectable("EditPerspectiveRolesModalController")
 class EditPerspectiveRolesModalController(scope: EditPerspectiveRolesModalScope,
-                                          modal: ModalService,
+                                          val modal: ModalService,
                                           instance: ModalInstance[Unit],
                                           backend: BackendService,
                                           timeout: Timeout,

@@ -20,7 +20,7 @@ trait MessageScope extends Scope {
 
 @injectable("MessageController")
 class MessageController(scope: MessageScope,
-                        modal: ModalService,
+                        val modal: ModalService,
                         instance: ModalInstance[Unit],
                         backend: BackendService,
                         timeout: Timeout,

@@ -46,8 +46,16 @@
                 <a class="btn btn-default" ng-href='{{controller.getActionLink("merge")}}' disabled>Merge suggestions</a>
             </div>
 
-            <div class="btn-group" role="group" aria-label="phonology">
-                <button type="button" class="btn btn-default" ng-click="controller.phonology()">Phonology</button>
+            <div class="btn-group" role="group" aria-label="tools">
+                <div class="dropdown">
+                    <button class="dropdown-toggle" data-toggle="dropdown">
+                        Tools<span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="" ng-click="controller.phonology()">Phonology</a></li>
+                        <li><a href="" ng-click="controller.statistics()">Statistics</a></li>
+                    </ul>
+                </div>
             </div>
 
         </div>

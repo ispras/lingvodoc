@@ -29,13 +29,13 @@ trait CreateLanguageScope extends Scope {
 
 @injectable("CreateLanguageController")
 class CreateLanguageController(scope: CreateLanguageScope,
-                               modalService: ModalService,
-                               modalInstance: ModalInstance[Language],
+                               val modal: ModalService,
+                               instance: ModalInstance[Language],
                                backend: BackendService,
                                timeout: Timeout,
                                val exceptionHandler: ExceptionHandler,
                                params: js.Dictionary[js.Function0[js.Any]])
-  extends BaseModalController[CreateLanguageScope, Language](scope, modalService, modalInstance, timeout, params)
+  extends BaseModalController[CreateLanguageScope, Language](scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
     with LanguageEdit {
 
@@ -130,17 +130,17 @@ class CreateLanguageController(scope: CreateLanguageScope,
           if (needUpdate) {
             if (selectedParentLanguage.nonEmpty) {
               backend.updateLanguage(CompositeId.fromObject(lang), selectedParentLanguage, Option.empty[CompositeId]) map { _ =>
-                modalInstance.close(lang)
+                instance.close(lang)
               } recover { case e: Throwable =>
                 console.error(e.getMessage)
-                modalInstance.dismiss(())
+                instance.dismiss(())
               }
             } else {
               console.error("Removing parent language is not supported at the moment!")
-              modalInstance.dismiss(())
+              instance.dismiss(())
             }
           } else {
-            modalInstance.dismiss(())
+            instance.dismiss(())
           }
         }
 
@@ -149,20 +149,20 @@ class CreateLanguageController(scope: CreateLanguageScope,
         if (!scope.names.forall(_.str.isEmpty)) {
           backend.createLanguage(scope.names.filterNot(_.str.isEmpty), parentLanguage) onComplete {
             case Success(langId) =>
-              backend.getLanguage(langId) map { language => modalInstance.close(language) }
+              backend.getLanguage(langId) map { language => instance.close(language) }
             case Failure(e) =>
               console.error(e.getMessage)
-              modalInstance.dismiss(())
+              instance.dismiss(())
           }
         } else {
-          modalInstance.dismiss(())
+          instance.dismiss(())
         }
     }
   }
 
   @JSExport
   def cancel(): Unit = {
-    modalInstance.dismiss(())
+    instance.dismiss(())
   }
 
 

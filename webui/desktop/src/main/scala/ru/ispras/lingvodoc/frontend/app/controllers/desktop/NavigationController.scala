@@ -19,6 +19,7 @@ trait NavigationScope extends Scope {
   var locales: js.Array[Locale] = js.native
   var selectedLocale: Locale = js.native
   var syncEnabled: Boolean = js.native
+  var tasks: js.Array[Task] = js.native
 }
 
 @JSExport
@@ -109,6 +110,13 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
     }
   })
 
+  private[this] def loadTasks(): Unit = {
+    backend.tasks map { tasks =>
+      scope.tasks = tasks.sortBy(_.taskFamily).toJSArray
+    }
+    timeout(loadTasks _, 10000)
+  }
+
   // initial
   backend.getLocales onComplete {
     case Success(locales) =>
@@ -118,5 +126,7 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
       }.getOrElse(locales.head)
     case Failure(e) => console.log(e.getMessage)
   }
+
+  loadTasks()
 }
 

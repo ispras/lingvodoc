@@ -280,6 +280,52 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
     }
   }
 
+  /** Opens dictionary statistics page. */
+  @JSExport
+  def dictionaryStatistics(dictionary: Dictionary): Unit =
+  {
+    val options = ModalOptions()
+
+    options.templateUrl = "/static/templates/modal/dictionaryStatistics.html"
+    options.controller = "DictionaryStatisticsModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionaryId = CompositeId(dictionary.clientId, dictionary.objectId).asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    modal.open[Unit](options)
+  }
+
+  /** Opens perspective statistics page. */
+  @JSExport
+  def perspectiveStatistics(perspective: Perspective): Unit =
+  {
+    val options = ModalOptions()
+
+    options.templateUrl = "/static/templates/modal/perspectiveStatistics.html"
+    options.controller = "PerspectiveStatisticsModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          perspectiveId = CompositeId(perspective.clientId, perspective.objectId).asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    modal.open[Unit](options)
+  }
+
 
   override protected def onLoaded[T](result: T): Unit = {
   }
