@@ -71,6 +71,14 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
   }
 
   @JSExport
+  def removeTask(task: Task): Unit = {
+    backend.removeTask(task) map { _ =>
+      scope.tasks = scope.tasks.filterNot(_.id == task.id)
+    }
+  }
+
+
+  @JSExport
   def sync() = {
     global.alert("Пока не закончится процесс синхронизации, система работает в режиме 'только чтение'")
     scope.syncEnabled = false
