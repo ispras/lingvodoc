@@ -56,7 +56,6 @@ def main():
     app = QApplication(sys.argv)
     processes = list()
     try:
-        # sys.path.append("%s\\new_ffmpeg" % cur_path)
         # postgres_backup = "%s\\postgres_data_backup" % cur_path
         restore_lock = "%s\\restore_fail" % cur_path
         restore_fail = False
@@ -66,7 +65,7 @@ def main():
         if restore_fail:
             message('Failure', 'Try running update again. If this repeats - contact developers')
             sys.exit(-1)
-        python = cur_path + "\\env86\\python-3.4.4\\python.exe"
+        python = cur_path + "\\env86\\python-3.4.4\\pythonw.exe"
         pserve = cur_path + "\\env86\\python-3.4.4\\Scripts\\pserve.exe"
         memcached = cur_path + "\\new_memcached\\memcached.exe"
         development = cur_path + "\\lingvodoc_desktop.ini"
@@ -85,13 +84,13 @@ def main():
         # proc_2.terminate()
         sleep(5)
         my_env = os.environ.copy()
-        # my_env["PATH"] = my_env["PATH"] + "; %s\\ffmpeg-3.2.4-win32-static\\bin" % cur_path
-        my_env["PATH"] = my_env["PATH"] + ";D:\\projects\\Lingvodoc-desktop\\new_ffmpeg\\bin"
-        message('title', my_env["PATH"])
-        proc_3 = Popen([python, pserve, development], env=my_env)
+        my_env["PATH"] = my_env["PATH"] + ";%s\\new_ffmpeg\\bin" % cur_path
+        # my_env["PATH"] = my_env["PATH"] + ";D:\\projects\\Lingvodoc-desktop\\new_ffmpeg\\bin"
+        # message('title', my_env["PATH"])
+        proc_3 = Popen([python, pserve, development], env=my_env, creationflags=DETACHED_PROCESS)
         sleep(1)
         proc_4 = Popen([memcached], creationflags=DETACHED_PROCESS)
-        # sleep(1)
+        sleep(1)
         proc_1 = Popen(args=[CHROME_PATH, "http://localhost:6543/"])
         # processes = (proc_1, proc_2, proc_3)  # (proc_1, proc_2, proc_3)
         processes = (proc_1, proc_2, proc_3, proc_4)  # (proc_1, proc_2, proc_3)
