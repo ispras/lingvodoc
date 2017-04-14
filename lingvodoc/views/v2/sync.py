@@ -739,7 +739,7 @@ def download_all(request):
     client_id = request.authenticated_userid
     user_id = Client.get_user_by_client_id(client_id).id
 
-    task = TaskStatus(user_id, "Dialeqt dictionary conversion", '', 16)
+    task = TaskStatus(user_id, "Synchronisation with server", '', 16)
     task.set(1, 10, "Started", "")
     path = request.route_url('check_version')
     subreq = Request.blank(path)
