@@ -398,6 +398,10 @@ class Example(QWidget):
             if self.workerLoop(connection_string, '123432', 'memcached', 'https://'):
                 return
 
+            connection_string = "https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-3.2.4-win32-static.zip"
+
+            if self.workerLoop(connection_string, '3.2.4', 'ffmpeg', 'https://'):
+                return
 
             new_source = cur_path + "\\new_source"
 
@@ -506,3 +510,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = Example()
     sys.exit(app.exec_())
+

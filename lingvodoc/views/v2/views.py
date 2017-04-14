@@ -230,8 +230,7 @@ def corpora_fields(request):
     markup_field = data_type_query.filter(TranslationAtom.locale_id == 2,
                                           TranslationAtom.content == 'Markup').one()
     comment_field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                              TranslationAtom.content == 'Comment').one()
-
+                                            TranslationAtom.content == 'Comment').one()
     response.append(view_field_from_object(request=request, field=sound_field))
     response[0]['contains'] = [view_field_from_object(request=request, field=markup_field)]
     response.append(view_field_from_object(request=request, field=markup_field))
