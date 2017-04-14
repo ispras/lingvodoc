@@ -72,6 +72,7 @@ real_delete_perspective
 )
 import urllib
 from pdb import set_trace
+from lingvodoc.cache.caching import TaskStatus
 
 log = logging.getLogger(__name__)
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
@@ -394,15 +395,19 @@ def diff_desk(request):
     existing = [row2dict(entry) for entry in DBSession.query(ObjectTOC)]
     central_server = settings['desktop']['central_server']
     path = central_server + 'sync/difference/server'
+    # task_key = None
+    req = request.json_body
+    task_key = req['task_key']
+    task_status = TaskStatus.get_from_cache(task_key)
 
     #todo: make request to server with existing objecttocs. server will return objecttocs for deletion
     #todo: delete deleted objects
 
     cookies = json.loads(request.cookies.get('server_cookies'))
-    log.error('before recieving list for uploading in diff_desk')
     server = make_request(path, cookies, 'post', existing).json()
-    log.error('before recieving list for deletion in diff_desk')
+    task_status.set(3, 20, "Recieved list of objects for uploading", "")
     for_deletion = make_request(central_server + 'sync/delete/server', cookies, 'post', existing)
+    task_status.set(4, 25, "Recieved list of objects for deleting", "")
     language = list()
     dictionary = list()
     perspective = list()
@@ -436,17 +441,14 @@ def diff_desk(request):
             field.append(entry)
     # todo: batches
     log.error('before uploading in diff_desk')
-    counter = 0
+
     groups = list()
     for group in DBSession.query(Group).all():
-        print(counter)
-        counter += 1
         groups.append(group.id)
 
     path = central_server + 'sync/difference/server/group'
     upload_groups = make_request(path, cookies, 'post', groups)
     upload_groups = upload_groups.json()
-
 
     for entry in upload_groups:
         group = DBSession.query(Group).filter_by(id=entry).first()
@@ -458,7 +460,10 @@ def diff_desk(request):
             if status.status_code != 200:
                 request.response.status = HTTPInternalServerError.code
                 return {'error': str("internet error 1")}
-    print(translationgist)
+
+    task_status.set(5, 30, "Uploaded groups", "")
+
+
     for entry in translationgist:
         desk_gist = DBSession.query(TranslationGist).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
@@ -467,6 +472,7 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 2")}
+
     for entry in translationatom:
         desk_atom = DBSession.query(TranslationAtom).filter_by(client_id=entry['client_id'],
                                                                object_id=entry['object_id']).one()
@@ -475,6 +481,9 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 3")}
+
+    task_status.set(6, 35, "Uploaded translations", "")
+
     for entry in language:
         desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).one()
@@ -483,6 +492,10 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 4")}
+
+    task_status.set(7, 40, "Uploaded languages", "")
+
+
     for entry in dictionary:
         desk_dict = DBSession.query(Dictionary).filter_by(client_id=entry['client_id'],
                                                           object_id=entry['object_id']).one()
@@ -493,6 +506,8 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 5")}
+    task_status.set(8, 45, "Uploaded dictionaries", "")
+
     for entry in perspective:
         desk_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=entry['client_id'],
                                                                       object_id=entry['object_id']).one()
@@ -502,6 +517,8 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 6")}
+    task_status.set(9, 50, "Uploaded perspectives", "")
+
     for entry in field:
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -510,6 +527,7 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 7")}
+
     # set_trace()
     for entry in dictionaryperspectivetofield:
         desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
@@ -524,6 +542,8 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 8")}
+    task_status.set(10, 55, "Uploaded fields", "")
+
     for entry in lexicalentry:
         desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -536,6 +556,8 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 9")}
+    task_status.set(11, 65, "Uploaded lexical entries", "")
+
     grouping_tags = dict()
     for entry in entity:
         do_not_add = False
@@ -602,6 +624,7 @@ def diff_desk(request):
                     error_happened = True
                     # request.response.status = HTTPInternalServerError.code
                     # return {'error': str("internet error 11")}
+    task_status.set(12, 80, "Uploaded entities", "")
     for entry in grouping_tags:
         path = central_server + 'group_entity/bulk'
         req = grouping_tags[entry]
@@ -612,6 +635,7 @@ def diff_desk(request):
             return {'error': str("internet error 42")}
         client.counter = status.json()['counter']
         DBSession.flush()
+    task_status.set(13, 80, "Uploaded etymology", "")
     for entry in userblobs:
         desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
                                                          object_id=entry['object_id']).one()
@@ -623,6 +647,7 @@ def diff_desk(request):
         if status.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': str("internet error 12")}
+    task_status.set(14, 85, "Uploaded userblobs", "")
 
     log.error('before deletion in diff_desk')
     language = list()
@@ -692,6 +717,7 @@ def diff_desk(request):
     if error_happened:
         request.response.status = HTTPInternalServerError.code
         return {'error': str("internet error 43")}
+    # task_status.set(15, 85, "Deletion complete", "")
 
     return
 
@@ -703,11 +729,18 @@ def download_all(request):
     from pyramid.request import Request
     print('locking client')
     log.error('locking client')
+
     DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     if not client:
         request.response.status = HTTPNotFound.code
         return {'error': str("Try to login again")}
+
+    client_id = request.authenticated_userid
+    user_id = Client.get_user_by_client_id(client_id).id
+
+    task = TaskStatus(user_id, "Synchronisation with server", '', 16)
+    task.set(1, 10, "Started", "")
     path = request.route_url('check_version')
     subreq = Request.blank(path)
     subreq.method = 'GET'
@@ -725,17 +758,20 @@ def download_all(request):
     if resp.status_code != 200:
         request.response.status = HTTPInternalServerError.code
         return {'error': 'network error 2'}
+    task.set(2, 15, "Basic synchronisation completed", "")
 
     path = request.route_url('diff_desk')
     subreq = Request.blank(path)
     subreq.method = 'POST'
     subreq.headers = request.headers
+    subreq.json = {'task_key': task.key}
     log.error('before diff_desk')
     resp = request.invoke_subrequest(subreq)
     log.error('after diff_desk')
     if resp.status_code != 200:
         request.response.status = HTTPInternalServerError.code
         return {'error': 'network error 3'}
+    task.set(15, 95, "All data uploaded to server", "")
 
     for dict_obj in DBSession.query(Dictionary).all():
         path = request.route_url('download_dictionary')
@@ -779,6 +815,7 @@ def download_all(request):
         if resp.status_code != 200:
             request.response.status = HTTPInternalServerError.code
             return {'error': 'network error 2'}
+        task.set(16, 100, "Synchronisation complete (New data still can be downloading from server, look a other tasks)", "")
 
         request.response.status = HTTPOk.code
 
