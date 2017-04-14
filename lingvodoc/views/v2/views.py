@@ -223,16 +223,19 @@ def corpora_fields(request):
     data_type_query = DBSession.query(Field) \
         .join(TranslationGist,
               and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                   Field.translation_gist_client_id == TranslationGist.client_id))\
+                   Field.translation_gist_client_id == TranslationGist.client_id)) \
         .join(TranslationGist.translationatom)
     sound_field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                         TranslationAtom.content == 'Sound').one() # todo: a way to find this fields if wwe cannot use one
+                                         TranslationAtom.content == 'Sound').one()  # todo: a way to find this fields if wwe cannot use one
     markup_field = data_type_query.filter(TranslationAtom.locale_id == 2,
                                           TranslationAtom.content == 'Markup').one()
+    comment_field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                              TranslationAtom.content == 'Comment').one()
 
-    response.append(view_field_from_object(request=request, field = sound_field))
-    response[0]['contains'] = [view_field_from_object(request=request, field = markup_field)]
-    response.append(view_field_from_object(request=request, field = markup_field))
+    response.append(view_field_from_object(request=request, field=sound_field))
+    response[0]['contains'] = [view_field_from_object(request=request, field=markup_field)]
+    response.append(view_field_from_object(request=request, field=markup_field))
+    response.append(view_field_from_object(request=request, field=comment_field))
     request.response.status = HTTPOk.code
     return response
 
