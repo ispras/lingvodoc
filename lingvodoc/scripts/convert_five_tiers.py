@@ -929,25 +929,61 @@ def convert_five_tiers(
         task_status.set(9, 90, "Uploading translations with marks")
 
         noms = []  # words with NOM/INF mark
+        conjs = []
         for t in lexes_with_text:
             t_fids = (t[2].field.client_id, t[2].field.object_id)
             if field_ids["Translation"] == t_fids:
                 translation_text = t[2].content
                 if re.search("[-]NOM|[-]INF|[-]SG.NOM", translation_text):
                     noms.append(t)
+                if re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", translation_text):
+                    conjs.append(t)
         for t in p_lexes_with_text:
             t_fids = (t[2].field.client_id, t[2].field.object_id)
             if field_ids["Translation of Paradigmatic forms"] == t_fids:
                 translation_text = t[2].content
-                if "-" in translation_text:
-                    create_le_flag = True
+                tag = re.search('[1-3][Dd][Uu][-.][\dA-Za-z]+|[1-3][Pp][Ll][-.][\dA-Za-z]+|[1-3][Ss][Gg][-.][\dA-Za-z]+', translation_text)
+                if tag:
+                    tag_name = tag.group(0)[:3]
+                    for conj in conjs:
+                        if tag_name == conj[2].content:
+                            sp_le_ids = (t[1].client_id, t[1].object_id)
+                            fp_le_ids = (conj[1].client_id, conj[1].object_id)
+                            if not (sp_le_ids, fp_le_ids) in links:
+                                create_entity(t[1].client_id,
+                                              t[1].object_id,
+                                              field_ids["Backref"][0],
+                                              field_ids["Backref"][1],
+                                              None,
+                                              client,
+                                              filename=None,
+                                              link_client_id=conj[1].client_id,
+                                              link_object_id=conj[1].object_id,
+                                              storage=storage,
+                                              locale_id=locale_id)
+
+                            if not (fp_le_ids, sp_le_ids) in links:
+                                create_entity(conj[1].client_id,
+                                              conj[1].object_id,
+                                              field_ids["Backref"][0],
+                                              field_ids["Backref"][1],
+                                              None,
+                                              client,
+                                              filename=None,
+                                              link_client_id=t[1].client_id,
+                                              link_object_id=t[1].object_id,
+                                              storage=storage,
+                                              locale_id=locale_id)
+                            break
+                else:
+                    create_le_flag = None
                     for x in noms:
+                        create_le_flag = False
                         reg = re.search('[-.][\dA-Z]+', t[2].content)
                         if reg:
                             mark_w_text = reg.start()
                             nom_clean_text = re.search('[-.][\dA-Z]+', x[2].content).start()
                             if x[2].content[:nom_clean_text] == t[2].content[:mark_w_text]:
-                                create_le_flag = False
                                 sp_le_ids = (t[1].client_id, t[1].object_id)
                                 fp_le_ids = (x[1].client_id, x[1].object_id)
                                 if not (sp_le_ids, fp_le_ids) in links:
@@ -975,6 +1011,8 @@ def convert_five_tiers(
                                                   link_object_id=t[1].object_id,
                                                   storage=storage,
                                                   locale_id=locale_id)
+                            else:
+                                create_le_flag = True
                     if create_le_flag:
                         before_dash = re.search("(.*?)-", translation_text)
                         if before_dash:
@@ -1049,7 +1087,6 @@ def convert_five_tiers(
                                               link_object_id=t[1].object_id,
                                               storage=storage,
                                               locale_id=locale_id)
-
     task_status.set(10, 100, "Finished", "")
 
 

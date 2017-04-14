@@ -120,7 +120,9 @@ class Elan:
                             if re.search('[-.][\dA-Z]+', tr_text) and \
                                     not re.search("[-]INF", tr_text) and \
                                     not re.search("[-]SG.NOM", tr_text) and \
-                                    not re.search("[-]NOM", tr_text):
+                                    not re.search("[-]NOM", tr_text) and \
+                                    not re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text) or\
+                                    re.search("[1-3][Dd][Uu][-.][\dA-Za-z]+|[1-3][Pp][Ll][-.][\dA-Za-z]+|[1-3][Ss][Gg][-.][\dA-Za-z]+", tr_text):
                                 le_to_paradigms = []
                                 if lit_transl_data:
                                     le_to_paradigms.append([Word(lit_transl_data ,
