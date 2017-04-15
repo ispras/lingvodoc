@@ -985,6 +985,7 @@ def convert_five_tiers(
                                 create_le_flag = False
                                 break
                     else:
+                        create_le_flag = True
                         for x in noms:
                             create_le_flag = False
                             reg = re.search('[-.][\dA-Z]+', t[2].content)
@@ -1024,6 +1025,7 @@ def convert_five_tiers(
                                 else:
                                     create_le_flag = True
                 else:
+                    create_le_flag = True
                     for x in noms:
                         create_le_flag = False
                         reg = re.search('[-.][\dA-Z]+', t[2].content)
