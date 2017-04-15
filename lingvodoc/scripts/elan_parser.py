@@ -159,11 +159,12 @@ class Elan:
                                                                      (time_tup[0], time_tup[1])) ])
                                     perspectives.append(le_to_paradigms)
                                 old_text = self.word[translation_data]
-                                before_dash = re.search("(.*?)[.-]", old_text)
-                                pure_text = old_text[:before_dash.end() - 1]
-                                new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
-                                if new_list:
-                                    perspectives2[Word(translation_data, pure_text, cur_tier, (time_tup[0], time_tup[1]))] = new_list
+                                before_dash_reg = re.search('[-.][\dA-Z]+', old_text)
+                                if before_dash_reg:
+                                    pure_text = old_text[:before_dash_reg.start()]
+                                    new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
+                                    if new_list:
+                                        perspectives2[Word(translation_data, pure_text, cur_tier, (time_tup[0], time_tup[1]))] = new_list
                             else:
                                 new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
                                 if new_list:
