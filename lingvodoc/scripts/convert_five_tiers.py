@@ -946,7 +946,13 @@ def convert_five_tiers(
                 create_le_flag = None
                 if tag:
                     tag_name = tag.group(0)
-                    if translation_text == tag.group(0):
+                    long_tag = re.search('[1-3][Dd][Uu][-.][\dA-Za-z]+|[1-3][Pp][Ll][-.][\dA-Za-z]+|[1-3][Ss][Gg][-.][\dA-Za-z]+', translation_text)
+                    long_tag_name = None
+                    if long_tag:
+                        if long_tag.group(0) == translation_text:
+                            long_tag_name = long_tag.group(0)
+
+                    if translation_text == tag_name or translation_text == long_tag_name:
                         for conj in conjs:
                             if tag_name == conj[2].content:
                                 sp_le_ids = (t[1].client_id, t[1].object_id)
@@ -976,6 +982,7 @@ def convert_five_tiers(
                                                   link_object_id=t[1].object_id,
                                                   storage=storage,
                                                   locale_id=locale_id)
+                                create_le_flag = False
                                 break
                     else:
                         for x in noms:
@@ -1012,6 +1019,8 @@ def convert_five_tiers(
                                                       link_object_id=t[1].object_id,
                                                       storage=storage,
                                                       locale_id=locale_id)
+                                    create_le_flag = False
+                                    break
                                 else:
                                     create_le_flag = True
                 else:
@@ -1049,9 +1058,60 @@ def convert_five_tiers(
                                                   link_object_id=t[1].object_id,
                                                   storage=storage,
                                                   locale_id=locale_id)
+                                create_le_flag = False
+                                break
                             else:
                                 create_le_flag = True
                 if create_le_flag:
+                    x = t
+                    for t in lexes_with_text:
+                        t_fids = (t[2].field.client_id, t[2].field.object_id)
+                        if field_ids["Translation"] == t_fids:
+                            if re.search('[-.][\dA-Z]+', translation_text):
+                                before_dash = translation_text[:re.search('[-.][\dA-Z]+', translation_text).start()]
+                                if before_dash:
+                                    if before_dash == t[2].content:
+                                        first_line = set([i[2].content for i in lexes_with_text if i[1] == t[1]]) # le line
+                                        second_line = set() # par line
+                                        for i in p_lexes_with_text:
+
+                                            if i[1] == x[1]:
+                                                txt = i[2].content
+                                                mark = re.search('[-.][\dA-Z]+', txt)
+                                                if mark:
+                                                    before_dash = txt[:mark.start()]
+                                                    txt = before_dash
+                                                second_line.add(txt)
+                                        if len(first_line.intersection(second_line)) >= 2:
+                                            fp_le_ids = (x[1].client_id, x[1].object_id)
+                                            sp_le_ids = (t[1].client_id, t[1].object_id)
+                                            if not (sp_le_ids, fp_le_ids) in links:
+                                                create_entity(t[1].client_id,
+                                                              t[1].object_id,
+                                                              field_ids["Backref"][0],
+                                                              field_ids["Backref"][1],
+                                                              None,
+                                                              client,
+                                                              filename=None,
+                                                              link_client_id=x[1].client_id,
+                                                              link_object_id=x[1].object_id,
+                                                              storage=storage,
+                                                              locale_id=locale_id)
+
+                                            if not (fp_le_ids, sp_le_ids) in links:
+                                                create_entity(x[1].client_id,
+                                                              x[1].object_id,
+                                                              field_ids["Backref"][0],
+                                                              field_ids["Backref"][1],
+                                                              None,
+                                                              client,
+                                                              filename=None,
+                                                              link_client_id=t[1].client_id,
+                                                              link_object_id=t[1].object_id,
+                                                              storage=storage,
+                                                              locale_id=locale_id)
+
+                    """
                     before_dash = re.search("(.*?)[.-]", translation_text)
                     if before_dash:
                         translation_text = translation_text[:before_dash.end() - 1]
@@ -1125,6 +1185,7 @@ def convert_five_tiers(
                                           link_object_id=t[1].object_id,
                                           storage=storage,
                                           locale_id=locale_id)
+                    """
     task_status.set(10, 100, "Finished", "")
 
 
