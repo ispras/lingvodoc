@@ -124,7 +124,7 @@ class Elan:
                                 tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
                                 if tag:
                                     text_without_tag = tr_text.replace(tag.group(0), "")
-                                    if re.search('[-.][\dA-Z]+', text_without_tag):
+                                    if len(text_without_tag) > 0:
                                         le_to_paradigms = []
                                         if lit_transl_data:
                                             le_to_paradigms.append([Word(lit_transl_data ,
