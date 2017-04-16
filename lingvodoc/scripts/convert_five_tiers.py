@@ -1052,9 +1052,9 @@ def convert_five_tiers(
                             else:
                                 create_le_flag = True
                 if create_le_flag:
-                    before_dash = re.search("(.*?)[.-]", translation_text)
+                    before_dash = re.search('[-.][\dA-Z]+', translation_text)
                     if before_dash:
-                        translation_text = translation_text[:before_dash.end() - 1]
+                        translation_text = translation_text[:before_dash.start()]
                     lexentr = LexicalEntry(client_id=client.id,
                                            parent_object_id=first_perspective_object_id, parent=first_perspective)
                     DBSession.add(lexentr)
@@ -1083,9 +1083,9 @@ def convert_five_tiers(
                                     and entity_tuple[1].object_id == t[1].object_id:
                                 transcription_text = entity_tuple[2].content
                     if transcription_text:
-                        before_dash = re.search("(.*?)-", transcription_text)
+                        before_dash = re.search('[-.][\dA-Z]+', translation_text)
                         if before_dash:
-                            transcription_text = transcription_text[:before_dash.end()]
+                            transcription_text = translation_text[:before_dash.start()]
                         create_entity(new_fp_lexical_entry_client_id,
                                       new_fp_lexical_entry_object_id,
                                       field_ids["Transcription"][0],
