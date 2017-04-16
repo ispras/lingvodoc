@@ -924,7 +924,7 @@ def convert_five_tiers(
                                    LexicalEntry.client_id==Entity.parent_client_id))
         lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
                            (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
-        p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text" and
+        p_lexes_with_text_after_update = [x for x in p_lexes if x[2].field.data_type == "Text" and
                            (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         task_status.set(9, 90, "Uploading translations with marks")
 
@@ -940,7 +940,9 @@ def convert_five_tiers(
                     noms.append(t)
                 if re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", translation_text):
                     conjs.append(t)
-        for t in p_lexes_with_text:
+        for t in p_lexes_with_text_after_update:
+            if t in p_lexes_with_text:
+                continue
             t_fids = (t[2].field.client_id, t[2].field.object_id)
             if field_ids["Translation of Paradigmatic forms"] == t_fids:
                 translation_text = t[2].content
