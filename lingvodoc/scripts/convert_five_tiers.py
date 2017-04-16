@@ -949,7 +949,7 @@ def convert_five_tiers(
                 if tag:
                     create_le_flag = False
                     tag_name = tag.group(0)
-                    if translation_text == tag.group(0):
+                    if translation_text[:3] == tag.group(0):
                         for conj in conjs:
                             if tag_name == conj[2].content:
                                 sp_le_ids = (t[1].client_id, t[1].object_id)
