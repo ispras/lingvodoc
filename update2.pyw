@@ -34,6 +34,7 @@ DETACHED_PROCESS = 8
 
 DELAY = 2
 CUR_PATH = os.path.abspath(os.path.dirname(__file__))
+updater_path = CUR_PATH + "\\updater"
 PG_DATA = "%s\\PostgreSQLPortable_9.6.1\\Data\\data" % CUR_PATH
 PG_CTL = "%s\\PostgreSQLPortable_9.6.1\\App\\PgSQL\\bin\\pg_ctl.exe" % CUR_PATH
 CHROME_PATH = "%s\\ChromiumPortable\\App\\Chromium\\32\\chrome.exe" % CUR_PATH
@@ -80,9 +81,9 @@ def remove(src):
 
 
 def backup_control(filename):
-    if os.path.exists('new_source\\%s' % filename):
-        shutil.copy2(filename, 'backup_control\\%s' % filename)
-        shutil.copy2('new_source\\%s' % filename, filename)
+    if os.path.exists('source\\%s' % filename):
+        shutil.copy2(filename, '%s\\backup_control\\%s' % (updater_path, filename))
+        shutil.copy2('source\\%s' % filename, filename)
 
 
 class Example(QWidget):
@@ -148,8 +149,8 @@ class Example(QWidget):
         info = STARTUPINFO()
         info.dwFlags = STARTF_USESHOWWINDOW
         info.wShowWindow = SW_HIDE
-        postgres_backup = "%s\\postgres_data_backup" % CUR_PATH
-        restore_lock = "%s\\restore_fail" % CUR_PATH
+        postgres_backup = "%s\\postgres_data_backup" % updater_path
+        restore_lock = "%s\\restore_fail" % updater_path
         restore_fail = False
         processes = []
         try:
@@ -172,7 +173,7 @@ class Example(QWidget):
             processes.append(proc)
             self.progress.setValue(75)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
-            tag_path = "%s\\new_tag" % CUR_PATH
+            tag_path = "%s\\new_tag" % updater_path
             if os.path.exists(tag_path):
                 with open(tag_path, 'r') as tag_file:
                     try:
@@ -227,7 +228,7 @@ class Example(QWidget):
             box = QMessageBox()
             box.move(50, 50)
 
-            with open("%s\\tag" % CUR_PATH, 'w') as tag_file:
+            with open("%s\\tag" % updater_path, 'w') as tag_file:
                 tag_file.write(str(tag))
             os.remove(tag_path)
             box = QMessageBox()

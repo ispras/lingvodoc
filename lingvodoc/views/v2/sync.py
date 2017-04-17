@@ -452,7 +452,7 @@ def diff_desk(request):
 
     for entry in upload_groups:
         group = DBSession.query(Group).filter_by(id=entry).first()
-        if group:
+        if group and group.subject_client_id and get_user_by_client_id(group.subject_client_id).id == user.id:
             path = central_server + 'group'
             gr_req = row2dict(group)
             gr_req['users']=[user.id]
