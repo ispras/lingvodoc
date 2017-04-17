@@ -11,13 +11,9 @@
     </div>
     <br>
 
-
-
     <div id="loader-wrapper" ng-show="!status">
         <div id="loader"></div>
     </div>
-
-
 
     <div ng-if="dictionaries.length > 0" ng-show="status">
         <div ng-repeat="dictionary in dictionaries">
@@ -29,7 +25,7 @@
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <button type="button" class="btn btn-default dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9"
-                            data-toggle="dropdown">{{ dictionary.translation }}
+                            data-toggle="dropdown">{{ dictionary.translation }} ({{ dictionary.createdAt.dateString() }})
                     </button>
                     <ul class="dropdown-menu">
                         <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)">
@@ -91,6 +87,11 @@
                                    ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}">
                                 <translatable str="Edit">Edit</translatable>
                             </a></li>
+                            <li><a href=""
+                                   ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}">
+                                <translatable str="Publish">Publish</translatable>
+                            </a>
+                            </li>
                             <li role="separator" class="divider"></li>
                             <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)">
                                 <translatable str="Edit roles">Roles</translatable>
