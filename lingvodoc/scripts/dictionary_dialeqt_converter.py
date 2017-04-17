@@ -33,8 +33,8 @@ from lingvodoc.models import (
     DictionaryPerspective,
     BaseGroup,
     Group,
-    PublishingEntity
-
+    PublishingEntity,
+    user_to_group_association
 )
 
 def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
@@ -540,6 +540,33 @@ def translation_service_search_all(searchstring):
     #response = translationgist_contents(translationatom.parent)
     return response
 
+
+
+def check_perspective_perm(user_id, perspective_client_id, perspective_object_id):
+    #user_id = Client.get_user_by_client_id(client_id).id
+    create_base_group = DBSession.query(BaseGroup).filter_by(
+        subject = 'lexical_entries_and_entities', action = 'create').first()
+    user_create = DBSession.query(user_to_group_association, Group).filter(and_(
+        user_to_group_association.c.user_id == user_id,
+        user_to_group_association.c.group_id == Group.id,
+        Group.base_group_id == create_base_group.id,
+        Group.subject_client_id == perspective_client_id,
+        Group.subject_object_id == perspective_object_id)).limit(1).count() > 0
+    return user_create
+
+
+def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
+    #user_id = Client.get_user_by_client_id(client_id).id
+    create_base_group = DBSession.query(BaseGroup).filter_by(
+        subject = 'perspective', action = 'create').first()
+    user_create = DBSession.query(user_to_group_association, Group).filter(and_(
+        user_to_group_association.c.user_id == user_id,
+        user_to_group_association.c.group_id == Group.id,
+        Group.base_group_id == create_base_group.id,
+        Group.subject_client_id == dictionary_client_id,
+        Group.subject_object_id == dictionary_object_id)).limit(1).count() > 0
+    return user_create
+
 def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage,
                    locale_id, task_status):
     log = logging.getLogger(__name__)
@@ -628,6 +655,9 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
 
             dictionary_client_id = dictionary.client_id
             dictionary_object_id = dictionary.object_id
+            if not check_dictionary_perm(user.id, dictionary_client_id, dictionary_object_id):
+                task_status.set(None, -1, "Wrong permissions: dictionary")
+                return
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
                 new_group = Group(parent=base,
                                   subject_object_id=dictionary.object_id,
@@ -737,8 +767,14 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 for p_to_field in fields:
                     structure.add((p_to_field.field_client_id, p_to_field.field_object_id))
                 if not fp_structure.difference(structure):
+                    if not check_perspective_perm(user.id, perspective.client_id, perspective.object_id):
+                        task_status.set(None, -1, "Wrong permissions: perspective")
+                        return
                     first_perspective = perspective
                 elif not sp_structure.difference(structure):
+                    if not check_perspective_perm(user.id, perspective.client_id, perspective.object_id):
+                        task_status.set(None, -1, "Wrong permissions: perspective")
+                        return
                     second_perspective = perspective
                 structure.clear()
             lexes = []
@@ -781,14 +817,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                      for x in lexes if x[2].field.data_type == "Link"]
             links = links[:] + [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
                      for x in p_lexes if x[2].field.data_type == "Link"]
-            for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):  # TODO: check it
-                new_group = Group(parent=base,
-                                  subject_object_id=dictionary_object_id,
-                                  subject_client_id=dictionary_client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
-                DBSession.add(new_group)
-                DBSession.flush()
             if first_perspective.additional_metadata:
                 old_meta = first_perspective.additional_metadata
                 if authors_set:
