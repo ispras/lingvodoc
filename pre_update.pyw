@@ -22,6 +22,7 @@ from PyQt5 import QtCore
 
 DETACHED_PROCESS = 8
 cur_path = os.path.abspath(os.path.dirname(__file__))
+updater_path = cur_path + "\\updater"
 
 PG_DATA = "%s\\PostgreSQLPortable_9.6.1\\Data\\data" % cur_path
 
@@ -87,11 +88,10 @@ class Worker(QObject):
                 return
             status_code = 200
             dump = file.raw
-
-            with open('tmp.zip', 'wb') as file_type:
+            with open('updater\\tmp.zip', 'wb') as file_type:
                 shutil.copyfileobj(dump, file_type)
 
-            with ZipFile('tmp.zip') as myzip:
+            with ZipFile('updater\\tmp.zip') as myzip:
                 if myzip.testzip():
                     self.sig_err.emit(
                         "Try again",
@@ -249,9 +249,11 @@ class Example(QWidget):
                             | QtCore.Qt.WindowMinimizeButtonHint
                             | QtCore.Qt.WindowMaximizeButtonHint)
         self.changetext("Update in progress. Downloading sources.")
+        if not os.path.exists('updater'):
+            os.mkdir('updater')
         tag = 500353  # 0
-        tag_path = "%s\\tag" % cur_path
-        new_tag_path = "%s\\new_tag" % cur_path
+        tag_path = "%s\\tag" % updater_path
+        new_tag_path = "%s\\new_tag" % updater_path
         if os.path.exists(tag_path):
             with open(tag_path, 'r') as tag_file:
                 try:
@@ -261,16 +263,8 @@ class Example(QWidget):
         else:
             with open(tag_path, 'w') as tag_file:
                 tag_file.write(str(tag))
-        postgres_backup = "%s\\postgres_data_backup" % cur_path
-        restore_lock = "%s\\restore_fail" % cur_path
         processes = []
         try:
-            if os.path.exists(restore_lock):
-                if os.path.exists(postgres_backup):
-                    restore(PG_DATA, postgres_backup)
-                os.remove(restore_lock)
-            remove(postgres_backup)
-            remove(PG_DATA + "_tmp")
             connection_string = "https://api.github.com/repos/ispras/lingvodoc/releases/latest"
             session = requests.Session()
             session.headers.update({'Connection': 'Keep-Alive'})

@@ -22,6 +22,7 @@ from PyQt5 import QtCore
 
 DETACHED_PROCESS = 8
 cur_path = os.path.abspath(os.path.dirname(__file__))
+updater_path = cur_path + "\\updater"
 
 PG_DATA = "%s\\PostgreSQLPortable_9.6.1\\Data\\data" % cur_path
 
@@ -65,10 +66,10 @@ class Worker(QObject):
         reunzip = True
         try:
 
-            file_type_hash_path = "%s_hash_%s" % (self.file_type, self.tag)
-            file_type_path = "%s_%s.zip" % (self.file_type, self.tag)
-            new_file_type_hash_path = "new_%s_hash" % self.file_type
-            new_file_type = 'new_%s' % self.file_type
+            file_type_hash_path = "%s\\%s_hash_%s" % (updater_path, self.file_type, self.tag)
+            file_type_path = "%s\\%s_%s.zip" % (updater_path, self.file_type, self.tag)
+            new_file_type_hash_path = "%s\\new_%s_hash" % (updater_path, self.file_type)
+            new_file_type = '%s\\new_%s' % (updater_path, self.file_type)
 
             if os.path.exists(file_type_hash_path) and os.path.exists(file_type_path):
                 with open(file_type_hash_path, 'r') as file_type_hash:
@@ -124,12 +125,12 @@ class Worker(QObject):
                         )
                         status_code = -1
                         return
-                    myzip.extractall()
+                    myzip.extractall(path=updater_path)
                 if os.path.exists(new_file_type):
                     shutil.rmtree(new_file_type)
-                folder = cur_path + "\\" + folder.split('/')[0]
+                folder = updater_path + "\\" + folder.split('/')[0]
                 # self.sig_progress.emit(50)
-                new_file_type = cur_path + "\\new_%s" % self.file_type
+                new_file_type = updater_path + "\\new_%s" % self.file_type
 
                 # remove(new_file_type)
                 os.rename(folder, new_file_type)
@@ -138,10 +139,10 @@ class Worker(QObject):
                 with open(new_file_type_hash_path, 'w') as file_type_hash:
                     file_type_hash.write(folder_md5(new_file_type))
 
-                for path in glob("%s_*.zip" % self.file_type):
+                for path in glob("%s\\%s_*.zip" % (updater_path, self.file_type)):
                     if path != file_type_path:
                         os.remove(path)
-                for path in glob("%s_hash_*" % self.file_type):
+                for path in glob("%s\\%s_hash_*" % (updater_path, self.file_type)):
                     if path != file_type_hash_path:
                         os.remove(path)
             # self.sig_msg.emit("Updating in progress. Sources Downloaded. Upgrading pip.")
@@ -174,12 +175,11 @@ class Worker(QObject):
             self.sig_done.emit(status_code)
             return
 
-
 def backup_control(filename):
-    if os.path.exists('new_source\\%s' % filename):
+    if os.path.exists('source\\%s' % filename):
         if os.path.exists(filename):
-            shutil.copy2(filename, 'backup_control\\%s' % filename)
-        shutil.copy2('new_source\\%s' % filename, filename)
+            shutil.copy2(filename, '%s\\backup_control\\%s' % (updater_path, filename))
+        shutil.copy2('source\\%s' % filename, filename)
 
 class Example(QWidget):
     def __init__(self):
@@ -309,8 +309,8 @@ class Example(QWidget):
                             | QtCore.Qt.WindowMaximizeButtonHint)
         self.changetext("Update in progress. Downloading sources.")
         tag = 500353  # 0
-        tag_path = "%s\\tag" % cur_path
-        new_tag_path = "%s\\new_tag" % cur_path
+        tag_path = "%s\\tag" % updater_path
+        new_tag_path = "%s\\new_tag" % updater_path
         if os.path.exists(tag_path):
             with open(tag_path, 'r') as tag_file:
                 try:
@@ -320,8 +320,8 @@ class Example(QWidget):
         else:
             with open(tag_path, 'w') as tag_file:
                 tag_file.write(str(tag))
-        postgres_backup = "%s\\postgres_data_backup" % cur_path
-        restore_lock = "%s\\restore_fail" % cur_path
+        postgres_backup = "%s\\postgres_data_backup" % updater_path
+        restore_lock = "%s\\restore_fail" % updater_path
         processes = []
         try:
             if os.path.exists(restore_lock):
@@ -387,26 +387,24 @@ class Example(QWidget):
             if ffmpeg:
                 if self.workerLoop(ffmpeg, '3.2.4', 'ffmpeg', 'https://'):
                     return
-            self.changetext("Updating in progress. Ffmpeg downloaded. Upgrading pip.")
+            self.changetext("Updating in progress. Ffmpeg downloaded. Updating packages")
             self.progress.setValue(50)
 
-            new_source = cur_path + "\\new_source"
+            if os.path.exists('ffmpeg'):
+                shutil.rmtree('ffmpeg')
+            shutil.copytree('%s\\new_ffmpeg' % updater_path, 'ffmpeg')
+            if os.path.exists('memcached'):
+                shutil.rmtree('memcached')
+            shutil.copytree('%s\\new_memcached' % updater_path, 'memcached')
+            if os.path.exists('source'):
+                shutil.rmtree('source')
+            shutil.copytree('%s\\new_source' % updater_path, 'source')
+
+            new_source = cur_path + "\\source"
             pythonw = cur_path + "\\env86\\python-3.4.4\\pythonw.exe"
             setup = new_source + "\\desktop-setup.py"
             requirements = new_source + "\\desktop-requirements.txt"
 
-            proc = Popen([pythonw, '-m', 'pip', 'install', '--upgrade', 'pip'], stdout=PIPE, stderr=PIPE)
-            streamdata = proc.communicate()[1]
-            rc = proc.returncode
-            if rc != 0:
-                self.message(
-                    "Try again",
-                    "pip upgrade unsuccessful: %s" % streamdata.decode("utf-8")
-                )
-                return
-            proc.terminate()
-            self.changetext("Updating in progress. Pip upgraded. Updating packages")
-            self.progress.setValue(55)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
 
             proc = Popen([pythonw, '-m', 'pip', 'install', '-r', os.path.normpath(requirements)], stdout=PIPE,
@@ -424,7 +422,7 @@ class Example(QWidget):
             self.progress.setValue(60)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
 
-            proc = Popen([pythonw, setup, 'install'], stdout=PIPE, stderr=PIPE, cwd='%s\\new_source' % cur_path)
+            proc = Popen([pythonw, setup, 'install'], stdout=PIPE, stderr=PIPE, cwd='%s\\source' % cur_path)
             streamdata = proc.communicate()[1]
             rc = proc.returncode
             if rc != 0:
@@ -438,20 +436,20 @@ class Example(QWidget):
             self.progress.setValue(65)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
 
-            if not os.path.exists('backup_control'):
-                os.makedirs('backup_control')
+            if not os.path.exists('%s\\backup_control' % updater_path):
+                os.makedirs('%s\\backup_control' % updater_path)
 
-            if os.path.exists('new_source\\alembic.ini'):
+            if os.path.exists('%s\\alembic.ini' % new_source):
                 backup_control('alembic.ini')
 
-            if os.path.exists('new_source\\alembic'):
-                if os.path.exists('new_source\\alembic'):
+            if os.path.exists('%s\\alembic' % new_source):
+                if os.path.exists('%s\\alembic' % new_source):
                     if os.path.exists('alembic'):
-                        if os.path.exists('backup_control\\%s' % 'alembic'):
-                            shutil.rmtree('backup_control\\%s' % 'alembic')
-                        shutil.copytree('alembic', 'backup_control\\%s' % 'alembic')
+                        if os.path.exists('%s\\backup_control\\%s' % (updater_path, 'alembic')):
+                            shutil.rmtree('%s\\backup_control\\%s' % (updater_path, 'alembic'))
+                        shutil.copytree('alembic', '%s\\backup_control\\%s' % (updater_path, 'alembic'))
                         shutil.rmtree('alembic')
-                    shutil.copytree('new_source\\%s' % 'alembic', 'alembic')
+                    shutil.copytree('%s\\%s' % (new_source, 'alembic'), 'alembic')
 
             proc = Popen([pythonw, "%s\\update2.pyw" % cur_path], creationflags=DETACHED_PROCESS, stdout=PIPE, stderr=PIPE)
             return

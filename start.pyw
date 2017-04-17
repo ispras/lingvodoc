@@ -14,6 +14,7 @@ DETACHED_PROCESS = 8
 
 DELAY = 2
 cur_path = os.path.abspath(os.path.dirname(__file__))
+updater_path = cur_path + "\\updater"
 PG_DATA = "%s\\PostgreSQLPortable_9.6.1\\Data\\data" % cur_path
 PG_CTL = "%s\\PostgreSQLPortable_9.6.1\\App\\PgSQL\\bin\\pg_ctl.exe" % cur_path
 CHROME_PATH = "%s\\ChromiumPortable\\App\\Chromium\\32\\chrome.exe" % cur_path
@@ -58,7 +59,7 @@ def main():
     processes = list()
     try:
         # postgres_backup = "%s\\postgres_data_backup" % cur_path
-        restore_lock = "%s\\restore_fail" % cur_path
+        restore_lock = "%s\\restore_fail" % updater_path
         restore_fail = False
         processes = []
         if os.path.exists(restore_lock):
@@ -68,8 +69,8 @@ def main():
             sys.exit(-1)
         python = cur_path + "\\env86\\python-3.4.4\\pythonw.exe"
         pserve = cur_path + "\\env86\\python-3.4.4\\Scripts\\pserve.exe"
-        memcached = cur_path + "\\new_memcached\\memcached.exe"
-        development = cur_path + "\\lingvodoc_desktop.ini"
+        memcached = cur_path + "\\memcached\\memcached.exe"
+        ini = cur_path + "\\lingvodoc_desktop.ini"
         venv = get_env()
         # if not os.path.exists(venv["PGDATA"]):
         # proc_0 = Popen('%s\\PostgreSQLPortable_9.6.1\\App\\PgSQL\\bin\\initdb.exe -U postgres -A trust -E utf8 --locale=C' % cur_path, env=venv, shell=True)
@@ -85,8 +86,8 @@ def main():
         # proc_2.terminate()
         sleep(5)
         my_env = os.environ.copy()
-        my_env["PATH"] = my_env["PATH"] + ";%s\\new_ffmpeg\\bin" % cur_path
-        proc_3 = Popen([python, pserve, development], env=my_env, creationflags=DETACHED_PROCESS)
+        my_env["PATH"] = my_env["PATH"] + ";%s\\ffmpeg\\bin" % cur_path
+        proc_3 = Popen([python, pserve, ini], env=my_env, creationflags=DETACHED_PROCESS)
         sleep(1)
         proc_4 = Popen([memcached], creationflags=DETACHED_PROCESS)
         sleep(1)
