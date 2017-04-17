@@ -949,7 +949,7 @@ def convert_five_tiers(
                 tag = re.search('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]', translation_text)
                 create_le_flag = None
                 if tag:
-                    create_le_flag = False
+                    create_le_flag = True
                     tag_name = tag.group(0)
                     if translation_text[:3] == tag.group(0):
                         for conj in conjs:
@@ -983,14 +983,13 @@ def convert_five_tiers(
                                                   locale_id=locale_id)
                                 create_le_flag = False
                                 break
-                            else:
-                                create_le_flag = True
                             
                     else:
                         create_le_flag = False
-                        for x in noms:
-                            reg = re.search('[-.][\dA-Z]+', t[2].content)
-                            if reg:
+                        reg = re.search('[-.][\dA-Z]+', t[2].content)
+                        if reg:
+                            create_le_flag = True
+                            for x in noms:
                                 mark_w_text = reg.start()
                                 nom_clean_text = re.search('[-.][\dA-Z]+', x[2].content).start()
                                 if x[2].content[:nom_clean_text] == t[2].content[:mark_w_text]:
@@ -1023,13 +1022,12 @@ def convert_five_tiers(
                                                       locale_id=locale_id)
                                     create_le_flag = False
                                     break
-                                else:
-                                    create_le_flag = True
                 else:
                     create_le_flag = False
-                    for x in noms:
-                        reg = re.search('[-.][\dA-Z]+', t[2].content)
-                        if reg:
+                    reg = re.search('[-.][\dA-Z]+', t[2].content)
+                    if reg:
+                        create_le_flag = True
+                        for x in noms:
                             mark_w_text = reg.start()
                             nom_clean_text = re.search('[-.][\dA-Z]+', x[2].content).start()
                             if x[2].content[:nom_clean_text] == t[2].content[:mark_w_text]:
@@ -1062,8 +1060,6 @@ def convert_five_tiers(
                                                   locale_id=locale_id)
                                 create_le_flag = False
                                 break
-                            else:
-                                create_le_flag = True
                 if create_le_flag:
                     before_dash = re.search('[-.][\dA-Z]+', translation_text)
                     if before_dash:
