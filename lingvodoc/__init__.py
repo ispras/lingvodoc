@@ -678,6 +678,8 @@ def configure_routes(config):
 
     config.add_route(name='all_translationgists', pattern='/all_translationgists',
                      factory='lingvodoc.models.AdminAcl')
+    config.add_route(name='fix_groups', pattern='/fix_groups',
+                     factory='lingvodoc.models.AdminAcl')
 
     config.add_route(name='create_translationgist', pattern='/translationgist',
                      factory='lingvodoc.models.AuthenticatedAcl')

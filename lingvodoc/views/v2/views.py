@@ -60,7 +60,66 @@ from pyramid.request import Request
 from time import time
 
 
-@view_config(route_name='testing', renderer='json')
+
+@view_config(route_name='fix_groups', renderer='json', permission='admin')
+def fix_groups(request):
+    for dictionary in DBSession.query(Dictionary):
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+
+            groups = DBSession.query(Group).filter_by(base_group_id=base.id,
+                              subject_object_id=dictionary.object_id,
+                                                      subject_client_id=dictionary.client_id).all()
+            if len(groups) > 1:
+                users = list()
+                for group in groups:
+                    for user in group.users:
+                        if user not in users:
+                            users.append(user)
+                winner = groups[0]
+                for user in users:
+                    if user not in winner.users:
+                        winner.users.append(user)
+                for delete_group in groups[1:]:
+                    DBSession.delete(delete_group)
+    for perspective in DBSession.query(DictionaryPerspective):
+        for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+
+            groups = DBSession.query(Group).filter_by(base_group_id=base.id,
+                              subject_object_id=perspective.object_id,
+                                                      subject_client_id=perspective.client_id).all()
+            if len(groups) > 1:
+                users = list()
+                for group in groups:
+                    for user in group.users:
+                        if user not in users:
+                            users.append(user)
+                winner = groups[0]
+                for user in users:
+                    if user not in winner.users:
+                        winner.users.append(user)
+                for delete_group in groups[1:]:
+                    DBSession.delete(delete_group)
+
+    base_id = 26
+
+    groups = DBSession.query(Group).filter_by(base_group_id=base_id,
+                      subject_override = True).all()
+    if len(groups) > 1:
+        users = list()
+        for group in groups:
+            for user in group.users:
+                if user not in users:
+                    users.append(user)
+        winner = groups[0]
+        for user in users:
+            if user not in winner.users:
+                winner.users.append(user)
+        for delete_group in groups[1:]:
+            DBSession.delete(delete_group)
+
+    return {}
+
+@view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     return {}
 
