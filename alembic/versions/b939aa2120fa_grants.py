@@ -14,7 +14,7 @@ depends_on = None
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.types import Text
+from sqlalchemy.types import Text, String
 from sqlalchemy.dialects import postgresql
 from lingvodoc.models import SLBigInteger, EpochType
 
@@ -24,10 +24,10 @@ def upgrade():
     sa.Column('id', SLBigInteger(), nullable=False),
     sa.Column('sender_id', SLBigInteger(), nullable=False),
     sa.Column('recipient_id', SLBigInteger(), nullable=False),
-    sa.Column('broadcast_uuid', sa.UnicodeText(), nullable=False),
-    sa.Column('type', sa.UnicodeText(), nullable=False),
-    sa.Column('message', sa.UnicodeText(), nullable=True),
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('broadcast_uuid', sa.String(36), nullable=False),
+    sa.Column('type', sa.String(1000), nullable=False),
+    sa.Column('message', sa.String(1000), nullable=True),
     sa.Column('subject', postgresql.JSONB(astext_type=Text()), nullable=True),
     sa.Column('additional_metadata', postgresql.JSONB(astext_type=Text()), nullable=True),
     sa.PrimaryKeyConstraint('id')
@@ -38,12 +38,12 @@ def upgrade():
     sa.Column('translation_gist_object_id', SLBigInteger(), nullable=False),
     sa.Column('issuer_translation_gist_client_id', SLBigInteger(), nullable=False),
     sa.Column('issuer_translation_gist_object_id', SLBigInteger(), nullable=False),
-    sa.Column('issuer_url', sa.UnicodeText(), nullable=False),
-    sa.Column('grant_url', sa.UnicodeText(), nullable=False),
-    sa.Column('grant_number', sa.UnicodeText(), nullable=False),
     sa.Column('begin', sa.Date(), nullable=True),
     sa.Column('end', sa.Date(), nullable=True),
-    sa.Column('created_at', EpochType(), nullable=False),
+    sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('issuer_url', sa.String(2048), nullable=False),
+    sa.Column('grant_url', sa.String(2048), nullable=False),
+    sa.Column('grant_number', sa.String(1000), nullable=False),
     sa.Column('owners', postgresql.JSONB(astext_type=Text()), nullable=True),
     sa.Column('additional_metadata', postgresql.JSONB(astext_type=Text()), nullable=True),
     sa.ForeignKeyConstraint(['translation_gist_object_id', 'translation_gist_client_id'], ['translationgist.object_id', 'translationgist.client_id'], ),
