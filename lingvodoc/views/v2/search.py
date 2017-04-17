@@ -115,13 +115,22 @@ def basic_search(request):
             results = []
             entries = list()
             if can_add_tags:
+                if can_add_tags.lower() == 'false':
+                    can_add_tags = False
+                elif can_add_tags.lower() == 'true':
+                    can_add_tags = True
+                else:
+                    can_add_tags = None
+
+            if can_add_tags:
                 results_cursor = results_cursor \
                     .filter(BaseGroup.subject == 'lexical_entries_and_entities',
                             or_(BaseGroup.action == 'create', BaseGroup.action =='view'))\
-                    .group_by(Entity).having(func.count('*') == 2)
+                    .group_by(Entity).having(func.count('*') >= 2) # todo: == after cleaning base
                 # results_cursor = list()
             else:
                 results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
+
             # print(results_cursor)
             if field:
                 results_cursor = results_cursor.join(DictionaryPerspective.dictionaryperspectivetofield).filter(
