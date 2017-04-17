@@ -1011,6 +1011,24 @@ Index('parent_perspective_idx', DictionaryPerspective.parent_client_id, Dictiona
 Index('parent_dictionary_idx', Dictionary.parent_client_id, Dictionary.parent_object_id)
 Index('parent_language_idx', Language.parent_client_id, Language.parent_object_id)
 
+# todo: auotgenerate migration
+class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, AdditionalMetadataMixin):
+    issuer_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
+    issuer_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
+    issuer_url = Column(UnicodeText, nullable=False)
+    grant_url = Column(UnicodeText, nullable=False)
+    grant_number = Column(UnicodeText, nullable=False)
+    begin = Column(Date)
+    end = Column(Date)
+    owners = Column(JSONB)
+
+class UserRequest(IdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
+    sender_id = Column(SLBigInteger(), nullable=False)
+    recipient_id = Column(SLBigInteger(), nullable=False)
+    broadcast_uuid = Column(UnicodeText, nullable=False)
+    type = Column(UnicodeText, nullable=False)
+    subject = Column(JSONB)
+    message = Column(UnicodeText)
 
 def acl_by_groups(object_id, client_id, subject):
     acls = []  # DANGER if acls do not work -- uncomment string below
