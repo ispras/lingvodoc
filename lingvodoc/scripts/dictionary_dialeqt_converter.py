@@ -631,6 +631,9 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         update_flag = False
         if dictionary_client_id is not None and dictionary_object_id is not None:
             update_flag = True
+            if not check_dictionary_perm(user.id, dictionary_client_id, dictionary_object_id):
+                task_status.set(None, -1, "Wrong permissions: dictionary")
+                return
         try:
             dict_attributes = get_dict_attributes(sqconn)
         except:
@@ -655,9 +658,6 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
 
             dictionary_client_id = dictionary.client_id
             dictionary_object_id = dictionary.object_id
-            if not check_dictionary_perm(user.id, dictionary_client_id, dictionary_object_id):
-                task_status.set(None, -1, "Wrong permissions: dictionary")
-                return
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
                 new_group = Group(parent=base,
                                   subject_object_id=dictionary.object_id,
