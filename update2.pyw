@@ -220,6 +220,11 @@ class Example(QWidget):
                     new_file.write(new_text)
                     pass
 
+            backup_control('start.pyw')
+            backup_control('start.bat')
+            backup_control('update.bat')
+            backup_control('pre_update.pyw')
+
             os.remove(old_ini)
             os.rename(tmp_ini, old_ini)
             if os.path.exists(tmp_ini):

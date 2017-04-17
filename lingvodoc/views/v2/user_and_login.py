@@ -174,6 +174,7 @@ def signin(request):
         result = dict()
         result['client_id'] = client.id
         request.response.status = HTTPOk.code
+        print(result)
         # request.response.headers = headers
         # return response
         return HTTPOk(headers=response.headers, json_body=result)
