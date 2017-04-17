@@ -632,6 +632,7 @@ def convert_five_tiers(
         lex_rows = {}
         par_rows = {}
         task_status.set(8, 60, "Uploading sounds and words")
+
         for phrase in final_dicts:
             curr_dict = {}
             paradigm_words = []
@@ -768,6 +769,21 @@ def convert_five_tiers(
             p_match_dict.clear()
             paradigm_words[:] = []
             for word in curr_dict:
+                if curr_dict:
+                    if word.tier == "translation":
+                         translation_word_text = word.text
+                         if translation_word_text:
+                             if re.search('[-.][\dA-Z]+', translation_word_text) and \
+                                not re.search("[-]INF", translation_word_text) and \
+                                not re.search("[-]SG.NOM", translation_word_text) and \
+                                not re.search("[-]NOM", translation_word_text):
+                                tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", translation_word_text)
+                                if tag:
+                                    text_without_tag = translation_word_text.replace(tag.group(0), "")
+                                    if len(text_without_tag) > 0:
+                                        continue
+                                else:
+                                    continue
                 column = [word] + curr_dict[word]
                 lex_row = tuple([x.text for x in column])
                 if not [x.text for x in column if x.text is not None]:
