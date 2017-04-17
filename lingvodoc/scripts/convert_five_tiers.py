@@ -465,18 +465,18 @@ def convert_five_tiers(
 
             first_perspective.additional_metadata = origin_metadata
             DBSession.add(first_perspective)
-        owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
-        owner = owner_client.user
-        for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-            new_group = Group(parent=base,
-                              subject_object_id=first_perspective.object_id,
-                              subject_client_id=first_perspective.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            if owner not in new_group.users:
-                new_group.users.append(owner)
-            DBSession.add(new_group)
-            DBSession.flush()
+            owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
+            owner = owner_client.user
+            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+                new_group = Group(parent=base,
+                                  subject_object_id=first_perspective.object_id,
+                                  subject_client_id=first_perspective.client_id)
+                if user not in new_group.users:
+                    new_group.users.append(user)
+                if owner not in new_group.users:
+                    new_group.users.append(owner)
+                DBSession.add(new_group)
+                DBSession.flush()
         first_perspective_client_id = first_perspective.client_id
         first_perspective_object_id = first_perspective.object_id
         """
@@ -500,17 +500,17 @@ def convert_five_tiers(
             # if is_template is not None:
             #     perspective.is_template = is_template
             DBSession.add(second_perspective)
-        owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
-        owner = owner_client.user
-        for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-            new_group = Group(parent=base,
-                              subject_object_id=second_perspective.object_id,
-                              subject_client_id=second_perspective.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            if owner not in new_group.users:
-                new_group.users.append(owner)
-            DBSession.add(new_group)
+            owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
+            owner = owner_client.user
+            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+                new_group = Group(parent=base,
+                                  subject_object_id=second_perspective.object_id,
+                                  subject_client_id=second_perspective.client_id)
+                if user not in new_group.users:
+                    new_group.users.append(user)
+                if owner not in new_group.users:
+                    new_group.users.append(owner)
+                DBSession.add(new_group)
 
         second_perspective_client_id = second_perspective.client_id
         second_perspective_object_id = second_perspective.object_id
