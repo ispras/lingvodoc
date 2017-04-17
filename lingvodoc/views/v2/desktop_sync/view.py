@@ -15,9 +15,26 @@ from pyramid.httpexceptions import (
 )
 from lingvodoc.views.v2.desktop_sync.core import async_download_dictionary
 import json
+import requests
 
 log = logging.getLogger(__name__)
 
+
+def make_request(path, cookies, req_type='get', json_data=None):
+    session = requests.Session()
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
+    session.mount('http://', adapter)
+    # log.error(path)
+    if req_type == 'get':
+        status = session.get(path, cookies=cookies)
+    elif req_type == 'post':
+        status = session.post(path, json=json_data, cookies=cookies)
+    else:
+        return None
+    return status
 
 @view_config(route_name='download_dictionary', renderer='json', request_method='POST')
 def download_dictionary(request):  # TODO: test
@@ -40,7 +57,18 @@ def download_dictionary(request):  # TODO: test
         dictionary_obj = DBSession.query(Dictionary).filter_by(client_id=req["client_id"],
                                                                object_id=req["object_id"]).first()
         if not dictionary_obj:
-            task = TaskStatus(user_id, "Dictionary sync with server", "dictionary name placeholder", 5)
+            dict_json = make_request(args["central_server"] + 'dictionary/%s/%s' % (
+                req["client_id"],
+                req["object_id"]), args["cookies"])
+            if dict_json.status_code != 200 or not dict_json.json():
+                task = TaskStatus(user_id, "Dictionary sync with server", "dictionary name placeholder", 5)
+            else:
+                dict_json = dict_json.json()
+                gist = DBSession.query(TranslationGist). \
+                    filter_by(client_id=dict_json['translation_gist_client_id'],
+                              object_id=dict_json['translation_gist_object_id']).first()
+                task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
+
         else:
             gist = DBSession.query(TranslationGist). \
                 filter_by(client_id=dictionary_obj.translation_gist_client_id,
