@@ -8,6 +8,7 @@ from subprocess import STARTUPINFO
 from subprocess import STARTF_USESHOWWINDOW
 from PyQt5.QtWidgets import QMessageBox, QApplication
 import sys
+import traceback
 
 DETACHED_PROCESS = 8
 
@@ -85,8 +86,6 @@ def main():
         sleep(5)
         my_env = os.environ.copy()
         my_env["PATH"] = my_env["PATH"] + ";%s\\new_ffmpeg\\bin" % cur_path
-        # my_env["PATH"] = my_env["PATH"] + ";D:\\projects\\Lingvodoc-desktop\\new_ffmpeg\\bin"
-        # message('title', my_env["PATH"])
         proc_3 = Popen([python, pserve, development], env=my_env, creationflags=DETACHED_PROCESS)
         sleep(1)
         proc_4 = Popen([memcached], creationflags=DETACHED_PROCESS)

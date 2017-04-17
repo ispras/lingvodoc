@@ -121,7 +121,7 @@ class Example(QWidget):
         quitbt.setDisabled(True)
 
         self.setGeometry(300, 300, 400, 100)
-        self.setWindowTitle('Updating')
+        self.setWindowTitle('Update part 2')
         self.show()
 
     def changetext(self, text):
@@ -149,8 +149,8 @@ class Example(QWidget):
         info.dwFlags = STARTF_USESHOWWINDOW
         info.wShowWindow = SW_HIDE
         postgres_backup = "%s\\postgres_data_backup" % CUR_PATH
-        # restore_lock = "%s\\restore_fail" % CUR_PATH
-        # restore_fail = False
+        restore_lock = "%s\\restore_fail" % CUR_PATH
+        restore_fail = False
         processes = []
         try:
             # if os.path.exists(restore_lock):
@@ -226,12 +226,6 @@ class Example(QWidget):
 
             box = QMessageBox()
             box.move(50, 50)
-            # QMessageBox.information(box, "Backup", "add pyw", QMessageBox.Ok)
-            if not os.path.exists('backup_control'):
-                os.makedirs('backup_control')
-            backup_control('pre_update.pyw')
-            # backup_control('update.pyw')
-            backup_control('start.pyw')
 
             with open("%s\\tag" % CUR_PATH, 'w') as tag_file:
                 tag_file.write(str(tag))
