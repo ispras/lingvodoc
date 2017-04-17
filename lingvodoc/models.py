@@ -1011,7 +1011,6 @@ Index('parent_perspective_idx', DictionaryPerspective.parent_client_id, Dictiona
 Index('parent_dictionary_idx', Dictionary.parent_client_id, Dictionary.parent_object_id)
 Index('parent_language_idx', Language.parent_client_id, Language.parent_object_id)
 
-# todo: auotgenerate migration
 class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, AdditionalMetadataMixin):
     issuer_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
     issuer_translation_gist_object_id = Column(SLBigInteger(), nullable=False)

@@ -60,9 +60,6 @@ def downgrade():
     op.alter_column('userblobs', 'marked_for_deletion',
                existing_type=sa.BOOLEAN(),
                nullable=True)
-    op.create_index('parent_translation_atom_idx', 'translationatom', ['parent_client_id', 'parent_object_id'], unique=False)
-    op.drop_index('parent_language_idx', table_name='language')
-    op.add_column('group', sa.Column('old_id', sa.BIGINT(), autoincrement=False, nullable=True))
     op.drop_table('grant')
     op.drop_table('userrequest')
     # ### end Alembic commands ###
