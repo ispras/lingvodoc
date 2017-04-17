@@ -199,6 +199,7 @@ def sync_signin(request):
 def desk_signin(request):
     import requests
     req = request.json_body
+    req['desktop'] = True
     settings = request.registry.settings
     try:
         path = settings['desktop']['central_server'] + 'signin'
