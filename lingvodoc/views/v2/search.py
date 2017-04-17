@@ -126,7 +126,7 @@ def basic_search(request):
                 results_cursor = results_cursor \
                     .filter(BaseGroup.subject == 'lexical_entries_and_entities',
                             or_(BaseGroup.action == 'create', BaseGroup.action =='view'))\
-                    .group_by(Entity).having(func.count('*') >= 2) # todo: == after cleaning base
+                    .group_by(Entity).having(func.count('*') == 2)
                 # results_cursor = list()
             else:
                 results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
