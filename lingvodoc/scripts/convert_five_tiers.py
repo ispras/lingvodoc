@@ -33,6 +33,13 @@ from lingvodoc.models import (
 from pyramid.httpexceptions import HTTPError
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.scripts import elan_parser
+from lingvodoc.models import (
+    user_to_group_association,
+
+)
+
+
+
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -289,6 +296,31 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     return (entity.client_id, entity.object_id)
 
 
+def check_perspective_perm(user_id, perspective_client_id, perspective_object_id):
+    #user_id = Client.get_user_by_client_id(client_id).id
+    create_base_group = DBSession.query(BaseGroup).filter_by(
+        subject = 'lexical_entries_and_entities', action = 'create').first()
+    user_create = DBSession.query(user_to_group_association, Group).filter(and_(
+        user_to_group_association.c.user_id == user_id,
+        user_to_group_association.c.group_id == Group.id,
+        Group.base_group_id == create_base_group.id,
+        Group.subject_client_id == perspective_client_id,
+        Group.subject_object_id == perspective_object_id)).limit(1).count() > 0
+    return user_create
+
+
+def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
+    #user_id = Client.get_user_by_client_id(client_id).id
+    create_base_group = DBSession.query(BaseGroup).filter_by(
+        subject = 'perspective', action = 'create').first()
+    user_create = DBSession.query(user_to_group_association, Group).filter(and_(
+        user_to_group_association.c.user_id == user_id,
+        user_to_group_association.c.group_id == Group.id,
+        Group.base_group_id == create_base_group.id,
+        Group.subject_client_id == dictionary_client_id,
+        Group.subject_object_id == dictionary_object_id)).limit(1).count() > 0
+    return user_create
+
 def convert_five_tiers(
                 dictionary_client_id,
                 dictionary_object_id,
@@ -374,13 +406,6 @@ def convert_five_tiers(
         fp_structure = set([field_ids[x] for x in fp_fields])
         sp_structure = set([field_ids[x] for x in sp_fields])
         DBSession.flush()
-        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-            new_group = Group(parent=base,
-                              subject_object_id=dictionary_object_id, subject_client_id=dictionary_client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            DBSession.add(new_group)
-            DBSession.flush()
 
 
         origin_metadata= {"origin_client_id": origin_client_id,
@@ -391,6 +416,9 @@ def convert_five_tiers(
                                                        object_id=dictionary_object_id).first()
         if not parent:
             return {'error': str("No such dictionary in the system")}
+        if not check_dictionary_perm(user.id, dictionary_client_id, dictionary_object_id):
+            task_status.set(None, -1, "Wrong permissions: dictionary")
+            return
         first_perspective = None
         second_perspective = None
         for perspective in DBSession.query(DictionaryPerspective).filter_by(parent=parent, marked_for_deletion=False):
@@ -403,8 +431,15 @@ def convert_five_tiers(
                 structure.add((p_to_field.field_client_id, p_to_field.field_object_id))
 
             if not fp_structure.difference(structure):
+                if not check_perspective_perm(user.id, perspective.client_id, perspective.object_id):
+                    task_status.set(None, -1, "Wrong permissions: perspective")
+                    return
                 first_perspective = perspective
+
             elif not sp_structure.difference(structure):
+                if not check_perspective_perm(user.id, perspective.client_id, perspective.object_id):
+                    task_status.set(None, -1, "Wrong permissions: perspective")
+                    return
                 second_perspective = perspective
             structure.clear()
         lexes = []
@@ -438,13 +473,6 @@ def convert_five_tiers(
                            (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         resp = translation_service_search("WiP")
         state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-            new_group = Group(parent=base,
-                              subject_object_id=dictionary_object_id, subject_client_id=dictionary_client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            DBSession.add(new_group)
-            DBSession.flush()
         """
         # FIRST PERSPECTIVE
         """
