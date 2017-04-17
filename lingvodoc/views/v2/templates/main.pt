@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="LingvodocDesktopModule" ng-cloak>
+<html lang="en" ng-app="LingvodocModule" ng-cloak>
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -19,7 +19,7 @@
     <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
 
     <script type="text/javascript">
-        ru.ispras.lingvodoc.frontend.DesktopApplication().main();
+        ru.ispras.lingvodoc.frontend.LingvodocApplication().main();
     </script>
 
 </head>
@@ -40,8 +40,8 @@
             <a class="navbar-brand" href="#/">Lingvodoc</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav" ng-if="controller.isAuthenticated()">
-                <li class="dropdown">
+            <ul class="nav navbar-nav">
+                <li class="dropdown" ng-if="controller.isAuthenticated()">
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">
                         <translatable str="Dashboard">Dashboard</translatable><span class="caret"></span>
@@ -59,8 +59,23 @@
                     </ul>
                 </li>
 
-                <li ng-if="controller.isAuthenticated()"><a href="#/map_search">Maps search</a></li>
 
+
+                <li class="dropdown">
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                                       aria-expanded="false">
+                        <translatable str="Maps">Maps</translatable><span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#/map_search">Search</a></li>
+                        <li><a href="#/sociolinguistics"><translatable str="Sociolinguistics">Sociolinguistics</translatable></a></li>
+                    </ul>
+                </li>
+
+                <li><a href="#/desktop_software"><translatable str="Desktop software">Desktop software</translatable></a></li>
+
+
+                <li ng-if="controller.isAuthenticated()"></li>
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
@@ -69,6 +84,7 @@
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">{{ controller.getAuthenticatedUser().name }}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
+
                         <li><a href="" ng-click="controller.editProfile()"><translatable str="Edit profile">Edit profile</translatable></a></li>
                         <li><a href="#/files"><translatable str="My files">My files</translatable></a></li>
                         <li><a href="#/logout"><translatable str="Sign out">Sign out</translatable></a></li>
@@ -80,51 +96,52 @@
                        aria-expanded="false"><translatable str="Guest">Guest</translatable><span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="#/login"><transltable str="Sign in">Sign in</transltable></a></li>
-                        <li><a href="http://lingvodoc.ispras.ru/#signup"><translatable str="Sign up">Sign up</translatable></a></li>
+                        <li><a href="#/signup"><translatable str="Sign up">Sign up</translatable></a></li>
                     </ul>
                 </li>
 
-                <li class="dropdown" ng-if="controller.isAuthenticated()">
-                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                        aria-expanded="false">Tasks ({{ tasks.length }}) <span class="caret"></span></a>
-                     <div class="dropdown-menu" style="width: 450px !important;">
-                         <div class="container-fluid">
+                <li class="dropdown">
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Tasks ({{ tasks.length }}) <span class="caret"></span></a>
+                    <div class="dropdown-menu" style="width: 450px !important;">
+                        <div class="container-fluid">
 
-                             <div class="row" ng-show="tasks.length == 0">
-                                 <div class="col-md-12">
-                                     No background tasks
-                                 </div>
-                             </div>
+                            <div class="row" ng-show="tasks.length == 0">
+                                <div class="col-md-12">
+                                    No background tasks
+                                </div>
+                            </div>
 
-                             <div class="row" ng-repeat="task in tasks" style="border-bottom: solid 1px;">
-                                 <div class="col-md-11">
-                                     <div>
-                                         <h4>{{ task.taskFamily }}</h4>
-                                         <span>{{ task.taskDetails }} ({{ task.currentStage }} / {{ task.totalStages }}) <b>{{ task.status }}</b></span>
-                                         <div class="progress">
-                                           <div class="progress-bar" role="progressbar" aria-valuenow="{{task.progress}}" aria-valuemin="0" aria-valuemax="100" style="width: {{task.progress}}%;">
-                                             {{task.progress}}%
-                                           </div>
-                                         </div>
+                            <div class="row" ng-repeat="task in tasks" style="border-bottom: solid 1px;">
+                                <div class="col-md-11">
+                                    <div>
+                                        <h4>{{ task.taskFamily }}</h4>
+                                        <span>{{ task.taskDetails }} ({{ task.currentStage }} / {{ task.totalStages }}) <b>{{ task.status }}</b></span>
+                                        <div class="progress">
+                                          <div class="progress-bar" role="progressbar" aria-valuenow="{{task.progress}}" aria-valuemin="0" aria-valuemax="100" style="width: {{task.progress}}%;">
+                                            {{task.progress}}%
+                                          </div>
+                                        </div>
 
-                                         <div ng-if="task.resultLink.length > 0">
-                                             Result:
-                                             <a ng-href="{{ task.resultLink }}" target="_blank">{{ task.resultLink }}</a>
-                                         </div>
+                                        <div ng-if="task.resultLink.length > 0">
+                                            Result:
+                                            <a ng-href="{{ task.resultLink }}" target="_blank">{{ task.resultLink }}</a>
+                                        </div>
 
-                                     </div>
-                                 </div>
+                                    </div>
+                                </div>
 
-                                 <div class="col-md-1">
-                                     <button type="button" class="close" aria-label="Remove" style="margin-top: 30px; opacity: 1 !important; color: red;" ng-click="controller.removeTask(task)">
-                                         <span aria-hidden="true">×</span>
-                                     </button>
-                                 </div>
-                             </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="close" aria-label="Remove" style="margin-top: 30px; opacity: 1 !important; color: red;" ng-click="controller.removeTask(task)">
+                                        <span aria-hidden="true">×</span>
+                                    </button>
+                                </div>
+                            </div>
 
-                         </div>
-                     </div>
-                 </li>
+                        </div>
+                    </div>
+                </li>
+
 
                 <li class="dropdown">
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
@@ -133,12 +150,6 @@
                     <ul class="dropdown-menu">
                         <li ng-repeat="locale in locales"><a ng-click="controller.setLocale(locale.id)"><span ng-if="controller.getLocale()===locale.id" class="glyphicon glyphicon-ok"></span> {{ locale.name }}</a></li>
                     </ul>
-                </li>
-
-                <li ng-if="controller.isAuthenticated()">
-                    <p class="navbar-btn">
-                        <button type="button" class="btn btn-default" ng-click="controller.sync()" ng-enabled="scope.syncEnabled">Sync</button>
-                    </p>
                 </li>
 
             </ul>
