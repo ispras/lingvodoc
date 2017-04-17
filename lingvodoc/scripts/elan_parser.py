@@ -121,22 +121,47 @@ class Elan:
                                     not re.search("[-]INF", tr_text) and \
                                     not re.search("[-]SG.NOM", tr_text) and \
                                     not re.search("[-]NOM", tr_text):
-                                le_to_paradigms = []
-                                if lit_transl_data:
-                                    le_to_paradigms.append([Word(lit_transl_data ,
-                                                                 self.word[lit_transl_data],
-                                                                 "Word of Paradigmatic forms",
-                                                                 (time_tup[0], time_tup[1])) ])
-                                if text_data:
-                                    le_to_paradigms.append([Word(text_data ,
-                                                                 self.word[text_data], "text",
-                                                                 (time_tup[0], time_tup[1])) ])
-                                if translation_data:
-                                    le_to_paradigms.append([Word(translation_data ,
-                                                                 self.word[translation_data],
-                                                                 "literary translation",
-                                                                 (time_tup[0], time_tup[1])) ])
-                                perspectives.append(le_to_paradigms)
+                                tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
+                                if tag:
+                                    text_without_tag = tr_text.replace(tag.group(0), "")
+                                    if len(text_without_tag) > 0:
+                                        le_to_paradigms = []
+                                        if lit_transl_data:
+                                            le_to_paradigms.append([Word(lit_transl_data ,
+                                                                         self.word[lit_transl_data],
+                                                                         "Word of Paradigmatic forms",
+                                                                         (time_tup[0], time_tup[1])) ])
+                                        if text_data:
+                                            le_to_paradigms.append([Word(text_data ,
+                                                                         self.word[text_data], "text",
+                                                                         (time_tup[0], time_tup[1])) ])
+                                        if translation_data:
+                                            le_to_paradigms.append([Word(translation_data ,
+                                                                         self.word[translation_data],
+                                                                         "literary translation",
+                                                                         (time_tup[0], time_tup[1])) ])
+                                        perspectives.append(le_to_paradigms)
+                                    else:
+                                        new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
+                                        if new_list:
+                                            perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
+                                else:
+                                    le_to_paradigms = []
+                                    if lit_transl_data:
+                                        le_to_paradigms.append([Word(lit_transl_data ,
+                                                                     self.word[lit_transl_data],
+                                                                     "Word of Paradigmatic forms",
+                                                                     (time_tup[0], time_tup[1])) ])
+                                    if text_data:
+                                        le_to_paradigms.append([Word(text_data ,
+                                                                     self.word[text_data], "text",
+                                                                     (time_tup[0], time_tup[1])) ])
+                                    if translation_data:
+                                        le_to_paradigms.append([Word(translation_data ,
+                                                                     self.word[translation_data],
+                                                                     "literary translation",
+                                                                     (time_tup[0], time_tup[1])) ])
+                                    perspectives.append(le_to_paradigms)
                             else:
                                 new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
                                 if new_list:
