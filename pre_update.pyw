@@ -161,7 +161,7 @@ class Example(QWidget):
         quitbt = QPushButton('Cancel', self)
         quitbt.clicked.connect(self.quit)
         quitbt.resize(quitbt.sizeHint())
-        quitbt.move(100, 70)
+        quitbt.move(150, 70)
         quitbt.setDisabled(True)
         self.quitbt = quitbt
 
@@ -297,26 +297,23 @@ class Example(QWidget):
 
             for asset in assets:
                 if asset['name'] == 'update.zip':
-                    new_update1 = asset['browser_download_url']
-                # if asset['name'] == 'update2.pyw':
-                #     new_update2 = asset['browser_download_url']
+                    new_update = asset['browser_download_url']
 
-            # if not new_update:
-            #     self.message(
-            #         "No updater found",
-            #         "Release contains no updater"
-            #     )
-            #     return
+            if not new_update:
+                self.message(
+                    "No updater found",
+                    "Release contains no updater"
+                )
+                return
 
-            new_update = 'https://www.dropbox.com/s/6stohg7cxcawi9c/update.zip?dl=1'
+            # new_update = 'https://www.dropbox.com/s/6stohg7cxcawi9c/update.zip?dl=1'
             if os.path.exists('update1.pyw'):
                 os.remove('update1.pyw')
             if os.path.exists('update2.pyw'):
                 os.remove('update2.pyw')
             if self.workerLoop(new_update, 'https://'):
                 return
-            # if self.workerLoop(new_update2, 'https://'):
-            #     return
+
             self.changetext("Updating in progress. New updater downloaded. Running updater")
 
             pythonw = cur_path + "\\env86\\python-3.4.4\\pythonw.exe"

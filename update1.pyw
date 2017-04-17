@@ -100,7 +100,7 @@ class Worker(QObject):
                 status_code = 200
                 dump = file.raw
 
-                self.sig_progress.emit(30)
+                # self.sig_progress.emit(30)
                 if os.path.exists(file_type_path):
                     os.remove(file_type_path)
                 with open(file_type_path, 'wb') as file_type:
@@ -128,7 +128,7 @@ class Worker(QObject):
                 if os.path.exists(new_file_type):
                     shutil.rmtree(new_file_type)
                 folder = cur_path + "\\" + folder.split('/')[0]
-                self.sig_progress.emit(50)
+                # self.sig_progress.emit(50)
                 new_file_type = cur_path + "\\new_%s" % self.file_type
 
                 # remove(new_file_type)
@@ -145,7 +145,7 @@ class Worker(QObject):
                     if path != file_type_hash_path:
                         os.remove(path)
             # self.sig_msg.emit("Updating in progress. Sources Downloaded. Upgrading pip.")
-            self.sig_progress.emit(55)
+            # self.sig_progress.emit(55)
 
         except OSError as e:
             status_code = -1
@@ -358,34 +358,42 @@ class Example(QWidget):
                 tag_file.write(str(new_tag))
             self.progress.setValue(10)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
+
             connection_string = server['zipball_url']
+            assets = server['assets']
+            ffmpeg = None
+            memcached = None
+            for asset in assets:
+                if asset['name'] == 'ffmpeg.zip':
+                    ffmpeg = asset['browser_download_url']
+                if asset['name'] == 'memcached.zip':
+                    memcached = asset['browser_download_url']
 
             # connection_string = "https://codeload.github.com/ispras/lingvodoc/zip/heavy_refactor"  # todo: remove
-            connection_string = "https://codeload.github.com/LukeTapekhin/lingvodoc/zip/heavy_refactor"  # todo: remove
+            # connection_string = "https://codeload.github.com/LukeTapekhin/lingvodoc/zip/heavy_refactor"  # todo: remove
             if self.workerLoop(connection_string, new_tag, 'source', 'https://'):
                 return
             self.changetext("Updating in progress. Sources downloaded. Downloading memcached")
+            self.progress.setValue(30)
 
-            connection_string = "https://www.dropbox.com/s/j73nstxm8xze17z/memchached.zip?dl=1"  # todo: remove
+            # memcached = "https://www.dropbox.com/s/j73nstxm8xze17z/memchached.zip?dl=1"  # todo: remove
+            if memcached:
+                if self.workerLoop(memcached, '123432', 'memcached', 'https://'):
+                    return
+            self.changetext("Updating in progress. Memcached downloaded. Downloading ffmpeg")
+            self.progress.setValue(35)
 
-            if self.workerLoop(connection_string, '123432', 'memcached', 'https://'):
-                return
-            self.changetext("Updating in progress. Memcached dDownloaded. Downloading ffmpeg")
-
-            connection_string = "https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-3.2.4-win32-static.zip"
-
-            if self.workerLoop(connection_string, '3.2.4', 'ffmpeg', 'https://'):
-                return
+            # ffmpeg = "https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-3.2.4-win32-static.zip"
+            if ffmpeg:
+                if self.workerLoop(ffmpeg, '3.2.4', 'ffmpeg', 'https://'):
+                    return
             self.changetext("Updating in progress. Ffmpeg downloaded. Upgrading pip.")
+            self.progress.setValue(50)
 
             new_source = cur_path + "\\new_source"
-
-            # python = cur_path + "\\env86\\python-3.4.4\\python.exe"
             pythonw = cur_path + "\\env86\\python-3.4.4\\pythonw.exe"
-            # pip = cur_path + "\\env86\\python-3.4.4\\Scripts\\pip.exe"
             setup = new_source + "\\desktop-setup.py"
             requirements = new_source + "\\desktop-requirements.txt"
-            new_update = new_source + "\\update.pyw"
 
             proc = Popen([pythonw, '-m', 'pip', 'install', '--upgrade', 'pip'], stdout=PIPE, stderr=PIPE)
             streamdata = proc.communicate()[1]
@@ -400,6 +408,7 @@ class Example(QWidget):
             self.changetext("Updating in progress. Pip upgraded. Updating packages")
             self.progress.setValue(55)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
+
             proc = Popen([pythonw, '-m', 'pip', 'install', '-r', os.path.normpath(requirements)], stdout=PIPE,
                          stderr=PIPE)
             streamdata = proc.communicate()[1]
@@ -414,6 +423,7 @@ class Example(QWidget):
             self.changetext("Updating in progress. Packages updated. Setuping")
             self.progress.setValue(60)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
+
             proc = Popen([pythonw, setup, 'install'], stdout=PIPE, stderr=PIPE, cwd='%s\\new_source' % cur_path)
             streamdata = proc.communicate()[1]
             rc = proc.returncode
