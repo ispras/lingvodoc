@@ -52,7 +52,13 @@ trait MergeDictionaryScope extends Scope
   /** Number of the result page currently being shown. */
   var pageNumber: Int = js.native
 
+  /** Number of matching entry groups found by selected merge suggestion algorithm. */
   var result_count: Int = js.native
+
+  /** Number of merged matching entry groups. */
+  var merged_count: Int = js.native
+
+  /** Data of matching lexical entries. */
   var dictionaryTables: js.Array[DictionaryTable] = js.native
 
   /** 
@@ -70,8 +76,9 @@ trait MergeDictionaryScope extends Scope
     * length. */
   var selected_entry_count: Int = js.native
 
-  /** Indices of currently selected lexical entry groups. */
-  var selectedGroups: js.Dictionary[Int] = js.native
+  /** Indices of currently selected lexical entry groups, with corresponding dictionary table and table page
+   *  indices. */
+  var selectedGroups: js.Dictionary[(Int, Int, Int)] = js.native
 
   /** Number of currently selected lexical entry groups, should always be exactly Object.keys(
     * selectedGroups).length. */
@@ -82,7 +89,7 @@ trait MergeDictionaryScope extends Scope
   var user_has_permissions: Boolean = js.native
 
   var pageLoaded: Boolean = js.native
-  var suggestionsLoading: Boolean = js.native
+  var loading: Boolean = js.native
 }
 
 
@@ -122,10 +129,16 @@ class MergeDictionaryController(
   private[this] var adjacency_map: mutable.Map[CompositeId, mutable.Set[CompositeId]] = mutable.Map()
   private[this] var weight_map: mutable.Map[CompositeId, Double] = mutable.Map()
 
-  private[this] var group_seq: mutable.Seq[mutable.Set[CompositeId]] = mutable.Seq()
-  private[this] var group_map: mutable.Map[CompositeId, Int] = mutable.Map()
+  /** Mapping from lexical entries to matching entry groups. */
+  private[this] var entry_group_map: mutable.Map[CompositeId, Int] = mutable.Map()
+
+  /** Mapping from entry group ids to sets of lexical entry ids. */
+  private[this] var group_entry_map: mutable.Map[Int, mutable.Set[CompositeId]] = mutable.Map()
+
   private[this] var dictionary_table_seq: mutable.Seq[DictionaryTable] = mutable.Seq()
-  private[this] var table_group_array: Array[js.Array[DictionaryTable]] = Array()
+
+  private[this] var table_group_array: mutable.ArrayBuffer[js.Array[DictionaryTable]] =
+    mutable.ArrayBuffer()
 
   scope.algorithm = "simple"
 
@@ -138,18 +151,21 @@ class MergeDictionaryController(
   scope.pageCount = -1
   scope.pageNumber = -1
 
+  scope.result_count = -1
+  scope.merged_count = 0
+
   scope.publishMergeMode = "any"
 
   scope.selectedEntries = js.Dictionary[String]()
   scope.selected_entry_count = 0
 
-  scope.selectedGroups = js.Dictionary[Int]()
+  scope.selectedGroups = js.Dictionary[(Int, Int, Int)]()
   scope.selected_group_count = 0
 
   scope.user_has_permissions = false
 
   scope.pageLoaded = false
-  scope.suggestionsLoading = false
+  scope.loading = false
 
   /** To be used for recover from Future failures, logs exception info to the console. */
   def recover_with_log(exception: Throwable): Unit =
@@ -199,6 +215,7 @@ class MergeDictionaryController(
       action
   }
 
+  /** Selects entry group page. */
   @JSExport
   def getPage(p: Int): Unit =
   {
@@ -213,7 +230,7 @@ class MergeDictionaryController(
   }
 
   @JSExport
-  def toggleSelectedEntries(client_id: Int, object_id: Int) =
+  def toggleSelectedEntries(client_id: Int, object_id: Int, table_index: Int) =
   {
     val composite_id = CompositeId(client_id, object_id)
     val string_id = composite_id.getId
@@ -231,10 +248,10 @@ class MergeDictionaryController(
 
     /* Checking if the entry's group have enough selected entries to be selected itself. */
 
-    val group_index = group_map(composite_id)
+    val group_index = entry_group_map(composite_id)
     var entry_count = 0
 
-    for (entry_id <- group_seq(group_index).toSeq.sorted)
+    for (entry_id <- group_entry_map(group_index).toSeq.sorted)
       if (scope.selectedEntries.contains(entry_id.getId))
         entry_count += 1
 
@@ -258,7 +275,7 @@ class MergeDictionaryController(
     {
       /* Group is not selected, but it should be, so we select it. */
 
-      scope.selectedGroups(group_string_id) = group_index
+      scope.selectedGroups(group_string_id) = (group_index, table_index, scope.pageNumber - 1)
       scope.selected_group_count += 1
     }
 
@@ -273,10 +290,12 @@ class MergeDictionaryController(
   }
 
   @JSExport
-  def toggleSelectedGroups(group_index: Int) =
+  def toggleSelectedGroups(group_index: Int, table_index: Int) =
   {
     val string_id = "group" + group_index.toString
-    if (__debug__) console.log(group_index)
+
+    if (__debug__)
+      console.log(group_index)
 
     if (scope.selectedGroups.contains(string_id))
     {
@@ -285,7 +304,7 @@ class MergeDictionaryController(
       scope.selectedGroups.delete(string_id)
       scope.selected_group_count -= 1
 
-      for (entry_id <- group_seq(group_index))
+      for (entry_id <- group_entry_map(group_index))
         if (scope.selectedEntries.contains(entry_id.getId))
         {
           scope.selectedEntries.delete(entry_id.getId)
@@ -296,10 +315,10 @@ class MergeDictionaryController(
     {
       /* Group is not selected, we select the whole group. */
 
-      scope.selectedGroups(string_id) = group_index
+      scope.selectedGroups(string_id) = (group_index, table_index, scope.pageNumber - 1)
       scope.selected_group_count += 1
 
-      for (entry_id <- group_seq(group_index))
+      for (entry_id <- group_entry_map(group_index))
         if (!scope.selectedEntries.contains(entry_id.getId))
         {
           scope.selectedEntries(entry_id.getId) = entry_id.getId
@@ -326,52 +345,51 @@ class MergeDictionaryController(
     }
   }
 
+  /** 
+   *  Opens view of a linked perpective, differs from the method with the same in LinkEntities by absense of
+   *  markedForDeletion filtration and absense of processing of modal page results.
+   */
   @JSExport
   def viewLinkedPerspective(
-    group_index: Int,
     entry: LexicalEntry,
     field: Field,
     values: js.Array[Value]) =
   {
     val options = ModalOptions()
+
     options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
     options.controller = "ViewDictionaryModalController"
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
+
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          linkPerspectiveClientId = field.link.get.clientId,
-          linkPerspectiveObjectId = field.link.get.objectId,
+          dictionaryId = dictionaryId.asInstanceOf[js.Object],
+          perspectiveId = perspectiveId.asInstanceOf[js.Object],
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
+          entities = values.map { _.getEntity() }
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    /* Updating dictionary table, if required. */
-
     val instance = modal.open[Seq[Entity]](options)
-    instance.result map { entities =>
-      entities.foreach(e => dictionary_table_seq(group_index).addEntity(entry, e))
-    }
+    instance.result map { _ => }
   }
 
   @JSExport
-  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
-
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) =
+  {
     val options = ModalOptions()
+
     options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
     options.controller = "EditGroupingTagModalController"
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
+
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(
@@ -387,9 +405,7 @@ class MergeDictionaryController(
     ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
-    instance.result map { _ =>
-
-    }
+    instance.result map { _ => }
   }
 
   /** Processes selection of a field used for entity matching. */
@@ -598,29 +614,36 @@ class MergeDictionaryController(
         weight_map(id_b) = weight_map.getOrElse(id_b, 0.0) + confidence / 2
       }
 
-      /* Grouping lexical entries into mutually matching groups. */
+      /* Gathers entries belonging to a specified entry group. */
 
-      group_seq = mutable.Seq()
-      group_map = mutable.Map()
+      var group_seq: mutable.Seq[mutable.Set[CompositeId]] = mutable.Seq()
 
       def df_search(entry_id: CompositeId, group_index: Int): Unit =
       {
-        if (group_map.contains(entry_id))
+        if (entry_group_map.contains(entry_id))
           return
 
         group_seq.last += entry_id
-        group_map(entry_id) = group_index
+        entry_group_map(entry_id) = group_index
 
         for (id <- adjacency_map(entry_id))
           df_search(id, group_index)
       }
 
+      /* Grouping lexical entries into mutually matching groups. */
+
+      entry_group_map = mutable.Map()
+
       for (entry_id <- adjacency_map.keys.toSeq.sorted)
-        if (!group_map.contains(entry_id))
+        if (!entry_group_map.contains(entry_id))
         {
           group_seq :+= mutable.Set()
           df_search(entry_id, group_seq.length - 1)
         }
+
+      group_entry_map = mutable.Map(
+        group_seq .zipWithIndex .map { case (entry_id_set, group_index) =>
+          group_index -> entry_id_set }: _*)
 
       /* Setting up lexical entry group data for rendering. */
 
@@ -632,12 +655,14 @@ class MergeDictionaryController(
           DictionaryTable.build(fields, dataTypes,
             group.toSeq.sorted.map { entry_id => entry_map(entry_id) }, Some(index)) }
 
-      table_group_array = dictionary_table_seq
-        .grouped(scope.pageSize)
-        .map { table_seq => js.Array(table_seq: _*) }
-        .toArray
+      table_group_array = mutable.ArrayBuffer(
+        dictionary_table_seq
+          .grouped(scope.pageSize)
+          .map { table_seq => js.Array(table_seq: _*) }
+          .toSeq: _*)
 
       scope.result_count = group_seq.length
+      scope.merged_count = 0
 
       scope.pageCount = table_group_array.length
       scope.pageNumber = 1
@@ -649,15 +674,11 @@ class MergeDictionaryController(
 
       /* Setting up tracking of selection of lexical entry groups. */
 
-      for (entry_id <- adjacency_map.keys)
-        scope.selectedEntries(entry_id.getId) = entry_id.getId
+      scope.selectedEntries = js.Dictionary[String]()
+      scope.selected_entry_count = 0
 
-      scope.selected_entry_count = adjacency_map.size
-
-      for (group_index <- 0 until group_seq.length)
-        scope.selectedGroups("group" + group_index.toString) = group_index
-
-      scope.selected_group_count = group_seq.length
+      scope.selectedGroups = js.Dictionary[(Int, Int, Int)]()
+      scope.selected_group_count = 0
 
       /* 
        * Dropping indication of loading of merge suggestions.
@@ -670,13 +691,13 @@ class MergeDictionaryController(
        * successful or unsuccessful.
        */
 
-      scope.suggestionsLoading = false
+      scope.loading = false
     }
 
     .recover {
       case e: Throwable =>
 
-      scope.suggestionsLoading = false
+      scope.loading = false
       recover_with_log(e)
     }
   }
@@ -685,13 +706,16 @@ class MergeDictionaryController(
   @JSExport
   def compute_merge_suggestions(): Unit =
   {
-    scope.suggestionsLoading = true
+    if (__debug__)
+      console.log("compute_merge_suggestions")
+
+    if (scope.loading)
+      return
+
+    scope.loading = true
 
     if (__debug__)
-    {
-      console.log("compute_merge_suggestions")
       console.log(scope.algorithm)
-    }
 
     if (scope.algorithm == "simple")
 
@@ -769,20 +793,64 @@ class MergeDictionaryController(
       s"Unknown entity matching algorithm '$scope.algorithm'.")
   }
 
-  /** Performs merge of selected entry groups. */
+  /** Shows message notifying the user about asynchronous merge. */
+  def async_merge_message()
+  {
+    val options = ModalOptions()
+
+    options.templateUrl = "/static/templates/modal/message.html"
+    options.controller = "MessageController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          "title" -> "Merge task launched",
+
+          "message" -> """
+            |<p>Due to large number of affected lexical entries a merge process was launched as a 
+            |background task, see the "Tasks" menu for details. 
+            |
+            |<p>Please refrain from computing new merge suggestions or editing the perspective until the 
+            |merge task is finished. It is safe to continue working with current merge suggestions and to 
+            |view the perspective.""".stripMargin
+        )
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    modal.open[Unit](options)
+  }
+
+  /** Performs merge of all selected entry groups. */
   @JSExport
-  def performMerge(): Unit =
+  def merge_all(): Unit =
   {
     if (__debug__)
-      console.log("performMerge")
+      console.log("merge_all")
 
-    val selected_seq = Seq({
+    if (!scope.user_has_permissions || scope.selected_group_count <= 0 || scope.loading)
+      return
 
-      for ((group_set, group_index) <- group_seq.zipWithIndex
-        if scope.selectedGroups.contains("group" + group_index.toString))
+    /* Gathering groups selections. */
 
-          yield Seq(group_set.toSeq.sorted: _*).filter(
-            entry_id => scope.selectedEntries.contains(entry_id.getId))}: _*)
+    var selected_group_map = mutable.Map[Int, mutable.Seq[(Int, Int)]]()
+
+    val selected_seq = Seq(
+      scope.selectedGroups .values .toSeq .map {
+        
+      case (group_index, table_index, page_index) =>
+
+        if (!selected_group_map.contains(page_index))
+          selected_group_map(page_index) = mutable.Seq()
+
+        selected_group_map(page_index) :+= (table_index, group_index)
+
+        Seq(group_entry_map(group_index) .toSeq .sorted: _*).filter(
+          entry_id => scope.selectedEntries.contains(entry_id.getId))
+
+      }: _*)
 
     if (__debug__)
     {
@@ -792,11 +860,91 @@ class MergeDictionaryController(
       console.log("publish_merge_mode: " + scope.publishMergeMode)
     }
 
-    backend.mergeBulk(
-      scope.publishMergeMode == "any",
-      selected_seq)
+    /* Removes selected entry groups. */
 
-      .map { entry_id_seq => () }
+    def remove_selected_groups() =
+    {
+      var current_page_index = scope.pageNumber - 1
+      var page_remove_count = 0
+
+      /* Going through all pages with at least one merged entry group in order of page numbers. */
+
+      for ((page_index, selected_group_seq) <- selected_group_map .toSeq .sortBy {
+        case (page_index, selected_group_seq) => page_index })
+      {
+        val table_group = table_group_array(page_index - page_remove_count)
+        var table_remove_count = 0
+
+        for ((table_index, group_index) <- selected_group_seq .sorted)
+        {
+          table_group.remove(table_index - table_remove_count)
+          table_remove_count += 1
+
+          /* De-selecting entries of the merged group. */
+
+          for (entry_id <- group_entry_map(group_index))
+            if (scope.selectedEntries.contains(entry_id.getId))
+            {
+              scope.selectedEntries.delete(entry_id.getId)
+              scope.selected_entry_count -= 1
+            }
+
+          scope.merged_count += 1
+        }
+
+        /* If we've removed all groups from the current page, we delete it. */
+
+        if (table_group.length <= 0)
+        {
+          table_group_array.remove(page_index - page_remove_count)
+
+          if (page_index - page_remove_count < current_page_index)
+            current_page_index -= 1
+
+          page_remove_count += 1
+        }
+      }
+
+      /* De-selecting merged groups, re-setting current page if required. */
+
+      scope.selectedGroups = js.Dictionary[(Int, Int, Int)]()
+      scope.selected_group_count = 0
+
+      if (page_remove_count > 0 && table_group_array.length > 0)
+        getPage(((current_page_index + 1) min table_group_array.length) max 1)
+    }
+
+    /* Low enough number of lexical entries to merge, using synchronous merge. */
+
+    if (scope.selected_entry_count <= 100)
+    {
+      scope.loading = true
+
+      backend.mergeBulk(
+        scope.publishMergeMode == "any",
+        selected_seq)
+
+      .map { _ =>
+        remove_selected_groups()
+        scope.loading = false }
+
+      .recover { case e: Throwable =>
+        scope.loading = false
+        recover_with_log(e) }
+    }
+
+    /* Large number of lexical entries to merge, launching asynchronous merge. */
+
+    else
+    
+      backend.mergeBulkAsync(
+        scope.publishMergeMode == "any",
+        selected_seq)
+
+      .map { _ =>
+        remove_selected_groups()
+        async_merge_message() }
+
       .recover { case e: Throwable => recover_with_log(e) }
   }
 
@@ -805,6 +953,267 @@ class MergeDictionaryController(
   override protected def onClose(): Unit = {
     waveSurfer foreach {w =>
       w.destroy()}
+  }
+
+  /** Merges all selected entry groups on the current page. */
+  @JSExport
+  def merge_all_page(): Unit =
+  {
+    if (__debug__)
+      console.log("merge_all_page")
+
+    if (!scope.user_has_permissions || scope.loading)
+      return
+
+    /* Gathering entries selected for a merge. */
+
+    var selected_group_seq = mutable.Seq[(Int, Int)]()
+    var selected_entry_count = 0
+
+    val selected_seq = Seq(
+      scope.dictionaryTables .zipWithIndex .flatMap {
+
+        case (dictionary_table, table_index) =>
+          val group_index = dictionary_table.tag.asInstanceOf[Int]
+
+          if (scope.selectedGroups.contains("group" + group_index.toString))
+          {
+            /* For each selected group we remember its index, its position in the table and the number of
+             * its selected entries. */
+
+            selected_group_seq :+= (group_index, table_index)
+
+            val entry_id_seq = Seq(
+              group_entry_map(group_index) .toSeq .sorted: _*)
+                .filter(entry_id => scope.selectedEntries.contains(entry_id.getId))
+
+            selected_entry_count += entry_id_seq.length
+            Some(entry_id_seq)
+          }
+
+          else None
+
+      }: _*)
+
+    if (selected_seq.length <= 0)
+      return
+
+    /* Removes selected entry groups. */
+
+    def remove_selected_groups() =
+    {
+      var remove_count = 0
+
+      for ((group_index, table_index) <- selected_group_seq)
+      {
+        scope.dictionaryTables.remove(table_index - remove_count)
+        remove_count += 1
+
+        /* De-selecting removed group. */
+
+        scope.selectedGroups.delete("group" + group_index.toString)
+        scope.selected_group_count -= 1
+
+        for (entry_id <- group_entry_map(group_index))
+          if (scope.selectedEntries.contains(entry_id.getId))
+          {
+            scope.selectedEntries.delete(entry_id.getId)
+            scope.selected_entry_count -= 1
+          }
+
+        scope.merged_count += 1
+      }
+
+      /* If we've removed all groups from the current page, we delete it. */
+
+      if (scope.dictionaryTables.length <= 0)
+      {
+        table_group_array.remove(scope.pageNumber - 1)
+        getPage(scope.pageNumber min table_group_array.length)
+      }
+    }
+
+    /* Low enough number of lexical entries to merge, using synchronous merge. */
+
+    if (selected_entry_count <= 100)
+    {
+      scope.loading = true
+
+      backend.mergeBulk(
+        scope.publishMergeMode == "any",
+        selected_seq)
+
+      .map { _ =>
+        remove_selected_groups()
+        scope.loading = false }
+
+      .recover { case e: Throwable =>
+        scope.loading = false
+        recover_with_log(e) }
+    }
+
+    /* Large number of lexical entries to merge, launching asynchronous merge. */
+
+    else
+    
+      backend.mergeBulkAsync(
+        scope.publishMergeMode == "any",
+        selected_seq)
+
+      .map { _ =>
+        remove_selected_groups()
+        async_merge_message() }
+
+      .recover { case e: Throwable => recover_with_log(e) }
+  }
+
+  /** Merges specified group. */
+  @JSExport
+  def merge_group(group_index: Int, table_index: Int): Unit =
+  {
+    if (__debug__)
+      console.log("merge_group")
+
+    if (!scope.user_has_permissions)
+      return
+
+    /* Gathering entries selected for a merge. */
+
+    val string_id = "group" + group_index.toString
+
+    if (!scope.selectedGroups.contains(string_id))
+      return
+
+    val selected_seq = Seq(
+      Seq(group_entry_map(group_index) .toSeq .sorted: _*).filter(
+        entry_id => scope.selectedEntries.contains(entry_id.getId)))
+
+    /* Performing merge. */
+      
+    scope.loading = true
+
+    backend.mergeBulk(
+      scope.publishMergeMode == "any",
+      selected_seq)
+
+    .map {
+      entry_id_seq =>
+
+      /* Removing merged group if the merge finished successfully. */
+
+      scope.dictionaryTables.remove(table_index)
+
+      scope.selectedGroups.delete(string_id)
+      scope.selected_group_count -= 1
+
+      for (entry_id <- group_entry_map(group_index))
+        if (scope.selectedEntries.contains(entry_id.getId))
+        {
+          scope.selectedEntries.delete(entry_id.getId)
+          scope.selected_entry_count -= 1
+        }
+
+      scope.merged_count += 1
+
+      /* If we've removed all groups from the current page, we delete it. */
+
+      if (scope.dictionaryTables.length <= 0)
+      {
+        table_group_array.remove(scope.pageNumber - 1)
+        getPage(scope.pageNumber min table_group_array.length)
+      }
+
+      scope.loading = false
+    }
+
+    .recover { case e: Throwable =>
+      scope.loading = false
+      recover_with_log(e) }
+  }
+
+  /** Selects all entries of all groups. */
+  @JSExport
+  def select_all() =
+  {
+    for ((group_array, page_index) <- table_group_array .zipWithIndex)
+      for ((dictionary_table, table_index) <- group_array .zipWithIndex)
+      {
+        val group_index = dictionary_table.tag.asInstanceOf[Int]
+        val string_id = "group" + group_index.toString
+
+        /* Ensuring that each group is selected. */
+
+        scope.selectedGroups(string_id) = (group_index, table_index, page_index)
+
+        for (entry_id <- group_entry_map(group_index))
+          scope.selectedEntries(entry_id.getId) = entry_id.getId
+      }
+
+    scope.selected_entry_count = scope.selectedEntries.size
+    scope.selected_group_count = scope.selectedGroups.size
+  }
+
+  /** De-selects all entries of all groups. */
+  @JSExport
+  def deselect_all() =
+  {
+    scope.selectedEntries = js.Dictionary[String]()
+    scope.selected_entry_count = 0
+
+    scope.selectedGroups = js.Dictionary[(Int, Int, Int)]()
+    scope.selected_group_count = 0
+  }
+
+  /** Selects all entries of all groups on the current page. */
+  @JSExport
+  def select_all_page() =
+  {
+    for ((dictionary_table, table_index) <- scope.dictionaryTables .zipWithIndex)
+    {
+      val group_index = dictionary_table.tag.asInstanceOf[Int]
+      val string_id = "group" + group_index.toString
+
+      if (!scope.selectedGroups.contains(string_id))
+      {
+        /* If a group is not selected, we select it and ensure that all its entries are selected too. */
+
+        scope.selectedGroups(string_id) = (group_index, table_index, scope.pageNumber - 1)
+        scope.selected_group_count += 1
+
+        for (entry_id <- group_entry_map(group_index))
+          if (!scope.selectedEntries.contains(entry_id.getId))
+          {
+            scope.selectedEntries(entry_id.getId) = entry_id.getId
+            scope.selected_entry_count += 1
+          }
+      }
+    }
+  }
+
+  /** De-selects all entries of all groups on the current page. */
+  @JSExport
+  def deselect_all_page() =
+  {
+    for (dictionary_table <- scope.dictionaryTables)
+    {
+      val group_index = dictionary_table.tag.asInstanceOf[Int]
+      val string_id = "group" + group_index.toString
+
+      if (scope.selectedGroups.contains(string_id))
+      {
+        /* If a group is selected, we deselect it and ensure that all its entries are deselected too. */
+
+        scope.selectedGroups.delete(string_id)
+        scope.selected_group_count -= 1
+
+        for (entry_id <- group_entry_map(group_index))
+          if (scope.selectedEntries.contains(entry_id.getId))
+          {
+            scope.selectedEntries.delete(entry_id.getId)
+            scope.selected_entry_count -= 1
+          }
+      }
+    }
   }
 }
 
