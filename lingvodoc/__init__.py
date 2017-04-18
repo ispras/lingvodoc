@@ -593,12 +593,18 @@ def configure_routes(config):
         factory = 'lingvodoc.models.LexicalEntriesEntitiesAcl')
 
     # API #POST
-    # {'group_list': <group_list>}
+    # {'group_list': <group_list>, 'publish_any': bool}
     #
     # Merges multiple groups of lexical entries, provided that each group is a subset of a single
     # perspective, returns client/object ids of new lexical entries, a new entry for each merged group.
     #
     config.add_route(name = 'merge_bulk', pattern = '/merge/bulk')
+
+    # API #POST
+    #
+    # Launches background merge task, parameters are the same as of 'merge_bulk' route.
+    #
+    config.add_route(name = 'merge_bulk_async', pattern = '/merge/bulk_async')
 
     # API #GET
     #

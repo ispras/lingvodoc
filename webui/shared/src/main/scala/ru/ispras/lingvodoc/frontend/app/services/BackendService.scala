@@ -2265,6 +2265,60 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  /** Launches background merge task, parameters are the same as of 'mergeBulk' method. */
+  def mergeBulkAsync(
+    publish_any: Boolean,
+    group_seq: Seq[Seq[CompositeId]]):
+    Future[Unit] =
+  {
+    val p = Promise[Unit]
+
+    val request =
+
+      JSON.stringify(js.Dynamic.literal(
+        "publish_any" -> publish_any,
+        "group_list" ->
+
+        js.Array(group_seq map { entry_id_seq =>
+          js.Array(entry_id_seq map { entry_id =>
+
+          js.Dynamic.literal(
+            "client_id" -> entry_id.clientId,
+            "object_id" -> entry_id.objectId)}: _*)}: _*)))
+
+    $http.post[js.Dynamic](getMethodUrl("merge/bulk_async"), request) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while launching asynchronous merge:\n" + response.error))
+
+          else p.success(())
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to launch bulk asynchronous merge: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
   /** 
     * Gathers user participation statistics for a specified perspective in a given time interval
     * [time_begin, time_end), with time interval endpoints 'time_begin', 'time_end' specified as Unix

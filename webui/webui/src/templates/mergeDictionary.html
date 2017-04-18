@@ -1,10 +1,13 @@
-<div id="shader" class="animate-show" ng-show="!pageLoaded || suggestionsLoading">
+<div id="shader" class="animate-show" ng-show="!pageLoaded || loading">
     <div id="loader-wrapper-fullscreen">
         <div id="loader"></div>
     </div>
 </div>
 
-<div class="container-fluid animate-show" style="padding-top: 20px" ng-show="pageLoaded">
+<div
+    class="container-fluid animate-show"
+    style="padding-top: 20px"
+    ng-show="pageLoaded">
 
     <div class="row">
         <div class="col-md-12">
@@ -88,7 +91,7 @@
                         type="button"
                         class="btn btn-default"
                         ng-click="controller.remove_field_selection($index)"
-                        ng-disabled="suggestionsLoading">
+                        ng-disabled="loading">
                         <span class="glyphicon glyphicon-remove"></span>
                     </button>
                 </div>
@@ -161,7 +164,7 @@
                     type="button"
                     class="btn btn-default"
                     ng-click="controller.add_field_selection()"
-                    ng-disabled="suggestionsLoading">
+                    ng-disabled="loading">
                     <span class="glyphicon glyphicon-plus"></span>
                 </button>
             </div>
@@ -199,7 +202,7 @@
                 ng-disabled="
                     optionform.threshold.$error.pattern || !threshold ||
                     !field_selection_valid ||
-                    suggestionsLoading">
+                    loading">
                 Compute merge suggestions
             </button>
         </div>
@@ -209,25 +212,23 @@
         <h4 class="text-center">
             You don't have create/delete permissions required to perform merges.
         </h4>
-        <!-- Dummy block for some whitespace separation. -->
-        <div class="row top30" ng-show="result_count >= 0"></div>
     </div>
 
     <!-- Merge suggestion results. -->
 
-    <div class="row top30" ng-show="result_count >= 0">
+    <div ng-show="result_count >= 0 && merged_count <= 0">
         <h3 class="text-center">Found {{ result_count }} matching entry groups</h3>
     </div>
 
-    <div style="display: table; border-spacing: 1em;" ng-show="result_count >= 0">
-        <div style="display: table-cell; vertical-align: middle;">
-            <a class="btn btn-default"
-                ng-click="controller.performMerge()"
-                ng-href='{{controller.getActionLink("view")}}'
-                ng-disabled="!user_has_permissions || selected_group_count <= 0">Perform merge</a>
-        </div>
+    <div ng-show="result_count >= 0 && merged_count > 0">
+        <h3 class="text-center">
+            Found {{ result_count }} matching entry groups, {{ merged_count }} merged,
+                {{ result_count - merged_count }} left
+        </h3>
+    </div>
 
-        <div style="display: table-cell; vertical-align: middle;">
+    <div style="text-align: center" ng-show="result_count - merged_count > 0">
+        <div style="display: inline-block; vertical-align: middle; text-align: left;">
             <label style="font-weight: normal">
                 <input type="radio" name="publishMode" ng-model="publishMergeMode" value="any">
                 Publish result of entity merge if any merged entity is published
@@ -238,12 +239,88 @@
                 Publish result of entity merge if all merged entities are published
             </label>
         </div>
+
+        <!-- Merge action buttons. -->
+
+        <br>
+        <div style="display: inline-block; margin: 0.25em;">
+            <a class="btn btn-default"
+                ng-click="controller.merge_all_page()"
+                ng-disabled="!user_has_permissions || selected_group_count <= 0 || loading">
+                Merge all selected entry groups on this page
+            </a>
+        </div>
+
+        <br>
+        <div style="display: inline-block; margin: 0.25em;">
+            <a class="btn btn-default"
+                ng-click="controller.merge_all()"
+                ng-disabled="!user_has_permissions || selected_group_count <= 0 || loading">
+                Merge all selected entry groups on all pages
+            </a>
+        </div>
     </div>
 
-    <!-- A table for each mergable lexical entry group. -->
+    <!-- Aggregate group selection/deselection. -->
+
+    <div style="display: table; border-spacing: 1em;" ng-show="result_count - merged_count > 0">
+        <div style="display: table-cell; vertical-align: middle;">
+            <div style="display: inline-block; margin: 0.25em;">
+                <a class="btn btn-default"
+                    ng-click="controller.select_all_page()"
+                    ng-disabled="loading">Select all on this page</a>
+
+                <a class="btn btn-default"
+                    ng-click="controller.deselect_all_page()"
+                    ng-disabled="loading">De-select all on this page</a>
+            </div>
+
+            <br>
+
+            <div style="display: inline-block; margin: 0.25em;">
+                <a class="btn btn-default"
+                    ng-click="controller.select_all()"
+                    ng-disabled="loading">Select all on all pages</a>
+
+                <a class="btn btn-default"
+                    ng-click="controller.deselect_all()"
+                    ng-disabled="loading">De-select all on all pages</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- A table for each mergeable lexical entry group. -->
 
     <div ng-repeat="dictionaryTable in dictionaryTables">
-      <div ng-include="'/static/templates/include/mergeDictionary.html'"></div>
+        <div ng-include="'/static/templates/include/mergeDictionary.html'"></div>
+    </div>
+
+    <!-- Aggregate group selection/deselection. -->
+
+    <div style="display: table; border-spacing: 0em;" ng-show="result_count - merged_count > 0">
+        <div style="display: table-cell; vertical-align: middle;">
+            <div style="display: inline-block; margin: 0.25em;">
+                <a class="btn btn-default"
+                    ng-click="controller.select_all_page()"
+                    ng-disabled="loading">Select all on this page</a>
+
+                <a class="btn btn-default"
+                    ng-click="controller.deselect_all_page()"
+                    ng-disabled="loading">De-select all on this page</a>
+            </div>
+
+            <br>
+
+            <div style="display: inline-block; margin: 0.25em;">
+                <a class="btn btn-default"
+                    ng-click="controller.select_all()"
+                    ng-disabled="loading">Select all on all pages</a>
+
+                <a class="btn btn-default"
+                    ng-click="controller.deselect_all()"
+                    ng-disabled="loading">De-select all on all pages</a>
+            </div>
+        </div>
     </div>
 
     <!-- Pagination, like in 'mapSearch.html'. -->
@@ -256,13 +333,42 @@
                     <ul class="pagination pagination-sm">
                         <li ng-repeat="p in controller.range(1, pageCount, 1)"
                             ng-class="{active: pageNumber == p}">
-                            <a href="" ng-click="controller.getPage(p)">{{ p }}</a>
+                            <a href="" ng-click="controller.getPage(p)" ng-disabled="loading">{{ p }}</a>
                         </li>
                     </ul>
                 </nav>
             </div>
 
         </div>
+    </div>
+
+    <!-- Merge action buttons. -->
+
+    <div style="text-align: center" ng-show="result_count - merged_count > 0">
+        <div style="display: inline-block; margin: 0.25em;">
+            <a class="btn btn-default"
+                ng-click="controller.merge_all_page()"
+                ng-disabled="!user_has_permissions || selected_group_count <= 0 || loading">
+                Merge all selected entry groups on this page
+            </a>
+        </div>
+        <br>
+        <div style="display: inline-block; margin: 0.25em;">
+            <a class="btn btn-default"
+                ng-click="controller.merge_all()"
+                ng-disabled="!user_has_permissions || selected_group_count <= 0 || loading">
+                Merge all selected entry groups on all pages
+            </a>
+        </div>
+    </div>
+
+    <!-- Showing merge results info, if required. -->
+
+    <div class="row top30" ng-show="merge_success">
+        <h3 class="text-center">
+            Merge successful, created {{ entry_count }} new lexical entries and {{ entity_count }} new
+            entities.
+        </h3>
     </div>
 
 </div>
