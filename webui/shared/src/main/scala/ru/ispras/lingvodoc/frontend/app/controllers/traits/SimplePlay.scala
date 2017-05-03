@@ -9,6 +9,7 @@ import scala.scalajs.js.annotation.JSExport
 trait SimplePlay {
 
   protected var waveSurfer: Option[WaveSurfer] = None
+  protected var waveSpectrogram: Option[js.Dynamic] = None
   protected var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
   protected val pxPerSecStep = 30 // zooming step
   protected var soundMarkup: Option[String] = None
@@ -52,12 +53,10 @@ trait SimplePlay {
     waveSurfer = Some(w)
   }
 
-
   private[this] def drawSpectrogram(waveSurfer: WaveSurfer) = {
-    val spectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
-    spectrogram.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer, container = spectrogramId, fftSamples = 128)))
+    if (waveSpectrogram.isEmpty) {
+      waveSpectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
+      waveSpectrogram.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer, container = spectrogramId, fftSamples = 128)))
+    }
   }
-
-
-
 }
