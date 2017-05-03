@@ -713,7 +713,7 @@ def convert_five_tiers(
             else:
                 sp_lexical_entry_client_id, sp_lexical_entry_object_id = par_rows[par_row]
             if not no_sound:
-                if word.time[1] < len(full_audio):
+                if word.time[1] <= len(full_audio):
                     with tempfile.NamedTemporaryFile() as temp:
                         full_audio[ word.time[0]: word.time[1]].export(temp.name, format=sound_format)
                         audio_slice = temp.read()
@@ -849,7 +849,7 @@ def convert_five_tiers(
                 else:
                     fp_lexical_entry_client_id, fp_lexical_entry_object_id = lex_rows[lex_row]
                 if not no_sound:
-                    if word.time[1] < len(full_audio):
+                    if word.time[1] <= len(full_audio):
                         with tempfile.NamedTemporaryFile() as temp:
                             full_audio[ word.time[0]: word.time[1]].export(temp.name, format=sound_format)
                             audio_slice = temp.read()
@@ -1027,7 +1027,6 @@ def convert_five_tiers(
                                                   locale_id=locale_id)
                                 create_le_flag = False
                                 break
-                            
                     else:
                         create_le_flag = False
                         reg = re.search('[-.][\dA-Z]+', t[2].content)
