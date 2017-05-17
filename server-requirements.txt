@@ -45,3 +45,4 @@ pydub==0.16.5
 xlsxwriter==0.9.6
 xlrd==1.0.0
 xlwt==1.1.2
+graphene==1.4
