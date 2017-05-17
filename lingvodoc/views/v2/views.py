@@ -58,8 +58,7 @@ import json
 import requests
 from pyramid.request import Request
 from time import time
-
-
+from lingvodoc.schema import schema
 
 @view_config(route_name='fix_groups', renderer='json', permission='admin')
 def fix_groups(request):
@@ -413,6 +412,40 @@ def create_persp_to_field(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
+
+#TODO: Remove it
+@view_config(route_name='testing_graphene', renderer='json')
+def testing_graphene(request):
+    published = request.params.get('published')
+    if published is None:
+        published = False
+
+    # result = schema.execute('query  dictionary{ client dictionaries(published: %s){translation status} dictionary(id: [70,4]){id translation}}' % str(published).lower(),
+    #                         context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
+    #                                        'locale_id': 1,
+    #                                        'request': request})
+
+    result = schema.execute(
+        'query  perspective{  perspective(id: [630,9])'
+        '{id translation tree{id translation dataType}'
+        'fields{id translation}'
+        'lexicalEntries{id entities{id content fieldType}}'
+        '}}',
+        context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
+                       'locale_id': 2,
+                       'request': request})
+    # result = schema.execute(
+    #     'query  perspective{  perspective(id: [70,5])'
+    #     '{id translation '
+    #     'lexicalEntries{id entities{id content fieldType}}'
+    #     '}}',
+    #     context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
+    #                    'locale_id': 2,
+    #                    'request': request})
+
+    if result.invalid:
+        return {'errors': [str(e) for e in result.errors]}
+    return result.data
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
