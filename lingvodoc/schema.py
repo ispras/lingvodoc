@@ -18,19 +18,18 @@ from sqlalchemy import (
     tuple_
 )
 
-
-
 class Holder(graphene.Interface):
     id = graphene.List(graphene.Int)
     translation = graphene.String()
     dataType = graphene.String()
 
-def fetch_object(attrib_name):
+def fetch_object(attrib_name=None):
     def dec(func):
         def wrapper(*args, **kwargs):
             cls = args[0]
-            if hasattr(cls, attrib_name):
-                return getattr(cls, attrib_name)
+            if attrib_name:
+                if hasattr(cls, attrib_name):
+                    return getattr(cls, attrib_name)
             if not cls.dbObject:
                 cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0], object_id=cls.id[1]).one()
             return func(*args, **kwargs)
@@ -38,13 +37,13 @@ def fetch_object(attrib_name):
     return dec
 
 class Field(graphene.ObjectType):
+    dbType = dbField
+    dbObject = None
     class Meta:
         interfaces = (Holder, )
 
     def resolve_dataType(self):
         return 'field'
-    dbType = dbField
-    dbObject = None
 
     @fetch_object('translation')
     def resolve_translation(self, args, context, info):
@@ -57,6 +56,7 @@ class Entity(graphene.ObjectType):
 
     dbType = dbEntity
     dbObject = None
+
     @fetch_object('content')
     def resolve_content(self, args, context, info):
         return self.dbObject.content
@@ -70,17 +70,15 @@ class LexicalEntry(graphene.ObjectType):
     id = graphene.List(graphene.Int)
     entities = graphene.List(Entity)
 
+    dbType = dbLexicalEntry
+    dbObject = None
 
+    @fetch_object('entities')
     def resolve_entities(self, args, context, info):
-        if hasattr(self, 'entities'):
-            return self.entities
-        else:
-
-            result = list()
-            dbLex = DBSession.query(dbLexicalEntry).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-            for entity in dbLex.entity:
-                result.append(Entity(id=[entity.client_id, entity.object_id]))
-            return result[:2]
+        result = list()
+        for entity in self.dbObject.entity:
+            result.append(Entity(id=[entity.client_id, entity.object_id]))
+        return result[:2]
 
 class Perspective(graphene.ObjectType):
     class Meta:
@@ -93,34 +91,32 @@ class Perspective(graphene.ObjectType):
     lexicalEntries = graphene.List(LexicalEntry, offset = graphene.Int(), count = graphene.Int(), mode = graphene.String())
     stats = graphene.String()
 
+    dbType = dbPerspective
+    dbObject = None
+
     def resolve_dataType(self, args, context, info):
         return 'perspective'
 
-
+    @fetch_object('translation')
     def resolve_translation(self, args, context, info):
-        if hasattr(self, 'translation'):
-            return self.translation
-        else:
-            dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-            return dbPersp.get_translation(context.get('locale_id'))
+        return self.dbObject.get_translation(context.get('locale_id'))
 
+    @fetch_object('status')
     def resolve_status(self, args, context, info):
-        if hasattr(self, 'status'):
-            return self.translation
+        # if hasattr(self, 'status'):
+        #     return self.translation TODO: fix it
+        atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=self.dbObject.state_translation_gist_client_id,
+                                                          parent_object_id=self.dbObject.state_translation_gist_object_id,
+                                                          locale_id=int(context.get('locale_id'))).first()
+        if atom:
+            return atom.content
         else:
-            dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbPersp.state_translation_gist_client_id,
-                                                              parent_object_id=dbPersp.state_translation_gist_object_id,
-                                                              locale_id=int(context.get('locale_id'))).first()
-            if atom:
-                return atom.content
-            else:
-                return None
+            return None
 
+    @fetch_object() # TODO: ?
     def resolve_tree(self, args, context, info):
-        dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
         result = list()
-        iteritem = dbPersp
+        iteritem = self.dbObject
         while iteritem:
             id = [iteritem.client_id, iteritem.object_id]
             if type(iteritem) == dbPerspective:
@@ -132,20 +128,19 @@ class Perspective(graphene.ObjectType):
             iteritem = iteritem.parent
         return result
 
+    @fetch_object() # TODO: ?
     def resolve_fields(self, args, context, info):
-        dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-        dbFields = dbPersp.dictionaryperspectivetofield
+        dbFields = self.dbObject.dictionaryperspectivetofield
         result = list()
         for dbfield in dbFields:
             result.append(Field(id=[dbfield.client_id, dbfield.object_id]))
         return result
 
+    @fetch_object() # TODO: ?
     def resolve_lexicalEntries(self, args, context, info):
         result = list()
         request = context.get('request')
-
-        dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-        # lexes = DBSession.query(dbLexicalEntry).filter_by(parent=dbPersp)
+        # lexes = DBSession.query(dbLexicalEntry).filter_by(parent=self.dbObject)
         #
         # lexes_composite_list = [(lex.created_at,
         #                          lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
@@ -158,7 +153,7 @@ class Perspective(graphene.ObjectType):
         #     entities = [Entity(id=[ent.client_id, ent.object_id]) for ent in dbentities]
         #     result.append(LexicalEntry(id=[lex.client_id, lex.object_id], entities = entities))
 
-        lex = DBSession.query(dbLexicalEntry).filter_by(parent=dbPersp).first()
+        lex = DBSession.query(dbLexicalEntry).filter_by(parent=self.dbObject).first()
         lexes_composite_list = [lex]
         lexes_composite_list = [(lex.created_at,
                                  lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
@@ -182,22 +177,24 @@ class Perspective(graphene.ObjectType):
         return result
 
 class Language(graphene.ObjectType):
+    dbType = dbLanguage
+    dbObject = None
+
     class Meta:
         interfaces = (Holder, )
 
     def resolve_dataType(self, args, context, info):
         return 'language'
 
-
+    @fetch_object('translation')
     def resolve_translation(self, args, context, info):
-        if hasattr(self, 'translation'):
-            return self.translation
-        else:
-            dbLang = DBSession.query(dbLanguage).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-            return dbLang.get_translation(context.get('locale_id'))
+        return self.dbObject.get_translation(context.get('locale_id'))
 
 
 class Dictionary(graphene.ObjectType):
+    dbType = dbDictionary
+    dbObject = None
+
     class Meta:
         interfaces = (Holder, )
     status = graphene.String()
@@ -205,27 +202,20 @@ class Dictionary(graphene.ObjectType):
     def resolve_dataType(self, args, context, info):
         return 'dictionary'
 
-
+    @fetch_object('translation')
     def resolve_translation(self, args, context, info):
-        if hasattr(self, 'translation'):
-            return self.translation
-        else:
-            dbdict = DBSession.query(dbDictionary).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-            # return dbdict.get_translation(2)
-            return dbdict.get_translation(context.get('locale_id'))
+        # return dbdict.get_translation(2)
+        return self.dbObject.get_translation(context.get('locale_id'))
 
+    @fetch_object('status')
     def resolve_status(self, args, context, info):
-        if hasattr(self, 'status'):
-            return self.status
+        atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=self.dbObject.state_translation_gist_client_id,
+                                                          parent_object_id=self.dbObject.state_translation_gist_object_id,
+                                                          locale_id=int(context.get('locale_id'))).first()
+        if atom:
+            return atom.content
         else:
-            dbdict = DBSession.query(dbDictionary).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbdict.state_translation_gist_client_id,
-                                                              parent_object_id=dbdict.state_translation_gist_object_id,
-                                                              locale_id=int(context.get('locale_id'))).first()
-            if atom:
-                return atom.content
-            else:
-                return None
+            return None
 
 class Query(graphene.ObjectType):
 
