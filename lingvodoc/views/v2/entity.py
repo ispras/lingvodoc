@@ -142,7 +142,11 @@ def create_entity(request):  # tested
                                                               Group.subject_client_id == entity.parent.parent.client_id,
                                                               Group.subject_object_id == entity.parent.parent.object_id,
                                                               BaseGroup.action == 'create').one()
-        if user in group.users:
+        override_group = DBSession.query(Group).join(BaseGroup).filter(
+                BaseGroup.subject == 'lexical_entries_and_entities',
+                Group.subject_override == True,
+                BaseGroup.action == 'create').one()
+        if user in group.users or user in override_group.users:
             entity.publishingentity.accepted = True
         if upper_level:
             entity.upper_level = upper_level
