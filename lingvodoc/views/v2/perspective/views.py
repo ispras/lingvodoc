@@ -1780,7 +1780,7 @@ def lexical_entries_not_accepted(request):
         lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
                                                         parent_object_id=parent.object_id) \
             .join(LexicalEntry.entity).join(Entity.publishingentity) \
-            .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
+            .filter(PublishingEntity.accepted == False)
         if authors or clients:
             lexes = lexes.join(Client, Entity.client_id == Client.id)
         if authors:
@@ -1801,7 +1801,6 @@ def lexical_entries_not_accepted(request):
             .offset(start_from).limit(count)
 
         result = deque()
-
         lexes_composite_list = [(lex.created_at,
                                  lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
                                  lex.marked_for_deletion, lex.additional_metadata,
@@ -1881,7 +1880,7 @@ def lexical_entries_not_accepted_count(request):
                                                                             parent_client_id=parent.client_id,
                                                                             parent_object_id=parent.object_id) \
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
+                .filter(PublishingEntity.accepted == False)
             if authors or clients or start_date or end_date:
                 lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
             if authors or clients:
@@ -1974,7 +1973,11 @@ def accept_entity(request):
                     Group.subject_client_id == entity.parent.parent.client_id,
                     Group.subject_object_id == entity.parent.parent.object_id,
                     BaseGroup.action == 'create').one()
-                if user in group.users:
+                override_group = DBSession.query(Group).join(BaseGroup).filter(
+                        BaseGroup.subject == 'lexical_entries_and_entities',
+                        Group.subject_override == True,
+                        BaseGroup.action == 'create').one()
+                if user in group.users or user in override_group.users:
                     if entity:
                         entity.publishingentity.accepted = True
                     else:
