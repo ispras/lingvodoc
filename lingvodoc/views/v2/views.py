@@ -414,7 +414,7 @@ def create_persp_to_field(request):
 
 
 #TODO: Remove it
-@view_config(route_name='testing_graphene', renderer='string', request_method='POST')
+@view_config(route_name='testing_graphene', renderer='json', request_method='POST')
 def testing_graphene(request):
     published = request.params.get('published')
     if published is None:
@@ -427,7 +427,6 @@ fields{id translation}
 lexicalEntries{id entities{id content fieldType}}
 }}
     """
-
     request_string = request.body.decode("utf-8")
     # result = schema.execute('query  dictionary{ client dictionaries(published: %s){translation status} dictionary(id: [70,4]){id translation}}' % str(published).lower(),
     #                         context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,

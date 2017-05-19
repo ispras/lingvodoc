@@ -7,7 +7,8 @@ from lingvodoc.models import (
     Language as dbLanguage,
     TranslationAtom as dbTranslationAtom,
     Entity as dbEntity,
-    LexicalEntry as dbLexicalEntry
+    LexicalEntry as dbLexicalEntry,
+    User as dbUser
 )
 from pyramid.request import Request
 
@@ -30,11 +31,18 @@ def fetch_object(attrib_name=None):
             if attrib_name:
                 if hasattr(cls, attrib_name):
                     return getattr(cls, attrib_name)
+
             if not cls.dbObject:
-                cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0], object_id=cls.id[1]).one()
+                if type(cls.id) is int:
+                    id = cls.id
+                    cls.dbObject = DBSession.query(cls.dbType).filter_by(id=id).one()
+                elif type(cls.id) is list:
+                    cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0], object_id=cls.id[1]).one()
             return func(*args, **kwargs)
         return wrapper
     return dec
+
+
 
 class Field(graphene.ObjectType):
     dbType = dbField
@@ -103,8 +111,6 @@ class Perspective(graphene.ObjectType):
 
     @fetch_object('status')
     def resolve_status(self, args, context, info):
-        # if hasattr(self, 'status'):
-        #     return self.translation TODO: fix it
         atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=self.dbObject.state_translation_gist_client_id,
                                                           parent_object_id=self.dbObject.state_translation_gist_object_id,
                                                           locale_id=int(context.get('locale_id'))).first()
@@ -176,6 +182,74 @@ class Perspective(graphene.ObjectType):
 
         return result
 
+import datetime
+from graphene.types import Scalar
+from graphql.language import ast
+
+class DateTime(Scalar): # TODO: choose format
+    '''DateTime Scalar Description'''
+
+    @staticmethod
+    def serialize(dt):
+        dt = datetime.datetime.utcfromtimestamp(dt) # wrong time
+        return dt.isoformat()
+
+    @staticmethod
+    def parse_literal(node):
+        print(2, node)
+        if isinstance(node, ast.StringValue):
+            return datetime.datetime.strptime(
+                node.value, "%Y-%m-%dT%H:%M:%S.%f")
+
+    @staticmethod
+    def parse_value(value):
+        print(3, value)
+        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+
+class User(graphene.ObjectType):
+    # class Meta:
+    #     interfaces = (Holder, )
+    # class
+    login = graphene.String()
+    name = graphene.String()
+    intl_name = graphene.String()
+    default_locale_id = graphene.Int()
+    birthday = graphene.String() # TODO: DateTime class
+    is_active = graphene.Boolean() #boolean
+    id = graphene.Int()
+    created_at = DateTime()
+
+    dbType = dbUser
+    dbObject = None
+
+    @fetch_object()
+    def resolve_login(self, args, context, info):
+        return self.dbObject.login
+
+    @fetch_object()
+    def resolve_name(self, args, context, info):
+        return self.dbObject.name
+
+    @fetch_object()
+    def resolve_intl_name(self, args, context, info):
+        return self.dbObject.intl_name
+
+    @fetch_object()
+    def resolve_default_locale_id(self, args, context, info):
+        return self.dbObject.default_locale_id
+
+    @fetch_object()
+    def resolve_birthday(self, args, context, info):
+        return self.dbObject.birthday
+
+    @fetch_object()
+    def resolve_is_active(self, args, context, info):
+        return self.dbObject.is_active
+
+    @fetch_object()
+    def resolve_created_at(self, args, context, info):
+        return self.dbObject.created_at
+
 class Language(graphene.ObjectType):
     dbType = dbLanguage
     dbObject = None
@@ -217,6 +291,9 @@ class Dictionary(graphene.ObjectType):
         else:
             return None
 
+
+
+
 class Query(graphene.ObjectType):
 
     client = graphene.String()
@@ -225,6 +302,7 @@ class Query(graphene.ObjectType):
     perspective = graphene.Field(Perspective, id=graphene.List(graphene.Int))
     entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
+    user = graphene.Field(User, id=graphene.Int())
     def resolve_client(self, args, context, info):
         return context.get('client')
 
@@ -296,4 +374,8 @@ class Query(graphene.ObjectType):
         id = args.get('id')
         return Entity(id=id)
 
-schema = graphene.Schema(query=Query)
+    def resolve_user(self, args, context, info):
+        id = args.get('id')
+        return User(id=id)
+
+schema = graphene.Schema(query=Query, auto_camelcase=False)
