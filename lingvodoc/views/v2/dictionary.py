@@ -631,6 +631,10 @@ def edit_dictionary_roles(request):  # tested & in docs
                             if org in group.organizations:
                                 permitted = True
                                 break
+                    if not permitted:
+                        override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
 
                     if permitted:
                         users = roles_users[role_name]
@@ -667,6 +671,10 @@ def edit_dictionary_roles(request):  # tested & in docs
                             if org in group.organizations:
                                 permitted = True
                                 break
+                    if not permitted:
+                        override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
 
                     if permitted:
                         orgs = roles_organizations[role_name]
@@ -724,6 +732,10 @@ def delete_dictionary_roles(request):  # & in docs
                             if org in group.organizations:
                                 permitted = True
                                 break
+                    if not permitted:
+                        override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
 
                     if permitted:
                         users = roles_users[role_name]
@@ -763,6 +775,10 @@ def delete_dictionary_roles(request):  # & in docs
                             if org in group.organizations:
                                 permitted = True
                                 break
+                    if not permitted:
+                        override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
 
                     if permitted:
                         orgs = roles_organizations[role_name]
