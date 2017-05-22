@@ -1,4 +1,6 @@
 import graphene
+from graphene.types.json import JSONString
+#from graphene.types.datetime import DateTime
 from lingvodoc.models import (
     DBSession,
     Dictionary as dbDictionary,
@@ -18,6 +20,30 @@ from sqlalchemy import (
     or_,
     tuple_
 )
+
+import datetime
+from graphene.types import Scalar
+from graphql.language import ast
+
+class DateTime(Scalar): # TODO: choose format
+    '''DateTime Scalar Description'''
+
+    @staticmethod
+    def serialize(dt):
+        dt = datetime.datetime.utcfromtimestamp(dt) # wrong time
+        return dt.isoformat()
+
+    @staticmethod
+    def parse_literal(node):
+        print(2, node)
+        if isinstance(node, ast.StringValue):
+            return datetime.datetime.strptime(
+                node.value, "%Y-%m-%dT%H:%M:%S.%f")
+
+    @staticmethod
+    def parse_value(value):
+        print(3, value)
+        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 class Holder(graphene.Interface):
     id = graphene.List(graphene.Int)
@@ -77,6 +103,7 @@ class Entity(graphene.ObjectType):
 class LexicalEntry(graphene.ObjectType):
     id = graphene.List(graphene.Int)
     entities = graphene.List(Entity)
+    created_at = DateTime()
 
     dbType = dbLexicalEntry
     dbObject = None
@@ -87,6 +114,10 @@ class LexicalEntry(graphene.ObjectType):
         for entity in self.dbObject.entity:
             result.append(Entity(id=[entity.client_id, entity.object_id]))
         return result[:2]
+
+    @fetch_object()
+    def resolve_created_at(self, args, context, info):
+        return self.dbObject.created_at
 
 class Perspective(graphene.ObjectType):
     class Meta:
@@ -182,29 +213,6 @@ class Perspective(graphene.ObjectType):
 
         return result
 
-import datetime
-from graphene.types import Scalar
-from graphql.language import ast
-
-class DateTime(Scalar): # TODO: choose format
-    '''DateTime Scalar Description'''
-
-    @staticmethod
-    def serialize(dt):
-        dt = datetime.datetime.utcfromtimestamp(dt) # wrong time
-        return dt.isoformat()
-
-    @staticmethod
-    def parse_literal(node):
-        print(2, node)
-        if isinstance(node, ast.StringValue):
-            return datetime.datetime.strptime(
-                node.value, "%Y-%m-%dT%H:%M:%S.%f")
-
-    @staticmethod
-    def parse_value(value):
-        print(3, value)
-        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 class User(graphene.ObjectType):
     # class Meta:
@@ -253,6 +261,8 @@ class User(graphene.ObjectType):
 class Language(graphene.ObjectType):
     dbType = dbLanguage
     dbObject = None
+    created_at = DateTime()
+
 
     class Meta:
         interfaces = (Holder, )
@@ -264,14 +274,28 @@ class Language(graphene.ObjectType):
     def resolve_translation(self, args, context, info):
         return self.dbObject.get_translation(context.get('locale_id'))
 
+    @fetch_object()
+    def resolve_created_at(self, args, context, info):
+        return self.dbObject.created_at
+
+
 
 class Dictionary(graphene.ObjectType):
     dbType = dbDictionary
     dbObject = None
+    category = graphene.Int()
+    domain = graphene.Int()
+    # parent_object_id
+    # translation_gist_client_id
+    # state_translation_gist_client_id
+    created_at = DateTime()
+    status = graphene.String()
+    marked_for_deletion = graphene.Boolean()
+    additional_metadata = JSONString()
 
     class Meta:
         interfaces = (Holder, )
-    status = graphene.String()
+
 
     def resolve_dataType(self, args, context, info):
         return 'dictionary'
@@ -291,7 +315,9 @@ class Dictionary(graphene.ObjectType):
         else:
             return None
 
-
+    @fetch_object()
+    def resolve_created_at(self, args, context, info):
+        return self.dbObject.created_at
 
 
 class Query(graphene.ObjectType):
