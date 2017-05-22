@@ -62,6 +62,12 @@ class CreateFieldController(scope: CreateFieldScope,
     }
   }
 
+  @JSExport
+  def okDisabled(): Boolean = {
+    scope.dataType.isEmpty || scope.fieldEntry.names.filterNot(_.str.trim.isEmpty).isEmpty
+  }
+
+
   private[this] def dataTypesNames(): Array[String] = {
     val currentLocaleId = Utils.getLocale().getOrElse(2)
     scope.dataTypes.flatMap {
