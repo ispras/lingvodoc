@@ -1303,7 +1303,7 @@ def view_field(request):
 
 @view_config(route_name='fields', renderer='json', request_method='GET')
 def all_fields(request):
-    fields = DBSession.query(Field).filter_by().all()
+    fields = DBSession.query(Field).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
     response = list()
     for field in fields:
         response.append(view_field_from_object(request=request, field=field))
@@ -1413,10 +1413,11 @@ def view_nested_field(request, field, link_ids):
         return field_json
     contains = list()
     for subfield in field.dictionaryperspectivetofield:  # todo: order subfields
-        subfield_json = view_nested_field(request, subfield, link_ids)
-        if 'error' in subfield_json:
-            return subfield_json
-        contains.append(subfield_json)
+        if not subfield.marked_for_deletion:
+            subfield_json = view_nested_field(request, subfield, link_ids)
+            if 'error' in subfield_json:
+                return subfield_json
+            contains.append(subfield_json)
     if contains:
         field_json['contains'] = contains
     if field_object.data_type_translation_gist_client_id == link_ids['client_id'] \
