@@ -14,3 +14,6 @@ class ICache:
 
     def set(self, user, value):
         raise NotImplementedError
+
+    def rem(self, key):
+        raise NotImplementedError
