@@ -22,3 +22,6 @@ class CommonCache(ICache):
     # TODO: add try/catch handlers.
     def set(self, key, value):
         self.cache.set(key, value)
+
+    def rem(self, key):
+        self.cache.delete(key)
