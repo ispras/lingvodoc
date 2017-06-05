@@ -20,6 +20,11 @@ from .acl import (
 )
 import multiprocess
 
+# def add_route_custom(config, name, pattern, api_version=[]):
+
+#     for api in api_version:
+#         config.add_route(name=%s %s, pattern="%s/%s" % (api_version, pattern))
+
 def configure_routes(config):
     """
     This function registers views from .views for pyramid event loop. Actually all listed items here is our
@@ -30,6 +35,32 @@ def configure_routes(config):
     3) internal calls for frontend (in most cases it's API but not always). If it's not API part, will be marked
        separately. Will be marked as 'internal'
     """
+    # version = ''
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_version' % version, pattern='/%stesting_version' % version)
+    # config.add_view(view='lingvodoc.views.' + prefix + '.views.testing_add_view', route_name='%stesting_version' % version, renderer='json')
+    #
+    # version = 'v2/'
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_version' % version, pattern='/%stesting_version' % version)
+    # config.add_view(view='lingvodoc.views.' + prefix + '.views.testing_add_view', route_name='%stesting_version' % version, renderer='json')
+    #
+    # version = 'v3/'
+    # prefix = 'v3'
+    # config.add_route(name='%stesting_version' % version, pattern='/%stesting_version' % version)
+    # config.add_view(view='lingvodoc.views.' + prefix + '.views.testing_add_view', route_name='%stesting_version' % version, renderer='json')
+    #
+    # version = ''
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_decorator' % version, pattern='/%stesting_decorator' % version)
+    # version = 'v2/'
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_decorator' % version, pattern='/%stesting_decorator' % version)
+    version = 'v3/'
+    prefix = 'v3'
+    config.add_route(name='%stesting_graphene' % version, pattern='/%stesting_graphene' % version)
+
+
 
     # web-view #GET
     config.add_route(name='main', pattern='/')
@@ -680,6 +711,8 @@ def configure_routes(config):
                      factory='lingvodoc.models.AdminAcl')
     config.add_route(name='fix_groups', pattern='/fix_groups',
                      factory='lingvodoc.models.AdminAcl')
+    config.add_route(name='save_media', pattern='/save_media',
+                     factory='lingvodoc.models.AdminAcl')
 
     config.add_route(name='create_translationgist', pattern='/translationgist',
                      factory='lingvodoc.models.AuthenticatedAcl')
@@ -800,5 +833,13 @@ def main(global_config, **settings):
 
     #    config.add_route('metaword', 'dictionary/{dictionary_id}/etymology/metaword')
 
+    # config.route_prefix = 'v3/'
+    # config.add_route('v3/testing_scan', '/testing_scan')
+    # config.route_prefix = 'v2/'
+    # config.add_route('v2/testing_scan', '/testing_scan')
+    # config.route_prefix = None
+    config.add_route('testing_scan', '/testing_scan')
     config.scan('.views')
+    # from lingvodoc.views.v2.views import testing_decorator
+    # testing_decorator(None)
     return config.make_wsgi_app()
