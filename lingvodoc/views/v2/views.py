@@ -673,54 +673,29 @@ def fix_fields(request):
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    count = {}
-    uniq_set = set()
-    objects = {}
-    res = []
-
-    for perspective in DBSession.query(DictionaryPerspective).filter_by(
-                                                                        marked_for_deletion=False):
-        fields = DBSession.query(DictionaryPerspectiveToField)\
-                    .filter_by(parent=perspective,
-                               marked_for_deletion=False, self_client_id=None, self_object_id=None).order_by(DictionaryPerspectiveToField.position)\
-                    .all()
-        structure = []
-        for p_to_field in fields:
-            children = list()
-            for child in p_to_field.dictionaryperspectivetofield:
-                children.append((child.field.get_translation(2), child.field.data_type, child.field_client_id, child.field_object_id))
-            children = tuple(children)
-            structure.append((p_to_field.field.get_translation(2), p_to_field.field.data_type, p_to_field.field_client_id, p_to_field.field_object_id, children))
-        structure = tuple(structure)
-        if not structure in count:
-            count[structure] = 1
-            objects[structure] = [perspective]
-        else:
-            count[structure] += 1
-            objects[structure].append(perspective)
-        uniq_set.add(structure)
-    print(len(uniq_set))
-    res.append(len(uniq_set))
-    for x in uniq_set:
-        print(x)
-        res.append(str(x))
-        print("counter = %s" % count[x])
-        res.append("counter = %s" % count[x])
-        # if count[x] < 20:
-        #    printlist = [((perspective.client_id, perspective.object_id), (perspective.parent_client_id, perspective.parent_object_id)) for perspective in objects[x]]
-        #    for x in printlist:
-        #        print("dictionary ids: %s, Perspective ids: %s, link: http://lingvodoc.ispras.ru/#/dictionary/%s/%s/perspective/%s/%s/view %s" % (x[1], x[0], x[1][0], x[1][1], x[0][0], x[0][1], perspective.additional_metadata["authors"]["content"]))
-        # else:
-        printlist = [((y.client_id, y.object_id), (y.parent_client_id, y.parent_object_id), y) for y in objects[x]]
-        # tmp_str = ''
-        for z in printlist:
-            res.append("dictionary ids: %s, Perspective ids: %s, link: http://lingvodoc.ispras.ru/#/dictionary/%s/%s/perspective/%s/%s/view %s" % (z[1], z[0], z[1][0], z[1][1], z[0][0], z[0][1], get_user_by_client_id(z[0][0]).login))
-            # tmp_str += ", (%s, %s)" % (z[0][0], z[0][1])
-        # res.append(tmp_str)
-        res.append("============================================================")
-        res.append("============================================================")
-
-
+    res = list()
+    for persp in DBSession.query(DictionaryPerspective).filter_by(marked_for_deletion = False).all():
+        url = request.route_url('perspective_fields',
+                                dictionary_client_id=persp.parent_client_id,
+                                dictionary_object_id=persp.parent_object_id,
+                                perspective_client_id=persp.client_id,
+                                perspective_object_id=persp.object_id)
+        subreq = Request.blank(url)
+        subreq.method = 'GET'
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        resp = resp.json
+        error = False
+        if type(resp) != list:
+            error = True
+        if not error:
+            for field in resp:
+                if 'error' in field:
+                    error = True
+                    break
+        if error:
+            res.append({'persp': (persp.client_id, persp.object_id), 'error': resp})
     return res
 
 @view_config(route_name='testing_translations', renderer='json')
