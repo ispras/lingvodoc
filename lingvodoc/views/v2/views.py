@@ -671,32 +671,38 @@ def fix_fields(request):
     return res
 
 
+def change_entity_field(entities, field_client_id, field_object_id):
+    for entity in DBSession.query(Entity).filter(tuple_(Entity.client_id, Entity.object_id).in_(entities)).all():
+        entity.field_client_id = field_client_id
+        entity.field_object_id = field_object_id
+
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    res = list()
-    for persp in DBSession.query(DictionaryPerspective).filter_by(marked_for_deletion = False).all():
-        url = request.route_url('perspective_fields',
-                                dictionary_client_id=persp.parent_client_id,
-                                dictionary_object_id=persp.parent_object_id,
-                                perspective_client_id=persp.client_id,
-                                perspective_object_id=persp.object_id)
-        subreq = Request.blank(url)
-        subreq.method = 'GET'
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        resp = resp.json
-        error = False
-        if type(resp) != list:
-            error = True
-        if not error:
-            for field in resp:
-                if 'error' in field:
-                    error = True
-                    break
-        if error:
-            res.append({'persp': (persp.client_id, persp.object_id), 'error': resp})
-    return res
+    entities = [(742, 7971), (742, 7632), (742, 7757), (742, 7740), (742, 7735), (742, 7710), (742, 8088), (742, 8456),
+                (742, 8654), (742, 7723), (742, 7645), (742, 7743), (742, 7745), (797, 432), (742, 3809), (742, 8155),
+                (797, 244), (742, 8162), (742, 8165), (742, 8173), (742, 8203), (742, 8658), (797, 204), (797, 205),
+                (742, 8619), (742, 8613), (797, 120), (742, 7909), (797, 384), (742, 8375), (742, 7689), (742, 7739),
+                (742, 7741), (742, 7742), (742, 7744), (742, 7746), (742, 7747), (742, 7748), (742, 7749), (742, 7750),
+                (742, 8403), (742, 8541), (742, 8264), (742, 8614), (742, 8213), (742, 8615), (742, 8617), (742, 8618),
+                (742, 8355), (742, 8306), (742, 8627), (742, 8629)]
+    change_entity_field(entities, 671, 16073)
+
+    entities = [(742, 5245), (742, 5902), (742, 5910), (742, 5530), (742, 5200), (742, 5203), (742, 5204), (742, 5202),
+                (742, 5207), (742, 5063), (742, 6040), (742, 6056), (742, 7314), (742, 3148), (742, 2863), (742, 2889),
+                (742, 5476), (742, 2923), (742, 5512), (742, 4732), (742, 5391), (742, 5392), (742, 5394), (742, 4668),
+                (742, 4669), (742, 5275), (742, 5198), (742, 6033), (742, 5668), (742, 5667), (742, 5740), (742, 5785),
+                (742, 4797), (742, 4798), (742, 5398), (742, 4816), (742, 7336), (742, 7337), (742, 7338)]
+    change_entity_field(entities, 671, 16073)
+
+    entities = [(742, 4625), (742, 4762), (742, 5260), (742, 4652), (742, 4651), (742, 4665), (742, 4710), (742, 4766),
+                (742, 4842), (742, 4848), (742, 4901), (742, 5045), (742, 5061), (742, 5190), (742, 5265), (742, 5490),
+                (742, 5502), (742, 5537), (742, 5545), (742, 4720), (742, 4726), (742, 4753), (742, 4944), (742, 5183),
+                (742, 4746), (742, 4787), (742, 4856), (742, 5463), (742, 4875), (742, 4893), (742, 4908), (742, 5251),
+                (742, 5636), (742, 5833), (742, 5890), (742, 5047), (742, 5070), (742, 5217), (742, 5229), (742, 5445),
+                (742, 5590), (742, 6026), (742, 6099), (742, 6116), (742, 6127)]
+    change_entity_field(entities, 671, 16067)
+
+    return {}
 
 @view_config(route_name='testing_translations', renderer='json')
 def testing_translations(request):
