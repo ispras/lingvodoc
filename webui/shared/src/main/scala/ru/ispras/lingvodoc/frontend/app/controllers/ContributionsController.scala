@@ -2,7 +2,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{Event => _, _}
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
@@ -17,7 +17,6 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
-import scala.util.{Failure, Success}
 
 
 @js.native
@@ -85,7 +84,6 @@ class ContributionsController(scope: ContributionsScope,
   def loadSearch(query: String): Unit = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
-        console.log(results.toJSArray)
         val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
@@ -128,32 +126,34 @@ class ContributionsController(scope: ContributionsScope,
   }
 
   @JSExport
-  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
+  def acceptGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
-    options.controller = "EditGroupingTagModalController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          dictionaryClientId = dictionaryClientId,
-          dictionaryObjectId = dictionaryObjectId,
-          perspectiveClientId = perspectiveClientId,
-          perspectiveObjectId = perspectiveObjectId,
-          lexicalEntry = entry.asInstanceOf[js.Object],
-          field = field.asInstanceOf[js.Object],
-          values = values.asInstanceOf[js.Object]
-        )
+    console.log((entry :: Nil).toJSArray)
+
+      val options = ModalOptions()
+      options.templateUrl = "/static/templates/modal/acceptGroupingTag.html"
+      options.controller = "ContributionsGroupingTagModalController"
+      options.backdrop = false
+      options.keyboard = false
+      options.size = "lg"
+      options.resolve = js.Dynamic.literal(
+        params = () => {
+          js.Dynamic.literal(
+            dictionaryClientId = dictionaryClientId,
+            dictionaryObjectId = dictionaryObjectId,
+            perspectiveClientId = perspectiveClientId,
+            perspectiveObjectId = perspectiveObjectId,
+            lexicalEntry = entry.asInstanceOf[js.Object],
+            field = field.asInstanceOf[js.Object],
+            values = values.asInstanceOf[js.Object]
+          )
+        }
+      ).asInstanceOf[js.Dictionary[Any]]
+
+      val instance = modal.open[Unit](options)
+      instance.result map { _ =>
+
       }
-    ).asInstanceOf[js.Dictionary[Any]]
-
-    val instance = modal.open[Unit](options)
-    instance.result map { _ =>
-
-    }
   }
 
   load(() => {
