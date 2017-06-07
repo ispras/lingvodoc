@@ -1666,7 +1666,6 @@ def lexical_entries_all_count(request):  # tested
 
 # TODO: completely broken!
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET')
-@MEMOIZE
 def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1769,7 +1768,6 @@ def lexical_entries_published(request):
 
 
 @view_config(route_name='lexical_entries_not_accepted', renderer='json', request_method='GET')
-@MEMOIZE
 def lexical_entries_not_accepted(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
