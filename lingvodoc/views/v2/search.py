@@ -229,7 +229,8 @@ def advanced_search(request):
         results_cursor = DBSession.query(LexicalEntry).join(Entity.parent) \
             .join(Entity.field).join(TranslationAtom,
                                      and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                          Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                          Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                          Field.marked_for_deletion == False)) \
             .distinct(Entity.parent_client_id, Entity.parent_object_id)
         if perspectives:
             results_cursor = results_cursor.filter(
@@ -264,7 +265,8 @@ def advanced_search(request):
             results_cursor = results_cursor.join(Entity.field) \
                 .join(TranslationAtom,
                       and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                           Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                           Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                           Field.marked_for_deletion == False)) \
                 .filter(TranslationAtom.content == adopted_type,
                         TranslationAtom.locale_id == 2)
         pre_results = pre_results and set(results_cursor.all())
@@ -272,7 +274,8 @@ def advanced_search(request):
         results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).join(Entity.field) \
             .join(TranslationAtom,
                   and_(Field.data_type_translation_gist_client_id == TranslationAtom.parent_client_id,
-                       Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                       Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id,
+                       Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == 'Grouping Tag',
                     TranslationAtom.locale_id == 2)
         pre_results = pre_results and set(results_cursor.all())

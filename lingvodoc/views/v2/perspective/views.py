@@ -1580,7 +1580,8 @@ def lexical_entries_all(request):
     if parent and not parent.marked_for_deletion:
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()  # TODO: make it harder better faster stronger
 
@@ -1693,7 +1694,8 @@ def lexical_entries_published(request):
 
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()
         # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
@@ -1789,7 +1791,8 @@ def lexical_entries_not_accepted(request):
     if parent and not parent.marked_for_deletion:
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()
         lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
