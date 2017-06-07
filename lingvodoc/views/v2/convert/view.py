@@ -166,7 +166,7 @@ def convert_markup(request):
             request.response.status = HTTPInternalServerError.code
             return {'error': str(e)}
         finally:
-            #os.remove(filename)
+            os.remove(filename)
             pass
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
