@@ -713,13 +713,15 @@ class LexicalEntry(CompositeIdMixin,
             if publish and accept is None:
                 pub_filter = " WHERE publishingentity.published = True and cte_expr.marked_for_deletion = False"
             elif accept and publish is None:
-                pub_filter = " WHERE publishingentity.accepted = True"
+                pub_filter = " WHERE publishingentity.accepted = True and cte_expr.marked_for_deletion = False"
             elif accept and publish:
                 pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True and cte_expr.marked_for_deletion = False"
             elif publish and not accept:
-                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True" # should not be used anywhere, just in case
+                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True and cte_expr.marked_for_deletion = False" # should not be used anywhere, just in case
             elif accept and not publish:
-                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False"
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False and cte_expr.marked_for_deletion = False"
+            elif not accept and not publish:
+                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = False and cte_expr.marked_for_deletion = False"
 
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")

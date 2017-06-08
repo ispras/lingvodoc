@@ -38,6 +38,7 @@ def basic_search(request):
     perspective_object_id = request.params.get('perspective_object_id')
     field_client_id = request.params.get('field_client_id')
     field_object_id = request.params.get('field_object_id')
+    search_in_published = request.params.get('published') or None
     if searchstring:
         if len(searchstring) >= 1:
             field = None
@@ -165,7 +166,7 @@ def basic_search(request):
                     subreq.headers = headers
                     resp = request.invoke_subrequest(subreq)
                     result = resp.json
-                    result['lexical_entry'] = entry.track(False, request.cookies['locale_id'])
+                    result['lexical_entry'] = entry.track(search_in_published, request.cookies['locale_id'])
                     dict_tr = entry.parent.parent.get_translation(request.cookies['locale_id'])
                     result['parent_translation'] = dict_tr
                     results.append(result)
