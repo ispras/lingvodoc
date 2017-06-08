@@ -77,7 +77,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
 
   @JSExport
   def loadSearch(query: String): Unit = {
-    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map { results =>
+    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false, published = Some(true)) map { results =>
         val entries = results.map(_.lexicalEntry).filterNot(_.markedForDeletion)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
