@@ -38,6 +38,7 @@ def basic_search(request):
     perspective_object_id = request.params.get('perspective_object_id')
     field_client_id = request.params.get('field_client_id')
     field_object_id = request.params.get('field_object_id')
+    search_in_published = request.params.get('published') or None
     if searchstring:
         if len(searchstring) >= 1:
             field = None
@@ -165,7 +166,7 @@ def basic_search(request):
                     subreq.headers = headers
                     resp = request.invoke_subrequest(subreq)
                     result = resp.json
-                    result['lexical_entry'] = entry.track(False, request.cookies['locale_id'])
+                    result['lexical_entry'] = entry.track(search_in_published, request.cookies['locale_id'])
                     dict_tr = entry.parent.parent.get_translation(request.cookies['locale_id'])
                     result['parent_translation'] = dict_tr
                     results.append(result)
@@ -229,7 +230,8 @@ def advanced_search(request):
         results_cursor = DBSession.query(LexicalEntry).join(Entity.parent) \
             .join(Entity.field).join(TranslationAtom,
                                      and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                          Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                          Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                          Field.marked_for_deletion == False)) \
             .distinct(Entity.parent_client_id, Entity.parent_object_id)
         if perspectives:
             results_cursor = results_cursor.filter(
@@ -264,7 +266,8 @@ def advanced_search(request):
             results_cursor = results_cursor.join(Entity.field) \
                 .join(TranslationAtom,
                       and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                           Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                           Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                           Field.marked_for_deletion == False)) \
                 .filter(TranslationAtom.content == adopted_type,
                         TranslationAtom.locale_id == 2)
         pre_results = pre_results and set(results_cursor.all())
@@ -272,7 +275,8 @@ def advanced_search(request):
         results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).join(Entity.field) \
             .join(TranslationAtom,
                   and_(Field.data_type_translation_gist_client_id == TranslationAtom.parent_client_id,
-                       Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                       Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id,
+                       Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == 'Grouping Tag',
                     TranslationAtom.locale_id == 2)
         pre_results = pre_results and set(results_cursor.all())

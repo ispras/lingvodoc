@@ -50,6 +50,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator, add_user_to_group, check_client_id
 from lingvodoc.views.v2.delete import real_delete_translation_gist
 # search (filter by input, type and (?) locale)
+from lingvodoc.cache.caching import CACHE
 
 
 def translationgist_contents(translationgist):
@@ -192,6 +193,11 @@ def edit_translationatom(request):
     object_id = request.matchdict.get('object_id')
     translationatom = DBSession.query(TranslationAtom).filter_by(client_id=client_id, object_id=object_id).first()
     if translationatom:
+        key = "translation:%s:%s:%s" % (
+            str(translationatom.translation_gist_client_id),
+            str(translationatom.translation_gist_object_id),
+            str(translationatom.locale_id))
+        CACHE.rem(key)
         translationatom.content = content
         request.response.status = HTTPOk.code
         return response

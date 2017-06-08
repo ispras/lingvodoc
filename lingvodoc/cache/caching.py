@@ -129,7 +129,7 @@ class TaskStatus():
                 if self.key in current_tasks:
                     current_tasks.remove(self.key)
                     CACHE.set("current_tasks:" + self.user_id, dill.dumps(current_tasks))
-            # TODO: implement del operation in cache; now we delete the task only from usertasks list
+                    CACHE.rem(self.key)
         return None
 
 
