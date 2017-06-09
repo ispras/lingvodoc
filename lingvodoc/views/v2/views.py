@@ -703,6 +703,7 @@ def testing(request):
 
 @view_config(route_name='testing_translations', renderer='json')
 def testing_translations(request):
+    """
     res = dict()
     res['dictionary'] = list()
     res['perspective'] = list()
@@ -752,7 +753,42 @@ def testing_translations(request):
         res['dictionary_language'].append(translationgist_contents(gist))
 
     res['parents'] = parents
-    print(res['dictionary_language'])
+    """
+    import collections
+    res = collections.defaultdict(list)
+    all_gists = []
+    atoms = []
+    gists =  DBSession.query(Dictionary).all()
+    for gist in all_gists:
+        gists.append((gist.translation_gist_client_id, gist.translation_gist_object_id))
+        for atom in DBSession.query(TranslationAtom).filter(and_(
+                        TranslationAtom.parent_client_id==gist.translation_gist_client_id),
+                        TranslationAtom.parent_object_id==gist.translation_gist_object_id).all():
+            atoms.append((atom.client_id, atom.object_id))
+    for transl_gist in DBSession.query(TranslationGist).filter(and_(
+                    TranslationGist.marked_for_deletion==False,
+                    TranslationGist.type != "Service")  # We must be careful here
+                    ).all():
+        if not (transl_gist.client_id, transl_gist.object_id) in gists:
+            tr_atoms = DBSession.query(TranslationAtom).filter(and_(
+                TranslationAtom.parent_client_id == transl_gist.client_id,
+                TranslationAtom.parent_object_id == transl_gist.object_id,
+                TranslationAtom.marked_for_deletion==False)
+                ).all()
+            for tratom in tr_atoms:
+                if not (tratom.client_id, tratom.object_id) in atoms:
+                    res["(%s, %s) [%s]" % (transl_gist.client_id,
+                                           transl_gist.object_id,
+                                           transl_gist.type)].append( tratom.content)
+                    tmp_atom = DBSession.query(TranslationAtom).filter_by(client_id=tratom.client_id,
+                                                                          object_id=tratom.object_id).one()
+                    tmp_atom.marked_for_deletion = True
+
+                    tmp_objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=tratom.client_id,
+                                                                         object_id=tratom.object_id).one()
+                    tmp_objecttoc.marked_for_deletion = True
+            del_object(transl_gist)
+
     return res
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
