@@ -20,6 +20,7 @@ import scala.util.{Failure, Success}
 
 @js.native
 trait ViewDictionaryModalScope extends Scope {
+  var path: String = js.native
   var linkedPath: String = js.native
   var dictionaryTable: DictionaryTable = js.native
   var count: Int = js.native
@@ -108,6 +109,18 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
           case perspective: Perspective => perspective.translation
         }}.mkString(" >> ")
       case Failure(e) => console.error(e.getMessage)
+    }
+
+    backend.perspectiveSource(perspectiveId) onComplete {
+      case Success(sources) =>
+        scope.path = sources.reverse.map {
+          _.source match {
+            case language: Language => language.translation
+            case dictionary: Dictionary => dictionary.translation
+            case perspective: Perspective => perspective.translation
+          }
+        }.mkString(" >> ")
+      case Failure(e) => error(e)
     }
 
     backend.getPerspective(perspectiveId) map {
