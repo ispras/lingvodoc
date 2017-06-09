@@ -158,22 +158,7 @@ def fix_fields(request):
     # wrong phon 671 16070
 
     """
-    lex_entries = set()
-    tuples = DBSession.query(DictionaryPerspective, LexicalEntry, Entity)\
-        .filter(and_(DictionaryPerspective.object_id==2,
-                DictionaryPerspective.client_id==398))\
-        .join(LexicalEntry, and_( LexicalEntry.parent_object_id==3,
-                                  LexicalEntry.parent_client_id==398))\
-        .join(Entity, and_(LexicalEntry.object_id==Entity.parent_object_id,
-                           LexicalEntry.client_id==Entity.parent_client_id))
-    for tup in tuples:
-        x = tup[2]
-        #if x.marked_for_delition == True:
-        # if x.field.data_type == "Text":
-        #     pass#print(x.content)
-        #     print(x.content)
-        lex_entries.add((x.parent_client_id, x.parent_object_id))
-    #print(len(lex_entries))
+
     """
     # # Mark
     # /671/15154/perspective/748/553/
@@ -186,10 +171,10 @@ def fix_fields(request):
 
 
     # Phon tr
-    entities = DBSession.query(Entity).join(LexicalEntry).filter(Entity.field_client_id == 671 and
-                                                                 Entity.field_object_id == 16070 and
-                                                                 LexicalEntry.parent_client_id == 671 and ###
-                                                                 LexicalEntry.parent_object_id ==10419) ####
+    entities = DBSession.query(Entity).join(LexicalEntry).filter(and_(Entity.field_client_id == 671,
+                                                                 Entity.field_object_id == 16070,
+                                                                 LexicalEntry.parent_client_id == 671,
+                                                                 LexicalEntry.parent_object_id ==10419))
     for entity in entities:
         entity.field_client_id = 671
         entity.field_object_id = 14204
@@ -251,11 +236,11 @@ def fix_fields(request):
 
     # Paradigmatic forms -> backref
     #
-    entities = DBSession.query(Entity).join(LexicalEntry).filter(Entity.field_client_id == 1 and
-                                                                 Entity.field_object_id == 212 and
-                                                                 Entity.marked_for_deletion == False and
-                                                                 LexicalEntry.parent_client_id == 671 and
-                                                                 LexicalEntry.parent_object_id ==12797)
+    entities = DBSession.query(Entity).join(LexicalEntry).filter(and_(Entity.field_client_id == 1,
+                                                                 Entity.field_object_id == 212,
+                                                                 Entity.marked_for_deletion == False,
+                                                                 LexicalEntry.parent_client_id == 671,
+                                                                 LexicalEntry.parent_object_id ==12797))
     for entity in entities:
         entity.field_client_id = 1
         entity.field_object_id = 213
@@ -520,33 +505,6 @@ def fix_fields(request):
                                                                              marked_for_deletion=False).one()
         perspfield.field_client_id = 1
         perspfield.field_object_id = 213
-    # entities = DBSession.query(Entity).join(LexicalEntry).filter(
-    #     # tuple_(LexicalEntry.parent_client_id, LexicalEntry.parent_object_id).in_(persp_ids) and
-    #            Entity.field_client_id == 1 and Entity.field_object_id == 212 and Entity.marked_for_deletion == False)
-    # for entity in entities:
-    #     entity.field_client_id = 1
-    #     entity.field_object_id = 213
-
-    # perspectives change translation to lexical entries: 304 17, 577 7, 577 6, 514 3, 515 3, 519 3, 512 5, 304 16 + 336 12
-    #"""
-    """
-    # check
-    persp_ids = [(304, 17), (577, 7), (577, 6), (514, 3), (515, 3), (519, 3), (512, 5)] + [(304, 16)] + [(336, 12)]
-    persps = DBSession.query(DictionaryPerspective).filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(persp_ids))
-    for persp in persps:
-        dictionary_client_id = persp.parent_client_id
-        dictionary_object_id = persp.parent_object_id
-        dict_ids = [(dictionary_client_id, dictionary_object_id)]
-        dictionary = DBSession.query(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dict_ids)).one()
-        print("\n", dict_ids, persp.client_id, persp.object_id)
-        resp = translation_service_search("Hidden")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-        if dictionary.state_translation_gist_client_id == state_translation_gist_client_id and dictionary.state_translation_gist_object_id == state_translation_gist_object_id:
-            print("Hidden")
-        print((persp.translation_gist_client_id, persp.translation_gist_object_id), (dictionary.translation_gist_client_id, dictionary.translation_gist_object_id))
-        #childs = DBSession.query(DictionaryPerspective).filter(tuple_(DictionaryPerspective.parent_client_id, DictionaryPerspective.parent_object_id).in_(dict_ids))
-        #(len([x for x in childs]))
-    """
     dicts = DBSession.query(DictionaryPerspective)
     #return
     persp_ids = [(304, 17), (577, 7), (577, 6), (514, 3), (515, 3), (519, 3), (512, 5), (304, 16)]+ [(336, 12)]
@@ -670,6 +628,43 @@ def fix_fields(request):
     res['non_empty_langs'] = [tuple(o) for o in langs]
     return res
 
+def del_object(tmp_object):
+    tmp_object.marked_for_deletion = True
+    tmp_objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=tmp_object.client_id,
+                                                     object_id=tmp_object.object_id).one()
+    tmp_objecttoc.marked_for_deletion = True
+
+def transfer_language(transferred_lng_ids, target_lng_ids):
+    transferred_lng = DBSession.query(Language).filter(
+        tuple_(Language.client_id, Language.object_id) == transferred_lng_ids).one()
+
+    del_gists = DBSession.query(TranslationGist).filter(and_(TranslationGist.client_id == transferred_lng.translation_gist_client_id,
+                                                        TranslationGist.object_id == transferred_lng.translation_gist_object_id,
+                                                             TranslationGist.marked_for_deletion == False)).all()
+    for gist in del_gists:
+        del_atoms = DBSession.query(TranslationAtom).filter(and_(TranslationAtom.parent_client_id == gist.client_id,
+                                                        TranslationAtom.parent_object_id == gist.object_id))
+        #print("deleted language: ", transferred_lng_ids)
+        for atom in del_atoms:
+            #print("atom: ", atom.content )
+            tmp_atom = DBSession.query(TranslationAtom).filter_by(client_id=atom.client_id, object_id=atom.object_id).one()
+            del_object(tmp_atom)
+        tmp_gist = DBSession.query(TranslationGist).filter_by(client_id=gist.client_id, object_id=gist.object_id).one()
+        del_object(tmp_gist)
+
+
+    # find all dictionaries and languages
+    dictionaries = DBSession.query(Dictionary).filter(tuple_(Dictionary.parent_client_id, Dictionary.parent_object_id) == transferred_lng_ids).all()
+    for dictionary in dictionaries:
+        dictionary.parent_client_id = target_lng_ids[0]
+        dictionary.parent_object_id = target_lng_ids[1]
+        #print("dictionary moved: ", dictionary.client_id, dictionary.object_id)
+    languages = DBSession.query(Language).filter(tuple_(Language.parent_client_id, Language.parent_object_id) == transferred_lng_ids).all()
+    for language in languages:
+        language.parent_client_id = target_lng_ids[0]
+        language.parent_object_id = target_lng_ids[1]
+    #print(transferred_lng.client_id, transferred_lng.object_id)
+    del_object(transferred_lng)
 
 def change_entity_field(entities, field_client_id, field_object_id):
     for entity in DBSession.query(Entity).filter(tuple_(Entity.client_id, Entity.object_id).in_(entities)).all():
@@ -678,61 +673,33 @@ def change_entity_field(entities, field_client_id, field_object_id):
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
+    transfer_language((500, 97), (508, 47)) # Самодийский язык-> Samoyed
+    transfer_language((31, 30), (508, 49)) # Enets language/Forest dialect+Tundra Enets-> Uralic/Samoyed/Enez/
+    transfer_language((31, 29), (508, 48)) # Nenez language/ Nenez-> Uralic/Samoyed/Nenez/
+    transfer_language((31, 23), (508, 38)) # Saami language/ -> Uralic/Saami
+    transfer_language((31, 28), (508, 45)) # Mansi+Yakyt/ -> Uralic/Mansi
+    transfer_language((500, 96), (508, 45)) # Mansi-> Uralic/Mansi
+    transfer_language((31, 32), (252, 42)) # tubulars language-> Altai language/Northern dialect/Tubalars dialect
+    transfer_language((121, 7), (633, 23)) # Evenki language-> tungusskie/Evenki
+    transfer_language((221, 5), (508, 50)) # Nganasan language-> Samoyed/Nganasan
+    transfer_language((357, 6), (508, 41)) # Mari language-> Uralic/Mari
+    transfer_language((375, 13), (500, 124)) # Казахский язык -> Kazakh
+    transfer_language((493, 9), (508, 38)) # Саамские языки -> Uralic/Saami
+    transfer_language((718, 5), (678, 9)) # Yakut  -> Uralic/Mansi-> Yakut
+    transfer_language((799, 7), (508, 44)) # Eastern Khanty -> Uralic Khanty
+    transfer_language((799, 44), (508, 44)) # Eastern Khanty -> Uralic Khanty
+    transfer_language((31, 31), (508, 51)) # Selkup language -> Uralic/Samoyed/Selkup
+    transfer_language((31, 25), (508, 42)) # Komi-Zyrian -> Uralic-Komi
+    transfer_language((500, 125), (33, 85)) # Forest dialect of Enents language -> Forest dialect
 
-    """
-    # (748, 553) and
-    #  (748, 1802)
-    entities = [(742, 5549), (742, 5186), (742, 4897), (742, 5255)]
-    change_entity_field(entities, 671, 16073)
+    # fix 2
+    #print("="*5)
+    # Башкирско-русский словарь, Оренбург, 1899, составитель В.В.Катаринский при помощи башкира Куватова -> Bashkir
 
-    entities =  [(748, 621), (748, 1855), (748, 796), (742, 6233),
-                 (748, 1552), (742, 6226), (748, 878), (742, 6231),
-                 (742, 6232), (742, 6228), (742, 6234), (742, 6235),
-                 (748, 954), (748, 960), (748, 837), (748, 842),
-                 (748, 1634), (742, 6238), (742, 7613), (748, 1725),
-                 (742, 6224), (742, 7286)]
-
-    change_entity_field(entities, 671, 16073)
-    entities = [(748, 911), (742, 6946), (742, 6886), (742, 6885), (742, 6832), (742, 6831),
-                (742, 6829), (748, 887), (742, 6828), (742, 1136), (748, 460), (748, 461),
-                (748, 1418), (742, 4443), (742, 6826), (742, 7335), (742, 7609), (742, 5805),
-                (742, 7307), (742, 7138), (742, 6821), (742, 6819), (742, 6817), (742, 6815),
-                (742, 6813), (748, 422), (748, 433), (748, 1422), (742, 6811), (742, 6810),
-                (742, 6808), (742, 6806), (748, 110), (748, 1488), (748, 1487), (742, 4499),
-                (742, 1144), (748, 1307), (742, 6802), (742, 7250), (742, 7249), (748, 523),
-                (742, 6801), (742, 6800), (742, 6798), (742, 6797), (742, 6796), (742, 6795),
-                (742, 6793), (742, 6788), (748, 1490), (742, 6786), (742, 6784), (742, 6783),
-                (742, 6782), (742, 6780), (742, 6781), (742, 1140), (742, 1138), (748, 399),
-                (748, 1416), (742, 6779), (742, 6777), (742, 7611), (742, 6776), (742, 6775),
-                (742, 6774), (742, 6772), (742, 6770), (748, 1483), (742, 6768), (742, 6767),
-                (742, 6766), (748, 425), (742, 6764), (748, 822), (742, 6961), (748, 445),
-                (748, 480), (748, 413), (748, 1412), (671, 16107), (748, 369), (748, 1414),
-                (742, 1147), (748, 414), (748, 540), (742, 7332), (748, 457), (748, 1409),
-                (742, 6761), (742, 6760), (742, 6758), (748, 388), (748, 735), (748, 756),
-                (748, 1420), (748, 440), (748, 471), (748, 800), (748, 798), (742, 6757)]
-    change_entity_field(entities, 671, 16073)
-    """
-    # narrow translation
-    entities = [(748, 579), (748, 623), (748, 730), (748, 714), (748, 701), (748, 678),
-                (748, 672), (748, 691), (748, 744), (748, 750), (748, 761), (748, 768),
-                (748, 777), (742, 4659), (742, 4660), (742, 4658), (748, 791), (748, 816),
-                (748, 826), (748, 853), (742, 6225), (748, 879), (748, 1859), (748, 893),
-                (748, 945), (742, 6229), (748, 986), (742, 6230), (748, 1059), (748, 1128),
-                (748, 1122), (748, 1137), (742, 6227), (748, 1154), (748, 1150), (742, 6236),
-                (748, 1201), (748, 1225), (748, 1314), (748, 1381), (748, 1447), (748, 1455),
-                (748, 1544), (748, 632), (748, 648), (748, 861), (748, 869), (748, 951), (748, 962),
-                (748, 1262), (748, 1335), (748, 834), (748, 1095), (748, 995), (748, 903), (748, 904),
-                (748, 1646), (748, 1643), (748, 1647), (748, 973), (748, 1644), (748, 1645), (748, 1014),
-                (748, 1026), (748, 1269), (748, 1355), (748, 1684), (748, 1295), (748, 1340), (748, 1361),
-                (748, 1696), (748, 844), (748, 1106), (748, 1756), (748, 1755), (748, 1743), (748, 1067),
-                (748, 1075), (748, 1006), (748, 1183), (748, 1192), (748, 1788), (748, 1609), (748, 1622),
-                (748, 1621), (748, 1635), (748, 1650), (748, 1652), (748, 1649), (748, 1651), (748, 1664),
-                (748, 1665), (742, 6237), (748, 1674), (748, 1722), (748, 1723), (748, 1708), (748, 1736),
-                (748, 1726), (748, 1727), (748, 1758), (748, 1767), (742, 6223), (748, 1777), (742, 6179),
-                (742, 6191), (742, 7272), (742, 7280)]
-    change_entity_field(entities, 671, 16067)
-
-    return {"status": "success"}
+    transfer_language((472, 29), (500, 121))
+    # Татарский язык (Словарь, 1880 г.) -> Tatar
+    transfer_language((472, 26), (500, 122))
+    return {"status": "languages fixed"}
 
 @view_config(route_name='testing_translations', renderer='json')
 def testing_translations(request):
