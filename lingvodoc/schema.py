@@ -25,6 +25,9 @@ import datetime
 from graphene.types import Scalar
 from graphql.language import ast
 
+RUSSIAN_LOCALE = 1
+ENGLISH_LOCALE = 2
+
 class DateTime(Scalar): # TODO: choose format
     '''DateTime Scalar Description'''
 
@@ -69,8 +72,206 @@ def fetch_object(attrib_name=None):
     return dec
 
 
+class BaseGroup(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     id                  | bigint                      | NOT NULL
+     dictionary_default  | boolean                     | NOT NULL
+     perspective_default | boolean                     | NOT NULL
+     name                | text                        | NOT NULL
+     subject             | text                        | NOT NULL
+     action              | text                        | NOT NULL
+    """
+    pass
+
+
+class Client(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     id                  | bigint                      | NOT NULL DEFAULT nextval('client_id_seq'::regclass)
+     user_id             | bigint                      | NOT NULL
+     is_browser_client   | boolean                     | NOT NULL
+     counter             | bigint                      | NOT NULL
+     additional_metadata | jsonb                       |
+    """
+    pass
+
+
+class DictionaryPerspectiveToField(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     object_id           | bigint                      | NOT NULL
+     client_id           | bigint                      | NOT NULL
+     parent_object_id    | bigint                      |
+     parent_client_id    | bigint                      |
+     self_client_id      | bigint                      |
+     self_object_id      | bigint                      |
+     field_client_id     | bigint                      | NOT NULL
+     field_object_id     | bigint                      | NOT NULL
+     link_client_id      | bigint                      |
+     link_object_id      | bigint                      |
+     marked_for_deletion | boolean                     | NOT NULL
+     position            | integer                     | NOT NULL
+    """
+    pass
+
+class Email(graphene.ObjectType):
+    """
+     created_at | timestamp without time zone | NOT NULL
+     id         | bigint                      | NOT NULL DEFAULT nextval('email_id_seq'::regclass)
+     user_id    | bigint                      | NOT NULL
+     email      | text                        |
+    """
+    pass
+
+class Grant(graphene.ObjectType):
+    """
+     id                                | bigint                      | NOT NULL DEFAULT nextval('grant_id_seq'::regclass)
+     translation_gist_client_id        | bigint                      | NOT NULL
+     translation_gist_object_id        | bigint                      | NOT NULL
+     issuer_translation_gist_client_id | bigint                      | NOT NULL
+     issuer_translation_gist_object_id | bigint                      | NOT NULL
+     begin                             | date                        |
+     end                               | date                        |
+     created_at                        | timestamp without time zone | NOT NULL
+     issuer_url                        | character varying(2048)     | NOT NULL
+     grant_url                         | character varying(2048)     | NOT NULL
+     grant_number                      | character varying(1000)     | NOT NULL
+     owners                            | jsonb                       |
+     additional_metadata               | jsonb                       |
+    """
+
+    pass
+
+
+class Group(graphene.ObjectType):
+    """
+     created_at        | timestamp without time zone | NOT NULL
+     id                | uuid                        | NOT NULL
+     old_id            | bigint                      |
+     base_group_id     | bigint                      | NOT NULL
+     subject_client_id | bigint                      |
+     subject_object_id | bigint                      |
+     subject_override  | boolean                     |
+    """
+    pass
+
+
+class Organization(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     id                  | bigint                      | NOT NULL DEFAULT nextval('organization_id_seq'::regclass)
+     marked_for_deletion | boolean                     | NOT NULL
+     name                | text                        |
+     about               | text                        |
+     additional_metadata | jsonb                       |
+    """
+    pass
+
+
+"""
+organization_to_group_association = Table('organization_to_group_association', Base.metadata,
+                                          Column('organization_id', SLBigInteger(), ForeignKey('organization.id')),
+                                          Column('group_id', UUIDType, ForeignKey('group.id'))
+                                          )
+"""
+class Passhash(graphene.ObjectType):
+    """
+     id         | bigint                      | NOT NULL DEFAULT nextval('passhash_id_seq'::regclass)
+     user_id    | bigint                      | NOT NULL
+     hash       | text                        | NOT NULL
+        """
+    pass
+
+
+class ObjectTOC(graphene.ObjectType):
+    """
+    object_id           | bigint  | NOT NULL
+    client_id           | bigint  | NOT NULL
+    table_name          | text    | NOT NULL
+    marked_for_deletion | boolean | NOT NULL
+    """
+    pass
+
+
+class PublishingEntity(graphene.ObjectType):
+    """
+     created_at | timestamp without time zone | NOT NULL
+     object_id  | bigint                      | NOT NULL
+     client_id  | bigint                      | NOT NULL
+     published  | boolean                     | NOT NULL
+     accepted   | boolean                     | NOT NULL
+    """
+    pass
+
+
+class TranslationAtom(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     object_id           | bigint                      | NOT NULL
+     client_id           | bigint                      | NOT NULL
+     parent_object_id    | bigint                      |
+     parent_client_id    | bigint                      |
+     locale_id           | bigint                      | NOT NULL
+     marked_for_deletion | boolean                     | NOT NULL
+     content             | text                        | NOT NULL
+     additional_metadata | jsonb                       |
+    """
+    pass
+
+class TranslationGist(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     object_id           | bigint                      | NOT NULL
+     client_id           | bigint                      | NOT NULL
+     marked_for_deletion | boolean                     | NOT NULL
+     type                | text                        |
+    """
+    pass
+
+
+class UserBlobs(graphene.ObjectType):
+    """
+    created_at          | timestamp without time zone | NOT NULL
+    object_id           | bigint                      | NOT NULL
+    client_id           | bigint                      | NOT NULL
+    marked_for_deletion | boolean                     | NOT NULL
+    user_id             | bigint                      |
+    name                | text                        | NOT NULL
+    content             | text                        | NOT NULL
+    real_storage_path   | text                        | NOT NULL
+    data_type           | text                        | NOT NULL
+    additional_metadata | jsonb                       |
+    """
+    pass
+
+class UserRequest(graphene.ObjectType):
+    """
+     id                  | bigint                      | NOT NULL DEFAULT nextval('userrequest_id_seq'::regclass)
+     sender_id           | bigint                      | NOT NULL
+     recipient_id        | bigint                      | NOT NULL
+     created_at          | timestamp without time zone | NOT NULL
+     broadcast_uuid      | character varying(36)       | NOT NULL
+     type                | character varying(1000)     | NOT NULL
+     message             | character varying(1000)     |
+     subject             | jsonb                       |
+     additional_metadata | jsonb                       |
+    """
+    pass
 
 class Field(graphene.ObjectType):
+    """
+     created_at                           | timestamp without time zone | NOT NULL
+     object_id                            | bigint                      | NOT NULL
+     client_id                            | bigint                      | NOT NULL
+     translation_gist_client_id           | bigint                      | NOT NULL
+     translation_gist_object_id           | bigint                      | NOT NULL
+     data_type_translation_gist_client_id | bigint                      | NOT NULL
+     data_type_translation_gist_object_id | bigint                      | NOT NULL
+     marked_for_deletion                  | boolean                     | NOT NULL
+     is_translatable                      | boolean                     | NOT NULL
+     additional_metadata                  | jsonb                       |
+    """
     dbType = dbField
     dbObject = None
     class Meta:
@@ -84,6 +285,23 @@ class Field(graphene.ObjectType):
         return self.dbObject.field.get_translation(context.get('locale_id'))
 
 class Entity(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     object_id           | bigint                      | NOT NULL
+     client_id           | bigint                      | NOT NULL
+     parent_object_id    | bigint                      |
+     parent_client_id    | bigint                      |
+     self_client_id      | bigint                      |
+     self_object_id      | bigint                      |
+     field_client_id     | bigint                      | NOT NULL
+     field_object_id     | bigint                      | NOT NULL
+     link_client_id      | bigint                      |
+     link_object_id      | bigint                      |
+     locale_id           | bigint                      |
+     marked_for_deletion | boolean                     | NOT NULL
+     content             | text                        |
+     additional_metadata | jsonb                       |
+    """
     id = graphene.List(graphene.Int)
     content = graphene.String()
     fieldType = graphene.String()
@@ -101,6 +319,16 @@ class Entity(graphene.ObjectType):
 
 
 class LexicalEntry(graphene.ObjectType):
+    """
+     created_at          | timestamp without time zone | NOT NULL
+     object_id           | bigint                      | NOT NULL
+     client_id           | bigint                      | NOT NULL
+     parent_object_id    | bigint                      |
+     parent_client_id    | bigint                      |
+     marked_for_deletion | boolean                     | NOT NULL
+     moved_to            | text                        |
+     additional_metadata | jsonb                       |
+    """
     id = graphene.List(graphene.Int)
     entities = graphene.List(Entity)
     created_at = DateTime()
@@ -119,7 +347,23 @@ class LexicalEntry(graphene.ObjectType):
     def resolve_created_at(self, args, context, info):
         return self.dbObject.created_at
 
-class Perspective(graphene.ObjectType):
+class DictionaryPerspective(graphene.ObjectType):
+    """
+     created_at                       | timestamp without time zone | NOT NULL
+     object_id                        | bigint                      | NOT NULL
+     client_id                        | bigint                      | NOT NULL
+     parent_object_id                 | bigint                      |
+     parent_client_id                 | bigint                      |
+     translation_gist_client_id       | bigint                      | NOT NULL
+     translation_gist_object_id       | bigint                      | NOT NULL
+     state_translation_gist_client_id | bigint                      | NOT NULL
+     state_translation_gist_object_id | bigint                      | NOT NULL
+     marked_for_deletion              | boolean                     | NOT NULL
+     is_template                      | boolean                     | NOT NULL
+     import_source                    | text                        |
+     import_hash                      | text                        |
+     additional_metadata              | jsonb                       |
+    """
     class Meta:
         interfaces = (Holder, )
 
@@ -157,7 +401,7 @@ class Perspective(graphene.ObjectType):
         while iteritem:
             id = [iteritem.client_id, iteritem.object_id]
             if type(iteritem) == dbPerspective:
-                result.append(Perspective(id=id))
+                result.append(DictionaryPerspective(id=id))
             if type(iteritem) == dbDictionary:
                 result.append(Dictionary(id=id))
             if type(iteritem) == dbLanguage:
@@ -213,8 +457,31 @@ class Perspective(graphene.ObjectType):
 
         return result
 
+"""
+user_to_group_association = Table('user_to_group_association', Base.metadata,
+                                  Column('user_id', SLBigInteger(), ForeignKey('user.id')),
+                                  Column('group_id', UUIDType, ForeignKey('group.id'))
+                                  )
+
+user_to_organization_association = Table('user_to_organization_association', Base.metadata,
+                                         Column('user_id', SLBigInteger(), ForeignKey('user.id')),
+                                         Column('organization_id', SLBigInteger(), ForeignKey('organization.id'))
+                                         )
+
+"""
 
 class User(graphene.ObjectType):
+    """
+    created_at          | timestamp without time zone | NOT NULL
+    id                  | bigint                      | NOT NULL DEFAULT nextval('user_id_seq'::regclass)
+    default_locale_id   | bigint                      | NOT NULL
+    birthday            | date                        |
+    is_active           | boolean                     | NOT NULL
+    login               | text                        | NOT NULL
+    intl_name           | text                        | NOT NULL
+    name                | text                        |
+    additional_metadata | jsonb                       |
+    """
     # class Meta:
     #     interfaces = (Holder, )
     # class
@@ -258,7 +525,20 @@ class User(graphene.ObjectType):
     def resolve_created_at(self, args, context, info):
         return self.dbObject.created_at
 
+
+
 class Language(graphene.ObjectType):
+    """
+     created_at                 | timestamp without time zone | NOT NULL
+     object_id                  | bigint                      | NOT NULL
+     client_id                  | bigint                      | NOT NULL
+     parent_object_id           | bigint                      |
+     parent_client_id           | bigint                      |
+     translation_gist_client_id | bigint                      | NOT NULL
+     translation_gist_object_id | bigint                      | NOT NULL
+     marked_for_deletion        | boolean                     | NOT NULL
+     additional_metadata        | jsonb                       |
+    """
     dbType = dbLanguage
     dbObject = None
     created_at = DateTime()
@@ -281,6 +561,21 @@ class Language(graphene.ObjectType):
 
 
 class Dictionary(graphene.ObjectType):
+    """
+     created_at                       | timestamp without time zone | NOT NULL
+     object_id                        | bigint                      | NOT NULL
+     client_id                        | bigint                      | NOT NULL
+     parent_object_id                 | bigint                      |
+     parent_client_id                 | bigint                      |
+     translation_gist_client_id       | bigint                      | NOT NULL
+     translation_gist_object_id       | bigint                      | NOT NULL
+     state_translation_gist_client_id | bigint                      | NOT NULL
+     state_translation_gist_object_id | bigint                      | NOT NULL
+     marked_for_deletion              | boolean                     | NOT NULL
+     category                         | bigint                      |
+     domain                           | bigint                      |
+     additional_metadata              | jsonb                       |
+    """
     dbType = dbDictionary
     dbObject = None
     category = graphene.Int()
@@ -325,7 +620,7 @@ class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
     dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int))
-    perspective = graphene.Field(Perspective, id=graphene.List(graphene.Int))
+    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int))
     entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
     user = graphene.Field(User, id=graphene.Int())
@@ -390,7 +685,7 @@ class Query(graphene.ObjectType):
 
     def resolve_perspective(self, args, context, info):
         id = args.get('id')
-        return Perspective(id=id)
+        return DictionaryPerspective(id=id)
 
     def resolve_language(self, args, context, info):
         id = args.get('id')
