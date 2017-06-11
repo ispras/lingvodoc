@@ -95,6 +95,7 @@ object LingvodocApplication {
       .controller[UserProfileController]
       .controller[PerspectiveStatisticsModalController]
       .controller[DictionaryStatisticsModalController]
+      .controller[PerspectivePhonologyModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

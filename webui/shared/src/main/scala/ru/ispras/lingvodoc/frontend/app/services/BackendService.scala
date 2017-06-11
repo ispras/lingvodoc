@@ -2044,12 +2044,26 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def phonology(perspectiveId: CompositeId): Future[String] = {
-
+  /** Phonology generation request. */
+  def phonology(
+    perspectiveId: CompositeId,
+    group_by_description: Boolean,
+    only_first_translation: Boolean,
+    vowel_selection: Boolean):
+    Future[String] =
+  {
     import ru.ispras.lingvodoc.frontend.app.utils.ConversionUtils._
 
     val p = Promise[String]()
-    val url = s"phonology?perspective_client_id=${perspectiveId.clientId}&perspective_object_id=${perspectiveId.objectId}"
+
+    val url = s"""phonology?
+      |perspective_client_id=${perspectiveId.clientId}&
+      |perspective_object_id=${perspectiveId.objectId}
+      |${if (group_by_description) "&group_by_description" else ""}
+      |${if (only_first_translation) "&only_first_translation" else ""}
+      |${if (vowel_selection) "&vowel_selection" else ""}
+      |""".stripMargin.replaceAll("\n", "")
+
     val xhr: XMLHttpRequest = new dom.XMLHttpRequest()
     xhr.open("GET", getMethodUrl(url))
     xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")

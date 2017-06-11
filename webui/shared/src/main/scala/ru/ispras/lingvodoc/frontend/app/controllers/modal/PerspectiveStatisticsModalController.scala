@@ -144,7 +144,7 @@ class PerspectiveStatisticsModalController(
         scope.from_string = date_to_string(from_date_time) }
   }
 
-  /** Parses starting datetime of the statistics gathering period. */
+  /** Parses ending datetime of the statistics gathering period. */
   @JSExport
   def change_to(): Unit =
   {

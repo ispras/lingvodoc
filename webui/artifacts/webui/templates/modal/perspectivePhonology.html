@@ -1,0 +1,65 @@
+<div class="modal-header">
+    <h3 class="modal-title">Perspective phonology</h3>
+</div>
+
+<div class="modal-body">
+
+    <form name="phonologyform">
+        <div style="margin-bottom: 0.5em">Phonology data source:</div>
+
+        <label style="font-weight: normal">
+            <input type="radio" name="source_all" ng-model="source" value="all">
+            All vowels.
+        </label>
+
+        <br>
+
+        <label style="font-weight: normal">
+            <input type="radio" name="source_selected" ng-model="source" value="selected">
+            Only longest vowels and vowels with highest intensity.
+        </label>
+
+        <div style="margin-top: 0.5em; margin-bottom: 0.5em;">Translation showing:</div>
+
+        <label style="font-weight: normal">
+            <input type="radio" name="translation_all" ng-model="translation_choice" value="all">
+            Show all translations of each word.
+        </label>
+
+        <br>
+
+        <label style="font-weight: normal">
+            <input type="radio" name="translation_first" ng-model="translation_choice" value="first">
+            Only longest vowels and vowels with highest intensity.
+        </label>
+
+        <br>
+
+        <div style="margin-top: 0.5em; margin-bottom: 0.5em;">
+            <label style="font-weight: normal">
+                <input
+                    type="checkbox"
+                    ng-model="group_by_description">
+                Group phonology data by markup descriptions.
+            </label>
+        </div>
+    </form>
+
+    <div style="text-align: center">
+        <button
+            class="btn btn-primary"
+            type="button"
+            ng-click="controller.generate()">
+            Generate phonology
+        </button>
+    <div>
+
+    <div ng-if="error" class="animate-if alert alert-danger">
+        <strong>Error</strong> {{ error.message }}
+    </div>
+
+</div>
+
+<div class="modal-footer" style="margin-top: 1em">
+    <button class="btn btn-primary" type="button" ng-click="controller.close()">Close</button>
+</div>
