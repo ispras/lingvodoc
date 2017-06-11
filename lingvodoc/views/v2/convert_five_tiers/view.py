@@ -15,6 +15,7 @@ from pyramid.httpexceptions import (
 )
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.views.v2.convert_five_tiers.core import async_convert_dictionary_new
+from lingvodoc.views.v2.utils import anonymous_userid
 
 @view_config(route_name='convert_five_tiers', renderer='json', request_method='POST')
 def convert_dictionary(request):  # TODO: test
@@ -47,10 +48,7 @@ def convert_dictionary(request):  # TODO: test
                                                       object_id=dictionary_obj.translation_gist_object_id).first()
 
     if not client_id:
-        ip = request.client_addr if request.client_addr else ""
-        useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
-        unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-        user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+        user_id = anonymous_userid(request)
         task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
     else:
         task = TaskStatus(user.id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)

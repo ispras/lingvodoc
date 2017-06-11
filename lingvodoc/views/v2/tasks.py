@@ -2,6 +2,7 @@ import base64
 from hashlib import md5
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.models import Client
+from lingvodoc.views.v2.utils import anonymous_userid
 from pyramid.response import Response
 from pyramid.security import authenticated_userid
 from pyramid.view import view_config
@@ -16,11 +17,7 @@ def get_tasks(request):
     # if not client_id:
     #     return []
     if not client_id:
-        ip = request.client_addr if request.client_addr else ""
-        useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
-        unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-        user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
-        tasks = TaskStatus.get_user_tasks(user_id, clear_out=True)
+        tasks = TaskStatus.get_user_tasks(anonymous_userid(request), clear_out=True)
         return tasks
     user = Client.get_user_by_client_id(authenticated_userid(request))
     tasks = TaskStatus.get_user_tasks(user.id, clear_out=True)
