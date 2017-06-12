@@ -128,8 +128,6 @@ class ContributionsController(scope: ContributionsScope,
   @JSExport
   def acceptGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
-    console.log((entry :: Nil).toJSArray)
-
       val options = ModalOptions()
       options.templateUrl = "/static/templates/modal/acceptGroupingTag.html"
       options.controller = "ContributionsGroupingTagModalController"
