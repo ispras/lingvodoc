@@ -1012,6 +1012,7 @@ Index('parent_perspective_idx', DictionaryPerspective.parent_client_id, Dictiona
 Index('parent_dictionary_idx', Dictionary.parent_client_id, Dictionary.parent_object_id)
 Index('parent_language_idx', Language.parent_client_id, Language.parent_object_id)
 
+
 class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, AdditionalMetadataMixin):
     issuer_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
     issuer_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
@@ -1022,6 +1023,7 @@ class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, Add
     end = Column(Date)
     owners = Column(JSONB)
 
+
 class UserRequest(IdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
     sender_id = Column(SLBigInteger(), nullable=False)
     recipient_id = Column(SLBigInteger(), nullable=False)
@@ -1029,6 +1031,7 @@ class UserRequest(IdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetad
     type = Column(String(1000), nullable=False)
     subject = Column(JSONB)
     message = Column(String(1000))
+
 
 def acl_by_groups(object_id, client_id, subject):
     acls = []  # DANGER if acls do not work -- uncomment string below
