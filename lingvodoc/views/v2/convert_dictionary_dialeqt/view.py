@@ -17,6 +17,7 @@ from lingvodoc.models import (
 )
 from lingvodoc.exceptions import CommonException
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
+from lingvodoc.views.v2.utils import anonymous_userid
 from lingvodoc.cache.caching import TaskStatus
 
 @view_config(route_name='convert_dictionary_dialeqt', renderer='json', request_method='POST')
@@ -26,10 +27,7 @@ def convert_dictionary(request):  # TODO: test
         locale_id = int(request.cookies.get('locale_id') or 2)
         client_id = request.authenticated_userid
         if not client_id:
-            ip = request.client_addr if request.client_addr else ""
-            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
-            unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-            user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+            user_id = anonymous_userid(request)
         else:
             user_id = Client.get_user_by_client_id(client_id).id
         args = dict()

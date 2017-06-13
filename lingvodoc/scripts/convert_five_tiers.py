@@ -464,13 +464,17 @@ def convert_five_tiers(
         hashes = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Sound"]
         hashes = hashes[:] + [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Sound"]
         links = [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
-                 for x in lexes if x[2].field.data_type == "Link"]
+                 for x in lexes if x[2].field.data_type == "Link" and
+                 not x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
         links = links[:] + [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
-                 for x in p_lexes if x[2].field.data_type == "Link"]
+                 for x in p_lexes if x[2].field.data_type == "Link" and
+                 not x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
         lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
-                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values() and not
+                           x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
         p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text" and
-                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values() and not
+                            x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
         resp = translation_service_search("WiP")
         state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
         """
@@ -713,7 +717,7 @@ def convert_five_tiers(
             else:
                 sp_lexical_entry_client_id, sp_lexical_entry_object_id = par_rows[par_row]
             if not no_sound:
-                if word.time[1] < len(full_audio):
+                if word.time[1] <= len(full_audio):
                     with tempfile.NamedTemporaryFile() as temp:
                         full_audio[ word.time[0]: word.time[1]].export(temp.name, format=sound_format)
                         audio_slice = temp.read()
@@ -849,7 +853,7 @@ def convert_five_tiers(
                 else:
                     fp_lexical_entry_client_id, fp_lexical_entry_object_id = lex_rows[lex_row]
                 if not no_sound:
-                    if word.time[1] < len(full_audio):
+                    if word.time[1] <= len(full_audio):
                         with tempfile.NamedTemporaryFile() as temp:
                             full_audio[ word.time[0]: word.time[1]].export(temp.name, format=sound_format)
                             audio_slice = temp.read()
@@ -967,9 +971,11 @@ def convert_five_tiers(
                 .join(Entity, and_(LexicalEntry.object_id==Entity.parent_object_id,
                                    LexicalEntry.client_id==Entity.parent_client_id))
         lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
-                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values() and not
+                            x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
         p_lexes_with_text_after_update = [x for x in p_lexes if x[2].field.data_type == "Text" and
-                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
+                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values() and not
+                            x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
         task_status.set(9, 90, "Uploading translations with marks")
 
         noms = []  # words with NOM/INF mark
@@ -1027,7 +1033,6 @@ def convert_five_tiers(
                                                   locale_id=locale_id)
                                 create_le_flag = False
                                 break
-                            
                     else:
                         create_le_flag = False
                         reg = re.search('[-.][\dA-Z]+', t[2].content)

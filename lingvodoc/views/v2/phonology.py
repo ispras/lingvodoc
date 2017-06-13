@@ -1,58 +1,67 @@
 
 # Standard library imports.
 
+import base64
 import collections
 import datetime
+from errno import EEXIST
+from hashlib import md5
 import io
+import itertools
 import logging
 import math
+from os import makedirs, path
+import pprint
 import re
+from shutil import copyfileobj
 import string
 import tempfile
-import traceback
 from time import time
+import traceback
 
 import urllib.request
 import urllib.parse
 
-import base64
-from hashlib import md5
-from os import makedirs
-from os import path
-from errno import EEXIST
 # External imports.
+
 import cchardet as chardet
+from celery.utils.log import get_task_logger
+
+# So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
+# stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as pyplot
+from mpl_toolkits.mplot3d import Axes3D
 
 import numpy
 import numpy.fft
 import numpy.linalg
 import numpy.polynomial
 
+from pathvalidate import sanitize_filename
+
 import pydub
 from pydub.utils import ratio_to_db
 
 import pympi
 
-from shutil import copyfileobj
-from pathvalidate import sanitize_filename
-from transaction import manager
-
 from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFailed, HTTPOk
-##from pyramid.request import Request
-##from pyramid.response import FileIter, Response
 from pyramid.view import view_config
 
 import scipy.linalg
 
-from sqlalchemy import (and_,)
+from sqlalchemy import and_, create_engine, func
 from sqlalchemy.orm import aliased
-from sqlalchemy import create_engine
 
+from transaction import manager
 import xlsxwriter
 
 # Project imports.
-from lingvodoc.queue.celery import celery
-from lingvodoc.cache.caching import TaskStatus
+
+import lingvodoc.cache.caching as caching
+from lingvodoc.cache.caching import CACHE, initialize_cache, TaskStatus
 
 from lingvodoc.models import (
     Client,
@@ -67,9 +76,17 @@ from lingvodoc.models import (
     TranslationAtom
 )
 
+from lingvodoc.queue.celery import celery
+from lingvodoc.views.v2.utils import anonymous_userid, message, unimplemented
+
 
 # Setting up logging.
 log = logging.getLogger(__name__)
+
+
+# Trying to set up celery logging.
+celery_log = get_task_logger(__name__)
+celery_log.setLevel(logging.DEBUG)
 
 
 def bessel_i0_approximation(x):
@@ -538,12 +555,12 @@ class AudioPraatLike(object):
                 if frequency >= 50 and frequency <= nyquist_frequency - 50:
                     formant_list.append(frequency)
 
-        # Memoizing and returning first two formants.
+        # Memoizing and returning first three formants.
 
         formant_list.sort()
-        self.formant_list[step_index] = formant_list[:2]
+        self.formant_list[step_index] = formant_list[:3]
 
-        return formant_list[:2]
+        return formant_list[:3]
 
     def get_interval_formants(self, begin, end):
         """
@@ -565,20 +582,20 @@ class AudioPraatLike(object):
 
         # Getting point formant values.
 
-        f1_list = []
-        f2_list = []
+        f1_list, f2_list, f3_list = [], [], []
 
         for step_index in range(begin_step, end_step + 1):
-            f1, f2 = self.get_formants(step_index)
+            f1, f2, f3 = self.get_formants(step_index)
 
             f1_list.append(f1)
             f2_list.append(f2)
+            f3_list.append(f3)
 
         f1_list.sort()
         f2_list.sort()
+        f3_list.sort()
 
-        # Computing interval formant values as means (without highest and lowest values, if possible) and
-        # medians of point formant values.
+        # Computing interval formant values as means (without highest and lowest values, if possible).
 
         step_count = end_step - begin_step + 1
 
@@ -590,6 +607,12 @@ class AudioPraatLike(object):
             sum(f2_list) / step_count if step_count <= 2 else
             sum(f2_list[1:-1]) / (step_count - 2))
 
+        f3_mean = (
+            sum(f3_list) / step_count if step_count <= 2 else
+            sum(f3_list[1:-1]) / (step_count - 2))
+
+        # Computing medians of point formant values.
+
         half_step_count = step_count // 2
 
         f1_median = (
@@ -599,6 +622,10 @@ class AudioPraatLike(object):
         f2_median = (
             f2_list[half_step_count] if step_count & 1 == 1 else
             (f2_list[half_step_count - 1] + f2_list[half_step_count]) / 2)
+
+        f3_median = (
+            f3_list[half_step_count] if step_count & 1 == 1 else
+            (f3_list[half_step_count - 1] + f3_list[half_step_count]) / 2)
 
         # Trying computation on just the middle third of the interval.
 
@@ -612,10 +639,13 @@ class AudioPraatLike(object):
             f2_list[third_step_count : -third_step_count] if step_count % 3 < 2 else
             f2_list[third_step_count + 1 : -third_step_count - 1])
 
-        return [f1_mean, f2_mean, f1_median, f2_median,
-            sum(f1_list) / len(f1_list), sum(f2_list) / len(f2_list)]
+        f3_list = (
+            f3_list[third_step_count : -third_step_count] if step_count % 3 < 2 else
+            f3_list[third_step_count + 1 : -third_step_count - 1])
 
-        return f1_mean, f2_mean, f1_median, f2_median
+        return [f1_mean, f2_mean, f3_mean,
+            f1_median, f2_median, f3_median,
+            sum(f1_list) / len(f1_list), sum(f2_list) / len(f2_list), sum(f3_list) / len(f3_list)]
 
 
 def find_max_interval_praat(sound, interval_list):
@@ -769,11 +799,21 @@ character_escape_dict = {escape_string: chr(character_code)
     for escape_string, character_code in character_escape_list}
 
 
+#: Substitutions of various Unicode symbols by Praat character escape sequences.
+escape_character_dict = {chr(character_code): escape_string
+    for escape_string, character_code in character_escape_list}
+
+
 #: Regular expression for substitution of Praat character escape sequences, based on info in http://
 #: stackoverflow.com/questions/6116978/python-replace-multiple-strings and https://gist.github.com/bgusach/
-#: a967e0587d6e01e889fd1d776c5f3729
+#: a967e0587d6e01e889fd1d776c5f3729.
 character_escape_re = re.compile('|'.join(
     map(re.escape, sorted(character_escape_dict.keys(), key = len, reverse = True))))
+
+
+#: Regular expression for substitution of various Unicode symbols by Praat character escape sequences.
+escape_character_re = re.compile('|'.join(
+    map(re.escape, sorted(escape_character_dict.keys(), key = len, reverse = True))))
 
 
 def character_escape(string):
@@ -782,6 +822,14 @@ def character_escape(string):
     """
 
     return character_escape_re.sub(lambda match: character_escape_dict[match.group(0)], string)
+
+
+def escape_character(string):
+    """
+    Substitutes various Unicode characters by corresponding Praat charater escape sequences.
+    """
+
+    return escape_character_re.sub(lambda match: escape_character_dict[match.group(0)], string)
 
 
 def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
@@ -895,7 +943,7 @@ def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
     return tier_data_list, vowel_flag
 
 
-def process_sound(tier_data_list, sound, translation = None):
+def process_sound(tier_data_list, sound, translation_list = []):
     """
     Analyzes sound intervals corresponding to vowel-containing markup.
     """
@@ -910,7 +958,8 @@ def process_sound(tier_data_list, sound, translation = None):
 
         # Analyzing vowel sounds of each interval sequence.
 
-        (raw_interval_list, raw_interval_seq_list, interval_seq_list, interval_idx_to_raw_idx,
+        (raw_interval_list, raw_interval_seq_list,
+            interval_seq_list, interval_idx_to_raw_idx,
             transcription) = tier_data
 
         textgrid_result_list.append((tier_number, tier_name, []))
@@ -921,16 +970,27 @@ def process_sound(tier_data_list, sound, translation = None):
             if len(interval_list) <= 0:
                 continue
 
+            # Looking in particular at longest interval and interval with highest intensity, and at all
+            # intervals in general.
+
             (max_intensity_index, max_intensity, max_length_index, max_length) = \
                 find_max_interval_praat(sound, interval_list)
 
             max_intensity_interval = interval_list[max_intensity_index]
             max_length_interval = interval_list[max_length_index]
 
-            max_intensity_f1_f2 = sound.get_interval_formants(*max_intensity_interval[:2])
-            max_length_f1_f2 = sound.get_interval_formants(*max_length_interval[:2])
+            max_intensity_f_list = sound.get_interval_formants(*max_intensity_interval[:2])
+            max_length_f_list = sound.get_interval_formants(*max_length_interval[:2])
 
-            # Compiling results.
+            intensity_list = [
+                sound.get_interval_intensity(begin_sec, end_sec)
+                    for begin_sec, end_sec, text in interval_list]
+
+            formant_list = [
+                sound.get_interval_formants(begin_sec, end_sec)
+                    for begin_sec, end_sec, text in interval_list]
+
+            # Preparing interval data.
 
             max_length_str = '{0} {1:.3f} [{2}]'.format(
                 max_length_interval[2], max_length,
@@ -943,24 +1003,38 @@ def process_sound(tier_data_list, sound, translation = None):
                 len(''.join(text for index, (begin, end, text) in
                     raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
 
+            str_list = [
+                    
+                '{0} {1:.3f} {2:.3f} [{3}]'.format(
+                    text, end_sec - begin_sec, intensity,
+                    len(''.join(text for index, (begin, end, text) in
+                        raw_interval_list[:interval_idx_to_raw_idx[seq_index][index]])))
+
+                    for index, (intensity, (begin_sec, end_sec, text)) in
+                        enumerate(zip(intensity_list, interval_list))]
+
+            # Compiling results.
+
+            interval_data_list = [
+
+                (interval_str,
+                    list(map('{0:.3f}'.format, f_list)),
+                    '+' if index == max_length_index else '-',
+                    '+' if index == max_intensity_index else '-')
+
+                    for index, (interval_str, f_list) in enumerate(zip(str_list, formant_list))]
+
             textgrid_result_list[-1][2].append([
                 ''.join(text for index, (begin, end, text) in raw_interval_list),
-                translation,
-                max_length_str,
-                '{0:.3f}'.format(max_length_f1_f2[0]),
-                '{0:.3f}'.format(max_length_f1_f2[1]),
-                '{0:.3f}'.format(max_length_f1_f2[2]),
-                '{0:.3f}'.format(max_length_f1_f2[3]),
-                '{0:.3f}'.format(max_length_f1_f2[4]),
-                '{0:.3f}'.format(max_length_f1_f2[5]),
-                max_intensity_str,
-                '{0:.3f}'.format(max_intensity_f1_f2[0]),
-                '{0:.3f}'.format(max_intensity_f1_f2[1]),
-                '{0:.3f}'.format(max_intensity_f1_f2[2]),
-                '{0:.3f}'.format(max_intensity_f1_f2[3]),
-                '{0:.3f}'.format(max_intensity_f1_f2[4]),
-                '{0:.3f}'.format(max_intensity_f1_f2[5]),
-                '+' if max_intensity_index == max_length_index else '-'])
+                translation_list,
+                max_length_str] +
+                    list(map('{0:.3f}'.format, max_intensity_f_list)) +
+                    [max_intensity_str] +
+                    list(map('{0:.3f}'.format, max_length_f_list)) +
+                    ['+' if max_intensity_index == max_length_index else '-'] +
+                    [interval_data_list])
+
+    # Returning analysis results.
 
     return textgrid_result_list
 
@@ -970,18 +1044,29 @@ def format_textgrid_result(group_list, textgrid_result_list):
     A little helper function for formatting sound/markup analysis results.
     """
 
+    def f(tier_result):
+
+        interval_result_list = [
+            ([interval_result[0]] + list(interval_result[-2:]), interval_result[1])
+                for interval_result in tier_result[-1]]
+
+        return pprint.pformat(
+            [tier_result[:3] + [tier_result[12], tier_result[22]],
+                tier_result[3:12], tier_result[13:22]] + interval_result_list,
+            width = 144)
+
     return '\n'.join(
         ['groups: {0}'.format(group_list)] +
         ['tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
             
             tier_result_list if not isinstance(tier_result_list, list) else
-            tier_result_list[0] if len(tier_result_list) <= 1 else
-            ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
+            f(tier_result_list[0]) if len(tier_result_list) <= 1 else
+            ''.join('\n{0}'.format(f(tier_result)) for tier_result in tier_result_list))
 
             for tier_number, tier_name, tier_result_list in textgrid_result_list])
 
 
-def compile_workbook(result_list, result_group_set, workbook_stream):
+def compile_workbook(vowel_selection, result_list, result_group_set, workbook_stream):
     """
     Compiles analysis results into an Excel workbook.
     """
@@ -1004,30 +1089,41 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
     for group in group_list:
         group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
 
+        if vowel_selection:
+
+            header_list = [
+                'Longest (seconds) interval',
+                'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+                'Highest intensity (dB) interval',
+                'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+                'Coincidence']
+
+        else:
+            header_list = [
+                'Interval',
+                'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+                'Longest', 'Highest intensity']
+
         worksheet_results = workbook.add_worksheet('Results' + group_name_string)
-        worksheet_results.write_row('A1', [
-            'Transcription',
-            'Translation',
-            'Longest (seconds) interval',
-            'F1 mean (Hz)', 'F2 mean (Hz)',
-        #   'F1 median (Hz)', 'F2 median (Hz)',
-        #   'F1 third (Hz)', 'F2 third (Hz)',
-            'Highest intensity (dB) interval',
-            'F1 mean (Hz)', 'F2 mean (Hz)',
-        #   'F1 median (Hz)', 'F2 median (Hz)',
-        #   'F1 third (Hz)', 'F2 third (Hz)',
-            'Coincidence'])
+        worksheet_results.write_row('A1', ['Transcription', 'Translation'] + header_list)
 
         # Formatting column widths.
 
-        worksheet_results.set_column(0, 2, 26)
-        worksheet_results.set_column(3, 4, 13)
-        worksheet_results.set_column(5, 5, 26)
-        worksheet_results.set_column(6, 8, 13)
+        if vowel_selection:
+
+            worksheet_results.set_column(0, 2, 26)
+            worksheet_results.set_column(3, 5, 13)
+            worksheet_results.set_column(6, 6, 26)
+            worksheet_results.set_column(7, 10, 13)
+
+        else:
+            worksheet_results.set_column(0, 2, 26)
+            worksheet_results.set_column(3, 7, 13)
 
         worksheet_dict[group] = (worksheet_results,
             workbook.add_worksheet('F-table' + group_name_string),
-            workbook.add_worksheet('F-chart' + group_name_string))
+            workbook.add_worksheet('F-chart' + group_name_string),
+            workbook.add_worksheet('F-table (3d)' + group_name_string))
 
     row_counter_dict = {group: 2 for group in result_group_set}
     sound_counter_dict = {group: 0 for group in result_group_set}
@@ -1043,309 +1139,690 @@ def compile_workbook(result_list, result_group_set, workbook_stream):
                 continue
 
             for tier_data in tier_result:
+                translation_list = tier_data[1]
 
-                row_list = (tier_data[:3] +
-                    list(map(float, tier_data[3:5])) + [tier_data[9]] +
-                    list(map(float, tier_data[10:12])) + [tier_data[16]])
+                # Either only for longest interval and interval with highest intensity, or...
 
-                for group in textgrid_group_list:
-                    worksheet_dict[group][0].write_row('A' + str(row_counter_dict[group]), row_list)
+                if vowel_selection:
 
-                    row_counter_dict[group] += 1
-                    sound_counter_dict[group] += 1
+                    f_list_a = list(map(float, tier_data[3:6]))
+                    f_list_b = list(map(float, tier_data[13:16]))
 
-                # Collecting vowel formant data.
+                    row_list = (
+                        [tier_data[0], translation_list[0] if translation_list else '', tier_data[2]] +
+                            f_list_a + [tier_data[12]] + f_list_b + [tier_data[22]])
 
-                text_a, f1_f2_list_a = tier_data[2], tier_data[3:5]
-                text_b, f1_f2_list_b = tier_data[9], tier_data[10:12]
+                    # Writing out interval data and any additional translations.
 
-                text_a_list = text_a.split()
-                text_b_list = text_b.split()
+                    for group in textgrid_group_list:
 
-                vowel_a = ''.join(filter(lambda character: character in vowel_set, text_a_list[0]))
-                vowel_b = ''.join(filter(lambda character: character in vowel_set, text_b_list[0]))
+                        worksheet_dict[group][0].write_row('A' + str(row_counter_dict[group]), row_list)
+                        row_counter_dict[group] += 1
 
-                for group in textgrid_group_list:
-                    vowel_formant_dict[group][vowel_a].append(tuple(map(float, f1_f2_list_a)))
+                    for translation in translation_list[1:]:
 
-                if text_b_list[2] != text_a_list[2]:
+                        worksheet_dict[group][0].write('B' + str(row_counter_dict[group]), translation)
+                        row_counter_dict[group] += 1
+
+                    # Collecting vowel formant data.
+
+                    text_a_list = tier_data[2].split()
+                    text_b_list = tier_data[12].split()
+
+                    vowel_a = ''.join(filter(lambda character: character in vowel_set, text_a_list[0]))
+                    vowel_b = ''.join(filter(lambda character: character in vowel_set, text_b_list[0]))
+
                     for group in textgrid_group_list:
 
                         sound_counter_dict[group] += 1
-                        vowel_formant_dict[group][vowel_b].append(tuple(map(float, f1_f2_list_b)))
+                        vowel_formant_dict[group][vowel_a].append(tuple(f_list_a))
 
-    # And now we will produce F1/F2 scatter charts for all sufficiently frequent analysed vowels of all
-    # result groups.
+                    if text_b_list[2] != text_a_list[2]:
+                        for group in textgrid_group_list:
 
+                            sound_counter_dict[group] += 1
+                            vowel_formant_dict[group][vowel_b].append(tuple(f_list_b))
+
+                # ...for all intervals.
+
+                else:
+                    for index, (interval_str, f_list, sign_longest, sign_highest) in enumerate(
+                        tier_data[23]):
+
+                        text_list = interval_str.split()
+                        vowel = ''.join(filter(lambda character: character in vowel_set, text_list[0]))
+
+                        f_list = list(map(float, f_list[:3]))
+
+                        row_list = (
+
+                            [tier_data[0],
+                                translation_list[index] if index < len(translation_list) else '',
+                                interval_str] +
+
+                                f_list + [sign_longest, sign_highest])
+
+                        # Writing out interval analysis data, collecting vowel formant data.
+
+                        for group in textgrid_group_list:
+
+                            worksheet_dict[group][0].write_row('A' + str(row_counter_dict[group]), row_list)
+                            row_counter_dict[group] += 1
+
+                            sound_counter_dict[group] += 1
+                            vowel_formant_dict[group][vowel].append(tuple(f_list))
+
+                    # Writing out additional translations, if we have any.
+
+                    for translation in translation_list[len(tier_data[23]):]:
+
+                        worksheet_dict[group][0].write('B' + str(row_counter_dict[group]), translation)
+                        row_counter_dict[group] += 1
+
+    # And now we will produce 2d F1/F2 and 3d F1/F2/F3  scatter charts for all analysed and sufficiently
+    # frequent vowels of all result groups.
+
+    chart_stream_list = []
     for group in group_list:
-        worksheet_table, worksheet_chart = worksheet_dict[group][1:3]
+
+        group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
+        worksheet_table_2d, worksheet_chart, worksheet_table_3d = worksheet_dict[group][1:4]
 
         vowel_formant_list = []
 
-        for vowel, f1_f2_list in sorted(vowel_formant_dict[group].items()):
-            f1_f2_list = list(set(f1_f2_list))
+        for vowel, f_tuple_list in sorted(vowel_formant_dict[group].items()):
+            f_tuple_list = list(set(f_tuple_list))
 
-            if len(f1_f2_list) >= 8:
-                vowel_formant_list.append((vowel, list(map(numpy.array, f1_f2_list))))
+            if len(f_tuple_list) >= 8:
+                vowel_formant_list.append((vowel,
+                    list(map(lambda f_tuple: numpy.array(f_tuple[:2]), f_tuple_list)),
+                    list(map(numpy.array, f_tuple_list))))
 
-        # Compiling data of formant value series by filtering F1/F2 2-vectors by Mahalonobis distance.
+        # Compiling data of formant value series by filtering F1/F2 2-vectors and F1/F2/F3 3-vectors by
+        # Mahalonobis distance.
 
-        chart_data_list = []
+        chart_data_2d_list = []
+        chart_data_3d_list = []
 
-        min_f1, max_f1 = None, None
-        min_f2, max_f2 = None, None
+        min_2d_f1, max_2d_f1 = None, None
+        min_2d_f2, max_2d_f2 = None, None
 
-        for index, (vowel, f1_f2_list) in enumerate(vowel_formant_list):
+        min_3d_f1, max_3d_f1 = None, None
+        min_3d_f2, max_3d_f2 = None, None
+        min_3d_f3, max_3d_f3 = None, None
 
-            mean = sum(f1_f2_list) / len(f1_f2_list)
-            sigma = numpy.cov(numpy.array(f1_f2_list).T)
-            inverse = numpy.linalg.inv(sigma)
+        for index, (vowel, f_2d_list, f_3d_list) in enumerate(vowel_formant_list):
 
-            distance_list = []
-            for f1_f2 in f1_f2_list:
+            mean_2d = sum(f_2d_list) / len(f_2d_list)
+            sigma_2d = numpy.cov(numpy.array(f_2d_list).T)
+            inverse_2d = numpy.linalg.inv(sigma_2d)
 
-                # Calculation of squared Mahalanobis distance inspired by the StackOverflow answer
-                # http://stackoverflow.com/q/27686240/2016856.
+            mean_3d = sum(f_3d_list) / len(f_3d_list)
+            sigma_3d = numpy.cov(numpy.array(f_3d_list).T)
+            inverse_3d = numpy.linalg.inv(sigma_3d)
 
-                delta = f1_f2 - mean
-                distance_list.append((numpy.einsum('n,nk,k->', delta, inverse, delta), f1_f2))
+            distance_2d_list = []
+            distance_3d_list = []
 
-            distance_list.sort()
+            # Calculation of squared Mahalanobis distance inspired by the StackOverflow answer
+            # http://stackoverflow.com/q/27686240/2016856.
 
-            # Trying to produce one standard deviation ellipse.
+            for f_2d in f_2d_list:
 
-            sigma_one_two = scipy.linalg.sqrtm(sigma)
+                delta_2d = f_2d - mean_2d
+                distance_2d_list.append((numpy.einsum('n,nk,k->', delta_2d, inverse_2d, delta_2d), f_2d))
+
+            for f_3d in f_3d_list:
+
+                delta_3d = f_3d - mean_3d
+                distance_3d_list.append((numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d), f_3d))
+
+            distance_2d_list.sort()
+            distance_3d_list.sort()
+
+            # Trying to produce one standard deviation ellipse for F1/F2 2-vectors.
+
+            sigma_one_two = scipy.linalg.sqrtm(sigma_2d)
             ellipse_list = []
 
             for i in range(64 + 1):
                 phi = 2 * math.pi * i / 64
 
                 ellipse_list.append(
-                    mean + numpy.dot(numpy.array([math.cos(phi), math.sin(phi)]), sigma_one_two))
+                    mean_2d + numpy.dot(numpy.array([math.cos(phi), math.sin(phi)]), sigma_one_two))
 
-            # Splitting F1/F2 vectors into these that are close enough to the mean and the outliers.
+            # Splitting F1/F2 2-vectors into these that are close enough to the mean, and the outliers.
 
-            filtered_list = []
-            outlier_list = []
+            filtered_2d_list = []
+            outlier_2d_list = []
 
-            for distance_squared, f1_f2 in distance_list:
+            for distance_squared, f_2d in distance_2d_list:
                 if distance_squared <= 2:
-                    filtered_list.append(f1_f2)
+                    filtered_2d_list.append(f_2d)
                 else:
-                    outlier_list.append(f1_f2)
+                    outlier_2d_list.append(f_2d)
 
-            if len(filtered_list) < len(distance_list) // 2:
-                f1_f2_list = [f1_f2 for distance_squared, f1_f2 in distance_list]
+            if len(filtered_2d_list) < (len(distance_2d_list) + 1) // 2:
+                sorted_list = [f_2d for distance_squared, f_2d in distance_2d_list]
 
-                filtered_list = f1_f2_list[:len(distance_list) // 2]
-                outlier_list = f1_f2_list[len(distance_list) // 2:]
+                filtered_2d_list = sorted_list[:(len(distance_2d_list) + 1) // 2]
+                outlier_2d_list = sorted_list[(len(distance_2d_list) + 1) // 2:]
 
-            chart_data_list.append((
-                len(filtered_list), len(f1_f2_list), vowel,
-                filtered_list, outlier_list, mean, ellipse_list))
+            chart_data_2d_list.append((
+                len(filtered_2d_list), len(f_2d_list), vowel,
+                filtered_2d_list, outlier_2d_list, mean_2d, ellipse_list))
+
+            # The same for F1/F2/F3 3-vectors.
+
+            filtered_3d_list = []
+            outlier_3d_list = []
+
+            for distance_squared, f_3d in distance_3d_list:
+                if distance_squared <= 2:
+                    filtered_3d_list.append(f_3d)
+                else:
+                    outlier_3d_list.append(f_3d)
+
+            if len(filtered_3d_list) < (len(distance_3d_list) + 1) // 2:
+                sorted_list = [f_3d for distance_squared, f_3d in distance_3d_list]
+
+                filtered_3d_list = sorted_list[:(len(distance_3d_list) + 1) // 2]
+                outlier_3d_list = sorted_list[(len(distance_3d_list) + 1) // 2:]
+
+            chart_data_3d_list.append((
+                len(filtered_3d_list), len(f_3d_list), vowel,
+                filtered_3d_list, outlier_3d_list, mean_3d, sigma_3d, inverse_3d))
 
             # Updating F1/F2 maximum/minimum info.
 
-            f1_list, f2_list = zip(*filtered_list)
+            f1_list, f2_list = zip(*filtered_2d_list)
 
             min_f1_list, max_f1_list = min(f1_list), max(f1_list)
-
-            if min_f1 == None or min_f1_list < min_f1:
-                min_f1 = min_f1_list
-
-            if max_f1 == None or max_f1_list > max_f1:
-                max_f1 = max_f1_list
-
             min_f2_list, max_f2_list = min(f2_list), max(f2_list)
 
-            if min_f2 == None or min_f2_list < min_f2:
-                min_f2 = min_f2_list
+            if min_2d_f1 == None or min_f1_list < min_2d_f1:
+                min_2d_f1 = min_f1_list
 
-            if max_f2 == None or max_f2_list > max_f2:
-                max_f2 = max_f2_list
+            if max_2d_f1 == None or max_f1_list > max_2d_f1:
+                max_2d_f1 = max_f1_list
+
+            if min_2d_f2 == None or min_f2_list < min_2d_f2:
+                min_2d_f2 = min_f2_list
+
+            if max_2d_f2 == None or max_f2_list > max_2d_f2:
+                max_2d_f2 = max_f2_list
+
+            # Updating F1/F2/F3 maximum/minimum info.
+
+            f1_list, f2_list, f3_list = zip(*filtered_3d_list)
+
+            min_f1_list, max_f1_list = min(f1_list), max(f1_list)
+            min_f2_list, max_f2_list = min(f2_list), max(f2_list)
+            min_f3_list, max_f3_list = min(f3_list), max(f3_list)
+
+            if min_3d_f1 == None or min_f1_list < min_3d_f1:
+                min_3d_f1 = min_f1_list
+
+            if max_3d_f1 == None or max_f1_list > max_3d_f1:
+                max_3d_f1 = max_f1_list
+
+            if min_3d_f2 == None or min_f2_list < min_3d_f2:
+                min_3d_f2 = min_f2_list
+
+            if max_3d_f2 == None or max_f2_list > max_3d_f2:
+                max_3d_f2 = max_f2_list
+
+            if min_3d_f3 == None or min_f3_list < min_3d_f3:
+                min_3d_f3 = min_f3_list
+
+            if max_3d_f3 == None or max_f3_list > max_3d_f3:
+                max_3d_f3 = max_f3_list
 
         # Compiling info of the formant scatter chart data series, unless we actually don't have any.
 
-        if len(chart_data_list) <= 0:
-            continue
+        if len(chart_data_2d_list) > 0:
+            chart_dict_list = []
 
-        chart_dict_list = []
+            column_list = list(string.ascii_uppercase) + [c1 + c2
+                for c1 in string.ascii_uppercase
+                for c2 in string.ascii_uppercase]
 
-        column_list = list(string.ascii_uppercase) + [c1 + c2
-            for c1 in string.ascii_uppercase
-            for c2 in string.ascii_uppercase]
+            shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle',
+                'plus']
 
-        shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle',
-            'plus']
+            color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red', 'orange', 'gray',
+                'cyan', 'lime', 'magenta', 'silver', 'yellow']
 
-        color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red', 'orange', 'gray', 'cyan',
-            'lime', 'magenta', 'silver', 'yellow']
+            # It seems that we have to plot data in order of its size, from vowels with least number of
+            # F1/F2 points to vowels with the most number of F1/F2 points, otherwise scatter chart fails to
+            # generate properly.
 
-        # It seems that we have to plot data in order of its size, from vowels with least number of F1/F2 points
-        # to vowels with the most number of F1/F2 points, otherwise scatter chart fails to generate properly.
+            chart_data_2d_list.sort(reverse = True)
 
-        chart_data_list.sort(reverse = True)
+            max_f_2d_list_length = max(len(f_2d_list)
+                for c, tc, v, f_2d_list, o_list, m, e_list in chart_data_2d_list)
 
-        max_f1_f2_list_length = max(len(f1_f2_list)
-            for count, total_count, vowel, f1_f2_list, outlier_list, mean, ellipse_list in chart_data_list)
+            heading_list = []
+            for c, tc, vowel, f_list, o_list, m, e_list in chart_data_2d_list:
+                heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
 
-        heading_list = []
-        for count, total_count, vowel, f1_f2_list, outlier_list, mean, ellipse_list in chart_data_list:
-            heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
+            worksheet_table_2d.write_row('A1', heading_list)
+            worksheet_table_2d.write_row('A2', ['main part', ''] * len(chart_data_2d_list))
 
-        worksheet_table.write_row('A1', heading_list)
-        worksheet_table.write_row('A2', ['main part', ''] * len(chart_data_list))
+            # Removing outliers that outlie too much.
 
-        # Removing outliers that outlie too much.
+            f1_limit = max_2d_f1 + min_2d_f1 / 2
+            f2_limit = max_2d_f2 + min_2d_f2 / 2
 
-        f1_limit = max_f1 + min_f1 / 2
-        f2_limit = max_f2 + min_f2 / 2
+            for i in range(len(chart_data_2d_list)):
+                chart_data_2d_list[i] = list(chart_data_2d_list[i])
 
-        for i in range(len(chart_data_list)):
-            chart_data_list[i] = list(chart_data_list[i])
+                chart_data_2d_list[i][4] = list(filter(
+                    lambda f_2d: f_2d[0] <= f1_limit and f_2d[1] <= f2_limit,
+                    chart_data_2d_list[i][4]))
 
-            chart_data_list[i][4] = list(filter(
-                lambda f1_f2: f1_f2[0] <= f1_limit and f1_f2[1] <= f2_limit,
-                chart_data_list[i][4]))
+            max_outlier_list_length = max(len(outlier_list)
+                for c, tc, v, f_list, outlier_list, m, e_list in chart_data_2d_list)
 
-        max_outlier_list_length = max(len(outlier_list)
-            for count, total_count, vowel, f1_f2_list, outlier_list, mean, ellipse_list in chart_data_list)
+            # Writing out chart data and compiling chart data series info.
 
-        # Writing out chart data and compiling chart data series info.
+            for index, (count, total_count, vowel,
+                f_2d_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_2d_list):
 
-        for index, (count, total_count, vowel,
-            f1_f2_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_list):
+                f1_list, f2_list = zip(*f_2d_list)
 
-            f1_list, f2_list = zip(*f1_f2_list)
+                f1_outlier_list, f2_outlier_list = zip(*outlier_list)
+                x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
 
-            f1_outlier_list, f2_outlier_list = zip(*outlier_list)
-            x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
+                f1_column = column_list[index * 2]
+                f2_column = column_list[index * 2 + 1]
 
-            f1_column = column_list[index * 2]
-            f2_column = column_list[index * 2 + 1]
+                # Writing out formant data.
 
-            # Writing out formant data.
+                worksheet_table_2d.write(f1_column + '3',
+                    '{0}/{1} ({2:.1f}%) points'.format(
+                        count, total_count, 100.0 * count / total_count))
 
-            worksheet_table.write(f1_column + '3',
-                '{0}/{1} ({2:.1f}%) points'.format(
-                    count, total_count, 100.0 * count / total_count))
+                worksheet_table_2d.write_column(f1_column + '4',
+                    list(f1_list) +
+                    [''] * (max_f_2d_list_length - len(f1_list)) +
+                    [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
+                        len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
+                    list(f1_outlier_list) +
+                    [''] * (max_outlier_list_length - len(f1_outlier_list)) +
+                    [vowel + ' mean', mean[0], vowel + ' stdev ellipse'] +
+                    list(x1_ellipse_list))
 
-            worksheet_table.write_column(f1_column + '4',
-                list(f1_list) +
-                [''] * (max_f1_f2_list_length - len(f1_list)) +
-                [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
-                    len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
-                list(f1_outlier_list) +
-                [''] * (max_outlier_list_length - len(f1_outlier_list)) +
-                [vowel + ' mean', mean[0], vowel + ' stdev ellipse'] +
-                list(x1_ellipse_list))
+                worksheet_table_2d.write_column(f2_column + '4',
+                    list(f2_list) +
+                    [''] * (max_f_2d_list_length - len(f2_list)) +
+                    ['', ''] + list(f2_outlier_list) +
+                    [''] * (max_outlier_list_length - len(f2_outlier_list)) +
+                    ['', mean[1], ''] + list(x2_ellipse_list))
 
-            worksheet_table.write_column(f2_column + '4',
-                list(f2_list) +
-                [''] * (max_f1_f2_list_length - len(f2_list)) +
-                ['', ''] + list(f2_outlier_list) +
-                [''] * (max_outlier_list_length - len(f2_outlier_list)) +
-                ['', mean[1], ''] + list(x2_ellipse_list))
+                worksheet_table_2d.set_column(index * 2, index * 2 + 1, 11)
 
-            worksheet_table.set_column(index * 2, index * 2 + 1, 11)
+                # Compiling and saving chart data series info.
 
-            # Compiling and saving chart data series info.
+                group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
+                color = color_list[index % len(color_list)]
 
-            group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
-            color = color_list[index % len(color_list)]
+                chart_dict_list.append({
+                    'name': vowel,
+                    'categories': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
+                        group_name_string, f2_column, len(f2_list) + 3),
+                    'values': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
+                        group_name_string, f1_column, len(f1_list) + 3),
+                    'marker': {
+                        'type': 'circle',
+                        'size': 5,
+                        'border': {'color': color},
+                        'fill': {'color': color}}})
 
-            chart_dict_list.append({
-                'name': vowel,
-                'categories': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
-                    group_name_string, f2_column, len(f2_list) + 3),
-                'values': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
-                    group_name_string, f1_column, len(f1_list) + 3),
-                'marker': {
-                    'type': 'circle',
-                    'size': 5,
-                    'border': {'color': color},
-                    'fill': {'color': color}}})
+                # And additional outliers data series.
 
-            # And additional outliers data series.
+                chart_dict_list.append({
+                    'name': vowel + ' outliers',
+                    'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                        group_name_string, f2_column,
+                        max_f_2d_list_length + 6, max_f_2d_list_length + len(f2_outlier_list) + 5),
+                    'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                        group_name_string, f1_column,
+                        max_f_2d_list_length + 6, max_f_2d_list_length + len(f1_outlier_list) + 5),
+                    'marker': {
+                        'type': 'circle',
+                        'size': 2,
+                        'border': {'color': color},
+                        'fill': {'color': color}}})
 
-            chart_dict_list.append({
-                'name': vowel + ' outliers',
-                'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                    group_name_string, f2_column,
-                    max_f1_f2_list_length + 6, max_f1_f2_list_length + len(f2_outlier_list) + 5),
-                'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                    group_name_string, f1_column,
-                    max_f1_f2_list_length + 6, max_f1_f2_list_length + len(f1_outlier_list) + 5),
-                'marker': {
-                    'type': 'circle',
-                    'size': 2,
-                    'border': {'color': color},
-                    'fill': {'color': color}}})
+                # Mean data point.
 
-            # Mean data point.
+                shift = max_f_2d_list_length + max_outlier_list_length
 
-            shift = max_f1_f2_list_length + max_outlier_list_length
+                chart_dict_list.append({
+                    'name': vowel + ' mean',
+                    'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                        group_name_string, f2_column, shift + 7, shift + 7),
+                    'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                        group_name_string, f1_column, shift + 7, shift + 7),
+                    'marker': {
+                        'type': 'x',
+                        'size': 12,
+                        'border': {'color': color},
+                        'fill': {'color': color}}})
 
-            chart_dict_list.append({
-                'name': vowel + ' mean',
-                'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                    group_name_string, f2_column, shift + 7, shift + 7),
-                'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                    group_name_string, f1_column, shift + 7, shift + 7),
-                'marker': {
-                    'type': 'x',
-                    'size': 12,
-                    'border': {'color': color},
-                    'fill': {'color': color}}})
+                # Finally, one standard deviation ellipse data series.
 
-            # Finally, one standard deviation ellipse data series.
+                chart_dict_list.append({
+                    'name': vowel + ' stdev ellipse',
+                    'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                        group_name_string, f2_column, shift + 9, shift + len(x2_ellipse_list) + 8),
+                    'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                        group_name_string, f1_column, shift + 9, shift + len(x1_ellipse_list) + 8),
+                    'marker': {
+                        'type': 'none',
+                        'size': 1,
+                        'border': {'color': color},
+                        'fill': {'color': color}},
+                    'line': {'color': color, 'width': 0.5},
+                    'smooth': True})
 
-            chart_dict_list.append({
-                'name': vowel + ' stdev ellipse',
-                'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                    group_name_string, f2_column, shift + 9, shift + len(x2_ellipse_list) + 8),
-                'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                    group_name_string, f1_column, shift + 9, shift + len(x1_ellipse_list) + 8),
-                'marker': {
-                    'type': 'none',
-                    'size': 1,
-                    'border': {'color': color},
-                    'fill': {'color': color}},
-                'line': {'color': color, 'width': 0.5},
-                'smooth': True})
+            # Generating formant chart, if we have any data.
 
-        # Generating formant chart, if we have any data.
+            if chart_dict_list:
 
-        if chart_dict_list:
+                chart = workbook.add_chart({'type': 'scatter'})
 
-            chart = workbook.add_chart({'type': 'scatter'})
+                chart.set_x_axis({
+                    'major_gridlines': {'visible': True},
+                    'name': 'F2 (Hz)',
+                    'reverse': True})
 
-            chart.set_x_axis({
-                'major_gridlines': {'visible': True},
-                'name': 'F2 (Hz)',
-                'reverse': True})
+                chart.set_y_axis({
+                    'major_gridlines': {'visible': True},
+                    'name': 'F1 (Hz)',
+                    'reverse': True})
 
-            chart.set_y_axis({
-                'major_gridlines': {'visible': True},
-                'name': 'F1 (Hz)',
-                'reverse': True})
+                chart.set_legend({'position': 'top'})
 
-            chart.set_legend({'position': 'top'})
+                for chart_dict in chart_dict_list:
+                    chart.add_series(chart_dict)
 
-            for chart_dict in chart_dict_list:
-                chart.add_series(chart_dict)
+                chart.set_style(11)
+                chart.set_size({'width': 1024, 'height': 768})
 
-            chart.set_style(11)
-            chart.set_size({'width': 1024, 'height': 768})
+                worksheet_chart.insert_chart('A1', chart)
 
-            worksheet_chart.insert_chart('A1', chart)
+        # Compiling info for F1/F2/F3 3-vector scatter charts, if we have any data.
+
+        if len(chart_data_3d_list) > 0:
+
+            column_list = list(string.ascii_uppercase) + [c1 + c2
+                for c1 in string.ascii_uppercase
+                for c2 in string.ascii_uppercase]
+
+            chart_data_3d_list.sort(reverse = True)
+
+            max_f_3d_list_length = max(len(f_3d_list)
+                for c, tc, v, f_3d_list, o_list, m, s_3d, i_3d in chart_data_3d_list)
+
+            heading_list = []
+            for c, tc, vowel, f_list, o_list, m, s_3d, i_3d in chart_data_3d_list:
+
+                heading_list.extend([
+                    '{0} F1'.format(vowel), '{0} F2'.format(vowel), '{0} F3'.format(vowel)])
+
+            worksheet_table_3d.write_row('A1', heading_list)
+            worksheet_table_3d.write_row('A2', ['main part', '', ''] * len(chart_data_3d_list))
+
+            # Removing outliers that outlie too much.
+
+            f1_limit = max_3d_f1 + min_3d_f1 / 2
+            f2_limit = max_3d_f2 + min_3d_f2 / 2
+            f3_limit = max_3d_f3 + min_3d_f3 / 2
+
+            for i in range(len(chart_data_3d_list)):
+                chart_data_3d_list[i] = list(chart_data_3d_list[i])
+
+                chart_data_3d_list[i][4] = list(filter(
+                    lambda f_3d: f_3d[0] <= f1_limit and f_3d[1] <= f2_limit and f_3d[2] <= f3_limit,
+                    chart_data_3d_list[i][4]))
+
+            max_outlier_list_length = max(len(outlier_list)
+                for c, tc, v, f_list, outlier_list, m, s_3d, i_3d in chart_data_3d_list)
+
+            # Writing out chart data.
+
+            for index, (count, total_count, vowel, f_3d_list,
+                outlier_list, mean, sigma_3d, inverse_3d) in enumerate(chart_data_3d_list):
+
+                f1_list, f2_list, f3_list = zip(*f_3d_list)
+                f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*outlier_list)
+
+                f1_column = column_list[index * 3]
+                f2_column = column_list[index * 3 + 1]
+                f3_column = column_list[index * 3 + 2]
+
+                # Writing out formant data.
+
+                worksheet_table_3d.write(f1_column + '3',
+                    '{0}/{1} ({2:.1f}%) points'.format(
+                        count, total_count, 100.0 * count / total_count))
+
+                worksheet_table_3d.write_column(f1_column + '4',
+                    list(f1_list) +
+                    [''] * (max_f_3d_list_length - len(f1_list)) +
+                    [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
+                        len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
+                    list(f1_outlier_list) +
+                    [''] * (max_outlier_list_length - len(f1_outlier_list)) +
+                    [vowel + ' mean', mean[0]])
+
+                worksheet_table_3d.write_column(f2_column + '4',
+                    list(f2_list) +
+                    [''] * (max_f_3d_list_length - len(f2_list)) +
+                    ['', ''] + list(f2_outlier_list) +
+                    [''] * (max_outlier_list_length - len(f2_outlier_list)) +
+                    ['', mean[1]])
+
+                worksheet_table_3d.write_column(f3_column + '4',
+                    list(f3_list) +
+                    [''] * (max_f_3d_list_length - len(f3_list)) +
+                    ['', ''] + list(f3_outlier_list) +
+                    [''] * (max_outlier_list_length - len(f3_outlier_list)) +
+                    ['', mean[2]])
+
+                worksheet_table_3d.set_column(index * 3, index * 3 + 2, 11)
+
+            # Creating 3d formant scatter charts, if we have any data.
+
+            if chart_data_3d_list:
+
+                figure = pyplot.figure()
+                figure.set_size_inches(16, 10)
+
+                axes = figure.add_subplot(111, projection = '3d')
+
+                axes.autoscale(tight = True)
+                axes.autoscale_view(tight = True)
+
+                axes.invert_xaxis()
+                axes.view_init(elev = 30, azim = -165)
+
+                x_min, x_max = min_3d_f1, max_3d_f1
+                y_min, y_max = min_3d_f2, max_3d_f2
+                z_min, z_max = min_3d_f3, max_3d_f3
+
+                legend_plot_list = []
+                legend_label_list = []
+
+                color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red',
+                    'orange', 'gray', 'cyan', 'lime', 'magenta', 'silver', 'yellow']
+
+                # Graphing every vowel's data.
+
+                for index, ((c, tc, vowel, f_3d_list, outlier_list, mean_3d, s_3d, inverse_3d),
+                    color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
+
+                    axes.scatter(
+                        [f_3d[0] for f_3d in f_3d_list],
+                        [f_3d[1] for f_3d in f_3d_list],
+                        [f_3d[2] for f_3d in f_3d_list],
+                        color = color, s = 4, depthshade = False, alpha = 0.5, zorder = 1000 + index)
+
+                    f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*outlier_list)
+
+                    axes.scatter(
+                        f1_outlier_list, f2_outlier_list, f3_outlier_list,
+                        color = color, s = 1.44, depthshade = False, alpha = 0.5, zorder = index)
+
+                    # Using 'plot' and not 'scatter' so that z-ordering would work correctly and mean
+                    # formant vector markers are in the forefront.
+
+                    axes.plot([mean_3d[0]], [mean_3d[1]], [mean_3d[2]], '.',
+                        marker = 'o', c = color, markersize = 7, zorder = 4000 + index)
+
+                    plot_proxy = matplotlib.lines.Line2D(
+                        [0], [0], linestyle = "none", c = color, marker = 'o')
+
+                    legend_plot_list.append(plot_proxy)
+                    legend_label_list.append(vowel)
+
+                    # Plotting one standard deviation ellipsoids for F1/F2/F3 3-vectors.
+                    #
+                    # See https://stackoverflow.com/questions/7819498/plotting-ellipsoid-with-matplotlib and
+                    # https://stackoverflow.com/questions/41955492/how-to-plot-efficiently-a-large-number-
+                    # of-3d-ellipsoids-with-matplotlib-axes3d for examples of parametrization with spherical
+                    # coordinates.
+
+                    phi = numpy.linspace(0, 2 * numpy.pi, 100)
+                    theta = numpy.linspace(0, numpy.pi, 100)
+                    
+                    # Getting scaling and rotation matrices from ellipsoid definition matrix Sigma^{-1}
+                    # by decomposing it via singular value decomposition.
+
+                    u, s, rotation = numpy.linalg.svd(inverse_3d)
+                    scale_x, scale_y, scale_z = 1.0 / numpy.sqrt(s)
+
+                    x = scale_x * numpy.outer(numpy.cos(phi), numpy.sin(theta))
+                    y = scale_y * numpy.outer(numpy.sin(phi), numpy.sin(theta))
+                    z = scale_z * numpy.outer(numpy.ones_like(theta), numpy.cos(theta))
+
+                    for i in range(len(x)):
+                        for j in range(len(x)):
+
+                            [x[i, j], y[i, j], z[i, j]] = (mean_3d +
+                                numpy.dot([x[i, j], y[i, j], z[i, j]], rotation))
+
+                    axes.plot_surface(x, y, z, rstride = 10, cstride = 10,
+                        color = color, linewidth = 0.1, alpha = 0.044, shade = True, zorder = 2000 + index)
+
+                    # And again, updating plot's minimums and maximums.
+
+                    ellipsoid_x_min = min(x.flat)
+                    ellipsoid_x_max = max(x.flat)
+
+                    if ellipsoid_x_min < x_min:
+                        x_min = ellipsoid_x_min - (ellipsoid_x_max - ellipsoid_x_min) / 16
+
+                    if ellipsoid_x_max > x_max:
+                        x_max = ellipsoid_x_max + (ellipsoid_x_max - ellipsoid_x_min) / 16
+
+                    ellipsoid_y_min = min(y.flat)
+                    ellipsoid_y_max = max(y.flat)
+
+                    if ellipsoid_y_min < y_min:
+                        y_min = ellipsoid_y_min - (ellipsoid_y_max - ellipsoid_y_min) / 16
+
+                    if ellipsoid_y_max > y_max:
+                        y_max = ellipsoid_y_max + (ellipsoid_y_max - ellipsoid_y_min) / 16
+
+                    ellipsoid_z_min = min(z.flat)
+                    ellipsoid_z_max = max(z.flat)
+
+                    if ellipsoid_z_min < z_min:
+                        z_min = ellipsoid_z_min - (ellipsoid_z_max - ellipsoid_z_min) / 16
+
+                    if ellipsoid_z_max > z_max:
+                        z_max = ellipsoid_z_max + (ellipsoid_z_max - ellipsoid_z_min) / 16
+
+                # And now plotting projections of mean F1/F2/F3 vectors, with vertial projection lines, and
+                # outlines of standard deviation ellipsoids.
+                #
+                # Separate cycle due to need for establishing a Z coordinate lower bound.
+
+                z_min_current, z_max_current = axes.get_zlim3d()
+                z_level = z_min_current - (z_max - z_min_current) / 4
+
+                for index, ((c, tc, vowel, f_3d_list, outlier_list, mean_3d, sigma_3d, i_3d),
+                    color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
+
+                    axes.scatter(mean_3d[0], mean_3d[1], z_level,
+                        c = color, s = 36, marker = 'x', zorder = 5000 + index)
+
+                    axes.plot(
+                        [mean_3d[0], mean_3d[0]],
+                        [mean_3d[1], mean_3d[1]],
+                        [mean_3d[2], z_level],
+                        '--', color = color, zorder = 3000 + index)
+
+                    # Projection of an ellipsoid is an ellipse, for info on computation of ellipsoid
+                    # projections see https://tcg.mae.cornell.edu/pubs/Pope_FDA_08.pdf.
+
+                    projection = numpy.identity(3)
+                    projection[2, 2] = 0
+
+                    mean_3d_p = numpy.dot(projection, mean_3d)[:2]
+                    transform = numpy.dot(projection, scipy.linalg.sqrtm(sigma_3d))[:2, :2]
+
+                    phi = numpy.linspace(0, 2 * numpy.pi, 64)
+                    x = numpy.cos(phi)
+                    y = numpy.sin(phi)
+
+                    for i in range(len(x)):
+                        x[i], y[i] = mean_3d_p + numpy.dot([x[i], y[i]], transform)
+
+                    axes.plot(x, y, zs = z_level, zdir = 'z', color = color, linewidth = 0.25,
+                        zorder = 6000 + index)
+
+                # Minimizing whitespace. Please remember that x-axis is inverted.
+
+                axes.set_xlim(x_max, x_min)
+                axes.set_ylim(y_min, y_max)
+                axes.set_zlim(z_level, z_max)
+
+                # Additional newlines for adjusting label positions, see https://stackoverflow.com/a/
+                # 5526717/2016856.
+
+                axes.set_xlabel('\nF1 (Hz)')
+                axes.set_ylabel('\nF2 (Hz)')
+                axes.set_zlabel('\nF3 (Hz)')
+
+                # Legend with manually selected font appropriate for various phonetic Unicode characters.
+
+                legend = axes.legend(legend_plot_list, legend_label_list,
+                    markerscale = 1.25, numpoints = 1)
+
+                pyplot.setp(legend.texts, family = 'Gentium')
+
+                pyplot.tight_layout()
+                figure.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
+
+                # Rendering charts to memory as PNG images.
+
+                chart_stream = io.BytesIO()
+                pyplot.savefig(chart_stream, format = 'png')
+
+                chart_stream_list.append((chart_stream, group_name_string))
+
+    # Finishing workbook compilation, returning some result counts.
 
     workbook.close()
 
     entity_counter_dict = {group: row_counter - 2
         for group, row_counter in row_counter_dict.items()}
 
-    return (entity_counter_dict, sound_counter_dict)
+    return (entity_counter_dict, sound_counter_dict, chart_stream_list)
 
 
 @view_config(route_name = 'phonology', renderer = 'json')
@@ -1355,6 +1832,18 @@ def phonology(request):
 
     Perspective is specified by request parameters 'perspective_client_id' and 'perspective_object_id',
     example of a request: /phonology?perspective_client_id=345&perspective_object_id=2.
+
+    Parameters:
+        group_by_description
+        limit
+        limit_exception
+        limit_no_vowel
+        limit_result
+        only_first_translation
+        perspective_client_id
+        perspective_object_id
+        synchronous
+        vowel_selection
     """
 
     task_status = None
@@ -1363,7 +1852,9 @@ def phonology(request):
         perspective_cid = request.params.get('perspective_client_id')
         perspective_oid = request.params.get('perspective_object_id')
 
-        group_by_description = request.params.get('group_by_description')
+        group_by_description = 'group_by_description' in request.params
+        only_first_translation = 'only_first_translation' in request.params
+        vowel_selection = 'vowel_selection' in request.params
 
         # Getting perspective and perspective's dictionary info.
 
@@ -1390,16 +1881,14 @@ def phonology(request):
         perspective_name = perspective_translation_gist.get_translation(locale_id)
 
         client_id = request.authenticated_userid
-        if not client_id:
-            ip = request.client_addr if request.client_addr else ""
-            useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
-            unique_string = "unauthenticated_%s_%s" % (ip, useragent)
-            user_id = base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
-        else:
-            user_id = Client.get_user_by_client_id(client_id).id
+
+        user_id = (
+            Client.get_user_by_client_id(client_id).id
+                if client_id else anonymous_userid(request))
 
         task_status = TaskStatus(user_id,
             'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
+
         # Checking if we have limits on number of computed results.
 
         limit = (None if 'limit' not in request.params else
@@ -1413,14 +1902,25 @@ def phonology(request):
 
         limit_result = (None if 'limit_result' not in request.params else
             int(request.params.get('limit_result')))
+
+        # Performing either synchronous or asynchronous phonology compilation.
+
+        request.response.status = HTTPOk.code
+
         task_key = task_status.key
         cache_kwargs = request.registry.settings["cache_kwargs"]
         sqlalchemy_url = request.registry.settings["sqlalchemy.url"]
         storage = request.registry.settings["storage"]
-        async_phonology.delay(
-            task_key, perspective_cid, perspective_oid, dictionary_name, perspective_name, cache_kwargs, storage,
-            group_by_description, limit, limit_exception, limit_no_vowel, limit_result, sqlalchemy_url
-        )
+
+        return (std_phonology if 'synchronous' in request.params else async_phonology.delay)(
+            task_key,
+            perspective_cid, perspective_oid,
+            dictionary_name, perspective_name,
+            cache_kwargs, storage,
+            group_by_description, vowel_selection, only_first_translation,
+            limit, limit_exception, limit_no_vowel, limit_result,
+            sqlalchemy_url)
+
     except Exception as exception:
 
         traceback_string = ''.join(traceback.format_exception(
@@ -1435,421 +1935,540 @@ def phonology(request):
             task_status.set(4, 100, 'Finished (ERROR), external error')
 
         return {'error': 'external error'}
-    request.response.status = HTTPOk.code
+
+
+def std_phonology(
+    task_key,
+    perspective_cid, perspective_oid,
+    dictionary_name, perspective_name,
+    cache_kwargs, storage,
+    group_by_description, vowel_selection, only_first_translation,
+    limit, limit_exception, limit_no_vowel, limit_result,
+    sqlalchemy_url):
+    """
+    Synchronous phonology compilation, useful for debugging.
+    """
+
+    task_status = TaskStatus.get_from_cache(task_key)
+
+    try:
+        return perform_phonology(
+            perspective_cid, perspective_oid,
+            dictionary_name, perspective_name,
+            group_by_description, vowel_selection, only_first_translation,
+            limit, limit_exception, limit_no_vowel, limit_result,
+            task_status, storage)
+
+    # Some unknown external exception.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('phonology: exception')
+        log.debug(traceback_string)
+
+        if task_status is not None:
+            task_status.set(4, 100, 'Finished (ERROR), external error')
+
+        return {'error': 'external error'}
+
 
 @celery.task
 def async_phonology(
-        task_key, perspective_cid, perspective_oid, dictionary_name, perspective_name, cache_kwargs, storage,
-        group_by_description, limit, limit_exception, limit_no_vowel, limit_result, sqlalchemy_url
-    ):
-    from lingvodoc.cache.caching import initialize_cache
+    task_key,
+    perspective_cid, perspective_oid,
+    dictionary_name, perspective_name,
+    cache_kwargs, storage,
+    group_by_description, vowel_selection, only_first_translation,
+    limit, limit_exception, limit_no_vowel, limit_result,
+    sqlalchemy_url):
+    """
+    Asynchronous phonology compilation.
+    """
+
+    # This is a no-op with current settings, we use it to enable logging inside celery tasks, because
+    # somehow this does it, and otherwise we couldn't set it up.
+
+    logging.debug('async_phonology')
+
+    # Or, and now we go on with task execution.
+
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
-    from lingvodoc.cache.caching import CACHE
+
     task_status = TaskStatus.get_from_cache(task_key)
+
     with manager:
         try:
-            task_status.set(1, 0, 'Preparing')
-            # Getting 'Translation' field ids.
 
-            field_translation_gist_client_id = None
-            field_translation_gist_object_id = None
-
-            # Looking through all translations we've got, getting field translation data.
-
-            data_type_query = DBSession.query(Field) \
-                .join(TranslationGist,
-                      and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                           Field.translation_gist_client_id == TranslationGist.client_id))\
-                .join(TranslationGist.translationatom)
-            # Finding required field by its translation.
-            field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                                 TranslationAtom.content == 'Translation').one()
-            if not field:
-                raise Exception('Missing \'Translation\' field.')
-
-            # Before everything else we should count how many sound/markup pairs we are to process.
-
-            Markup = aliased(Entity, name = 'Markup')
-            Sound = aliased(Entity, name = 'Sound')
-            Translation = aliased(Entity, name = 'Translation')
-            PublishingSound = aliased(PublishingEntity, name = 'PublishingSound')
-
-            count_query = DBSession.query(
-                LexicalEntry, Markup, Sound, PublishingEntity, PublishingSound).filter(and_(
-                    LexicalEntry.parent_client_id == perspective_cid,
-                    LexicalEntry.parent_object_id == perspective_oid,
-                    LexicalEntry.marked_for_deletion == False,
-                    Markup.parent_client_id == LexicalEntry.client_id,
-                    Markup.parent_object_id == LexicalEntry.object_id,
-                    Markup.marked_for_deletion == False,
-                    Markup.additional_metadata.contains({'data_type': 'praat markup'}),
-                    PublishingEntity.client_id == Markup.client_id,
-                    PublishingEntity.object_id == Markup.object_id,
-                    PublishingEntity.published == True,
-                    PublishingEntity.accepted == True,
-                    Sound.client_id == Markup.self_client_id,
-                    Sound.object_id == Markup.self_object_id,
-                    Sound.marked_for_deletion == False,
-                    PublishingSound.client_id == Sound.client_id,
-                    PublishingSound.object_id == Sound.object_id,
-                    PublishingSound.published == True,
-                    PublishingSound.accepted == True))
-
-            total_count = count_query.count()
-            task_status.set(2, 1, 'Analyzing sound and markup')
-
-            # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations.
-
-            data_query = count_query.outerjoin(Translation, and_(
-                LexicalEntry.client_id == Translation.parent_client_id,
-                LexicalEntry.object_id == Translation.parent_object_id)).filter(and_(
-                    Translation.field_client_id == field.client_id,
-                    Translation.field_object_id == field.object_id)).add_entity(Translation)
-
-            exception_counter = 0
-            no_vowel_counter = 0
-
-            result_list = list()
-            result_group_set = set()
-
-            # We process these lexical entries in batches. Just in case, it seems that perspectives rarely have
-            # more then several hundred such lexical entries.
-
-            for index, row in enumerate(data_query.yield_per(100)):
-
-                markup_url = row.Markup.content
-                sound_url = row.Sound.content
-
-                row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(
-                    index,
-                    row.LexicalEntry.client_id, row.LexicalEntry.object_id,
-                    row.Sound.client_id, row.Sound.object_id,
-                    row.Markup.client_id, row.Markup.object_id)
-
-                cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
-                    row.Sound.client_id, row.Sound.object_id,
-                    row.Markup.client_id, row.Markup.object_id)
-
-                # Checking if we have cached result for this pair of sound/markup.
-
-                cache_result = CACHE.get(cache_key)
-
-                try:
-                    if cache_result == 'no_vowel':
-
-                        log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}'.format(
-                            row_str, cache_key, markup_url, sound_url))
-
-                        no_vowel_counter += 1
-
-                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                            'Analyzing sound and markup')
-
-                        if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
-                            limit and index + 1 >= limit):
-                            break
-
-                        continue
-
-                    # If we have cached exception, we do the same as with absence of vowels, show its info and
-                    # continue.
-
-                    elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
-                        exception, traceback_string = cache_result[1:3]
-
-                        log.debug(
-                            '{0} [CACHE {1}]: exception\n{2}\n{3}'.format(
-                            row_str, cache_key, markup_url, sound_url))
-
-                        log.debug(traceback_string)
-
-                        exception_counter += 1
-
-                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                            'Analyzing sound and markup')
-
-                        if (limit_exception and exception_counter >= limit_exception or
-                            limit and index + 1 >= limit):
-                            break
-
-                        continue
-
-                    # If we actually have the result, we use it and continue.
-
-                    elif cache_result:
-                        group_list, textgrid_result_list = cache_result
-
-                        log.debug(
-                            '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
-                            row_str, cache_key, markup_url, sound_url,
-                            format_textgrid_result(group_list, textgrid_result_list)))
-
-                        result_list.append(cache_result)
-                        result_group_set.update(group_list)
-
-                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                            'Analyzing sound and markup')
-
-                        if (limit_result and len(result_list) >= limit_result or
-                            limit and index + 1 >= limit):
-                            break
-
-                        continue
-
-                # If we have an exception while processing cache results, we stop and terminate with error.
-
-                except:
-                    ##request.response.status = HTTPInternalServerError.code
-
-                    task_status.set(4, 100,
-                        'Finished (ERROR), cache processing error')
-
-                    return {
-                        'error': 'cache processing error',
-                        'exception_counter': exception_counter,
-                        'no_vowel_counter': no_vowel_counter,
-                        'result_counter': len(result_list)}
-
-                try:
-                    # Getting markup, checking for each tier if it needs to be processed.
-
-                    markup_bytes = urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')).read()
-
-                    textgrid = pympi.Praat.TextGrid(xmax = 0)
-                    textgrid.from_file(
-                        io.BytesIO(markup_bytes),
-                        codec = chardet.detect(markup_bytes)['encoding'])
-
-                    def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
-
-                        log.debug(
-                            '{0}: tier {1} \'{2}\' has interval(s) with unusual transcription text: '
-                            '{3} / {4}'.format(
-                            row_str, tier_number, tier_name, transcription, unusual_markup_dict))
-
-                    def no_vowel_f(tier_number, tier_name, transcription_list):
-
-                        log.debug(
-                            '{0}: tier {1} \'{2}\' doesn\'t have any vowel markup: {3}'.format(
-                            row_str, tier_number, tier_name, transcription_list))
-
-                    def no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list):
-
-                        log.debug(
-                            '{0}: tier {1} \'{2}\' intervals to be processed don\'t have any vowel markup: '
-                            'markup {3}, selected {4}'.format(
-                            row_str, tier_number, tier_name, transcription_list, selected_list))
-
-                    tier_data_list, vowel_flag = process_textgrid(
-                        textgrid, unusual_f, no_vowel_f, no_vowel_selected_f)
-
-                    # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
-
-                    if not vowel_flag:
-
-                        CACHE.set(cache_key, 'no_vowel')
-                        no_vowel_counter += 1
-
-                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                            'Analyzing sound and markup')
-
-                        if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
-                            limit and index + 1 >= limit):
-                            break
-
-                        continue
-
-                    # Otherwise we retrieve the sound file and analyze each vowel-containing markup.
-                    # Partially inspired by source code at scripts/convert_five_tiers.py:307.
-
-                    sound = None
-                    with tempfile.NamedTemporaryFile() as temp_file:
-
-                        sound_file = urllib.request.urlopen(urllib.parse.quote(sound_url, safe = '/:'))
-                        temp_file.write(sound_file.read())
-                        temp_file.flush()
-
-                        sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
-
-                    textgrid_result_list = process_sound(tier_data_list, sound,
-                        row.Translation.content if row.Translation else None)
-
-                    # Saving analysis results.
-
-                    group_list = [None]
-
-                    if group_by_description == 'true' and 'blob_description' in row.Markup.additional_metadata:
-                        group_list.append(row.Markup.additional_metadata['blob_description'])
-
-                        print(row.Markup.additional_metadata['blob_description'])
-                        print(row.Sound.additional_metadata['blob_description'])
-
-                    result_list.append((group_list, textgrid_result_list))
-                    result_group_set.update(group_list)
-
-                    CACHE.set(cache_key, (group_list, textgrid_result_list))
-
-                    # Showing results for this sound/markup pair, stopping earlier, if required.
-
-                    log.debug(
-                        '{0}:\n{1}\n{2}\n{3}'.format(
-                        row_str, markup_url, sound_url,
-                        format_textgrid_result(group_list, textgrid_result_list)))
-
-                    task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        'Analyzing sound and markup')
-
-                    if (limit_result and len(result_list) >= limit_result or
-                        limit and index + 1 >= limit):
-                        break
-
-                except Exception as exception:
-
-                    #
-                    # NOTE
-                    #
-                    # Exceptional situations encountered so far:
-                    #
-                    #   1. TextGrid file actually contains sound, and wav file actually contains textgrid
-                    #     markup.
-                    #
-                    #     Perspective 330/4, LexicalEntry 330/7, sound-Entity 330/2328, markup-Entity 330/6934
-                    #
-                    #   2. Markup for one of the intervals contains a newline "\n", and pympi fails to parse it.
-                    #     Praat parses such files without problems.
-                    #
-                    #     Perspective 330/4, LexicalEntry 330/20, sound-Entity 330/6297, markup-Entity 330/6967
-                    #
-
-                    log.debug(
-                        '{0}: exception\n{1}\n{2}'.format(
-                        row_str, markup_url, sound_url))
-
-                    # if we encountered an exception, we show its info and remember not to try offending
-                    # sound/markup pair again.
-
-                    traceback_string = ''.join(traceback.format_exception(
-                        exception, exception, exception.__traceback__))[:-1]
-
-                    log.debug(traceback_string)
-
-                    CACHE.set(cache_key, ('exception', exception,
-                        traceback_string.replace('Traceback', 'CACHEd traceback')))
-
-                    exception_counter += 1
-
-                    task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
-                        'Analyzing sound and markup')
-
-                    if (limit_exception and exception_counter >= limit_exception or
-                        limit and index + 1 >= limit):
-                        break
-
-            log.debug('phonology {0}/{1}: {2} result{3}, {4} no vowels, {5} exceptions'.format(
+            return perform_phonology(
                 perspective_cid, perspective_oid,
-                len(result_list), '' if len(result_list) == 1 else 's',
-                no_vowel_counter, exception_counter))
-
-            # If we have no results, we indicate the situation and also show number of failures and number of
-            # markups with no vowels.
-
-            if not result_list:
-                ##request.response.status = HTTPPreconditionFailed.code
-
-                task_status.set(4, 100,
-                    'Finished, no results produced')
-
-                return {
-                    'error': 'no markups for this query',
-                    'exception_counter': exception_counter,
-                    'no_vowel_counter': no_vowel_counter}
-
-            # Otherwise we create and then serve Excel file.
-
-            task_status.set(3, 99, 'Compiling results')
-            workbook_stream = io.BytesIO()
-
-            try:
-                entry_count_dict, sound_count_dict = compile_workbook(
-                    result_list, result_group_set, workbook_stream)
-
-                workbook_stream.seek(0)
-
-            except Exception as exception:
-
-                traceback_string = ''.join(traceback.format_exception(
-                    exception, exception, exception.__traceback__))[:-1]
-
-                log.debug('compile_workbook: exception')
-                log.debug(traceback_string)
-
-                # If we failed to create an Excel file, we terminate with error.
-
-                ##request.response.status = HTTPInternalServerError.code
-
-                task_status.set(4, 100,
-                    'Finished (ERROR), result compilation error')
-
-                return {
-                    'error': 'result compilation error',
-                    'exception_counter': exception_counter,
-                    'no_vowel_counter': no_vowel_counter,
-                    'result_counter': len(result_list)}
-
-            # Name of the resulting file includes dictionary name, perspective name and current date.
-
-            current_datetime = datetime.datetime.now(datetime.timezone.utc)
-
-            result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
                 dictionary_name, perspective_name,
-                current_datetime.year,
-                current_datetime.month,
-                current_datetime.day)
-
-            # See http://stackoverflow.com/questions/2937465/what-is-correct-content-type-for-excel-files for
-            # Excel content-type.
-
-            filename = sanitize_filename(result_filename)
-            cur_time = time()
-            storage_dir = path.join(storage["path"], "phonology", str(cur_time))
-            makedirs(storage_dir, exist_ok=True)
-            storage_path = path.join(storage_dir, filename)
-            directory = path.dirname(storage_path)
-            try:
-                makedirs(directory)
-            except OSError as exception:
-                if exception.errno != EEXIST:
-                    raise
-            workbook_stream.seek(0)
-            with open(storage_path, 'wb+') as f:
-                copyfileobj(workbook_stream, f)
-
-            #real_location = storage_path
-
-            url = "".join((storage["prefix"],
-                          storage["static_route"],
-                          "phonology",
-                          '/',
-                          str(cur_time),
-                          '/',
-                          filename))
-            task_status.set(4, 100, 'Finished', result_link=url)
+                group_by_description, vowel_selection, only_first_translation,
+                limit, limit_exception, limit_no_vowel, limit_result,
+                task_status, storage)
 
         # Some unknown external exception.
 
         except Exception as exception:
+
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('phonology: exception')
             log.debug(traceback_string)
-            print(traceback_string)
+
             if task_status is not None:
                 task_status.set(4, 100, 'Finished (ERROR), external error')
 
             return {'error': 'external error'}
+
+
+def perform_phonology(
+    perspective_cid, perspective_oid,
+    dictionary_name, perspective_name,
+    group_by_description, vowel_selection, only_first_translation,
+    limit, limit_exception, limit_no_vowel, limit_result,
+    task_status, storage):
+    """
+    Performs phonology compilation.
+    """
+
+    log.debug('phonology {0}/{1}:'
+        '\n  dictionary_name: \'{2}\'\n  perspective_name: \'{3}\''
+        '\n  group_by_description: {4}\n  vowel_selection: {5}\n  only_first_translation: {6}'
+        '\n  limit: {7}\n  limit_exception: {8}\n  limit_no_vowel: {9}\n  limit_result: {10}'.format(
+        perspective_cid, perspective_oid,
+        dictionary_name, perspective_name,
+        group_by_description, vowel_selection, only_first_translation,
+        limit, limit_exception, limit_no_vowel, limit_result))
+
+    task_status.set(1, 0, 'Preparing')
+
+    # Looking through all translations we've got, getting field translation data.
+
+    data_type_query = DBSession.query(Field) \
+        .join(TranslationGist,
+              and_(Field.translation_gist_object_id == TranslationGist.object_id,
+                   Field.translation_gist_client_id == TranslationGist.client_id)) \
+        .join(TranslationGist.translationatom)
+
+    # Finding required field by its translation.
+
+    field = data_type_query.filter(
+        TranslationAtom.locale_id == 2,
+        TranslationAtom.content == 'Translation').one()
+
+    if not field:
+        raise Exception('Missing \'Translation\' field.')
+
+    log.debug('field: {0}/{1}'.format(field.client_id, field.object_id))
+
+    # Before everything else we should count how many sound/markup pairs we are to process.
+
+    Markup = aliased(Entity, name = 'Markup')
+    Sound = aliased(Entity, name = 'Sound')
+    Translation = aliased(Entity, name = 'Translation')
+
+    PublishingMarkup = aliased(PublishingEntity, name = 'PublishingMarkup')
+    PublishingSound = aliased(PublishingEntity, name = 'PublishingSound')
+    PublishingTranslation = aliased(PublishingEntity, name = 'PublishingTranslation')
+
+    data_query = DBSession.query(
+        LexicalEntry, Markup, Sound, func.array_agg(Translation.content)).filter(and_(
+            LexicalEntry.parent_client_id == perspective_cid,
+            LexicalEntry.parent_object_id == perspective_oid,
+            LexicalEntry.marked_for_deletion == False,
+            Markup.parent_client_id == LexicalEntry.client_id,
+            Markup.parent_object_id == LexicalEntry.object_id,
+            Markup.marked_for_deletion == False,
+            Markup.additional_metadata.contains({'data_type': 'praat markup'}),
+            PublishingMarkup.client_id == Markup.client_id,
+            PublishingMarkup.object_id == Markup.object_id,
+            PublishingMarkup.published == True,
+            PublishingMarkup.accepted == True,
+            Sound.client_id == Markup.self_client_id,
+            Sound.object_id == Markup.self_object_id,
+            Sound.marked_for_deletion == False,
+            PublishingSound.client_id == Sound.client_id,
+            PublishingSound.object_id == Sound.object_id,
+            PublishingSound.published == True,
+            PublishingSound.accepted == True,
+            Translation.parent_client_id == LexicalEntry.client_id,
+            Translation.parent_object_id == LexicalEntry.object_id,
+            Translation.marked_for_deletion == False,
+            Translation.field_client_id == field.client_id,
+            Translation.field_object_id == field.object_id,
+            PublishingTranslation.client_id == Translation.client_id,
+            PublishingTranslation.object_id == Translation.object_id,
+            PublishingTranslation.published == True,
+            PublishingTranslation.accepted == True)).group_by(
+                LexicalEntry.client_id, LexicalEntry.object_id,
+                Markup.client_id, Markup.object_id,
+                Sound.client_id, Sound.object_id)
+
+    total_count = data_query.count()
+    task_status.set(2, 1, 'Analyzing sound and markup')
+
+    # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations, and
+    # process these lexical entries in batches. Just in case, it seems that perspectives rarely have more
+    # then several hundred such lexical entries.
+
+    exception_counter = 0
+    no_vowel_counter = 0
+
+    result_list = list()
+    result_group_set = set()
+
+    for index, row in enumerate(data_query.yield_per(100)):
+
+        markup_url = row.Markup.content
+        sound_url = row.Sound.content
+
+        row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(
+            index,
+            row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+            row.Sound.client_id, row.Sound.object_id,
+            row.Markup.client_id, row.Markup.object_id)
+
+        cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
+            row.Sound.client_id, row.Sound.object_id,
+            row.Markup.client_id, row.Markup.object_id)
+
+        # Processing grouping, if required.
+
+        group_list = [None]
+
+        if group_by_description and 'blob_description' in row.Markup.additional_metadata:
+            group_list.append(row.Markup.additional_metadata['blob_description'])
+
+            log.debug(message('\n  blob description: {0}/{1}'.format(
+                row.Markup.additional_metadata['blob_description'],
+                row.Sound.additional_metadata['blob_description'])))
+
+        # Checking if we have cached result for this pair of sound/markup.
+        #
+        # NOTE: We reference CACHE indirectly, as caching.CACHE, so that when we are inside a celery task
+        # and CACHE is re-initialized, we would get newly initialized CACHE, and not the value which was
+        # imported ealier.
+
+        cache_result = caching.CACHE.get(cache_key)
+
+        try:
+            if cache_result == 'no_vowel':
+
+                log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}'.format(
+                    row_str, cache_key, markup_url, sound_url))
+
+                no_vowel_counter += 1
+
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    'Analyzing sound and markup')
+
+                if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                    limit and index + 1 >= limit):
+                    break
+
+                continue
+
+            # If we have cached exception, we do the same as with absence of vowels, show its info and
+            # continue.
+
+            elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
+                exception, traceback_string = cache_result[1:3]
+
+                log.debug(
+                    '{0} [CACHE {1}]: exception\n{2}\n{3}'.format(
+                    row_str, cache_key, markup_url, sound_url))
+
+                log.debug(traceback_string)
+
+                exception_counter += 1
+
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    'Analyzing sound and markup')
+
+                if (limit_exception and exception_counter >= limit_exception or
+                    limit and index + 1 >= limit):
+                    break
+
+                continue
+
+            # If we actually have the result, we use it and continue.
+
+            elif cache_result:
+                textgrid_result_list = cache_result
+
+                log.debug(
+                    '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
+                    row_str, cache_key, markup_url, sound_url,
+                    format_textgrid_result(group_list, textgrid_result_list)))
+
+                result_list.append((group_list, textgrid_result_list))
+                result_group_set.update(group_list)
+
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    'Analyzing sound and markup')
+
+                if (limit_result and len(result_list) >= limit_result or
+                    limit and index + 1 >= limit):
+                    break
+
+                continue
+
+        # If we have an exception while processing cache results, we stop and terminate with error.
+
+        except:
+            task_status.set(4, 100,
+                'Finished (ERROR), cache processing error')
+
+            return {
+                'error': 'cache processing error',
+                'exception_counter': exception_counter,
+                'no_vowel_counter': no_vowel_counter,
+                'result_counter': len(result_list)}
+
+        try:
+            # Getting markup, checking for each tier if it needs to be processed.
+
+            markup_bytes = urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')).read()
+
+            textgrid = pympi.Praat.TextGrid(xmax = 0)
+            textgrid.from_file(
+                io.BytesIO(markup_bytes),
+                codec = chardet.detect(markup_bytes)['encoding'])
+
+            def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
+
+                log.debug(
+                    '{0}: tier {1} \'{2}\' has interval(s) with unusual transcription text: '
+                    '{3} / {4}'.format(
+                    row_str, tier_number, tier_name, transcription, unusual_markup_dict))
+
+            def no_vowel_f(tier_number, tier_name, transcription_list):
+
+                log.debug(
+                    '{0}: tier {1} \'{2}\' doesn\'t have any vowel markup: {3}'.format(
+                    row_str, tier_number, tier_name, transcription_list))
+
+            def no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list):
+
+                log.debug(
+                    '{0}: tier {1} \'{2}\' intervals to be processed don\'t have any vowel markup: '
+                    'markup {3}, selected {4}'.format(
+                    row_str, tier_number, tier_name, transcription_list, selected_list))
+
+            tier_data_list, vowel_flag = process_textgrid(
+                textgrid, unusual_f, no_vowel_f, no_vowel_selected_f)
+
+            # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
+
+            if not vowel_flag:
+
+                caching.CACHE.set(cache_key, 'no_vowel')
+                no_vowel_counter += 1
+
+                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    'Analyzing sound and markup')
+
+                if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
+                    limit and index + 1 >= limit):
+                    break
+
+                continue
+
+            # Otherwise we retrieve the sound file and analyze each vowel-containing markup.
+            # Partially inspired by source code at scripts/convert_five_tiers.py:307.
+
+            sound = None
+            with tempfile.NamedTemporaryFile() as temp_file:
+
+                sound_file = urllib.request.urlopen(urllib.parse.quote(sound_url, safe = '/:'))
+                temp_file.write(sound_file.read())
+                temp_file.flush()
+
+                sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
+
+            textgrid_result_list = process_sound(tier_data_list, sound,
+                row[3][:1] if only_first_translation else row[3])
+
+            # Saving analysis results.
+
+            result_list.append((group_list, textgrid_result_list))
+            result_group_set.update(group_list)
+
+            caching.CACHE.set(cache_key, textgrid_result_list)
+
+            # Showing results for this sound/markup pair, stopping earlier, if required.
+
+            log.debug(
+                '{0}:\n{1}\n{2}\n{3}'.format(
+                row_str, markup_url, sound_url,
+                format_textgrid_result(group_list, textgrid_result_list)))
+
+            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                'Analyzing sound and markup')
+
+            if (limit_result and len(result_list) >= limit_result or
+                limit and index + 1 >= limit):
+                break
+
+        except Exception as exception:
+
+            #
+            # NOTE
+            #
+            # Exceptional situations encountered so far:
+            #
+            #   1. TextGrid file actually contains sound, and wav file actually contains textgrid
+            #     markup.
+            #
+            #     Perspective 330/4, LexicalEntry 330/7, sound-Entity 330/2328, markup-Entity 330/6934
+            #
+            #   2. Markup for one of the intervals contains a newline "\n", and pympi fails to parse it.
+            #     Praat parses such files without problems.
+            #
+            #     Perspective 330/4, LexicalEntry 330/20, sound-Entity 330/6297, markup-Entity 330/6967
+            #
+
+            log.debug(
+                '{0}: exception\n{1}\n{2}'.format(
+                row_str, markup_url, sound_url))
+
+            # if we encountered an exception, we show its info and remember not to try offending
+            # sound/markup pair again.
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug(traceback_string)
+
+            caching.CACHE.set(cache_key, ('exception', exception,
+                traceback_string.replace('Traceback', 'CACHEd traceback')))
+
+            exception_counter += 1
+
+            task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                'Analyzing sound and markup')
+
+            if (limit_exception and exception_counter >= limit_exception or
+                limit and index + 1 >= limit):
+                break
+
+    log.debug('phonology {0}/{1}: {2} result{3}, {4} no vowels, {5} exceptions'.format(
+        perspective_cid, perspective_oid,
+        len(result_list), '' if len(result_list) == 1 else 's',
+        no_vowel_counter, exception_counter))
+
+    # If we have no results, we indicate the situation and also show number of failures and number of
+    # markups with no vowels.
+
+    if not result_list:
+
+        task_status.set(4, 100,
+            'Finished, no results produced')
+
+        return {
+            'error': 'no markups for this query',
+            'exception_counter': exception_counter,
+            'no_vowel_counter': no_vowel_counter}
+
+    # Otherwise we create an Excel file with results.
+
+    task_status.set(3, 99, 'Compiling results')
+    workbook_stream = io.BytesIO()
+
+    try:
+        entry_count_dict, sound_count_dict, chart_stream_list = compile_workbook(
+            vowel_selection, result_list, result_group_set, workbook_stream)
+
+        workbook_stream.seek(0)
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('compile_workbook: exception')
+        log.debug(traceback_string)
+
+        # If we failed to create an Excel file, we terminate with error.
+
+        task_status.set(4, 100,
+            'Finished (ERROR), result compilation error')
+
+        return {
+            'error': 'result compilation error',
+            'exception_counter': exception_counter,
+            'no_vowel_counter': no_vowel_counter,
+            'result_counter': len(result_list)}
+
+    # Name(s) of the resulting file(s) includes dictionary name, perspective name and current date.
+
+    current_datetime = datetime.datetime.now(datetime.timezone.utc)
+
+    result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}'.format(
+        dictionary_name, perspective_name,
+        current_datetime.year,
+        current_datetime.month,
+        current_datetime.day)
+
+    table_filename = sanitize_filename(result_filename + '.xlsx')
+
+    cur_time = time()
+    storage_dir = path.join(storage["path"], "phonology", str(cur_time))
+    makedirs(storage_dir, exist_ok = True)
+
+    # Storing file with the results.
+
+    storage_path = path.join(storage_dir, table_filename)
+    directory = path.dirname(storage_path)
+
+    try:
+        makedirs(directory)
+
+    except OSError as exception:
+        if exception.errno != EEXIST:
+            raise
+
+    workbook_stream.seek(0)
+
+    with open(storage_path, 'wb+') as workbook_file:
+        copyfileobj(workbook_stream, workbook_file)
+
+    # Storing 3d F1/F2/F3 scatter charts, if we have any.
+
+    chart_filename_list = []
+
+    for chart_stream, group_string in chart_stream_list:
+
+        filename = sanitize_filename(result_filename + group_string + '.png')
+        storage_path = path.join(storage_dir, filename)
+
+        chart_stream.seek(0)
+
+        with open(storage_path, 'wb+') as chart_file:
+            copyfileobj(chart_stream, chart_file)
+
+        chart_filename_list.append(filename)
+
+    # Successfully compiled phonology, finishing and returning links to files with results.
+
+    url_list = [
+
+        "".join([
+            storage["prefix"],
+            storage["static_route"],
+            "phonology", '/',
+            str(cur_time), '/',
+            filename])
+
+        for filename in [table_filename] + chart_filename_list]
+
+    task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
 
 def cpu_time(reference_cpu_time = 0.0):

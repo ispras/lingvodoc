@@ -1303,7 +1303,7 @@ def view_field(request):
 
 @view_config(route_name='fields', renderer='json', request_method='GET')
 def all_fields(request):
-    fields = DBSession.query(Field).filter_by().all()
+    fields = DBSession.query(Field).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
     response = list()
     for field in fields:
         response.append(view_field_from_object(request=request, field=field))
@@ -1413,10 +1413,11 @@ def view_nested_field(request, field, link_ids):
         return field_json
     contains = list()
     for subfield in field.dictionaryperspectivetofield:  # todo: order subfields
-        subfield_json = view_nested_field(request, subfield, link_ids)
-        if 'error' in subfield_json:
-            return subfield_json
-        contains.append(subfield_json)
+        if not subfield.marked_for_deletion:
+            subfield_json = view_nested_field(request, subfield, link_ids)
+            if 'error' in subfield_json:
+                return subfield_json
+            contains.append(subfield_json)
     if contains:
         field_json['contains'] = contains
     if field_object.data_type_translation_gist_client_id == link_ids['client_id'] \
@@ -1579,7 +1580,8 @@ def lexical_entries_all(request):
     if parent and not parent.marked_for_deletion:
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()  # TODO: make it harder better faster stronger
 
@@ -1665,7 +1667,6 @@ def lexical_entries_all_count(request):  # tested
 
 # TODO: completely broken!
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET')
-@MEMOIZE
 def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1693,7 +1694,8 @@ def lexical_entries_published(request):
 
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()
         # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
@@ -1768,7 +1770,6 @@ def lexical_entries_published(request):
 
 
 @view_config(route_name='lexical_entries_not_accepted', renderer='json', request_method='GET')
-@MEMOIZE
 def lexical_entries_not_accepted(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1790,7 +1791,8 @@ def lexical_entries_not_accepted(request):
     if parent and not parent.marked_for_deletion:
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()
         lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,

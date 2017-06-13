@@ -1611,7 +1611,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def search(query: String, perspectiveId: Option[CompositeId], tagsOnly: Boolean, fieldId: Option[CompositeId] = None): Future[Seq[SearchResult]] = {
+  def search(query: String, perspectiveId: Option[CompositeId], tagsOnly: Boolean, fieldId: Option[CompositeId] = None, published: Option[Boolean] = None): Future[Seq[SearchResult]] = {
     val p = Promise[Seq[SearchResult]]()
 
     var url = "basic_search?searchstring=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent(tagsOnly.toString)
@@ -1623,6 +1623,10 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
     fieldId foreach { id =>
       url = url + "&field_client_id=" + encodeURIComponent(id.clientId.toString) + "&field_object_id=" + encodeURIComponent(id.objectId.toString)
+    }
+
+    published foreach { p =>
+      url = url + "&published=" + encodeURIComponent(p.toString)
     }
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
@@ -2040,12 +2044,26 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def phonology(perspectiveId: CompositeId): Future[String] = {
-
+  /** Phonology generation request. */
+  def phonology(
+    perspectiveId: CompositeId,
+    group_by_description: Boolean,
+    only_first_translation: Boolean,
+    vowel_selection: Boolean):
+    Future[String] =
+  {
     import ru.ispras.lingvodoc.frontend.app.utils.ConversionUtils._
 
     val p = Promise[String]()
-    val url = s"phonology?perspective_client_id=${perspectiveId.clientId}&perspective_object_id=${perspectiveId.objectId}"
+
+    val url = s"""phonology?
+      |perspective_client_id=${perspectiveId.clientId}&
+      |perspective_object_id=${perspectiveId.objectId}
+      |${if (group_by_description) "&group_by_description" else ""}
+      |${if (only_first_translation) "&only_first_translation" else ""}
+      |${if (vowel_selection) "&vowel_selection" else ""}
+      |""".stripMargin.replaceAll("\n", "")
+
     val xhr: XMLHttpRequest = new dom.XMLHttpRequest()
     xhr.open("GET", getMethodUrl(url))
     xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
@@ -2260,6 +2278,60 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
         }
 
       case Failure(e) => p.failure(BackendException("Failed to perform bulk merge: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
+  /** Launches background merge task, parameters are the same as of 'mergeBulk' method. */
+  def mergeBulkAsync(
+    publish_any: Boolean,
+    group_seq: Seq[Seq[CompositeId]]):
+    Future[Unit] =
+  {
+    val p = Promise[Unit]
+
+    val request =
+
+      JSON.stringify(js.Dynamic.literal(
+        "publish_any" -> publish_any,
+        "group_list" ->
+
+        js.Array(group_seq map { entry_id_seq =>
+          js.Array(entry_id_seq map { entry_id =>
+
+          js.Dynamic.literal(
+            "client_id" -> entry_id.clientId,
+            "object_id" -> entry_id.objectId)}: _*)}: _*)))
+
+    $http.post[js.Dynamic](getMethodUrl("merge/bulk_async"), request) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while launching asynchronous merge:\n" + response.error))
+
+          else p.success(())
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to launch bulk asynchronous merge: " + e.getMessage, e))
     }
 
     p.future

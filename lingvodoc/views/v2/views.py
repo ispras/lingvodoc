@@ -58,7 +58,6 @@ import requests
 from pyramid.request import Request
 from time import time
 from copy import deepcopy
-
 if sys.platform == 'darwin':
     multiprocessing.set_start_method('spawn')
 import os
@@ -227,7 +226,6 @@ def fix_groups(request):
 
     return {}
 
-
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     res = list()
@@ -255,108 +253,6 @@ def testing(request):
             res.append({'persp': (persp.client_id, persp.object_id), 'error': resp})
 
     return res
-    # res = dict()
-    # res['dictionary'] = list()
-    # res['perspective'] = list()
-    # res['language'] = list()
-    # res['field'] = list()
-    # res['parents'] = list()
-    # dicts = DBSession.query(Dictionary.translation_gist_client_id, Dictionary.translation_gist_object_id).all()
-    # translation_gists = DBSession.query(TranslationGist).filter(
-    #     tuple_(TranslationGist.client_id, TranslationGist.object_id).in_(dicts)).filter(
-    #     TranslationGist.type != 'Dictionary')
-    # for gist in translation_gists:
-    #     res['dictionary'].append(translationgist_contents(gist))
-    # persps = DBSession.query(DictionaryPerspective.translation_gist_client_id,
-    #                          DictionaryPerspective.translation_gist_object_id).all()
-    # translation_gists = DBSession.query(TranslationGist).filter(
-    #     tuple_(TranslationGist.client_id, TranslationGist.object_id).in_(persps)).filter(
-    #     TranslationGist.type != 'Perspective')
-    # for gist in translation_gists:
-    #     res['perspective'].append(translationgist_contents(gist))
-    # langs = DBSession.query(Language.translation_gist_client_id, Language.translation_gist_object_id).all()
-    # translation_gists = DBSession.query(TranslationGist).filter(
-    #     tuple_(TranslationGist.client_id, TranslationGist.object_id).in_(langs)).filter(
-    #     TranslationGist.type != 'Language')
-    # for gist in translation_gists:
-    #     res['language'].append(translationgist_contents(gist))
-    # fields = DBSession.query(Field.translation_gist_client_id, Field.translation_gist_object_id).all()
-    # translation_gists = DBSession.query(TranslationGist).filter(
-    #     tuple_(TranslationGist.client_id, TranslationGist.object_id).in_(fields)).filter(
-    #     TranslationGist.type != 'Field')
-    # for gist in translation_gists:
-    #     res['field'].append(translationgist_contents(gist))
-    # all_langs = DBSession.query(Language.client_id, Language.object_id).all()
-    # parents = DBSession.query(Dictionary.client_id, Dictionary.object_id, Dictionary.parent_client_id,
-    #                           Dictionary.parent_object_id).filter(or_(
-    #     not_(tuple_(Dictionary.parent_client_id, Dictionary.parent_object_id).in_(all_langs)),
-    #     and_(Dictionary.parent_object_id == None, Dictionary.parent_client_id == None)
-    # )).all()
-    # res['parents'] = parents
-    #
-    # res['perspective_translations'] = list()
-    # persp_gists = [(1, 26),(1, 159)]
-    # perspectives = DBSession.query(DictionaryPerspective.translation_gist_client_id,
-    #                                DictionaryPerspective.translation_gist_object_id).filter(not_(
-    #     tuple_(DictionaryPerspective.translation_gist_client_id, DictionaryPerspective.translation_gist_object_id).in_(
-    #         persp_gists))).all()
-    #
-    # translation_gists = DBSession.query(TranslationGist).filter(
-    #     tuple_(TranslationGist.client_id, TranslationGist.object_id).in_(perspectives))
-    # for gist in translation_gists:
-    #     res['perspective_translations'].append(translationgist_contents(gist))
-    # # res['wrong_perspectives'] = list()
-    # persp_gists = [(1, 26), (1, 159)]
-    # # res['wrong_perspectives'] = ["http://localhost:6544/dictionary/%s/%s/perspective/%s/%s" % (o[0], o[1], o[2], o[3],)
-    # res['corpora_perspectives'] = ["http://localhost:6544/dictionary/%s/%s/perspectives  %s %s" % (o[0], o[1], o[2], o[3])
-    #                              for o in DBSession.query(DictionaryPerspective.parent_client_id,
-    #                                                       DictionaryPerspective.parent_object_id,
-    #                                                       DictionaryPerspective.client_id,
-    #                                                       DictionaryPerspective.object_id).join(Dictionary).filter(not_(
-    #         tuple_(DictionaryPerspective.translation_gist_client_id,
-    #                DictionaryPerspective.translation_gist_object_id).in_(
-    #             persp_gists)), DictionaryPerspective.marked_for_deletion == False,
-    #                            Dictionary.marked_for_deletion == False, Dictionary.category == 1).all()]
-    # res['corpora_perspectives'] = sorted(res['corpora_perspectives'])
-    # res['wrong_perspectives'] = ["http://localhost:6544/dictionary/%s/%s/perspectives  %s %s" % (o[0], o[1], o[2], o[3])
-    #                              for o in DBSession.query(DictionaryPerspective.parent_client_id,
-    #                                                       DictionaryPerspective.parent_object_id,
-    #                                                       DictionaryPerspective.client_id,
-    #                                                       DictionaryPerspective.object_id).join(Dictionary).filter(not_(
-    #         tuple_(DictionaryPerspective.translation_gist_client_id,
-    #                DictionaryPerspective.translation_gist_object_id).in_(
-    #             persp_gists)), DictionaryPerspective.marked_for_deletion == False,
-    #                            Dictionary.marked_for_deletion == False, Dictionary.category == 0).all()]
-    # res['wrong_perspectives'] = sorted(res['wrong_perspectives'])
-    # # 304 16, 304 17, 435 ???,
-    #
-    #
-    # res['empty_language'] = list()
-    # new_langs = DBSession.query(Dictionary.parent_client_id, Dictionary.parent_object_id).filter(
-    #     Dictionary.marked_for_deletion == False).all()
-    # # new_langs = set(new_langs)
-    # new_langs = DBSession.query(Language.client_id, Language.object_id, Language.parent_client_id,
-    #                             Language.parent_object_id).filter(
-    #     tuple_(Language.client_id, Language.object_id).in_(new_langs)).all()
-    # DBSession.flush()
-    # while new_langs != langs:
-    #     langs = deepcopy(new_langs)
-    #     for lang in langs:
-    #         if lang[2] and lang[3]:
-    #             parent = DBSession.query(Language.client_id, Language.object_id, Language.parent_client_id,
-    #                             Language.parent_object_id).filter_by(client_id=lang[2],
-    #                                                          object_id=lang[3]).one()
-    #             if parent not in new_langs:
-    #                 new_langs.append(parent)
-    # langs = [(o[0], o[1]) for o in langs]
-    # empty_langs = DBSession.query(Language.client_id, Language.object_id).filter(
-    #     not_(tuple_(Language.client_id, Language.object_id).in_(langs))).all()
-    # res['non_empty_language'] = langs
-    # res['empty_language'] = empty_langs
-    # print([val for val in langs if val in empty_langs])
-    # # add prefixes to cache
-    # return res
-
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
 def main_get(request):

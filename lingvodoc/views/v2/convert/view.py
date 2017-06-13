@@ -116,11 +116,11 @@ def convert_markup(request):
         client_id = req['client_id']
         object_id = req['object_id']
 
-        l2e = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
         # l2e = None
-        if not l2e:
+        if not entity:
             raise KeyError("No such file")
-        r = requests.get(l2e.content)
+        r = requests.get(entity.content)
         if not r:
             raise CommonException("Cannot access file")
         content = r.content
@@ -136,11 +136,11 @@ def convert_markup(request):
         try:
             f.write(content)
             f.close()
-            if os.path.getsize(filename) / 1024 / 1024.0 < 1:
-                if 'data_type' in l2e.additional_metadata :
-                    if 'praat' in l2e.additional_metadata['data_type']:
+            if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
+                if 'data_type' in entity.additional_metadata :
+                    if 'praat' in entity.additional_metadata['data_type']:
                         content = praat_to_elan(filename)
-                        if sys.getsizeof(content) / 1024 / 1024.0 < 1:
+                        if sys.getsizeof(content) / (10 * 1024 * 1024.0) < 1:
                             # filename2 = 'abc.xml'
                             # f2 = open(filename2, 'w')
                             # try:
@@ -154,7 +154,7 @@ def convert_markup(request):
                             #     pass
                             #     os.remove(filename2)
                             return content
-                    elif 'elan' in l2e.additional_metadata['data_type']:
+                    elif 'elan' in entity.additional_metadata['data_type']:
                         with open(filename, 'r') as f:
                             return f.read()
                     else:

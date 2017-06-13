@@ -632,12 +632,18 @@ def configure_routes(config):
         factory = 'lingvodoc.models.LexicalEntriesEntitiesAcl')
 
     # API #POST
-    # {'group_list': <group_list>}
+    # {'group_list': <group_list>, 'publish_any': bool}
     #
     # Merges multiple groups of lexical entries, provided that each group is a subset of a single
     # perspective, returns client/object ids of new lexical entries, a new entry for each merged group.
     #
     config.add_route(name = 'merge_bulk', pattern = '/merge/bulk')
+
+    # API #POST
+    #
+    # Launches background merge task, parameters are the same as of 'merge_bulk' route.
+    #
+    config.add_route(name = 'merge_bulk_async', pattern = '/merge/bulk_async')
 
     # API #GET
     #
@@ -719,6 +725,7 @@ def configure_routes(config):
                      factory='lingvodoc.models.AdminAcl')
     config.add_route(name='fix_groups', pattern='/fix_groups',
                      factory='lingvodoc.models.AdminAcl')
+
     config.add_route(name='save_media', pattern='/save_media',
                      factory='lingvodoc.models.AdminAcl')
 
@@ -830,6 +837,7 @@ def main(global_config, **settings):
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
     config.add_route('testing', '/testing')
+    config.add_route('testing_translations', '/testing_translations')
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
     #    config.add_route('home', '/')
     #    config.add_route('login', 'login')
