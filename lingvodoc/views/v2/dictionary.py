@@ -1114,6 +1114,9 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     return response
 
 
+
+
+
 @view_config(route_name='new_dictionary', renderer='templates/create_dictionary.pt', request_method='GET')
 def new_dictionary_get(request):
     client_id = authenticated_userid(request)
