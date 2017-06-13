@@ -76,7 +76,6 @@ def configure_routes(config):
     # API #POST
     # this is the same operation as login - but params are sent via json
     config.add_route(name='signin', pattern='/signin')
-    # config.add_route(name='grant', pattern='/grant/{id}')
 
     config.add_route(name='create_grant', pattern='/grant',
                      factory='lingvodoc.models.AdminAcl')

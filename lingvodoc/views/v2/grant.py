@@ -51,18 +51,20 @@ from lingvodoc.views.v2.delete import real_delete_translation_gist
 # search (filter by input, type and (?) locale)
 
 
-def grant_contents(grant):
+def grant_contents(grant, locale_id=2):
     result = dict()
     result['id'] = grant.id
     result['issuer_translation_gist_client_id'] = grant.issuer_translation_gist_client_id
     result['issuer_translation_gist_object_id'] = grant.issuer_translation_gist_object_id
     result['translation_gist_object_id'] = grant.translation_gist_object_id
     result['translation_gist_object_id'] = grant.translation_gist_object_id
+    result['translation'] = grant.get_translation(locale_id)
+    result['issuer'] = grant.get_issuer_translation(locale_id)
     result['issuer_url'] = grant.issuer_url
     result['grant_url'] = grant.grant_url
     result['grant_number'] = grant.grant_number
-    result['begin'] = grant.begin
-    result['end'] = grant.end
+    result['begin'] = grant.begin.strftime("%d.%M.%Y")
+    result['end'] = grant.end.strftime("%d.%M.%Y")
     result['owners'] = grant.owners
     result['created_at'] = grant.created_at
     result['additional_metadata'] = grant.additional_metadata
@@ -72,19 +74,21 @@ def grant_contents(grant):
 @view_config(route_name='all_grants', renderer='json', request_method='GET')
 def all_grants(request):
     response = list()
+    locale_id = request.cookies['locale_id']
     grants = DBSession.query(Grant).order_by(Grant.grant_number).all()
     for grant in grants:
-        response.append(grant_contents(grant))
+        response.append(grant_contents(grant, locale_id))
     return response
 
 
 @view_config(route_name='grant', renderer='json', request_method='GET')
 def view_grant(request):
     response = dict()
+    locale_id = request.cookies['locale_id']
     grant_id = request.matchdict.get('id')
     grant = DBSession.query(Grant).filter_by(id=grant_id).first()
     if grant:
-        response = grant_id(grant)
+        response = grant_contents(grant, locale_id)
         return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such grant in the system")}
@@ -118,8 +122,8 @@ def create_grant(request):
         grant_number = req['grant_number']
         begin = req['begin']
         end = req['end']
-        owners = req['owners']
-        additional_metadata = req['additional_metadata']
+        # owners = req['owners']
+        # additional_metadata = req['additional_metadata']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
 
         if not client:
@@ -128,13 +132,6 @@ def create_grant(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        client_id = variables['auth']
-        if 'client_id' in req:
-            if check_client_id(authenticated=client.id, client_id=req['client_id']):
-                client_id = req['client_id']
-            else:
-                request.response.status_code = HTTPBadRequest
-                return {'error': 'client_id from another user'}
         grant = Grant(issuer_translation_gist_client_id=issuer_translation_gist_client_id,
                       issuer_translation_gist_object_id=issuer_translation_gist_object_id,
                       translation_gist_client_id=translation_gist_client_id,
@@ -142,17 +139,14 @@ def create_grant(request):
                       issuer_url=issuer_url,
                       grant_url=grant_url,
                       grant_number=grant_number,
-                      begin=begin,
-                      end=end,
-                      owners=owners,
-                      additional_metadata=additional_metadata
+                      begin=datetime.datetime.strptime(begin, "%d.%M.%Y").date(),
+                      end=datetime.datetime.strptime(end, "%d.%M.%Y").date()
                       )
         DBSession.add(grant)
         DBSession.flush()
 
         request.response.status = HTTPOk.code
-        return {'object_id': grant.object_id,
-                'client_id': grant.client_id}
+        return {'id': grant.id}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
