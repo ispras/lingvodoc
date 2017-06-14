@@ -58,7 +58,7 @@ import json
 import requests
 from pyramid.request import Request
 from time import time
-from lingvodoc.schema import schema
+from lingvodoc.schema.query import schema
 
 @view_config(route_name='fix_groups', renderer='json', permission='admin')
 def fix_groups(request):
@@ -434,7 +434,7 @@ lexicalEntries{id entities{id content fieldType}}
     #                                        'request': request})
 
     result = schema.execute(request_string,
-        context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
+                           context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
                        'locale_id': 2,
                        'request': request})
     # result = schema.execute(
