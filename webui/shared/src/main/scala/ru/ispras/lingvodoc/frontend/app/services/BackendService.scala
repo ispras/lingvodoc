@@ -2438,6 +2438,40 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
     p.future
   }
+
+
+  def createGrant(grant: GrantRequest): Future[Unit] = {
+    val p = Promise[Unit]()
+    $http.post[js.Dynamic](getMethodUrl("grant"), write[GrantRequest](grant)) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to create grant", e))
+    }
+    p.future
+  }
+
+  def grant(grantId: Int): Future[Grant] = {
+    val p = Promise[Grant]()
+    $http.get[js.Dynamic](getMethodUrl("grants/" + encodeURIComponent(grantId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(read[Grant](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get grant", e))
+    }
+    p.future
+  }
+
+  def grants(): Future[Seq[Grant]] = {
+    val p = Promise[Seq[Grant]]()
+    $http.get[js.Dynamic](getMethodUrl("all_grants")) onComplete {
+      case Success(response)  =>
+        p.success(read[Seq[Grant]](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get list of grants", e))
+    }
+    p.future
+  }
 }
 
 

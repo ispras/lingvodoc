@@ -37,6 +37,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/sociolinguistics", Route("/static/templates/sociolinguistics.html", "Lingvodoc 2.1 / Sociolinguistics", "SociolinguisticsController"))
     .when("/desktop_software", Route("/static/templates/desktop.html", "Lingvodoc 2.1 / Desktop software"))
     .when("/edit_translations", Route("/static/templates/editTranslations.html", "Lingvodoc 2.1 / Edit translations", "EditTranslationsController"))
+    .when("/grants", Route("/static/templates/grants.html", "Lingvodoc 2.1 / Grants", "GrantsController"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
@@ -96,6 +97,8 @@ object LingvodocApplication {
       .controller[PerspectiveStatisticsModalController]
       .controller[DictionaryStatisticsModalController]
       .controller[PerspectivePhonologyModalController]
+      .controller[GrantsController]
+      .controller[CreateGrantModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
