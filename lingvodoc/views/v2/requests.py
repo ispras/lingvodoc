@@ -129,7 +129,6 @@ def accept_userrequest(request):
         req = request.json_body
         accept = req['accept']
         if accept is True:
-            pass  #case for all types of requests
             if userrequest.type == 'grant_permission':
                 # req['subject'] = {'grant_id': grant_id, 'user_id': user_id}
                 grant = DBSession.query(Grant).filter_by(id=userrequest.subject['grant_id']).first()
@@ -137,6 +136,18 @@ def accept_userrequest(request):
                     grant.owners = list()
                 if userrequest.subject['user_id'] not in grant.owners:
                     grant.owners.append(userrequest.subject['user_id'])
+            elif userrequest.type == 'add_dict_to_grant':
+                grant = DBSession.query(Grant).filter_by(id=userrequest.subject['grant_id']).first()
+                if grant.additional_metadata is None:
+                    grant.additional_metadata = dict()
+                if grant.additional_metadata.get('participant') is None:
+                    grant.additional_metadata['participant'] = list()
+
+                dict_ids = {'client_id': userrequest.subject['client_id'], 'object_id':userrequest.subject['object_id']}
+                if dict_ids not in grant.additional_metadata['participant']:
+                    grant.additional_metadata['participant'].append(dict_ids)
+
+                # todo: roles
             else:
                 pass
             broadcast_uuid = userrequest.broadcast_uuid
@@ -250,6 +261,63 @@ def get_grant_permission(request):
 
         for grantadmin in grantadmins:
             req['recipient_id'] = grantadmin.id
+            req_id = create_one_userrequest(req, client_id)
+
+
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='add_dictionary_to_grant', renderer='json', request_method='POST')
+def add_dictionary_to_grant(request):
+    try:
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        user_id = user.id
+        client_id = variables['auth']
+        request_json = request.json_body
+        req = dict()
+        req['sender_id'] = user_id
+        req['broadcast_uuid'] = str(uuid4())
+        req['type'] = 'add_dict_to_grant'
+        req['subject'] = request_json
+        req['message'] = ''
+
+
+        grantadmins = list()
+        # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
+
+        # group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'grant',
+        #                                                       Group.subject_override == True,
+        #                                                       BaseGroup.action == 'approve').one()
+
+        # for user in group.users:
+        #     if user not in grantadmins:
+        #         grantadmins.append(user)
+
+        grant = DBSession.query(Grant).filter_by(id=request_json['grant_id']).first()
+        grantadmins = grant.owners
+
+        for grantadmin in grantadmins:
+            req['recipient_id'] = grantadmin
             req_id = create_one_userrequest(req, client_id)
 
 
