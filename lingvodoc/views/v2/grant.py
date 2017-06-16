@@ -57,7 +57,7 @@ def grant_contents(grant, locale_id=2):
     result['issuer_translation_gist_client_id'] = grant.issuer_translation_gist_client_id
     result['issuer_translation_gist_object_id'] = grant.issuer_translation_gist_object_id
     result['translation_gist_object_id'] = grant.translation_gist_object_id
-    result['translation_gist_object_id'] = grant.translation_gist_object_id
+    result['translation_gist_client_id'] = grant.translation_gist_client_id
     result['translation'] = grant.get_translation(locale_id)
     result['issuer'] = grant.get_issuer_translation(locale_id)
     result['issuer_url'] = grant.issuer_url
@@ -65,7 +65,10 @@ def grant_contents(grant, locale_id=2):
     result['grant_number'] = grant.grant_number
     result['begin'] = grant.begin.strftime("%d.%M.%Y")
     result['end'] = grant.end.strftime("%d.%M.%Y")
-    result['owners'] = grant.owners
+    owners = grant.owners
+    if owners is None:
+        owners = []
+    result['owners'] = owners 
     result['created_at'] = grant.created_at
     result['additional_metadata'] = grant.additional_metadata
     return result
