@@ -432,11 +432,20 @@ lexicalEntries{id entities{id content fieldType}}
     #                         context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
     #                                        'locale_id': 1,
     #                                        'request': request})
-
+    client_id = request.authenticated_userid
+    if not client_id:
+        client_id = None
+    #user_id =  get_user_by_client_id(authenticated_userid(request))
+    # if not client_id:
+    #     user_id = None
+    # else:
+    #     user_id = get_user_by_client_id(client_id).id
     result = schema.execute(request_string,
-                           context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
+                           context_value={'client_id': client_id,
                        'locale_id': 2,
                        'request': request})
+
+
     # result = schema.execute(
     #     'query  perspective{  perspective(id: [70,5])'
     #     '{id translation '
@@ -445,8 +454,11 @@ lexicalEntries{id entities{id content fieldType}}
     #     context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
     #                    'locale_id': 2,
     #                    'request': request})
+    #print(result.data, result.errors, result.invalid)
 
     if result.invalid:
+        return {'errors': [str(e) for e in result.errors]}
+    if result.errors:
         return {'errors': [str(e) for e in result.errors]}
     return result.data
 
