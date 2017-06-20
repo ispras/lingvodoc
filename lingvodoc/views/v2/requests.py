@@ -238,7 +238,7 @@ def get_grant_permission(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         user_id = user.id
         client_id = variables['auth']
-        grant_id= request.matchdict.get('id')
+        grant_id = int(request.matchdict.get('id'))
         # req = request.json_body
         req = dict()
         req['sender_id'] = user_id
