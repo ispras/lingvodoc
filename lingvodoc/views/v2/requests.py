@@ -8,6 +8,7 @@ from lingvodoc.models import (
     Language,
     User,
     UserRequest,
+    Grant
 )
 
 from lingvodoc.views.v2.utils import (
@@ -42,6 +43,7 @@ from sqlalchemy import (
     case
 )
 from sqlalchemy.exc import IntegrityError
+from uuid import uuid4
 
 import datetime
 import json
@@ -51,20 +53,20 @@ from lingvodoc.views.v2.delete import real_delete_translation_gist
 # search (filter by input, type and (?) locale)
 
 
-# def userrequest_contents(userrequest):
-#     result = dict()
-#     result['id'] = userrequest.id
-#     result['sender_id'] = userrequest.sender_id
-#     result['recipient_id'] = userrequest.recipient_id
-#     result['broadcast_uuid'] = userrequest.broadcast_uuid
-#     result['type'] = userrequest.type
-#     result['subject'] = userrequest.subject
-#     result['message'] = userrequest.message
-#     result['created_at'] = userrequest.created_at
-#     result['additional_metadata'] = userrequest.additional_metadata
-#     return result
-#
-#
+def userrequest_contents(userrequest):
+    result = dict()
+    result['id'] = userrequest.id
+    result['sender_id'] = userrequest.sender_id
+    result['recipient_id'] = userrequest.recipient_id
+    result['broadcast_uuid'] = userrequest.broadcast_uuid
+    result['type'] = userrequest.type
+    result['subject'] = userrequest.subject
+    result['message'] = userrequest.message
+    result['created_at'] = userrequest.created_at
+    result['additional_metadata'] = userrequest.additional_metadata
+    return result
+
+
 # @view_config(route_name='all_userrequests', renderer='json', request_method='GET', permission='view')  # why would we need all of them?
 # def all_userrequests(request):
 #     response = list()
@@ -72,108 +74,143 @@ from lingvodoc.views.v2.delete import real_delete_translation_gist
 #     for userrequest in userrequests:
 #         response.append(userrequest_contents(userrequest))
 #     return response
-#
-#
-# @view_config(route_name='incoming_userrequests', renderer='json', request_method='GET', permission='view')  # why would we need all of them?
-# def incoming_userrequests(request):
-#     response = list()
-#
-#     variables = {'auth': request.authenticated_userid}
-#     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-#
-#     if not client:
-#         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-#                        variables['auth'])
-#     user = DBSession.query(User).filter_by(id=client.user_id).first()
-#     if not user:
-#         raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-#
-#     userrequests = DBSession.query(UserRequest).filter(UserRequest.recipient_id == user.id).order_by(UserRequest.grant_number).all()
-#     for userrequest in userrequests:
-#         response.append(userrequest_contents(userrequest))
-#     return response
-#
-#
-# @view_config(route_name='grant', renderer='json', request_method='GET')
-# def view_grant(request):
-#     response = dict()
-#     grant_id = request.matchdict.get('id')
-#     grant = DBSession.query(UserRequest).filter_by(id=grant_id).first()
-#     if grant:
-#         response = grant_id(grant)
-#         return response
-#     request.response.status = HTTPNotFound.code
-#     return {'error': str("No such grant in the system")}
-#
-#
-# @view_config(route_name='grant', renderer='json', request_method='DELETE', permission='admin')  # delete grant???
-# def delete_grant(request):
-#     response = dict()
-#     grant_id = request.matchdict.get('id')
-#     grant = DBSession.query(UserRequest).filter_by(id=grant_id).first()
-#     if grant:
-#         DBSession.delete(grant)
-#         request.response.status = HTTPOk.code
-#         return response
-#     request.response.status = HTTPNotFound.code
-#     return {'error': str("No such grant in the system")}
-#
-#
-# @view_config(route_name='create_grant', renderer='json', request_method='POST', permission='create')
-# def create_grant(request):
+
+
+@view_config(route_name='get_current_userrequests', renderer='json', request_method='GET')
+def get_current_userrequests(request):
+    response = list()
+
+    variables = {'auth': request.authenticated_userid}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                       variables['auth'])
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+    userrequests = DBSession.query(UserRequest).filter(UserRequest.recipient_id == user.id).order_by(UserRequest.created_at).all()
+    for userrequest in userrequests:
+        response.append(userrequest_contents(userrequest))
+    return response
+
+
+@view_config(route_name='userrequest', renderer='json', request_method='GET')  # only recipient can see it?
+def view_userrequest(request):
+    response = dict()
+    userrequest_id = request.matchdict.get('id')
+    userrequest = DBSession.query(UserRequest).filter_by(id=userrequest_id).first()
+    if userrequest:
+        response = userrequest_contents(userrequest)
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such userrequest in the system")}
+
+
+@view_config(route_name='accept_userrequest', renderer='json', request_method='POST')  # only recipient can see it?
+def accept_userrequest(request):
+    response = dict()
+    userrequest_id = request.matchdict.get('id')
+
+    variables = {'auth': request.authenticated_userid}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                       variables['auth'])
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+    recipient_id = user.id
+
+    userrequest = DBSession.query(UserRequest).filter_by(id=userrequest_id, recipient_id=recipient_id).first()
+    if userrequest:
+        req = request.json_body
+        accept = req['accept']
+        if accept is True:
+            if userrequest.type == 'grant_permission':
+                # req['subject'] = {'grant_id': grant_id, 'user_id': user_id}
+                grant = DBSession.query(Grant).filter_by(id=userrequest.subject['grant_id']).first()
+                if grant.owners is None:
+                    grant.owners = list()
+                if userrequest.subject['user_id'] not in grant.owners:
+                    grant.owners.append(userrequest.subject['user_id'])
+            elif userrequest.type == 'add_dict_to_grant':
+                grant = DBSession.query(Grant).filter_by(id=userrequest.subject['grant_id']).first()
+                if grant.additional_metadata is None:
+                    grant.additional_metadata = dict()
+                if grant.additional_metadata.get('participant') is None:
+                    grant.additional_metadata['participant'] = list()
+
+                dict_ids = {'client_id': userrequest.subject['client_id'], 'object_id':userrequest.subject['object_id']}
+                if dict_ids not in grant.additional_metadata['participant']:
+                    grant.additional_metadata['participant'].append(dict_ids)
+
+                # todo: roles
+            else:
+                pass
+            broadcast_uuid = userrequest.broadcast_uuid
+            family = DBSession.query(UserRequest).filter_by(id=userrequest_id, broadcast_uuid=broadcast_uuid).all()
+            for userreq in family:
+                DBSession.delete(userreq)
+        else:
+            DBSession.delete(userrequest)
+        return response
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such userrequest in the system")}
+
+
+@view_config(route_name='userrequest', renderer='json', request_method='DELETE', permission='admin')  # delete grant???
+def delete_userrequest(request):
+    response = dict()
+    userrequest_id = request.matchdict.get('id')
+    userrequest = DBSession.query(UserRequest).filter_by(id=userrequest_id).first()
+    if userrequest:
+        DBSession.delete(userrequest)
+        request.response.status = HTTPOk.code
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such userrequest in the system")}
+
+def create_one_userrequest(req, client_id):
+    sender_id = req['sender_id']
+    recipient_id = req['recipient_id']
+    broadcast_uuid = req['broadcast_uuid']  # generate it
+    type = req['type']
+    subject = req['subject']
+    message = req['message']
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                       client_id)
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+    userrequest = UserRequest(sender_id=sender_id,
+                              recipient_id=recipient_id,
+                              broadcast_uuid=broadcast_uuid,
+                              type=type,
+                              subject=subject,
+                              message=message
+                              )
+    DBSession.add(userrequest)
+    DBSession.flush()
+    return userrequest.id
+
+
+# @view_config(route_name='create_userrequest', renderer='json', request_method='POST', permission='create')
+# def create_userrequest(request):
 #     try:
 #         variables = {'auth': request.authenticated_userid}
-#
-#         req = request.json_body
-#         object_id = req.get('object_id', None)
-#         issuer_translation_gist_client_id = req['issuer_translation_gist_client_id']
-#         issuer_translation_gist_object_id = req['issuer_translation_gist_object_id']
-#         issuer_url = req['issuer_url']
-#         grant_url = req['grant_url']
-#         grant_number = req['grant_number']
-#         begin = req['begin']
-#         end = req['end']
-#         owners = req['owners']
-#         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-#
-#         if not client:
-#             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-#                            variables['auth'])
-#         user = DBSession.query(User).filter_by(id=client.user_id).first()
-#         if not user:
-#             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 #         client_id = variables['auth']
-#         if 'client_id' in req:
-#             if check_client_id(authenticated=client.id, client_id=req['client_id']):
-#                 client_id = req['client_id']
-#             else:
-#                 request.response.status_code = HTTPBadRequest
-#                 return {'error': 'client_id from another user'}
-#         grant = Grant(client_id=client_id,
-#                       object_id=object_id,
-#                       issuer_translation_gist_client_id=issuer_translation_gist_client_id,
-#                       issuer_translation_gist_object_id=issuer_translation_gist_object_id,
-#                       issuer_url=issuer_url,
-#                       grant_url=grant_url,
-#                       grant_number=grant_number,
-#                       begin=begin,
-#                       end=end,
-#                       owners=owners,
-#                       )
-#         DBSession.add(grant)
-#         DBSession.flush()
-#         basegroups = list()
-#         basegroups.append(DBSession.query(BaseGroup).filter_by(name="Can edit grant").first())
-#         if not object_id:
-#             groups = []
-#             for base in basegroups:
-#                 group = Group(subject_client_id=grant.client_id, subject_object_id=grant.object_id, parent=base)
-#                 groups += [group]
-#             for group in groups:
-#                 add_user_to_group(user, group)
+#
+#
 #         request.response.status = HTTPOk.code
-#         return {'object_id': grant.object_id,
-#                 'client_id': grant.client_id}
+#         return {'id': req_id}
 #     except KeyError as e:
 #         request.response.status = HTTPBadRequest.code
 #         return {'error': str(e)}
@@ -185,3 +222,115 @@ from lingvodoc.views.v2.delete import real_delete_translation_gist
 #     except CommonException as e:
 #         request.response.status = HTTPConflict.code
 #         return {'error': str(e)}
+
+
+@view_config(route_name='get_grant_permission', renderer='json', request_method='GET')
+def get_grant_permission(request):
+    try:
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        user_id = user.id
+        client_id = variables['auth']
+        grant_id= request.matchdict.get('id')
+        # req = request.json_body
+        req = dict()
+        req['sender_id'] = user_id
+        req['broadcast_uuid'] = str(uuid4())
+        req['type'] = 'grant_permission'
+        req['subject'] = {'grant_id': grant_id, 'user_id': user_id}
+        req['message'] = ''
+
+
+        grantadmins = list()
+        # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
+
+        group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'grant',
+                                                              Group.subject_override == True,
+                                                              BaseGroup.action == 'approve').one()
+
+        for user in group.users:
+            if user not in grantadmins:
+                grantadmins.append(user)
+
+        for grantadmin in grantadmins:
+            req['recipient_id'] = grantadmin.id
+            req_id = create_one_userrequest(req, client_id)
+
+
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='add_dictionary_to_grant', renderer='json', request_method='POST')
+def add_dictionary_to_grant(request):
+    try:
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        user_id = user.id
+        client_id = variables['auth']
+        request_json = request.json_body
+        req = dict()
+        req['sender_id'] = user_id
+        req['broadcast_uuid'] = str(uuid4())
+        req['type'] = 'add_dict_to_grant'
+        req['subject'] = request_json
+        req['message'] = ''
+
+
+        grantadmins = list()
+        # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
+
+        # group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'grant',
+        #                                                       Group.subject_override == True,
+        #                                                       BaseGroup.action == 'approve').one()
+
+        # for user in group.users:
+        #     if user not in grantadmins:
+        #         grantadmins.append(user)
+
+        grant = DBSession.query(Grant).filter_by(id=request_json['grant_id']).first()
+        grantadmins = grant.owners
+
+        for grantadmin in grantadmins:
+            req['recipient_id'] = grantadmin
+            req_id = create_one_userrequest(req, client_id)
+
+
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}

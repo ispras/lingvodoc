@@ -226,33 +226,26 @@ def fix_groups(request):
 
     return {}
 
+def add_role(name, subject, action, admin):
+    base_group = BaseGroup(name=name,
+                         subject=subject,
+                         action=action)
+    DBSession.add(base_group)
+    DBSession.flush()
+    group = Group(base_group_id=base_group.id, subject_override=True)
+    DBSession.add(group)
+    group.users.append(admin)
+    DBSession.flush()
+
+
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    res = list()
-    for persp in DBSession.query(DictionaryPerspective).filter_by(marked_for_deletion = False).all():
-        url = request.route_url('perspective_fields',
-                                dictionary_client_id=persp.parent_client_id,
-                                dictionary_object_id=persp.parent_object_id,
-                                perspective_client_id=persp.client_id,
-                                perspective_object_id=persp.object_id)
-        subreq = Request.blank(url)
-        subreq.method = 'GET'
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        resp = resp.json
-        error = False
-        if type(resp) != list:
-            error = True
-        if not error:
-            for field in resp:
-                if 'error' in field:
-                    error = True
-                    break
-        if error:
-            res.append({'persp': (persp.client_id, persp.object_id), 'error': resp})
+    admin = DBSession.query(User).filter_by(id=1).one()
+    add_role("Can create grants", "grant", "create", admin)
+    add_role("Can approve grants", "grant", "approve", admin)
+    add_role("Can change status", "status", "edit", admin)
 
-    return res
+    return {}
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
 def main_get(request):
