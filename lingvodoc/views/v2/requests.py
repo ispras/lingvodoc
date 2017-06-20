@@ -246,6 +246,9 @@ def get_grant_permission(request):
         req['type'] = 'grant_permission'
         req['subject'] = {'grant_id': grant_id, 'user_id': user_id}
         req['message'] = ''
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'request already exists'}
 
 
         grantadmins = list()
@@ -300,6 +303,9 @@ def add_dictionary_to_grant(request):
         req['type'] = 'add_dict_to_grant'
         req['subject'] = request_json
         req['message'] = ''
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'request already exists'}
 
 
         grantadmins = list()
