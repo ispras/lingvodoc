@@ -1,5 +1,5 @@
 import graphene
-from graphene.types.json import JSONString
+from graphene.types.json import JSONString as JSONtype
 #from graphene.types.datetime import DateTime
 from lingvodoc.models import (
     DBSession,
@@ -13,7 +13,13 @@ from lingvodoc.models import (
     LexicalEntry as dbLexicalEntry,
     User as dbUser,
     BaseGroup as dbBaseGroup,
-    Group as dbGroup
+    Group as dbGroup,
+    Email as dbEmail,
+    Grant as dbGrant,
+    PublishingEntity as dbPublishingEntity,
+    TranslationGist as dbTranslationGist,
+    UserBlobs as dbUserBlobs,
+    UserRequest as dbUserRequest
 )
 from pyramid.request import Request
 
@@ -30,6 +36,51 @@ from graphql.language import ast
 
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
+
+from graphene.types.generic import GenericScalar
+
+
+
+import json
+class JSONString(JSONtype):
+    @staticmethod
+    def serialize(dt):
+        return dt
+
+    @staticmethod
+    def parse_literal(node):
+        if isinstance(node, ast.StringValue):
+            print(node.value)
+            return json.loads(node.value)
+
+    @staticmethod
+    def parse_value(value):
+        return value#json.loads(value)
+
+from graphql.language.ast import ObjectValue
+
+class ObjectVal(Scalar):
+    """
+    The `GenericScalar` scalar type represents a generic
+    GraphQL scalar value that could be:
+    String, Boolean, Int, Float, List or Object.
+    """
+
+    @staticmethod
+    def identity(value):
+        return value
+
+    serialize = identity
+    parse_value = identity
+
+    @staticmethod
+    def parse_literal(ast):
+        if isinstance(ast, ObjectValue):
+            return {field.name.value: GenericScalar.parse_literal(field.value) for field in ast.fields}
+        else:
+            return None
+
+
 
 
 def fetch_object(attrib_name=None):
@@ -60,14 +111,14 @@ class DateTime(Scalar): # TODO: choose format
 
     @staticmethod
     def parse_literal(node):
-        print(2, node)
+        #print(2, node)
         if isinstance(node, ast.StringValue):
             return datetime.datetime.strptime(
                 node.value, "%Y-%m-%dT%H:%M:%S.%f")
 
     @staticmethod
     def parse_value(value):
-        print(3, value)
+        #print(3, value)
         return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
@@ -85,7 +136,7 @@ class CompositeIdHolder(graphene.Interface):
 
     @fetch_object("id")
     def resolve_id(self, args, context, info):
-        return [self.dbObject.client_id, self.dbObject.object_id]
+        return (self.dbObject.client_id, self.dbObject.object_id)
 
     @fetch_object("client_id")
     def resolve_client_id(self, args, context, info):
@@ -108,7 +159,7 @@ class Relationship(graphene.Interface):
 
     @fetch_object("parent_id")
     def resolve_parent_id(self, args, context, info):
-        return self.dbObject.parent_id
+        return (self.dbObject.parent_client_id, self.dbObject.parent_object_id)
 
     @fetch_object("parent_client_id")
     def resolve_parent_client_id(self, args, context, info):
@@ -126,7 +177,7 @@ class SelfHolder(graphene.Interface):
 
     @fetch_object("self_id")
     def resolve_self_id(self, args, context, info):
-        return self.dbObject.self_id
+        return (self.dbObject.self_client_id, self.dbObject.self_object_id)
 
     @fetch_object("self_client_id")
     def resolve_self_client_id(self, args, context, info):
@@ -143,7 +194,7 @@ class FieldHolder(graphene.Interface):
 
     @fetch_object("field_id")
     def resolve_field_id(self, args, context, info):
-        return self.dbObject.field_id
+        return (self.dbObject.field_client_id, self.dbObject.field_object_id)
 
     @fetch_object("field_client_id")
     def resolve_field_client_id(self, args, context, info):
@@ -160,7 +211,7 @@ class ParentLink(graphene.Interface):
 
     @fetch_object("link_id")
     def resolve_link_id(self, args, context, info):
-        return self.dbObject.link_id
+        return (self.dbObject.link_client_id, self.dbObject.link_object_id)
 
     @fetch_object("link_client_id")
     def resolve_link_client_id(self, args, context, info):
@@ -177,12 +228,113 @@ class MarkedForDeletion(graphene.Interface):
     def resolve_marked_for_deletion(self, args, context, info):
         return self.dbObject.marked_for_deletion
 
-class AdditionalMetadata(graphene.Interface):
-    additional_metadata = JSONString()
+class metadata(graphene.ObjectType):
+    hash = GenericScalar()
+    origin_client_id = GenericScalar()
+    origin_object_id =GenericScalar()
+    info = GenericScalar()
+    merged_by = GenericScalar()
+    data_type = GenericScalar()
+    blob_description = GenericScalar()
+    merge = GenericScalar()
+    original_filename = GenericScalar()
+    location = GenericScalar()
+    client_id = GenericScalar()
+    authors = GenericScalar()
+    row_id = GenericScalar()
+    merged_to = GenericScalar()
 
-    @fetch_object("additional_metadata")
+
+    def resolve_hash(self, args, context, info):
+        return self.hash
+
+    def resolve_origin_client_id(self, args, context, info):
+        return self.origin_client_id
+
+    def resolve_origin_object_id(self, args, context, info):
+        return self.origin_object_id
+
+    def resolve_info(self, args, context, info):
+        return self.info
+
+    def resolve_merged_by(self, args, context, info):
+        return self.merged_by
+
+    def resolve_data_type(self, args, context, info):
+        return self.data_type
+
+    def resolve_blob_description(self, args, context, info):
+        return self.blob_description
+
+    def resolve_merge(self, args, context, info):
+        return self.merge
+
+    def resolve_original_filename(self, args, context, info):
+        return self.original_filename
+
+    def resolve_location(self, args, context, info):
+        return self.location
+
+    def resolve_client_id(self, args, context, info):
+        return self.client_id
+
+    def resolve_authors(self, args, context, info):
+        return self.authors
+
+    def resolve_row_id(self, args, context, info):
+        return self.row_id
+
+    def resolve_merged_to(self, args, context, info):
+        return self.merged_to
+
+
+def get_value_by_key(db_object, additional_metadata_string, metadata_key):
+    if additional_metadata_string:
+        if metadata_key in additional_metadata_string:
+            return additional_metadata_string[metadata_key]
+    if db_object:
+        meta = db_object.additional_metadata
+        if meta:
+            if metadata_key in meta:
+                return meta[metadata_key]
+
+
+class AdditionalMetadata(graphene.Interface):
+    """
+    'origin_client_id', 'info', 'hash', 'merged_by', 'data_type', 'blob_description',
+    'origin_object_id', 'merge', 'original_filename', 'location', 'client_id', 'authors', 'row_id', 'merged_to'
+    """
+    additional_metadata_string = JSONString()
+    additional_metadata = graphene.Field(metadata)
+    values = ObjectVal()
+
+
+
+    @fetch_object()
     def resolve_additional_metadata(self, args, context, info):
-        return self.dbObject.additional_metadata
+        db_object = self.dbObject
+        additional_metadata_string = None
+        if hasattr(self, "additional_metadata_string"):
+            additional_metadata_string = self.additional_metadata_string
+
+        metadata_object = metadata(hash=get_value_by_key(db_object, additional_metadata_string,"hash"), # TODO: refactor
+                                    origin_client_id=get_value_by_key(db_object, additional_metadata_string, "origin_client_id"),
+                                    origin_object_id=get_value_by_key(db_object, additional_metadata_string,"origin_object_id"),
+                                    info=get_value_by_key(db_object, additional_metadata_string,"info"),
+                                    merged_by = get_value_by_key(db_object, additional_metadata_string,"merged_by"),
+                                    data_type = get_value_by_key(db_object, additional_metadata_string,"data_type"),
+                                    blob_description = get_value_by_key(db_object, additional_metadata_string,"blob_description"),
+                                    merge = get_value_by_key(db_object, additional_metadata_string,"merge"),
+                                    original_filename = get_value_by_key(db_object, additional_metadata_string,"original_filename"),
+                                    location = get_value_by_key(db_object, additional_metadata_string,"location"),
+                                    client_id = get_value_by_key(db_object, additional_metadata_string,"client_id"),
+                                    authors = get_value_by_key(db_object, additional_metadata_string,"authors"),
+                                    row_id = get_value_by_key(db_object, additional_metadata_string,"row_id"),
+                                    merged_to = get_value_by_key(db_object, additional_metadata_string,"merged_to")
+                                   )
+        return metadata_object
+        #return metadata(**)
+
 
 
 class Position(graphene.Interface):
@@ -359,6 +511,9 @@ class BaseGroup(graphene.ObjectType):
      #subject             | text                        | NOT NULL
      #action              | text                        | NOT NULL
     """
+    dbType = dbBaseGroup
+    dbObject = None
+
     perspective_default = graphene.Boolean()
     dictionary_default = graphene.Boolean()
     subject = graphene.String()
@@ -407,6 +562,9 @@ class Email(graphene.ObjectType):
      #user_id    | bigint                      | NOT NULL
      #email      | text                        |
     """
+    dbType = dbEmail
+    dbObject = None
+
     email = graphene.String()
 
     class Meta:
@@ -432,6 +590,8 @@ class Grant(graphene.ObjectType):
      #owners                            | jsonb                       |
      #additional_metadata               | jsonb                       |
     """
+    dbType = dbGrant
+    dbObject = None
     issuer_translation_gist_id = graphene.Int()
     begin = DateTime()
     end = DateTime()
@@ -459,6 +619,8 @@ class Group(graphene.ObjectType):
      #subject_object_id | bigint                      |
      #subject_override  | boolean                     |
     """
+    dbType = dbGroup
+    dbObject = None
     old_id = graphene.String() # uuid
     base_group_id = graphene.Int()
     subject_id = graphene.List(graphene.Int)
@@ -523,6 +685,7 @@ class PublishingEntity(graphene.ObjectType):
      #published  | boolean                     | NOT NULL
      #accepted   | boolean                     | NOT NULL
     """
+    dbType = dbPublishingEntity
     class Meta:
         interfaces = (CreatedAt,
                       CompositeIdHolder,
@@ -544,6 +707,8 @@ class TranslationAtom(graphene.ObjectType):
      #content             | text                        | NOT NULL
      #additional_metadata | jsonb                       |
     """
+    dbType = dbTranslationAtom
+    dbObject = None
     class Meta:
         interfaces = (CompositeIdHolder, Relationship, AdditionalMetadata, CreatedAt, MarkedForDeletion,  Content, LocaleId)
     pass
@@ -556,6 +721,8 @@ class TranslationGist(graphene.ObjectType):
      #marked_for_deletion | boolean                     | NOT NULL
      #type                | text                        |
     """
+    dbType = dbTranslationGist
+    dbObject = None
     class Meta:
         interfaces = (CompositeIdHolder,
                       CreatedAt,
@@ -578,6 +745,8 @@ class UserBlobs(graphene.ObjectType):
     #data_type           | text                        | NOT NULL
     #additional_metadata | jsonb                       |
     """
+    dbType = dbUserBlobs
+    dbObject = None
     real_storage_path = graphene.String()
 
     class Meta:
@@ -596,6 +765,8 @@ class UserRequest(graphene.ObjectType):
      #subject             | jsonb                       |
      #additional_metadata | jsonb                       |
     """
+    dbType = dbUserRequest
+    dbObject = None
     sender_id = graphene.Int()
     recipient_id = graphene.Int()
     broadcast_uuid = graphene.String()
@@ -625,6 +796,7 @@ class Field(graphene.ObjectType):
      + .translation
     """
 
+    locale_id2 = graphene.Int() ##########
     data_type = graphene.String()
     translation = graphene.String()
     dbType = dbField
@@ -739,18 +911,22 @@ class UpdateField(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
 
-    marked_for_deletion = graphene.Boolean()
-    person = graphene.Field(Field)
+
+
+    field = graphene.Field(Field)
+
 
     @staticmethod
     def mutate(root, args, context, info):
+        #print(args.get('locale_id'))
         #client_id = context.authenticated_userid
-        client_id = context["request"].authenticated_userid
+        client_id = context["client_id"]
+        #print(args)
         id = args.get('id')
-        field = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
-        person = Field(id = id)
-        marked_for_deletion = True
-        return CreateField(person=person, marked_for_deletion=marked_for_deletion)
+        dbfield_obj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
+        field = Field( **args)
+        field.dbObject = dbfield_obj
+        return UpdateField(field=field)
 
 
 class DeleteField(graphene.Mutation):
@@ -768,12 +944,7 @@ class DeleteField(graphene.Mutation):
         field = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
         field.marked_for_deletion = True
         field = Field(id = id)
-        return CreateField(field=field)
-
-class MyMutations(graphene.ObjectType):
-    create_field = CreateField.Field()
-    update_field = UpdateField.Field()
-    delete_field = DeleteField.Field()
+        return DeleteField(field=field)
 
 
 class Entity(graphene.ObjectType):
@@ -796,10 +967,11 @@ class Entity(graphene.ObjectType):
 
 
     """
+
+    args = GenericScalar()
      # TODO: Accepted, entity_type
     content = graphene.String()
     data_type = graphene.String()
-
     dbType = dbEntity
     dbObject = None
     class Meta:
@@ -812,7 +984,7 @@ class Entity(graphene.ObjectType):
                       FieldHolder,
                       ParentLink,
                       Content,
-                      TranslationHolder,
+                      #TranslationHolder,
                       LocaleId
                       )
 
@@ -821,7 +993,115 @@ class Entity(graphene.ObjectType):
     def resolve_data_type(self, args, context, info):
         return self.dbObject.field.data_type
 
+class CreateEntity(graphene.Mutation):
+    class Input:
+        translation_gist_id = graphene.List(graphene.Int)
+        data_type_translation_gist_id = graphene.List(graphene.Int)
 
+
+    marked_for_deletion = graphene.Boolean()
+    field = graphene.Field(Entity)
+    status_code = graphene.Boolean()
+    errors = graphene.List(graphene.String)
+    id = graphene.List(graphene.Int)
+
+    @staticmethod
+    def mutate(root, args, context, info):
+        #subject = 'language'
+        client_id = context["client_id"]
+        if client_id:
+            data_type_translation_gist_id = args.get('data_type_translation_gist_id')
+            translation_gist_id = args.get('translation_gist_id')
+            dbfield = dbEntity(client_id=client_id,
+                          object_id=None,
+                          data_type_translation_gist_client_id=data_type_translation_gist_id[0],
+                          data_type_translation_gist_object_id=data_type_translation_gist_id[1],
+                          translation_gist_client_id=translation_gist_id[0],
+                          translation_gist_object_id=translation_gist_id[1],
+                          marked_for_deletion=False
+                          )
+            # if args.get('is_translatable', None):
+            #     field.is_translatable = bool(args['is_translatable'])
+            DBSession.add(dbfield)
+            DBSession.flush()
+            field = Entity(id = [dbfield.client_id, dbfield.object_id])
+            field.dbObject = dbfield
+            return CreateEntity(field=field)
+
+
+
+
+
+
+
+            """
+            groups = DBSession.query(dbGroup).filter_by(subject_override=True).join(dbBaseGroup).filter_by(subject=subject).all()
+            print(groups)
+            create_base_group = DBSession.query(dbBaseGroup).filter_by(
+                subject = 'language', action = 'edit').first()
+            #print(create_base_group)
+
+            user_create = DBSession.query(user_to_group_association, dbGroup).filter(and_(
+            user_to_group_association.c.user_id == user_id,
+            user_to_group_association.c.group_id == dbGroup.id,
+            dbGroup.base_group_id == create_base_group.id,
+            dbGroup.subject_client_id == 205,
+            dbGroup.subject_object_id == 1)).limit(1).count() > 0
+            print("!", user_create)
+            """
+            #print(models.acl_by_groups())
+            #client_id = context.authenticated_userid
+            #client_id = context["request"].authenticated_userid
+            #if not perm_check(client_id, "field"):
+            #    return ResponseError(message = "Permission Denied (Entity)")
+
+            #print(context)
+
+            #id = args.get('id')
+            #field = DBSession.query(dbEntity).filter(and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])).one()
+            #context["error"] = ["123"]
+
+
+class UpdateEntity(graphene.Mutation):
+    class Input:
+        id = graphene.List(graphene.Int)
+        additional_metadata = ObjectVal()
+
+    entity = graphene.Field(Entity)
+    additional_metadata = ObjectVal()
+    status = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, args, context, info):
+        client_id = context["client_id"]
+        id = args.get('id')
+        update_args = {k: v for k, v in args.items() if k != "id"}
+
+        dbfield_obj = DBSession.query(dbEntity).filter(and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])).one()
+        for arg in update_args:
+            setattr(dbfield_obj, arg, update_args[arg] )
+        print(update_args)
+        entity = Entity( **args)
+        entity.dbObject = dbfield_obj
+        return UpdateEntity(entity=entity, status = "OK")
+
+
+class DeleteEntity(graphene.Mutation):
+    class Input:
+        id = graphene.List(graphene.Int)
+
+    status = graphene.Boolean()
+    entity = graphene.Field(Entity)
+
+    @staticmethod
+    def mutate(root, args, context, info):
+        #client_id = context.authenticated_userid
+        client_id = context["client_id"]
+        id = args.get('id')
+        entity = DBSession.query(dbEntity).filter(and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])).one()
+        entity.marked_for_deletion = True
+        entity = Entity(id = id)
+        return DeleteEntity(entity=entity)
 
 class LexicalEntry(graphene.ObjectType):
     """
@@ -1010,7 +1290,7 @@ class DictionaryPerspective(graphene.ObjectType):
     import_hash = graphene.String()
 
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
-    fields = graphene.List(Field)
+    fields = graphene.List(DictionaryPerspectiveToField)
     lexicalEntries = graphene.List(LexicalEntry, offset = graphene.Int(), count = graphene.Int(), mode = graphene.String())
     #stats = graphene.String() # ?
 
@@ -1066,7 +1346,6 @@ class DictionaryPerspective(graphene.ObjectType):
 
     @fetch_object() # TODO: ?
     def resolve_fields(self, args, context, info):
-        print(context.get("locale_id"))
         locale_id = context.get("locale_id")
         dbFields = self.dbObject.dictionaryperspectivetofield
         result = list()
@@ -1098,6 +1377,8 @@ class DictionaryPerspective(graphene.ObjectType):
         sub_result = dbLexicalEntry.track_multiple(lexes_composite_list,
                                              int(request.cookies.get('locale_id') or 2),
                                              publish=None, accept=True)
+        #print(context["request"].body)
+        #Request.
         for entry in sub_result:
             entities = []
             for ent in entry['contains']:
@@ -1108,8 +1389,23 @@ class DictionaryPerspective(graphene.ObjectType):
                 del ent["published"]
                 if "link_client_id" in ent and "link_object_id" in ent:
                     ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
+                else:
+                    ent["link_id"] = None
+                ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
+                if "self_client_id" in ent and "self_object_id" in ent:
+                    ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
+                else:
+                    ent["self_id"] = None
+                    #context["request"].body = str(context["request"].body).replace("self_id", "").encode("utf-8")
                 if not "content" in ent:
                     ent["content"] = None
+                # if not "additional_metadata" in ent:
+                #     ent["additional_metadata"] = None
+                #print(ent)
+                if "additional_metadata" in ent:
+                    ent["additional_metadata_string"] = ent["additional_metadata"]
+                    #print(ent["additional_metadata_string"])
+                    del ent["additional_metadata"]
                 gr_entity_object = Entity(id=[ent['client_id'],
                                        ent['object_id']],
                                        #link_id = (ent["link_client_id"], ent["link_object_id"]),
@@ -1361,5 +1657,12 @@ class Query(graphene.ObjectType):
 
 
 
-schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
+class MyMutations(graphene.ObjectType):
+    create_field = CreateField.Field()
+    update_field = UpdateField.Field()
+    delete_field = DeleteField.Field()
+    create_entity = CreateEntity.Field()
+    update_entity = UpdateEntity.Field()
+    delete_entity = DeleteEntity.Field()
 
+schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
