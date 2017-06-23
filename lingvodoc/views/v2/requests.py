@@ -8,7 +8,8 @@ from lingvodoc.models import (
     Language,
     User,
     UserRequest,
-    Grant
+    Grant,
+    Organization
 )
 
 from lingvodoc.views.v2.utils import (
@@ -148,6 +149,25 @@ def accept_userrequest(request):
                     grant.additional_metadata['participant'].append(dict_ids)
 
                 # todo: roles
+
+            elif userrequest.type == 'participate_org':
+                org_id = req['subject']['org_id']
+                user_id = req['subject']['user_id']
+                organization = DBSession.query(Organization).filter_by(id=org_id).first()
+                user = DBSession.query(User).filter_by(id=user_id).first()
+                if user not in organization.users:
+                    if not user in organization.users:
+                        organization.users.append(user)
+            elif userrequest.type == 'administrate_org':
+                org_id = req['subject']['org_id']
+                user_id = req['subject']['user_id']
+                organization = DBSession.query(Organization).filter_by(id=org_id).first()
+                user = DBSession.query(User).filter_by(id=user_id).first()
+                if organization.additional_metadata is None:
+                    organization.additional_metadata = dict()
+                if organization.additional_metadata.get('admins') is None:
+                    organization.additional_metadata['admins'] = list()
+                organization.additional_metadata['admins'].append(user_id)
             else:
                 pass
             broadcast_uuid = userrequest.broadcast_uuid
@@ -202,28 +222,6 @@ def create_one_userrequest(req, client_id):
     return userrequest.id
 
 
-# @view_config(route_name='create_userrequest', renderer='json', request_method='POST', permission='create')
-# def create_userrequest(request):
-#     try:
-#         variables = {'auth': request.authenticated_userid}
-#         client_id = variables['auth']
-#
-#
-#         request.response.status = HTTPOk.code
-#         return {'id': req_id}
-#     except KeyError as e:
-#         request.response.status = HTTPBadRequest.code
-#         return {'error': str(e)}
-#
-#     except IntegrityError as e:
-#         request.response.status = HTTPInternalServerError.code
-#         return {'error': str(e)}
-#
-#     except CommonException as e:
-#         request.response.status = HTTPConflict.code
-#         return {'error': str(e)}
-
-
 @view_config(route_name='get_grant_permission', renderer='json', request_method='GET')
 def get_grant_permission(request):
     try:
@@ -265,8 +263,6 @@ def get_grant_permission(request):
         for grantadmin in grantadmins:
             req['recipient_id'] = grantadmin.id
             req_id = create_one_userrequest(req, client_id)
-
-
         request.response.status = HTTPOk.code
         return {}
     except KeyError as e:
@@ -329,6 +325,116 @@ def add_dictionary_to_grant(request):
 
         request.response.status = HTTPOk.code
         return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='administrate_org', renderer='json', request_method='GET')
+def administrate_org(request):
+    try:
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        user_id = user.id
+        client_id = variables['auth']
+        org_id = int(request.matchdict.get('id'))
+        # req = request.json_body
+        req = dict()
+        req['sender_id'] = user_id
+        req['broadcast_uuid'] = str(uuid4())
+        req['type'] = 'administrate_org'
+        req['subject'] = {'org_id': org_id, 'user_id': user_id}
+        req['message'] = ''
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'request already exists'}
+
+
+        orgadmins = list()
+        # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
+
+        group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'org',
+                                                              Group.subject_override == True,
+                                                              BaseGroup.action == 'approve').one()
+
+        for user in group.users:
+            if user not in orgadmins:
+                orgadmins.append(user)
+
+        for orgadmin in orgadmins:
+            req['recipient_id'] = orgadmin.id
+            req_id = create_one_userrequest(req, client_id)
+
+
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='participate_org', renderer='json', request_method='GET')
+def participate_org(request):
+    try:
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        user_id = user.id
+        client_id = variables['auth']
+        org_id = int(request.matchdict.get('id'))
+        # req = request.json_body
+        req = dict()
+        req['sender_id'] = user_id
+        req['broadcast_uuid'] = str(uuid4())
+        req['type'] = 'participate_org'
+        req['subject'] = {'org_id': org_id, 'user_id': user_id}
+        req['message'] = ''
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'request already exists'}
+
+
+        orgadmins = list()
+        # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
+
+        org = DBSession.query(Organization).filter_by(id=org_id).first()
+
+        for orgadmin in org.additional_metadata['admins']:
+            req['recipient_id'] = orgadmin.id
+            req_id = create_one_userrequest(req, client_id)
+
+        request.response.status = HTTPOk.code
+        return {}
+
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
