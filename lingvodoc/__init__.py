@@ -710,7 +710,11 @@ def configure_routes(config):
     config.add_route(name="delete_user_blob",
                      pattern="/blobs/{client_id}/{object_id}", request_method='DELETE')
 
+    # Computes phonology of a specified perspective.
     config.add_route(name="phonology", pattern="/phonology")
+
+    # Gets a list of names of phonology markup tiers for a specified perspective.
+    config.add_route(name="phonology_tier_list", pattern="/phonology_tier_list")
 
     config.add_route(name="tasks", pattern="/tasks", request_method='GET')
 
