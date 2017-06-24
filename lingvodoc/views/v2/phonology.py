@@ -1830,8 +1830,7 @@ def phonology(request):
     """
     Computes phonology of a specified perspective.
 
-    Perspective is specified by request parameters 'perspective_client_id' and 'perspective_object_id',
-    example of a request: /phonology?perspective_client_id=345&perspective_object_id=2.
+    Perspective is specified by JSON request parameters 'perspective_client_id' and 'perspective_object_id'.
 
     Parameters:
         group_by_description
@@ -1849,12 +1848,17 @@ def phonology(request):
     task_status = None
 
     try:
-        perspective_cid = request.params.get('perspective_client_id')
-        perspective_oid = request.params.get('perspective_object_id')
+        request_json = request.json
 
-        group_by_description = 'group_by_description' in request.params
-        only_first_translation = 'only_first_translation' in request.params
-        vowel_selection = 'vowel_selection' in request.params
+        perspective_cid = request_json.get('perspective_client_id')
+        perspective_oid = request_json.get('perspective_object_id')
+
+        group_by_description = request_json.get('group_by_description')
+        only_first_translation = request_json.get('only_first_translation')
+        vowel_selection = request_json.get('vowel_selection')
+
+        maybe_tier_list = request_json.get('maybe_tier_list')
+        maybe_tier_set = set(maybe_tier_list) if maybe_tier_list else None
 
         # Getting perspective and perspective's dictionary info.
 
@@ -1891,17 +1895,17 @@ def phonology(request):
 
         # Checking if we have limits on number of computed results.
 
-        limit = (None if 'limit' not in request.params else
-            int(request.params.get('limit')))
+        limit = (None if 'limit' not in request_json else
+            int(request_json.get('limit')))
 
-        limit_exception = (None if 'limit_exception' not in request.params else
-            int(request.params.get('limit_exception')))
+        limit_exception = (None if 'limit_exception' not in request_json else
+            int(request_json.get('limit_exception')))
 
-        limit_no_vowel = (None if 'limit_no_vowel' not in request.params else
-            int(request.params.get('limit_no_vowel')))
+        limit_no_vowel = (None if 'limit_no_vowel' not in request_json else
+            int(request_json.get('limit_no_vowel')))
 
-        limit_result = (None if 'limit_result' not in request.params else
-            int(request.params.get('limit_result')))
+        limit_result = (None if 'limit_result' not in request_json else
+            int(request_json.get('limit_result')))
 
         # Performing either synchronous or asynchronous phonology compilation.
 
@@ -1917,7 +1921,7 @@ def phonology(request):
             perspective_cid, perspective_oid,
             dictionary_name, perspective_name,
             cache_kwargs, storage,
-            group_by_description, vowel_selection, only_first_translation,
+            group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
             limit, limit_exception, limit_no_vowel, limit_result,
             sqlalchemy_url)
 
@@ -1942,7 +1946,7 @@ def std_phonology(
     perspective_cid, perspective_oid,
     dictionary_name, perspective_name,
     cache_kwargs, storage,
-    group_by_description, vowel_selection, only_first_translation,
+    group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
     limit, limit_exception, limit_no_vowel, limit_result,
     sqlalchemy_url):
     """
@@ -1955,7 +1959,7 @@ def std_phonology(
         return perform_phonology(
             perspective_cid, perspective_oid,
             dictionary_name, perspective_name,
-            group_by_description, vowel_selection, only_first_translation,
+            group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
             limit, limit_exception, limit_no_vowel, limit_result,
             task_status, storage)
 
@@ -1981,7 +1985,7 @@ def async_phonology(
     perspective_cid, perspective_oid,
     dictionary_name, perspective_name,
     cache_kwargs, storage,
-    group_by_description, vowel_selection, only_first_translation,
+    group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
     limit, limit_exception, limit_no_vowel, limit_result,
     sqlalchemy_url):
     """
@@ -2007,7 +2011,7 @@ def async_phonology(
             return perform_phonology(
                 perspective_cid, perspective_oid,
                 dictionary_name, perspective_name,
-                group_by_description, vowel_selection, only_first_translation,
+                group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
                 limit, limit_exception, limit_no_vowel, limit_result,
                 task_status, storage)
 
@@ -2030,7 +2034,7 @@ def async_phonology(
 def perform_phonology(
     perspective_cid, perspective_oid,
     dictionary_name, perspective_name,
-    group_by_description, vowel_selection, only_first_translation,
+    group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
     limit, limit_exception, limit_no_vowel, limit_result,
     task_status, storage):
     """
@@ -2040,13 +2044,29 @@ def perform_phonology(
     log.debug('phonology {0}/{1}:'
         '\n  dictionary_name: \'{2}\'\n  perspective_name: \'{3}\''
         '\n  group_by_description: {4}\n  vowel_selection: {5}\n  only_first_translation: {6}'
-        '\n  limit: {7}\n  limit_exception: {8}\n  limit_no_vowel: {9}\n  limit_result: {10}'.format(
+        '\n  maybe_tier_set: {7}'
+        '\n  limit: {8}\n  limit_exception: {9}\n  limit_no_vowel: {10}\n  limit_result: {11}'.format(
         perspective_cid, perspective_oid,
         dictionary_name, perspective_name,
-        group_by_description, vowel_selection, only_first_translation,
+        group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
         limit, limit_exception, limit_no_vowel, limit_result))
 
     task_status.set(1, 0, 'Preparing')
+
+    # Setting up result filteting based on allowed tiers, if required.
+
+    if maybe_tier_set:
+
+        def result_filter(textgrid_result_list):
+
+            return [(tier_number, tier_name, tier_data)
+                for tier_number, tier_name, tier_data in textgrid_result_list
+                    if tier_name in maybe_tier_set]
+
+    else:
+
+        def result_filter(textgrid_result_list):
+            return textgrid_result_list
 
     # Looking through all translations we've got, getting field translation data.
 
@@ -2200,14 +2220,23 @@ def perform_phonology(
             # If we actually have the result, we use it and continue.
 
             elif cache_result:
+
                 textgrid_result_list = cache_result
+                filtered_result_list = result_filter(textgrid_result_list)
 
                 log.debug(
                     '{0} [CACHE {1}]:\n{2}\n{3}\n{4}'.format(
                     row_str, cache_key, markup_url, sound_url,
                     format_textgrid_result(group_list, textgrid_result_list)))
 
-                result_list.append((group_list, textgrid_result_list))
+                if maybe_tier_set:
+
+                    log.debug('filtered result:\n{0}'.format(
+                        format_textgrid_result(group_list, filtered_result_list)))
+
+                # Acquiring another result, updating progress status, stopping earlier, if required.
+
+                result_list.append((group_list, filtered_result_list))
                 result_group_set.update(group_list)
 
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
@@ -2297,7 +2326,9 @@ def perform_phonology(
 
             # Saving analysis results.
 
-            result_list.append((group_list, textgrid_result_list))
+            filtered_result_list = result_filter(textgrid_result_list)
+
+            result_list.append((group_list, filtered_result_list))
             result_group_set.update(group_list)
 
             caching.CACHE.set(cache_key, textgrid_result_list)
@@ -2308,6 +2339,11 @@ def perform_phonology(
                 '{0}:\n{1}\n{2}\n{3}'.format(
                 row_str, markup_url, sound_url,
                 format_textgrid_result(group_list, textgrid_result_list)))
+
+            if maybe_tier_set:
+
+                log.debug('filtered result:\n{0}'.format(
+                    format_textgrid_result(group_list, filtered_result_list)))
 
             task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                 'Analyzing sound and markup')
@@ -2469,6 +2505,134 @@ def perform_phonology(
         for filename in [table_filename] + chart_filename_list]
 
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
+
+
+@view_config(route_name = 'phonology_tier_list', renderer = 'json')
+def phonology_tier_list(request):
+    """
+    Gets a list of names of phonology markup tiers for a specified perspective.
+    """
+
+    try:
+        perspective_cid = request.params.get('perspective_client_id')
+        perspective_oid = request.params.get('perspective_object_id')
+
+        log.debug('phonology_tier_list {0}/{1}'.format(
+            perspective_cid, perspective_oid))
+
+        # We are going to look through all perspective's accessible markup/sound pairs.
+
+        Markup = aliased(Entity, name = 'Markup')
+        Sound = aliased(Entity, name = 'Sound')
+
+        PublishingMarkup = aliased(PublishingEntity, name = 'PublishingMarkup')
+        PublishingSound = aliased(PublishingEntity, name = 'PublishingSound')
+
+        data_query = DBSession.query(
+            LexicalEntry, Markup, Sound).filter(and_(
+                LexicalEntry.parent_client_id == perspective_cid,
+                LexicalEntry.parent_object_id == perspective_oid,
+                LexicalEntry.marked_for_deletion == False,
+                Markup.parent_client_id == LexicalEntry.client_id,
+                Markup.parent_object_id == LexicalEntry.object_id,
+                Markup.marked_for_deletion == False,
+                Markup.additional_metadata.contains({'data_type': 'praat markup'}),
+                PublishingMarkup.client_id == Markup.client_id,
+                PublishingMarkup.object_id == Markup.object_id,
+                PublishingMarkup.published == True,
+                PublishingMarkup.accepted == True,
+                Sound.client_id == Markup.self_client_id,
+                Sound.object_id == Markup.self_object_id,
+                Sound.marked_for_deletion == False,
+                PublishingSound.client_id == Sound.client_id,
+                PublishingSound.object_id == Sound.object_id,
+                PublishingSound.published == True,
+                PublishingSound.accepted == True))
+
+        # Processing sound/markup pairs.
+
+        tier_count = collections.Counter()
+        total_count = 0
+
+        for index, row in enumerate(data_query.yield_per(100)):
+            markup_url = row.Markup.content
+
+            row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(
+                index,
+                row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                row.Sound.client_id, row.Sound.object_id,
+                row.Markup.client_id, row.Markup.object_id)
+
+            log.debug('{0}: {1}'.format(row_str, markup_url))
+
+            # Checking if we have cached tier list for this pair of sound/markup.
+
+            cache_key = 'phonology_tier_list:{0}:{1}:{2}:{3}'.format(
+                row.Sound.client_id, row.Sound.object_id,
+                row.Markup.client_id, row.Markup.object_id)
+
+            cache_result = caching.CACHE.get(cache_key)
+
+            if cache_result:
+
+                tier_count.update(cache_result)
+                total_count += 1
+
+                log.debug('{0} [CACHE {1}]: {2}'.format(row_str, cache_key, list(sorted(cache_result))))
+                continue
+
+            # Trying to download and parse markup and get its tiers.
+
+            try:
+                markup_bytes = urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')).read()
+
+                textgrid = pympi.Praat.TextGrid(xmax = 0)
+                textgrid.from_file(
+                    io.BytesIO(markup_bytes),
+                    codec = chardet.detect(markup_bytes)['encoding'])
+
+                markup_tier_set = set(tier_name
+                    for tier_number, tier_name in textgrid.get_tier_name_num())
+
+                caching.CACHE.set(cache_key, markup_tier_set)
+
+                tier_count.update(markup_tier_set)
+                total_count += 1
+
+                log.debug('{0}: {1}'.format(row_str, list(sorted(markup_tier_set))))
+
+            # Markup processing error, we report it and go on.
+
+            except Exception as exception:
+
+                traceback_string = ''.join(traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1]
+
+                log.debug('{0}: exception'.format(row_str))
+                log.debug(traceback_string)
+
+        # Logging and returning list of all tier names we encountered.
+
+        tier_list = list(sorted(tier_count.items(),
+            key = lambda tier_count: (tier_count[0].lower(), tier_count[0])))
+
+        log.debug('phonology_tier_list {0}/{1}: {2}, {3}'.format(
+            perspective_cid, perspective_oid, total_count, tier_list))
+
+        return {'tier_count': dict(tier_count), 'total_count': total_count}
+
+    # Some unknown external exception.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('phonology_tier_list: exception')
+        log.debug(traceback_string)
+
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'external error'}
 
 
 def cpu_time(reference_cpu_time = 0.0):

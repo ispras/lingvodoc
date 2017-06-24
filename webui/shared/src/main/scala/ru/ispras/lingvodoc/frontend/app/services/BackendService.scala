@@ -2049,39 +2049,55 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     perspectiveId: CompositeId,
     group_by_description: Boolean,
     only_first_translation: Boolean,
-    vowel_selection: Boolean):
-    Future[String] =
+    vowel_selection: Boolean,
+    maybe_tier_list: Option[Seq[String]]):
+    Future[Unit] =
   {
-    import ru.ispras.lingvodoc.frontend.app.utils.ConversionUtils._
+    val p = Promise[Unit]
 
-    val p = Promise[String]()
+    val request =
 
-    val url = s"""phonology?
-      |perspective_client_id=${perspectiveId.clientId}&
-      |perspective_object_id=${perspectiveId.objectId}
-      |${if (group_by_description) "&group_by_description" else ""}
-      |${if (only_first_translation) "&only_first_translation" else ""}
-      |${if (vowel_selection) "&vowel_selection" else ""}
-      |""".stripMargin.replaceAll("\n", "")
+      JSON.stringify(js.Dynamic.literal(
+        "perspective_client_id" -> perspectiveId.clientId,
+        "perspective_object_id" -> perspectiveId.objectId,
+        "group_by_description" -> group_by_description,
+        "only_first_translation" -> only_first_translation,
+        "vowel_selection" -> vowel_selection,
 
-    val xhr: XMLHttpRequest = new dom.XMLHttpRequest()
-    xhr.open("GET", getMethodUrl(url))
-    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
-    xhr.responseType = "arraybuffer"
-    xhr.onload = { (e: dom.Event) =>
-      if (xhr.status == 200) {
-        p.success(xhr.response.asInstanceOf[js.typedarray.ArrayBuffer].toBase64)
-      } else {
-        val r = xhr.response.asInstanceOf[js.typedarray.ArrayBuffer]
-        val response: Dynamic = JSON.parse(r.toStr())
-        if (!js.isUndefined(response.error)) {
-          p.failure(new BackendException(response.error.asInstanceOf[String]))
-        } else {
-          p.failure(new BackendException("Failed to obtain phonology."))
+        "maybe_tier_list" -> (maybe_tier_list
+          map { tier_seq => js.Array(tier_seq: _*) }
+          getOrElse(null))))
+
+    $http.post[js.Dynamic](getMethodUrl("phonology"), request) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while launching phonology computation:\n" + response.error))
+
+          else p.success(())
         }
-      }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to launch phonology computation: " + e.getMessage, e))
     }
-    xhr.send()
+
     p.future
   }
 
@@ -2434,6 +2450,52 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
       case Failure(e) => p.failure(BackendException(
         "Failed to gather dictionary statistics: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
+  /** Gets a list of names of phonology markup tiers for a specified perspective. */
+  def phonologyTierList(perspectiveId: CompositeId):
+    Future[(Int, js.Dictionary[Int])] =
+  {
+    val p = Promise[(Int, js.Dictionary[Int])]()
+
+    val url = s"""phonology_tier_list?
+      |perspective_client_id=${perspectiveId.clientId}&
+      |perspective_object_id=${perspectiveId.objectId}
+      |""".stripMargin.replaceAll("\n", "")
+
+    $http.get[js.Dynamic](url) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while getting phonology markup tier list:\n" + response.error))
+
+          else p.success((
+            read[Int](js.JSON.stringify(response.total_count)),
+            response.tier_count.asInstanceOf[js.Dictionary[Int]]))
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to get phonology markup tier list: " + e.getMessage, e))
     }
 
     p.future
