@@ -3,8 +3,8 @@ package ru.ispras.lingvodoc.frontend
 import com.greencatsoft.angularjs.{Angular, Config, Module}
 import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.modal._
-import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal.{ContributionsGroupingTagModalController, ContributionsLinkedDictionaryModalController, PublishLinkedDictionaryModalController, ViewSociolinguisticsInfoController}
-import ru.ispras.lingvodoc.frontend.app.controllers.webui.{EditTranslationsController, PerspectivePropertiesController, SociolinguisticsController}
+import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal._
+import ru.ispras.lingvodoc.frontend.app.controllers.webui._
 import ru.ispras.lingvodoc.frontend.app.controllers._
 import ru.ispras.lingvodoc.frontend.app.directives._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -37,7 +37,10 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/sociolinguistics", Route("/static/templates/sociolinguistics.html", "Lingvodoc 2.1 / Sociolinguistics", "SociolinguisticsController"))
     .when("/desktop_software", Route("/static/templates/desktop.html", "Lingvodoc 2.1 / Desktop software"))
     .when("/edit_translations", Route("/static/templates/editTranslations.html", "Lingvodoc 2.1 / Edit translations", "EditTranslationsController"))
-    .when("/grants", Route("/static/templates/grants.html", "Lingvodoc 2.1 / Grants", "GrantsController"))
+    .when("/grants_admin", Route("/static/templates/grants.html", "Lingvodoc 2.1 / Grants", "GrantsController"))
+    .when("/grants", Route("/static/templates/grantsPublic.html", "Lingvodoc 2.1 / Grants", "GrantsPublicController"))
+    .when("/grant_requests", Route("/static/templates/userRequests.html", "Lingvodoc 2.1 / User requests", "UserRequestsController"))
+    .when("/organizations", Route("/static/templates/organizations.html", "Lingvodoc 2.1 / Organizations", "OrganizationsController"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
@@ -98,7 +101,12 @@ object LingvodocApplication {
       .controller[DictionaryStatisticsModalController]
       .controller[PerspectivePhonologyModalController]
       .controller[GrantsController]
+      .controller[GrantsPublicController]
+      .controller[UserRequestsController]
       .controller[CreateGrantModalController]
+      .controller[AddDictionaryToGrantModalController]
+      .controller[OrganizationsController]
+      .controller[CreateOrganizationModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

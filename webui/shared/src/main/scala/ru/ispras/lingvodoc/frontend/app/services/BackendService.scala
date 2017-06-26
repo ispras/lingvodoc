@@ -2472,6 +2472,134 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
+
+  def grantUserRequests(): Future[Seq[UserRequest]] = {
+    val p = Promise[Seq[UserRequest]]()
+    $http.get[js.Dynamic](getMethodUrl("get_current_userrequests")) onComplete {
+      case Success(response)  =>
+        p.success(read[Seq[UserRequest]](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get list of grant requests", e))
+    }
+    p.future
+  }
+
+
+  def addDictionaryToGrant(grantId: Int, dictionaryId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "grant_id" -> grantId,
+      "client_id" -> dictionaryId.clientId,
+      "object_id" -> dictionaryId.objectId
+    )
+
+    $http.post[js.Dynamic](getMethodUrl("add_dictionary_to_grant"), req) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add dictionary to grant", e))
+    }
+    p.future
+  }
+
+  def addUserToGrant(grantId: Int, userId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "grant_id" -> grantId,
+      "user_id" -> userId
+    )
+
+    $http.post[js.Dynamic](getMethodUrl("add_user_to_grant"), req) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to grant", e))
+    }
+    p.future
+  }
+
+
+  def acceptUserRequest(requestId: Int, accept: Boolean): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "accept" -> accept
+    )
+
+    $http.post[js.Dynamic](getMethodUrl("accept_userrequest/" + encodeURIComponent(requestId.toString)), req) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to grant", e))
+    }
+    p.future
+  }
+
+  def grantUserPermission(grantId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("get_grant_permission/" + encodeURIComponent(grantId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to grant", e))
+    }
+    p.future
+  }
+
+  def organizations(): Future[Seq[Organization]] = {
+    val p = Promise[Seq[Organization]]()
+
+    $http.get[js.Dynamic](getMethodUrl("organizations_list")) onComplete {
+      case Success(response)  =>
+        p.success(read[Seq[Organization]](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to obtain list of organizations", e))
+    }
+    p.future
+  }
+
+  def createOrganization(name: String, about: String): Future[Int] = {
+    val p = Promise[Int]()
+    $http.post[js.Dynamic](getMethodUrl("organization"), js.Dynamic.literal(
+      "name" -> name,
+      "about" -> about
+    )) onComplete {
+      case Success(response)  =>
+        p.success(response.organization_id.asInstanceOf[Int])
+      case Failure(e) =>
+        p.failure(BackendException("Failed to create organization", e))
+    }
+    p.future
+  }
+
+  def joinOrganization(organizationId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("participate_org/" + encodeURIComponent(organizationId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to organization", e))
+    }
+    p.future
+  }
+
+  def joinOrganizationAdmin(organizationId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("administrate_org/" + encodeURIComponent(organizationId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to organization's admins", e))
+    }
+    p.future
+  }
+
+
 }
 
 

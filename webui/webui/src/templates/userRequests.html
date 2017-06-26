@@ -1,0 +1,52 @@
+<div class="container" ng-cloak="">
+
+    <div class="row">
+
+        <div class="col-sm-3 col-md-2">
+            <ul class="nav nav-pills nav-stacked">
+
+                <li><a href="" ng-click="controller.filterGrantPermission()"><span class="badge pull-right">{{ controller.GrantPermissionRequestsCount() }}</span> Grants </a></li>
+                <li><a href="" ng-click="controller.filterAddDictionary()"><span class="badge pull-right">{{ controller.AddDictionaryRequestsCount() }}</span> Dictionaries</a></li>
+                <li><a href="" ng-click="controller.filterOrganizationUser()"><span class="badge pull-right">{{ controller.OrganizationUserRequestsCount() }}</span> Organization users</a></li>
+                <li><a href="" ng-click="controller.filterOrganizationAdmin()"><span class="badge pull-right">{{ controller.OrganizationAdminRequestCount() }}</span> Organization admins</a></li>
+            </ul>
+        </div>
+
+
+        <div class="col-sm-9 col-md-10">
+
+            <div class="list-group">
+                <a href="" class="list-group-item" ng-repeat="request in controller.requests()" ng-init="user=controller.sender(request);">
+
+                    <span class="glyphicon glyphicon-star-empty"></span><span class="name" style="min-width: 120px; display: inline-block;">{{ user.intlName }}</span>
+                    <span class="">
+
+                        <span ng-if="controller.isGrantPermissionRequest(request)" ng-init="grant=controller.grant(request);">
+                            User wants to join grant {{ grant.translation }} ({{ grant.issuer }})
+                        </span>
+
+                        <span ng-if="controller.isAddDictionaryRequest(request)" ng-init="grant=controller.grant(request); dictionary=controller.dictionary(request);">
+                            User wants to add grant {{ grant.translation }} ({{ grant.issuer }}) to dictionary {{ translation }}
+                        </span>
+
+                        <span ng-if="controller.isOrganizationUserRequest(request)" ng-init="grant=controller.organization(request);">
+                            User wants to join {{ organization.intlName }}
+                        </span>
+
+                        <span ng-if="controller.isOrganizationAdminRequest(request)" ng-init="grant=controller.organization(request);">
+                            User wants to become admin of {{ organization.intlName }}
+                        </span>
+
+                    </span>
+                    <span class="text-muted pull-right" style="font-size: 11px;"></span>
+                        <button type="button" class="btn btn-xs btn-primary" ng-click="controller.accept(request)">Accept</button>
+                        <button type="button" class="btn btn-xs btn-danger" ng-click="controller.decline(request)">Decline</button>
+                    </span>
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
