@@ -204,13 +204,11 @@ def configure_routes(config):
 
     # API #POST
     # Creating organization
-    config.add_route(name='create_organization', pattern='/organization',
-                     factory='lingvodoc.models.OrganizationAcl')  # ?TODO: ?test
+    config.add_route(name='create_organization', pattern='/organization)  # ?TODO: ?test
 
     # API #GET && PUT && DELETE
     # Gets/puts info about organization
-    config.add_route(name='organization', pattern='/organization/{organization_id}',
-                     factory='lingvodoc.models.OrganizationAcl')  # TODO: ?test
+    config.add_route(name='organization', pattern='/organization/{organization_id}')  # TODO: ?test
 
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create and modify perspectives)
