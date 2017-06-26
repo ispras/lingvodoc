@@ -81,6 +81,18 @@ def configure_routes(config):
                      factory='lingvodoc.models.AdminAcl')
     config.add_route(name='grant', pattern='/grant/{id}')
     config.add_route(name='all_grants', pattern='/all_grants')
+
+    # config.add_route(name='create_userrequest', pattern='/grant',
+    #                  factory='lingvodoc.models.AdminAcl')
+
+    config.add_route(name='userrequest', pattern='/userrequest/{id}')
+    config.add_route(name='get_current_userrequests', pattern='/get_current_userrequests')
+    config.add_route(name='accept_userrequest', pattern='/accept_userrequest/{id}')
+    config.add_route(name='get_grant_permission', pattern='/get_grant_permission/{id}')
+    config.add_route(name='participate_org', pattern='/participate_org/{id}')
+    config.add_route(name='administrate_org', pattern='/administrate_org/{id}')
+    config.add_route(name='add_dictionary_to_grant', pattern='add_dictionary_to_grant')
+
     # config.add_route(name='create_grant', pattern='/grant')
 
 
