@@ -25,7 +25,7 @@ from sqlalchemy import (
     or_,
 )
 
-
+# Read
 class Entity(graphene.ObjectType):
      # TODO: Accepted, entity_type
     content = graphene.String()
@@ -51,12 +51,34 @@ class Entity(graphene.ObjectType):
     def resolve_data_type(self, args, context, info):
         return self.dbObject.field.data_type
 
+# Create
 class CreateEntity(graphene.Mutation):
     class Input:
+        # input values from request. Look at "LD methods" exel table
         translation_gist_id = graphene.List(graphene.Int)
         data_type_translation_gist_id = graphene.List(graphene.Int)
+    # Result object
     field = graphene.Field(Entity)
-    id = graphene.List(graphene.Int)
+    # Composite id
+    #id = graphene.List(graphene.Int)
+    # Used for convenience
+    """
+    example:
+    mutation  {
+        create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
+            field {
+                id
+            }
+            status
+        }
+    }
+    or
+    mutation  {
+        create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
+            status
+        }
+    }
+    """
     status = graphene.Boolean()
 
     @staticmethod
@@ -85,7 +107,7 @@ class CreateEntity(graphene.Mutation):
             #    return ResponseError(message = "Permission Denied (Entity)")
 
 
-
+# Update
 class UpdateEntity(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
@@ -98,23 +120,53 @@ class UpdateEntity(graphene.Mutation):
         locale_id = graphene.Int()
 
     entity = graphene.Field(Entity)
-    additional_metadata = ObjectVal()  # TODO: remove this string
+    additional_metadata = ObjectVal()  # TODO: deprecated, used in additional_metadata holder
     status = graphene.Boolean()
+    """
+    example #1:
+    mutation  {
+        update_entity(id: [ 742, 5494], additional_metadata: {hash:"1234567"} ) {
+            entity {
+                created_at,
+                additional_metadata{
+                hash
+                }
+            }
+
+        status
+        }
+    }
+    example #2:
+    mutation  {
+        update_entity(id: [ 742, 5494], additional_metadata: {hash:"12345"} ){status}
+    }
+    resolve:
+    {
+        "update_entity": {
+            "status": true
+        }
+    }
+    """
+
+
 
     @staticmethod
     def mutate(root, args, context, info):
-        client_id = context["client_id"]
+        client_id = context["client_id"] # client_id used in ACL func as arg
         id = args.get('id')
+        # params, that can`t been resolved from Entity object
         restricted_fields = ["id", "created_at"]
+        # Other params from request
         update_args = {k: v for k, v in args.items() if k not in restricted_fields}
         dbfield_obj = DBSession.query(dbEntity).filter(and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])).one()
         for arg in update_args:
+            # It is used later in fetch_object decorator
             setattr(dbfield_obj, arg, update_args[arg] )
         entity = Entity( **args)
-        entity.dbObject = dbfield_obj
+        entity.dbObject = dbfield_obj # speeds up queries
         return UpdateEntity(entity=entity, status = "OK")
 
-
+# Delete
 class DeleteEntity(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
@@ -127,7 +179,8 @@ class DeleteEntity(graphene.Mutation):
         #client_id = context.authenticated_userid
         client_id = context["client_id"]
         id = args.get('id')
-        entity = DBSession.query(dbEntity).filter(and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])).one()
-        entity.marked_for_deletion = True
+        dbentityobj = DBSession.query(dbEntity).filter(and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])).one()
+        dbentityobj.marked_for_deletion = True
         entity = Entity(id = id)
+        entity.dbObject=dbentityobj
         return DeleteEntity(entity=entity)

@@ -20,6 +20,7 @@ from lingvodoc.schema.gql_dictionary import Dictionary
 from lingvodoc.schema.gql_dictipersptofield import DictionaryPerspectiveToField
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
+from lingvodoc.schema.gql_entity import Entity
 
 
 class DictionaryPerspective(graphene.ObjectType):
@@ -54,7 +55,6 @@ class DictionaryPerspective(graphene.ObjectType):
     lexicalEntries = graphene.List(LexicalEntry, offset = graphene.Int(), count = graphene.Int(), mode = graphene.String())
     #stats = graphene.String() # ?
 
-
     dbType = dbPerspective
     dbObject = None
 
@@ -76,9 +76,11 @@ class DictionaryPerspective(graphene.ObjectType):
 
     @fetch_object('status')
     def resolve_status(self, args, context, info):
-        atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=self.dbObject.state_translation_gist_client_id,
-                                                          parent_object_id=self.dbObject.state_translation_gist_object_id,
-                                                          locale_id=int(context.get('locale_id'))).first()
+        atom = DBSession.query(dbTranslationAtom).filter_by(
+            parent_client_id=self.dbObject.state_translation_gist_client_id,
+            parent_object_id=self.dbObject.state_translation_gist_object_id,
+            locale_id=int(context.get('locale_id'))
+        ).first()
         if atom:
             return atom.content
         else:
@@ -86,13 +88,9 @@ class DictionaryPerspective(graphene.ObjectType):
 
     @fetch_object() # TODO: ?
     def resolve_tree(self, args, context, info):
-        # print(self.dbObject)
-        # print(DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one())
-
         result = list()
         iteritem = self.dbObject
         while iteritem:
-            #print(type(iteritem))
             id = [iteritem.client_id, iteritem.object_id]
             if type(iteritem) == dbPerspective:
                 result.append(DictionaryPerspective(id=id))
@@ -118,7 +116,6 @@ class DictionaryPerspective(graphene.ObjectType):
     def resolve_lexicalEntries(self, args, context, info):
         result = list()
         request = context.get('request')
-
         #dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
         lexes = DBSession.query(dbLexicalEntry).filter_by(parent=self.dbObject)
 
@@ -132,16 +129,16 @@ class DictionaryPerspective(graphene.ObjectType):
         #     dbentities = DBSession.query(dbEntity).filter_by(parent=lex).all()
         #     entities = [Entity(id=[ent.client_id, ent.object_id]) for ent in dbentities]
         #     result.append(LexicalEntry(id=[lex.client_id, lex.object_id], entities = entities))
-
-
         sub_result = dbLexicalEntry.track_multiple(lexes_composite_list,
                                              int(request.cookies.get('locale_id') or 2),
                                              publish=None, accept=True)
-        #print(context["request"].body)
-        #Request.
+
+
         for entry in sub_result:
             entities = []
             for ent in entry['contains']:
+                # del attributes that Entity class doesn`t have
+                # the code below has to be refactored
                 del ent["contains"]
                 del ent["level"]
                 del ent["accepted"]
@@ -159,28 +156,25 @@ class DictionaryPerspective(graphene.ObjectType):
                     #context["request"].body = str(context["request"].body).replace("self_id", "").encode("utf-8")
                 if not "content" in ent:
                     ent["content"] = None
-                # if not "additional_metadata" in ent:
-                #     ent["additional_metadata"] = None
-                #print(ent)
                 if "additional_metadata" in ent:
+                    # used in AdditionalMetadata interface (gql_holders.py) and sets metadata dictionary
                     ent["additional_metadata_string"] = ent["additional_metadata"]
-                    #print(ent["additional_metadata_string"])
                     del ent["additional_metadata"]
                 gr_entity_object = Entity(id=[ent['client_id'],
                                        ent['object_id']],
                                        #link_id = (ent["link_client_id"], ent["link_object_id"]),
                                        parent_id = (ent["parent_client_id"], ent["parent_object_id"]),
-
-                                   #content=ent.get('content'),
-                                   #fieldType=ent['data_type'],
-                                   ** ent)
+                                       **ent  # all other args from sub_result
+                                          )
                 #print(ent)
                 entities.append(gr_entity_object)
             #del entry["entries"]
             del entry["published"]
             del entry["contains"]
             del entry["level"]
-            gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'], entry['object_id']], entities=entities, **entry)
+            gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
+                                                      entry['object_id']],
+                                                  entities=entities, **entry)
 
             result.append(gr_lexicalentry_object)
 

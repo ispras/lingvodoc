@@ -224,6 +224,12 @@ class Query(graphene.ObjectType):
 
 
 class MyMutations(graphene.ObjectType):
+    """
+    Mutation classes.
+    It may be replaced by
+    create_field = gql_field.CreateField.Field()
+    for more beautiful imports
+    """
     create_field = CreateField.Field()
     update_field = UpdateField.Field()
     delete_field = DeleteField.Field()

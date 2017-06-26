@@ -10,7 +10,15 @@ from lingvodoc.models import (
     DBSession,
 )
 
+# Object types
+
 class ResponseError(Exception):
+    """
+    usage:
+    (in resolve_***  functions)
+    if not perm_check(client_id, "field"):
+        return ResponseError(message = "Permission Denied")
+    """
     def __init__(self, message, code=None, params=None):
         super().__init__(message)
         self.message = str(message)
@@ -20,9 +28,8 @@ class ResponseError(Exception):
 
 class ObjectVal(Scalar):
     """
-    The `GenericScalar` scalar type represents a generic
-    GraphQL scalar value that could be:
-    String, Boolean, Int, Float, List or Object.
+    ObjectVal is GraphQL scalar value must be Object
+    This class was obtained from from "GenericScalar" and restrict users to input string or float data
     """
 
     @staticmethod
@@ -41,6 +48,9 @@ class ObjectVal(Scalar):
 
 
 class JSONString(JSONtype):
+    """
+    graphene.types.json.JSONString replacement which has no JSON encoder and decoder
+    """
     @staticmethod
     def serialize(dt):
         return dt
@@ -48,7 +58,6 @@ class JSONString(JSONtype):
     @staticmethod
     def parse_literal(node):
         if isinstance(node, ast.StringValue):
-            print(node.value)
             return json.loads(node.value)
 
     @staticmethod
@@ -56,28 +65,40 @@ class JSONString(JSONtype):
         return value#json.loads(value)
 
 
-class DateTime(Scalar): # TODO: choose format
-    '''DateTime Scalar Description'''
-
+class DateTime(Scalar): # TODO: change format
+    """
+    graphene.types.json.JSONString replacement having different time format
+    """
     @staticmethod
     def serialize(dt):
-        dt = datetime.datetime.utcfromtimestamp(dt) # wrong time
+        # need to add assert
+        dt = datetime.datetime.utcfromtimestamp(dt) # can return wrong time
         return dt.isoformat()
 
     @staticmethod
     def parse_literal(node):
-        #print(2, node)
         if isinstance(node, ast.StringValue):
             return datetime.datetime.strptime(
                 node.value, "%Y-%m-%dT%H:%M:%S.%f")
 
     @staticmethod
     def parse_value(value):
-        #print(3, value)
         return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
 
 def fetch_object(attrib_name=None):
+    """
+    This magic decorator, which the resolve_* functions have, sets the dbObject atribute
+    after execution of a request to a DB or force the function to return attribute by attrib_name.
+    class must have dbType and dbObject attributes
+    example:
+    dbType = dbLanguage
+    dbObject = None
+
+    @fetch_object("marked_for_deletion")
+    def resolve_marked_for_deletion(self, args, context, info):
+        ...
+    """
     def dec(func):
         def wrapper(*args, **kwargs):
             cls = args[0]
@@ -86,13 +107,19 @@ def fetch_object(attrib_name=None):
                     return getattr(cls, attrib_name)
             if not cls.dbObject:
                 if type(cls.id) is int:
+                    # example: (id: 1)
                     id = cls.id
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(id=id).one()
                 elif type(cls.id) is list:
-                    cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0], object_id=cls.id[1]).one()
+                    # example: (id: [2,3])
+                    cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
+                                                                         object_id=cls.id[1]).one()
             return func(*args, **kwargs)
         return wrapper
     return dec
+
+
+# Common interfaces
 
 class IdHolder(graphene.Interface):
     id = graphene.Int()
@@ -199,11 +226,177 @@ class MarkedForDeletion(graphene.Interface):
     def resolve_marked_for_deletion(self, args, context, info):
         return self.dbObject.marked_for_deletion
 
+class Position(graphene.Interface):
+    position = graphene.Int()
+
+    @fetch_object("position")
+    def resolve_position(self, args, context, info):
+        return self.dbObject.position
+
+class TranslationGistHolder(graphene.Interface):
+    translation_gist_id = graphene.List(graphene.Int)
+    translation_gist_client_id = graphene.Int()
+    translation_gist_object_id = graphene.Int()
+
+    @fetch_object("translation_gist_id")
+    def resolve_translation_gist_id(self, args, context, info):
+        return (self.dbObject.translation_gist_client_id,
+                self.dbObject.translation_gist_object_id)
+
+    @fetch_object("translation_gist_client_id")
+    def resolve_translation_gist_client_id(self, args, context, info):
+        return self.dbObject.translation_gist_client_id
+
+    @fetch_object("translation_gist_object_id")
+    def resolve_translation_gist_object_id(self, args, context, info):
+        return self.dbObject.translation_gist_object_id
+
+class UserId(graphene.Interface):
+    user_id = graphene.Int()
+
+    @fetch_object("user_id")
+    def resolve_user_id(self, args, context, info):
+        return self.dbObject.user_id
+
+class StateHolder(graphene.Interface):
+    state_translation_gist_id = graphene.List(graphene.Int)
+    state_translation_gist_client_id = graphene.Int()
+    state_translation_gist_object_id = graphene.Int()
+
+    @fetch_object("state_translation_gist_id")
+    def resolve_state_translation_gist_id(self, args, context, info):
+        return (self.dbObject.state_translation_gist_client_id,
+                self.dbObject.state_translation_gist_object_id)
+
+    @fetch_object("state_translation_gist_client_id")
+    def resolve_state_translation_gist_client_id(self, args, context, info):
+        return self.dbObject.state_translation_gist_client_id
+
+    @fetch_object("state_translation_gist_object_id")
+    def resolve_state_translation_gist_object_id(self, args, context, info):
+        return self.dbObject.state_translation_gist_object_id
+
+class TableName(graphene.Interface):
+    table_name = graphene.String()
+
+    @fetch_object("table_name")
+    def resolve_table_name(self, args, context, info):
+        return self.dbObject.table_name
+
+class Name(graphene.Interface):
+    name = graphene.String()
+    @fetch_object("name")
+    def resolve_name(self, args, context, info):
+        return self.dbObject.name
+
+class LocaleId(graphene.Interface):
+    locale_id = graphene.Int()
+
+    @fetch_object("locale_id")
+    def resolve_locale_id(self, args, context, info):
+        return self.dbObject.locale_id
+
+class Content(graphene.Interface):
+    content = graphene.String()
+
+    @fetch_object("content")
+    def resolve_content(self, args, context, info):
+        return self.dbObject.content
+
+class TypeHolder(graphene.Interface):
+    type = graphene.String()  # rename (?)
+    @fetch_object("type")
+    def resolve_type(self, args, context, info):
+        return self.dbObject.type
+
+class TranslationHolder(graphene.Interface):
+    translation = graphene.String()
+    @fetch_object("translation")
+    def resolve_translation(self, args, context, info):
+        return self.dbObject.get_translation(context.get('locale_id')) # TODO: fix it
+
+# rare interfaces
+
+# Organization interface
+class About(graphene.Interface):
+    about = graphene.String()
+    @fetch_object("about")
+    def resolve_about(self, args, context, info):
+        return self.dbObject.about
+
+# PublishedEntity interface
+class Published(graphene.Interface):
+    published = graphene.Boolean()
+
+    @fetch_object("published")
+    def resolve_about(self, args, context, info):
+        return self.dbObject.published
+
+class Accepted(graphene.Interface):
+    accepted = graphene.Boolean()
+
+    @fetch_object("accepted")
+    def resolve_accepted(self, args, context, info):
+        return self.dbObject.accepted
+
+# userBlobs interface
+class DataType(graphene.Interface):   #TODO: check all data_type fields
+    data_type = graphene.String()
+
+    @fetch_object("data_type")
+    def resolve_data_type(self, args, context, info):
+        pass #return self.dbObject.data_type
+
+# LexicalEntry interface
+class MovedTo(graphene.Interface):
+    moved_to = graphene.String()
+
+    @fetch_object("moved_to")
+    def resolve_moved_to(self, args, context, info):
+        return self.dbObject.moved_to
+
+# Field interface
+class DataTypeTranslationGistId(graphene.Interface):
+    data_type_translation_gist_id = graphene.List(graphene.Int)
+    data_type = graphene.String()
+
+    @fetch_object("data_type")
+    def resolve_data_type(self, args, context, info):
+        return self.dbObject.data_type
+
+    @fetch_object("data_type_translation_gist_id")
+    def resolve_data_type_translation_gist_id(self, args, context, info):
+        return (self.dbObject.data_type_translation_gist_client_id,
+                self.dbObject.data_type_translation_gist_object_id)
+
+    @fetch_object("data_type_translation_gist_client_id")
+    def resolve_data_type_translation_gist_client_id(self, args, context, info):
+        return self.dbObject.data_type_translation_gist_client_id
+
+    @fetch_object("data_type_translation_gist_object_id")
+    def resolve_data_type_translation_gist_object_id(self, args, context, info):
+        return self.dbObject.data_type_translation_gist_object_id
+
+
+
+# Metadata section
+
+
+class IsTranslatable(graphene.Interface):
+    is_translatable = graphene.Boolean()
+
+    @fetch_object("is_translatable")
+    def resolve_is_translatable(self, args, context, info):
+        return self.dbObject.is_translatable
 
 class metadata(graphene.ObjectType):
+    """
+    graphene object that have all metadata attributes
+    if new attributes of metadata are added, then this class has to be updated
+    """
     hash = GenericScalar()
     origin_client_id = GenericScalar()
-    origin_object_id =GenericScalar()
+    origin_object_id = GenericScalar()
     info = GenericScalar()
     merged_by = GenericScalar()
     data_type = GenericScalar()
@@ -261,6 +454,13 @@ class metadata(graphene.ObjectType):
 
 
 def get_value_by_key(db_object, additional_metadata_string, metadata_key):
+    """
+
+    :param db_object: self.dbObject with metadata or None
+    :param additional_metadata_string: self.additional_metadata_string dictionary or None
+    :param metadata_key: metadata first-level key
+    :return: value by metadata_key or None if params are not set
+    """
     if additional_metadata_string:
         if metadata_key in additional_metadata_string:
             return additional_metadata_string[metadata_key]
@@ -273,10 +473,17 @@ def get_value_by_key(db_object, additional_metadata_string, metadata_key):
 
 class AdditionalMetadata(graphene.Interface):
     """
-    'origin_client_id', 'info', 'hash', 'merged_by', 'data_type', 'blob_description',
-    'origin_object_id', 'merge', 'original_filename', 'location', 'client_id', 'authors', 'row_id', 'merged_to'
+    Interface allowing to work with metadata as with the dictionary
+
+    example:
+    additional_metadata{
+      hash
+     }
     """
+
+    # additional_metadata_string is attribute which needs to be set to have an opportunity to receive metadata without appeal to a DB
     additional_metadata_string = JSONString()
+    # additional_metadata_string is necessary for obtaining result
     additional_metadata = graphene.Field(metadata)
 
 
@@ -286,7 +493,7 @@ class AdditionalMetadata(graphene.Interface):
         additional_metadata_string = None
         if hasattr(self, "additional_metadata_string"):
             additional_metadata_string = self.additional_metadata_string
-
+        # returns an object with the fields to which we can get access in the request
         metadata_object = metadata(hash=get_value_by_key(db_object, additional_metadata_string,"hash"), # TODO: refactor
                                     origin_client_id=get_value_by_key(db_object, additional_metadata_string, "origin_client_id"),
                                     origin_object_id=get_value_by_key(db_object, additional_metadata_string,"origin_object_id"),
@@ -303,167 +510,12 @@ class AdditionalMetadata(graphene.Interface):
                                     merged_to = get_value_by_key(db_object, additional_metadata_string,"merged_to")
                                    )
         return metadata_object
-        #return metadata(**)
 
-
-
-class Position(graphene.Interface):
-    position = graphene.Int()
-
-    @fetch_object("position")
-    def resolve_position(self, args, context, info):
-        return self.dbObject.position
-
-class TranslationGistHolder(graphene.Interface):
-    translation_gist_id = graphene.List(graphene.Int)
-    translation_gist_client_id = graphene.Int()
-    translation_gist_object_id = graphene.Int()
-
-    @fetch_object("translation_gist_id")
-    def resolve_translation_gist_id(self, args, context, info):
-        return (self.dbObject.translation_gist_client_id, self.dbObject.translation_gist_object_id)
-
-    @fetch_object("translation_gist_client_id")
-    def resolve_translation_gist_client_id(self, args, context, info):
-        return self.dbObject.translation_gist_client_id
-
-    @fetch_object("translation_gist_object_id")
-    def resolve_translation_gist_object_id(self, args, context, info):
-        return self.dbObject.translation_gist_object_id
-
-class UserId(graphene.Interface):
-    user_id = graphene.Int()
-
-    @fetch_object("user_id")
-    def resolve_user_id(self, args, context, info):
-        return self.dbObject.user_id
-
-class StateHolder(graphene.Interface):
-    state_translation_gist_id = graphene.List(graphene.Int)
-    state_translation_gist_client_id = graphene.Int()
-    state_translation_gist_object_id = graphene.Int()
-
-    @fetch_object("state_translation_gist_id")
-    def resolve_state_translation_gist_id(self, args, context, info):
-        return (self.dbObject.state_translation_gist_client_id, self.dbObject.state_translation_gist_object_id)
-
-    @fetch_object("state_translation_gist_client_id")
-    def resolve_state_translation_gist_client_id(self, args, context, info):
-        return self.dbObject.state_translation_gist_client_id
-
-    @fetch_object("state_translation_gist_object_id")
-    def resolve_state_translation_gist_object_id(self, args, context, info):
-        return self.dbObject.state_translation_gist_object_id
-
-class TableName(graphene.Interface):
-    table_name = graphene.String()
-
-    @fetch_object("table_name")
-    def resolve_table_name(self, args, context, info):
-        return self.dbObject.table_name
-
-class Name(graphene.Interface):
-    name = graphene.String()
-    @fetch_object("name")
-    def resolve_name(self, args, context, info):
-        return self.dbObject.name
-
-class LocaleId(graphene.Interface):
-    locale_id = graphene.Int()
-
-    @fetch_object("locale_id")
-    def resolve_locale_id(self, args, context, info):
-        return self.dbObject.locale_id
-
-class Content(graphene.Interface):
-    content = graphene.String()
-
-    @fetch_object("content")
-    def resolve_content(self, args, context, info):
-        return self.dbObject.content
-
-class TypeHolder(graphene.Interface):
-    type = graphene.String()  # rename (?)
-    @fetch_object("type")
-    def resolve_type(self, args, context, info):
-        return self.dbObject.type
-
-class TranslationHolder(graphene.Interface):
-    translation = graphene.String()
-    @fetch_object("translation")
-    def resolve_translation(self, args, context, info):
-        return self.dbObject.get_translation(context.get('locale_id')) # TODO: fix it
-
-# Organization
-class About(graphene.Interface):
-    about = graphene.String()
-    @fetch_object("about")
-    def resolve_about(self, args, context, info):
-        return self.dbObject.about
-# PublishedEntity
-class Published(graphene.Interface):
-    published = graphene.Boolean()
-
-    @fetch_object("published")
-    def resolve_about(self, args, context, info):
-        return self.dbObject.published
-
-class Accepted(graphene.Interface):
-    accepted = graphene.Boolean()
-
-    @fetch_object("accepted")
-    def resolve_accepted(self, args, context, info):
-        return self.dbObject.accepted
-# userBlobs
-class DataType(graphene.Interface):
-    data_type = graphene.String()
-
-    @fetch_object("data_type")
-    def resolve_data_type(self, args, context, info):
-        pass #return self.dbObject.data_type
-# LexicalEntry
-class MovedTo(graphene.Interface):
-    moved_to = graphene.String()
-
-    @fetch_object("moved_to")
-    def resolve_moved_to(self, args, context, info):
-        return self.dbObject.moved_to
-# Field
-
-class DataTypeTranslationGistId(graphene.Interface):
-    data_type_translation_gist_id = graphene.List(graphene.Int)
-    data_type = graphene.String()
-
-    @fetch_object("data_type")
-    def resolve_data_type(self, args, context, info):
-        return self.dbObject.data_type
-
-    @fetch_object("data_type_translation_gist_id")
-    def resolve_data_type_translation_gist_id(self, args, context, info):
-        return (self.dbObject.data_type_translation_gist_client_id, self.dbObject.data_type_translation_gist_object_id)
-
-    @fetch_object("data_type_translation_gist_client_id")
-    def resolve_data_type_translation_gist_client_id(self, args, context, info):
-        return self.dbObject.data_type_translation_gist_client_id
-
-    @fetch_object("data_type_translation_gist_object_id")
-    def resolve_data_type_translation_gist_object_id(self, args, context, info):
-        return self.dbObject.data_type_translation_gist_object_id
+#  end of metadata section
 
 class CommonFieldsComposite( MarkedForDeletion, AdditionalMetadata, CreatedAt, CompositeIdHolder, Relationship, TranslationGistHolder):
+    """
+    used in Dictionary, DictionaryPerspective and Language classes as Interfaces because function
+    tree = graphene.List(CommonFieldsComposite, ) does not support listing
+    """
     fieldType = graphene.String()
-
-class IsTranslatable(graphene.Interface):
-    is_translatable = graphene.Boolean()
-
-    @fetch_object("is_translatable")
-    def resolve_is_translatable(self, args, context, info):
-        return self.dbObject.is_translatable
-# class SingleID(graphene.Interface):
-#     id = graphene.Int()
-
-# class TranslationgistHoler(graphene.Interface):
-#     id = graphene.List(graphene.Int)
-#     additional_metadata = JSONString()
-#     created_at = DateTime()
-#     marked_for_deletion = graphene.Boolean()
