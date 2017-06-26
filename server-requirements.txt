@@ -10,6 +10,7 @@ dogpile.cache==0.6.2
 kombu==3.0.37
 Mako==1.0.4
 MarkupSafe==0.23
+matplotlib==1.5.3
 multiprocess==0.70.4
 numpy==1.11.2
 passlib==1.6.5

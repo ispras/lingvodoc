@@ -32,28 +32,27 @@ trait Tools extends ErrorModalHandler
 
   protected[this] def perspectiveId: CompositeId
 
+  /** Opens perspective phonology page. */
   @JSExport
-  def phonology(): Unit = {
-    backend.phonology(perspectiveId) map { blob =>
-      val options = ModalOptions()
-      options.templateUrl = "/static/templates/modal/message.html"
-      options.windowClass = "sm-modal-window"
-      options.controller = "MessageController"
-      options.backdrop = false
-      options.keyboard = false
-      options.size = "lg"
-      options.resolve = js.Dynamic.literal(
-        params = () => {
-          js.Dynamic.literal(
-            "title" -> "",
-            "message" -> "Background task created. Check tasks menu for details."
-          )
-        }
-      ).asInstanceOf[js.Dictionary[Any]]
-      modal.open[Unit](options)
-    } recover { case e: Throwable =>
-      showError(e)
-    }
+  def phonology(): Unit =
+  {
+    val options = ModalOptions()
+
+    options.templateUrl = "/static/templates/modal/perspectivePhonology.html"
+    options.controller = "PerspectivePhonologyModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          perspectiveId = perspectiveId.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    modal.open[Unit](options)
   }
 
   /** Opens perspective statistics page. */

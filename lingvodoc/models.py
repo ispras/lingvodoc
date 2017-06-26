@@ -363,7 +363,7 @@ class TranslationMixin(PrimeTableArgs):
         main_locale = str(locale_id)
         fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
 
-        key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
+        key = "translation:%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
         translation = CACHE.get(key)
         if translation:
             log.info("Got cached %s " % str(key))
@@ -375,14 +375,14 @@ class TranslationMixin(PrimeTableArgs):
         all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
         if not all_translations_dict:
             return "Translation missing for all locales"
-        elif all_translations_dict.get(main_locale):
+        elif all_translations_dict.get(main_locale) is not None:
             translation = all_translations_dict.get(main_locale)
-            key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
+            key = "translation:%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
             CACHE.set(key=key, value=translation)
             return translation
-        elif all_translations_dict.get(fallback_locale):
+        elif all_translations_dict.get(fallback_locale) is not None:
             translation = all_translations_dict.get(fallback_locale)
-            key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(fallback_locale))
+            key = "translation:%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(fallback_locale))
             CACHE.set(key=key, value=translation)
             return translation
         else:
@@ -414,12 +414,12 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, Ma
         all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
         if not all_translations_dict:
             return "Translation missing for all locales"
-        elif all_translations_dict.get(main_locale):
+        elif all_translations_dict.get(main_locale) is not None:
             translation = all_translations_dict.get(main_locale)
             key = "%s:%s:%s" % (str(self.client_id), str(self.object_id), str(main_locale))
             CACHE.set(key=key, value=translation)
             return translation
-        elif all_translations_dict.get(fallback_locale):
+        elif all_translations_dict.get(fallback_locale) is not None:
             translation = all_translations_dict.get(fallback_locale)
             key = "%s:%s:%s" % (str(self.client_id), str(self.object_id), str(fallback_locale))
             CACHE.set(key=key, value=translation)
@@ -713,13 +713,15 @@ class LexicalEntry(CompositeIdMixin,
             if publish and accept is None:
                 pub_filter = " WHERE publishingentity.published = True and cte_expr.marked_for_deletion = False"
             elif accept and publish is None:
-                pub_filter = " WHERE publishingentity.accepted = True"
+                pub_filter = " WHERE publishingentity.accepted = True and cte_expr.marked_for_deletion = False"
             elif accept and publish:
                 pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True and cte_expr.marked_for_deletion = False"
             elif publish and not accept:
-                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True" # should not be used anywhere, just in case
+                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True and cte_expr.marked_for_deletion = False" # should not be used anywhere, just in case
             elif accept and not publish:
-                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False"
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False and cte_expr.marked_for_deletion = False"
+        else:
+            pub_filter = " WHERE cte_expr.marked_for_deletion = False"
 
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")

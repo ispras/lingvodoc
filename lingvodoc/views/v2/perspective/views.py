@@ -1056,6 +1056,10 @@ def edit_perspective_roles(request):
                         if org in group.organizations:
                             permitted = True
                             break
+                if not permitted:
+                    override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                    if userlogged in override_group.users:
+                        permitted = True
 
                 if permitted:
                     users = roles_users[role_name]
@@ -1091,6 +1095,10 @@ def edit_perspective_roles(request):
                         if org in group.organizations:
                             permitted = True
                             break
+                if not permitted:
+                    override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                    if userlogged in override_group.users:
+                        permitted = True
 
                 if permitted:
                     orgs = roles_organizations[role_name]
@@ -1154,6 +1162,10 @@ def delete_perspective_roles(request):  # TODO: test
                             if org in group.organizations:
                                 permitted = True
                                 break
+                    if not permitted:
+                        override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
 
                     if permitted:
                         users = roles_users[role_name]
@@ -1192,6 +1204,10 @@ def delete_perspective_roles(request):  # TODO: test
                             if org in group.organizations:
                                 permitted = True
                                 break
+                    if not permitted:
+                        override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
 
                     if permitted:
                         orgs = roles_organizations[role_name]
@@ -1287,7 +1303,7 @@ def view_field(request):
 
 @view_config(route_name='fields', renderer='json', request_method='GET')
 def all_fields(request):
-    fields = DBSession.query(Field).filter_by().all()
+    fields = DBSession.query(Field).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
     response = list()
     for field in fields:
         response.append(view_field_from_object(request=request, field=field))
@@ -1397,10 +1413,11 @@ def view_nested_field(request, field, link_ids):
         return field_json
     contains = list()
     for subfield in field.dictionaryperspectivetofield:  # todo: order subfields
-        subfield_json = view_nested_field(request, subfield, link_ids)
-        if 'error' in subfield_json:
-            return subfield_json
-        contains.append(subfield_json)
+        if not subfield.marked_for_deletion:
+            subfield_json = view_nested_field(request, subfield, link_ids)
+            if 'error' in subfield_json:
+                return subfield_json
+            contains.append(subfield_json)
     if contains:
         field_json['contains'] = contains
     if field_object.data_type_translation_gist_client_id == link_ids['client_id'] \
@@ -1563,7 +1580,8 @@ def lexical_entries_all(request):
     if parent and not parent.marked_for_deletion:
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()  # TODO: make it harder better faster stronger
 
@@ -1649,7 +1667,6 @@ def lexical_entries_all_count(request):  # tested
 
 # TODO: completely broken!
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET')
-@MEMOIZE
 def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1677,7 +1694,8 @@ def lexical_entries_published(request):
 
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()
         # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
@@ -1752,7 +1770,6 @@ def lexical_entries_published(request):
 
 
 @view_config(route_name='lexical_entries_not_accepted', renderer='json', request_method='GET')
-@MEMOIZE
 def lexical_entries_not_accepted(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1774,13 +1791,14 @@ def lexical_entries_not_accepted(request):
     if parent and not parent.marked_for_deletion:
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
+                                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()
         lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
                                                         parent_object_id=parent.object_id) \
             .join(LexicalEntry.entity).join(Entity.publishingentity) \
-            .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
+            .filter(PublishingEntity.accepted == False)
         if authors or clients:
             lexes = lexes.join(Client, Entity.client_id == Client.id)
         if authors:
@@ -1801,7 +1819,6 @@ def lexical_entries_not_accepted(request):
             .offset(start_from).limit(count)
 
         result = deque()
-
         lexes_composite_list = [(lex.created_at,
                                  lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
                                  lex.marked_for_deletion, lex.additional_metadata,
@@ -1881,7 +1898,7 @@ def lexical_entries_not_accepted_count(request):
                                                                             parent_client_id=parent.client_id,
                                                                             parent_object_id=parent.object_id) \
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
+                .filter(PublishingEntity.accepted == False)
             if authors or clients or start_date or end_date:
                 lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
             if authors or clients:
@@ -1974,7 +1991,11 @@ def accept_entity(request):
                     Group.subject_client_id == entity.parent.parent.client_id,
                     Group.subject_object_id == entity.parent.parent.object_id,
                     BaseGroup.action == 'create').one()
-                if user in group.users:
+                override_group = DBSession.query(Group).join(BaseGroup).filter(
+                        BaseGroup.subject == 'lexical_entries_and_entities',
+                        Group.subject_override == True,
+                        BaseGroup.action == 'create').one()
+                if user in group.users or user in override_group.users:
                     if entity:
                         entity.publishingentity.accepted = True
                     else:

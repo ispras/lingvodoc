@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend
 import com.greencatsoft.angularjs.{Angular, Config, Module}
 import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.modal._
-import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal.{ContributionsLinkedDictionaryModalController, PublishLinkedDictionaryModalController, ViewSociolinguisticsInfoController}
+import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal.{ContributionsGroupingTagModalController, ContributionsLinkedDictionaryModalController, PublishLinkedDictionaryModalController, ViewSociolinguisticsInfoController}
 import ru.ispras.lingvodoc.frontend.app.controllers.webui.{EditTranslationsController, PerspectivePropertiesController, SociolinguisticsController}
 import ru.ispras.lingvodoc.frontend.app.controllers._
 import ru.ispras.lingvodoc.frontend.app.directives._
@@ -84,6 +84,7 @@ object LingvodocApplication {
       .controller[EditGroupingTagModalController]
       .controller[ContributionsController]
       .controller[ContributionsLinkedDictionaryModalController]
+      .controller[ContributionsGroupingTagModalController]
       .controller[CorporaController]
       .controller[SociolinguisticsController]
       .controller[ViewSociolinguisticsInfoController]
@@ -94,6 +95,7 @@ object LingvodocApplication {
       .controller[UserProfileController]
       .controller[PerspectiveStatisticsModalController]
       .controller[DictionaryStatisticsModalController]
+      .controller[PerspectivePhonologyModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
