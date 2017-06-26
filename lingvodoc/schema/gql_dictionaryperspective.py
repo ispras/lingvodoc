@@ -137,8 +137,10 @@ class DictionaryPerspective(graphene.ObjectType):
         for entry in sub_result:
             entities = []
             for ent in entry['contains']:
+
                 # del attributes that Entity class doesn`t have
                 # the code below has to be refactored
+
                 del ent["contains"]
                 del ent["level"]
                 del ent["accepted"]
@@ -157,7 +159,9 @@ class DictionaryPerspective(graphene.ObjectType):
                 if not "content" in ent:
                     ent["content"] = None
                 if "additional_metadata" in ent:
+
                     # used in AdditionalMetadata interface (gql_holders.py) and sets metadata dictionary
+
                     ent["additional_metadata_string"] = ent["additional_metadata"]
                     del ent["additional_metadata"]
                 gr_entity_object = Entity(id=[ent['client_id'],
