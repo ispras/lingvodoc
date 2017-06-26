@@ -7,6 +7,7 @@ from graphene.types import Scalar
 from graphene.types.json import JSONString as JSONtype
 from graphene.types.generic import GenericScalar
 from lingvodoc.models import (
+    ObjectTOC,
     DBSession,
 )
 
@@ -85,6 +86,13 @@ class DateTime(Scalar): # TODO: change format
     def parse_value(value):
         return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
 
+# Functions
+
+def del_object(tmp_object):
+    tmp_object.marked_for_deletion = True
+    tmp_objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=tmp_object.client_id,
+                                                     object_id=tmp_object.object_id).one()
+    tmp_objecttoc.marked_for_deletion = True
 
 def fetch_object(attrib_name=None):
     """
@@ -377,10 +385,7 @@ class DataTypeTranslationGistId(graphene.Interface):
     def resolve_data_type_translation_gist_object_id(self, args, context, info):
         return self.dbObject.data_type_translation_gist_object_id
 
-
-
 # Metadata section
-
 
 class IsTranslatable(graphene.Interface):
     is_translatable = graphene.Boolean()
@@ -482,8 +487,11 @@ class AdditionalMetadata(graphene.Interface):
     """
 
     # additional_metadata_string is attribute which needs to be set to have an opportunity to receive metadata without appeal to a DB
+
     additional_metadata_string = JSONString()
+
     # additional_metadata_string is necessary for obtaining result
+
     additional_metadata = graphene.Field(metadata)
 
 
@@ -493,7 +501,9 @@ class AdditionalMetadata(graphene.Interface):
         additional_metadata_string = None
         if hasattr(self, "additional_metadata_string"):
             additional_metadata_string = self.additional_metadata_string
+
         # returns an object with the fields to which we can get access in the request
+
         metadata_object = metadata(hash=get_value_by_key(db_object, additional_metadata_string,"hash"), # TODO: refactor
                                     origin_client_id=get_value_by_key(db_object, additional_metadata_string, "origin_client_id"),
                                     origin_object_id=get_value_by_key(db_object, additional_metadata_string,"origin_object_id"),
@@ -518,4 +528,4 @@ class CommonFieldsComposite( MarkedForDeletion, AdditionalMetadata, CreatedAt, C
     used in Dictionary, DictionaryPerspective and Language classes as Interfaces because function
     tree = graphene.List(CommonFieldsComposite, ) does not support listing
     """
-    fieldType = graphene.String()
+    fieldType = graphene.String()  # depricated? -> data_type

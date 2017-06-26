@@ -9,13 +9,17 @@ from lingvodoc.schema.gql_holders import (
     DataTypeTranslationGistId,
     IsTranslatable,
     #TranslationHolder
-    fetch_object
+    fetch_object,
+    del_object
 
 )
 
 from lingvodoc.models import (
     Field as dbField,
     DBSession
+)
+from sqlalchemy import (
+    and_
 )
 
 class Field(graphene.ObjectType):
@@ -133,8 +137,8 @@ class DeleteField(graphene.Mutation):
         #client_id = context.authenticated_userid
         client_id = context["client_id"]
         id = args.get('id')
-        field = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
-        field.marked_for_deletion = True
+        fieldobj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
+        del_object(fieldobj)
         field = Field(id = id)
         return DeleteField(field=field)
 
