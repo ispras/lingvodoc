@@ -30,6 +30,7 @@ from sqlalchemy.orm import joinedload
 from collections import deque
 import base64
 import datetime
+from hashlib import md5
 import json
 import os
 from pathvalidate import sanitize_filename
@@ -687,4 +688,16 @@ def message(message):
 
     filename, line, function, statement = traceback.extract_stack()[-2]
     return '{0}:{1}: {2}: {3}'.format(filename, line, function, message)
+
+
+def anonymous_userid(request):
+    """
+    Constructs an identifier (unique with high enough probability) for an anonymous user.
+    """
+
+    ip = request.client_addr if request.client_addr else ""
+    useragent = request.headers["User-Agent"] if "User-Agent" in request.headers else ""
+
+    unique_string = "unauthenticated_%s_%s" % (ip, useragent)
+    return base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
 

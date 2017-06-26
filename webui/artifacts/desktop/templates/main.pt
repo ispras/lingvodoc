@@ -107,9 +107,11 @@
                                            </div>
                                          </div>
 
-                                         <div ng-if="task.resultLink.length > 0">
-                                             Result:
-                                             <a ng-href="{{ task.resultLink }}" target="_blank">{{ task.resultLink }}</a>
+                                         <div ng-if="task.resultLinkList.length > 0">
+                                             <span>{{ task.resultLinkList.length == 1 ? 'Result:' : 'Results:'}}</span>
+                                             <div ng-repeat="resultLink in task.resultLinkList">
+                                                 <a ng-href="{{ resultLink }}" target="_blank">{{ resultLink }}</a>
+                                             </div>
                                          </div>
 
                                      </div>

@@ -69,7 +69,7 @@ class TaskStatus():
         self.task_family = task_family
         self.task_details = task_details
         self.status = "Starting the task"
-        self.result_link = ""
+        self.result_link_list = []
 
         self.put_to_cache()
 
@@ -112,12 +112,16 @@ class TaskStatus():
         else:
             return task_list
 
-    def set(self, current_stage, progress, status, result_link=""):
+    def set(self, current_stage, progress, status, result_link = None, result_link_list = None):
         if current_stage:
             self.current_stage = current_stage
         self.progress = progress
         self.status = status
-        self.result_link = result_link
+
+        self.result_link_list = [result_link] if result_link else []
+
+        if result_link_list:
+            self.result_link_list.extend(result_link_list)
 
         self.put_to_cache()
 
@@ -129,7 +133,7 @@ class TaskStatus():
                 if self.key in current_tasks:
                     current_tasks.remove(self.key)
                     CACHE.set("current_tasks:" + self.user_id, dill.dumps(current_tasks))
-            # TODO: implement del operation in cache; now we delete the task only from usertasks list
+                    CACHE.rem(self.key)
         return None
 
 

@@ -686,6 +686,8 @@ def configure_routes(config):
                      factory='lingvodoc.models.AdminAcl')
     config.add_route(name='fix_groups', pattern='/fix_groups',
                      factory='lingvodoc.models.AdminAcl')
+    config.add_route(name='fix_fields', pattern='/fix_fields',
+                     factory='lingvodoc.models.AdminAcl')
 
     config.add_route(name='create_translationgist', pattern='/translationgist',
                      factory='lingvodoc.models.AuthenticatedAcl')
@@ -708,7 +710,11 @@ def configure_routes(config):
     config.add_route(name="delete_user_blob",
                      pattern="/blobs/{client_id}/{object_id}", request_method='DELETE')
 
+    # Computes phonology of a specified perspective.
     config.add_route(name="phonology", pattern="/phonology")
+
+    # Gets a list of names of phonology markup tiers for a specified perspective.
+    config.add_route(name="phonology_tier_list", pattern="/phonology_tier_list")
 
     config.add_route(name="tasks", pattern="/tasks", request_method='GET')
 
@@ -795,6 +801,7 @@ def main(global_config, **settings):
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
     config.add_route('testing', '/testing')
+    config.add_route('testing_translations', '/testing_translations')
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
     #    config.add_route('home', '/')
     #    config.add_route('login', 'login')
