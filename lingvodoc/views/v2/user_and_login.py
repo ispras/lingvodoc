@@ -453,6 +453,13 @@ def get_user_info(request):  # tested
     for organization in user.organizations:
         organizations += [{'organization_id':organization.id}]
     response['organizations'] = organizations
+    roles = list()
+    for group in user.groups:
+        roles.append({'subject_client_id': group.subject_client_id,
+                      'subject_object_id': group.subject_object_id,
+                      'subject_override': group.subject_override,
+                      'name': group.parent.name})
+    response['roles'] = roles
     request.response.status = HTTPOk.code
     return response
 
