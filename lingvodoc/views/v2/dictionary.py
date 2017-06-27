@@ -170,6 +170,7 @@ def view_dictionary(request):  # tested & in docs
         response['created_at'] = dictionary.created_at
         response['domain'] = dictionary.domain
         response['marked_for_deletion'] = dictionary.marked_for_deletion
+        response['additional_metadata'] = dictionary.additional_metadata
         if request.cookies.get('locale_id'):
             locale_id = request.cookies['locale_id']
         else:
