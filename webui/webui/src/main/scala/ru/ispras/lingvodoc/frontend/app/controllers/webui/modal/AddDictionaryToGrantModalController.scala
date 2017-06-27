@@ -62,7 +62,7 @@ class AddDictionaryToGrantModalController(scope: AddDictionaryToGrantModalScope,
     backend.getUsers map { u =>
       users = u
       backend.grants() map { grants =>
-        scope.grants = grants.filterNot(g => scope.currentGrants.exists(_.id == g.id)).toJSArray
+        scope.grants = grants.filter(_.owners.nonEmpty).filterNot(g => scope.currentGrants.exists(_.id == g.id)).toJSArray
       } recover {
         case e: Throwable => Future.failed(e)
       }
