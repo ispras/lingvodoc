@@ -236,14 +236,40 @@ def add_role(name, subject, action, admin):
     DBSession.add(group)
     group.users.append(admin)
     DBSession.flush()
+    return base_group
 
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     admin = DBSession.query(User).filter_by(id=1).one()
-    add_role("Can create grants", "grant", "create", admin)
-    add_role("Can approve grants", "grant", "approve", admin)
-    add_role("Can change status", "status", "edit", admin)
+    # add_role("Can create grants", "grant", "create", admin)
+    # add_role("Can approve grants", "grant", "approve", admin)
+    # add_role("Can approve organizations", "organization", "approve", admin)
+
+    base_group = add_role("Can edit dictionary status", "dict", "edit", admin)
+    groups = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'dictionary_role',
+                                                           BaseGroup.action == 'delete',
+                                                           Group.subject_override == False).all()
+    for group in groups:
+        new_group = Group(parent=base_group, subject_client_id=group.subject_client_id, subject_object_id=group.subject_object_id)
+        DBSession.add(new_group)
+        DBSession.flush()
+        for user in group.users:
+            new_group.users.append(user)
+    base_group = add_role("Can edit perspective status", "dict", "edit", admin)
+    groups = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'perspective_role',
+                                                           BaseGroup.action == 'delete',
+                                                           Group.subject_override == False).all()
+    for group in groups:
+        new_group = Group(parent=base_group, subject_client_id=group.subject_client_id, subject_object_id=group.subject_object_id)
+        DBSession.add(new_group)
+        DBSession.flush()
+        for user in group.users:
+            new_group.users.append(user)
+
+
+    # add_role("Can change status", "status", "edit", admin)
+
 
     return {}
 

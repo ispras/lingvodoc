@@ -1,4 +1,3 @@
-
 from lingvodoc.exceptions import CommonException
 from lingvodoc.models import (
     BaseGroup,
@@ -9,7 +8,9 @@ from lingvodoc.models import (
     User,
     UserRequest,
     Grant,
-    Organization
+    Organization,
+    Dictionary,
+    DictionaryPerspective
 )
 
 from lingvodoc.views.v2.utils import (
@@ -51,6 +52,8 @@ import json
 from sqlalchemy.orm.exc import NoResultFound
 from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator, add_user_to_group, check_client_id
 from lingvodoc.views.v2.delete import real_delete_translation_gist
+
+
 # search (filter by input, type and (?) locale)
 
 
@@ -91,7 +94,8 @@ def get_current_userrequests(request):
     if not user:
         raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
-    userrequests = DBSession.query(UserRequest).filter(UserRequest.recipient_id == user.id).order_by(UserRequest.created_at).all()
+    userrequests = DBSession.query(UserRequest).filter(UserRequest.recipient_id == user.id).order_by(
+        UserRequest.created_at).all()
     for userrequest in userrequests:
         response.append(userrequest_contents(userrequest))
     return response
@@ -144,11 +148,79 @@ def accept_userrequest(request):
                 if grant.additional_metadata.get('participant') is None:
                     grant.additional_metadata['participant'] = list()
 
-                dict_ids = {'client_id': userrequest.subject['client_id'], 'object_id':userrequest.subject['object_id']}
+                dict_ids = {'client_id': userrequest.subject['client_id'],
+                            'object_id': userrequest.subject['object_id']}
                 if dict_ids not in grant.additional_metadata['participant']:
                     grant.additional_metadata['participant'].append(dict_ids)
 
-                # todo: roles
+                no_grants = False
+                for grant in DBSession.query(Grant).all():
+                    if grant.additional_metadata and grant.additional_metadata.get('participant') and dict_ids in \
+                            grant.additional_metadata['participant']:
+                        no_grants = True
+                        break
+
+                # if no_grants:
+                #     dict_authors = DBSession.query(User).join(Group).join(BaseGroup).filter(
+                #         Group.subject_client_id == dict_ids['client_id'],
+                #         Group.subject_object_id == dict_ids['object_id'],
+                #         BaseGroup.subject == 'dictionary_role',
+                #         BaseGroup.action == 'delete').all()
+                state_group = DBSession.query(Group).join(BaseGroup).filter(
+                    Group.subject_client_id == dict_ids['client_id'],
+                    Group.subject_object_id == dict_ids['object_id'],
+                    BaseGroup.subject == 'dictionary_state',
+                    BaseGroup.action == 'edit'
+                ).first()
+                approve_groups = list()
+                cur_dict = DBSession.query(Dictionary).filter_by(client_id=dict_ids['client_id'], object_id=dict_ids['object_id']).first()
+                persp_ids = list()
+                for persp in cur_dict.dictionaryperspective:
+                    persp_ids.append((persp.client_id, persp.object_id))
+                    approve_group = DBSession.query(Group).join(BaseGroup).filter(
+                        Group.subject_client_id == persp.client_id,
+                        Group.subject_object_id == persp.object_id,
+                        BaseGroup.subject == 'perspective_state',
+                        BaseGroup.action == 'edit'
+                    ).first()
+                    approve_groups.append(approve_group)
+                    approve_group = DBSession.query(Group).join(BaseGroup).filter(
+                        Group.subject_client_id == persp.client_id,
+                        Group.subject_object_id == persp.object_id,
+                        BaseGroup.subject == 'approve_entities',
+                        BaseGroup.action == 'create'
+                    ).first()
+                    approve_groups.append(approve_group)
+                    approve_group = DBSession.query(Group).join(BaseGroup).filter(
+                        Group.subject_client_id == persp.client_id,
+                        Group.subject_object_id == persp.object_id,
+                        BaseGroup.subject == 'approve_entities',
+                        BaseGroup.action == 'delete'
+                    ).first()
+                    approve_groups.append(approve_group)
+
+                # for user in dict_authors:
+                #     state_group.users.remove(user)
+                #     approve_group.users.remove(user)
+                if no_grants:
+                    for user in state_group.users:
+                        state_group.users.remove(user)
+                    for group in approve_groups:
+                        for user in group.users:
+                            group.users.remove(user)
+                grant_admins = DBSession
+                for admin in grant_admins:
+                    groups = DBSession.query(Group).filter_by(subject_client_id=cur_dict.client_id, subject_object_id=cur_dict.object_id).all()
+                    for group in groups:
+                        if admin not in group.users:
+                            group.users.append(admin)
+                    groups = DBSession.query(Group).filter(tuple_(Group.subject_client_id, Group.subject_object_id).in_(persp_ids)).all()
+                    for group in groups:
+                        if admin not in group.users:
+                            group.users.append(admin)
+                    # state_group.users.append(admin) # or only for some permissions?
+                    # for group in approve_groups:
+                    #     group.users.append(admin)
 
             elif userrequest.type == 'participate_org':
                 org_id = req['subject']['org_id']
@@ -193,6 +265,7 @@ def delete_userrequest(request):
         return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such userrequest in the system")}
+
 
 def create_one_userrequest(req, client_id):
     sender_id = req['sender_id']
@@ -244,10 +317,10 @@ def get_grant_permission(request):
         req['type'] = 'grant_permission'
         req['subject'] = {'grant_id': grant_id, 'user_id': user_id}
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+                                                  message=req['message']).first():
             request.response.status = HTTPBadRequest.code
             return {'error': 'request already exists'}
-
 
         grantadmins = list()
         # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
@@ -259,6 +332,10 @@ def get_grant_permission(request):
         for user in group.users:
             if user not in grantadmins:
                 grantadmins.append(user)
+
+        if not grantadmins:
+            request.response.status = HTTPBadRequest
+            return {'error': 'no administrators'}
 
         for grantadmin in grantadmins:
             req['recipient_id'] = grantadmin.id
@@ -299,29 +376,22 @@ def add_dictionary_to_grant(request):
         req['type'] = 'add_dict_to_grant'
         req['subject'] = request_json
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+                                                  message=req['message']).first():
             request.response.status = HTTPBadRequest.code
             return {'error': 'request already exists'}
 
-
         grantadmins = list()
-        # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
-
-        # group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'grant',
-        #                                                       Group.subject_override == True,
-        #                                                       BaseGroup.action == 'approve').one()
-
-        # for user in group.users:
-        #     if user not in grantadmins:
-        #         grantadmins.append(user)
 
         grant = DBSession.query(Grant).filter_by(id=request_json['grant_id']).first()
         grantadmins = grant.owners
+        if not grantadmins:
+            request.response.status = HTTPBadRequest
+            return {'error': 'no administrators'}
 
         for grantadmin in grantadmins:
             req['recipient_id'] = grantadmin
             req_id = create_one_userrequest(req, client_id)
-
 
         request.response.status = HTTPOk.code
         return {}
@@ -360,26 +430,27 @@ def administrate_org(request):
         req['type'] = 'administrate_org'
         req['subject'] = {'org_id': org_id, 'user_id': user_id}
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+                                                  message=req['message']).first():
             request.response.status = HTTPBadRequest.code
             return {'error': 'request already exists'}
-
 
         orgadmins = list()
         # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
 
-        group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'org',
+        group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'organization',
                                                               Group.subject_override == True,
                                                               BaseGroup.action == 'approve').one()
 
         for user in group.users:
             if user not in orgadmins:
                 orgadmins.append(user)
-
+        if not orgadmins:
+            request.response.status = HTTPBadRequest
+            return {'error': 'no administrators'}
         for orgadmin in orgadmins:
             req['recipient_id'] = orgadmin.id
             req_id = create_one_userrequest(req, client_id)
-
 
         request.response.status = HTTPOk.code
         return {}
@@ -418,15 +489,19 @@ def participate_org(request):
         req['type'] = 'participate_org'
         req['subject'] = {'org_id': org_id, 'user_id': user_id}
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'], message=req['message']).first():
+        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+                                                  message=req['message']).first():
             request.response.status = HTTPBadRequest.code
             return {'error': 'request already exists'}
-
 
         orgadmins = list()
         # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
 
         org = DBSession.query(Organization).filter_by(id=org_id).first()
+        orgadmins = org.additional_metadata.get('admins')
+        if not orgadmins:
+            request.response.status = HTTPBadRequest
+            return {'error': 'no administrators'}
 
         for orgadmin in org.additional_metadata['admins']:
             req['recipient_id'] = orgadmin.id
