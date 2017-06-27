@@ -216,7 +216,7 @@ def configure_routes(config):
 
     # API #POST
     # Creating organization
-    config.add_route(name='create_organization', pattern='/organization)  # ?TODO: ?test
+    config.add_route(name='create_organization', pattern='/organization')  # ?TODO: ?test
 
     # API #GET && PUT && DELETE
     # Gets/puts info about organization
