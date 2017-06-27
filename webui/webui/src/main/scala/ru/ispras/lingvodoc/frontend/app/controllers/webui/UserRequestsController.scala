@@ -18,7 +18,7 @@ trait UserRequestsScope extends Scope {
 
 }
 
-@injectable("GrantRequests")
+@injectable("UserRequestsController")
 class UserRequestsController(scope: UserRequestsScope,
                              val modal: ModalService,
                              backend: BackendService,

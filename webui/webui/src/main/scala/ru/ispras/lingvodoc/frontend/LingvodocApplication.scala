@@ -39,7 +39,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/edit_translations", Route("/static/templates/editTranslations.html", "Lingvodoc 2.1 / Edit translations", "EditTranslationsController"))
     .when("/grants_admin", Route("/static/templates/grants.html", "Lingvodoc 2.1 / Grants", "GrantsController"))
     .when("/grants", Route("/static/templates/grantsPublic.html", "Lingvodoc 2.1 / Grants", "GrantsPublicController"))
-    .when("/grant_requests", Route("/static/templates/userRequests.html", "Lingvodoc 2.1 / User requests", "UserRequestsController"))
+    .when("/user_requests", Route("/static/templates/userRequests.html", "Lingvodoc 2.1 / User requests", "UserRequestsController"))
     .when("/organizations", Route("/static/templates/organizations.html", "Lingvodoc 2.1 / Organizations", "OrganizationsController"))
     .otherwise(Route("/static/templates/404.html"))
 }

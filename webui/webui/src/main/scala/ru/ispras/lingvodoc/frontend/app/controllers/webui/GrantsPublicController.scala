@@ -50,10 +50,9 @@ class GrantsPublicController(scope: GrantsPublicScope,
       users = u
       backend.grants() map { grants =>
 
-        userService.get() foreach { user =>
+        backend.getCurrentUser map { user =>
           scope.grants = grants.filterNot(_.owners.contains(user.id)).toJSArray
         }
-
       } recover {
         case e: Throwable => Future.failed(e)
       }
