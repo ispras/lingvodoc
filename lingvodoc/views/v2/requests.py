@@ -213,16 +213,16 @@ def accept_userrequest(request):
                         for group in approve_groups:
                             for user in group.users:
                                 group.users.remove(user)
-                grant_admins = DBSession
+                grant_admins = DBSession.query(User).filter(User.id.in_(grant.owners))
                 for admin in grant_admins:
-                    groups = DBSession.query(Group).filter_by(subject_client_id=cur_dict.client_id, subject_object_id=cur_dict.object_id).all()
-                    for group in groups:
-                        if admin not in group.users:
-                            group.users.append(admin)
-                    groups = DBSession.query(Group).filter(tuple_(Group.subject_client_id, Group.subject_object_id).in_(persp_ids)).all()
-                    for group in groups:
-                        if admin not in group.users:
-                            group.users.append(admin)
+                    perm_groups = DBSession.query(Group).filter_by(subject_client_id=cur_dict.client_id, subject_object_id=cur_dict.object_id).all()
+                    for group in perm_groups:
+                        if group not in admin.groups:
+                            admin.groups.append(group)
+                    perm_groups = DBSession.query(Group).filter(tuple_(Group.subject_client_id, Group.subject_object_id).in_(persp_ids)).all()
+                    for group in perm_groups:
+                        if group not in admin.groups:
+                            admin.groups.append(group)
                     # state_group.users.append(admin) # or only for some permissions?
                     # for group in approve_groups:
                     #     group.users.append(admin)
