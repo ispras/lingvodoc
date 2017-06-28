@@ -106,9 +106,6 @@ class CreateField(graphene.Mutation):
 class UpdateField(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
-
-
-
     field = graphene.Field(Field)
 
 
