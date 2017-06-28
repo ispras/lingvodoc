@@ -183,21 +183,24 @@ def accept_userrequest(request):
                         BaseGroup.subject == 'perspective_state',
                         BaseGroup.action == 'edit'
                     ).first()
-                    approve_groups.append(approve_group)
+                    if approve_group:
+                        approve_groups.append(approve_group)
                     approve_group = DBSession.query(Group).join(BaseGroup).filter(
                         Group.subject_client_id == persp.client_id,
                         Group.subject_object_id == persp.object_id,
                         BaseGroup.subject == 'approve_entities',
                         BaseGroup.action == 'create'
                     ).first()
-                    approve_groups.append(approve_group)
+                    if approve_group:
+                        approve_groups.append(approve_group)
                     approve_group = DBSession.query(Group).join(BaseGroup).filter(
                         Group.subject_client_id == persp.client_id,
                         Group.subject_object_id == persp.object_id,
                         BaseGroup.subject == 'approve_entities',
                         BaseGroup.action == 'delete'
                     ).first()
-                    approve_groups.append(approve_group)
+                    if approve_group:
+                        approve_groups.append(approve_group)
 
                 # for user in dict_authors:
                 #     state_group.users.remove(user)
