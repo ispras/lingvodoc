@@ -20,7 +20,8 @@ from lingvodoc.schema.gql_holders import (
     AdditionalMetadata,
     LocaleId,
     Content,
-    del_object
+    del_object,
+    ResponseError
 )
 from sqlalchemy import (
     and_,
@@ -93,7 +94,7 @@ class CreateEntity(graphene.Mutation):
         if client_id:
             data_type_translation_gist_id = args.get('data_type_translation_gist_id')
             translation_gist_id = args.get('translation_gist_id')
-            dbfield = dbEntity(client_id=client_id,
+            dbentityobj = dbEntity(client_id=client_id,
                           object_id=None,
                           data_type_translation_gist_client_id=data_type_translation_gist_id[0],
                           data_type_translation_gist_object_id=data_type_translation_gist_id[1],
@@ -103,17 +104,42 @@ class CreateEntity(graphene.Mutation):
                           )
             # if args.get('is_translatable', None): # TODO: fix it
             #     field.is_translatable = bool(args['is_translatable'])
-            DBSession.add(dbfield)
+            DBSession.add(dbentityobj)
             DBSession.flush()
-            field = Entity(id = [dbfield.client_id, dbfield.object_id])
-            field.dbObject = dbfield
-            return CreateEntity(field=field)
+            entity = Entity(id = [dbentityobj.client_id, dbentityobj.object_id])
+            entity.dbObject = dbentityobj
+            return CreateEntity(entity=entity, status="OK")
 
             #if not perm_check(client_id, "field"):
             #    return ResponseError(message = "Permission Denied (Entity)")
 
 
 # Update
+"""
+example #1:
+mutation  {
+    update_entity(id: [ 742, 5494], additional_metadata: {hash:"1234567"} ) {
+        entity {
+            created_at,
+            additional_metadata{
+            hash
+            }
+        }
+
+    status
+    }
+}
+example #2:
+mutation  {
+    update_entity(id: [ 742, 5494], additional_metadata: {hash:"12345"} ){status}
+}
+resolve:
+{
+    "update_entity": {
+        "status": true
+    }
+}
+"""
 class UpdateEntity(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
@@ -128,33 +154,6 @@ class UpdateEntity(graphene.Mutation):
     entity = graphene.Field(Entity)
     additional_metadata = ObjectVal()  # TODO: deprecated, used in additional_metadata holder
     status = graphene.Boolean()
-    """
-    example #1:
-    mutation  {
-        update_entity(id: [ 742, 5494], additional_metadata: {hash:"1234567"} ) {
-            entity {
-                created_at,
-                additional_metadata{
-                hash
-                }
-            }
-
-        status
-        }
-    }
-    example #2:
-    mutation  {
-        update_entity(id: [ 742, 5494], additional_metadata: {hash:"12345"} ){status}
-    }
-    resolve:
-    {
-        "update_entity": {
-            "status": true
-        }
-    }
-    """
-
-
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -171,18 +170,50 @@ class UpdateEntity(graphene.Mutation):
         # Other params from request
 
         update_args = {k: v for k, v in args.items() if k not in restricted_fields}
-        dbfield_obj = DBSession.query(dbEntity).filter(
+        dbentity_obj = DBSession.query(dbEntity).filter(
             and_(dbEntity.client_id == id[0],
             dbEntity.object_id == id[1])
-        ).one()
-        for arg in update_args:
-            # It is used later in fetch_object decorator
-            setattr(dbfield_obj, arg, update_args[arg] )
-        entity = Entity( **args)
-        entity.dbObject = dbfield_obj # speeds up queries
-        return UpdateEntity(entity=entity, status = "OK")
+        ).first()
+        if dbentity_obj and not dbentity_obj.marked_for_deletion:
+            for arg in update_args:
+                # attributes are used later in fetch_object decorator
+                setattr(dbentity_obj, arg, update_args[arg] )
+
+            entity = Entity( **args)
+            entity.dbObject = dbentity_obj # speeds up queries
+
+            return UpdateEntity(entity=entity, status = "OK")
 
 # Delete
+"""
+query:
+mutation  {
+    delete_entity(id: [879, 8]) {
+    entity{id, content, created_at}
+    status
+    }
+}
+response:
+{
+    "delete_entity": {
+        "entity": {
+            "id": [
+                879,
+                8
+            ],
+            "content": "123",
+            "created_at": "2017-06-27T09:49:24"
+        },
+        "status": true
+    }
+}
+or
+{
+    "errors": [
+        "No such entity in the system"
+    ]
+}
+"""
 class DeleteEntity(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
@@ -195,10 +226,13 @@ class DeleteEntity(graphene.Mutation):
         #client_id = context.authenticated_userid
         client_id = context["client_id"]
         id = args.get('id')
+
         dbentityobj = DBSession.query(dbEntity).filter(
             and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])
-        ).one()
-        del_object(dbentityobj)
-        entity = Entity(id = id)
-        entity.dbObject=dbentityobj
-        return DeleteEntity(entity=entity)
+        ).first()
+        if dbentityobj and not dbentityobj.marked_for_deletion:
+            del_object(dbentityobj)
+            entity = Entity(id = id)
+            entity.dbObject=dbentityobj
+            return DeleteEntity(entity=entity, status="OK")
+        return ResponseError(message="No such entity in the system")
