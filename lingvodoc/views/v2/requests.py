@@ -203,11 +203,13 @@ def accept_userrequest(request):
                 #     state_group.users.remove(user)
                 #     approve_group.users.remove(user)
                 if no_grants:
-                    for user in state_group.users:
-                        state_group.users.remove(user)
-                    for group in approve_groups:
-                        for user in group.users:
-                            group.users.remove(user)
+                    if state_group:
+                        for user in state_group.users:
+                            state_group.users.remove(user)
+                    if approve_groups:
+                        for group in approve_groups:
+                            for user in group.users:
+                                group.users.remove(user)
                 grant_admins = DBSession
                 for admin in grant_admins:
                     groups = DBSession.query(Group).filter_by(subject_client_id=cur_dict.client_id, subject_object_id=cur_dict.object_id).all()
