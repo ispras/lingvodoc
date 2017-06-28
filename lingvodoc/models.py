@@ -1170,7 +1170,7 @@ class PerspectiveCreateAcl(ACLMixin):
     object_id = 'dictionary_object_id'
 
 
-class OrganizationAcl(ACLMixin):
+class OrganizationAcl(SimpleAclMixin):
     subject = 'organization'
     id = 'organization_id'
 
