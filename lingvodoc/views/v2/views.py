@@ -1097,27 +1097,17 @@ def testing_graphene(request):
         data:
 
         MultiDict([
-        ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')), ('data_type', 'dialeqt_dictionary'),
-         ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')), ('data_type', 'dialeqt_dictionary'),
-         ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')), ('data_type', 'dialeqt_dictionary')
+        ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+         ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+         ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
          ])
-        """
-
-        """
-        blobs:
-        [
-        FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav'),
-        FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav'),
-        FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')
-        ]
         """
 
 
         if data:
             if "file" in data and "graphene" in data:
-                # We can get a couple from the list with each request
-                # with request.POST.popitem();request.POST.popitem()
-                # But I chose simple way and gave them the number
+                # We can get next file from the list inside file upload mutation resolve
+                # use request.POST.popitem()
                 request_string = request.POST.popitem()#data["graphene"]
                 #files = data.getall("file")
                 file_upload_flag = True
