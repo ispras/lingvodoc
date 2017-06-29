@@ -184,7 +184,7 @@ def view_translationatom(request):
     return response
 
 
-@view_config(route_name='translationatom', renderer='json', request_method='PUT')
+@view_config(route_name='translationatom', renderer='json', request_method='PUT', permission='edit')
 def edit_translationatom(request):
     response = dict()
     req = request.json_body
