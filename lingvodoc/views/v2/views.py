@@ -1089,6 +1089,32 @@ def create_persp_to_field(request):
 #TODO: Remove it
 @view_config(route_name='testing_graphene', renderer='json', request_method='POST')
 def testing_graphene(request):
+    variable_values = {}
+    file_upload_flag = False # may rewrite without the flag
+    if request.method == "POST":
+        data = request.POST
+        """
+        data:
+
+        MultiDict([
+        ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+         ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+         ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+         ])
+        """
+
+
+        if data:
+            if "file" in data and "graphene" in data:
+                # We can get next file from the list inside file upload mutation resolve
+                # use request.POST.popitem()
+                request_string = request.POST.popitem()#data["graphene"]
+                #files = data.getall("file")
+                file_upload_flag = True
+                #print(data["blob"], data["blob"].filename, data["blob"].file)
+                #print(data["data_type"])
+
+
     published = request.params.get('published')
     if published is None:
         published = False
@@ -1100,7 +1126,8 @@ fields{id translation}
 lexicalEntries{id entities{id content fieldType}}
 }}
     """
-    request_string = request.body.decode("utf-8")
+    if not file_upload_flag:
+        request_string = request.body.decode("utf-8")
     # result = schema.execute('query  dictionary{ client dictionaries(published: %s){translation status} dictionary(id: [70,4]){id translation}}' % str(published).lower(),
     #                         context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
     #                                        'locale_id': 1,
@@ -1115,8 +1142,9 @@ lexicalEntries{id entities{id content fieldType}}
     #     user_id = get_user_by_client_id(client_id).id
     result = schema.execute(request_string,
                            context_value={'client_id': client_id,
-                       'locale_id': 2,
-                       'request': request})
+                                           'locale_id': 2,
+                                           'request': request},
+                            variable_values={})
 
 
     # result = schema.execute(
