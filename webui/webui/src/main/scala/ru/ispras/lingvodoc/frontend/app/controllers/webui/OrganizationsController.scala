@@ -38,7 +38,7 @@ class OrganizationsController(scope: OrganizationsScope,
   }
 
   @JSExport
-  def joinAdmins(organization: Organization): Unit = {
+  def joinAdmin(organization: Organization): Unit = {
     userService.get() foreach { user =>
       backend.joinOrganizationAdmin(organization.id)
     }

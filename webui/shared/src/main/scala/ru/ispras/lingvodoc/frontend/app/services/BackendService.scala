@@ -2552,9 +2552,9 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   def organizations(): Future[Seq[Organization]] = {
     val p = Promise[Seq[Organization]]()
 
-    $http.get[js.Dynamic](getMethodUrl("organizations_list")) onComplete {
+    $http.get[js.Dynamic](getMethodUrl("organization_list")) onComplete {
       case Success(response)  =>
-        p.success(read[Seq[Organization]](js.JSON.stringify(response)))
+        p.success(read[Seq[Organization]](js.JSON.stringify(response.organizations)))
       case Failure(e) =>
         p.failure(BackendException("Failed to obtain list of organizations", e))
     }
@@ -2598,8 +2598,6 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
-
-
 }
 
 
