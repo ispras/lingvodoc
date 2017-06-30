@@ -339,7 +339,7 @@ def get_grant_permission(request):
                 grantadmins.append(user)
 
         if not grantadmins:
-            request.response.status = HTTPBadRequest
+            request.response.status = HTTPBadRequest.code
             return {'error': 'no administrators'}
 
         for grantadmin in grantadmins:
@@ -391,7 +391,7 @@ def add_dictionary_to_grant(request):
         grant = DBSession.query(Grant).filter_by(id=request_json['grant_id']).first()
         grantadmins = grant.owners
         if not grantadmins:
-            request.response.status = HTTPBadRequest
+            request.response.status = HTTPBadRequest.code
             return {'error': 'no administrators'}
 
         for grantadmin in grantadmins:
@@ -451,7 +451,7 @@ def administrate_org(request):
             if user not in orgadmins:
                 orgadmins.append(user)
         if not orgadmins:
-            request.response.status = HTTPBadRequest
+            request.response.status = HTTPBadRequest.code
             return {'error': 'no administrators'}
         for orgadmin in orgadmins:
             req['recipient_id'] = orgadmin.id
@@ -503,13 +503,18 @@ def participate_org(request):
         # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
 
         org = DBSession.query(Organization).filter_by(id=org_id).first()
+        if not org.additional_metadata:
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'no administrators'}
+
         orgadmins = org.additional_metadata.get('admins')
+
         if not orgadmins:
-            request.response.status = HTTPBadRequest
+            request.response.status = HTTPBadRequest.code
             return {'error': 'no administrators'}
 
         for orgadmin in org.additional_metadata['admins']:
-            req['recipient_id'] = orgadmin.id
+            req['recipient_id'] = orgadmin
             req_id = create_one_userrequest(req, client_id)
 
         request.response.status = HTTPOk.code
