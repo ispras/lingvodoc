@@ -228,16 +228,16 @@ def accept_userrequest(request):
                     #     group.users.append(admin)
 
             elif userrequest.type == 'participate_org':
-                org_id = req['subject']['org_id']
-                user_id = req['subject']['user_id']
+                org_id = userrequest.subject['org_id']
+                user_id = userrequest.subject['user_id']
                 organization = DBSession.query(Organization).filter_by(id=org_id).first()
                 user = DBSession.query(User).filter_by(id=user_id).first()
                 if user not in organization.users:
                     if not user in organization.users:
                         organization.users.append(user)
             elif userrequest.type == 'administrate_org':
-                org_id = req['subject']['org_id']
-                user_id = req['subject']['user_id']
+                org_id = userrequest.subject['org_id']
+                user_id = userrequest.subject['user_id']
                 organization = DBSession.query(Organization).filter_by(id=org_id).first()
                 user = DBSession.query(User).filter_by(id=user_id).first()
                 if organization.additional_metadata is None:
