@@ -175,6 +175,13 @@ class UpdateEntity(graphene.Mutation):
             dbEntity.object_id == id[1])
         ).first()
         if dbentity_obj and not dbentity_obj.marked_for_deletion:
+
+            # Checking for perspective modification permission.
+
+            dbentry_obj = dbentity_obj.parent
+            context.acl_check('edit', 'perspective',
+                (dbentry_obj.parent_client_id, dbentry_obj.parent_object_id))
+        
             for arg in update_args:
                 # attributes are used later in fetch_object decorator
                 setattr(dbentity_obj, arg, update_args[arg] )
@@ -231,6 +238,15 @@ class DeleteEntity(graphene.Mutation):
             and_(dbEntity.client_id == id[0], dbEntity.object_id == id[1])
         ).first()
         if dbentityobj and not dbentityobj.marked_for_deletion:
+
+            # Checking for lexical entries and entities deletion permission.
+
+            dbentryobj = dbentityobj.parent
+            context.acl_check('delete', 'lexical_entries_and_entities',
+                (dbentryobj.parent_client_id, dbentryobj.parent_object_id))
+
+            raise NotImplementedError
+
             del_object(dbentityobj)
             entity = Entity(id = id)
             entity.dbObject=dbentityobj

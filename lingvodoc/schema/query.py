@@ -55,7 +55,10 @@ from lingvodoc.schema.gql_grant import (
 from lingvodoc.schema.gql_email import (
     Email
 )
+from lingvodoc.schema.gql_holders import PermissionException
 
+
+import lingvodoc.acl as acl
 
 from lingvodoc.models import (
     DBSession,
@@ -237,4 +240,56 @@ class MyMutations(graphene.ObjectType):
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
 
+
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
+
+
+class Context(dict):
+    """
+    Context for graphene query execution, works as dict for arbitrary key-value associations and supports
+    ACL-based permission checking.
+    """
+
+    def __init__(self, context_dict):
+        """
+        Initializes query execution context by initializing context key-value dictionary and, hopefully,
+        getting client id and request data.
+        """
+
+        dict.__init__(self, context_dict)
+
+        self.client_id = context_dict.get('client_id')
+        self.request = context_dict.get('request')
+
+        self.cache = {}
+
+    def acl_check_if(self, action, subject, subject_id):
+        """
+        Checks if the client has permission to perform given action on a specified subject via ACL.
+        """
+
+        if (action, subject, subject_id) in self.cache:
+          return self.cache[(action, subject, subject_id)]
+
+        result = acl.check(self.client_id, self.request, action, subject, subject_id)
+        self.cache[(action, subject, subject_id)] = result
+
+        return result
+
+    def acl_check(self, action, subject, subject_id):
+        """
+        Checks if the client has permission to perform given action on a specified subject via ACL, raises
+        permission exception otherwise.
+        """
+
+        if not self.acl_check_if(action, subject, subject_id):
+            raise PermissionException(self.client_id, action, subject, subject_id)
+
+    def acl_check_with_id_if(self, action, subject, args):
+        """
+        Checks via ACL if the client has permission to perform given action on a specified subject, with
+        subject identifier extracted from query execution arguments.
+        """
+
+        return self.acl_check_if(action, subject, args.get('id'))
+

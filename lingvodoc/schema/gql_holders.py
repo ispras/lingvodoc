@@ -27,6 +27,61 @@ class ResponseError(Exception):
         self.params = params
 
 
+class PermissionException(ResponseError):
+    """
+    Exception used to signal absense of permission.
+    """
+
+    def __init__(self, client_id, action, subject, subject_id):
+        """
+        Saves permission absense information.
+        """
+
+        super().__init__(
+            'Client {0} doesn\'t have \'{1}\' permissions for \'{2}\' {3}.'.format(
+                client_id, action, subject, subject_id),
+            params = (client_id, action, subject, subject_id))
+
+        self.client_id = client_id
+        self.action = action
+        self.subject = subject
+        self.subject_id = subject_id
+
+
+def acl_check_by_id(action, subject, id_key = 'id'):
+    """
+    Decorator enabling ACL-based permission checks, compatible with any functions/methods with signature
+    'def f(arg1, args, context, *args)', e.g. resolve methods.
+
+    Example:
+
+        @acl_check_by_id('view', 'dictionary_role')
+        def resolve_dictionary_role(self, args, context, info):
+            ...
+
+    With different identifier argument key, that is, assuming that subject identifier is  args.get(
+    'different_id_key'):
+
+        @acl_check_by_id('view', 'dictionary_role', 'different_id_key')
+        def resolve_dictionary_role(self, args, context, info):
+            ...
+    """
+
+    def decorator(resolve_f):
+
+        def wrapper(self, args, context, *resolve_f_args):
+
+            if context.acl_check_if(action, subject, args.get(id_key)):
+                return resolve_f(self, args, context, *resolve_f_args)
+
+            else:
+                raise PermissionException(context.client_id, action, subject, args.get(id_key))
+
+        return wrapper
+
+    return decorator
+
+
 class ObjectVal(Scalar):
     """
     ObjectVal is GraphQL scalar value must be Object
