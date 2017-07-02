@@ -60,12 +60,10 @@ import requests
 from pyramid.request import Request
 from time import time
 
-from lingvodoc.schema.query import schema
+from lingvodoc.schema.query import schema, Context
 
 from copy import deepcopy
 from lingvodoc.views.v2.translations import translationgist_contents
-
-
 
 
 @view_config(route_name='fix_groups', renderer='json', permission='admin')
@@ -1141,9 +1139,10 @@ lexicalEntries{id entities{id content fieldType}}
     # else:
     #     user_id = get_user_by_client_id(client_id).id
     result = schema.execute(request_string,
-                           context_value={'client_id': client_id,
-                                           'locale_id': 2,
-                                           'request': request},
+                            context_value=Context({
+                                'client_id': client_id,
+                                'locale_id': 2,
+                                'request': request}),
                             variable_values={})
 
 
