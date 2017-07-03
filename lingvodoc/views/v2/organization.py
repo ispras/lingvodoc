@@ -127,7 +127,7 @@ def view_organization(request):  # TODO: test
             admins = list()
             if additional_metadata.get('admins'):
                 admins = additional_metadata['admins']
-            response['additional_metadata'] = admins
+            response['admin'] = admins
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code

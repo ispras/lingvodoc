@@ -242,9 +242,9 @@ def add_role(name, subject, action, admin):
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     admin = DBSession.query(User).filter_by(id=1).one()
-    # add_role("Can create grants", "grant", "create", admin)
-    # add_role("Can approve grants", "grant", "approve", admin)
-    # add_role("Can approve organizations", "organization", "approve", admin)
+    add_role("Can create grants", "grant", "create", admin)
+    add_role("Can approve grants", "grant", "approve", admin)
+    add_role("Can approve organizations", "organization", "approve", admin)
 
     base_group = add_role("Can edit dictionary status", "dict", "edit", admin)
     groups = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'dictionary_role',
@@ -268,7 +268,7 @@ def testing(request):
             new_group.users.append(user)
 
 
-    # add_role("Can change status", "status", "edit", admin)
+    add_role("Can change status", "status", "edit", admin)
 
 
     return {}
