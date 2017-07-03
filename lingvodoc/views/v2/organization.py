@@ -120,6 +120,14 @@ def view_organization(request):  # TODO: test
             for user in organization.users:
                 users += [user.id]
             response['users'] = users
+            additional_metadata = organization.additional_metadata
+            if additional_metadata is None:
+                additional_metadata = dict()
+            response['additional_metadata'] = additional_metadata
+            admins = list()
+            if additional_metadata.get('admins'):
+                admins = additional_metadata['admins']
+            response['additional_metadata'] = admins
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
