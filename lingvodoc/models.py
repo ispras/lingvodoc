@@ -1182,12 +1182,12 @@ class OrganizationAcl(SimpleAclMixin):
 
 
 class DictionaryAcl(ACLMixin):
-    subject = 'dictionary_status'
+    subject = 'dictionary'
     client_id = 'client_id'
     object_id = 'object_id'
 
 class DictionaryStatusAcl(ACLMixin):
-    subject = 'dictionary'
+    subject = 'dictionary_status'
     client_id = 'client_id'
     object_id = 'object_id'
 

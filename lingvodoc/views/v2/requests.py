@@ -23,6 +23,7 @@ from lingvodoc.views.v2.utils import (
     user_counter
 )
 
+from sqlalchemy.orm.attributes import flag_modified
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -139,8 +140,14 @@ def accept_userrequest(request):
                 grant = DBSession.query(Grant).filter_by(id=userrequest.subject['grant_id']).first()
                 if grant.owners is None:
                     grant.owners = list()
+                user = DBSession.query(User).filter_by(id=userrequest.subject['user_id']).one()
                 if userrequest.subject['user_id'] not in grant.owners:
                     grant.owners.append(userrequest.subject['user_id'])
+                if grant.additional_metadata is not None and grant.additional_metadata.get('roles'):
+                    for role in grant.additional_metadata['roles']:
+                        group = DBSession.query(Group).filter_by(id=role).one()
+                        if user not in group.users:
+                            group.users.append(user)
             elif userrequest.type == 'add_dict_to_grant':
                 grant = DBSession.query(Grant).filter_by(id=userrequest.subject['grant_id']).first()
                 if grant.additional_metadata is None:
@@ -150,15 +157,16 @@ def accept_userrequest(request):
 
                 dict_ids = {'client_id': userrequest.subject['client_id'],
                             'object_id': userrequest.subject['object_id']}
+
+                no_grants = True
+                for tmp_grant in DBSession.query(Grant).all():
+                    if tmp_grant.additional_metadata and tmp_grant.additional_metadata.get('participant') and dict_ids in \
+                            tmp_grant.additional_metadata['participant']:
+                        no_grants = False
+                        break
+
                 if dict_ids not in grant.additional_metadata['participant']:
                     grant.additional_metadata['participant'].append(dict_ids)
-
-                no_grants = False
-                for grant in DBSession.query(Grant).all():
-                    if grant.additional_metadata and grant.additional_metadata.get('participant') and dict_ids in \
-                            grant.additional_metadata['participant']:
-                        no_grants = True
-                        break
 
                 # if no_grants:
                 #     dict_authors = DBSession.query(User).join(Group).join(BaseGroup).filter(
@@ -169,7 +177,7 @@ def accept_userrequest(request):
                 state_group = DBSession.query(Group).join(BaseGroup).filter(
                     Group.subject_client_id == dict_ids['client_id'],
                     Group.subject_object_id == dict_ids['object_id'],
-                    BaseGroup.subject == 'dictionary_state',
+                    BaseGroup.subject == 'dictionary_status',
                     BaseGroup.action == 'edit'
                 ).first()
                 approve_groups = list()
@@ -180,7 +188,7 @@ def accept_userrequest(request):
                     approve_group = DBSession.query(Group).join(BaseGroup).filter(
                         Group.subject_client_id == persp.client_id,
                         Group.subject_object_id == persp.object_id,
-                        BaseGroup.subject == 'perspective_state',
+                        BaseGroup.subject == 'perspective_status',
                         BaseGroup.action == 'edit'
                     ).first()
                     if approve_group:
@@ -214,15 +222,24 @@ def accept_userrequest(request):
                             for user in group.users:
                                 group.users.remove(user)
                 grant_admins = DBSession.query(User).filter(User.id.in_(grant.owners))
+                if grant.additional_metadata is None:
+                    grant.additional_metadata = dict()
+                if grant.additional_metadata.get('roles', None) is None:
+                    grant.additional_metadata['roles'] = list()
                 for admin in grant_admins:
                     perm_groups = DBSession.query(Group).filter_by(subject_client_id=cur_dict.client_id, subject_object_id=cur_dict.object_id).all()
                     for group in perm_groups:
+                        if group.id not in grant.additional_metadata['roles']:
+                            grant.additional_metadata['roles'].append(group.id)
                         if group not in admin.groups:
                             admin.groups.append(group)
                     perm_groups = DBSession.query(Group).filter(tuple_(Group.subject_client_id, Group.subject_object_id).in_(persp_ids)).all()
                     for group in perm_groups:
+                        if group.id not in grant.additional_metadata['roles']:
+                            grant.additional_metadata['roles'].append(group.id)
                         if group not in admin.groups:
                             admin.groups.append(group)
+                flag_modified(grant, 'additional_metadata')
                     # state_group.users.append(admin) # or only for some permissions?
                     # for group in approve_groups:
                     #     group.users.append(admin)
@@ -251,6 +268,7 @@ def accept_userrequest(request):
             family = DBSession.query(UserRequest).filter_by(id=userrequest_id, broadcast_uuid=broadcast_uuid).all()
             for userreq in family:
                 DBSession.delete(userreq)
+
         else:
             DBSession.delete(userrequest)
         return response

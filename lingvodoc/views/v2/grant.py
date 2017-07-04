@@ -63,14 +63,17 @@ def grant_contents(grant, locale_id=2):
     result['issuer_url'] = grant.issuer_url
     result['grant_url'] = grant.grant_url
     result['grant_number'] = grant.grant_number
-    result['begin'] = grant.begin.strftime("%d.%M.%Y")
-    result['end'] = grant.end.strftime("%d.%M.%Y")
+    result['begin'] = grant.begin.strftime("%d.%m.%Y")
+    result['end'] = grant.end.strftime("%d.%m.%Y")
     owners = grant.owners
     if owners is None:
         owners = []
     result['owners'] = owners 
     result['created_at'] = grant.created_at
-    result['additional_metadata'] = grant.additional_metadata
+    additional_metadata = grant.additional_metadata
+    if additional_metadata is None:
+        additional_metadata = dict()
+    result['additional_metadata'] = additional_metadata
     return result
 
 
