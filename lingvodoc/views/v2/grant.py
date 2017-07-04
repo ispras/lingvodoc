@@ -110,6 +110,38 @@ def delete_grant(request):
     return {'error': str("No such grant in the system")}
 
 
+@view_config(route_name='grant', renderer='json', request_method='PUT', permission='admin')
+def edit_grant(request):  # tested & in docs
+    try:
+        response = dict()
+        grant_id = request.matchdict.get('id')
+        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        grant = DBSession.query(Grant).filter_by(id=grant_id).first()
+        if grant and not grant.marked_for_deletion:
+            req = request.json_body
+            if 'issuer_translation_gist_client_id' in req:
+                grant.issuer_translation_gist_client_id = req['issuer_translation_gist_client_id']
+
+            additional_metadata = req.get('additional_metadata')
+            if additional_metadata:
+                if additional_metadata.get('participant'):
+                    request.response.status = HTTPBadRequest.code
+                    return {'error': 'protected field'}
+
+                old_meta = grant.additional_metadata
+                old_meta.update(additional_metadata)
+                grant.additional_metadata = old_meta
+            request.response.status = HTTPOk.code
+            return response
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such grant in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='create_grant', renderer='json', request_method='POST', permission='admin')
 def create_grant(request):
     try:

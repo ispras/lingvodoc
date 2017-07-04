@@ -233,7 +233,7 @@ def configure_routes(config):
     # Change visibility state for dictionary. States are: 'frozen', 'WiP', 'published', 'merging'
     config.add_route(name='dictionary_status',
                      pattern='/dictionary/{client_id}/{object_id}/state',
-                     factory='lingvodoc.models.DictionaryAcl')  # tested
+                     factory='lingvodoc.models.DictionaryStatusAcl')  # tested
 
     # API #GET && PUT && DELETE
     # Gets/puts info about perspective.
@@ -319,7 +319,7 @@ def configure_routes(config):
     config.add_route(name='perspective_status',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/state',
-                     factory='lingvodoc.models.PerspectiveAcl')  # tested
+                     factory='lingvodoc.models.PerspectiveStatusAcl')  # tested
 
     # API #GET && POST && DELETE
     # Configuring columns in perspective table.
