@@ -246,7 +246,7 @@ def testing(request):
     add_role("Can approve grants", "grant", "approve", admin)
     add_role("Can approve organizations", "organization", "approve", admin)
 
-    base_group = add_role("Can edit dictionary status", "dict", "edit", admin)
+    base_group = add_role("Can edit dictionary status", "dictionary_status", "edit", admin)
     groups = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'dictionary_role',
                                                            BaseGroup.action == 'delete',
                                                            Group.subject_override == False).all()
@@ -256,7 +256,7 @@ def testing(request):
         DBSession.flush()
         for user in group.users:
             new_group.users.append(user)
-    base_group = add_role("Can edit perspective status", "dict", "edit", admin)
+    base_group = add_role("Can edit perspective status", "perspective_status", "edit", admin)
     groups = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'perspective_role',
                                                            BaseGroup.action == 'delete',
                                                            Group.subject_override == False).all()
@@ -267,8 +267,7 @@ def testing(request):
         for user in group.users:
             new_group.users.append(user)
 
-
-    add_role("Can change status", "status", "edit", admin)
+    # add_role("Can change status", "status", "edit", admin)
 
 
     return {}
