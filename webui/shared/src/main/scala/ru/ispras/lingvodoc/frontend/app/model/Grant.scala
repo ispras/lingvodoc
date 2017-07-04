@@ -3,6 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.model
 import upickle.Js
 
 import scala.scalajs.js.annotation.JSExportAll
+import upickle.default._
 
 @JSExportAll
 case class Grant(id: Int,
@@ -16,7 +17,8 @@ case class Grant(id: Int,
                  begin: String,
                  end: String,
                  owners: Seq[Int],
-                 metadata: Seq[String]
+                 participants: Seq[CompositeId],
+                 organizations: Seq[Int]
                 )
 
 
@@ -38,8 +40,7 @@ object Grant {
         ("grant_number", Js.Str(grant.grantNumber)),
         ("begin", Js.Str(grant.begin)),
         ("end", Js.Str(grant.end)),
-        ("owners", Js.Arr(grant.owners.map(i => Js.Num(i)):_*)),
-        ("additional_metadata", Js.Arr())
+        ("owners", Js.Arr(grant.owners.map(i => Js.Num(i)):_*))
       )
   }
 
@@ -57,6 +58,18 @@ object Grant {
         js("translation_gist_object_id").num.toInt
       )
 
+      val metaData = js("additional_metadata").obj
+
+      var participants = Seq[CompositeId]()
+      if (metaData.contains("participant")) {
+        participants = readJs[Seq[CompositeId]](metaData("participant"))
+      }
+
+      var organizations = Seq[Int]()
+      if (metaData.contains("organizations")) {
+        organizations = readJs[Seq[Int]](metaData("organizations"))
+      }
+
       val translation = js("translation").str
 
       val issuerUrl = js("issuer_url").str
@@ -71,7 +84,7 @@ object Grant {
 
       val owners = js("owners").arr.map(_.num.toInt)
 
-      Grant(id, issuerTranslationGistId, issuer, translationGistId, translation, issuerUrl, grantUrl, grantNumber, begin, end, owners, Seq[String]())
+      Grant(id, issuerTranslationGistId, issuer, translationGistId, translation, issuerUrl, grantUrl, grantNumber, begin, end, owners, participants, organizations)
   }
 }
 
