@@ -40,6 +40,13 @@ class GrantsPublicController(scope: GrantsPublicScope,
   }
 
   @JSExport
+  def isJoinAvailable(grant: Grant): Boolean = {
+    val user = userService.getUser()
+    grant.owners.contains(user.id)
+  }
+
+
+  @JSExport
   def owners(grant: Grant): String = {
     grant.owners.flatMap(id => users.find(_.id == id)).map(_.name).mkString(", ")
   }
@@ -51,7 +58,7 @@ class GrantsPublicController(scope: GrantsPublicScope,
       backend.grants() map { grants =>
 
         backend.getCurrentUser map { user =>
-          scope.grants = grants.filterNot(_.owners.contains(user.id)).toJSArray
+          scope.grants = grants.toJSArray
         }
       } recover {
         case e: Throwable => Future.failed(e)

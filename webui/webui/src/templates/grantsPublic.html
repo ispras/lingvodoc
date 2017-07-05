@@ -52,7 +52,7 @@
             </td>
 
             <td>
-                <button type="button" class="btn btn-primary" ng-click="controller.join(grant)">Join</button>
+                <button type="button" class="btn btn-primary" ng-click="controller.join(grant)" ng-disabled="controller.isJoinAvailable(grant)">Join</button>
             </td>
 
         </tr>

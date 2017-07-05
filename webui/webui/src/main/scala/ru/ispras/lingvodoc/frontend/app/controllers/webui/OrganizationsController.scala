@@ -45,6 +45,18 @@ class OrganizationsController(scope: OrganizationsScope,
   }
 
   @JSExport
+  def isCurrentUserOrganizationAdmin(organization: Organization): Boolean = {
+    val user = userService.getUser()
+    organization.admin.contains(user.id)
+  }
+
+  @JSExport
+  def isCurrentUserOrganizationMember(organization: Organization): Boolean = {
+    val user = userService.getUser()
+    organization.users.contains(user.id)
+  }
+
+  @JSExport
   def createOrganization(): Unit = {
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/createOrganization.html"
