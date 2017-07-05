@@ -22,8 +22,8 @@
             </td>
 
             <td>
-                <button type="button" class="btn btn-primary" ng-click="controller.join(organization)">Join as user</button>
-                <button type="button" class="btn btn-primary" ng-click="controller.joinAdmin(organization)">Join as admin</button>
+                <button type="button" class="btn btn-primary" ng-click="controller.join(organization)" ng-disabled="controller.isCurrentUserOrganizationMember(organization)">Join as user</button>
+                <button type="button" class="btn btn-primary" ng-click="controller.joinAdmin(organization)" ng-disabled="controller.isCurrentUserOrganizationAdmin(organization)">Join as admin</button>
             </td>
 
         </tr>
