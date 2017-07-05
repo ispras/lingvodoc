@@ -1163,6 +1163,12 @@ class PerspectiveAcl(ACLMixin):
     client_id = 'perspective_client_id'
     object_id = 'perspective_object_id'
 
+class PerspectiveStatusAcl(ACLMixin):
+    subject = 'perspective_status'
+    client_id = 'perspective_client_id'
+    object_id = 'perspective_object_id'
+
+
 
 class PerspectiveCreateAcl(ACLMixin):
     subject = 'perspective'
@@ -1177,6 +1183,11 @@ class OrganizationAcl(SimpleAclMixin):
 
 class DictionaryAcl(ACLMixin):
     subject = 'dictionary'
+    client_id = 'client_id'
+    object_id = 'object_id'
+
+class DictionaryStatusAcl(ACLMixin):
+    subject = 'dictionary_status'
     client_id = 'client_id'
     object_id = 'object_id'
 
