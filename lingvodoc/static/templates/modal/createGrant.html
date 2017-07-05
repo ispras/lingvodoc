@@ -115,7 +115,12 @@
         <div class="col-lg-12">
             <div class="input-group"><span class="input-group-addon">Begin date</span>
                 <input type="text" id="begin" class="form-control"
-                       ng-model="begin" placeholder="">
+                       ng-model="begin" placeholder="dd.mm.yyyy" onkeyup="var v = this.value;
+                                                                        if (v.match(/^\d{2}$/) !== null) {
+                                                                            this.value = v + '.';
+                                                                        } else if (v.match(/^\d{2}\.\d{2}$/) !== null) {
+                                                                            this.value = v + '.';
+                                                                        }">
             </div>
         </div>
     </div>
@@ -124,7 +129,12 @@
         <div class="col-lg-12">
             <div class="input-group"><span class="input-group-addon">End date</span>
                 <input type="text" id="end" class="form-control"
-                       ng-model="end" placeholder="">
+                       ng-model="end" placeholder="dd.mm.yyyy" onkeyup="var v = this.value;
+                                                                        if (v.match(/^\d{2}$/) !== null) {
+                                                                            this.value = v + '.';
+                                                                        } else if (v.match(/^\d{2}\.\d{2}$/) !== null) {
+                                                                            this.value = v + '.';
+                                                                        }">
             </div>
         </div>
     </div>

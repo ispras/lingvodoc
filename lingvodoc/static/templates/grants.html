@@ -11,6 +11,7 @@
                 <td>Begin</td>
                 <td>End</td>
                 <td>Owners</td>
+                <td></td>
             </tr>
             </thead>
 
@@ -50,6 +51,11 @@
                     {{ controller.owners(grant) }}
                 </td>
 
+                <td>
+                    <button type="button" class="btn btn-sm" ng-click="controller.editGrant(grant)">
+                        <span class="glyphicon glyphicon-edit"></span>
+                    </button>
+                </td>
 
             </tr>
 
