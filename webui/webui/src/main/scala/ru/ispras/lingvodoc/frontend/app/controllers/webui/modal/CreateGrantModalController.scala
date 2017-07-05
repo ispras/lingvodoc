@@ -1,30 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.webui.modal
 
-import com.greencatsoft.angularjs.AngularExecutionContextProvider
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.LanguageEdit
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{ErrorModalHandler, Messages}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.BackendService
-
-import scala.scalajs.js
-import scala.scalajs.js.UndefOr
-import com.greencatsoft.angularjs.core.{Event, ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LanguageEdit, LoadingPlaceholder}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
-import scala.util.{Failure, Success}
 
 
 
@@ -53,7 +41,8 @@ class CreateGrantModalController(scope: CreateGrantModalScope,
                                  val exceptionHandler: ExceptionHandler,
                                  params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController[CreateGrantModalScope, Grant](scope, modal, instance, timeout, params)
-    with AngularExecutionContextProvider {
+    with AngularExecutionContextProvider
+    with ErrorModalHandler {
 
 
   scope.locales = js.Array[Locale]()
@@ -69,6 +58,9 @@ class CreateGrantModalController(scope: CreateGrantModalScope,
 
   private[this] var allUsers = Seq[UserListEntry]()
 
+  private[this] val grantOpt = params.get("grant").map(_.asInstanceOf[Grant])
+  private[this] var translationGistOpt: Option[TranslationGist] = None
+  private[this] var issuerTranslationGistOpt: Option[TranslationGist] = None
 
 
   private[this] def createGrant(): Future[Unit] = {
@@ -94,6 +86,72 @@ class CreateGrantModalController(scope: CreateGrantModalScope,
             backend.createGrant(grant)
           }
         }
+      }
+    }
+  }
+
+
+
+  private[this] def updateTranslations(originalGist: Option[TranslationGist], translations: js.Array[LocalizedString]): Seq[Future[Unit]] = {
+    var updateRequests = Seq[Future[Unit]]()
+
+    val createdAtoms = translations.filterNot(translation => originalGist.exists(_.atoms.exists(atom => atom.localeId == translation.localeId)))
+
+    createdAtoms.foreach { atom =>
+      originalGist.foreach { gist =>
+        backend.createTranslationAtom(CompositeId.fromObject(gist), atom)
+      }
+    }
+
+    // create a list of updated translation atoms
+    // Array of (atom, updatedString)
+    val updatedAtoms = originalGist.map { gist =>
+      gist.atoms.sortBy(_.localeId).map(atom => (atom, LocalizedString(atom.localeId, atom.content))) zip translations.filter(t => gist.atoms.exists(_.localeId == t.localeId)).sortBy(_.localeId) flatMap {
+        case (original, updated) =>
+          if (!original._2.str.equals(updated.str) && updated.str.nonEmpty) Some(original._1, updated) else None
+      }
+    }
+
+    // update atoms
+    updatedAtoms.foreach { updated =>
+      updateRequests = updateRequests ++ updated.map { case (atom, str) =>
+        atom.content = str.str
+        backend.updateTranslationAtom(atom)
+      }.toSeq
+    }
+
+    updateRequests
+  }
+
+  private[this] def updateGrant(): Future[Any] = {
+
+    var updateRequests = Seq[Future[Unit]]()
+    updateRequests = updateRequests ++ updateTranslations(translationGistOpt, scope.grantTranslations)
+    updateRequests = updateRequests ++ updateTranslations(issuerTranslationGistOpt, scope.issuerTranslations)
+
+    Future.sequence(updateRequests) map { _ =>
+      val grant = grantOpt.get
+      if (grant.grantUrl != scope.grantUrl ||
+        grant.issuerUrl != scope.issuerUrl ||
+        grant.grantNumber != scope.grantNumber ||
+        grant.begin != scope.begin ||
+        grant.end != scope.end
+      ) {
+        val newGrant = Grant(grant.id,
+          grant.issuerTranslationGistId,
+          grant.issuer,
+          grant.translationGistId,
+          grant.translation,
+          grant.issuerUrl,
+          grant.grantUrl,
+          grant.grantNumber,
+          grant.begin,
+          grant.end,
+          grant.owners,
+          grant.participants,
+          grant.organizations)
+
+        backend.updateGrant(newGrant)
       }
     }
   }
@@ -164,10 +222,23 @@ class CreateGrantModalController(scope: CreateGrantModalScope,
 
   @JSExport
   def save(): Unit = {
-    createGrant() map { _ =>
-      instance.dismiss(())
-    }
 
+    grantOpt match {
+      case Some(_) =>
+        updateGrant() map { _ =>
+          instance.dismiss(())
+        } recover {
+          case e: Throwable =>
+            showError(e)
+        }
+      case None =>
+        createGrant() map { _ =>
+          instance.dismiss(())
+        } recover {
+          case e: Throwable =>
+            showError(e)
+        }
+    }
   }
 
   @JSExport
@@ -180,11 +251,32 @@ class CreateGrantModalController(scope: CreateGrantModalScope,
       allUsers = users
       backend.getLocales() map { locales =>
         scope.locales = locales.toJSArray
+
+        grantOpt foreach { g =>
+
+          backend.translationGist(g.translationGistId) map { translationGist =>
+            backend.translationGist(g.issuerTranslationGistId) map { issuerTranslationGist =>
+
+              // save original translations
+              translationGistOpt = Some(translationGist)
+              issuerTranslationGistOpt = Some(issuerTranslationGist)
+
+              scope.grantTranslations = translationGist.atoms.map(atom => LocalizedString(atom.localeId, atom.content))
+              scope.issuerTranslations = issuerTranslationGist.atoms.map(atom => LocalizedString(atom.localeId, atom.content))
+
+              scope.issuerUrl = g.issuerUrl
+              scope.grantUrl = g.grantUrl
+              scope.grantNumber = g.grantNumber
+              scope.begin = g.begin
+              scope.end = g.end
+              scope.users = g.owners.flatMap(id => users.find(_.id == id)).toJSArray
+            }
+          }
+        }
+
       }
     }
   })
-
-
 
 
   override protected def onStartRequest(): Unit = {}

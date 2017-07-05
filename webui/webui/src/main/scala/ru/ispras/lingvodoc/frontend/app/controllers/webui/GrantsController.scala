@@ -77,6 +77,29 @@ class GrantsController(scope: GrantsScope,
     }
   }
 
+  @JSExport
+  def editGrant(grant: Grant): Unit = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/createGrant.html"
+    options.controller = "CreateGrantModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal("grant" -> grant.asInstanceOf[js.Object])
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    val instance = modal.open[Grant](options)
+
+    instance.result map { grant =>
+      scope.grants.push(grant)
+    }
+  }
+
+
   override protected def onStartRequest(): Unit = {}
 
   override protected def onCompleteRequest(): Unit = {}
