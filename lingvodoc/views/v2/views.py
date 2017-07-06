@@ -302,6 +302,17 @@ def all_statuses(request):
     return response
 
 
+@view_config(route_name='home_page_text', renderer='string', request_method='GET')
+def home_page_text(request):
+    path = 'home_page_text.html'
+    if not os.path.exists(path):
+        request.override_renderer = 'json'
+        return {'error': 'no text file'}
+    with open(path, 'r') as text_file:
+        text = text_file.read()
+        return text
+
+
 @view_config(route_name='all_locales', renderer='json', request_method='GET')
 def all_locales(request):
     response = list()
