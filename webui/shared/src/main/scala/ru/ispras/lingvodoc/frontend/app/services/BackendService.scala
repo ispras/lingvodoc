@@ -2587,6 +2587,22 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def updateOrganization(organization: Organization, addUsers: Seq[Int] = Seq[Int](), removeUsers: Seq[Int] = Seq[Int]()): Future[Int] = {
+    val p = Promise[Int]()
+
+    val req = js.JSON.parse(write(organization))
+    req.add_users = addUsers.toJSArray
+    req.remove_users = removeUsers.toJSArray
+
+    $http.put[js.Dynamic](getMethodUrl("organization/" + encodeURIComponent(organization.id.toString)), req) onComplete {
+      case Success(response)  =>
+        p.success(response.organization_id.asInstanceOf[Int])
+      case Failure(e) =>
+        p.failure(BackendException("Failed to update organization", e))
+    }
+    p.future
+  }
+
   def joinOrganization(organizationId: Int): Future[Unit] = {
     val p = Promise[Unit]()
 

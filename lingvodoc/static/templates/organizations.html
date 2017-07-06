@@ -6,6 +6,7 @@
             <td>Organization name</td>
             <td>Description</td>
             <td></td>
+            <td></td>
         </tr>
         </thead>
 
@@ -26,10 +27,16 @@
                 <button type="button" class="btn btn-primary" ng-click="controller.joinAdmin(organization)" ng-disabled="controller.isCurrentUserOrganizationAdmin(organization)">Join as admin</button>
             </td>
 
+            <td>
+                <button type="button" class="btn btn-sm" ng-disabled="controller.isEditDisabled(organization)" ng-click="controller.editOrganization(organization)">
+                    <span class="glyphicon glyphicon-edit"></span>
+                </button>
+            </td>
+
         </tr>
 
         <tr >
-            <td colspan="3" class="text-center" ng-if="organizations.length==0">
+            <td colspan="4" class="text-center" ng-if="organizations.length==0">
                 No organizations
             </td>
         </tr>

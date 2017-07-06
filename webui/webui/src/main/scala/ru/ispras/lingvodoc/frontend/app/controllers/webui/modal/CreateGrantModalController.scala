@@ -137,19 +137,14 @@ class CreateGrantModalController(scope: CreateGrantModalScope,
         grant.begin != scope.begin ||
         grant.end != scope.end
       ) {
-        val newGrant = Grant(grant.id,
-          grant.issuerTranslationGistId,
-          grant.issuer,
-          grant.translationGistId,
-          grant.translation,
-          grant.issuerUrl,
-          grant.grantUrl,
-          grant.grantNumber,
-          grant.begin,
-          grant.end,
-          grant.owners,
-          grant.participants,
-          grant.organizations)
+
+        val newGrant = grant.copy(
+          issuerUrl = scope.issuerUrl,
+          grantUrl = scope.grantUrl,
+          grantNumber = scope.grantNumber,
+          begin = scope.begin,
+          end = scope.end
+        )
 
         backend.updateGrant(newGrant)
       }
