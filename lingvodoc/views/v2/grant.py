@@ -114,7 +114,7 @@ def delete_grant(request):
     return {'error': str("No such grant in the system")}
 
 
-@view_config(route_name='grant', renderer='json', request_method='PUT', permission='edit')
+@view_config(route_name='grant', renderer='json', request_method='PUT', permission='create')
 def edit_grant(request):  # tested & in docs
     try:
         response = dict()
@@ -161,7 +161,7 @@ def edit_grant(request):  # tested & in docs
         return {'error': str(e)}
 
 
-@view_config(route_name='create_grant', renderer='json', request_method='POST', permission='admin')
+@view_config(route_name='create_grant', renderer='json', request_method='POST', permission='create')
 def create_grant(request):
     try:
         variables = {'auth': request.authenticated_userid}
