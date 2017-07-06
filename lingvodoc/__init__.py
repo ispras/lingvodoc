@@ -79,7 +79,8 @@ def configure_routes(config):
 
     config.add_route(name='create_grant', pattern='/grant',
                      factory='lingvodoc.models.AdminAcl')
-    config.add_route(name='grant', pattern='/grant/{id}')
+    config.add_route(name='grant', pattern='/grant/{id}',
+                     factory='lingvodoc.models.AdminAcl')
     config.add_route(name='all_grants', pattern='/all_grants')
 
     # config.add_route(name='create_userrequest', pattern='/grant',

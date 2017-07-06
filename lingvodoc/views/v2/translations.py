@@ -194,8 +194,8 @@ def edit_translationatom(request):
     translationatom = DBSession.query(TranslationAtom).filter_by(client_id=client_id, object_id=object_id).first()
     if translationatom:
         key = "translation:%s:%s:%s" % (
-            str(translationatom.translation_gist_client_id),
-            str(translationatom.translation_gist_object_id),
+            str(translationatom.parent_client_id),
+            str(translationatom.parent_object_id),
             str(translationatom.locale_id))
         CACHE.rem(key)
         translationatom.content = content

@@ -18,6 +18,7 @@ from lingvodoc.models import (
     Entity,
     ObjectTOC
 )
+from sqlalchemy.orm.attributes import flag_modified
 
 from lingvodoc.views.v2.utils import (
     all_languages,
@@ -210,6 +211,7 @@ def edit_dictionary(request):  # tested & in docs
                     old_meta = dictionary.additional_metadata
                     old_meta.update(additional_metadata)
                     dictionary.additional_metadata = old_meta
+                    flag_modified(dictionary, 'additional_metadata')
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code

@@ -143,6 +143,7 @@ def accept_userrequest(request):
                 user = DBSession.query(User).filter_by(id=userrequest.subject['user_id']).one()
                 if userrequest.subject['user_id'] not in grant.owners:
                     grant.owners.append(userrequest.subject['user_id'])
+                    flag_modified(grant, 'ownersedf;f. ')
                 if grant.additional_metadata is not None and grant.additional_metadata.get('roles'):
                     for role in grant.additional_metadata['roles']:
                         group = DBSession.query(Group).filter_by(id=role).one()
