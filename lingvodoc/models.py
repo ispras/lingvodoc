@@ -1144,6 +1144,19 @@ def acl_by_groups_single_id(object_id, subject):
     return acls
 
 
+def acl_by_subject_override(subject):
+    acls = []  # DANGER if acls do not work -- uncomment string below
+    # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
+    groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
+    for group in groups:
+        base_group = group.parent
+        group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
+        acls += [(Allow, group_name, base_group.action)]
+    log.debug("ACLS: %s", acls)  # todo: caching
+    # log.error("ACLS: %s", acls)
+    return acls
+
+
 class ACLMixin(object):
     @classmethod
     def get_subject(cls):
@@ -1159,12 +1172,25 @@ class ACLMixin(object):
 
 
 class SimpleAclMixin(object):
+    @classmethod
     def get_subject(self):
         return self.subject
 
     def __acl__(self):
         id = self.request.matchdict.get(self.id, None)
         return acl_by_groups_single_id(id, self.subject)
+
+    def __init__(self, request):
+        self.request = request
+
+
+class NoIdAclMixin(object):
+    @classmethod
+    def get_subject(cls):
+        return cls.subject
+
+    def __acl__(self):
+        return acl_by_subject_override(self.subject)
 
     def __init__(self, request):
         self.request = request
@@ -1209,9 +1235,10 @@ class OrganizationAcl(SimpleAclMixin):
     id = 'organization_id'
 
 
-class GrantAcl(SimpleAclMixin):
+class GrantAcl(NoIdAclMixin):
     subject = 'grant'
-    id = 'id'
+
+
 
 
 class DictionaryAcl(ACLMixin):
