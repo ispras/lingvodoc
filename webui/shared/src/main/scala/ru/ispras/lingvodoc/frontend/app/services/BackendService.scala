@@ -2626,6 +2626,19 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
+
+  def homePageText(): Future[String] = {
+    val p = Promise[String]()
+
+    $http.get[String](getMethodUrl("home_page_text")) onComplete {
+      case Success(response)  =>
+        p.success(response)
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get home page text", e))
+    }
+    p.future
+  }
+
 }
 
 
