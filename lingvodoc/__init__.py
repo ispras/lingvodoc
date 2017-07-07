@@ -84,8 +84,6 @@ def configure_routes(config):
     config.add_route(name='all_grants', pattern='/all_grants')
     config.add_route(name='home_page_text', pattern='/home_page_text')
 
-    # config.add_route(name='create_userrequest', pattern='/grant',
-    #                  factory='lingvodoc.models.AdminAcl')
 
     config.add_route(name='userrequest', pattern='/userrequest/{id}')
     config.add_route(name='get_current_userrequests', pattern='/get_current_userrequests')
@@ -848,7 +846,8 @@ def main(global_config, **settings):
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
-    config.add_route('testing', '/testing')
+    config.add_route('testing', '/testing',
+                     factory='lingvodoc.models.AdminAcl')
     config.add_route('testing_translations', '/testing_translations')
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
     #    config.add_route('home', '/')

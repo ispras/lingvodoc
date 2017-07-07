@@ -242,9 +242,11 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
     return base_group
 
 
-@view_config(route_name='testing', renderer='json')
+@view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     admin = DBSession.query(User).filter_by(id=1).one()
+    if DBSession.query(BaseGroup).filter_by(name="Can create grants").first():
+        return {"error": "already done"}
     add_role("Can create grants", "grant", "create", admin)
     add_role("Can approve grants", "grant", "approve", admin)
     add_role("Can approve organizations", "organization", "approve", admin)
