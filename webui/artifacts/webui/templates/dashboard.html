@@ -24,7 +24,7 @@
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
-                    <button type="button" class="btn btn-primary dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9"
+                    <button type="button" class="btn btn-default dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9"
                             data-toggle="dropdown">{{ dictionary.translation }} ({{ dictionary.createdAt.dateString() }})
                     </button>
                     <ul class="dropdown-menu">
@@ -47,7 +47,7 @@
                     </ul>
                 </div>
                 <div class="btn-group col-md-4 col-sm-4 col-lg-4">
-                    <button type="button" class="btn btn-primary col-md-10 col-lg-11 col-sm-10 col-xs-8"
+                    <button type="button" class="btn btn-info col-md-10 col-lg-11 col-sm-10 col-xs-8"
                             data-toggle="dropdown">{{ controller.getDictionaryStatus(dictionary).content }}
                     </button>
                     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -75,7 +75,7 @@
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <button type="button"
-                                class="btn btn-primary col-md-10 col-lg-11 col-sm-10 col-xs-9 dropdown-toggle"
+                                class="btn btn-default col-md-10 col-lg-11 col-sm-10 col-xs-9 dropdown-toggle"
                                 data-toggle="dropdown">{{ perspective.translation }}
                         </button>
                         <ul class="dropdown-menu">
@@ -110,7 +110,7 @@
                     </div>
                     <div class="btn-group btn-group-xs col-md-4 col-sm-4 col-lg-4 col-xs-4 ">
                         <button type="button"
-                                class="btn btn-primary dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-8"
+                                class="btn btn-info dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-8"
                                 data-toggle="dropdown">{{ controller.getPerspectiveStatus(perspective).content }}
                         </button>
                         <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
