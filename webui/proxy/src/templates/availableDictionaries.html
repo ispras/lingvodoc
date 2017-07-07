@@ -1,0 +1,19 @@
+<div class="container">
+
+    <div ng-show="languages.length > 0">
+        <h2>Available dictionaries</h2>
+        <ul>
+            <li ng-repeat="language in languages" ng-include="'/static/templates/include/availableLanguage.html'"></li>
+        </ul>
+    </div>
+
+
+    <div class="text-center" ng-show="languages.length > 0">
+
+        <button type="button" class="btn btn-danger btn-lg" ng-click="controller.download()">Download</button>
+
+    </div>
+
+
+</div>
+

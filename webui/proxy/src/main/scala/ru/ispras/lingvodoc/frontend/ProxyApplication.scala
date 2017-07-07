@@ -12,7 +12,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{AppInitializer, BackendService
 
 import scala.scalajs.js.annotation.JSExport
 
-class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) extends Config {
+class ProxyConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) extends Config {
 
   routeProvider
     .when("/", Route("/static/templates/home.html", "Lingvodoc 2.1", "HomeController"))
@@ -36,7 +36,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/files", Route("/static/templates/files.html", "Lingvodoc 2.1 / Files", "UserFilesController"))
     .when("/map_search", Route("/static/templates/mapSearch.html", "Lingvodoc 2.1 / Map search", "MapSearchController"))
     .when("/sociolinguistics", Route("/static/templates/sociolinguistics.html", "Lingvodoc 2.1 / Sociolinguistics", "SociolinguisticsController"))
-    .when("/desktop_software", Route("/static/templates/desktop.html", "Lingvodoc 2.1 / Desktop software"))
+    .when("/available_dictionaries", Route("/static/templates/availableDictionaries.html", "Lingvodoc 2.1 / AvailableDictionariesController", "AvailableDictionariesController"))
     .when("/edit_translations", Route("/static/templates/editTranslations.html", "Lingvodoc 2.1 / Edit translations", "EditTranslationsController"))
     .when("/grants_admin", Route("/static/templates/grants.html", "Lingvodoc 2.1 / Grants", "GrantsController"))
     .when("/grants", Route("/static/templates/grantsPublic.html", "Lingvodoc 2.1 / Grants", "GrantsPublicController"))
@@ -53,7 +53,7 @@ object ProxyApplication {
   def main(): Unit = {
 
     Angular.module("ProxyApplication", Seq("ngRoute", "ngSanitize", "ngAnimate", "ui.bootstrap"))
-      .config[LingvodocConfig]
+      .config[ProxyConfig]
       .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
       //.factory[ExceptionHandlerFactory]
@@ -64,6 +64,7 @@ object ProxyApplication {
       .controller[DashboardController]
       .controller[LanguageController]
       .controller[proxy.HomeController]
+      .controller[proxy.AvailableDictionariesController]
       .controller[CreateLanguageController]
       .controller[CreateDictionaryController]
       .controller[CreateCorpusController]

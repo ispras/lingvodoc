@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="LingvodocModule" ng-cloak>
+<html lang="en" ng-app="ProxyApplication" ng-cloak>
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -19,7 +19,7 @@
     <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
 
     <script type="text/javascript">
-        ru.ispras.lingvodoc.frontend.LingvodocApplication().main();
+        ru.ispras.lingvodoc.frontend.ProxyApplication().main();
     </script>
 
 </head>
@@ -51,6 +51,7 @@
                         <li role="separator" class="divider"></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/dashboard"><translatable str="My dictionaries">My dictionaries</translatable></a></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/dictionary/create"><translatable str="Create dictionary">Create dictionary</translatable></a></li>
+                        <li ng-if="controller.isAuthenticated()"><a href="#/available_dictionaries"><translatable str="Available dictionaries">Available dictionaries</translatable></a></li>
                         <li role="separator" class="divider"></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/corpora"><translatable str="My corpora">My corpora</translatable></a></li>
                         <li ng-if="controller.isAuthenticated()"><a href="#/corpora/create"><translatable str="Create corpus">Create corpus</translatable></a></li>
