@@ -7,11 +7,15 @@ from .models import (
     Group,
     BaseGroup,
     acl_by_groups,
-    acl_by_groups_single_id
+    acl_by_groups_single_id,
+    user_to_group_association,
+    user_to_organization_association,
+    organization_to_group_association
     )
 
 from pyramid.security import forget
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
 
 import logging
@@ -19,10 +23,21 @@ from time import time
 log = logging.getLogger(__name__)
 
 
-def groupfinder(client_id, request, factory = None, subject = None):
+def get_effective_client_id(client_id, request):
+    """
+    Returns client id to be used for permission checking.
+    """
 
     if request.registry.settings.get("desktop") and request.registry.settings["desktop"].get("desktop"):
-        client_id = request.cookies.get('client_id')
+        return request.cookies.get('client_id')
+
+    else:
+        return client_id
+
+def groupfinder(client_id, request, factory = None, subject = None):
+
+    client_id = get_effective_client_id(client_id, request)
+
     if not client_id:
         return None
 
@@ -117,9 +132,131 @@ def check(client_id, request, action, subject, subject_id):
     # reference.
 
     for acl_action, acl_principal, acl_permission in acl_list:
+        if acl_principal in principal_set:
 
-        if acl_principal in principal_set and acl_permission == action:
-            return True
+            # Checking carefully, because acl_permission can be, for example, special ALL_PERMISSIONS
+            # object.
+            
+            if not hasattr(acl_permission, '__iter__'):
+                if acl_permission == action:
+                    return True
+
+            elif action in acl_permission:
+                return True
 
     return False
+
+
+def check_direct(client_id, request, action, subject, subject_id):
+    """
+    Checks if a given action on a given subject is permitted for the specified client, accesses DB directly,
+    so should be faster.
+    """
+
+    client_id = get_effective_client_id(client_id, request)
+
+    if not client_id:
+        return False
+
+    try:
+        user_id = Client.get_user_by_client_id(client_id).id
+
+    except:
+        return False
+
+    # Subject is specified by a client_id/object_id pair.
+
+    if isinstance(subject_id, (list, tuple)):
+        subject_client_id, subject_object_id = subject_id[:2]
+
+        # Special case for 'approve_entities' perspective subject, permission depends on perspective's
+        # state, see function acls_by_groups() in models.py.
+
+        if subject == 'approve_entities':
+
+            perspective = DBSession.query(DictionaryPerspective).filter_by(
+                client_id = subject_client_id, subject_object_id = object_id).first()
+
+            if (perspective and
+                (perspective.state == 'Published' or perspective.state == 'Limited access') and
+                (action == 'view' or action == 'preview')):
+
+                return True
+
+        # Ok, checking as usual, first through by-user permissions...
+
+        user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
+            BaseGroup.subject == subject,
+            BaseGroup.action == action,
+            Group.base_group_id == BaseGroup.id,
+            or_(Group.subject_override, and_(
+                Group.subject_client_id == subject_client_id,
+                Group.subject_object_id == subject_object_id)),
+            user_to_group_association.c.user_id == user_id,
+            user_to_group_association.c.group_id == Group.id)).limit(1).count()
+
+        if user_count > 0:
+            return True
+
+        # ...and then through by-organization permissions.
+
+        organization_count = DBSession.query(BaseGroup, Group,
+            user_to_organization_association, organization_to_group_association).filter(and_(
+                BaseGroup.subject == subject,
+                BaseGroup.action == action,
+                Group.base_group_id == BaseGroup.id,
+                or_(Group.subject_override, and_(
+                    Group.subject_client_id == subject_client_id,
+                    Group.subject_object_id == subject_object_id)),
+                user_to_organization_association.c.user_id == user_id,
+                organization_to_group_association.c.organization_id ==
+                    user_to_organization_association.c.organization_id,
+                organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+
+        if organization_count > 0:
+            return True
+
+        return False
+
+    # Subject is specified by a single object_id.
+
+    elif isinstance(subject_id, int):
+        subject_object_id = subject_id
+
+        # Checking as usual, first through by-user permissions...
+
+        user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
+            BaseGroup.subject == subject,
+            BaseGroup.action == action,
+            Group.base_group_id == BaseGroup.id,
+            or_(Group.subject_override,
+                Group.subject_object_id == subject_object_id),
+            user_to_group_association.c.user_id == user_id,
+            user_to_group_association.c.group_id == Group.id)).limit(1).count()
+
+        if user_count > 0:
+            return True
+
+        # ...and then through by-organization permissions.
+
+        organization_count = DBSession.query(BaseGroup, Group,
+            user_to_organization_association, organization_to_group_association).filter(and_(
+                BaseGroup.subject == subject,
+                BaseGroup.action == action,
+                Group.base_group_id == BaseGroup.id,
+                or_(Group.subject_override,
+                    Group.subject_object_id == subject_object_id),
+                user_to_organization_association.c.user_id == user_id,
+                organization_to_group_association.c.organization_id ==
+                    user_to_organization_association.c.organization_id,
+                organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+
+        if organization_count > 0:
+            return True
+
+        return False
+
+    # Ok, we have a subject we do not know hot to process, so we terminate with error.
+
+    raise NotImplementedError
 

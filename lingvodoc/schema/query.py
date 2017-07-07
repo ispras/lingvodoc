@@ -271,7 +271,7 @@ class Context(dict):
         if (action, subject, subject_id) in self.cache:
           return self.cache[(action, subject, subject_id)]
 
-        result = acl.check(self.client_id, self.request, action, subject, subject_id)
+        result = acl.check_direct(self.client_id, self.request, action, subject, subject_id)
         self.cache[(action, subject, subject_id)] = result
 
         return result
