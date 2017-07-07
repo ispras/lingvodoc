@@ -304,6 +304,34 @@ def all_statuses(request):
     return response
 
 
+# @view_config(route_name='all_dictionary_roles', renderer='json', request_method='GET')
+# def all_dictionary_roles(request):
+#     bases = DBSession.query(BaseGroup).filter_by(dictionary_default = True).all()
+#     response = list()
+#     for base in bases:
+#         response.append({"name": base.name, "subject": base.subject, "action": base.action})
+#     request.response.status = HTTPOk.code
+#     return response
+#
+# @view_config(route_name='all_perspective_roles', renderer='json', request_method='GET')
+# def all_dictionary_roles(request):
+#     from pyramid.request import Request
+#     import json
+#
+#     response = list()
+#     for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
+#         subreq = Request.blank('/translation_service_search')
+#         subreq.method = 'POST'
+#         subreq.headers = request.headers
+#         subreq.json = {'searchstring': status}
+#         headers = {'Cookie': request.headers['Cookie']}
+#         subreq.headers = headers
+#         resp = request.invoke_subrequest(subreq)
+#         response.append(resp.json)
+#     request.response.status = HTTPOk.code
+#     return response
+
+
 @view_config(route_name='home_page_text', renderer='string', request_method='GET')
 def home_page_text(request):
     path = 'home_page_text.html'
