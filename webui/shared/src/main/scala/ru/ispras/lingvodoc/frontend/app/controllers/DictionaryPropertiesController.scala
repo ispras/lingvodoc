@@ -2,11 +2,14 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.Translatable
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.ErrorModalHandler
 import ru.ispras.lingvodoc.frontend.app.exceptions.{ControllerException, ModelException}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Translatable}
+import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils
@@ -139,9 +142,30 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
   }
 
   @JSExport
-  def cancel() = {
+  def cancel(): Unit = {
     modalInstance.dismiss(())
   }
+
+
+  @JSExport
+  def grants(): Unit = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/addDictionaryToGrant.html"
+    options.controller = "AddDictionaryToGrantModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(dictionary = dictionary.asInstanceOf[js.Object])
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    val instance = modal.open[FieldEntry](options)
+  }
+
+
 
 
   private[this] def load() = {

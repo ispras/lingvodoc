@@ -42,6 +42,11 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
   scope.statuses = js.Array[TranslationGist]()
   scope.status = false
 
+  private[this] var hasGlobalChangeStatusRole = false
+  private[this] var hasChangeStatusRole = Seq.empty[CompositeId]
+  private[this] var hasGlobalPerspectiveChangeStatusRole = false
+  private[this] var hasChangePerspectiveStatusRole = Seq.empty[CompositeId]
+
 
   @JSExport
   def getActionLink(dictionary: Dictionary, perspective: Perspective, action: String) = {
@@ -257,6 +262,16 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
   }
 
   @JSExport
+  def changingDictionaryStatusDisabled(dictionary: Dictionary): Boolean = {
+    !(hasGlobalChangeStatusRole || hasChangeStatusRole.exists(_.getId == dictionary.getId))
+  }
+
+  @JSExport
+  def changingPerspectveStatusDisabled(perspective: Perspective): Boolean = {
+    !(hasGlobalPerspectiveChangeStatusRole || hasChangePerspectiveStatusRole.exists(_.getId == perspective.getId))
+  }
+
+  @JSExport
   def getDictionaryStatus(dictionary: Dictionary): TranslationAtom = {
     val localeId = Utils.getLocale().getOrElse(2)
     scope.statuses.find(gist => gist.clientId == dictionary.stateTranslationGistClientId && gist.objectId == dictionary.stateTranslationGistObjectId) match {
@@ -347,6 +362,13 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
     backend.allStatuses().flatMap(statuses => {
       scope.statuses = statuses.toJSArray
       backend.getCurrentUser flatMap { user =>
+
+        hasGlobalChangeStatusRole = user.roles.filter(_.name == "Can edit dictionary status").exists(_.subjectOverride)
+        hasChangeStatusRole = user.roles.filter(_.name == "Can edit dictionary status").filter(_.subject.nonEmpty).flatMap(_.subject)
+
+        hasGlobalPerspectiveChangeStatusRole = user.roles.filter(_.name == "Can edit perspective status").exists(_.subjectOverride)
+        hasChangePerspectiveStatusRole = user.roles.filter(_.name == "Can edit perspective status").filter(_.subject.nonEmpty).flatMap(_.subject)
+
         userService.setUser(user)
         // load dictionary list
         val query = DictionaryQuery()
