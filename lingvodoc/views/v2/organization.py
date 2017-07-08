@@ -66,7 +66,7 @@ def view_organization_list(request):  # TODO: test
     return response
 
 
-@view_config(route_name='create_organization', renderer='json', request_method='POST', permission='create')
+@view_config(route_name='create_organization', renderer='json', request_method='POST')
 def create_organization(request):  # TODO: test
     try:
 
@@ -120,13 +120,21 @@ def view_organization(request):  # TODO: test
             for user in organization.users:
                 users += [user.id]
             response['users'] = users
+            additional_metadata = organization.additional_metadata
+            if additional_metadata is None:
+                additional_metadata = dict()
+            response['additional_metadata'] = additional_metadata
+            admins = list()
+            if additional_metadata.get('admins'):
+                admins = additional_metadata['admins']
+            response['admin'] = admins
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such organization in the system")}
 
 
-@view_config(route_name='organization', renderer='json', request_method='PUT', permission='edit')
+@view_config(route_name='organization', renderer='json', request_method='PUT')
 def edit_organization(request):  # TODO: test
     try:
         response = dict()
@@ -180,7 +188,7 @@ def edit_organization(request):  # TODO: test
         return {'error': str(e)}
 
 
-@view_config(route_name='organization', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='organization', renderer='json', request_method='DELETE')
 def delete_organization(request):  # TODO: test
     response = dict()
     organization_id = request.matchdict.get('organization_id')

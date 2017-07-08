@@ -18,10 +18,11 @@ lazy val deployAll = TaskKey[Unit]("deployAll", "Copy shared static to artifacts
 lazy val deployShared = TaskKey[Unit]("deployShared", "Copy shared static files to artifacts directory")
 lazy val deployDesktop = TaskKey[Unit]("deployDesktop", "Copy desktop static files to artifacts directory")
 lazy val deployWebUI = TaskKey[Unit]("deployWebUI", "Copy webui static files to artifacts directory")
+lazy val deployProxy = TaskKey[Unit]("deployProxy", "Copy proxy static files to artifacts directory")
 
 lazy val root = project.in(file("."))
   .enablePlugins(ScalaJSPlugin)
-  .aggregate(webui, desktop)
+  .aggregate(webui, desktop, proxy)
   .settings(
     name := "lingvodoc-ui",
 
@@ -44,14 +45,20 @@ lazy val root = project.in(file("."))
       val files = mappings.map(p => (p._1, file(p._2)))
       IO.copy(files, overwrite = true)
     },
-
+    deployProxy := {
+      val finder: PathFinder = (proxy.base / "src/templates") ** "*"
+      val mappings = finder.get pair rebase(proxy.base / "src/templates", "artifacts/proxy/templates")
+      val files = mappings.map(p => (p._1, file(p._2)))
+      IO.copy(files, overwrite = true)
+    },
     deployAll := {
 
     },
 
     deployDesktop <<= deployDesktop dependsOn(fullOptJS in Compile, deployShared),
     deployWebUI <<= deployWebUI dependsOn(fullOptJS in Compile, deployShared),
-    deployAll <<= deployAll dependsOn(deployDesktop, deployWebUI)
+    deployProxy <<= deployProxy dependsOn(fullOptJS in Compile, deployShared, deployWebUI),
+    deployAll <<= deployAll dependsOn(deployDesktop, deployWebUI, deployProxy)
   )
 
 lazy val webui = (project in file("webui")).dependsOn(shared)
@@ -134,6 +141,47 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
     artifactPath in (Compile, fastOptJS) := file("artifacts/desktop/js") / "lingvodoc.js",
     artifactPath in (Compile, fullOptJS) := file("artifacts/desktop/js") / "lingvodoc.js",
     artifactPath in (Compile, packageJSDependencies) := file("artifacts/desktop/js") / "lingvodoc-deps.js"
+  )
+
+lazy val proxy = (project in file("proxy")).dependsOn(shared, webui)
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    name := "proxy",
+    libraryDependencies ++= Seq(
+      lib.scalajsDom,
+      lib.upickle,
+      lib.scalaAngular,
+      lib.pamphlet,
+      lib.scalaXml,
+      lib.scalaJquery,
+      lib.jquery,
+      lib.angular,
+      lib.bootstrap,
+      lib.bootstrapUI,
+      lib.validator,
+      lib.base64
+    ),
+    jsDependencies ++= Seq(
+      js.jquery / "2.2.1/jquery.js" minified "2.2.1/jquery.min.js",
+      js.angularjs / "angular.js" minified "angular.min.js",
+      js.angularjs / "angular-route.js" minified "angular-route.min.js" dependsOn "angular.js",
+      js.angularjs / "angular-animate.js" minified "angular-animate.min.js" dependsOn "angular.js",
+      js.angularjs / "angular-sanitize.js" minified "angular-sanitize.min.js" dependsOn "angular.js",
+      js.bootstrap / "bootstrap.js" minified "bootstrap.min.js" dependsOn "2.2.1/jquery.js",
+      js.bootstrapUI / "ui-bootstrap.js" minified "ui-bootstrap.min.js" dependsOn "bootstrap.js",
+      js.bootstrapUITpls / "ui-bootstrap-tpls.js" minified "ui-bootstrap-tpls.min.js" dependsOn "ui-bootstrap.js",
+      js.validator / "0.10.2/dist/validator.js" minified "0.10.2/dist/validator.min.js" dependsOn "bootstrap.js",
+      ProvidedJS / "wavesurfer.js",
+      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "leaflet.js",
+      ProvidedJS / "chroma.min.js"
+    ),
+    relativeSourceMaps := true,
+    skip in packageJSDependencies := false,
+    artifactPath in (Compile, fastOptJS) := file("artifacts/proxy/js") / "lingvodoc.js",
+    artifactPath in (Compile, fullOptJS) := file("artifacts/proxy/js") / "lingvodoc.js",
+    artifactPath in (Compile, packageJSDependencies) := file("artifacts/proxy/js") / "lingvodoc-deps.js"
   )
 
 lazy val shared = (project in file("shared"))

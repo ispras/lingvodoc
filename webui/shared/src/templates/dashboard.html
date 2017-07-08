@@ -51,7 +51,7 @@
                             data-toggle="dropdown">{{ controller.getDictionaryStatus(dictionary).content }}
                     </button>
                     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
-                            aria-haspopup="true" aria-expanded="false">
+                            aria-haspopup="true" aria-expanded="false" ng-disabled="controller.changingDictionaryStatusDisabled(dictionary)">
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
@@ -114,7 +114,7 @@
                                 data-toggle="dropdown">{{ controller.getPerspectiveStatus(perspective).content }}
                         </button>
                         <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
-                                aria-haspopup="true" aria-expanded="false">
+                                aria-haspopup="true" aria-expanded="false" ng-disabled="controller.changingPerspectveStatusDisabled(perspective)">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
