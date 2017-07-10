@@ -343,6 +343,8 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     super.onModalClose()
   }
 
+  override protected[this] def getCurrentLocale: Int = Utils.getLocale().getOrElse(2)
+
   override protected def onStartRequest(): Unit = {}
 
   override protected def onCompleteRequest(): Unit = {}

@@ -13,11 +13,14 @@ import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
+import scala.scalajs.js.JSConverters._
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
+import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
+
 
 
 
@@ -31,6 +34,8 @@ trait EditDictionaryScope extends Scope {
   var pageCount: Int = js.native
   // total number of pages
   var dictionaryTable: DictionaryTable = js.native
+  var locales: js.Array[Locale] = js.native
+  var translationLocaleId: Int = js.native
 
   /** 
     * How we set publishing state of merged entities, either when any merged entity is published (value
@@ -88,6 +93,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
   scope.publishMergeMode = "any"
 
   scope.pageLoaded = false
+  scope.locales = js.Array[Locale]()
+
 
   @JSExport
   def filterKeypress(event: Event): Unit = {
@@ -159,15 +166,15 @@ class EditDictionaryController(scope: EditDictionaryScope,
           scope.dictionaryTable.removeEntry(entry) }
 
         backend.getLexicalEntry(dictionaryId, perspectiveId, entry_id) onComplete
-        {
-          case Success(entry) =>
-            scope.dictionaryTable.addEntry(entry)
-            createdLexicalEntries = createdLexicalEntries :+ entry
+          {
+            case Success(entry) =>
+              scope.dictionaryTable.addEntry(entry)
+              createdLexicalEntries = createdLexicalEntries :+ entry
 
-          case Failure(e) => error(e)
-        }
+            case Failure(e) => error(e)
+          }
     }
-    .recover { case e: Throwable => error(e) }
+      .recover { case e: Throwable => error(e) }
   }
 
   @JSExport
@@ -200,6 +207,14 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
   }
 
+  @JSExport
+  def getTranslationLanguage(entity: Entity, field: Field): UndefOr[String] = {
+    if (field.isTranslatable) {
+      scope.locales.toSeq.find(_.id == entity.localeId).map(_.shortcut).orUndefined
+    } else {
+      Option.empty[String].orUndefined
+    }
+  }
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {
@@ -286,6 +301,12 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
 
   load(() => {
+
+    backend.getLocales() map { locales =>
+      scope.locales = locales.toJSArray
+      scope.translationLocaleId = Utils.getLocale().getOrElse(2)
+    }
+
     backend.perspectiveSource(perspectiveId) flatMap {
       sources =>
         scope.path = sources.reverse.map {
@@ -339,6 +360,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
   })
 
+  override protected[this] def getCurrentLocale: Int = scope.translationLocaleId
+
   override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 
   override protected def onOpen(): Unit = {}
@@ -347,4 +370,5 @@ class EditDictionaryController(scope: EditDictionaryScope,
     waveSurfer foreach {w =>
       w.destroy()}
   }
+
 }

@@ -55,7 +55,7 @@
                         <!-- simple column -->
                         <ul class="tree" ng-if="column.getType()=='Simple'">
                             <li ng-repeat="value in cell.values" ng-class="{removed: value.entity.markedForDeletion}" ng-if="value.entity.accepted && !value.entity.markedForDeletion">
-                                <span ng-hide="controller.isEditActive(value.entity)">{{ value.getContent() }}</span>
+                                <span ng-hide="controller.isEditActive(value.entity)">{{ value.getContent() }} <span class="badge" ng-if="column.field.isTranslatable"> {{ controller.getTranslationLanguage(value.entity, column.field) }} </span></span>
 
                                 <span ng-show="controller.isEditActive(value.entity)">
                                     <input type="text" value="{{ value.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, value.entity, column.field, $event)">
