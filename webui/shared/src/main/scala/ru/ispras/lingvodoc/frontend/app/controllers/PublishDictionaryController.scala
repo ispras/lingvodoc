@@ -10,10 +10,13 @@ import ru.ispras.lingvodoc.frontend.app.controllers.traits._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
+import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
+import scala.scalajs.js.JSConverters._
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
+import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 
 @js.native
@@ -25,6 +28,7 @@ trait PublishDictionaryScope extends Scope {
   var pageCount: Int = js.native
   // total number of pages
   var dictionaryTable: DictionaryTable = js.native
+  var locales: js.Array[Locale] = js.native
   var pageLoaded: Boolean = js.native
 }
 
@@ -178,6 +182,15 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
 
 
   @JSExport
+  def getTranslationLanguage(entity: Entity, field: Field): UndefOr[String] = {
+    if (field.isTranslatable) {
+      scope.locales.toSeq.find(_.id == entity.localeId).map(_.shortcut).orUndefined
+    } else {
+      Option.empty[String].orUndefined
+    }
+  }
+
+  @JSExport
   def disapproveDisabled(value: Value): Boolean = {
     !value.getEntity.published
   }
@@ -217,6 +230,11 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   load(() => {
+
+    backend.getLocales() map { locales =>
+      scope.locales = locales.toJSArray
+    }
+
     backend.perspectiveSource(perspectiveId) flatMap {
       sources =>
         scope.path = sources.reverse.map {
