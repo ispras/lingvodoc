@@ -4,7 +4,7 @@ import com.greencatsoft.angularjs.core.{ExceptionHandler, Location, Scope, Timeo
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Messages}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
@@ -33,10 +33,12 @@ trait DashboardScope extends Scope {
 
 @JSExport
 @injectable("DashboardController")
-class DashboardController(scope: DashboardScope, modal: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends
+class DashboardController(scope: DashboardScope, val modalService: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends
   AbstractController[DashboardScope](scope)
   with AngularExecutionContextProvider
-  with LoadingPlaceholder {
+  with LoadingPlaceholder
+  with Messages
+{
 
   scope.dictionaries = js.Array[Dictionary]()
   scope.statuses = js.Array[TranslationGist]()
@@ -73,7 +75,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modal.open[Dictionary](options)
+    val instance = modalService.open[Dictionary](options)
 
     instance.result map {
       case d: Dictionary =>
@@ -97,7 +99,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modal.open[Perspective](options)
+    val instance = modalService.open[Perspective](options)
 
     instance.result map {
       case p: Perspective => console.log(p.toString)
@@ -120,7 +122,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modal.open[Unit](options)
+    val instance = modalService.open[Unit](options)
 
     instance.result map {
       _ =>
@@ -147,7 +149,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modal.open[Unit](options)
+    val instance = modalService.open[Unit](options)
 
     instance.result map {
       _ =>
@@ -171,7 +173,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modal.open[Unit](options)
+    val instance = modalService.open[Unit](options)
 
     instance.result map {
       _ =>
@@ -245,12 +247,24 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
 
   @JSExport
   def removeDictionary(dictionary: Dictionary) = {
-    backend.removeDictionary(dictionary)
+    backend.removeDictionary(dictionary) map { _ =>
+      scope.dictionaries = scope.dictionaries.filterNot(_.getId == dictionary.getId)
+    } recover {
+      case e: Throwable =>
+        showException(e)
+    }
   }
 
   @JSExport
   def removePerspective(dictionary: Dictionary, perspective: Perspective) = {
-    backend.removePerspective(dictionary, perspective)
+    backend.removePerspective(dictionary, perspective) map { _ =>
+      scope.dictionaries.find(_.getId == dictionary.getId) foreach { d =>
+        d.perspectives = d.perspectives.filterNot(_.getId == perspective.getId)
+      }
+    } recover {
+      case e: Throwable =>
+        showException(e)
+    }
   }
 
   @JSExport
@@ -315,7 +329,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    modal.open[Unit](options)
+    modalService.open[Unit](options)
   }
 
   /** Opens perspective statistics page. */
@@ -338,7 +352,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    modal.open[Unit](options)
+    modalService.open[Unit](options)
   }
 
 
