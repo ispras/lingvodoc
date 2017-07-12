@@ -25,22 +25,25 @@
 
         <div class="col-lg-10">
 
-            <div>
-                <select ng-model="selectedGrantId" convert-to-number>
-                    <option value="-1">&nbsp;</option>
-                    <option ng-repeat="grant in grants" value="{{ grant.id }}">{{ grant.translation }} ({{ grant.issuer }})</option>
-                </select>
-            </div>
+            <ul class="list-group">
+                <li class="list-group-item" ng-repeat="grant in grants" ng-click="controller.addToGrant(grant)">
+                    {{ grant.translation }} ({{ grant.issuer }}) <br>
+                    {{ grant.begin }} - {{ grant.end }} <br>
+
+                    <a ng-href="{{ grant.issuerUrl }}" target="_blank">{{ grant.issuerUrl }}</a> <br>
+                    <a ng-href="{{ grant.grantUrl }}" target="_blank">{{ grant.grantUrl }}</a> <br>
+
+                    <hr/>
+
+                    <button type="button" class="btn btn-default right">
+                        <span class="glyphicon glyphicon-plus-sign"> Add</span>
+                    </button>
+                </li>
+            </ul>
 
         </div>
 
-        <div class="col-lg-2">
 
-            <button type="button" class="btn btn-default" ng-click="controller.addDictionary()" ng-disabled="selectedGrantId < 0;">
-                <span class="glyphicon glyphicon-plus-sign"></span>
-            </button>
-
-        </div>
 
     </div>
 

@@ -33,7 +33,7 @@ trait DashboardScope extends Scope {
 
 @JSExport
 @injectable("DashboardController")
-class DashboardController(scope: DashboardScope, val modalService: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends
+class DashboardController(scope: DashboardScope, val modal: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends
   AbstractController[DashboardScope](scope)
   with AngularExecutionContextProvider
   with LoadingPlaceholder
@@ -75,7 +75,7 @@ class DashboardController(scope: DashboardScope, val modalService: ModalService,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modalService.open[Dictionary](options)
+    val instance = modal.open[Dictionary](options)
 
     instance.result map {
       case d: Dictionary =>
@@ -99,7 +99,7 @@ class DashboardController(scope: DashboardScope, val modalService: ModalService,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modalService.open[Perspective](options)
+    val instance = modal.open[Perspective](options)
 
     instance.result map {
       case p: Perspective => console.log(p.toString)
@@ -122,7 +122,7 @@ class DashboardController(scope: DashboardScope, val modalService: ModalService,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modalService.open[Unit](options)
+    val instance = modal.open[Unit](options)
 
     instance.result map {
       _ =>
@@ -149,7 +149,7 @@ class DashboardController(scope: DashboardScope, val modalService: ModalService,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modalService.open[Unit](options)
+    val instance = modal.open[Unit](options)
 
     instance.result map {
       _ =>
@@ -173,7 +173,7 @@ class DashboardController(scope: DashboardScope, val modalService: ModalService,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    val instance = modalService.open[Unit](options)
+    val instance = modal.open[Unit](options)
 
     instance.result map {
       _ =>
@@ -329,7 +329,7 @@ class DashboardController(scope: DashboardScope, val modalService: ModalService,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    modalService.open[Unit](options)
+    modal.open[Unit](options)
   }
 
   /** Opens perspective statistics page. */
@@ -352,7 +352,7 @@ class DashboardController(scope: DashboardScope, val modalService: ModalService,
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    modalService.open[Unit](options)
+    modal.open[Unit](options)
   }
 
 
