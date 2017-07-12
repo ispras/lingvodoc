@@ -139,57 +139,46 @@
         </div>
     </div>
 
+    <!--<div class="panel panel-default">-->
+        <!--<div class="panel-heading">-->
+            <!--<h3 class="panel-title"><translatable str="Owners">Owners</translatable></h3>-->
+        <!--</div>-->
+        <!--<div class="panel-body">-->
+            <!--<div class="row">-->
+
+                <!--<div class="col-lg-12">-->
+                    <!--<div ng-if="users.length > 0">-->
+                        <!--<ul>-->
+                            <!--<li ng-repeat="user in users">-->
+                                <!--{{ user.login }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove" ng-click="controller.removeUser(user)"><span aria-hidden="true">×</span></button>-->
+                            <!--</li>-->
+                        <!--</ul>-->
+                    <!--</div>-->
+
+                    <!--<div ng-if="users.length == 0">-->
+                        <!--<span>No users. Enter user name to add...</span>-->
+                    <!--</div>-->
+
+                    <!--<div>-->
+                        <!--<input type="text" class="form-control" ng-model="searchString" ng-change="controller.searchUser()">-->
 
 
-
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h3 class="panel-title"><translatable str="Issuer">Owners</translatable></h3>
-        </div>
-        <div class="panel-body">
-            <div class="row">
-
-                <div class="col-lg-12">
-                    <div ng-if="users.length > 0">
-                        <ul>
-                            <li ng-repeat="user in users">
-                                {{ user.login }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove" ng-click="controller.removeUser(user)"><span aria-hidden="true">×</span></button>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div ng-if="users.length == 0">
-                        <span>No users. Enter user name to add...</span>
-                    </div>
-
-                    <div>
-                        <input type="text" class="form-control" ng-model="searchString" ng-change="controller.searchUser()">
-
-
-                        <table class="table table-bordered">
-                            <tr ng-repeat="searchUser in searchUsers">
-                                <td>{{ searchUser.login }}</td>
-                                <td>{{ searchUser.name }}</td>
-                                <td>
-                                    <button type="button" class="btn btn-default" ng-click="controller.addUser(searchUser)">
-                                        <span class="glyphicon glyphicon-plus-sign"></span>
-                                    </button>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-
-
-
-
-
-
+                        <!--<table class="table table-bordered">-->
+                            <!--<tr ng-repeat="searchUser in searchUsers">-->
+                                <!--<td>{{ searchUser.login }}</td>-->
+                                <!--<td>{{ searchUser.name }}</td>-->
+                                <!--<td>-->
+                                    <!--<button type="button" class="btn btn-default" ng-click="controller.addUser(searchUser)">-->
+                                        <!--<span class="glyphicon glyphicon-plus-sign"></span>-->
+                                    <!--</button>-->
+                                <!--</td>-->
+                            <!--</tr>-->
+                        <!--</table>-->
+                    <!--</div>-->
+                <!--</div>-->
+            <!--</div>-->
+        <!--</div>-->
+    <!--</div>-->
 
 </div>
 

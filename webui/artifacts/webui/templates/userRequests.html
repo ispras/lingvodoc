@@ -26,7 +26,7 @@
                         </span>
 
                         <span ng-if="controller.isAddDictionaryRequest(request)" ng-init="grant=controller.grant(request); dictionary=controller.dictionary(request);">
-                            User wants to add grant {{ grant.translation }} ({{ grant.issuer }}) to dictionary {{ translation }}
+                            User wants to add dictionary <b>{{ dictionary.translation }}</b> to grant <b>{{ grant.translation }} ({{ grant.issuer }})</b>
                         </span>
 
                         <span ng-if="controller.isOrganizationUserRequest(request)" ng-init="grant=controller.organization(request);">
@@ -38,6 +38,8 @@
                         </span>
 
                     </span>
+                    <br>
+
                     <span class="text-muted pull-right" style="font-size: 11px;"></span>
                         <button type="button" class="btn btn-xs btn-primary" ng-click="controller.accept(request)">Accept</button>
                         <button type="button" class="btn btn-xs btn-danger" ng-click="controller.decline(request)">Decline</button>
