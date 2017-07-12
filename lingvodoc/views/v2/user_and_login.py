@@ -475,7 +475,7 @@ def edit_user_info(request):  # TODO: test
 
     req = request.json_body
     client_id = req.get('client_id')
-    user_id = req.get('user_id')
+    user_id = req.get('id')
     user = None
     if client_id:
         client = DBSession.query(Client).filter_by(id=client_id).first()
