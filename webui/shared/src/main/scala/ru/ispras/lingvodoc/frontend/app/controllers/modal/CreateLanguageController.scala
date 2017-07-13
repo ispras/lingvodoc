@@ -151,10 +151,10 @@ class CreateLanguageController(scope: CreateLanguageScope,
 
       // Create a new language
       case None =>
-        val selectedParentLanguage = Utils.flattenLanguages(scope.languages).find(_.getId == scope.languageId)
+        parentLanguage = Utils.flattenLanguages(scope.languages).find(_.getId == scope.languageId)
 
         if (!scope.names.forall(_.str.isEmpty)) {
-          backend.createLanguage(scope.names.filterNot(_.str.isEmpty), selectedParentLanguage) onComplete {
+          backend.createLanguage(scope.names.filterNot(_.str.isEmpty), parentLanguage) onComplete {
             case Success(langId) =>
               backend.getLanguage(langId) map { language => instance.close(language) }
             case Failure(e) =>

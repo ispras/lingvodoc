@@ -47,8 +47,8 @@ class LanguageController(scope: LanguageScope, modal: ModalService, backend: Bac
 
     val instance = modal.open[Language](options)
 
-    instance.result foreach {
-      lang: Language => parentLanguage.languages.push(lang)
+    instance.result foreach { _ =>
+      load()
     }
   }
 
@@ -68,8 +68,8 @@ class LanguageController(scope: LanguageScope, modal: ModalService, backend: Bac
 
     val instance = modal.open[Language](options)
 
-    instance.result foreach {
-      lang: Language => scope.languages.push(lang)
+    instance.result foreach { lang: Language =>
+        load()
     }
   }
 
