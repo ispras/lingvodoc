@@ -586,6 +586,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
   def setPerspectiveMeta(dictionaryId: CompositeId, perspectiveId: CompositeId, metadata: MetaData) = {
     val p = Promise[Unit]()
+    org.scalajs.dom.console.log(write(metadata))
+
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) +
       "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/meta"
     $http.put(getMethodUrl(url), write(metadata)) onComplete {
