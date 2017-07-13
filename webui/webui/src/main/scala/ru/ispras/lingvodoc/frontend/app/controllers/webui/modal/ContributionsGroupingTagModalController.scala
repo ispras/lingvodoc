@@ -14,6 +14,7 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
+import org.scalajs.dom.console
 
 
 
@@ -31,13 +32,13 @@ trait ContributionsGroupingTagModalScope extends Scope {
 
 @injectable("ContributionsGroupingTagModalController")
 class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagModalScope,
-                                                   val modal: ModalService,
-                                                   instance: ModalInstance[Unit],
-                                                   val backend: BackendService,
-                                                   userService: UserService,
-                                                   timeout: Timeout,
-                                                   val exceptionHandler: ExceptionHandler,
-                                                   params: js.Dictionary[js.Function0[js.Any]])
+                                              val modal: ModalService,
+                                              instance: ModalInstance[Unit],
+                                              val backend: BackendService,
+                                              userService: UserService,
+                                              timeout: Timeout,
+                                              val exceptionHandler: ExceptionHandler,
+                                              params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
     with SimplePlay
@@ -62,6 +63,9 @@ class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagMod
   private[this] var searchDictionaries = Seq[Dictionary]()
   private[this] var searchPerspectives = Seq[Perspective]()
 
+  private[this] var tables = Map.empty[String, Seq[DictionaryTable]]
+
+
   override def spectrogramId: String = "#spectrogram-modal"
 
   scope.pageLoaded = false
@@ -72,12 +76,26 @@ class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagMod
   scope.resultEntriesCount = -1
 
   @JSExport
-  def getSource(entry: LexicalEntry): UndefOr[String] = {
-    perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
-      dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
-        s"${dictionary.translation} / ${perspective.translation}"
+  def tags(): js.Array[String] = {
+    tables.keys.toJSArray
+  }
+
+  @JSExport
+  def dictionaryTables(tag: String): js.Array[DictionaryTable] = {
+    tables.get(tag).get.toJSArray
+  }
+
+  @JSExport
+  def getSource(dictionaryTable: DictionaryTable): UndefOr[String] = {
+    dictionaryTable.rows.toSeq.headOption.flatMap { row =>
+      val entry = row.entry
+      perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
+        dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
+          s"${dictionary.translation} / ${perspective.translation}"
+        }
       }
     }.orUndefined
+
   }
 
   @JSExport
@@ -122,11 +140,13 @@ class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagMod
   }
 
   @JSExport
-  def accept(entry: LexicalEntry): Unit = {
-    entry.entities.find(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId) foreach { entity =>
+  def accept(tag: String): Unit = {
+    lexicalEntry.entities.find(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId && e.content == tag) foreach { entity =>
       if (!entity.accepted) {
         backend.acceptEntities(dictionaryId, perspectiveId, CompositeId.fromObject(entity) :: Nil) map { _ =>
+          // remove accepted tags from list of candidates
           scope.$apply(() => {
+            tables -= "tag"
             entity.accepted = true
           })
         }
@@ -135,8 +155,8 @@ class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagMod
   }
 
   @JSExport
-  def acceptDisabled(entry: LexicalEntry): Boolean = {
-    entry.entities.find(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId).exists(_.accepted)
+  def acceptDisabled(tag: String): Boolean = {
+    lexicalEntry.entities.find(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId && e.content == tag).exists(_.accepted)
   }
 
 
@@ -209,17 +229,39 @@ class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagMod
   }
 
   private[this] def loadConnectedEntries() = {
+
+    // exclude unknown and already accepted tags
+    val knownTags = lexicalEntry.entities.filter(entity => entity.fieldClientId == field.clientId && entity.fieldObjectId == field.objectId && !entity.accepted).map(_.content).toSet
+
     backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
-      val tf = connectedEntries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq map { entryGroup =>
-        val firstEntry = entryGroup.head
-        backend.getPerspective(CompositeId(firstEntry.parentClientId, firstEntry.parentObjectId)) flatMap { connectedPerspective =>
-          backend.getFields(CompositeId(connectedPerspective.parentClientId, connectedPerspective.parentObjectId), CompositeId.fromObject(connectedPerspective)) map { connectedFields =>
-            DictionaryTable.build(connectedFields, dataTypes, entryGroup)
+
+      var groups = Map.empty[String, Seq[LexicalEntry]]
+
+      connectedEntries.foreach { entry =>
+
+        val groupKeys = entry.entities
+          .filter(entity => entity.fieldClientId == field.clientId && entity.fieldObjectId == field.objectId && knownTags.contains(entity.content))
+          .groupBy(_.content).keys.toSeq
+
+        groupKeys.foreach { g =>
+          val s = groups.getOrElse(g, Seq.empty[LexicalEntry])
+          groups = groups + (g -> (s :+ entry))
+        }
+      }
+
+      val tf = groups.toSeq flatMap { case (k, entries) =>
+        // collect entries from the same source
+        entries.groupBy(entry => CompositeId(entry.parentClientId, entry.parentObjectId)).map { case (parentId, perspectiveEntries) =>
+          backend.getPerspective(parentId) flatMap { connectedPerspective =>
+            backend.getFields(CompositeId(connectedPerspective.parentClientId, connectedPerspective.parentObjectId), CompositeId.fromObject(connectedPerspective)) map { connectedFields =>
+              (k, DictionaryTable.build(connectedFields, dataTypes, perspectiveEntries))
+            }
           }
         }
       }
-      Future.sequence(tf) map { tables =>
-        scope.dictionaryTables = tables.toJSArray
+
+      Future.sequence(tf) map { t =>
+        tables = t.groupBy(_._1).map(g => (g._1, g._2.map(_._2)))
       }
     }
   }
@@ -245,7 +287,6 @@ class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagMod
         dataTypes = allDataTypes
         loadConnectedEntries()
       }
-
     }
   })
 
@@ -262,5 +303,3 @@ class ContributionsGroupingTagModalController(scope: ContributionsGroupingTagMod
     scope.pageLoaded = true
   }
 }
-
-
