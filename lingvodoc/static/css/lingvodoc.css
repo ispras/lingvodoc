@@ -393,11 +393,14 @@ span.remove-sign {
 
 .modal-dialog {
     position: relative;
-    overflow-y: auto;
-    overflow-x: auto;
+    overflow: auto;
     width: auto;
     min-width: 600px;
-    max-width: 900px;
+}
+
+.modal-body {
+    max-height: calc(100vh - 212px);
+    overflow-y: auto;
 }
 
 .nav-tabs .glyphicon:not(.no-margin) {
