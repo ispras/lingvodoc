@@ -33,7 +33,7 @@ object WaveSurferOpts {
       mediaControls = false,
       autoplay = false,
       barWidth = barWidth,
-      mediaControls = js.Dynamic.literal()
+      mediaControls = false
     ).asInstanceOf[WaveSurferOpts]
   }
 }
