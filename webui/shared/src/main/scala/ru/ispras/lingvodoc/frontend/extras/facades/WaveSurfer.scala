@@ -32,7 +32,8 @@ object WaveSurferOpts {
       height = height,
       mediaControls = false,
       autoplay = false,
-      barWidth = barWidth
+      barWidth = barWidth,
+      mediaControls = false
     ).asInstanceOf[WaveSurferOpts]
   }
 }
@@ -71,3 +72,14 @@ object WaveSurferSpectrogramPlugin extends js.Object {
 object WaveSurferTimelinePlugin extends js.Object {
   def init(opts: js.Dynamic): js.Any = js.native
 }
+
+
+@JSName("WaveSurfer.ELAN")
+@js.native
+object WaveSurferELAN extends js.Object {
+  def init(opts: js.Dynamic): js.Any = js.native
+  def on(event: String, handler: js.Function): js.Any = js.native
+  def setPxPerSec(scale: Double): js.Any = js.native
+  def drawerSetup(): js.Any = js.native
+}
+

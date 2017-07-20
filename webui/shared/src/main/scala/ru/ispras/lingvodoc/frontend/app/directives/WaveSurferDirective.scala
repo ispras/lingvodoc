@@ -7,7 +7,7 @@ import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.js
 
-@injectable("wavesurfer")
+@injectable("waveplayer")
 class WaveSurferDirective(parse: Parse) extends ElementDirective {
   override def link(scope: ScopeType, elements: Seq[Element], attrs: Attributes): Unit = {
     val element: Element = elements.head
