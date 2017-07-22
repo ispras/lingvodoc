@@ -45,6 +45,11 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
   @JSExport
+  def hasSound(): Boolean = {
+    soundAddress.nonEmpty
+  }
+
+  @JSExport
   def playPause(): Unit = {
     waveSurfer.foreach(_.playPause())
   }
@@ -53,9 +58,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def zoomIn(): Unit = {
     if (scale < 800) {
       scale = scale + 20
-      waveSurfer.foreach(_.zoom(scale))
-      elan.foreach(_.drawerSetup())
-      elan.foreach(_.render())
+      setZoom(scale)
     }
   }
 
@@ -63,9 +66,18 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def zoomOut(): Unit = {
     if (scale > 50) {
       scale = scale - 20
-      waveSurfer.foreach(_.zoom(scale))
-      elan.foreach(_.drawerSetup())
-      elan.foreach(_.render())
+      setZoom(scale)
+    }
+  }
+
+  private[this] def setZoom(v: Double) = {
+    soundAddress match {
+      case Some(_) =>
+        waveSurfer.foreach(_.zoom(v))
+        elan.foreach(_.drawerSetup())
+        elan.foreach(_.render())
+      case None =>
+        elan.foreach(_.setPxPerSec(v))
     }
   }
 
@@ -117,7 +129,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
       barWidth = 0)
 
     waveSurfer = Some(WaveSurfer.create(wso))
-    waveSurfer.foreach(_.load(soundAddress.get))
+
+    waveSurfer.foreach { w =>
+      soundAddress.foreach { url =>
+        w.load(url)
+      }
+    }
 
     spectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
     timeline = Some(js.Object.create(WaveSurferTimelinePlugin).asInstanceOf[js.Dynamic])
@@ -133,8 +150,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
       elan.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer.get, container = "#elan", xml = markupData.get)))
     }))
 
-    waveSurfer.foreach(_.zoom(scale))
+    // If we have only markup, wavesurfer's "ready" event is never fired
+    if (soundAddress.isEmpty) {
+      elan.foreach(_.init(js.Dynamic.literal(container = "#elan", xml = markupData.get)))
+    }
 
+    waveSurfer.foreach(_.zoom(scale))
 
     super.onModalOpen()
   }
