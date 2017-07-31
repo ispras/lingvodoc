@@ -2703,6 +2703,52 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  /** Sound/markup archive generation request. */
+  def sound_and_markup(
+    perspectiveId: CompositeId,
+    published_mode: String):
+    Future[Unit] =
+  {
+    val p = Promise[Unit]
+
+    val url = s"""sound_and_markup?
+      |perspective_client_id=${perspectiveId.clientId}&
+      |perspective_object_id=${perspectiveId.objectId}&
+      |published_mode=${published_mode}
+      |""".stripMargin.replaceAll("\n", "")
+
+    $http.get[js.Dynamic](url) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while launching sound/markup archive generation:\n" + response.error))
+
+          else p.success(())
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to launch sound/markup archive generation: " + e.getMessage, e))
+    }
+
+    p.future
+  }
 }
 
 

@@ -788,6 +788,9 @@ def configure_routes(config):
     config.add_route(name = 'stat_dictionary',
       pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
 
+    # Compiles archive of sound recordings and corresponding markups for a specified perspective.
+    config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
