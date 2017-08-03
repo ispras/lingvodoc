@@ -211,17 +211,6 @@ def accept_userrequest(request):
                     if approve_group:
                         approve_groups.append(approve_group)
 
-                # for user in dict_authors:
-                #     state_group.users.remove(user)
-                #     approve_group.users.remove(user)
-                if no_grants:
-                    if state_group:
-                        for user in state_group.users:
-                            state_group.users.remove(user)
-                    if approve_groups:
-                        for group in approve_groups:
-                            for user in group.users:
-                                group.users.remove(user)
                 grant_admins = DBSession.query(User).filter(User.id.in_(grant.owners))
                 if grant.additional_metadata is None:
                     grant.additional_metadata = dict()
