@@ -194,7 +194,9 @@ def bulk_group_entities(request):  # tested
                 for tag in tags:
                     tag_entity = DBSession.query(Entity) \
                         .join(Entity.field) \
+                        .join(Entity.publishingentity) \
                         .filter(Entity.parent == lex,
+                                Entity.marked_for_deletion == False,
                                 Field.client_id == field_client_id,
                                 Field.object_id == field_object_id,
                                 Entity.content == tag).first()
@@ -279,10 +281,12 @@ def create_group_entity(request):  # tested
             for tag in tags:
                 tag_entity = DBSession.query(Entity) \
                     .join(Entity.field) \
+                    .join(Entity.publishingentity) \
                     .filter(Entity.parent == lex,
                             Field.client_id == field_client_id,
                             Field.object_id == field_object_id,
-                            Entity.content == tag).first()
+                            Entity.content == tag,
+                            Entity.marked_for_deletion == False).first()
                 if not tag_entity:
                     tag_entity = Entity(client_id=client.id,
                                         object_id=object_id,
