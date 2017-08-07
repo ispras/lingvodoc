@@ -38,16 +38,25 @@ from lingvodoc.schema.gql_field import (
 )
 
 from lingvodoc.schema.gql_dictionary import (
-    Dictionary
+    Dictionary,
+    CreateDictionary,
+    UpdateDictionary,
+    DeleteDictionary
 )
 
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
-from lingvodoc.schema.gql_language import Language
+from lingvodoc.schema.gql_language import (
+    Language,
+    CreateLanguage,
+    DeleteLanguage
+)
 from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective
 )
 from lingvodoc.schema.gql_user import (
-    User
+    User,
+    CreateUser,
+    UpdateUser
 )
 from lingvodoc.schema.gql_grant import (
     Grant
@@ -239,6 +248,14 @@ class MyMutations(graphene.ObjectType):
     create_entity = CreateEntity.Field()
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
+    create_user = CreateUser.Field()
+    update_user = UpdateUser.Field()
+    create_language = CreateLanguage.Field()
+    delete_language = DeleteLanguage.Field()
+    create_dictionary = CreateDictionary.Field()
+    update_dictionary = UpdateDictionary.Field()
+    delete_dictionary = DeleteDictionary.Field()
+
 
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
