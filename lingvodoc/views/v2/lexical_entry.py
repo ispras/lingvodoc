@@ -93,7 +93,7 @@ def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
 def find_all_tags(lexical_entry, field_client_id, field_object_id):
     tag = None
     for entity in lexical_entry.entity:
-        if not entity.marked_for_deletion and entity.field.data_type == 'Grouping Tag':
+        if not entity.marked_for_deletion and entity.field.data_type == 'Grouping Tag' and entity.publishingentity.accepted == True:
             tag = entity.content
             break
     if not tag:
