@@ -3,12 +3,13 @@ import graphene
 from lingvodoc.models import (
     Dictionary as dbDictionary,
     TranslationAtom as dbTranslationAtom,
-    TranslationGist,
+    TranslationGist as dbTranslationGist,
     DBSession,
-    Client,
-    Language,
-    User
+    Client as dbClient,
+    Language as dbLanguage,
+    User as dbUser
 )
+from lingvodoc.schema.gql_user import User
 
 """
 from lingvodoc.views.v2.views import (
@@ -18,12 +19,15 @@ from lingvodoc.views.v2.views import (
 
 from lingvodoc.views.v2.translations import translationgist_contents
 
+from lingvodoc.schema.gql_language import Language
+
+
 def translation_service_search(searchstring):
     translationatom = DBSession.query(dbTranslationAtom)\
-        .join(TranslationGist).\
+        .join(dbTranslationGist).\
         filter(dbTranslationAtom.content == searchstring,
                dbTranslationAtom.locale_id == 2,
-               TranslationGist.type == 'Service')\
+               dbTranslationGist.type == 'Service')\
         .order_by(dbTranslationAtom.client_id)\
         .first()
     response = translationgist_contents(translationatom.parent)
@@ -145,12 +149,12 @@ class CreateDictionary(graphene.Mutation):
         if not object_id:
             object_id = None
 
-        client = DBSession.query(Client).filter_by(id=client_id).first()
+        client = DBSession.query(dbClient).filter_by(id=client_id).first()
         if not client:
             return ResponseError(
                 message="Error: Invalid client id (not registered on server). Try to logout and then login.")
 
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
             return ResponseError(message="Error: This client id is orphaned. Try to logout and then login once more.")
 
@@ -161,7 +165,7 @@ class CreateDictionary(graphene.Mutation):
             else:
                 return ResponseError(message="Error: client_id from another user")
 
-        parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
 
         additional_metadata = args.get('additional_metadata')
         if not additional_metadata:
@@ -221,7 +225,7 @@ class UpdateDictionary(graphene.Mutation):
         client_id = context["client_id"]
         object_id = context["object_id"]
 
-        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+        client = DBSession.query(dbClient).filter_by(id=request.authenticated_userid).first()
         if not client:
             return ResponseError(
                 message="Error: Invalid client id (not registered on server). Try to logout and then login.")

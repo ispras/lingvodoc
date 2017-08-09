@@ -1085,11 +1085,11 @@ def create_persp_to_field(request):
 
 
 #TODO: Remove it
-@view_config(route_name='testing_graphene', renderer='json', request_method='POST')
+@view_config(route_name='testing_graphene', renderer='json')
 def testing_graphene(request):
     variable_values = {}
     file_upload_flag = False # may rewrite without the flag
-    if request.method == "POST":
+    if request.headers == "POST":
         data = request.POST
         """
         data:
@@ -1102,15 +1102,14 @@ def testing_graphene(request):
         """
 
 
-        if data:
-            if "file" in data and "graphene" in data:
-                # We can get next file from the list inside file upload mutation resolve
-                # use request.POST.popitem()
-                request_string = request.POST.popitem()#data["graphene"]
-                #files = data.getall("file")
-                file_upload_flag = True
-                #print(data["blob"], data["blob"].filename, data["blob"].file)
-                #print(data["data_type"])
+        if data and "file" in data and "graphene" in data:
+            # We can get next file from the list inside file upload mutation resolve
+            # use request.POST.popitem()
+            request_string = request.POST.popitem()#data["graphene"]
+            #files = data.getall("file")
+            file_upload_flag = True
+            #print(data["blob"], data["blob"].filename, data["blob"].file)
+            #print(data["data_type"])
 
 
     published = request.params.get('published')
