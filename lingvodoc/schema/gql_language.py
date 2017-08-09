@@ -13,7 +13,7 @@ from lingvodoc.schema.gql_holders import (
     del_object
 )
 
-from lingvodoc.schema.gql_dictionary import Dictionary
+# from lingvodoc.schema.gql_dictionary import Dictionary
 
 
 class Language(graphene.ObjectType):
@@ -31,7 +31,7 @@ class Language(graphene.ObjectType):
     """
     dbType = dbLanguage
     dbObject = None
-    dictionaries = graphene.List(Dictionary)
+    dictionaries = graphene.List(lambda: Dictionary)
 
     dataType = graphene.String()
 
@@ -148,3 +148,5 @@ class DeleteLanguage(graphene.Mutation):
             language.dbObject = dbentityobj
             return DeleteLanguage(field=language, status=True)
         return ResponseError(message="No such entity in the system")
+
+from .gql_dictionary import Dictionary

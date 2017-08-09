@@ -19,7 +19,7 @@ from lingvodoc.views.v2.views import (
 
 from lingvodoc.views.v2.translations import translationgist_contents
 
-from lingvodoc.schema.gql_language import Language
+# from lingvodoc.schema.gql_language import Language
 
 
 def translation_service_search(searchstring):
@@ -125,7 +125,7 @@ class CreateDictionary(graphene.Mutation):
         additional_metadata = graphene.String()
 
 
-    field = graphene.Field(Language)
+    field = graphene.Field(lambda: Language)
     status = graphene.Boolean()
 
 
@@ -266,7 +266,7 @@ class DeleteDictionary(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
 
-    field = graphene.Field(Language)
+    field = graphene.Field(lambda: Language)
     status = graphene.Boolean()
 
     @staticmethod
@@ -286,3 +286,5 @@ class DeleteDictionary(graphene.Mutation):
             return DeleteDictionary(field=dbentityobj, status=True)
         return ResponseError(message="No such entity in the system")
 
+
+from .gql_language import Language
