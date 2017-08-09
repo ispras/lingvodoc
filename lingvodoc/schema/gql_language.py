@@ -31,6 +31,7 @@ class Language(graphene.ObjectType):
     """
     dbType = dbLanguage
     dbObject = None
+    dictionaries = graphene.List(Dictionary)
 
     dataType = graphene.String()
 
@@ -112,6 +113,7 @@ class CreateLanguage(graphene.Mutation):
             )
             DBSession.add(dbentityobj)
 
+            parent = None
             if parent_client_id and parent_object_id:
                 parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
             if parent:

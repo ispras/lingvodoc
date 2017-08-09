@@ -66,7 +66,6 @@ from lingvodoc.schema.gql_email import (
 )
 from lingvodoc.schema.gql_holders import PermissionException
 
-
 import lingvodoc.acl as acl
 
 from lingvodoc.models import (
@@ -81,13 +80,11 @@ from sqlalchemy import (
     or_,
 )
 
-
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
 
 class Query(graphene.ObjectType):
-
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
     dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int))
@@ -133,15 +130,16 @@ class Query(graphene.ObjectType):
             else:
                 raise KeyError("Something wrong with the base", resp.json['error'])
 
-            dbdicts = DBSession.query(dbDictionary).filter(or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                                                                    dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                                 and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                                      dbDictionary.state_translation_gist_client_id == limited_client_id))).\
+            dbdicts = DBSession.query(dbDictionary).filter(
+                or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                         dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                    and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
+                         dbDictionary.state_translation_gist_client_id == limited_client_id))). \
                 join(dbPerspective) \
                 .filter(or_(and_(dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                             dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                        and_(dbPerspective.state_translation_gist_object_id == limited_object_id,
-                             dbPerspective.state_translation_gist_client_id == limited_client_id))).all()
+                                 dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                            and_(dbPerspective.state_translation_gist_object_id == limited_object_id,
+                                 dbPerspective.state_translation_gist_client_id == limited_client_id))).all()
 
         else:
             dbdicts = DBSession.query(dbDictionary).all()
@@ -257,7 +255,6 @@ class MyMutations(graphene.ObjectType):
     delete_dictionary = DeleteDictionary.Field()
 
 
-
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
 
@@ -286,7 +283,7 @@ class Context(dict):
         """
 
         if (action, subject, subject_id) in self.cache:
-          return self.cache[(action, subject, subject_id)]
+            return self.cache[(action, subject, subject_id)]
 
         result = acl.check_direct(self.client_id, self.request, action, subject, subject_id)
         self.cache[(action, subject, subject_id)] = result
@@ -309,4 +306,3 @@ class Context(dict):
         """
 
         return self.acl_check_if(action, subject, args.get('id'))
-
