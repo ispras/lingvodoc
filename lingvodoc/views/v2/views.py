@@ -59,7 +59,7 @@ import json
 import requests
 from pyramid.request import Request
 from time import time
-
+from webob.multidict import MultiDict, NoVars
 from lingvodoc.schema.query import schema, Context
 
 from copy import deepcopy
@@ -1088,8 +1088,18 @@ def create_persp_to_field(request):
 @view_config(route_name='testing_graphene', renderer='json')
 def testing_graphene(request):
     variable_values = {}
-    file_upload_flag = False # may rewrite without the flag
-    if request.headers == "POST":
+    client_id = request.authenticated_userid
+    if not client_id:
+        client_id = None
+        # todo: httpnotauthorized?
+
+    # user_id =  get_user_by_client_id(authenticated_userid(request))
+    # if not client_id:
+    #     user_id = None
+    # else:
+    #     user_id = get_user_by_client_id(client_id).id
+
+    if request.content_type == "application/x-www-form-urlencoded" and type(request.POST) == MultiDict:
         data = request.POST
         """
         data:
@@ -1101,42 +1111,25 @@ def testing_graphene(request):
          ])
         """
 
-
         if data and "file" in data and "graphene" in data:
             # We can get next file from the list inside file upload mutation resolve
             # use request.POST.popitem()
-            request_string = request.POST.popitem()#data["graphene"]
-            #files = data.getall("file")
-            file_upload_flag = True
-            #print(data["blob"], data["blob"].filename, data["blob"].file)
-            #print(data["data_type"])
-
+            request_string = request.POST.popitem()  # data["graphene"]
+            # todo: file usage
+            # files = data.getall("file")
+        else:
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'wrong data'}
+    elif request.content_type == "text/plain" and type(request.POST) == NoVars:
+        request_string = request.body.decode("utf-8")
+    else:
+        request.response.status = HTTPBadRequest.code
+        return {'error': 'wrong content type'}
 
     published = request.params.get('published')
     if published is None:
-        published = False
+        published = False  # todo: use this
 
-    request_string = """
-query  perspective{  perspective(id: [630,9])
-{id translation tree{id translation dataType}
-fields{id translation}
-lexicalEntries{id entities{id content fieldType}}
-}}
-    """
-    if not file_upload_flag:
-        request_string = request.body.decode("utf-8")
-    # result = schema.execute('query  dictionary{ client dictionaries(published: %s){translation status} dictionary(id: [70,4]){id translation}}' % str(published).lower(),
-    #                         context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
-    #                                        'locale_id': 1,
-    #                                        'request': request})
-    client_id = request.authenticated_userid
-    if not client_id:
-        client_id = None
-    #user_id =  get_user_by_client_id(authenticated_userid(request))
-    # if not client_id:
-    #     user_id = None
-    # else:
-    #     user_id = get_user_by_client_id(client_id).id
     result = schema.execute(request_string,
                             context_value=Context({
                                 'client_id': client_id,
@@ -1144,22 +1137,12 @@ lexicalEntries{id entities{id content fieldType}}
                                 'request': request}),
                             variable_values={})
 
-
-    # result = schema.execute(
-    #     'query  perspective{  perspective(id: [70,5])'
-    #     '{id translation '
-    #     'lexicalEntries{id entities{id content fieldType}}'
-    #     '}}',
-    #     context_value={'client': get_user_by_client_id(authenticated_userid(request)).name,
-    #                    'locale_id': 2,
-    #                    'request': request})
-    #print(result.data, result.errors, result.invalid)
-
     if result.invalid:
         return {'errors': [str(e) for e in result.errors]}
     if result.errors:
         return {'errors': [str(e) for e in result.errors]}
     return result.data
+
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
