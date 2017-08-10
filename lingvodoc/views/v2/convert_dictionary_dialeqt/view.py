@@ -24,7 +24,7 @@ from lingvodoc.cache.caching import TaskStatus
 def convert_dictionary(request):  # TODO: test
     try:
         req = request.json_body
-        locale_id = int(request.cookies.get('locale_id') or 2)
+        locale_id = int(request.cookies.get('locale_id') or 1)
         client_id = request.authenticated_userid
         if not client_id:
             user_id = anonymous_userid(request)

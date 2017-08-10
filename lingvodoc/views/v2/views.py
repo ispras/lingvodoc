@@ -1087,74 +1087,91 @@ def create_persp_to_field(request):
 #TODO: Remove it
 @view_config(route_name='testing_graphene', renderer='json')
 def testing_graphene(request):
-    variable_values = {}
-    client_id = request.authenticated_userid
-    if not client_id:
-        client_id = None
+    try:
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
         # todo: httpnotauthorized?
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        # user_id =  get_user_by_client_id(authenticated_userid(request))
+        # if not client_id:
+        #     user_id = None
+        # else:
+        #     user_id = get_user_by_client_id(client_id).id
+        if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
+                and type(request.POST) == MultiDict:
+            data = request.POST
+            if not data:
+                return {'error': 'empty request'}
+            elif not "graphene" in data:
+                return {'error': 'graphene key not nound'}
+            elif not "blob" in data:
+                return {'error': 'blob key not nound'}
+            request_string = request.POST.pop("graphene")
+            """
+            data:
 
-    # user_id =  get_user_by_client_id(authenticated_userid(request))
-    # if not client_id:
-    #     user_id = None
-    # else:
-    #     user_id = get_user_by_client_id(client_id).id
-    if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
-            and type(request.POST) == MultiDict:
-        data = request.POST
-        if not data:
-            return {'error': 'empty request'}
-        elif not "graphene" in data:
-            return {'error': 'graphene key not nound'}
-        elif not "blob" in data:
-            return {'error': 'blob key not nound'}
-        request_string = request.POST.pop("graphene")
-        """
-        data:
+            MultiDict([
+            ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+             ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+             ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+             ])
+            """
+            '''
+            if data and "file" in data and "graphene" in data:
+                # We can get next file from the list inside file upload mutation resolve
+                # use request.POST.popitem()
+                request_string = request.POST.popitem()  # data["graphene"]
+                # todo: file usage
+                # files = data.getall("file")
+            else:
+                request.response.status = HTTPBadRequest.code
+                return {'error': 'wrong data'}
 
-        MultiDict([
-        ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
-         ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
-         ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
-         ])
-        """
-        '''
-        if data and "file" in data and "graphene" in data:
-            # We can get next file from the list inside file upload mutation resolve
-            # use request.POST.popitem()
-            request_string = request.POST.popitem()  # data["graphene"]
-            # todo: file usage
-            # files = data.getall("file")
+            '''
+
+
+            #request_string = request.POST.popitem()
+            #print(request_string)
+        elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
+            request_string = request.body.decode("utf-8")
         else:
             request.response.status = HTTPBadRequest.code
-            return {'error': 'wrong data'}
+            return {'error': 'wrong content type'}
 
-        '''
+        published = request.params.get('published')
+        if published is None:
+            published = False  # todo: use this
 
+        result = schema.execute(request_string,
+                                context_value=Context({
+                                    'client_id': client.id,
+                                    'locale_id': locale_id,
+                                    'request': request}),
+                                variable_values={})
 
-        #request_string = request.POST.popitem()
-        #print(request_string)
-    elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
-        request_string = request.body.decode("utf-8")
-    else:
+        if result.invalid:
+            return {'errors': [str(e) for e in result.errors]}
+        if result.errors:
+            return {'errors': [str(e) for e in result.errors]}
+        return result.data
+    except KeyError as e:
         request.response.status = HTTPBadRequest.code
-        return {'error': 'wrong content type'}
+        return {'error': str(e)}
 
-    published = request.params.get('published')
-    if published is None:
-        published = False  # todo: use this
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
 
-    result = schema.execute(request_string,
-                            context_value=Context({
-                                'client_id': client_id,
-                                'locale_id': 2,
-                                'request': request}),
-                            variable_values={})
-
-    if result.invalid:
-        return {'errors': [str(e) for e in result.errors]}
-    if result.errors:
-        return {'errors': [str(e) for e in result.errors]}
-    return result.data
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
 
 
 conn_err_msg = """\
