@@ -1152,7 +1152,7 @@ def testing_graphene(request):
         result = schema.execute(request_string,
                                 context_value=Context({
                                     'client_id': client.id,
-                                    'locale_id': 2,
+                                    'locale_id': locale_id,
                                     'request': request}),
                                 variable_values={})
 
