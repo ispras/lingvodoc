@@ -1098,9 +1098,16 @@ def testing_graphene(request):
     #     user_id = None
     # else:
     #     user_id = get_user_by_client_id(client_id).id
-
-    if request.content_type == "application/x-www-form-urlencoded" and type(request.POST) == MultiDict:
+    if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
+            and type(request.POST) == MultiDict:
         data = request.POST
+        if not data:
+            return {'error': 'empty request'}
+        elif not "graphene" in data:
+            return {'error': 'graphene key not nound'}
+        elif not "blob" in data:
+            return {'error': 'blob key not nound'}
+        request_string = request.POST.pop("graphene")
         """
         data:
 
@@ -1110,7 +1117,7 @@ def testing_graphene(request):
          ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
          ])
         """
-
+        '''
         if data and "file" in data and "graphene" in data:
             # We can get next file from the list inside file upload mutation resolve
             # use request.POST.popitem()
@@ -1120,7 +1127,13 @@ def testing_graphene(request):
         else:
             request.response.status = HTTPBadRequest.code
             return {'error': 'wrong data'}
-    elif request.content_type == "text/plain" and type(request.POST) == NoVars:
+
+        '''
+
+
+        #request_string = request.POST.popitem()
+        #print(request_string)
+    elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
         request_string = request.body.decode("utf-8")
     else:
         request.response.status = HTTPBadRequest.code
