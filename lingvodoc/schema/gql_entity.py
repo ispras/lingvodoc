@@ -86,7 +86,7 @@ class CreateEntity(graphene.Mutation):
     """
     # Used for convenience
 
-    status = graphene.Boolean()
+    triumf = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -108,7 +108,7 @@ class CreateEntity(graphene.Mutation):
             DBSession.flush()
             entity = Entity(id = [dbentityobj.client_id, dbentityobj.object_id])
             entity.dbObject = dbentityobj
-            return CreateEntity(entity=entity, status="OK")
+            return CreateEntity(entity=entity, triumf=True)
 
             #if not perm_check(client_id, "field"):
             #    return ResponseError(message = "Permission Denied (Entity)")
@@ -153,7 +153,7 @@ class UpdateEntity(graphene.Mutation):
 
     entity = graphene.Field(Entity)
     additional_metadata = ObjectVal()  # TODO: deprecated, used in additional_metadata holder
-    status = graphene.Boolean()
+    triumf = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -189,7 +189,7 @@ class UpdateEntity(graphene.Mutation):
             entity = Entity( **args)
             entity.dbObject = dbentity_obj # speeds up queries
 
-            return UpdateEntity(entity=entity, status = "OK")
+            return UpdateEntity(entity=entity, triumf = True)
 
 # Delete
 """
@@ -225,7 +225,7 @@ class DeleteEntity(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
 
-    status = graphene.Boolean()
+    triumf = graphene.Boolean()
     entity = graphene.Field(Entity)
 
     @staticmethod
@@ -250,5 +250,5 @@ class DeleteEntity(graphene.Mutation):
             del_object(dbentityobj)
             entity = Entity(id = id)
             entity.dbObject=dbentityobj
-            return DeleteEntity(entity=entity, status="OK")
+            return DeleteEntity(entity=entity, triumf="OK")
         return ResponseError(message="No such entity in the system")
