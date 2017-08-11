@@ -10,7 +10,8 @@ from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     TranslationHolder,
     fetch_object,
-    del_object
+    del_object,
+    client_id_check
 )
 
 # from lingvodoc.schema.gql_dictionary import Dictionary
@@ -84,6 +85,7 @@ class CreateLanguage(graphene.Mutation):
 
 
     @staticmethod
+    @client_id_check()
     def mutate(root, args, context, info):
         try:
             parent_id = args.get('parent_id')
@@ -146,3 +148,4 @@ class DeleteLanguage(graphene.Mutation):
         raise ResponseError(message="No such entity in the system")
 
 from .gql_dictionary import Dictionary
+

@@ -9,6 +9,7 @@ from graphene.types.generic import GenericScalar
 from lingvodoc.models import (
     ObjectTOC,
     DBSession,
+    Client
 )
 
 # Object types
@@ -52,16 +53,12 @@ def acl_check_by_id(action, subject, id_key = 'id'):
     """
     Decorator enabling ACL-based permission checks, compatible with any functions/methods with signature
     'def f(arg1, args, context, *args)', e.g. resolve methods.
-
     Example:
-
         @acl_check_by_id('view', 'dictionary_role')
         def resolve_dictionary_role(self, args, context, info):
             ...
-
     With different identifier argument key, that is, assuming that subject identifier is  args.get(
     'different_id_key'):
-
         @acl_check_by_id('view', 'dictionary_role', 'different_id_key')
         def resolve_dictionary_role(self, args, context, info):
             ...
@@ -81,6 +78,26 @@ def acl_check_by_id(action, subject, id_key = 'id'):
 
     return decorator
 
+
+def client_id_check():
+    """
+    client_id checks
+    """
+
+    def decorator(resolve_f):
+
+        def wrapper(self, args, context, *resolve_f_args):
+            client = DBSession.query(Client).filter_by(id=context.client_id).first()
+            if not client:
+                raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                               context.client_id)
+            else:
+                return resolve_f(self, args, context, *resolve_f_args)
+
+
+        return wrapper
+
+    return decorator
 
 class ObjectVal(Scalar):
     """
