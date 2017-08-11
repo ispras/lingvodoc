@@ -10,11 +10,11 @@ from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     TranslationHolder,
     fetch_object,
-    del_object
+    del_object,
+    ResponseError
 )
 
 # from lingvodoc.schema.gql_dictionary import Dictionary
-
 
 class Language(graphene.ObjectType):
     """
@@ -58,19 +58,30 @@ class Language(graphene.ObjectType):
         # def resolve_created_at(self, args, context, info):
         #    return self.dbObject.created_at
 
-
 class CreateLanguage(graphene.Mutation):
-
-
     """
     example:
     mutation  {
-        create_language(translation_gist_id: [662, 2], parent_id: [1, 47], locale_exist: true) {
-            triumf
+        create_language(id: [1,1], translation_gist_id: [662, 2], parent_id: [1, 47], locale_exist: true) {
+            field {
+                id
+            }
         }
     }
-    """
 
+    (this example works)
+    return:
+    {
+      "create_language": {
+        "field": {
+          "id": [
+            1,
+            1
+          ]
+        }
+      }
+    }
+    """
 
     class Input:
         id = graphene.List(graphene.Int)
@@ -82,7 +93,6 @@ class CreateLanguage(graphene.Mutation):
     field = graphene.Field(Language)
     triumph = graphene.Boolean()
 
-
     @staticmethod
     def mutate(root, args, context, info):
         try:
@@ -92,7 +102,6 @@ class CreateLanguage(graphene.Mutation):
         except:
             parent_client_id = None
             parent_object_id = None
-
 
         translation_gist_id = args.get('translation_gist_id')
         translation_gist_client_id = translation_gist_id[0]
@@ -123,7 +132,6 @@ class CreateLanguage(graphene.Mutation):
             language = Language(id=[dbentityobj.client_id, dbentityobj.object_id])
             language.dbObject = dbentityobj
             return CreateLanguage(field=language, triumph=True)
-
 
 class DeleteLanguage(graphene.Mutation):
     class Input:

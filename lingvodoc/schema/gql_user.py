@@ -16,7 +16,8 @@ from lingvodoc.schema.gql_holders import (
     CreatedAt,
     AdditionalMetadata,
     Name,
-    fetch_object
+    fetch_object,
+    ResponseError
 )
 
 import datetime
@@ -83,9 +84,9 @@ class CreateUser(graphene.Mutation):
 
     """
     example:
-    mutation: {
-        create_user( login: "new_usr", email: "new@mail.ru"), name: "Новое имя", birthday: [1, 1, 1970], password: "secret") {
-            triumf
+    mutation {
+        create_user( login: "new_usr", email: "new@mail.ru", name: "Новое имя", birthday: [1, 1, 1970], password: "secret") {
+            triumph
         }
     }
     """

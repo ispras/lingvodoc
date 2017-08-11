@@ -17,6 +17,10 @@ from lingvodoc.views.v2.views import (
 )
 """
 
+from lingvodoc.schema.gql_holders import (
+    ResponseError
+)
+
 from lingvodoc.views.v2.translations import translationgist_contents
 
 # from lingvodoc.schema.gql_language import Language
