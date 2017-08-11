@@ -66,7 +66,7 @@ class CreateLanguage(graphene.Mutation):
     example:
     mutation  {
         create_language(translation_gist_id: [662, 2], parent_id: [1, 47], locale_exist: true) {
-            triumf
+            status
         }
     }
     """
@@ -80,7 +80,7 @@ class CreateLanguage(graphene.Mutation):
 
 
     field = graphene.Field(Language)
-    triumf = graphene.Boolean()
+    status = graphene.Boolean()
 
 
     @staticmethod
@@ -98,16 +98,12 @@ class CreateLanguage(graphene.Mutation):
         translation_gist_client_id = translation_gist_id[0]
         translation_gist_object_id = translation_gist_id[1]
 
-        id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
+        client_id = context.client_id#id[0]
+        #object_id = id[1]
         if client_id:
-            if not object_id:
-                object_id = None
-
             dbentityobj = dbLanguage(
                 client_id=client_id,
-                object_id=object_id,
+                object_id=None,
                 translation_gist_client_id=translation_gist_client_id,
                 translation_gist_object_id=translation_gist_object_id
             )
@@ -122,7 +118,7 @@ class CreateLanguage(graphene.Mutation):
             DBSession.flush()
             language = Language(id=[dbentityobj.client_id, dbentityobj.object_id])
             language.dbObject = dbentityobj
-            return CreateLanguage(field=language, triumf=True)
+            return CreateLanguage(field=language, status=True)
 
 
 class DeleteLanguage(graphene.Mutation):
@@ -130,7 +126,7 @@ class DeleteLanguage(graphene.Mutation):
         id = graphene.List(graphene.Int)
 
     field = graphene.Field(Language)
-    triumf = graphene.Boolean()
+    status = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -146,7 +142,7 @@ class DeleteLanguage(graphene.Mutation):
             del_object(dbentityobj)
             language = Language(id=id)
             language.dbObject = dbentityobj
-            return DeleteLanguage(field=language, triumf=True)
-        return ResponseError(message="No such entity in the system")
+            return DeleteLanguage(field=language, status=True)
+        raise ResponseError(message="No such entity in the system")
 
 from .gql_dictionary import Dictionary
