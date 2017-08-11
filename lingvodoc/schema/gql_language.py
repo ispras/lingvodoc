@@ -98,16 +98,12 @@ class CreateLanguage(graphene.Mutation):
         translation_gist_client_id = translation_gist_id[0]
         translation_gist_object_id = translation_gist_id[1]
 
-        id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
+        client_id = context.client_id#id[0]
+        #object_id = id[1]
         if client_id:
-            if not object_id:
-                object_id = None
-
             dbentityobj = dbLanguage(
                 client_id=client_id,
-                object_id=object_id,
+                object_id=None,
                 translation_gist_client_id=translation_gist_client_id,
                 translation_gist_object_id=translation_gist_object_id
             )
@@ -147,6 +143,6 @@ class DeleteLanguage(graphene.Mutation):
             language = Language(id=id)
             language.dbObject = dbentityobj
             return DeleteLanguage(field=language, status=True)
-        return ResponseError(message="No such entity in the system")
+        raise ResponseError(message="No such entity in the system")
 
 from .gql_dictionary import Dictionary
