@@ -66,7 +66,7 @@ class CreateLanguage(graphene.Mutation):
     example:
     mutation  {
         create_language(translation_gist_id: [662, 2], parent_id: [1, 47], locale_exist: true) {
-            status
+            triumph
         }
     }
     """
@@ -80,7 +80,7 @@ class CreateLanguage(graphene.Mutation):
 
 
     field = graphene.Field(Language)
-    status = graphene.Boolean()
+    triumph = graphene.Boolean()
 
 
     @staticmethod
@@ -118,7 +118,7 @@ class CreateLanguage(graphene.Mutation):
             DBSession.flush()
             language = Language(id=[dbentityobj.client_id, dbentityobj.object_id])
             language.dbObject = dbentityobj
-            return CreateLanguage(field=language, status=True)
+            return CreateLanguage(field=language, triumph=True)
 
 
 class DeleteLanguage(graphene.Mutation):
@@ -126,7 +126,7 @@ class DeleteLanguage(graphene.Mutation):
         id = graphene.List(graphene.Int)
 
     field = graphene.Field(Language)
-    status = graphene.Boolean()
+    triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -142,7 +142,7 @@ class DeleteLanguage(graphene.Mutation):
             del_object(dbentityobj)
             language = Language(id=id)
             language.dbObject = dbentityobj
-            return DeleteLanguage(field=language, status=True)
+            return DeleteLanguage(field=language, triumph=True)
         raise ResponseError(message="No such entity in the system")
 
 from .gql_dictionary import Dictionary
