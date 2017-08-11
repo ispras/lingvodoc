@@ -1089,14 +1089,9 @@ def create_persp_to_field(request):
 def testing_graphene(request):
     try:
         variables = {'auth': request.authenticated_userid}
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-        if not client:
-            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                           variables['auth'])
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
-        if not user:
-            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-
+        client_id = variables["auth"]
+        if not client_id:
+            client_id = None
         # todo: httpnotauthorized?
         locale_id = int(request.cookies.get('locale_id') or 2)
         # user_id =  get_user_by_client_id(authenticated_userid(request))
@@ -1151,7 +1146,7 @@ def testing_graphene(request):
 
         result = schema.execute(request_string,
                                 context_value=Context({
-                                    'client_id': client.id,
+                                    'client_id': client_id,
                                     'locale_id': locale_id,
                                     'request': request}),
                                 variable_values={})
