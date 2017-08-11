@@ -98,7 +98,7 @@ class CreateUser(graphene.Mutation):
 
 
     field = graphene.Field(User)
-    triumf = graphene.Boolean()
+    triumph = graphene.Boolean()
 
 
     @staticmethod
@@ -149,7 +149,7 @@ class CreateUser(graphene.Mutation):
 
         user = User(login=dbentityobj.login, is_active=True)
         user.dbObject = dbentityobj
-        return CreateUser(field=user, triumf=True)
+        return CreateUser(field=user, triumph=True)
 
 
 """
@@ -184,7 +184,7 @@ class UpdateUser(graphene.Mutation):
         about = graphene.String()
 
     field = graphene.Field(User)
-    triumf = graphene.Boolean()
+    triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -257,4 +257,4 @@ class UpdateUser(graphene.Mutation):
         field = User(login=user.login)
         field.dbObject = user
 
-        return UpdateUser(field=field, triumf=True)
+        return UpdateUser(field=field, triumph=True)
