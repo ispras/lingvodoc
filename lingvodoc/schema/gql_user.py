@@ -16,7 +16,8 @@ from lingvodoc.schema.gql_holders import (
     CreatedAt,
     AdditionalMetadata,
     Name,
-    fetch_object
+    fetch_object,
+    ResponseError
 )
 
 import datetime
@@ -83,9 +84,9 @@ class CreateUser(graphene.Mutation):
 
     """
     example:
-    mutation: {
-        create_user( login: "new_usr", email: "new@mail.ru"), name: "Новое имя", birthday: [1, 1, 1970], password: "secret") {
-            triumf
+    mutation {
+        create_user( login: "new_usr", email: "new@mail.ru", name: "Новое имя", birthday: [1, 1, 1970], password: "secret") {
+            triumph
         }
     }
     """
@@ -98,7 +99,7 @@ class CreateUser(graphene.Mutation):
 
 
     field = graphene.Field(User)
-    triumf = graphene.Boolean()
+    triumph = graphene.Boolean()
 
 
     @staticmethod
@@ -149,7 +150,7 @@ class CreateUser(graphene.Mutation):
 
         user = User(login=dbentityobj.login, is_active=True)
         user.dbObject = dbentityobj
-        return CreateUser(field=user, triumf=True)
+        return CreateUser(field=user, triumph=True)
 
 
 """
@@ -184,7 +185,7 @@ class UpdateUser(graphene.Mutation):
         about = graphene.String()
 
     field = graphene.Field(User)
-    triumf = graphene.Boolean()
+    triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -257,4 +258,4 @@ class UpdateUser(graphene.Mutation):
         field = User(login=user.login)
         field.dbObject = user
 
-        return UpdateUser(field=field, triumf=True)
+        return UpdateUser(field=field, triumph=True)

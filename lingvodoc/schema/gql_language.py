@@ -11,11 +11,10 @@ from lingvodoc.schema.gql_holders import (
     TranslationHolder,
     fetch_object,
     del_object,
-    client_id_check
+    ResponseError
 )
 
 # from lingvodoc.schema.gql_dictionary import Dictionary
-
 
 class Language(graphene.ObjectType):
     """
@@ -59,19 +58,30 @@ class Language(graphene.ObjectType):
         # def resolve_created_at(self, args, context, info):
         #    return self.dbObject.created_at
 
-
 class CreateLanguage(graphene.Mutation):
-
-
     """
     example:
     mutation  {
-        create_language(translation_gist_id: [662, 2], parent_id: [1, 47], locale_exist: true) {
-            triumph
+        create_language(id: [1,1], translation_gist_id: [662, 2], parent_id: [1, 47], locale_exist: true) {
+            field {
+                id
+            }
         }
     }
-    """
 
+    (this example works)
+    return:
+    {
+      "create_language": {
+        "field": {
+          "id": [
+            1,
+            1
+          ]
+        }
+      }
+    }
+    """
 
     class Input:
         id = graphene.List(graphene.Int)
@@ -83,9 +93,7 @@ class CreateLanguage(graphene.Mutation):
     field = graphene.Field(Language)
     triumph = graphene.Boolean()
 
-
     @staticmethod
-    @client_id_check()
     def mutate(root, args, context, info):
         try:
             parent_id = args.get('parent_id')
@@ -95,17 +103,20 @@ class CreateLanguage(graphene.Mutation):
             parent_client_id = None
             parent_object_id = None
 
-
         translation_gist_id = args.get('translation_gist_id')
         translation_gist_client_id = translation_gist_id[0]
         translation_gist_object_id = translation_gist_id[1]
 
-        client_id = context.client_id#id[0]
-        #object_id = id[1]
+        id = args.get('id')
+        client_id = id[0]
+        object_id = id[1]
         if client_id:
+            if not object_id:
+                object_id = None
+
             dbentityobj = dbLanguage(
                 client_id=client_id,
-                object_id=None,
+                object_id=object_id,
                 translation_gist_client_id=translation_gist_client_id,
                 translation_gist_object_id=translation_gist_object_id
             )
@@ -121,7 +132,6 @@ class CreateLanguage(graphene.Mutation):
             language = Language(id=[dbentityobj.client_id, dbentityobj.object_id])
             language.dbObject = dbentityobj
             return CreateLanguage(field=language, triumph=True)
-
 
 class DeleteLanguage(graphene.Mutation):
     class Input:
@@ -145,7 +155,6 @@ class DeleteLanguage(graphene.Mutation):
             language = Language(id=id)
             language.dbObject = dbentityobj
             return DeleteLanguage(field=language, triumph=True)
-        raise ResponseError(message="No such entity in the system")
+        return ResponseError(message="No such entity in the system")
 
 from .gql_dictionary import Dictionary
-

@@ -16,7 +16,10 @@ from lingvodoc.schema.gql_group import (
     Group
 )
 from lingvodoc.schema.gql_organization import (
-    Organization
+    Organization,
+    CreateOrganization,
+    UpdateOrganization,
+    DeleteOrganization
 )
 from lingvodoc.schema.gql_publishingentity import (
     PublishingEntity
@@ -253,10 +256,11 @@ class MyMutations(graphene.ObjectType):
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
     delete_dictionary = DeleteDictionary.Field()
-
+    create_organization = CreateOrganization.Field()
+    update_organization = UpdateOrganization.Field()
+    delete_organization = UpdateOrganization.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
-
 
 class Context(dict):
     """
