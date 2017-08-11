@@ -72,7 +72,7 @@ class Dictionary(graphene.ObjectType):
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
-    status = graphene.String()
+    triumf = graphene.Boolean()
 
     translation = graphene.String()
     dataType = graphene.String()
@@ -125,8 +125,8 @@ class CreateDictionary(graphene.Mutation):
         additional_metadata = graphene.String()
 
 
-    field = graphene.Field(lambda: Language)
-    status = graphene.Boolean()
+    field = graphene.Field(lambda: Dictionary)
+    triumf = graphene.Boolean()
 
 
     @staticmethod
@@ -208,7 +208,7 @@ class CreateDictionary(graphene.Mutation):
         dbentityobj.state_translation_gist_object_id = response.state_translation_gist_object
 
         DBSession.flush()
-        return CreateDictionary(field=dictionary, status=True)
+        return CreateDictionary(field=dictionary, triumf=True)
 
 
 class UpdateDictionary(graphene.Mutation):
@@ -217,8 +217,8 @@ class UpdateDictionary(graphene.Mutation):
         parent_id = graphene.List(graphene.Int)
         additional_metadata = graphene.String()
 
-    field = graphene.Field(User)
-    status = graphene.Boolean()
+    field = graphene.Field(Dictionary)
+    triumf = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -258,7 +258,7 @@ class UpdateDictionary(graphene.Mutation):
 
                 dictionary = Dictionary(id=[dbentityobj.client_id, dbentityobj.object_id])
                 dictionary.dbObject = dbentityobj
-                return UpdateDictionary(field=dictionary, status=True)
+                return UpdateDictionary(field=dictionary, triumf=True)
         return ResponseError(message="Error: No such dictionary in the system")
 
 
@@ -266,8 +266,8 @@ class DeleteDictionary(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
 
-    field = graphene.Field(lambda: Language)
-    status = graphene.Boolean()
+    field = graphene.Field(lambda: Dictionary)
+    triumf = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -283,8 +283,5 @@ class DeleteDictionary(graphene.Mutation):
             del_object(dbentityobj)
             dictionary = Dictionary(id=id)
             dictionary.dbObject = dbentityobj
-            return DeleteDictionary(field=dbentityobj, status=True)
+            return DeleteDictionary(field=dbentityobj, triumf=True)
         return ResponseError(message="No such entity in the system")
-
-
-from .gql_language import Language

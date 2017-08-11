@@ -25,7 +25,7 @@ from passlib.hash import bcrypt
 class User(graphene.ObjectType):
     """
     created_at          | timestamp without time zone | NOT NULL
-    id                  | bigint                      | NOT NULL DEFAULT nextval('user_id_seq'::regclass)
+    id                  | bigint                      | NOT NULL DEFAULpserve --daemon ./postgres.ini startT nextval('user_id_seq'::regclass)
     default_locale_id   | bigint                      | NOT NULL
     birthday            | date                        |
     is_active           | boolean                     | NOT NULL
@@ -80,11 +80,12 @@ class User(graphene.ObjectType):
 
 
 class CreateUser(graphene.Mutation):
+
     """
     example:
-    mutation:  {
+    mutation: {
         create_user( login: "new_usr", email: "new@mail.ru"), name: "Новое имя", birthday: [1, 1, 1970], password: "secret") {
-            status
+            triumf
         }
     }
     """
@@ -97,7 +98,7 @@ class CreateUser(graphene.Mutation):
 
 
     field = graphene.Field(User)
-    status = graphene.Boolean()
+    triumf = graphene.Boolean()
 
 
     @staticmethod
@@ -114,13 +115,6 @@ class CreateUser(graphene.Mutation):
         if day is None or month is None or year is None:
             return ResponseError(message="Error: day, month or year of the birth is missing")
         # birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
-        try:
-            day = int(day)
-            month = int(month)
-            year = int(year)
-            date_of_birthday = datetime.date(year, month, day)
-        except ValueError:
-            return ResponseError(message="Error: Invalid birthday")
 
         if DBSession.query(User).filter_by(login=login).first():
             return ResponseError(message="The user with this login is already registered")
@@ -155,7 +149,7 @@ class CreateUser(graphene.Mutation):
 
         user = User(login=dbentityobj.login, is_active=True)
         user.dbObject = dbentityobj
-        return CreateUser(field=user, status=True)
+        return CreateUser(field=user, triumf=True)
 
 
 """
@@ -190,7 +184,7 @@ class UpdateUser(graphene.Mutation):
         about = graphene.String()
 
     field = graphene.Field(User)
-    status = graphene.Boolean()
+    triumf = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -263,4 +257,4 @@ class UpdateUser(graphene.Mutation):
         field = User(login=user.login)
         field.dbObject = user
 
-        return UpdateUser(field=field, status=True)
+        return UpdateUser(field=field, triumf=True)

@@ -71,7 +71,7 @@ class CreateField(graphene.Mutation):
 
     marked_for_deletion = graphene.Boolean()
     field = graphene.Field(Field)
-    status_code = graphene.Boolean()
+    triumf = graphene.Boolean()
     errors = graphene.List(graphene.String)
     id = graphene.List(graphene.Int)
 
@@ -96,7 +96,7 @@ class CreateField(graphene.Mutation):
             DBSession.flush()
             field = Field(id = [dbfield.client_id, dbfield.object_id])
             field.dbObject = dbfield
-            return CreateField(field=field)
+            return CreateField(field=field, triumf = True)
 
             #if not perm_check(client_id, "field"):
             #    return ResponseError(message = "Permission Denied (Field)")
@@ -107,7 +107,7 @@ class UpdateField(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
     field = graphene.Field(Field)
-
+    triumf = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -119,7 +119,7 @@ class UpdateField(graphene.Mutation):
         dbfield_obj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
         field = Field( **args)
         field.dbObject = dbfield_obj
-        return UpdateField(field=field)
+        return UpdateField(field=field, triumf = True)
 
 
 class DeleteField(graphene.Mutation):
@@ -128,6 +128,7 @@ class DeleteField(graphene.Mutation):
 
     marked_for_deletion = graphene.Boolean()
     field = graphene.Field(Field)
+    triumf = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -137,5 +138,5 @@ class DeleteField(graphene.Mutation):
         fieldobj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
         del_object(fieldobj)
         field = Field(id = id)
-        return DeleteField(field=field)
+        return DeleteField(field=field, triumf = true)
 
