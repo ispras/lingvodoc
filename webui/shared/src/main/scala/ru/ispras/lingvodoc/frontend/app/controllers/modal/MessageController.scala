@@ -21,7 +21,7 @@ trait MessageScope extends Scope {
 @injectable("MessageController")
 class MessageController(scope: MessageScope,
                         val modal: ModalService,
-                        instance: ModalInstance[Unit],
+                        instance: ModalInstance[Boolean],
                         backend: BackendService,
                         timeout: Timeout,
                         val exceptionHandler: ExceptionHandler,
@@ -43,6 +43,18 @@ class MessageController(scope: MessageScope,
   def close(): Unit = {
     instance.dismiss(())
   }
+
+  @JSExport
+  def yes(): Unit = {
+    instance.close(true)
+  }
+
+  @JSExport
+  def no(): Unit = {
+    instance.close(false)
+  }
+
+
 
   override protected def onStartRequest(): Unit = {}
 

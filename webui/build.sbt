@@ -70,7 +70,6 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       lib.upickle,
       lib.scalaAngular,
       lib.pamphlet,
-      lib.scalaXml,
       lib.scalaJquery,
       lib.jquery,
       lib.angular,
@@ -92,6 +91,8 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.regions.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.myelan.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js",
       ProvidedJS / "chroma.min.js"
     ),
@@ -111,7 +112,6 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
       lib.upickle,
       lib.scalaAngular,
       lib.pamphlet,
-      lib.scalaXml,
       lib.scalaJquery,
       lib.jquery,
       lib.angular,
@@ -133,6 +133,8 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.regions.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.myelan.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js",
       ProvidedJS / "chroma.min.js"
     ),
@@ -152,7 +154,6 @@ lazy val proxy = (project in file("proxy")).dependsOn(shared, webui)
       lib.upickle,
       lib.scalaAngular,
       lib.pamphlet,
-      lib.scalaXml,
       lib.scalaJquery,
       lib.jquery,
       lib.angular,
@@ -174,6 +175,8 @@ lazy val proxy = (project in file("proxy")).dependsOn(shared, webui)
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.regions.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.myelan.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js",
       ProvidedJS / "chroma.min.js"
     ),
@@ -192,7 +195,6 @@ lazy val shared = (project in file("shared"))
       lib.upickle,
       lib.scalaAngular,
       lib.pamphlet,
-      lib.scalaXml,
       lib.scalaJquery,
       lib.jquery,
       lib.angular,
@@ -213,6 +215,8 @@ lazy val shared = (project in file("shared"))
       ProvidedJS / "wavesurfer.js",
       ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
       ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.regions.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.myelan.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js",
       ProvidedJS / "chroma.min.js"
     )

@@ -3,7 +3,9 @@ package ru.ispras.lingvodoc.frontend.app.controllers.webui.modal
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
+import com.sun.corba.se.impl.protocol.giopmsgheaders.Message
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.Messages
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 
@@ -31,7 +33,8 @@ class AddDictionaryToGrantModalController(scope: AddDictionaryToGrantModalScope,
                                           params: js.Dictionary[js.Function0[js.Any]])
 
   extends BaseModalController(scope, modal, instance, timeout, params)
-    with AngularExecutionContextProvider {
+    with AngularExecutionContextProvider
+    with Messages {
 
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
   private[this] var users: Seq[UserListEntry] = Seq.empty[UserListEntry]
@@ -40,14 +43,14 @@ class AddDictionaryToGrantModalController(scope: AddDictionaryToGrantModalScope,
   scope.grants = js.Array[Grant]()
   scope.selectedGrantId = -1
 
-
   @JSExport
-  def addDictionary(): Unit = {
-
-    scope.grants.find(_.id == scope.selectedGrantId) foreach { grant =>
-      backend.addDictionaryToGrant(grant.id, CompositeId.fromObject(dictionary)) map { _ =>
-        scope.currentGrants.push(grant)
-        scope.grants = scope.grants.filterNot(_.id == grant.id)
+  def addToGrant(grant: Grant): Unit = {
+    yesNo("Confirmation required", "Are you sure you want to add dictionary to this grant?") map { result =>
+      if (result) {
+        backend.addDictionaryToGrant(grant.id, CompositeId.fromObject(dictionary)) map { _ =>
+          scope.currentGrants.push(grant)
+          scope.grants = scope.grants.filterNot(_.id == grant.id)
+        }
       }
     }
   }

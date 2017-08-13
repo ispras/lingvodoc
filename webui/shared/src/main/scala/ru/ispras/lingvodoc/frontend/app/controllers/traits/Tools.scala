@@ -7,8 +7,11 @@ package ru.ispras.lingvodoc.frontend.app.controllers.traits
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.Controller
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
+
 import org.scalajs.dom.console
+
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
@@ -76,6 +79,42 @@ trait Tools extends ErrorModalHandler
     ).asInstanceOf[js.Dictionary[Any]]
 
     modal.open[Unit](options)
+  }
+
+  /** Launches background task of packaging all sound/markup pairs of perspective as a single archive. */
+  @JSExport
+  def sound_and_markup(published_mode: String): Unit =
+  {
+    backend.sound_and_markup(
+      perspectiveId, published_mode)
+
+    .map {
+      result =>
+
+        /* Showing a message about successfully launched sound/markup archive compilation. */
+
+        val options = ModalOptions()
+
+        options.templateUrl = "/static/templates/modal/message.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "MessageController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              "title" -> "",
+              "message" -> "Background task created. Check tasks menu for details."
+            )
+          }
+        ).asInstanceOf[js.Dictionary[Any]]
+
+        modal.open[Unit](options)
+    }
+    
+    .recover { case e: Throwable => Future.failed(e) }
   }
 }
 
