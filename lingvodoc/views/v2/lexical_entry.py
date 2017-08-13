@@ -52,8 +52,8 @@ def view_connected_words(request):
     response = list()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    field_client_id=request.params.get('field_client_id')
-    field_object_id=request.params.get('field_object_id')
+    field_client_id=int(request.params.get('field_client_id'))
+    field_object_id=int(request.params.get('field_object_id'))
     lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if lexical_entry and not lexical_entry.marked_for_deletion:
         tags = find_all_tags(lexical_entry, field_client_id, field_object_id)
@@ -93,7 +93,7 @@ def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
 def find_all_tags(lexical_entry, field_client_id, field_object_id):
     tag = None
     for entity in lexical_entry.entity:
-        if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id and entity.publishingentity.accepted == True:
+        if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id and entity.publishingentity.accepted:
             tag = entity.content
             break
     if not tag:
