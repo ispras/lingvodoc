@@ -172,6 +172,11 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   @JSExport
+  def etymologyPendingApproval(entry: LexicalEntry): Boolean = {
+    entry.entities.toSeq.exists(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId && !e.accepted)
+  }
+
+  @JSExport
   def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
@@ -276,8 +281,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   private[this] def loadConnectedEntries() = {
-
-    backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
+    val edit = !params("edit").asInstanceOf[Boolean]
+    backend.connectedLexicalEntries(lexicalEntryId, fieldId, edit) map { connectedEntries =>
       connectedLexicalEntries = connectedEntries
       val tf = connectedEntries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq map { entryGroup =>
         val firstEntry = entryGroup.head
