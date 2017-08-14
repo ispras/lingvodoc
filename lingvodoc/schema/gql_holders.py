@@ -11,6 +11,9 @@ from lingvodoc.models import (
     DBSession,
     Client
 )
+from lingvodoc.views.v2.utils import (
+    check_client_id
+)
 
 # Object types
 
@@ -83,16 +86,27 @@ def client_id_check():
     """
     client_id checks
     """
+    def get_client_id_from_args(wrapper_args):
+        if "id" in wrapper_args:
+            if wrapper_args["id"]:
+                return wrapper_args["id"][0]
+
 
     def decorator(resolve_f):
-
         def wrapper(self, args, context, *resolve_f_args):
-            client = DBSession.query(Client).filter_by(id=context.client_id).first()
-            if not client:
-                raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                               context.client_id)
+            client_id = get_client_id_from_args(args)
+            authenticated = context.client_id
+            if client_id:
+            #client = DBSession.query(Client).filter_by(id=context.client_id).first()
+                if not check_client_id(authenticated, client_id):
+                    raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                                       authenticated)
             else:
-                return resolve_f(self, args, context, *resolve_f_args)
+                client = DBSession.query(Client).filter_by(id=authenticated).first()
+                if not client:
+                    raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                                       authenticated)
+            return resolve_f(self, args, context, *resolve_f_args)
 
 
         return wrapper
@@ -145,7 +159,10 @@ class DateTime(Scalar): # TODO: change format
     @staticmethod
     def serialize(dt):
         # need to add assert
-        dt = datetime.datetime.utcfromtimestamp(dt) # can return wrong time
+        if type(dt) is datetime.datetime:
+            return  dt.isoformat()
+        else:
+            dt = datetime.datetime.utcfromtimestamp(dt) # can return wrong time
         return dt.isoformat()
 
     @staticmethod
