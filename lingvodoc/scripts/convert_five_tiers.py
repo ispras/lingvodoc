@@ -645,11 +645,15 @@ def convert_five_tiers(
                     curr_dict = word_translation
                     mt_words = [word_translation[i][1].text for i in word_translation
                                 if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
+                    mt_times = [word_translation[i][1].time for i in word_translation
+                                if len(word_translation[i]) > 1 and word_translation[i][1].time is not None]
+
                     main_tier_text = " ".join(mt_words)
+                    main_tier_time = (mt_times[0], mt_times[-1])
                     if main_tier_text:
                         paradigm_words.append(elan_parser.Word(text=main_tier_text,
                                                                tier="Word of Paradigmatic forms",
-                                                               time=word.time)
+                                                               time=main_tier_time)
                                               )
                 else:
                     word = word_translation[0]
