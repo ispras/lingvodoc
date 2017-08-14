@@ -11,6 +11,7 @@ from lingvodoc.schema.gql_holders import (
     TranslationHolder,
     fetch_object,
     del_object,
+    client_id_check,
     ResponseError
 )
 
@@ -94,6 +95,7 @@ class CreateLanguage(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @client_id_check()
     def mutate(root, args, context, info):
         try:
             parent_id = args.get('parent_id')
