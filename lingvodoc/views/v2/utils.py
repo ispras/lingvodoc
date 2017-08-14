@@ -132,7 +132,6 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
                   str(obj.client_id), '/',
                   str(obj.object_id), '/',
                   filename))
-    print(url)
     return real_location, url
 
 
@@ -145,7 +144,7 @@ def get_user_by_client_id(client_id):
 
 
 def check_client_id(authenticated, client_id):
-    print(authenticated, client_id)
+    # TODO: single request
     client = DBSession.query(Client).filter_by(id=authenticated).first()
     if not client:
         return False

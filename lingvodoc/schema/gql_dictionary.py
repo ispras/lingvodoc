@@ -36,8 +36,12 @@ def translation_service_search(searchstring):
 from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     StateHolder,
+    TranslationHolder,
     fetch_object,
-    del_object
+    del_object,
+    client_id_check,
+    ResponseError,
+    ObjectVal
 )
 
 from lingvodoc.views.v2.delete import real_delete_dictionary
@@ -47,6 +51,7 @@ from lingvodoc.views.v2.utils import (
 
 
 class Dictionary(graphene.ObjectType):
+    # TODO: resolve_dataType(?)
     """
      #created_at                       | timestamp without time zone | NOT NULL
      #object_id                        | bigint                      | NOT NULL
@@ -64,7 +69,27 @@ class Dictionary(graphene.ObjectType):
      + status
      + .translation
      + dataType
+    Test:
+    query myQuery
+    {
+       dictionary(id:[126, 3])
+       {
+          id
+          translation
+          created_at
+          parent_id
+          marked_for_deletion
+          translation_gist_id
+          additional_metadata
+              {
+              blob_description
+              }
+        }
+
+    }
+
     """
+
     dbType = dbDictionary
     dbObject = None
     category = graphene.Int()
@@ -72,21 +97,12 @@ class Dictionary(graphene.ObjectType):
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
-    triumf = graphene.Boolean()
-
-    translation = graphene.String()
-    dataType = graphene.String()
+    triumph = graphene.Boolean()
+    status = graphene.String()
 
     class Meta:
-        interfaces = (CommonFieldsComposite, StateHolder)
+        interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
 
-    def resolve_dataType(self, args, context, info):
-        return 'dictionary'
-
-    @fetch_object('translation')
-    def resolve_translation(self, args, context, info):
-        # return dbdict.get_translation(2)
-        return self.dbObject.get_translation(context.get('locale_id'))
 
     @fetch_object('status')
     def resolve_status(self, args, context, info):
@@ -99,19 +115,46 @@ class Dictionary(graphene.ObjectType):
         else:
             return None
 
-    @fetch_object()
-    def resolve_created_at(self, args, context, info):
-        return self.dbObject.created_at
 
+
+    def resolve_triumph(self, args, context, info):
+        return True
 
 class CreateDictionary(graphene.Mutation):
 
 
     """
     example:
-    mutation  {
-        create_dictionary(id: [ 742, 5494], translation_gist_id: [662, 2], parent_id: [1, 47], additional_metadata: "some data") {
-            status
+mutation  {
+        create_dictionary(id:[449,2491],translation_gist_id: [714, 3], parent_id: [500, 121], additional_metadata: {hash:"1234567"}) {
+            triumph
+            dictionary{
+                id
+                translation
+                marked_for_deletion
+                created_at
+                translation
+                            additional_metadata{
+             hash
+            }
+            }
+
+        }
+
+             delete_dictionary(id:[449,2491]) {
+            triumph
+            dictionary{
+                id
+                translation
+                created_at
+                translation
+                marked_for_deletion
+
+                            additional_metadata{
+             hash
+            }
+            }
+
         }
     }
     """
@@ -120,17 +163,19 @@ class CreateDictionary(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
-        client_id = graphene.Int()
         parent_id = graphene.List(graphene.Int)
-        additional_metadata = graphene.String()
+        additional_metadata = ObjectVal()
 
-
-    field = graphene.Field(lambda: Dictionary)
-    triumf = graphene.Boolean()
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
 
 
     @staticmethod
+    @client_id_check()
     def mutate(root, args, context, info):
+        ids = args.get("id")
+        client_id = ids[0] if ids else context["client_id"]
+        object_id = ids[1] if ids else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0]
         parent_object_id = parent_id[1]
@@ -138,32 +183,11 @@ class CreateDictionary(graphene.Mutation):
         translation_gist_id = args.get('translation_gist_id')
         translation_gist_client_id = translation_gist_id[0]
         translation_gist_object_id = translation_gist_id[1]
+        duplicate_check = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).all()
+        if duplicate_check:
+            raise ResponseError(message="Dictionary with such ID already exists in the system")
 
-        id = args.get('id')
-        client_id = id[0]
-        # client_id = context["client_id"]
 
-        object_id = id[1]
-        # object_id = context["object_id"]
-        # object_id = args.get('object_id')
-        if not object_id:
-            object_id = None
-
-        client = DBSession.query(dbClient).filter_by(id=client_id).first()
-        if not client:
-            return ResponseError(
-                message="Error: Invalid client id (not registered on server). Try to logout and then login.")
-
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            return ResponseError(message="Error: This client id is orphaned. Try to logout and then login once more.")
-
-        client_id_from_args = args.get('client_id')
-        if client_id_from_args:
-            if check_client_id(authenticated=client.id, client_id=client_id_from_args):
-                client_id = client_id_from_args
-            else:
-                return ResponseError(message="Error: client_id from another user")
 
         parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
 
@@ -171,44 +195,24 @@ class CreateDictionary(graphene.Mutation):
         if not additional_metadata:
             additional_metadata = None
 
-        """
-    
-    
-        subreq = Request.blank('/translation_service_search')
-        subreq.method = 'POST'
-        subreq.headers = request.headers
-        subreq.json = {"searchstring": "WiP"}
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-    
-        resp = request.invoke_subrequest(subreq)
-        # set_trace()
-        if 'error' not in resp.json:
-            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
-        else:
-            raise KeyError("Something wrong with the base", resp.json['error'])
-        """
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+
 
         dbentityobj = dbDictionary(client_id=client_id,
                                    object_id=object_id,
-                                   state_translation_gist_object_id=None,
-                                   state_translation_gist_client_id=None,
+                                   state_translation_gist_object_id=state_translation_gist_object_id,
+                                   state_translation_gist_client_id=state_translation_gist_client_id,
                                    parent=parent,
                                    translation_gist_client_id=translation_gist_client_id,
-                                   translation_gist_object_id=translation_gist_object_id)
+                                   translation_gist_object_id=translation_gist_object_id,
+                                   additional_metadata=additional_metadata
+                                   )
 
         dictionary = Dictionary(id=[dbentityobj.client_id, dbentityobj.object_id])
         dictionary.dbObject = dbentityobj
-        #context = {}
-        #context.locale_id = 2
-        searchstring = {"searchstring": "WiP"}
-        response = translation_service_search(searchstring)
-        # response = dictionary.resolve_status(dictionary, args, context, info)
-        dbentityobj.state_translation_gist_client_id = response.state_translation_gist_client
-        dbentityobj.state_translation_gist_object_id = response.state_translation_gist_object
-
         DBSession.flush()
-        return CreateDictionary(field=dictionary, triumf=True)
+        return CreateDictionary(dictionary=dictionary, triumph=True)
 
 
 class UpdateDictionary(graphene.Mutation):
@@ -217,8 +221,8 @@ class UpdateDictionary(graphene.Mutation):
         parent_id = graphene.List(graphene.Int)
         additional_metadata = graphene.String()
 
-    field = graphene.Field(Dictionary)
-    triumf = graphene.Boolean()
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
@@ -258,7 +262,7 @@ class UpdateDictionary(graphene.Mutation):
 
                 dictionary = Dictionary(id=[dbentityobj.client_id, dbentityobj.object_id])
                 dictionary.dbObject = dbentityobj
-                return UpdateDictionary(field=dictionary, triumf=True)
+                return UpdateDictionary(field=dictionary, triumph=True)
         return ResponseError(message="Error: No such dictionary in the system")
 
 
@@ -266,22 +270,20 @@ class DeleteDictionary(graphene.Mutation):
     class Input:
         id = graphene.List(graphene.Int)
 
-    field = graphene.Field(lambda: Dictionary)
-    triumf = graphene.Boolean()
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
 
     @staticmethod
+    @client_id_check()
     def mutate(root, args, context, info):
-        id = args.get('id')
-
-        client_id = id[0]
-        object_id = id[1]
+        ids = args.get('id')
+        client_id, object_id = ids
         dbentityobj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
 
         if dbentityobj and not dbentityobj.marked_for_deletion:
             dbentityobj = dbentityobj.parent
-
             del_object(dbentityobj)
             dictionary = Dictionary(id=id)
             dictionary.dbObject = dbentityobj
-            return DeleteDictionary(field=dbentityobj, triumf=True)
+            return DeleteDictionary(dictionary=dictionary, triumph=True)
         return ResponseError(message="No such entity in the system")
