@@ -876,10 +876,10 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
 
 
-  def connectedLexicalEntries(entryId: CompositeId, fieldId: CompositeId) = {
+  def connectedLexicalEntries(entryId: CompositeId, fieldId: CompositeId, onlyConnected: Boolean = false) = {
     val p = Promise[Seq[LexicalEntry]]()
 
-    val url = s"lexical_entry/${encodeURIComponent(entryId.clientId.toString)}/${encodeURIComponent(entryId.objectId.toString)}/connected?field_client_id=${encodeURIComponent(fieldId.clientId.toString)}&field_object_id=${encodeURIComponent(fieldId.objectId.toString)}"
+    val url = s"lexical_entry/${encodeURIComponent(entryId.clientId.toString)}/${encodeURIComponent(entryId.objectId.toString)}/connected?field_client_id=${encodeURIComponent(fieldId.clientId.toString)}&field_object_id=${encodeURIComponent(fieldId.objectId.toString)}&connected=${encodeURIComponent(onlyConnected.toString)}"
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
