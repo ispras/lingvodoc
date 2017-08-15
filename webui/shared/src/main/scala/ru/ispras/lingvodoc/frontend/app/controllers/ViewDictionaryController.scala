@@ -136,7 +136,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
           values = values.asInstanceOf[js.Object],
-          edit = false
+          edit = false,
+          published = true
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]
