@@ -323,13 +323,8 @@
 
                         <td>
                             <div ng-if="controller.etymologyPendingApproval(row.entry)">
-                                pending approval
+                                <span title="pending approval" class="glyphicon glyphicon-asterisk"></span>
                             </div>
-
-                            <div ng-if="!controller.etymologyPendingApproval(row.entry)">
-                                approved
-                            </div>
-
                         </td>
 
                         <td>{{ controller.getSource(row.entry) }}</td>
