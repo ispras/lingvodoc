@@ -6,6 +6,12 @@ from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
+    Client,
+    User as dbUser,
+    TranslationGist as dbTranslationGist,
+    BaseGroup as dbBaseGroup,
+    Group as dbGroup,
+    ObjectTOC,
     DBSession
 )
 
@@ -13,7 +19,11 @@ from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     TranslationHolder,
     StateHolder,
-    fetch_object
+    fetch_object,
+    client_id_check,
+    del_object,
+    ResponseError,
+    ObjectVal
 )
 
 from lingvodoc.schema.gql_dictionary import Dictionary
@@ -21,6 +31,22 @@ from lingvodoc.schema.gql_dictipersptofield import DictionaryPerspectiveToField
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
+
+from lingvodoc.views.v2.utils import add_user_to_group
+
+from lingvodoc.views.v2.translations import translationgist_contents
+
+def translation_service_search(searchstring):
+    translationatom = DBSession.query(dbTranslationAtom)\
+        .join(dbTranslationGist).\
+        filter(dbTranslationAtom.content == searchstring,
+               dbTranslationAtom.locale_id == 2,
+               dbTranslationGist.type == 'Service')\
+        .order_by(dbTranslationAtom.client_id)\
+        .first()
+    response = translationgist_contents(translationatom.parent)
+    return response
+
 
 
 class DictionaryPerspective(graphene.ObjectType):
@@ -184,3 +210,270 @@ class DictionaryPerspective(graphene.ObjectType):
 
 
         return result
+
+class CreateDictionaryPerspective(graphene.Mutation):
+    """
+    example:
+    mutation  {
+            create_perspective(id:[949,2491], dictionary_id:[449,2491], translation_gist_id: [714, 3], is_template: true, additional_metadata: {hash:"1234567"}, import_source: "source", import_hash: "hash") {
+                triumph
+                perspective{
+                    id
+                    is_template
+                }
+            }
+    }
+
+    (this example works)
+    returns:
+
+    {
+      "create_perspective": {
+        "triumph": true,
+        "perspective": {
+          "id": [
+            949,
+            2491
+          ],
+          "is_template": true
+        }
+      }
+    }
+    """
+
+    class Input:
+        id = graphene.List(graphene.Int)
+        dictionary_id = graphene.List(graphene.Int)
+        translation_gist_id = graphene.List(graphene.Int)
+        is_template = graphene.Boolean()
+        latitude = graphene.String()
+        longitude = graphene.String()
+        additional_metadata = ObjectVal()
+        import_source = graphene.String()
+        import_hash = graphene.String()
+
+    perspective = graphene.Field(DictionaryPerspective)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, args, context, info):
+        id = args.get("id")
+        client_id = id[0] if id else context["client_id"]
+        object_id = id[1] if id else None
+        parent_id = args.get('dictionary_id')
+        parent_client_id = parent_id[0]
+        parent_object_id = parent_id[1]
+        translation_gist_id = args.get('translation_gist_id')
+        translation_gist_client_id = translation_gist_id[0]
+        translation_gist_object_id = translation_gist_id[1]
+        is_template = args.get('is_template')
+        import_source = args.get('import_source')
+        import_hash = args.get('import_hash')
+
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        if not user:
+            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+           raise ResponseError(message="No such dictionary in the system")
+
+        coord = {}
+        latitude = args.get('latitude')
+        longitude = args.get('longitude')
+        if latitude:
+            coord['latitude'] = latitude
+        if longitude:
+            coord['longitude'] = longitude
+        additional_metadata = args.get('additional_metadata')
+        if additional_metadata:
+            additional_metadata.update(coord)
+        else:
+            additional_metadata = coord
+
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+
+        dbperspective = dbPerspective(client_id=client_id,
+                                            object_id=object_id,
+                                            state_translation_gist_object_id=state_translation_gist_object_id,
+                                            state_translation_gist_client_id=state_translation_gist_client_id,
+                                            parent=parent,
+                                            import_source=import_source,
+                                            import_hash=import_hash,
+                                            additional_metadata=additional_metadata,
+                                            translation_gist_client_id=translation_gist_client_id,
+                                            translation_gist_object_id=translation_gist_object_id
+                                            )
+        if is_template is not None:
+            dbperspective.is_template = is_template
+        DBSession.add(dbperspective)
+        DBSession.flush()
+        owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
+        owner = owner_client.user
+        if not object_id:
+            for base in DBSession.query(dbBaseGroup).filter_by(perspective_default=True):
+                new_group = dbGroup(parent=base,
+                                  subject_object_id=dbperspective.object_id, subject_client_id=dbperspective.client_id)
+                add_user_to_group(user, new_group)
+                add_user_to_group(owner, new_group)
+                DBSession.add(new_group)
+                DBSession.flush()
+
+        perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+        perspective.dbObject = dbperspective
+        return CreateDictionaryPerspective(perspective=perspective, triumph=True)
+
+class UpdateDictionaryPerspective(graphene.Mutation):
+    """
+    example:
+      mutation  {
+            update_perspective(id:[949,2491], dictionary_id:[449,2491], translation_gist_id: [714, 3], is_template: false) {
+                triumph
+                perspective{
+                    id
+                    is_template
+                }
+            }
+    }
+
+    (this example works)
+    returns:
+
+    {
+      "update_perspective": {
+        "triumph": true,
+        "perspective": {
+          "id": [
+            949,
+            2491
+          ],
+          "is_template": false
+        }
+      }
+    }
+    """
+    class Input:
+        id = graphene.List(graphene.Int)
+        dictionary_id = graphene.List(graphene.Int)
+        translation_gist_id = graphene.List(graphene.Int)
+        parent_id = graphene.List(graphene.Int)
+        is_template = graphene.Boolean()
+
+    perspective = graphene.Field(DictionaryPerspective)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, args, context, info):
+        id = args.get("id")
+        client_id = id[0]
+        object_id = id[1]
+        dictionary_id = args.get('dictionary_id')
+        dictionary_client_id = dictionary_id[0]
+        dictionary_object_id = dictionary_id[1]
+
+        dictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        if not dictionary:
+            raise ResponseError(message="No such dictionary in the system")
+
+        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbperspective:
+            if not dbperspective.marked_for_deletion:
+                if dbperspective.parent != dictionary:
+                    raise ResponseError(message="No such pair of dictionary/perspective in the system")
+
+                translation_gist_id = args.get("translation_gist_id")
+                translation_gist_client_id = translation_gist_id[0] if translation_gist_id else None
+                translation_gist_object_id = translation_gist_id[1] if translation_gist_id else None
+                if translation_gist_client_id:
+                    dbperspective.translation_gist_client_id = translation_gist_client_id
+                if translation_gist_object_id:
+                    dbperspective.translation_gist_object_id = translation_gist_object_id
+
+                parent_id = args.get("parent_id")
+                parent_client_id = parent_id[0] if parent_id else None
+                parent_object_id = parent_id[1] if parent_id else None
+                if parent_client_id:
+                    dbperspective.parent_client_id = parent_client_id
+                if parent_object_id:
+                    dbperspective.parent_object_id = parent_object_id
+
+                is_template = args.get('is_template')
+                if is_template is not None:
+                    dbperspective.is_template = is_template
+
+                perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id], is_template=dbperspective.is_template)
+                perspective.dbObject = dbperspective
+                return CreateDictionaryPerspective(perspective=perspective, triumph=True)
+        raise ResponseError(message="Error: No such perspective in the system")
+
+class DeleteDictionaryPerspective(graphene.Mutation):
+    """
+    example:
+      mutation  {
+            delete_perspective(id:[949,2491], dictionary_id:[449,2491]) {
+                triumph
+                perspective{
+                    id
+                    is_template
+                }
+            }
+    }
+
+    (this example works)
+    returns:
+
+    {
+      "delete_perspective": {
+        "triumph": true,
+        "perspective": {
+          "id": [
+            949,
+            2491
+          ],
+          "is_template": false
+        }
+      }
+    }
+    """
+    class Input:
+        id = graphene.List(graphene.Int)
+        dictionary_id = graphene.List(graphene.Int)
+
+    perspective = graphene.Field(DictionaryPerspective)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, args, context, info):
+        id = args.get("id")
+        client_id = id[0]
+        object_id = id[1]
+        parent_id = args.get('dictionary_id')
+        parent_client_id = parent_id[0]
+        parent_object_id = parent_id[1]
+
+        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            raise ResponseError(message="No such dictionary in the system")
+
+        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+
+        if dbperspective and not dbperspective.marked_for_deletion:
+            if dbperspective.parent != parent:
+                raise ResponseError(message="No such pair of dictionary/perspective in the system")
+
+
+            del_object(dbperspective)
+            objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=dbperspective.client_id,
+                                                             object_id=dbperspective.object_id).one()
+            del_object(objecttoc)
+
+            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
+                                                is_template=dbperspective.is_template)
+            perspective.dbObject = dbperspective
+            return CreateDictionaryPerspective(perspective=perspective, triumph=True)
+        raise ResponseError(message="No such entity in the system")

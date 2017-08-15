@@ -63,7 +63,10 @@ from lingvodoc.schema.gql_language import (
     DeleteLanguage
 )
 from lingvodoc.schema.gql_dictionaryperspective import (
-    DictionaryPerspective
+    DictionaryPerspective,
+    CreateDictionaryPerspective,
+    UpdateDictionaryPerspective,
+    DeleteDictionaryPerspective
 )
 from lingvodoc.schema.gql_user import (
     User,
@@ -274,6 +277,9 @@ class MyMutations(graphene.ObjectType):
     delete_translationgist = DeleteTranslationGist.Field()
     create_lexicalentry = CreateLexicalEntry.Field()
     delete_lexicalentry = DeleteLexicalEntry.Field()
+    create_perspective = CreateDictionaryPerspective.Field()
+    update_perspective = UpdateDictionaryPerspective.Field()
+    delete_perspective = DeleteDictionaryPerspective.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
