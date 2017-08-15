@@ -157,6 +157,6 @@ class DeleteLanguage(graphene.Mutation):
             language = Language(id=id)
             language.dbObject = dbentityobj
             return DeleteLanguage(field=language, triumph=True)
-        return ResponseError(message="No such entity in the system")
+        raise ResponseError(message="No such entity in the system")
 
 from .gql_dictionary import Dictionary
