@@ -59,6 +59,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   private[this] var searchDictionaries = Seq[Dictionary]()
   private[this] var searchPerspectives = Seq[Perspective]()
 
+  private[this] var connectedLexicalEntries = Seq[LexicalEntry]()
+
   override def spectrogramId: String = "#spectrogram-modal"
 
   scope.pageLoaded = false
@@ -116,9 +118,14 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   @JSExport
   def remove(entry: LexicalEntry): Unit = {
-    backend.disconnectLexicalEntry(entry, CompositeId.fromObject(field)).foreach { _ =>
-      loadConnectedEntries()
+
+    var requests = connectedLexicalEntries.map { e =>
+      backend.disconnectLexicalEntry(entry, CompositeId.fromObject(field))
     }
+
+    Future.sequence(requests)
+
+
   }
 
   @JSExport
@@ -165,6 +172,11 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   @JSExport
+  def etymologyPendingApproval(entry: LexicalEntry): Boolean = {
+    entry.entities.toSeq.exists(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId && !e.accepted)
+  }
+
+  @JSExport
   def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
@@ -185,7 +197,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
               perspectiveObjectId = perspective.objectId,
               lexicalEntry = entry.asInstanceOf[js.Object],
               field = field.asInstanceOf[js.Object],
-              values = values.asInstanceOf[js.Object]
+              values = values.asInstanceOf[js.Object],
+              edit = true
             )
           }
         ).asInstanceOf[js.Dictionary[Any]]
@@ -268,8 +281,9 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   private[this] def loadConnectedEntries() = {
-
-    backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
+    val edit = !params("edit").asInstanceOf[Boolean]
+    backend.connectedLexicalEntries(lexicalEntryId, fieldId, edit) map { connectedEntries =>
+      connectedLexicalEntries = connectedEntries
       val tf = connectedEntries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq map { entryGroup =>
         val firstEntry = entryGroup.head
         backend.getPerspective(CompositeId(firstEntry.parentClientId, firstEntry.parentObjectId)) flatMap { connectedPerspective =>

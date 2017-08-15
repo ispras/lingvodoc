@@ -177,7 +177,8 @@ trait Edit {
           perspectiveObjectId = perspectiveId.objectId,
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
-          values = values.asInstanceOf[js.Object]
+          values = values.asInstanceOf[js.Object],
+          edit = true
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]

@@ -135,7 +135,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
           perspectiveObjectId = perspectiveObjectId,
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
-          values = values.asInstanceOf[js.Object]
+          values = values.asInstanceOf[js.Object],
+          edit = false
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]
