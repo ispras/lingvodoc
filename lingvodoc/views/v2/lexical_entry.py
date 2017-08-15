@@ -57,25 +57,30 @@ def view_connected_words(request):
         accepted = False
     if accepted:
         accepted = True
-    field_client_id=int(request.params.get('field_client_id'))
-    field_object_id=int(request.params.get('field_object_id'))
+    published = request.params.get('published', False)
+    if type(published) == str and 'false' in published.lower():
+        published = False
+    if published:
+        published = True
+    field_client_id = int(request.params.get('field_client_id'))
+    field_object_id = int(request.params.get('field_object_id'))
     lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if lexical_entry and not lexical_entry.marked_for_deletion:
         tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accepted)
         lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
-        for lex in lexes:
-            path = request.route_url('lexical_entry',  # todo: method in utils (or just use track)
-                                     client_id=lex.client_id,
-                                     object_id=lex.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'GET'
-            subreq.headers = request.headers
-            try:
-                resp = request.invoke_subrequest(subreq)
-                if resp.json and resp.json not in response and 'error' not in resp.json:
-                    response.append(resp.json)
-            except HTTPForbidden:
-                pass
+        lexes_composite_list = [(lex.created_at,
+                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                                 lex.marked_for_deletion, lex.additional_metadata,
+                                 lex.additional_metadata.get('came_from')
+                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                                for lex in lexes]
+
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2),
+                                             publish=published, accept=accepted)
+        if published:
+            result = [lex for lex in result if have_tag(lex, tags, field_client_id, field_object_id)]
+
+        response = list(result)
         request.response.status = HTTPOk.code
         return response
 
@@ -83,22 +88,26 @@ def view_connected_words(request):
     return {'error': str("No such lexical entry in the system")}
 
 
-def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted=True):
+def have_tag(lex, tags, field_client_id, field_object_id):
+    return bool([x for x in lex['contains'] if x['field_client_id'] == field_client_id and x['field_object_id'] == field_object_id and x['content'] in tags and x['published'] and x['accepted']])
+
+
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted):
     result = DBSession.query(LexicalEntry) \
         .join(LexicalEntry.entity) \
         .join(Entity.publishingentity) \
         .join(Entity.field) \
         .filter(Entity.content.in_(tags),
-                Entity.marked_for_deletion==False,
+                Entity.marked_for_deletion == False,
                 Field.client_id == field_client_id,
                 Field.object_id == field_object_id)
     if accepted:
-        result.filter(PublishingEntity.accepted == True)
+        result = result.filter(PublishingEntity.accepted == True)
     result = result.all()
     return result
 
 
-def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted=True):
+def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
     tag = None
     for entity in lexical_entry.entity:
         if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id:
@@ -113,7 +122,7 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted=True
         tags = [tag]
         new_tags = [tag]
         while new_tags:
-            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id)
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
             new_tags = list()
             for lex in lexical_entries:
                 entities = DBSession.query(Entity) \
