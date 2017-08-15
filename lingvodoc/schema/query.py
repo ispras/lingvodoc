@@ -25,10 +25,14 @@ from lingvodoc.schema.gql_publishingentity import (
     PublishingEntity
 )
 from lingvodoc.schema.gql_translationatom import (
-    TranslationAtom
+    TranslationAtom,
+    CreateTranslationAtom,
+    UpdateTranslationAtom
 )
 from lingvodoc.schema.gql_translationgist import (
-    TranslationGist
+    TranslationGist,
+    CreateTranslationGist,
+    DeleteTranslationGist
 )
 from lingvodoc.schema.gql_userblobs import (
     UserBlobs
@@ -47,14 +51,22 @@ from lingvodoc.schema.gql_dictionary import (
     DeleteDictionary
 )
 
-from lingvodoc.schema.gql_lexicalentry import LexicalEntry
+from lingvodoc.schema.gql_lexicalentry import (
+    LexicalEntry,
+    CreateLexicalEntry,
+    DeleteLexicalEntry
+)
+
 from lingvodoc.schema.gql_language import (
     Language,
     CreateLanguage,
     DeleteLanguage
 )
 from lingvodoc.schema.gql_dictionaryperspective import (
-    DictionaryPerspective
+    DictionaryPerspective,
+    CreateDictionaryPerspective,
+    UpdateDictionaryPerspective,
+    DeleteDictionaryPerspective
 )
 from lingvodoc.schema.gql_user import (
     User,
@@ -258,7 +270,16 @@ class MyMutations(graphene.ObjectType):
     delete_dictionary = DeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
     update_organization = UpdateOrganization.Field()
-    delete_organization = UpdateOrganization.Field()
+    delete_organization = DeleteOrganization.Field()
+    create_translationatom = CreateTranslationAtom.Field()
+    update_translationatom = UpdateTranslationAtom.Field()
+    create_translationgist = CreateTranslationGist.Field()
+    delete_translationgist = DeleteTranslationGist.Field()
+    create_lexicalentry = CreateLexicalEntry.Field()
+    delete_lexicalentry = DeleteLexicalEntry.Field()
+    create_perspective = CreateDictionaryPerspective.Field()
+    update_perspective = UpdateDictionaryPerspective.Field()
+    delete_perspective = DeleteDictionaryPerspective.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

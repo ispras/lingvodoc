@@ -11,6 +11,7 @@ from lingvodoc.schema.gql_holders import (
     TranslationHolder,
     fetch_object,
     del_object,
+    client_id_check,
     ResponseError
 )
 
@@ -94,6 +95,7 @@ class CreateLanguage(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @client_id_check()
     def mutate(root, args, context, info):
         try:
             parent_id = args.get('parent_id')
@@ -155,6 +157,6 @@ class DeleteLanguage(graphene.Mutation):
             language = Language(id=id)
             language.dbObject = dbentityobj
             return DeleteLanguage(field=language, triumph=True)
-        return ResponseError(message="No such entity in the system")
+        raise ResponseError(message="No such entity in the system")
 
 from .gql_dictionary import Dictionary
