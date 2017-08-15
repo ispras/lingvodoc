@@ -50,6 +50,17 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
   private[this] val fieldId = CompositeId.fromObject(field)
+  
+  private[this] val published = params.get("published") match {
+    case Some(x) =>
+      x.asInstanceOf[Boolean]
+    case None => false
+  }
+
+  private[this] val edit = params.get("edit") match {
+    case Some(x) => x.asInstanceOf[Boolean]
+    case None => false
+  }
 
   private[this] var foundEntries = Seq[Seq[LexicalEntry]]()
   private[this] var dataTypes = Seq[TranslationGist]()
@@ -232,7 +243,9 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
               perspectiveObjectId = perspective.objectId,
               lexicalEntry = entry.asInstanceOf[js.Object],
               field = field.asInstanceOf[js.Object],
-              values = values.asInstanceOf[js.Object]
+              values = values.asInstanceOf[js.Object],
+              edit = edit,
+              published = published
             )
           }
         ).asInstanceOf[js.Dictionary[Any]]
@@ -281,8 +294,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   private[this] def loadConnectedEntries() = {
-    val edit = !params("edit").asInstanceOf[Boolean]
-    backend.connectedLexicalEntries(lexicalEntryId, fieldId, edit) map { connectedEntries =>
+    backend.connectedLexicalEntries(lexicalEntryId, fieldId, !edit, published) map { connectedEntries =>
       connectedLexicalEntries = connectedEntries
       val tf = connectedEntries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq map { entryGroup =>
         val firstEntry = entryGroup.head
