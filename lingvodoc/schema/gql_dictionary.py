@@ -220,55 +220,86 @@ mutation  {
 
 
 class UpdateDictionary(graphene.Mutation):
+    """
+    example:
+    mutation  {
+        update_dictionary(id:[949,2492], additional_metadata: {hash:"new hash"}) {
+            triumph
+            dictionary{
+                id
+                translation
+                marked_for_deletion
+                created_at
+                translation
+                            additional_metadata{
+             hash
+            }
+            }
+        }
+    }
+
+    (this example works)
+    returns:
+    {
+      "update_dictionary": {
+        "triumph": true,
+        "dictionary": {
+          "id": [
+            949,
+            2492
+          ],
+          "translation": "Словарь башкирского языка",
+          "marked_for_deletion": false,
+          "created_at": "2017-08-16T10:25:35",
+          "additional_metadata": {
+            "hash": "new hash"
+          }
+        }
+      }
+    }
+    """
     class Input:
+        id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
-        additional_metadata = graphene.String()
+        additional_metadata = ObjectVal()
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
 
     @staticmethod
+    @client_id_check()
     def mutate(root, args, context, info):
-        client_id = context["client_id"]
-        object_id = context["object_id"]
+        id = args.get('id')
+        client_id = id[0]
+        object_id = id[1]
+        parent_id = args.get('parent_id')
+        parent_client_id = parent_id[0] if parent_id else None
+        parent_object_id = parent_id[1] if parent_id else None
+        translation_gist_id = args.get('translation_gist_id')
+        translation_gist_client_id = translation_gist_id[0] if translation_gist_id else None
+        translation_gist_object_id = translation_gist_id[1] if translation_gist_id else None
+        additional_metadata = args.get('additional_metadata')
 
-        client = DBSession.query(dbClient).filter_by(id=request.authenticated_userid).first()
-        if not client:
-            return ResponseError(
-                message="Error: Invalid client id (not registered on server). Try to logout and then login.")
-
-            dbentityobj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbentityobj:
-            if not dbentityobj.marked_for_deletion:
-
-                parent_id = args.get('parent_id')
-                parent_client_id = parent_id[0]
-                parent_object_id = parent_id[1]
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
                 if parent_client_id:
-                    dbentityobj.parent_client_id = parent_client_id
+                    dbdictionary.parent_client_id = parent_client_id
                 if parent_object_id:
-                    dbentityobj.parent_object_id = parent_object_id
-
-                translation_gist_id = args.get('translation_gist_id')
-                translation_gist_client_id = translation_gist_id[0]
-                translation_gist_object_id = translation_gist_id[1]
+                    dbdictionary.parent_object_id = parent_object_id
                 if translation_gist_client_id:
-                    dbentityobj.translation_gist_client_id = translation_gist_client_id
+                    dbdictionary.translation_gist_client_id = translation_gist_client_id
                 if translation_gist_object_id:
-                    dbentityobj.translation_gist_object_id = translation_gist_object_id
-
-                additional_metadata = args.get('additional_metadata')
+                    dbdictionary.translation_gist_object_id = translation_gist_object_id
                 if additional_metadata:
-                    old_meta = dbentityobj.additional_metadata
+                    old_meta = dbdictionary.additional_metadata
                     old_meta.update(additional_metadata)
-                    dbentityobj.additional_metadata = old_meta
+                    dbdictionary.additional_metadata = old_meta
 
-                dictionary = Dictionary(id=[dbentityobj.client_id, dbentityobj.object_id])
-                dictionary.dbObject = dbentityobj
-                return UpdateDictionary(field=dictionary, triumph=True)
-        return ResponseError(message="Error: No such dictionary in the system")
-
+                dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
+                dictionary.dbObject = dbdictionary
+                return UpdateDictionary(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="Error: No such dictionary in the system")
 
 class DeleteDictionary(graphene.Mutation):
     class Input:
@@ -290,4 +321,4 @@ class DeleteDictionary(graphene.Mutation):
             dictionary = Dictionary(id=id)
             dictionary.dbObject = dbentityobj
             return DeleteDictionary(dictionary=dictionary, triumph=True)
-        return ResponseError(message="No such entity in the system")
+        raise ResponseError(message="No such entity in the system")
