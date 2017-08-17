@@ -50,7 +50,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
   private[this] val fieldId = CompositeId.fromObject(field)
-  
+
   private[this] val published = params.get("published") match {
     case Some(x) =>
       x.asInstanceOf[Boolean]
