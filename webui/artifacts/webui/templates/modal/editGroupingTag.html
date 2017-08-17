@@ -322,7 +322,9 @@
                     <tr ng-repeat="row in dictionaryTable.rows">
 
                         <td>
-                            Pending approval
+                            <div ng-if="controller.etymologyPendingApproval(row.entry)">
+                                Pending approval
+                            </div>
                         </td>
 
                         <td>{{ controller.getSource(row.entry) }}</td>
