@@ -9,7 +9,8 @@ from lingvodoc.schema.gql_entity import (
 from lingvodoc.schema.gql_dictipersptofield import (
     DictionaryPerspectiveToField,
     CreateDictionaryPerspectiveToField,
-    UpdateDictionaryPerspectiveToField
+    UpdateDictionaryPerspectiveToField,
+    DeleteDictionaryPerspectiveToField
 )
 from lingvodoc.schema.gql_basegroup import (
     BaseGroup,
@@ -62,6 +63,7 @@ from lingvodoc.schema.gql_lexicalentry import (
 from lingvodoc.schema.gql_language import (
     Language,
     CreateLanguage,
+    UpdateLanguage,
     DeleteLanguage
 )
 from lingvodoc.schema.gql_dictionaryperspective import (
@@ -266,6 +268,7 @@ class MyMutations(graphene.ObjectType):
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
     create_language = CreateLanguage.Field()
+    update_language = UpdateLanguage.Field()
     delete_language = DeleteLanguage.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
@@ -284,6 +287,7 @@ class MyMutations(graphene.ObjectType):
     delete_perspective = DeleteDictionaryPerspective.Field()
     create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()
     update_perspective_to_field = UpdateDictionaryPerspectiveToField.Field()
+    delete_perspective_to_field = DeleteDictionaryPerspectiveToField.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

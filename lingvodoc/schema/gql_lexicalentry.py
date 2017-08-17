@@ -88,7 +88,7 @@ class CreateLexicalEntry(graphene.Mutation):
         id = graphene.List(graphene.Int)
         perspective_id = graphene.List(graphene.Int)
 
-    field = graphene.Field(LexicalEntry)
+    lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -131,38 +131,44 @@ class CreateLexicalEntry(graphene.Mutation):
         DBSession.flush()
         lexicalentry = LexicalEntry(id=[dblexentry.client_id, dblexentry.object_id])
         lexicalentry.dbObject = dblexentry
-        return CreateLexicalEntry(field=lexicalentry, triumph=True)
+        return CreateLexicalEntry(lexicalentry=lexicalentry, triumph=True)
 
 class DeleteLexicalEntry(graphene.Mutation):
     """
     example:
     mutation {
         delete_lexicalentry(id: [949,21]) {
-            field {
+            lexicalentry {
                 id
             }
             triumph
         }
     }
     now returns:
-        {
-      "errors": [
-        "No such entity in the system"
-      ]
+      {
+      "delete_lexicalentry": {
+        "lexicalentry": {
+          "id": [
+            949,
+            21
+          ]
+        },
+        "triumph": true
+      }
     }
     """
 
     class Input:
         id = graphene.List(graphene.Int)
 
-    field = graphene.Field(LexicalEntry)
+    lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
         id = args.get('id')
-        object_id = id[0]
-        client_id = id[1]
+        client_id = id[0]
+        object_id = id[1]
 
         dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if dblexicalentry and not dblexicalentry.marked_for_deletion:
@@ -172,5 +178,5 @@ class DeleteLexicalEntry(graphene.Mutation):
             del_object(objecttoc)
             lexicalentry = LexicalEntry(id=[dblexicalentry.client_id, dblexicalentry.object_id])
             lexicalentry.dbObject = dblexicalentry
-            return DeleteLexicalEntry(field=lexicalentry, triumph=True)
+            return DeleteLexicalEntry(lexicalentry=lexicalentry, triumph=True)
         raise ResponseError(message="No such entity in the system")

@@ -42,8 +42,8 @@ class CreateTranslationGist(graphene.Mutation):
     """
     example:
     mutation {
-        create_translationgist(id: [949,20], type: "some type") {
-            field {
+        create_translationgist(id: [949,22], type: "some type") {
+            translationgist {
                 id
                 type
             }
@@ -55,10 +55,10 @@ class CreateTranslationGist(graphene.Mutation):
 
      {
       "create_translationgist": {
-        "field": {
+        "translationgist": {
           "id": [
             949,
-            20
+            22
           ],
           "type": "some type"
         },
@@ -71,7 +71,7 @@ class CreateTranslationGist(graphene.Mutation):
         id = graphene.List(graphene.Int)
         type = graphene.String()
 
-    field = graphene.Field(TranslationGist)
+    translationgist = graphene.Field(TranslationGist)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -118,14 +118,14 @@ class CreateTranslationGist(graphene.Mutation):
         translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id],
                                           type=dbtranslationgist.type)
         translationgist.dbObject = dbtranslationgist
-        return CreateTranslationGist(field=translationgist, triumph=True)
+        return CreateTranslationGist(translationgist=translationgist, triumph=True)
 
 class DeleteTranslationGist(graphene.Mutation):
     """
     example:
     mutation {
-        delete_translationgist(id: [949,20]) {
-            field {
+        delete_translationgist(id: [949,22]) {
+            translationgist {
                 id
             }
             triumph
@@ -134,23 +134,29 @@ class DeleteTranslationGist(graphene.Mutation):
 
     now returns:
     {
-      "errors": [
-        "No such translationgist in the system"
-      ]
+      "delete_translationgist": {
+        "translationgist": {
+          "id": [
+            949,
+            22
+          ]
+        },
+        "triumph": true
+      }
     }
     """
 
     class Input:
         id = graphene.List(graphene.Int)
 
-    field = graphene.Field(TranslationGist)
+    translationgist = graphene.Field(TranslationGist)
     triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
         id = args.get('id')
-        object_id = id[0]
-        client_id = id[1]
+        client_id = id[0]
+        object_id = id[1]
 
         dbtranslationgist = DBSession.query(dbTranslationGist).filter_by(client_id=client_id, object_id=object_id).first()
         if dbtranslationgist and not dbtranslationgist.marked_for_deletion:
@@ -166,5 +172,5 @@ class DeleteTranslationGist(graphene.Mutation):
 
             translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
             translationgist.dbObject = dbtranslationgist
-            return DeleteTranslationGist(field=translationgist, triumph=True)
+            return DeleteTranslationGist(translationgist=translationgist, triumph=True)
         raise ResponseError(message="No such translationgist in the system")

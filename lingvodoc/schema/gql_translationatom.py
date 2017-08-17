@@ -46,8 +46,8 @@ class CreateTranslationAtom(graphene.Mutation):
     """
     example:
     mutation  {
-        create_translationatom(id: [949,10], parent_id: [1, 47], locale_id: 2, content: "some content") {
-            field {
+        create_translationatom(id: [949,11], parent_id: [1, 47], locale_id: 2, content: "some content") {
+            translationatom {
                 id
                 content
             }
@@ -59,10 +59,10 @@ class CreateTranslationAtom(graphene.Mutation):
 
      {
       "create_translationatom": {
-        "field": {
+        "translationatom": {
           "id": [
             949,
-            10
+            11
           ],
           "content": "some content"
         },
@@ -77,7 +77,7 @@ class CreateTranslationAtom(graphene.Mutation):
         locale_id = graphene.Int()
         content = graphene.String()
 
-    field = graphene.Field(TranslationAtom)
+    translationatom = graphene.Field(TranslationAtom)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -137,15 +137,14 @@ class CreateTranslationAtom(graphene.Mutation):
         translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
                                           content=dbtranslationatom.content)
         translationatom.dbObject = dbtranslationatom
-
-        return CreateTranslationAtom(field=translationatom, triumph=True)
+        return CreateTranslationAtom(translationatom=translationatom, triumph=True)
 
 class UpdateTranslationAtom(graphene.Mutation):
     """
     example:
     mutation {
-        update_translationatom(id: [949,10], content: "new content") {
-            field {
+        update_translationatom(id: [949,11], content: "new content") {
+            translationatom {
                 id
                 content
             }
@@ -156,9 +155,16 @@ class UpdateTranslationAtom(graphene.Mutation):
     now returns:
 
     {
-      "errors": [
-        "Error: no such translationatom in the system"
-      ]
+      "update_translationatom": {
+        "translationatom": {
+          "id": [
+            949,
+            11
+          ],
+          "content": "new content"
+        },
+        "triumph": true
+      }
     }
     """
 
@@ -166,27 +172,29 @@ class UpdateTranslationAtom(graphene.Mutation):
         id = graphene.List(graphene.Int)
         content = graphene.String()
 
-    field = graphene.Field(TranslationAtom)
+    translationatom = graphene.Field(TranslationAtom)
     triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, args, context, info):
         content = args.get('content')
         id = args.get('id')
-        object_id = id[0]
-        client_id = id[1]
+        client_id = id[0]
+        object_id = id[1]
 
         dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(client_id=client_id, object_id=object_id).first()
         if dbtranslationatom:
+            """
             key = "translation:%s:%s:%s" % (
                 str(dbtranslationatom.translation_gist_client_id),
                 str(dbtranslationatom.translation_gist_object_id),
                 str(dbtranslationatom.locale_id))
             CACHE.rem(key)
+            """
             dbtranslationatom.content = content
 
             translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
                                               content=dbtranslationatom.content)
             translationatom.dbObject = dbtranslationatom
-            return UpdateTranslationAtom(field=translationatom, triumph=True)
+            return UpdateTranslationAtom(translationatom=translationatom, triumph=True)
         raise ResponseError(message="Error: no such translationatom in the system")

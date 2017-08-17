@@ -114,7 +114,7 @@ class CreateUser(graphene.Mutation):
         birthday = graphene.List(graphene.Int)
         password = graphene.String()
 
-    field = graphene.Field(User)
+    user = graphene.Field(User)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -165,7 +165,7 @@ class CreateUser(graphene.Mutation):
 
         user = User(login=dbuser.login, id = dbuser.id, is_active=True)
         user.dbObject = dbuser
-        return CreateUser(field=user, triumph=True)
+        return CreateUser(user=user, triumph=True)
 
 class UpdateUser(graphene.Mutation):
     """
@@ -206,7 +206,7 @@ class UpdateUser(graphene.Mutation):
         email = graphene.String()
         about = graphene.String()
 
-    field = graphene.Field(User)
+    user = graphene.Field(User)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -273,4 +273,4 @@ class UpdateUser(graphene.Mutation):
 
         user = User(login=dbuser.login, id=dbuser.id, name=dbuser.name)
         user.dbObject = dbuser
-        return UpdateUser(field=user, triumph=True)
+        return UpdateUser(user=user, triumph=True)
