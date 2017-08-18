@@ -407,7 +407,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
 
                 perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id], is_template=dbperspective.is_template)
                 perspective.dbObject = dbperspective
-                return CreateDictionaryPerspective(perspective=perspective, triumph=True)
+                return UpdateDictionaryPerspective(perspective=perspective, triumph=True)
         raise ResponseError(message="Error: No such perspective in the system")
 
 class DeleteDictionaryPerspective(graphene.Mutation):
@@ -475,5 +475,5 @@ class DeleteDictionaryPerspective(graphene.Mutation):
             perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
                                                 is_template=dbperspective.is_template)
             perspective.dbObject = dbperspective
-            return CreateDictionaryPerspective(perspective=perspective, triumph=True)
+            return DeleteDictionaryPerspective(perspective=perspective, triumph=True)
         raise ResponseError(message="No such entity in the system")

@@ -67,7 +67,7 @@ class CreateOrganization(graphene.Mutation):
         name = graphene.String()
         about = graphene.String()
 
-    field = graphene.Field(Organization)
+    organization = graphene.Field(Organization)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -99,7 +99,7 @@ class CreateOrganization(graphene.Mutation):
         DBSession.flush()
         organization = Organization(name=dborganization.name, about = dborganization.about, id = dborganization.id)
         organization.dbObject = dborganization
-        return CreateOrganization(field=organization, triumph=True)
+        return CreateOrganization(organization=organization, triumph=True)
 
 class UpdateOrganization(graphene.Mutation):
     """
@@ -135,7 +135,7 @@ class UpdateOrganization(graphene.Mutation):
         name = graphene.String()
         about = graphene.String()
 
-    field = graphene.Field(Organization)
+    organization = graphene.Field(Organization)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -188,7 +188,7 @@ class UpdateOrganization(graphene.Mutation):
 
                 organization = Organization(name=dborganization.name, about=dborganization.about, id=dborganization.id)
                 organization.dbObject = dborganization
-        return UpdateOrganization(field=organization, triumph=True)
+        return UpdateOrganization(organization=organization, triumph=True)
 
 
 class DeleteOrganization(graphene.Mutation):
@@ -222,7 +222,7 @@ class DeleteOrganization(graphene.Mutation):
     class Input:
         organization_id = graphene.Int()
 
-    field = graphene.Field(Organization)
+    organization = graphene.Field(Organization)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -234,5 +234,5 @@ class DeleteOrganization(graphene.Mutation):
                 del_object(dborganization)
                 organization = Organization(name=dborganization.name, about=dborganization.about, id=dborganization.id)
                 organization.dbObject = dborganization
-                return DeleteOrganization(field=organization, triumph=True)
+                return DeleteOrganization(organization=organization, triumph=True)
         raise ResponseError(message="No such organization in the system")

@@ -217,3 +217,52 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
             perspective_to_field.dbObject = field_object
             return UpdateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
         raise ResponseError(message="Error: No such field object in the system")
+
+class DeleteDictionaryPerspectiveToField(graphene.Mutation):
+    """
+    example:
+      mutation  {
+       delete_perspective_to_field(id: [949, 2493]) {
+            triumph
+            perspective_to_field{
+                id
+            }
+        }
+    }
+
+    (this example works)
+    returns:
+
+    {
+      "delete_perspective_to_field": {
+        "triumph": true,
+        "perspective_to_field": {
+          "id": [
+            949,
+            2493
+          ]
+        }
+      }
+    }
+    """
+    class Input:
+        id = graphene.List(graphene.Int)
+
+    perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, args, context, info):
+        id = args.get('id')
+        client_id = id[0]
+        object_id = id[1]
+
+        field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
+                                                                                 object_id=object_id).first()
+        if field_object and not field_object.marked_for_deletion:
+            del_object(field_object)
+            perspective_to_field = DictionaryPerspectiveToField(id=id)
+            perspective_to_field.dbObject = field_object
+            return DeleteDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
+        raise ResponseError(message="No such field object in the system")
