@@ -83,6 +83,9 @@ class CreateTranslationAtom(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, args, context, info):
+        ids = args.get("id")
+        client_id = ids[0] if ids else context["client_id"]
+        object_id = ids[1] if ids else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0]
         parent_object_id = parent_id[1]
@@ -90,29 +93,9 @@ class CreateTranslationAtom(graphene.Mutation):
         content = args.get('content')
         id = args.get('id')
 
-        object_id = None
-        client_id_from_args = None
-        if len(id) == 1:
-            client_id_from_args = id[0]
-        elif len(id) == 2:
-            client_id_from_args = id[0]
-            object_id = id[1]
-
-        client_id = context["client_id"]
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
 
         parent = DBSession.query(dbTranslationGist).filter_by(client_id=parent_client_id,
                                                             object_id=parent_object_id).first()
-
-        if client_id_from_args:
-            if check_client_id(authenticated=client.id, client_id=client_id_from_args):
-                client_id = client_id_from_args
-            else:
-                raise ResponseError(message="Error: client_id from another user")
 
         if not parent.marked_for_deletion:
             dbtranslationatom = dbTranslationAtom(client_id=client_id,

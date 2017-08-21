@@ -215,7 +215,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
     """
     example:
     mutation  {
-            create_perspective(id:[949,2491], dictionary_id:[449,2491], translation_gist_id: [714, 3], is_template: true, additional_metadata: {hash:"1234567"}, import_source: "source", import_hash: "hash") {
+            create_perspective(id:[949,2491], parent_id:[449,2491], translation_gist_id: [714, 3], is_template: true, additional_metadata: {hash:"1234567"}, import_source: "source", import_hash: "hash") {
                 triumph
                 perspective{
                     id
@@ -243,7 +243,6 @@ class CreateDictionaryPerspective(graphene.Mutation):
 
     class Input:
         id = graphene.List(graphene.Int)
-        dictionary_id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         is_template = graphene.Boolean()
         latitude = graphene.String()
@@ -261,7 +260,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
         id = args.get("id")
         client_id = id[0] if id else context["client_id"]
         object_id = id[1] if id else None
-        parent_id = args.get('dictionary_id')
+        parent_id = args.get('parent_id')
         parent_client_id = parent_id[0]
         parent_object_id = parent_id[1]
         translation_gist_id = args.get('translation_gist_id')
@@ -271,10 +270,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
         import_source = args.get('import_source')
         import_hash = args.get('import_hash')
 
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
 
         parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent:
@@ -315,6 +311,8 @@ class CreateDictionaryPerspective(graphene.Mutation):
         owner = owner_client.user
         if not object_id:
             for base in DBSession.query(dbBaseGroup).filter_by(perspective_default=True):
+                client = DBSession.query(Client).filter_by(id=client_id).first()
+                user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
                 new_group = dbGroup(parent=base,
                                   subject_object_id=dbperspective.object_id, subject_client_id=dbperspective.client_id)
                 add_user_to_group(user, new_group)
@@ -330,7 +328,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
     """
     example:
       mutation  {
-            update_perspective(id:[949,2491], dictionary_id:[449,2491], translation_gist_id: [714, 3], is_template: false) {
+            update_perspective(id:[949,2491], parent_id:[449,2491], translation_gist_id: [714, 3], is_template: false) {
                 triumph
                 perspective{
                     id
@@ -357,7 +355,6 @@ class UpdateDictionaryPerspective(graphene.Mutation):
     """
     class Input:
         id = graphene.List(graphene.Int)
-        dictionary_id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
         is_template = graphene.Boolean()
@@ -371,9 +368,9 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         id = args.get("id")
         client_id = id[0]
         object_id = id[1]
-        dictionary_id = args.get('dictionary_id')
-        dictionary_client_id = dictionary_id[0]
-        dictionary_object_id = dictionary_id[1]
+        parent_id = args.get('parent_id')
+        dictionary_client_id = parent_id[0]
+        dictionary_object_id = parent_id[1]
 
         dictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         if not dictionary:
@@ -414,7 +411,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
     """
     example:
       mutation  {
-            delete_perspective(id:[949,2491], dictionary_id:[449,2491]) {
+            delete_perspective(id:[949,2491], parent_id:[449,2491]) {
                 triumph
                 perspective{
                     id
@@ -441,7 +438,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
     """
     class Input:
         id = graphene.List(graphene.Int)
-        dictionary_id = graphene.List(graphene.Int)
+        parent_id = graphene.List(graphene.Int)
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -452,7 +449,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         id = args.get("id")
         client_id = id[0]
         object_id = id[1]
-        parent_id = args.get('dictionary_id')
+        parent_id = args.get('parent_id')
         parent_client_id = parent_id[0]
         parent_object_id = parent_id[1]
 
