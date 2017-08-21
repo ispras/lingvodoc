@@ -74,22 +74,18 @@ class Dictionary(graphene.ObjectType):
      + .translation
      + dataType
     Test:
-    query myQuery
-    {
-       dictionary(id:[126, 3])
-       {
-          id
-          translation
-          created_at
-          parent_id
-          marked_for_deletion
-          translation_gist_id
-          additional_metadata
-              {
-              blob_description
-              }
+    query myQuery {
+      dictionary(id: [126, 3]) {
+        id
+        translation
+        created_at
+        parent_id
+        marked_for_deletion
+        translation_gist_id
+        additional_metadata {
+          blob_description
         }
-
+      }
     }
 
     """
@@ -129,45 +125,28 @@ class CreateDictionary(graphene.Mutation):
 
     """
     example:
-mutation  {
-        create_dictionary(id:[449,2491],translation_gist_id: [714, 3], parent_id: [500, 121], additional_metadata: {hash:"1234567"}) {
-            triumph
-            dictionary{
-                id
-                translation
-                marked_for_deletion
-                created_at
-                translation
-                            additional_metadata{
-             hash
-            }
-            }
-
+    mutation {
+      create_dictionary(id: [449, 2527], translation_gist_id: [714, 3], parent_id: [500, 121], additional_metadata: {hash: "1234567"}) {
+        triumph
+        dictionary {
+          id
+          translation
+          marked_for_deletion
+          created_at
+          translation
+          additional_metadata {
+            hash
+          }
         }
-
-             delete_dictionary(id:[449,2491]) {
-            triumph
-            dictionary{
-                id
-                translation
-                created_at
-                translation
-                marked_for_deletion
-
-                            additional_metadata{
-             hash
-            }
-            }
-
-        }
+      }
     }
     """
 
 
     class Input:
         id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        translation_gist_id = graphene.List(graphene.Int, required=True)
+        parent_id = graphene.List(graphene.Int, required=True)
         additional_metadata = ObjectVal()
 
     dictionary = graphene.Field(Dictionary)
@@ -259,7 +238,7 @@ class UpdateDictionary(graphene.Mutation):
     }
     """
     class Input:
-        id = graphene.List(graphene.Int)
+        id = graphene.List(graphene.Int, required=True)
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
         additional_metadata = ObjectVal()
@@ -270,9 +249,9 @@ class UpdateDictionary(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, args, context, info):
-        id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
+        ids = args.get('id')
+        client_id = ids[0] if ids else context["client_id"]
+        object_id = ids[1] if ids else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0] if parent_id else None
         parent_object_id = parent_id[1] if parent_id else None
@@ -302,8 +281,25 @@ class UpdateDictionary(graphene.Mutation):
         raise ResponseError(message="Error: No such dictionary in the system")
 
 class DeleteDictionary(graphene.Mutation):
+    """
+    mutation {
+      delete_dictionary(id: [449, 2491]) {
+        triumph
+        dictionary {
+          id
+          translation
+          created_at
+          translation
+          marked_for_deletion
+          additional_metadata {
+            hash
+          }
+        }
+      }
+    }
+    """
     class Input:
-        id = graphene.List(graphene.Int)
+        id = graphene.List(graphene.Int, required=True)
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -312,13 +308,15 @@ class DeleteDictionary(graphene.Mutation):
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get('id')
-        client_id, object_id = ids
-        dbentityobj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-
-        if dbentityobj and not dbentityobj.marked_for_deletion:
-            dbentityobj = dbentityobj.parent
-            del_object(dbentityobj)
-            dictionary = Dictionary(id=id)
-            dictionary.dbObject = dbentityobj
+        if ids:
+            client_id = ids[0]
+            object_id = ids[1]
+        else:
+            raise ResponseError(message="id not found")
+        dbdictionaryobj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionaryobj and not dbdictionaryobj.marked_for_deletion:
+            del_object(dbdictionaryobj)
+            dictionary = Dictionary(id==[dbdictionaryobj.client_id, dbdictionaryobj.object_id])
+            dictionary.dbObject = dbdictionaryobj
             return DeleteDictionary(dictionary=dictionary, triumph=True)
-        raise ResponseError(message="No such entity in the system")
+        raise ResponseError(message="Error: No such dictionary in the system")
