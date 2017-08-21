@@ -153,6 +153,16 @@ def bulk_group_entities(request):  # tested
         field_client_id = req['field_client_id']
         field_object_id = req['field_object_id']
         counter = req['counter']
+        accepted = request.params.get('accepted', False)
+        if type(accepted) == str and 'false' in accepted.lower():
+            accepted = False
+        if accepted:
+            accepted = True
+        published = request.params.get('published', False)
+        if type(published) == str and 'false' in published.lower():
+            published = False
+        if published:
+            published = True
         field = DBSession.query(Field).\
             filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
@@ -205,11 +215,11 @@ def bulk_group_entities(request):  # tested
             if not parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such lexical entry in the system")}
-            par_tags = find_all_tags(parent, field_client_id, field_object_id)
+            par_tags = find_all_tags(parent, field_client_id, field_object_id, accepted)
             for tag in par_tags:
                 if tag not in tags:
                     tags.append(tag)
-            lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+            lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 
@@ -284,7 +294,7 @@ def create_group_entity(request):  # tested
             if not parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such lexical entry in the system")}
-            par_tags = find_all_tags(parent, field_client_id, field_object_id)
+            par_tags = find_all_tags(parent, field_client_id, field_object_id, False)
             for tag in par_tags:
                 if tag not in tags:
                     tags.append(tag)
@@ -293,7 +303,7 @@ def create_group_entity(request):  # tested
             tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                          for c in range(n))
             tags.append(tag)
-        lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+        lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, False)
         for par in req['connections']:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
