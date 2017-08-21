@@ -24,12 +24,13 @@ case class User(id: Int,
 object User {
   implicit val writer = upickle.default.Writer[User] {
     user =>
+      val birthDate = user.birthday.toISOString().substring(0, 10)
       var values = Seq[(String, Js.Value)](
         ("id", Js.Num(user.id)),
         ("login", Js.Str(user.login)),
         ("name", Js.Str(user.name)),
         ("intl_name", Js.Str(user.intlName)),
-        ("birthday", Js.Str(s"${user.birthday.getFullYear()}-${user.birthday.getMonth()}-${user.birthday.getDay()}")),
+        ("birthday", Js.Str(birthDate)),
         ("is_active", if (user.isActive) Js.True else Js.False),
         ("created_at", Js.Num(user.created.getTime().toInt))
       )
