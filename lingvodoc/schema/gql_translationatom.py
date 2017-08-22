@@ -36,6 +36,14 @@ class TranslationAtom(graphene.ObjectType):
      #marked_for_deletion | boolean                     | NOT NULL
      #content             | text                        | NOT NULL
      #additional_metadata | jsonb                       |
+     example:
+         query myQuery {
+            translationatom( id: [449, 47]) {
+                id
+                content
+            }
+         }
+
     """
     dbType = dbTranslationAtom
     dbObject = None
@@ -44,44 +52,6 @@ class TranslationAtom(graphene.ObjectType):
         interfaces = (CompositeIdHolder, Relationship, AdditionalMetadata, CreatedAt, MarkedForDeletion,  Content,
                       LocaleId)
     pass
-
-
-def create_dbtranslationatom(client_id=None,
-                             object_id=None,
-                             locale_id=2,
-                             content=None,
-                             parent_client_id=None,
-                             parent_object_id=None):
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
-
-        parent = DBSession.query(dbTranslationGist).filter_by(client_id=parent_client_id,
-                                                              object_id=parent_object_id).first()
-
-        if parent.marked_for_deletion:
-            raise ResponseError(message="Error: no such translationgist in the system.")
-        dbtranslationatom = dbTranslationAtom(client_id=client_id,
-                                              object_id=object_id,
-                                              parent=parent,
-                                              locale_id=locale_id,
-                                              content=content)
-        DBSession.add(dbtranslationatom)
-        DBSession.flush()
-        if not object_id:
-            basegroups = []
-            basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
-            if not object_id:
-                groups = []
-                for base in basegroups:
-                    group = dbGroup(subject_client_id=dbtranslationatom.client_id,
-                                    subject_object_id=dbtranslationatom.object_id,
-                                    parent=base)
-                    groups += [group]
-                for group in groups:
-                    add_user_to_group(user, group)
-        return dbtranslationatom
 
 
 class CreateTranslationAtom(graphene.Mutation):
@@ -123,6 +93,44 @@ class CreateTranslationAtom(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    def create_dbtranslationatom(client_id=None,
+                                 object_id=None,
+                                 locale_id=2,
+                                 content=None,
+                                 parent_client_id=None,
+                                 parent_object_id=None):
+            client = DBSession.query(Client).filter_by(id=client_id).first()
+            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+            if not user:
+                raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+            parent = DBSession.query(dbTranslationGist).filter_by(client_id=parent_client_id,
+                                                                  object_id=parent_object_id).first()
+
+            if parent.marked_for_deletion:
+                raise ResponseError(message="Error: no such translationgist in the system.")
+            dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                  object_id=object_id,
+                                                  parent=parent,
+                                                  locale_id=locale_id,
+                                                  content=content)
+            DBSession.add(dbtranslationatom)
+            DBSession.flush()
+            if not object_id:
+                basegroups = []
+                basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
+                if not object_id:
+                    groups = []
+                    for base in basegroups:
+                        group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                        subject_object_id=dbtranslationatom.object_id,
+                                        parent=base)
+                        groups += [group]
+                    for group in groups:
+                        add_user_to_group(user, group)
+            return dbtranslationatom
+
+    @staticmethod
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get("id")
@@ -134,7 +142,7 @@ class CreateTranslationAtom(graphene.Mutation):
         locale_id = args.get('locale_id')
         content = args.get('content')
 
-        dbtranslationatom = create_dbtranslationatom(client_id=client_id,
+        dbtranslationatom = CreateTranslationAtom.create_dbtranslationatom(client_id=client_id,
                                                      object_id=object_id,
                                                      locale_id=locale_id,
                                                      content=content,
@@ -189,15 +197,15 @@ class UpdateTranslationAtom(graphene.Mutation):
         client_id = id[0]
         object_id = id[1]
 
-        dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(client_id=client_id, object_id=object_id).first()
+        dbtranslationatom = DBSession.query(dbTranslationAtom).\
+            filter_by(client_id=client_id, object_id=object_id).first()
         if dbtranslationatom:
-            """
             key = "translation:%s:%s:%s" % (
                 str(dbtranslationatom.translation_gist_client_id),
                 str(dbtranslationatom.translation_gist_object_id),
                 str(dbtranslationatom.locale_id))
             CACHE.rem(key)
-            """
+
             dbtranslationatom.content = content
 
             translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
