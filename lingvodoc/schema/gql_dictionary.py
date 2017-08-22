@@ -1,5 +1,4 @@
 import graphene
-
 from lingvodoc.models import (
     Dictionary as dbDictionary,
     TranslationAtom as dbTranslationAtom,
@@ -9,21 +8,33 @@ from lingvodoc.models import (
     Language as dbLanguage,
     User as dbUser
 )
+from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.schema.gql_user import User
-
 """
 from lingvodoc.views.v2.views import (
     translation_service_search
 )
 """
-
+from lingvodoc.views.v2.utils import update_metadata
 from lingvodoc.schema.gql_holders import (
     ResponseError
 )
-
 from lingvodoc.views.v2.translations import translationgist_contents
-
 # from lingvodoc.schema.gql_language import Language
+from lingvodoc.schema.gql_holders import (
+    CommonFieldsComposite,
+    StateHolder,
+    TranslationHolder,
+    fetch_object,
+    del_object,
+    client_id_check,
+    ResponseError,
+    ObjectVal
+)
+from lingvodoc.views.v2.delete import real_delete_dictionary
+from lingvodoc.views.v2.utils import (
+    check_client_id
+)
 
 
 def translation_service_search(searchstring):
@@ -36,22 +47,6 @@ def translation_service_search(searchstring):
         .first()
     response = translationgist_contents(translationatom.parent)
     return response
-
-from lingvodoc.schema.gql_holders import (
-    CommonFieldsComposite,
-    StateHolder,
-    TranslationHolder,
-    fetch_object,
-    del_object,
-    client_id_check,
-    ResponseError,
-    ObjectVal
-)
-
-from lingvodoc.views.v2.delete import real_delete_dictionary
-from lingvodoc.views.v2.utils import (
-    check_client_id
-)
 
 
 class Dictionary(graphene.ObjectType):
@@ -103,7 +98,6 @@ class Dictionary(graphene.ObjectType):
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
 
-
     @fetch_object('status')
     def resolve_status(self, args, context, info):
         atom = DBSession.query(dbTranslationAtom).filter_by(
@@ -115,18 +109,71 @@ class Dictionary(graphene.ObjectType):
         else:
             return None
 
-
-
     def resolve_triumph(self, args, context, info):
         return True
 
+###
+# CrUd functions
+#
+###
+
+
+def create_dbdictionary(client_id=None,
+                        object_id=None,
+                        parent_client_id=None,
+                        parent_object_id=None,
+                        translation_gist_client_id=None,
+                        translation_gist_object_id=None,
+                        additional_metadata=None):
+
+    duplicate_check = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).all()
+    if duplicate_check:
+        raise ResponseError(message="Dictionary with such ID already exists in the system")
+    parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    resp = translation_service_search("WiP")
+    state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+    dbdictionary_obj = dbDictionary(client_id=client_id,
+                                    object_id=object_id,
+                                    state_translation_gist_object_id=state_translation_gist_object_id,
+                                    state_translation_gist_client_id=state_translation_gist_client_id,
+                                    parent=parent,
+                                    translation_gist_client_id=translation_gist_client_id,
+                                    translation_gist_object_id=translation_gist_object_id,
+                                    additional_metadata=additional_metadata
+                                    )
+    return dbdictionary_obj
+
+
+def update_dictionary(client_id=None,
+                      object_id=None,
+                      parent_client_id=None,
+                      parent_object_id=None,
+                      translation_gist_client_id=None,
+                      translation_gist_object_id=None,
+                      additional_metadata=None
+                      ):
+    db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+    if not db_dictionary or db_dictionary.marked_for_deletion:
+        raise ResponseError(message="Error: No such dictionary in the system")
+
+    if parent_client_id:
+        db_dictionary.parent_client_id = parent_client_id
+    if parent_object_id:
+        db_dictionary.parent_object_id = parent_object_id
+    if translation_gist_client_id:
+        db_dictionary.translation_gist_client_id = translation_gist_client_id
+    if translation_gist_object_id:
+        db_dictionary.translation_gist_object_id = translation_gist_object_id
+    update_metadata(db_dictionary, additional_metadata)
+    return db_dictionary
+
+
 class CreateDictionary(graphene.Mutation):
-
-
     """
     example:
     mutation {
-      create_dictionary(id: [449, 2527], translation_gist_id: [714, 3], parent_id: [500, 121], additional_metadata: {hash: "1234567"}) {
+      create_dictionary(id: [449, 2527], translation_gist_id: [714, 3], parent_id: [500, 121],
+      additional_metadata: {hash: "1234567"}) {
         triumph
         dictionary {
           id
@@ -142,7 +189,6 @@ class CreateDictionary(graphene.Mutation):
     }
     """
 
-
     class Input:
         id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int, required=True)
@@ -152,49 +198,25 @@ class CreateDictionary(graphene.Mutation):
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
 
-
     @staticmethod
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get("id")
         client_id = ids[0] if ids else context["client_id"]
         object_id = ids[1] if ids else None
-        parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0]
-        parent_object_id = parent_id[1]
+        parent_client_id, parent_object_id = args.get('parent_id')
+        translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
+        additional_metadata = args.get("additional_metadata")
 
-        translation_gist_id = args.get('translation_gist_id')
-        translation_gist_client_id = translation_gist_id[0]
-        translation_gist_object_id = translation_gist_id[1]
-        duplicate_check = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).all()
-        if duplicate_check:
-            raise ResponseError(message="Dictionary with such ID already exists in the system")
-
-
-
-        parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-
-        additional_metadata = args.get('additional_metadata')
-        if not additional_metadata:
-            additional_metadata = None
-
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-
-
-        dbentityobj = dbDictionary(client_id=client_id,
-                                   object_id=object_id,
-                                   state_translation_gist_object_id=state_translation_gist_object_id,
-                                   state_translation_gist_client_id=state_translation_gist_client_id,
-                                   parent=parent,
-                                   translation_gist_client_id=translation_gist_client_id,
-                                   translation_gist_object_id=translation_gist_object_id,
-                                   additional_metadata=additional_metadata
-                                   )
-
-        dictionary = Dictionary(id=[dbentityobj.client_id, dbentityobj.object_id])
-        dictionary.dbObject = dbentityobj
-        DBSession.flush()
+        dbdictionary_obj = create_dbdictionary(client_id=client_id,
+                                               object_id=object_id,
+                                               parent_client_id=parent_client_id,
+                                               parent_object_id=parent_object_id,
+                                               translation_gist_client_id=translation_gist_client_id,
+                                               translation_gist_object_id=translation_gist_object_id,
+                                               additional_metadata=additional_metadata)
+        dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
+        dictionary.dbObject = dbdictionary_obj
         return CreateDictionary(dictionary=dictionary, triumph=True)
 
 
@@ -259,26 +281,18 @@ class UpdateDictionary(graphene.Mutation):
         translation_gist_client_id = translation_gist_id[0] if translation_gist_id else None
         translation_gist_object_id = translation_gist_id[1] if translation_gist_id else None
         additional_metadata = args.get('additional_metadata')
+        dbdictionary = update_dictionary(client_id=client_id,
+                                         object_id=object_id,
+                                         parent_client_id=parent_client_id,
+                                         parent_object_id=parent_object_id,
+                                         translation_gist_client_id=translation_gist_client_id,
+                                         translation_gist_object_id=translation_gist_object_id,
+                                         additional_metadata=additional_metadata
+                                         )
+        dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
+        dictionary.dbObject = dbdictionary
+        return UpdateDictionary(dictionary=dictionary, triumph=True)
 
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbdictionary and not dbdictionary.marked_for_deletion:
-                if parent_client_id:
-                    dbdictionary.parent_client_id = parent_client_id
-                if parent_object_id:
-                    dbdictionary.parent_object_id = parent_object_id
-                if translation_gist_client_id:
-                    dbdictionary.translation_gist_client_id = translation_gist_client_id
-                if translation_gist_object_id:
-                    dbdictionary.translation_gist_object_id = translation_gist_object_id
-                if additional_metadata:
-                    old_meta = dbdictionary.additional_metadata
-                    old_meta.update(additional_metadata)
-                    dbdictionary.additional_metadata = old_meta
-
-                dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
-                dictionary.dbObject = dbdictionary
-                return UpdateDictionary(dictionary=dictionary, triumph=True)
-        raise ResponseError(message="Error: No such dictionary in the system")
 
 class DeleteDictionary(graphene.Mutation):
     """
@@ -308,15 +322,16 @@ class DeleteDictionary(graphene.Mutation):
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get('id')
-        if ids:
-            client_id = ids[0]
-            object_id = ids[1]
-        else:
+        if not ids:
             raise ResponseError(message="id not found")
-        dbdictionaryobj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbdictionaryobj and not dbdictionaryobj.marked_for_deletion:
-            del_object(dbdictionaryobj)
-            dictionary = Dictionary(id==[dbdictionaryobj.client_id, dbdictionaryobj.object_id])
-            dictionary.dbObject = dbdictionaryobj
-            return DeleteDictionary(dictionary=dictionary, triumph=True)
-        raise ResponseError(message="Error: No such dictionary in the system")
+        client_id = ids[0]
+        object_id = ids[1]
+        dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
+            raise ResponseError(message="Error: No such dictionary in the system")
+        del_object(dbdictionary_obj)
+        dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
+        dictionary.dbObject = dbdictionary_obj
+        return DeleteDictionary(dictionary=dictionary, triumph=True)
+
+
