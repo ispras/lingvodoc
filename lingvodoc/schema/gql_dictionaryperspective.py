@@ -36,6 +36,7 @@ from lingvodoc.views.v2.utils import add_user_to_group
 
 from lingvodoc.views.v2.translations import translationgist_contents
 
+
 def translation_service_search(searchstring):
     translationatom = DBSession.query(dbTranslationAtom)\
         .join(dbTranslationGist).\
@@ -46,7 +47,6 @@ def translation_service_search(searchstring):
         .first()
     response = translationgist_contents(translationatom.parent)
     return response
-
 
 
 class DictionaryPerspective(graphene.ObjectType):
@@ -86,7 +86,6 @@ class DictionaryPerspective(graphene.ObjectType):
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
-
 
     @fetch_object()
     def resolve_additional_metadata(self, args, context, info):
@@ -159,7 +158,6 @@ class DictionaryPerspective(graphene.ObjectType):
                                              int(request.cookies.get('locale_id') or 2),
                                              publish=None, accept=True)
 
-
         for entry in sub_result:
             entities = []
             for ent in entry['contains']:
@@ -210,6 +208,7 @@ class DictionaryPerspective(graphene.ObjectType):
 
 
         return result
+
 
 class CreateDictionaryPerspective(graphene.Mutation):
     """
@@ -324,6 +323,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
         perspective.dbObject = dbperspective
         return CreateDictionaryPerspective(perspective=perspective, triumph=True)
 
+
 class UpdateDictionaryPerspective(graphene.Mutation):
     """
     example:
@@ -407,6 +407,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
                 return UpdateDictionaryPerspective(perspective=perspective, triumph=True)
         raise ResponseError(message="Error: No such perspective in the system")
 
+
 class DeleteDictionaryPerspective(graphene.Mutation):
     """
     example:
@@ -462,8 +463,6 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         if dbperspective and not dbperspective.marked_for_deletion:
             if dbperspective.parent != parent:
                 raise ResponseError(message="No such pair of dictionary/perspective in the system")
-
-
             del_object(dbperspective)
             objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=dbperspective.client_id,
                                                              object_id=dbperspective.object_id).one()

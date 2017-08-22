@@ -112,6 +112,7 @@ class Query(graphene.ObjectType):
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
     user = graphene.Field(User, id=graphene.Int())
     field = graphene.Field(Field, id=graphene.List(graphene.Int))
+    translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
 
     def resolve_dictionaries(self, args, context, info):
         dbdicts = list()
@@ -189,7 +190,6 @@ class Query(graphene.ObjectType):
     # def resolve_datetime(self, args, context, info):
     #     id = args.get('id')
     #     return DateTime(id=id)
-
 
     def resolve_basegroup(self, args, context, info):
         id = args.get('id')

@@ -118,56 +118,6 @@ class Dictionary(graphene.ObjectType):
 ###
 
 
-def create_dbdictionary(client_id=None,
-                        object_id=None,
-                        parent_client_id=None,
-                        parent_object_id=None,
-                        translation_gist_client_id=None,
-                        translation_gist_object_id=None,
-                        additional_metadata=None):
-
-    duplicate_check = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).all()
-    if duplicate_check:
-        raise ResponseError(message="Dictionary with such ID already exists in the system")
-    parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    resp = translation_service_search("WiP")
-    state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-    dbdictionary_obj = dbDictionary(client_id=client_id,
-                                    object_id=object_id,
-                                    state_translation_gist_object_id=state_translation_gist_object_id,
-                                    state_translation_gist_client_id=state_translation_gist_client_id,
-                                    parent=parent,
-                                    translation_gist_client_id=translation_gist_client_id,
-                                    translation_gist_object_id=translation_gist_object_id,
-                                    additional_metadata=additional_metadata
-                                    )
-    return dbdictionary_obj
-
-
-def update_dictionary(client_id=None,
-                      object_id=None,
-                      parent_client_id=None,
-                      parent_object_id=None,
-                      translation_gist_client_id=None,
-                      translation_gist_object_id=None,
-                      additional_metadata=None
-                      ):
-    db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    if not db_dictionary or db_dictionary.marked_for_deletion:
-        raise ResponseError(message="Error: No such dictionary in the system")
-
-    if parent_client_id:
-        db_dictionary.parent_client_id = parent_client_id
-    if parent_object_id:
-        db_dictionary.parent_object_id = parent_object_id
-    if translation_gist_client_id:
-        db_dictionary.translation_gist_client_id = translation_gist_client_id
-    if translation_gist_object_id:
-        db_dictionary.translation_gist_object_id = translation_gist_object_id
-    update_metadata(db_dictionary, additional_metadata)
-    return db_dictionary
-
-
 class CreateDictionary(graphene.Mutation):
     """
     example:
@@ -199,6 +149,32 @@ class CreateDictionary(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    def create_dbdictionary(client_id=None,
+                            object_id=None,
+                            parent_client_id=None,
+                            parent_object_id=None,
+                            translation_gist_client_id=None,
+                            translation_gist_object_id=None,
+                            additional_metadata=None):
+
+        duplicate_check = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).all()
+        if duplicate_check:
+            raise ResponseError(message="Dictionary with such ID already exists in the system")
+        parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+        dbdictionary_obj = dbDictionary(client_id=client_id,
+                                        object_id=object_id,
+                                        state_translation_gist_object_id=state_translation_gist_object_id,
+                                        state_translation_gist_client_id=state_translation_gist_client_id,
+                                        parent=parent,
+                                        translation_gist_client_id=translation_gist_client_id,
+                                        translation_gist_object_id=translation_gist_object_id,
+                                        additional_metadata=additional_metadata
+                                        )
+        return dbdictionary_obj
+
+    @staticmethod
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get("id")
@@ -208,7 +184,7 @@ class CreateDictionary(graphene.Mutation):
         translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
         additional_metadata = args.get("additional_metadata")
 
-        dbdictionary_obj = create_dbdictionary(client_id=client_id,
+        dbdictionary_obj = CreateDictionary.create_dbdictionary(client_id=client_id,
                                                object_id=object_id,
                                                parent_client_id=parent_client_id,
                                                parent_object_id=parent_object_id,
@@ -269,6 +245,30 @@ class UpdateDictionary(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    def update_dictionary(client_id=None,
+                          object_id=None,
+                          parent_client_id=None,
+                          parent_object_id=None,
+                          translation_gist_client_id=None,
+                          translation_gist_object_id=None,
+                          additional_metadata=None
+                          ):
+        db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if not db_dictionary or db_dictionary.marked_for_deletion:
+            raise ResponseError(message="Error: No such dictionary in the system")
+
+        if parent_client_id:
+            db_dictionary.parent_client_id = parent_client_id
+        if parent_object_id:
+            db_dictionary.parent_object_id = parent_object_id
+        if translation_gist_client_id:
+            db_dictionary.translation_gist_client_id = translation_gist_client_id
+        if translation_gist_object_id:
+            db_dictionary.translation_gist_object_id = translation_gist_object_id
+        update_metadata(db_dictionary, additional_metadata)
+        return db_dictionary
+
+    @staticmethod
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get('id')
@@ -281,14 +281,14 @@ class UpdateDictionary(graphene.Mutation):
         translation_gist_client_id = translation_gist_id[0] if translation_gist_id else None
         translation_gist_object_id = translation_gist_id[1] if translation_gist_id else None
         additional_metadata = args.get('additional_metadata')
-        dbdictionary = update_dictionary(client_id=client_id,
-                                         object_id=object_id,
-                                         parent_client_id=parent_client_id,
-                                         parent_object_id=parent_object_id,
-                                         translation_gist_client_id=translation_gist_client_id,
-                                         translation_gist_object_id=translation_gist_object_id,
-                                         additional_metadata=additional_metadata
-                                         )
+        dbdictionary = UpdateDictionary.update_dictionary(client_id=client_id,
+                                                          object_id=object_id,
+                                                          parent_client_id=parent_client_id,
+                                                          parent_object_id=parent_object_id,
+                                                          translation_gist_client_id=translation_gist_client_id,
+                                                          translation_gist_object_id=translation_gist_object_id,
+                                                          additional_metadata=additional_metadata
+                                                          )
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
         return UpdateDictionary(dictionary=dictionary, triumph=True)

@@ -16,8 +16,9 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     ResponseError
 )
-
+from .gql_dictionary import Dictionary
 # from lingvodoc.schema.gql_dictionary import Dictionary
+
 
 class Language(graphene.ObjectType):
     """
@@ -34,7 +35,7 @@ class Language(graphene.ObjectType):
     """
     dbType = dbLanguage
     dbObject = None
-    dictionaries = graphene.List(lambda: Dictionary)
+    dictionaries = graphene.List(Dictionary)
 
     dataType = graphene.String()
 
@@ -50,16 +51,14 @@ class Language(graphene.ObjectType):
             result.append(Dictionary(id=[dictionary.client_id, dictionary.object_id]))
         return result
 
-    def resolve_dataType(self, args, context, info):
-        return 'language'
-
-    @fetch_object('translation')
-    def resolve_translation(self, args, context, info):
-        return self.dbObject.get_translation(context.get('locale_id'))
+    # @fetch_object('translation')
+    # def resolve_translation(self, args, context, info):
+    #     return self.dbObject.get_translation(context.get('locale_id'))
 
         # @fetch_object()
         # def resolve_created_at(self, args, context, info):
         #    return self.dbObject.created_at
+
 
 class CreateLanguage(graphene.Mutation):
     """
@@ -100,27 +99,16 @@ class CreateLanguage(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
-    def mutate(root, args, context, info):
-        id = args.get('id')
-        client_id = id[0] if id else context["client_id"]
-        object_id = id[1] if id else None
-        parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else None
-
-        translation_gist_id = args.get('translation_gist_id')
-        translation_gist_client_id = translation_gist_id[0]
-        translation_gist_object_id = translation_gist_id[1]
-
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
-
+    def create_dblanguage(client_id=None,
+                          object_id=None,
+                          parent_client_id=None,
+                          parent_object_id=None,
+                          translation_gist_client_id=None,
+                          translation_gist_object_id=None):
         parent = None
         if parent_client_id and parent_object_id:
-            parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+            parent = DBSession.query(dbLanguage).\
+                filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
 
         dblanguage = dbLanguage(
             client_id=client_id,
@@ -134,9 +122,32 @@ class CreateLanguage(graphene.Mutation):
             dblanguage.parent = parent
 
         DBSession.flush()
+        return dblanguage
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, args, context, info):
+        id = args.get('id')
+        client_id = id[0] if id else context["client_id"]
+        object_id = id[1] if id else None
+        parent_id = args.get('parent_id')
+        parent_client_id = parent_id[0] if parent_id else None
+        parent_object_id = parent_id[1] if parent_id else None
+
+        translation_gist_id = args.get('translation_gist_id')
+        translation_gist_client_id = translation_gist_id[0]
+        translation_gist_object_id = translation_gist_id[1]
+
+        dblanguage = CreateLanguage.create_dblanguage(client_id=client_id,
+                                                      object_id=object_id,
+                                                      parent_client_id=parent_client_id,
+                                                      parent_object_id=parent_object_id,
+                                                      translation_gist_client_id=translation_gist_client_id,
+                                                      translation_gist_object_id=translation_gist_object_id)
         language = Language(id=[dblanguage.client_id, dblanguage.object_id])
         language.dbObject = dblanguage
         return CreateLanguage(language=language, triumph=True)
+
 
 class UpdateLanguage(graphene.Mutation):
     """
@@ -183,21 +194,22 @@ class UpdateLanguage(graphene.Mutation):
         object_id = id[1]
         dblanguage = DBSession.query(dbLanguage).filter_by(client_id=client_id, object_id=object_id).first()
 
-        if dblanguage and not dblanguage.marked_for_deletion:
-            parent_id = args.get('parent_id')
-            if parent_id:
-                dblanguage.parent_client_id = parent_id[0]
-                dblanguage.parent_object_id = parent_id[1]
+        if not dblanguage or dblanguage.marked_for_deletion:
+            raise ResponseError(message="Error: No such language in the system")
+        parent_id = args.get('parent_id')
+        if parent_id:
+            dblanguage.parent_client_id = parent_id[0]
+            dblanguage.parent_object_id = parent_id[1]
 
-            translation_gist_id = args.get('translation_gist_id')
-            if translation_gist_id:
-                dblanguage.translation_gist_client_id = translation_gist_id[0]
-                dblanguage.translation_gist_object_id = translation_gist_id[1]
+        translation_gist_id = args.get('translation_gist_id')
+        if translation_gist_id:
+            dblanguage.translation_gist_client_id = translation_gist_id[0]
+            dblanguage.translation_gist_object_id = translation_gist_id[1]
 
-            language = Language(id=[dblanguage.client_id, dblanguage.object_id])
-            language.dbObject = dblanguage
-            return UpdateLanguage(language=language, triumph=True)
-        raise ResponseError(message="Error: No such language in the system")
+        language = Language(id=[dblanguage.client_id, dblanguage.object_id])
+        language.dbObject = dblanguage
+        return UpdateLanguage(language=language, triumph=True)
+
 
 class DeleteLanguage(graphene.Mutation):
     """
@@ -234,15 +246,15 @@ class DeleteLanguage(graphene.Mutation):
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]
-        dbentityobj = DBSession.query(dbLanguage).filter_by(client_id=client_id, object_id=object_id).first()
+        dblanguageobj = DBSession.query(dbLanguage).filter_by(client_id=client_id, object_id=object_id).first()
 
-        if dbentityobj and not dbentityobj.marked_for_deletion:
+        if not dblanguageobj or dblanguageobj.marked_for_deletion:
+            raise ResponseError(message="No such language in the system")
             # dbentryobj = dbentityobj.parent - ?
+        del_object(dblanguageobj)
+        language = Language(id=id)
+        language.dbObject = dblanguageobj
+        return DeleteLanguage(language=language, triumph=True)
 
-            del_object(dbentityobj)
-            language = Language(id=id)
-            language.dbObject = dbentityobj
-            return DeleteLanguage(language=language, triumph=True)
-        raise ResponseError(message="No such language in the system")
 
-from .gql_dictionary import Dictionary
+# from .gql_dictionary import Dictionary
