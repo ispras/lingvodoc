@@ -24,6 +24,7 @@ from lingvodoc.models import (
 from lingvodoc.views.v2.utils import check_client_id, add_user_to_group
 from lingvodoc.cache.caching import CACHE
 
+
 class TranslationAtom(graphene.ObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
@@ -38,9 +39,50 @@ class TranslationAtom(graphene.ObjectType):
     """
     dbType = dbTranslationAtom
     dbObject = None
+
     class Meta:
-        interfaces = (CompositeIdHolder, Relationship, AdditionalMetadata, CreatedAt, MarkedForDeletion,  Content, LocaleId)
+        interfaces = (CompositeIdHolder, Relationship, AdditionalMetadata, CreatedAt, MarkedForDeletion,  Content,
+                      LocaleId)
     pass
+
+
+def create_dbtranslationatom(client_id=None,
+                             object_id=None,
+                             locale_id=2,
+                             content=None,
+                             parent_client_id=None,
+                             parent_object_id=None):
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        if not user:
+            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        parent = DBSession.query(dbTranslationGist).filter_by(client_id=parent_client_id,
+                                                              object_id=parent_object_id).first()
+
+        if parent.marked_for_deletion:
+            raise ResponseError(message="Error: no such translationgist in the system.")
+        dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                              object_id=object_id,
+                                              parent=parent,
+                                              locale_id=locale_id,
+                                              content=content)
+        DBSession.add(dbtranslationatom)
+        DBSession.flush()
+        if not object_id:
+            basegroups = []
+            basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
+            if not object_id:
+                groups = []
+                for base in basegroups:
+                    group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                    subject_object_id=dbtranslationatom.object_id,
+                                    parent=base)
+                    groups += [group]
+                for group in groups:
+                    add_user_to_group(user, group)
+        return dbtranslationatom
+
 
 class CreateTranslationAtom(graphene.Mutation):
     """
@@ -91,36 +133,18 @@ class CreateTranslationAtom(graphene.Mutation):
         parent_object_id = parent_id[1]
         locale_id = args.get('locale_id')
         content = args.get('content')
-        id = args.get('id')
 
-
-        parent = DBSession.query(dbTranslationGist).filter_by(client_id=parent_client_id,
-                                                            object_id=parent_object_id).first()
-
-        if not parent.marked_for_deletion:
-            dbtranslationatom = dbTranslationAtom(client_id=client_id,
-                                              object_id=object_id,
-                                              parent=parent,
-                                              locale_id=locale_id,
-                                              content=content)
-            DBSession.add(dbtranslationatom)
-            DBSession.flush()
-            if not object_id:
-                basegroups = []
-                basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
-                if not object_id:
-                    groups = []
-                    for base in basegroups:
-                        group = dbGroup(subject_client_id=dbtranslationatom.client_id,
-                                      subject_object_id=dbtranslationatom.object_id, parent=base)
-                        groups += [group]
-                    for group in groups:
-                        add_user_to_group(user, group)
-
+        dbtranslationatom = create_dbtranslationatom(client_id=client_id,
+                                                     object_id=object_id,
+                                                     locale_id=locale_id,
+                                                     content=content,
+                                                     parent_client_id=parent_client_id,
+                                                     parent_object_id=parent_object_id)
         translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
                                           content=dbtranslationatom.content)
         translationatom.dbObject = dbtranslationatom
         return CreateTranslationAtom(translationatom=translationatom, triumph=True)
+
 
 class UpdateTranslationAtom(graphene.Mutation):
     """
