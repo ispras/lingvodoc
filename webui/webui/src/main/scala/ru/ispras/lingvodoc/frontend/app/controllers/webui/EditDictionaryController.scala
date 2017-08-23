@@ -280,8 +280,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def getSortByPageLink(sort: String): String = {
-    getPageLink(scope.pageNumber) + "/" + sort
+  def getSortByPageLink(field: Field): String = {
+    getPageLink(scope.pageNumber) + "/" + field.getId
   }
 
   /** Checks if the user has permissions required to merge lexical entries and entities. */

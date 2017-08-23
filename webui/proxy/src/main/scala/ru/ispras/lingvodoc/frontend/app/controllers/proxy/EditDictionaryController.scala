@@ -218,8 +218,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def getSortByPageLink(sort: String): String = {
-    getPageLink(scope.pageNumber) + "/" + sort
+  def getSortByPageLink(field: Field): String = {
+    getPageLink(scope.pageNumber) + "/" + field.getId
   }
 
   override protected def onStartRequest(): Unit = {
