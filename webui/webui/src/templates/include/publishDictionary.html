@@ -29,7 +29,7 @@
             <tr>
                 <td></td>
                 <td ng-repeat="column in dictionaryTable.header">
-                    <a ng-href="{{controller.getSortByPageLink(column.getName())}}">{{ column.getName() }}</a>
+                    <a ng-href="{{controller.getSortByPageLink(column.field)}}">{{ column.getName() }}</a>
                 </td>
             </tr>
             </thead>

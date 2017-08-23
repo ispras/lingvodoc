@@ -834,7 +834,11 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     url = addUrlParameter(url, "count", count.toString)
 
     sortBy.foreach { s =>
-      url = addUrlParameter(url, "sort_by", s)
+      val ids = s.split("_")
+      if (ids.length == 2) {
+        url = addUrlParameter(url, "field_client_id", ids(0))
+        url = addUrlParameter(url, "field_object_id", ids(1))
+      }
     }
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
