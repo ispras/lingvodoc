@@ -239,6 +239,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
 
     class Input:
         id = graphene.List(graphene.Int)
+        parent_id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         is_template = graphene.Boolean()
         latitude = graphene.String()
