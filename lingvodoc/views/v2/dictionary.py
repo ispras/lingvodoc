@@ -151,7 +151,6 @@ def create_dictionary(request):  # tested & in docs
 
 @view_config(route_name='dictionary', renderer='json', request_method='GET')  # Authors -- names of users, who can edit?
 def view_dictionary(request):  # tested & in docs
-    from lingvodoc.models import categories
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
