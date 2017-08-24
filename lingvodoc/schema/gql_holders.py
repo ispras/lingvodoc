@@ -17,6 +17,7 @@ from lingvodoc.views.v2.utils import (
 
 # Object types
 
+
 class ResponseError(Exception):
     """
     usage:
@@ -44,7 +45,7 @@ class PermissionException(ResponseError):
         super().__init__(
             'Client {0} doesn\'t have \'{1}\' permissions for \'{2}\' {3}.'.format(
                 client_id, action, subject, subject_id),
-            params = (client_id, action, subject, subject_id))
+            params=(client_id, action, subject, subject_id))
 
         self.client_id = client_id
         self.action = action
@@ -52,7 +53,7 @@ class PermissionException(ResponseError):
         self.subject_id = subject_id
 
 
-def acl_check_by_id(action, subject, id_key = 'id'):
+def acl_check_by_id(action, subject, id_key='id'):
     """
     Decorator enabling ACL-based permission checks, compatible with any functions/methods with signature
     'def f(arg1, args, context, *args)', e.g. resolve methods.
@@ -91,27 +92,25 @@ def client_id_check():
             if wrapper_args["id"]:
                 return wrapper_args["id"][0]
 
-
     def decorator(resolve_f):
         def wrapper(self, args, context, *resolve_f_args):
             client_id = get_client_id_from_args(args)
             authenticated = context.client_id
             if client_id:
-            #client = DBSession.query(Client).filter_by(id=context.client_id).first()
                 if not check_client_id(authenticated, client_id):
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                                       authenticated)
+                                   authenticated)
             else:
                 client = DBSession.query(Client).filter_by(id=authenticated).first()
                 if not client:
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                                       authenticated)
+                                   authenticated)
             return resolve_f(self, args, context, *resolve_f_args)
-
 
         return wrapper
 
     return decorator
+
 
 class ObjectVal(Scalar):
     """
@@ -149,10 +148,11 @@ class JSONString(JSONtype):
 
     @staticmethod
     def parse_value(value):
-        return value#json.loads(value)
+        # json.loads(value)
+        return value
 
 
-class DateTime(Scalar): # TODO: change format
+class DateTime(Scalar):  # TODO: change format
     """
     graphene.types.json.JSONString replacement having different time format
     """
@@ -160,9 +160,9 @@ class DateTime(Scalar): # TODO: change format
     def serialize(dt):
         # need to add assert
         if type(dt) is datetime.datetime:
-            return  dt.isoformat()
+            return dt.isoformat()
         else:
-            dt = datetime.datetime.utcfromtimestamp(dt) # can return wrong time
+            dt = datetime.datetime.utcfromtimestamp(dt)  # can return wrong time
         return dt.isoformat()
 
     @staticmethod
@@ -177,11 +177,13 @@ class DateTime(Scalar): # TODO: change format
 
 # Functions
 
+
 def del_object(tmp_object):
     tmp_object.marked_for_deletion = True
     tmp_objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=tmp_object.client_id,
-                                                     object_id=tmp_object.object_id).one()
+                                                         object_id=tmp_object.object_id).one()
     tmp_objecttoc.marked_for_deletion = True
+
 
 def fetch_object(attrib_name=None):
     """
@@ -221,8 +223,10 @@ def fetch_object(attrib_name=None):
 class IdHolder(graphene.Interface):
     id = graphene.Int()
     fetch_object("id")
+
     def resolve_id(self, args, context, info):
         return self.dbObject.id
+
 
 class CompositeIdHolder(graphene.Interface):
     id = graphene.List(graphene.Int)
@@ -241,11 +245,14 @@ class CompositeIdHolder(graphene.Interface):
     def resolve_object_id(self, args, context, info):
         return self.dbObject.object_id
 
+
 class CreatedAt(graphene.Interface):
     created_at = DateTime()
+
     @fetch_object("created_at")
     def resolve_created_at(self, args, context, info):
         return self.dbObject.created_at
+
 
 class Relationship(graphene.Interface):
     parent_id = graphene.List(graphene.Int)
@@ -282,6 +289,7 @@ class SelfHolder(graphene.Interface):
     def resolve_self_object_id(self, args, context, info):
         return self.dbObject.self_object_id
 
+
 class FieldHolder(graphene.Interface):
     field_id = graphene.List(graphene.Int)
     field_client_id = graphene.Int()
@@ -298,6 +306,7 @@ class FieldHolder(graphene.Interface):
     @fetch_object("field_object_id")
     def resolve_field_object_id(self, args, context, info):
         return self.dbObject.field_object_id
+
 
 class ParentLink(graphene.Interface):
     link_id = graphene.List(graphene.Int)
@@ -316,6 +325,7 @@ class ParentLink(graphene.Interface):
     def resolve_link_object_id(self, args, context, info):
         return self.dbObject.link_object_id
 
+
 class MarkedForDeletion(graphene.Interface):
     marked_for_deletion = graphene.Boolean()
 
@@ -323,12 +333,14 @@ class MarkedForDeletion(graphene.Interface):
     def resolve_marked_for_deletion(self, args, context, info):
         return self.dbObject.marked_for_deletion
 
+
 class Position(graphene.Interface):
     position = graphene.Int()
 
     @fetch_object("position")
     def resolve_position(self, args, context, info):
         return self.dbObject.position
+
 
 class TranslationGistHolder(graphene.Interface):
     translation_gist_id = graphene.List(graphene.Int)
@@ -348,12 +360,14 @@ class TranslationGistHolder(graphene.Interface):
     def resolve_translation_gist_object_id(self, args, context, info):
         return self.dbObject.translation_gist_object_id
 
+
 class UserId(graphene.Interface):
     user_id = graphene.Int()
 
     @fetch_object("user_id")
     def resolve_user_id(self, args, context, info):
         return self.dbObject.user_id
+
 
 class StateHolder(graphene.Interface):
     state_translation_gist_id = graphene.List(graphene.Int)
@@ -373,6 +387,7 @@ class StateHolder(graphene.Interface):
     def resolve_state_translation_gist_object_id(self, args, context, info):
         return self.dbObject.state_translation_gist_object_id
 
+
 class TableName(graphene.Interface):
     table_name = graphene.String()
 
@@ -380,11 +395,14 @@ class TableName(graphene.Interface):
     def resolve_table_name(self, args, context, info):
         return self.dbObject.table_name
 
+
 class Name(graphene.Interface):
     name = graphene.String()
+
     @fetch_object("name")
     def resolve_name(self, args, context, info):
         return self.dbObject.name
+
 
 class LocaleId(graphene.Interface):
     locale_id = graphene.Int()
@@ -393,6 +411,7 @@ class LocaleId(graphene.Interface):
     def resolve_locale_id(self, args, context, info):
         return self.dbObject.locale_id
 
+
 class Content(graphene.Interface):
     content = graphene.String()
 
@@ -400,14 +419,18 @@ class Content(graphene.Interface):
     def resolve_content(self, args, context, info):
         return self.dbObject.content
 
+
 class TypeHolder(graphene.Interface):
     type = graphene.String()  # rename (?)
+
     @fetch_object("type")
     def resolve_type(self, args, context, info):
         return self.dbObject.type
 
+
 class TranslationHolder(graphene.Interface):
     translation = graphene.String()
+
     @fetch_object("translation")
     def resolve_translation(self, args, context, info):
         return self.dbObject.get_translation(context.get('locale_id')) # TODO: fix it
@@ -415,19 +438,26 @@ class TranslationHolder(graphene.Interface):
 # rare interfaces
 
 # Organization interface
+
+
 class About(graphene.Interface):
+
     about = graphene.String()
+
     @fetch_object("about")
     def resolve_about(self, args, context, info):
         return self.dbObject.about
 
 # PublishedEntity interface
+
+
 class Published(graphene.Interface):
     published = graphene.Boolean()
 
     @fetch_object("published")
     def resolve_about(self, args, context, info):
         return self.dbObject.published
+
 
 class Accepted(graphene.Interface):
     accepted = graphene.Boolean()
@@ -437,14 +467,18 @@ class Accepted(graphene.Interface):
         return self.dbObject.accepted
 
 # userBlobs interface
-class DataType(graphene.Interface):   #TODO: check all data_type fields
+
+
+class DataType(graphene.Interface):  # TODO: check all data_type fields
     data_type = graphene.String()
 
     @fetch_object("data_type")
     def resolve_data_type(self, args, context, info):
-        pass #return self.dbObject.data_type
+        pass  # return self.dbObject.data_type
 
 # LexicalEntry interface
+
+
 class MovedTo(graphene.Interface):
     moved_to = graphene.String()
 
@@ -453,6 +487,8 @@ class MovedTo(graphene.Interface):
         return self.dbObject.moved_to
 
 # Field interface
+
+
 class DataTypeTranslationGistId(graphene.Interface):
     data_type_translation_gist_id = graphene.List(graphene.Int)
     data_type = graphene.String()
@@ -476,6 +512,7 @@ class DataTypeTranslationGistId(graphene.Interface):
 
 # Metadata section
 
+
 class IsTranslatable(graphene.Interface):
     is_translatable = graphene.Boolean()
 
@@ -483,7 +520,8 @@ class IsTranslatable(graphene.Interface):
     def resolve_is_translatable(self, args, context, info):
         return self.dbObject.is_translatable
 
-class metadata(graphene.ObjectType):
+
+class Metadata(graphene.ObjectType):
     """
     graphene object that have all metadata attributes
     if new attributes of metadata are added, then this class has to be updated
@@ -502,7 +540,6 @@ class metadata(graphene.ObjectType):
     authors = GenericScalar()
     row_id = GenericScalar()
     merged_to = GenericScalar()
-
 
     def resolve_hash(self, args, context, info):
         return self.hash
@@ -575,14 +612,14 @@ class AdditionalMetadata(graphene.Interface):
      }
     """
 
-    # additional_metadata_string is attribute which needs to be set to have an opportunity to receive metadata without appeal to a DB
+    #  additional_metadata_string is attribute which needs to be set №
+    # to have an opportunity to receive metadata without appeal to a DB
 
     additional_metadata_string = JSONString()
 
     # additional_metadata_string is necessary for obtaining result
 
-    additional_metadata = graphene.Field(metadata)
-
+    additional_metadata = graphene.Field(Metadata)
 
     @fetch_object()
     def resolve_additional_metadata(self, args, context, info):
@@ -593,26 +630,32 @@ class AdditionalMetadata(graphene.Interface):
 
         # returns an object with the fields to which we can get access in the request
 
-        metadata_object = metadata(hash=get_value_by_key(db_object, additional_metadata_string,"hash"), # TODO: refactor
-                                    origin_client_id=get_value_by_key(db_object, additional_metadata_string, "origin_client_id"),
-                                    origin_object_id=get_value_by_key(db_object, additional_metadata_string,"origin_object_id"),
-                                    info=get_value_by_key(db_object, additional_metadata_string,"info"),
-                                    merged_by = get_value_by_key(db_object, additional_metadata_string,"merged_by"),
-                                    data_type = get_value_by_key(db_object, additional_metadata_string,"data_type"),
-                                    blob_description = get_value_by_key(db_object, additional_metadata_string,"blob_description"),
-                                    merge = get_value_by_key(db_object, additional_metadata_string,"merge"),
-                                    original_filename = get_value_by_key(db_object, additional_metadata_string,"original_filename"),
-                                    location = get_value_by_key(db_object, additional_metadata_string,"location"),
-                                    client_id = get_value_by_key(db_object, additional_metadata_string,"client_id"),
-                                    authors = get_value_by_key(db_object, additional_metadata_string,"authors"),
-                                    row_id = get_value_by_key(db_object, additional_metadata_string,"row_id"),
-                                    merged_to = get_value_by_key(db_object, additional_metadata_string,"merged_to")
+        metadata_object = Metadata(hash=get_value_by_key(db_object, additional_metadata_string, "hash"),
+                                   origin_client_id=get_value_by_key(db_object, additional_metadata_string,
+                                                                     "origin_client_id"),
+                                   origin_object_id=get_value_by_key(db_object, additional_metadata_string,
+                                                                     "origin_object_id"),
+                                   info=get_value_by_key(db_object, additional_metadata_string, "info"),
+                                   merged_by=get_value_by_key(db_object, additional_metadata_string, "merged_by"),
+                                   data_type=get_value_by_key(db_object, additional_metadata_string, "data_type"),
+                                   blob_description=get_value_by_key(db_object, additional_metadata_string,
+                                                                     "blob_description"),
+                                   merge=get_value_by_key(db_object, additional_metadata_string, "merge"),
+                                   original_filename=get_value_by_key(db_object, additional_metadata_string,
+                                                                      "original_filename"),
+                                   location=get_value_by_key(db_object, additional_metadata_string, "location"),
+                                   client_id=get_value_by_key(db_object, additional_metadata_string, "client_id"),
+                                   authors=get_value_by_key(db_object, additional_metadata_string, "authors"),
+                                   row_id=get_value_by_key(db_object, additional_metadata_string, "row_id"),
+                                   merged_to=get_value_by_key(db_object, additional_metadata_string, "merged_to")
                                    )
         return metadata_object
 
 #  end of metadata section
 
-class CommonFieldsComposite( MarkedForDeletion, AdditionalMetadata, CreatedAt, CompositeIdHolder, Relationship, TranslationGistHolder):
+
+class CommonFieldsComposite(MarkedForDeletion, AdditionalMetadata, CreatedAt, CompositeIdHolder, Relationship,
+                            TranslationGistHolder):
     """
     used in Dictionary, DictionaryPerspective and Language classes as Interfaces because function
     tree = graphene.List(CommonFieldsComposite, ) does not support listing

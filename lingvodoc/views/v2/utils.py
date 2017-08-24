@@ -47,6 +47,7 @@ from pyramid.httpexceptions import (
 )
 from lingvodoc.exceptions import CommonException
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.attributes import flag_modified
 import pdb
 from pdb import set_trace
 import binascii
@@ -700,3 +701,10 @@ def anonymous_userid(request):
     unique_string = "unauthenticated_%s_%s" % (ip, useragent)
     return base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
 
+
+def update_metadata(dbobject, new_metadata=None):
+    if new_metadata:
+        old_meta = dbobject.additional_metadata
+        old_meta.update(new_metadata)
+        dbobject.additional_metadata = old_meta
+        flag_modified(dbobject, 'additional_metadata')
