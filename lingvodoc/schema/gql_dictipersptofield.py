@@ -22,6 +22,8 @@ from lingvodoc.models import (
     ObjectTOC,
     DBSession
 )
+
+
 class DictionaryPerspectiveToField(graphene.ObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
@@ -40,6 +42,7 @@ class DictionaryPerspectiveToField(graphene.ObjectType):
     """
     dbObject = None
     dbType = dbDictionaryPerspectiveToField
+
     class Meta:
         interfaces = (CreatedAt,
                       CompositeIdHolder,
@@ -51,11 +54,13 @@ class DictionaryPerspectiveToField(graphene.ObjectType):
                       Position)
     pass
 
+
 class CreateDictionaryPerspectiveToField(graphene.Mutation):
     """
     example:
     mutation  {
-        create_perspective_to_field(id: [949, 2493], parent_id: [949, 2491], field_id: [949, 5], self_id: [949, 2493], link_id: [5, 6], position: 1) {
+        create_perspective_to_field(id: [949, 2493], parent_id: [949, 2491], field_id: [949, 5], self_id: [949, 2493],
+         link_id: [5, 6], position: 1) {
             triumph
             perspective_to_field{
                 id
@@ -93,6 +98,37 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    def create_dictionary_persp_to_field(client_id=None,
+                                         object_id=None,
+                                         parent_client_id=None,
+                                         parent_object_id=None,
+                                         field_client_id=None,
+                                         field_object_id=None,
+                                         self_client_id=None,
+                                         self_object_id=None,
+                                         link_client_id=None,
+                                         link_object_id=None,
+                                         position=1):
+        if DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
+                                                                     object_id=object_id).first():
+            raise ResponseError(message="This field already exists")
+        field_object = dbDictionaryPerspectiveToField(client_id=client_id,
+                                                      object_id=object_id,
+                                                      parent_client_id=parent_client_id,
+                                                      parent_object_id=parent_object_id,
+                                                      field_client_id=field_client_id,
+                                                      field_object_id=field_object_id,
+                                                      self_client_id=self_client_id,
+                                                      self_object_id=self_object_id,
+                                                      link_client_id=link_client_id,
+                                                      link_object_id=link_object_id,
+                                                      position=position
+                                                      )
+        DBSession.add(field_object)
+        DBSession.flush()
+        return field_object
+
+    @staticmethod
     @client_id_check()
     def mutate(root, args, context, info):
         id = args.get("id")
@@ -111,32 +147,24 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
         link_client_id = link_id[0]
         link_object_id = link_id[1]
         position = args.get('position')
+        field_object = CreateDictionaryPerspectiveToField\
+            .create_dictionary_persp_to_field(client_id=client_id,
+                                              object_id=object_id,
+                                              parent_client_id=parent_client_id,
+                                              parent_object_id=parent_object_id,
+                                              field_client_id=field_client_id,
+                                              field_object_id=field_object_id,
+                                              self_client_id=self_client_id,
+                                              self_object_id=self_object_id,
+                                              link_client_id=link_client_id,
+                                              link_object_id=link_object_id,
+                                              position=position)
+        DBSession.add(field_object)
+        DBSession.flush()
+        perspective_to_field = DictionaryPerspectiveToField(id=[field_object.client_id, field_object.object_id])
+        perspective_to_field.dbObject = field_object
+        return CreateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
 
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
-
-        if not DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
-                                                                       object_id=object_id).first():
-            field_object = dbDictionaryPerspectiveToField(client_id=client_id,
-                                                        object_id=object_id,
-                                                        parent_client_id=parent_client_id,
-                                                        parent_object_id=parent_object_id,
-                                                        field_client_id=field_client_id,
-                                                        field_object_id=field_object_id,
-                                                        self_client_id=self_client_id,
-                                                        self_object_id=self_object_id,
-                                                        link_client_id=link_client_id,
-                                                        link_object_id=link_object_id,
-                                                        position=position)
-            DBSession.add(field_object)
-            DBSession.flush()
-
-            perspective_to_field = DictionaryPerspectiveToField(id=[field_object.client_id, field_object.object_id])
-            perspective_to_field.dbObject = field_object
-            return CreateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
-        raise ResponseError(message="This field already exists")
 
 class UpdateDictionaryPerspectiveToField(graphene.Mutation):
     """
@@ -186,7 +214,7 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
         object_id = id[1]
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else  None
+        parent_object_id = parent_id[1] if parent_id else None
         field_id = args.get('field_id')
         field_client_id = field_id[0] if field_id else None
         field_object_id = field_id[1] if field_id else None
@@ -195,8 +223,8 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
         link_object_id = link_id[1] if link_id else None
         position = args.get('position')
 
-        field_object =  DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
-                                                                       object_id=object_id).first()
+        field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
+                                                                                 object_id=object_id).first()
         if field_object and not field_object.marked_for_deletion:
             if parent_client_id:
                 field_object.parent_client_id = parent_client_id
@@ -217,6 +245,7 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
             perspective_to_field.dbObject = field_object
             return UpdateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
         raise ResponseError(message="Error: No such field object in the system")
+
 
 class DeleteDictionaryPerspectiveToField(graphene.Mutation):
     """
@@ -260,9 +289,10 @@ class DeleteDictionaryPerspectiveToField(graphene.Mutation):
 
         field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
-        if field_object and not field_object.marked_for_deletion:
-            del_object(field_object)
-            perspective_to_field = DictionaryPerspectiveToField(id=id)
-            perspective_to_field.dbObject = field_object
-            return DeleteDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
-        raise ResponseError(message="No such field object in the system")
+        if not field_object or field_object.marked_for_deletion:
+            raise ResponseError(message="No such field object in the system")
+        del_object(field_object)
+        perspective_to_field = DictionaryPerspectiveToField(id=id)
+        perspective_to_field.dbObject = field_object
+        return DeleteDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
+
