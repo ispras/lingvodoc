@@ -968,16 +968,16 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             if update_flag:
                 match_dict = defaultdict(list)
                 for lex in lexes_with_text:
-                    if lex[2].content == word:
+                    if lex[2].content and lex[2].content == word:
                         if field_ids["Word"] == (lex[2].field.client_id, lex[2].field.object_id):
                             match_dict[lex[1]].append(lex)
-                    if lex[2].content == transcription:
+                    if lex[2].content and lex[2].content == transcription:
                         if field_ids["Transcription"] == (lex[2].field.client_id, lex[2].field.object_id):
                             match_dict[lex[1]].append(lex)
-                    if lex[2].content == translation:
+                    if lex[2].content and lex[2].content == translation:
                         if field_ids["Translation"] == (lex[2].field.client_id, lex[2].field.object_id):
                             match_dict[lex[1]].append(lex)
-                match_dict = { k: v for k, v in match_dict.items()
+                match_dict = {k: v for k, v in match_dict.items()
                                if len(v) >= 2 or len(v) == 1 and [x[1] for x in lexes_with_text].count(k) == 1}
                 max_sim = None
                 for le in match_dict:
