@@ -6,6 +6,7 @@ from lingvodoc.schema.gql_holders import (
     MarkedForDeletion,
     TypeHolder,
     client_id_check,
+    acl_check_by_id,
     ResponseError
 )
 
@@ -153,6 +154,7 @@ class DeleteTranslationGist(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @acl_check_by_id('delete', 'translations')
     def mutate(root, args, context, info):
         id = args.get('id')
         client_id = id[0]

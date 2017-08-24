@@ -8,6 +8,7 @@ from lingvodoc.schema.gql_holders import (
     MarkedForDeletion,
     Content,
     client_id_check,
+    acl_check_by_id,
     ResponseError,
     LocaleId
 )
@@ -191,6 +192,7 @@ class UpdateTranslationAtom(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @acl_check_by_id('edit', 'translations')
     def mutate(root, args, context, info):
         content = args.get('content')
         id = args.get('id')

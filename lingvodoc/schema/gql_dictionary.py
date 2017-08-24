@@ -10,11 +10,7 @@ from lingvodoc.models import (
 )
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.schema.gql_user import User
-"""
-from lingvodoc.views.v2.views import (
-    translation_service_search
-)
-"""
+
 from lingvodoc.views.v2.utils import update_metadata
 from lingvodoc.schema.gql_holders import (
     ResponseError
@@ -29,7 +25,8 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     client_id_check,
     ResponseError,
-    ObjectVal
+    ObjectVal,
+    acl_check_by_id
 )
 from lingvodoc.views.v2.delete import real_delete_dictionary
 from lingvodoc.views.v2.utils import (
@@ -202,6 +199,7 @@ class CreateDictionary(graphene.Mutation):
         return dbdictionary_obj
 
     @staticmethod
+    @acl_check_by_id('create', 'dictionary')
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get("id")
@@ -349,6 +347,7 @@ class UpdateDictionary(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('edit', 'dictionary')
     def mutate(root, args, context, info):
         ids = args.get('id')
         client_id = ids[0] if ids else context["client_id"]
@@ -399,6 +398,7 @@ class DeleteDictionary(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('delete', 'dictionary')
     def mutate(root, args, context, info):
         ids = args.get('id')
         if not ids:

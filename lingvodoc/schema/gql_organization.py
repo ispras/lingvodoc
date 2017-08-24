@@ -6,6 +6,7 @@ from lingvodoc.schema.gql_holders import (CreatedAt,
     Name,
     About,
     del_object,
+    acl_check_by_id,
     ResponseError
 )
 from lingvodoc.models import (
@@ -71,6 +72,7 @@ class CreateOrganization(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @acl_check_by_id('create', 'organization')
     def mutate(root, args, context, info):
         name = args.get('name')
         about = args.get('about')
@@ -139,6 +141,7 @@ class UpdateOrganization(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @acl_check_by_id('edit', 'organization')
     def mutate(root, args, context, info):
         organization_id = args.get('organization_id')
         dborganization = DBSession.query(dbOrganization).filter_by(id=organization_id).first()
