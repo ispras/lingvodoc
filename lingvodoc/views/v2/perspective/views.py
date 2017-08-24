@@ -1572,18 +1572,13 @@ def lexical_entries_all(request):
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    sort_criterion = request.params.get('sort_by') or 'Translation'  # TODO: make it work
+    field_client_id = int(request.params.get('field_client_id', 66))
+    field_object_id = int(request.params.get('field_object_id', 10))
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
-        field = DBSession.query(Field) \
-            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
-                                        Field.marked_for_deletion == False)) \
-            .filter(TranslationAtom.content == sort_criterion,
-                    TranslationAtom.locale_id == 2).one()  # TODO: make it harder better faster stronger
 
         lexes = DBSession.query(LexicalEntry).join(LexicalEntry.entity).join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion == False,
@@ -1600,8 +1595,8 @@ def lexical_entries_all(request):
             lexes = lexes.filter(Entity.created_at <= end_date)  # todo: check if field=field ever works
         lexes = lexes \
             .order_by(func.min(case(
-            [(or_(Entity.field_client_id != field.client_id,
-                  Entity.field_object_id != field.object_id),
+            [(or_(Entity.field_client_id != field_client_id,
+                  Entity.field_object_id != field_object_id),
               'яяяяяя')],
             else_=Entity.content))) \
             .group_by(LexicalEntry) \
@@ -1680,7 +1675,8 @@ def lexical_entries_published(request):
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    sort_criterion = request.params.get('sort_by') or 'Translation'
+    field_client_id = int(request.params.get('field_client_id', 66))
+    field_object_id = int(request.params.get('field_object_id', 10))
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
     preview_mode = False
@@ -1691,32 +1687,6 @@ def lexical_entries_published(request):
         if (parent.state == 'Limited access' or parent.parent.state == 'Limited access') and "view:lexical_entries_and_entities:" + client_id + ":" + object_id not in request.effective_principals:
             log.debug("PREVIEW MODE")
             preview_mode = True
-
-        field = DBSession.query(Field) \
-            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
-                                        Field.marked_for_deletion == False)) \
-            .filter(TranslationAtom.content == sort_criterion,
-                    TranslationAtom.locale_id == 2).one()
-        # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
-        # NOTE: IMPORTANT: 'яяяяя' is a hack - something wrong with postgres collation if we use \uffff
-        # lexes = DBSession.query(LexicalEntry) \
-        #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-        #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-        #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-        #     .options(joinedload('publishleveloneentity')) \
-        #     .options(joinedload('publishleveltwoentity')) \
-        #     .options(joinedload('publishgroupingentity')) \
-        #     .filter(LexicalEntry.parent == parent) \
-        #     .group_by(LexicalEntry, LevelOneEntity.content) \
-        #     .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-        #                                LevelOneEntity.parent_object_id == LexicalEntry.object_id,
-        #                                LevelOneEntity.marked_for_deletion == False)) \
-        #     .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-        #                                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id,
-        #                                       PublishLevelOneEntity.marked_for_deletion == False)) \
-        #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
-        #     .offset(start_from).limit(count)
         lexes = DBSession.query(LexicalEntry) \
             .join(LexicalEntry.entity).join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, PublishingEntity.published == True,
@@ -1733,8 +1703,8 @@ def lexical_entries_published(request):
             lexes = lexes.filter(Entity.created_at <= end_date)
         lexes = lexes.group_by(LexicalEntry) \
             .order_by(func.min(case(
-            [(or_(Entity.field_client_id != field.client_id,
-                  Entity.field_object_id != field.object_id),
+            [(or_(Entity.field_client_id != field_client_id,
+                  Entity.field_object_id != field_object_id),
               'яяяяяя')],
             else_=Entity.content))) \
             .group_by(LexicalEntry) \
@@ -1783,18 +1753,13 @@ def lexical_entries_not_accepted(request):
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    sort_criterion = request.params.get('sort_by') or 'Translation'
+    field_client_id = int(request.params.get('field_client_id', 66))
+    field_object_id = int(request.params.get('field_object_id', 10))
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
-        field = DBSession.query(Field) \
-            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
-                                        Field.marked_for_deletion == False)) \
-            .filter(TranslationAtom.content == sort_criterion,
-                    TranslationAtom.locale_id == 2).one()
         lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
                                                         parent_object_id=parent.object_id) \
             .join(LexicalEntry.entity).join(Entity.publishingentity) \
@@ -1811,8 +1776,8 @@ def lexical_entries_not_accepted(request):
             lexes = lexes.filter(Entity.created_at <= end_date)
         lexes = lexes.group_by(LexicalEntry) \
             .order_by(func.min(case(
-            [(or_(Entity.field_client_id != field.client_id,
-                  Entity.field_object_id != field.object_id),
+            [(or_(Entity.field_client_id != field_client_id,
+                  Entity.field_object_id != field_object_id),
               'яяяяяя')],
             else_=Entity.content))) \
             .group_by(LexicalEntry) \
