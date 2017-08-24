@@ -653,8 +653,17 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def updatePassword(oldPassword: String, newPassword: String): Future[Unit] = {
+    val p = Promise[Unit]()
 
-
+    val req = js.Dynamic.literal("old_password" -> oldPassword, "new_password" -> newPassword)
+    $http.put[js.Object](getMethodUrl("user"), JSON.stringify(req)) onComplete {
+      case Success(js) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update user password", e))
+    }
+    p.future
+  }
 
   def getUser(userId: Int): Future[User] = {
     val p = Promise[User]()
@@ -825,7 +834,11 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     url = addUrlParameter(url, "count", count.toString)
 
     sortBy.foreach { s =>
-      url = addUrlParameter(url, "sort_by", s)
+      val ids = s.split("_")
+      if (ids.length == 2) {
+        url = addUrlParameter(url, "field_client_id", ids(0))
+        url = addUrlParameter(url, "field_object_id", ids(1))
+      }
     }
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
