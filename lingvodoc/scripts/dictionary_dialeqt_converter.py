@@ -968,16 +968,17 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             if update_flag:
                 match_dict = defaultdict(list)
                 for lex in lexes_with_text:
-                    if lex[2].content and lex[2].content == word:
-                        if field_ids["Word"] == (lex[2].field.client_id, lex[2].field.object_id):
-                            match_dict[lex[1]].append(lex)
-                    if lex[2].content and lex[2].content == transcription:
-                        if field_ids["Transcription"] == (lex[2].field.client_id, lex[2].field.object_id):
-                            match_dict[lex[1]].append(lex)
-                    if lex[2].content and lex[2].content == translation:
-                        if field_ids["Translation"] == (lex[2].field.client_id, lex[2].field.object_id):
-                            match_dict[lex[1]].append(lex)
-                match_dict = {k: v for k, v in match_dict.items()
+                    if lex[2].content:
+                        if lex[2].content == word:
+                            if field_ids["Word"] == (lex[2].field.client_id, lex[2].field.object_id):
+                                match_dict[lex[1]].append(lex)
+                        if lex[2].content == transcription:
+                            if field_ids["Transcription"] == (lex[2].field.client_id, lex[2].field.object_id):
+                                match_dict[lex[1]].append(lex)
+                        if lex[2].content == translation:
+                            if field_ids["Translation"] == (lex[2].field.client_id, lex[2].field.object_id):
+                                match_dict[lex[1]].append(lex)
+                match_dict = { k: v for k, v in match_dict.items()
                                if len(v) >= 2 or len(v) == 1 and [x[1] for x in lexes_with_text].count(k) == 1}
                 max_sim = None
                 for le in match_dict:
@@ -1117,15 +1118,16 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 for lex in p_lexes_with_text:
                     entity = lex[2]
                     entity_field_ids = (entity.field.client_id, entity.field.object_id)
-                    if entity.content == word:
-                        if field_ids["Word of Paradigmatic forms"] == entity_field_ids:
-                            p_match_dict[lex[1]].append(lex)
-                    if entity.content == transcription:
-                        if field_ids["Transcription of Paradigmatic forms"] == entity_field_ids:
-                            p_match_dict[lex[1]].append(lex)
-                    if entity.content == translation:
-                        if field_ids["Translation of Paradigmatic forms"] == entity_field_ids:
-                            p_match_dict[lex[1]].append(lex)
+                    if entity.content:
+                        if entity.content == word:
+                            if field_ids["Word of Paradigmatic forms"] == entity_field_ids:
+                                p_match_dict[lex[1]].append(lex)
+                        if entity.content == transcription:
+                            if field_ids["Transcription of Paradigmatic forms"] == entity_field_ids:
+                                p_match_dict[lex[1]].append(lex)
+                        if entity.content == translation:
+                            if field_ids["Translation of Paradigmatic forms"] == entity_field_ids:
+                                p_match_dict[lex[1]].append(lex)
                 p_match_dict = { k: v for k, v in p_match_dict.items()
                                  if len(v) >= 2 or len(v) == 1 and [x[1] for x in p_lexes_with_text].count(k) == 1}
                 max_sim = None
