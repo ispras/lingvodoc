@@ -14,7 +14,8 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     del_object,
     client_id_check,
-    ResponseError
+    ResponseError,
+    acl_check_by_id
 )
 from .gql_dictionary import Dictionary
 # from lingvodoc.schema.gql_dictionary import Dictionary
@@ -126,6 +127,7 @@ class CreateLanguage(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('create', 'language')
     def mutate(root, args, context, info):
         id = args.get('id')
         client_id = id[0] if id else context["client_id"]
@@ -188,6 +190,7 @@ class UpdateLanguage(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('edit', 'language')
     def mutate(root, args, context, info):
         id = args.get('id')
         client_id = id[0]
@@ -242,6 +245,7 @@ class DeleteLanguage(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @acl_check_by_id('delete', 'language')
     def mutate(root, args, context, info):
         id = args.get('id')
         client_id = id[0]

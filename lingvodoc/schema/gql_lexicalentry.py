@@ -10,6 +10,7 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     client_id_check,
     del_object,
+    acl_check_by_id,
     ResponseError,
 )
 
@@ -48,6 +49,7 @@ class LexicalEntry(graphene.ObjectType):
         #only_fields = ['id', 'additional_metadata', 'created_at', "marked_for_deletion"]
 
     @fetch_object('entities')
+    @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, args, context, info):
         result = list()
         for db_entity in self.dbObject.entity:
@@ -93,6 +95,7 @@ class CreateLexicalEntry(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('create', 'lexical_entries_and_entities')
     def mutate(root, args, context, info):
         perspective_id = args.get('perspective_id')
         perspective_client_id = perspective_id[0]
@@ -165,6 +168,7 @@ class DeleteLexicalEntry(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
+    @acl_check_by_id('delete', 'lexical_entries_and_entities')
     def mutate(root, args, context, info):
         id = args.get('id')
         client_id = id[0]
