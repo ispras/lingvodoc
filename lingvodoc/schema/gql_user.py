@@ -18,6 +18,7 @@ from lingvodoc.schema.gql_holders import (
     Name,
     fetch_object,
     client_id_check,
+    acl_check_by_id,
     ResponseError
 )
 
@@ -211,6 +212,7 @@ class UpdateUser(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('edit', 'edit_user')
     def mutate(root, args, context, info):
         #id = args.get('id')
         client_id = args.get('client_id')

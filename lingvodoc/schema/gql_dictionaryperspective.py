@@ -23,6 +23,7 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     del_object,
     ResponseError,
+    acl_check_by_id,
     ObjectVal
 )
 
@@ -136,6 +137,7 @@ class DictionaryPerspective(graphene.ObjectType):
             result.append(gr_field_obj)
         return result
 
+    @acl_check_by_id('view', 'approve_entities')
     def resolve_lexicalentries(self, args, context, info):
         result = list()
         request = context.get('request')
@@ -239,6 +241,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
 
     class Input:
         id = graphene.List(graphene.Int)
+        parent_id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         is_template = graphene.Boolean()
         latitude = graphene.String()
@@ -314,6 +317,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('create', 'perspective')
     def mutate(root, args, context, info):
         id = args.get("id")
         client_id = id[0] if id else context["client_id"]
@@ -389,6 +393,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('edit', 'perspective')
     def mutate(root, args, context, info):
         id = args.get("id")
         client_id = id[0]
@@ -471,6 +476,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id('delete', 'perspective')
     def mutate(root, args, context, info):
         id = args.get("id")
         client_id = id[0]

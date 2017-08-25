@@ -10,7 +10,8 @@ from .models import (
     acl_by_groups_single_id,
     user_to_group_association,
     user_to_organization_association,
-    organization_to_group_association
+    organization_to_group_association,
+    DictionaryPerspective
     )
 
 from pyramid.security import forget
@@ -175,7 +176,7 @@ def check_direct(client_id, request, action, subject, subject_id):
         if subject == 'approve_entities':
 
             perspective = DBSession.query(DictionaryPerspective).filter_by(
-                client_id = subject_client_id, subject_object_id = object_id).first()
+                client_id=subject_client_id, subject_object_id=subject_object_id).first()
 
             if (perspective and
                 (perspective.state == 'Published' or perspective.state == 'Limited access') and
