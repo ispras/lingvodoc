@@ -78,7 +78,10 @@ from lingvodoc.schema.gql_user import (
     UpdateUser
 )
 from lingvodoc.schema.gql_grant import (
-    Grant
+    Grant,
+    CreateGrant,
+    UpdateGrant,
+    DeleteGrant
 )
 from lingvodoc.schema.gql_email import (
     Email
@@ -288,6 +291,9 @@ class MyMutations(graphene.ObjectType):
     create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()
     update_perspective_to_field = UpdateDictionaryPerspectiveToField.Field()
     delete_perspective_to_field = DeleteDictionaryPerspectiveToField.Field()
+    create_grant = CreateGrant.Field()
+    update_grant = UpdateGrant.Field()
+    delete_grant = DeleteGrant.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
