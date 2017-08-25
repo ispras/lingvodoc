@@ -314,6 +314,8 @@ class Context(dict):
         """
         Checks if the client has permission to perform given action on a specified subject via ACL.
         """
+        if type(subject_id) is list:
+            subject_id = tuple(subject_id)
 
         if (action, subject, subject_id) in self.cache:
             return self.cache[(action, subject, subject_id)]

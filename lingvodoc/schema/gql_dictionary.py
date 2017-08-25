@@ -134,7 +134,8 @@ class Dictionary(graphene.ObjectType):
         return True
 
     def resolve_perspectives(self, args, context, info):
-        return self.perspectives
+        if hasattr(self, "perspectives"):
+            return self.perspectives
 ###
 # CrUd functions
 #
