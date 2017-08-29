@@ -55,7 +55,7 @@ def basic_search(request):
             #     group = 1
             published_cursor = None
             if group: # todo: change!!!!!
-                results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'))
+                results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'), Entity.marked_for_deletion == False)
                 # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.join(LexicalEntry)\
@@ -101,9 +101,9 @@ def basic_search(request):
                         .join(BaseGroup)\
                         .join(User, Group.users)\
                         .join(Client)\
-                        .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
+                        .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'), Entity.marked_for_deletion == False)
                 else:
-                    results_cursor = results_cursor.filter(Entity.content.like('%'+searchstring+'%'))
+                    results_cursor = results_cursor.filter(Entity.content.like('%'+searchstring+'%'), Entity.marked_for_deletion == False)
                 if published_cursor:
 
                     published_cursor = published_cursor \
