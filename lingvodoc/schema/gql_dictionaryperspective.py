@@ -317,7 +317,6 @@ class CreateDictionaryPerspective(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id('create', 'perspective')
     def mutate(root, args, context, info):
         id = args.get("id")
         client_id = id[0] if id else context["client_id"]
