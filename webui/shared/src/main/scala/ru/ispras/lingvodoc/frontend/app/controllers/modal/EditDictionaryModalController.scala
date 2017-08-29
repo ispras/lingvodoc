@@ -6,7 +6,7 @@ import com.greencatsoft.angularjs.injectable
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Row, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Edit, LinkEntities, SimplePlay, ViewMarkup}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
@@ -32,6 +32,8 @@ trait EditDictionaryModalScope extends Scope {
   var size: Int = js.native
   var pageCount: Int = js.native
   var edit: Boolean = js.native
+  var query: String = js.native
+  var showPagination: Boolean = js.native
 }
 
 @injectable("EditDictionaryModalController")
@@ -69,6 +71,8 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   scope.size = 5
   scope.pageCount = 1
   scope.edit = true
+  scope.query = ""
+  scope.showPagination = true
 
   private[this] var createdEntities = Seq[Entity]()
 
@@ -262,6 +266,17 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     instance.close(createdEntities)
   }
 
+  @JSExport
+  def filter(rows: js.Array[Row]): js.Array[Row] = {
+    if (scope.query.nonEmpty) {
+      scope.showPagination = false
+      rows.toSeq.filter(row => row.entry.entities.toSeq.exists(_.content.toLowerCase.contains(scope.query))).toJSArray
+    }
+    else {
+      scope.showPagination = true
+      rows
+    }
+  }
 
   private[this] def load() = {
 
@@ -342,6 +357,8 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
       w.destroy()}
     super.onModalClose()
   }
+
+  override protected[this] def getCurrentLocale: Int = Utils.getLocale().getOrElse(2)
 
   override protected def onStartRequest(): Unit = {}
 

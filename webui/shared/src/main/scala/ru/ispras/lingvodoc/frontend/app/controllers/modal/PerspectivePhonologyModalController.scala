@@ -39,6 +39,27 @@ trait PerspectivePhonologyModalScope extends Scope
   /** If we should show only first translation ('first') or all available translations ('all') of each
    *  word. */
   var translation_choice: String = js.native
+
+  /** If we should provide markup tier choice. */
+  var tier_choice: Boolean = js.native
+
+  /** If the markup tier names are being loaded. */
+  var tier_loading: Boolean = js.native
+  
+  /** If the markup tier names were successfully loaded. */
+  var tier_loaded: Boolean = js.native
+
+  /** List of phonology markup tier names. */
+  var tier_list: js.Array[String] = js.native
+
+  /** Percentages of markup records each markup tier is present at. */
+  var tier_percentage: js.Dictionary[String] = js.native
+
+  /** Names of selected markup tiers. */
+  var selected_tiers: js.Dictionary[String] = js.native
+
+  /** Number of selected markup tiers. */
+  var selected_tier_count: Int = js.native
 }
 
 
@@ -58,6 +79,8 @@ class PerspectivePhonologyModalController(
   private[this] val __debug__ = false
   private[this] val perspectiveId = params("perspectiveId").asInstanceOf[CompositeId]
 
+  private[this] var tier_loading = false
+
   /* By default we extract phonology data from all vowels. */
   scope.source = "all"
 
@@ -67,14 +90,92 @@ class PerspectivePhonologyModalController(
   /* By default we show all available translations. */
   scope.translation_choice = "all"
 
+  /* By default we use all markup tiers. */
+  scope.tier_choice = false
+
+  scope.tier_loading = false
+  scope.tier_loaded = false
+  scope.tier_list = js.Array[String]()
+
+  scope.selected_tiers = js.Dictionary[String]()
+  scope.selected_tier_count = 0
+
+  /** Enables or disables tier choice selection. */
+  @JSExport
+  def tier_choice_change(): Unit =
+  {
+    if (!scope.tier_loading && !scope.tier_loaded)
+    {
+      scope.tier_loading = true
+
+      /* Loading tier names only if we are not currently loading or haven't already loaded them. */
+
+      backend.phonologyTierList(perspectiveId)
+
+      .map {
+        case (total_count, tier_count) =>
+
+          scope.tier_loading = false
+          scope.tier_loaded = true
+
+          scope.tier_list = js.Array[String](
+            tier_count .keys .toSeq .sortBy {
+              case tier => (tier.toLowerCase, tier) }: _*)
+
+          /* Computing tier presence percentages, selecting all loaded tiers. */
+
+          scope.tier_percentage = js.Dictionary[String](
+            tier_count .toSeq .map { case (tier, count) =>
+              tier -> f"${count * 100.0 / total_count}%.1f%%" }: _*)
+        
+          scope.selected_tiers = js.Dictionary[String](
+            scope.tier_list .map { tier => (tier, tier) }: _*)
+
+          scope.selected_tier_count = scope.tier_list.length
+        }
+
+      .recover { case e: Throwable => setError(e) }
+    }
+  }
+
+  /** Changes selection state of a phonology markup tier. */
+  @JSExport
+  def toggleTierSelection(tier: String)
+  {
+    if (scope.selected_tiers.contains(tier))
+    {
+      scope.selected_tiers.delete(tier)
+      scope.selected_tier_count -= 1
+    }
+
+    else
+    {
+      scope.selected_tiers(tier) = tier
+      scope.selected_tier_count += 1
+    }
+
+    console.log(scope.selected_tiers)
+  }
+
   /** Launches phonology generation. */
   @JSExport
   def generate(): Unit =
   {
+    /* Getting list of markup tiers to look at, if required. */
+
+    val maybe_tier_list =
+    {
+      if (scope.tier_choice)
+        Some(scope.selected_tiers.keys.toSeq.sorted)
+      else
+        None
+    }
+
     backend.phonology(perspectiveId,
       scope.group_by_description,
       scope.translation_choice == "first",
-      scope.source == "selected")
+      scope.source == "selected",
+      maybe_tier_list)
     
     .map {
       blob =>

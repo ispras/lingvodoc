@@ -48,6 +48,7 @@ import json
 from sqlalchemy.orm.exc import NoResultFound
 from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator, add_user_to_group, check_client_id
 from lingvodoc.views.v2.delete import real_delete_translation_gist
+from sqlalchemy.orm.attributes import flag_modified
 # search (filter by input, type and (?) locale)
 
 
@@ -63,14 +64,17 @@ def grant_contents(grant, locale_id=2):
     result['issuer_url'] = grant.issuer_url
     result['grant_url'] = grant.grant_url
     result['grant_number'] = grant.grant_number
-    result['begin'] = grant.begin.strftime("%d.%M.%Y")
-    result['end'] = grant.end.strftime("%d.%M.%Y")
+    result['begin'] = grant.begin.strftime("%d.%m.%Y")
+    result['end'] = grant.end.strftime("%d.%m.%Y")
     owners = grant.owners
     if owners is None:
         owners = []
     result['owners'] = owners 
     result['created_at'] = grant.created_at
-    result['additional_metadata'] = grant.additional_metadata
+    additional_metadata = grant.additional_metadata
+    if additional_metadata is None:
+        additional_metadata = dict()
+    result['additional_metadata'] = additional_metadata
     return result
 
 
@@ -110,7 +114,54 @@ def delete_grant(request):
     return {'error': str("No such grant in the system")}
 
 
-@view_config(route_name='create_grant', renderer='json', request_method='POST', permission='admin')
+@view_config(route_name='grant', renderer='json', request_method='PUT', permission='create')
+def edit_grant(request):  # tested & in docs
+    try:
+        response = dict()
+        grant_id = request.matchdict.get('id')
+        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        grant = DBSession.query(Grant).filter_by(id=grant_id).first()
+        if grant:
+            req = request.json_body
+            if 'issuer_translation_gist_client_id' in req:
+                grant.issuer_translation_gist_client_id = req['issuer_translation_gist_client_id']
+            if 'issuer_translation_gist_object_id' in req:
+                grant.issuer_translation_gist_object_id = req['issuer_translation_gist_object_id']
+            if 'translation_gist_client_id' in req:
+                grant.translation_gist_client_id = req['translation_gist_client_id']
+            if 'translation_gist_object_id' in req:
+                grant.translation_gist_object_id = req['translation_gist_object_id']
+            if 'issuer_url' in req:
+                grant.issuer_url = req['issuer_url']
+            if 'grant_url' in req:
+                grant.grant_url = req['grant_url']
+            if 'begin' in req:
+                grant.begin = datetime.datetime.strptime(req['begin'], "%d.%M.%Y").date()
+            if 'end' in req:
+                grant.begin = datetime.datetime.strptime(req['end'], "%d.%M.%Y").date()
+
+            additional_metadata = req.get('additional_metadata')
+            if additional_metadata:
+                if additional_metadata.get('participant'):
+                    request.response.status = HTTPBadRequest.code
+                    return {'error': 'protected field'}
+
+                old_meta = grant.additional_metadata
+                old_meta.update(additional_metadata)
+                grant.additional_metadata = old_meta
+                flag_modified(grant, 'additional_metadata')
+            request.response.status = HTTPOk.code
+            return response
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such grant in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='create_grant', renderer='json', request_method='POST', permission='create')
 def create_grant(request):
     try:
         variables = {'auth': request.authenticated_userid}

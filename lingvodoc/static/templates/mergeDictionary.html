@@ -33,7 +33,7 @@
             <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
         </button>
 
-        <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
+        <waveplayer on-ready="controller.onReady($waveSurfer)"></waveplayer>
         <div id="spectrogram"></div>
 
     </div>
@@ -57,6 +57,7 @@
                     <ul class="dropdown-menu">
                         <li><a href="" ng-click="controller.phonology()">Phonology</a></li>
                         <li><a href="" ng-click="controller.statistics()">Statistics</a></li>
+                        <li><a href="" ng-click="controller.sound_and_markup('published')">Sound and markup</a></li>
                     </ul>
                 </div>
             </div>

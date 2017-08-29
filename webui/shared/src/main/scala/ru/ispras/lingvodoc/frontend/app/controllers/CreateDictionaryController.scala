@@ -52,6 +52,8 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
   private[this] var allDictionaries: Seq[Dictionary] = Seq[Dictionary]()
   private[this] var selectedUpdateDictionary: Option[Dictionary] = Option.empty[Dictionary]
 
+  private[this] var nextButtonDisabled: Boolean = false
+
 
   // Scope initialization
   scope.locales = js.Array[Locale]()
@@ -90,6 +92,9 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
   @JSExport
   def step1NextDisabled(): Boolean = {
 
+    if (nextButtonDisabled)
+      return true
+
     if (scope.creationMode == "update") {
       selectedUpdateDictionary.isEmpty
     } else {
@@ -101,6 +106,10 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
 
   @JSExport
   def step2NextDisabled(): Boolean = {
+
+    if (nextButtonDisabled)
+      return true
+
     scope.layers.isEmpty
   }
 
@@ -143,6 +152,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
   @JSExport
   def createDictionary2(): Any = {
 
+    nextButtonDisabled = true
 
     scope.creationMode match {
       case "create" =>
@@ -153,6 +163,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
               dictionaryId =>
                 scope.dictionaryId = Some(dictionaryId)
                 scope.step = 2
+                nextButtonDisabled = false
             }
 
           case None =>
@@ -166,6 +177,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
               scope.files.find(_.getId == scope.fileId) foreach { file =>
                 backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
                   scope.step = 3
+                  nextButtonDisabled = false
                   redirectToDashboard()
                 }
               }
@@ -178,6 +190,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope,
           selectedUpdateDictionary.foreach { dictionary =>
             backend.convertDialeqtDictionary(CompositeId.fromObject(file), CompositeId.fromObject(dictionary)) map { _ =>
               scope.step = 3
+              nextButtonDisabled = true
               redirectToDashboard()
             }
           }

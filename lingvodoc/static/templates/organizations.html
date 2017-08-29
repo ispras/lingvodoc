@@ -1,0 +1,56 @@
+<div class="container" ng-cloak="">
+
+    <table class="table table-striped table-bordered">
+        <thead>
+        <tr>
+            <td>Organization name</td>
+            <td>Description</td>
+            <td></td>
+            <td></td>
+        </tr>
+        </thead>
+
+        <tbody>
+
+        <tr ng-repeat="organization in organizations">
+
+            <td>
+                {{ organization.name }}
+            </td>
+
+            <td>
+                {{ organization.about }}
+            </td>
+
+            <td>
+                <button type="button" class="btn btn-primary" ng-click="controller.join(organization)" ng-disabled="controller.isCurrentUserOrganizationMember(organization)">Join as user</button>
+                <button type="button" class="btn btn-primary" ng-click="controller.joinAdmin(organization)" ng-disabled="controller.isCurrentUserOrganizationAdmin(organization)">Join as admin</button>
+            </td>
+
+            <td>
+                <button type="button" class="btn btn-sm" ng-disabled="controller.isEditDisabled(organization)" ng-click="controller.editOrganization(organization)">
+                    <span class="glyphicon glyphicon-edit"></span>
+                </button>
+            </td>
+
+        </tr>
+
+        <tr >
+            <td colspan="4" class="text-center" ng-if="organizations.length==0">
+                No organizations
+            </td>
+        </tr>
+
+        </tbody>
+
+    </table>
+
+    <div class="text-center">
+        <button type="button" class="btn btn-primary" ng-click="controller.createOrganization()">Create...</button>
+
+    </div>
+
+
+</div>
+
+

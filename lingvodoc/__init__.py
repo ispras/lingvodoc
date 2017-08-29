@@ -78,17 +78,19 @@ def configure_routes(config):
     config.add_route(name='signin', pattern='/signin')
 
     config.add_route(name='create_grant', pattern='/grant',
-                     factory='lingvodoc.models.AdminAcl')
-    config.add_route(name='grant', pattern='/grant/{id}')
+                     factory='lingvodoc.models.GrantAcl')
+    config.add_route(name='grant', pattern='/grant/{id}',
+                     factory='lingvodoc.models.GrantAcl')
     config.add_route(name='all_grants', pattern='/all_grants')
+    config.add_route(name='home_page_text', pattern='/home_page_text')
 
-    # config.add_route(name='create_userrequest', pattern='/grant',
-    #                  factory='lingvodoc.models.AdminAcl')
 
     config.add_route(name='userrequest', pattern='/userrequest/{id}')
     config.add_route(name='get_current_userrequests', pattern='/get_current_userrequests')
     config.add_route(name='accept_userrequest', pattern='/accept_userrequest/{id}')
     config.add_route(name='get_grant_permission', pattern='/get_grant_permission/{id}')
+    config.add_route(name='participate_org', pattern='/participate_org/{id}')
+    config.add_route(name='administrate_org', pattern='/administrate_org/{id}')
     config.add_route(name='add_dictionary_to_grant', pattern='add_dictionary_to_grant')
 
     # config.add_route(name='create_grant', pattern='/grant')
@@ -214,13 +216,11 @@ def configure_routes(config):
 
     # API #POST
     # Creating organization
-    config.add_route(name='create_organization', pattern='/organization',
-                     factory='lingvodoc.models.OrganizationAcl')  # ?TODO: ?test
+    config.add_route(name='create_organization', pattern='/organization')  # ?TODO: ?test
 
     # API #GET && PUT && DELETE
     # Gets/puts info about organization
-    config.add_route(name='organization', pattern='/organization/{organization_id}',
-                     factory='lingvodoc.models.OrganizationAcl')  # TODO: ?test
+    config.add_route(name='organization', pattern='/organization/{organization_id}')  # TODO: ?test
 
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create and modify perspectives)
@@ -233,7 +233,7 @@ def configure_routes(config):
     # Change visibility state for dictionary. States are: 'frozen', 'WiP', 'published', 'merging'
     config.add_route(name='dictionary_status',
                      pattern='/dictionary/{client_id}/{object_id}/state',
-                     factory='lingvodoc.models.DictionaryAcl')  # tested
+                     factory='lingvodoc.models.DictionaryStatusAcl')  # tested
 
     # API #GET && PUT && DELETE
     # Gets/puts info about perspective.
@@ -319,7 +319,7 @@ def configure_routes(config):
     config.add_route(name='perspective_status',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/state',
-                     factory='lingvodoc.models.PerspectiveAcl')  # tested
+                     factory='lingvodoc.models.PerspectiveStatusAcl')  # tested
 
     # API #GET && POST && DELETE
     # Configuring columns in perspective table.
@@ -760,7 +760,11 @@ def configure_routes(config):
     config.add_route(name="delete_user_blob",
                      pattern="/blobs/{client_id}/{object_id}", request_method='DELETE')
 
+    # Computes phonology of a specified perspective.
     config.add_route(name="phonology", pattern="/phonology")
+
+    # Gets a list of names of phonology markup tiers for a specified perspective.
+    config.add_route(name="phonology_tier_list", pattern="/phonology_tier_list")
 
     config.add_route(name="tasks", pattern="/tasks", request_method='GET')
 
@@ -783,6 +787,9 @@ def configure_routes(config):
     # time interval. Time interval is specified in the same way as for 'stat_perspective'.
     config.add_route(name = 'stat_dictionary',
       pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
+
+    # Compiles archive of sound recordings and corresponding markups for a specified perspective.
+    config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
 
 
 def main(global_config, **settings):
@@ -846,7 +853,8 @@ def main(global_config, **settings):
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
-    config.add_route('testing', '/testing')
+    config.add_route('testing', '/testing',
+                     factory='lingvodoc.models.AdminAcl')
     config.add_route('testing_translations', '/testing_translations')
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
     #    config.add_route('home', '/')

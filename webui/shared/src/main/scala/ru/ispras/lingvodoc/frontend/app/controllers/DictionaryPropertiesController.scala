@@ -1,10 +1,14 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.extensions.ModalInstance
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.Translatable
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.ErrorModalHandler
+import ru.ispras.lingvodoc.frontend.app.exceptions.{ControllerException, ModelException}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Translatable}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
@@ -29,11 +33,14 @@ trait DictionaryPropertiesScope extends Scope {
 @injectable("DictionaryPropertiesController")
 class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
                                      modalInstance: ModalInstance[Dictionary],
+                                     val modal: ModalService,
                                      backend: BackendService,
                                      val timeout: Timeout,
                                      val exceptionHandler: ExceptionHandler,
                                      params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[DictionaryPropertiesScope](scope) with AngularExecutionContextProvider {
+  extends AbstractController[DictionaryPropertiesScope](scope)
+    with AngularExecutionContextProvider
+    with ErrorModalHandler  {
 
   // create a backup copy of dictionary
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
@@ -128,13 +135,37 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
 
     Future.sequence(updateRequests) map { _ =>
       modalInstance.close(scope.dictionary)
+    } recover {
+      case e: Exception =>
+        showError(new ModelException("Failed to update dictionary. You probably don't have required permissions."))
     }
   }
 
   @JSExport
-  def cancel() = {
+  def cancel(): Unit = {
     modalInstance.dismiss(())
   }
+
+
+  @JSExport
+  def grants(): Unit = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/addDictionaryToGrant.html"
+    options.controller = "AddDictionaryToGrantModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(dictionary = dictionary.asInstanceOf[js.Object])
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+
+    val instance = modal.open[FieldEntry](options)
+  }
+
+
 
 
   private[this] def load() = {

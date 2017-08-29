@@ -9,6 +9,7 @@ with open(os.path.join(here, 'CHANGES.md')) as f:
     CHANGES = f.read()
 
 requires = [
+    'pyramid',
     ]
 
 setup(name='lingvodoc',

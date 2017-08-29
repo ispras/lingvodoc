@@ -33,6 +33,7 @@ import datetime
 from hashlib import md5
 import json
 import os
+import os.path
 from pathvalidate import sanitize_filename
 import shutil
 import traceback
@@ -132,7 +133,6 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
                   str(obj.client_id), '/',
                   str(obj.object_id), '/',
                   filename))
-    print(url)
     return real_location, url
 
 
@@ -700,4 +700,23 @@ def anonymous_userid(request):
 
     unique_string = "unauthenticated_%s_%s" % (ip, useragent)
     return base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
+
+
+def storage_file(storage_config, url):
+    """
+    Given a URL of a file from storage, first tries to open it as a file from local storage, and
+    then as a download stream.
+    """
+
+    storage_url_prefix = 'http://lingvodoc.ispras.ru/objects/'
+
+    if url.startswith(storage_url_prefix):
+
+        storage_file_path = os.path.join('/root/lingvodoc-extra/backend_storage',
+            url[len(storage_url_prefix):])
+
+        if os.path.exists(storage_file_path):
+            return open(storage_file_path, 'rb')
+
+    return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
 

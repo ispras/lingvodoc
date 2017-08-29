@@ -97,6 +97,11 @@ class CreateLanguageController(scope: CreateLanguageScope,
   }
 
   @JSExport
+  def parentLanguageChangeDisabled(): Boolean = {
+    parentLanguage.nonEmpty && language.isEmpty
+  }
+
+  @JSExport
   def ok(): Unit = {
 
     import org.scalajs.dom.console
@@ -146,6 +151,8 @@ class CreateLanguageController(scope: CreateLanguageScope,
 
       // Create a new language
       case None =>
+        parentLanguage = Utils.flattenLanguages(scope.languages).find(_.getId == scope.languageId)
+
         if (!scope.names.forall(_.str.isEmpty)) {
           backend.createLanguage(scope.names.filterNot(_.str.isEmpty), parentLanguage) onComplete {
             case Success(langId) =>

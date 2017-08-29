@@ -18,6 +18,7 @@ from lingvodoc.models import (
     Entity,
     ObjectTOC
 )
+from sqlalchemy.orm.attributes import flag_modified
 
 from lingvodoc.views.v2.utils import (
     all_languages,
@@ -150,7 +151,6 @@ def create_dictionary(request):  # tested & in docs
 
 @view_config(route_name='dictionary', renderer='json', request_method='GET')  # Authors -- names of users, who can edit?
 def view_dictionary(request):  # tested & in docs
-    from lingvodoc.models import categories
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -170,6 +170,7 @@ def view_dictionary(request):  # tested & in docs
         response['created_at'] = dictionary.created_at
         response['domain'] = dictionary.domain
         response['marked_for_deletion'] = dictionary.marked_for_deletion
+        response['additional_metadata'] = dictionary.additional_metadata
         if request.cookies.get('locale_id'):
             locale_id = request.cookies['locale_id']
         else:
@@ -209,6 +210,7 @@ def edit_dictionary(request):  # tested & in docs
                     old_meta = dictionary.additional_metadata
                     old_meta.update(additional_metadata)
                     dictionary.additional_metadata = old_meta
+                    flag_modified(dictionary, 'additional_metadata')
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code

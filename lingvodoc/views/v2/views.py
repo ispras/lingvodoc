@@ -226,24 +226,54 @@ def fix_groups(request):
 
     return {}
 
-def add_role(name, subject, action, admin):
+
+def add_role(name, subject, action, admin, perspective_default=False, dictionary_default=False):
     base_group = BaseGroup(name=name,
-                         subject=subject,
-                         action=action)
+                           subject=subject,
+                           action=action,
+                           perspective_default=perspective_default,
+                           dictionary_default=dictionary_default)
     DBSession.add(base_group)
     DBSession.flush()
     group = Group(base_group_id=base_group.id, subject_override=True)
     DBSession.add(group)
     group.users.append(admin)
     DBSession.flush()
+    return base_group
 
 
-@view_config(route_name='testing', renderer='json')
+@view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     admin = DBSession.query(User).filter_by(id=1).one()
+    if DBSession.query(BaseGroup).filter_by(name="Can create grants").first():
+        return {"error": "already done"}
     add_role("Can create grants", "grant", "create", admin)
     add_role("Can approve grants", "grant", "approve", admin)
-    add_role("Can change status", "status", "edit", admin)
+    add_role("Can approve organizations", "organization", "approve", admin)
+
+    base_group = add_role("Can edit dictionary status", "dictionary_status", "edit", admin, dictionary_default=True)
+    groups = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'dictionary_role',
+                                                           BaseGroup.action == 'delete',
+                                                           Group.subject_override == False).all()
+    for group in groups:
+        new_group = Group(parent=base_group, subject_client_id=group.subject_client_id, subject_object_id=group.subject_object_id)
+        DBSession.add(new_group)
+        DBSession.flush()
+        for user in group.users:
+            new_group.users.append(user)
+    base_group = add_role("Can edit perspective status", "perspective_status", "edit", admin, perspective_default=True)
+    groups = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'perspective_role',
+                                                           BaseGroup.action == 'delete',
+                                                           Group.subject_override == False).all()
+    for group in groups:
+        new_group = Group(parent=base_group, subject_client_id=group.subject_client_id, subject_object_id=group.subject_object_id)
+        DBSession.add(new_group)
+        DBSession.flush()
+        for user in group.users:
+            new_group.users.append(user)
+
+    # add_role("Can change status", "status", "edit", admin)
+
 
     return {}
 
@@ -272,6 +302,45 @@ def all_statuses(request):
         response.append(resp.json)
     request.response.status = HTTPOk.code
     return response
+
+
+# @view_config(route_name='all_dictionary_roles', renderer='json', request_method='GET')
+# def all_dictionary_roles(request):
+#     bases = DBSession.query(BaseGroup).filter_by(dictionary_default = True).all()
+#     response = list()
+#     for base in bases:
+#         response.append({"name": base.name, "subject": base.subject, "action": base.action})
+#     request.response.status = HTTPOk.code
+#     return response
+#
+# @view_config(route_name='all_perspective_roles', renderer='json', request_method='GET')
+# def all_dictionary_roles(request):
+#     from pyramid.request import Request
+#     import json
+#
+#     response = list()
+#     for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
+#         subreq = Request.blank('/translation_service_search')
+#         subreq.method = 'POST'
+#         subreq.headers = request.headers
+#         subreq.json = {'searchstring': status}
+#         headers = {'Cookie': request.headers['Cookie']}
+#         subreq.headers = headers
+#         resp = request.invoke_subrequest(subreq)
+#         response.append(resp.json)
+#     request.response.status = HTTPOk.code
+#     return response
+
+
+@view_config(route_name='home_page_text', renderer='string', request_method='GET')
+def home_page_text(request):
+    path = 'home_page_text.html'
+    if not os.path.exists(path):
+        request.override_renderer = 'json'
+        return {'error': 'no text file'}
+    with open(path, 'r') as text_file:
+        text = text_file.read()
+        return text
 
 
 @view_config(route_name='all_locales', renderer='json', request_method='GET')

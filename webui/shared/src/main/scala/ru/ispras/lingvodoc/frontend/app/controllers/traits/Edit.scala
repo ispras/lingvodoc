@@ -37,6 +37,7 @@ trait Edit {
 
   protected[this] var createdLexicalEntries: Seq[LexicalEntry] = Seq[LexicalEntry]()
 
+  protected[this] def getCurrentLocale: Int
 
   @JSExport
   def addNewLexicalEntry(): Unit = {
@@ -95,7 +96,8 @@ trait Edit {
 
     val entryId = CompositeId.fromObject(entry)
 
-    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
+
+    val entity = EntityData(field.clientId, field.objectId, getCurrentLocale)
     entity.content = Some(Left(textValue))
 
     // self
@@ -175,7 +177,8 @@ trait Edit {
           perspectiveObjectId = perspectiveId.objectId,
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
-          values = values.asInstanceOf[js.Object]
+          values = values.asInstanceOf[js.Object],
+          edit = true
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]
