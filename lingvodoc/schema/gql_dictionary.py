@@ -6,7 +6,9 @@ from lingvodoc.models import (
     DBSession,
     Client as dbClient,
     Language as dbLanguage,
-    User as dbUser
+    User as dbUser,
+    BaseGroup as dbBaseGroup,
+    Group as dbGroup
 )
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.schema.gql_user import User
@@ -175,6 +177,7 @@ class CreateDictionary(graphene.Mutation):
     perspectives = graphene.List(Dictionary)
 
     @staticmethod
+    @client_id_check()
     def create_dbdictionary(client_id=None,
                             object_id=None,
                             parent_client_id=None,
@@ -197,10 +200,20 @@ class CreateDictionary(graphene.Mutation):
                                         translation_gist_object_id=translation_gist_object_id,
                                         additional_metadata=additional_metadata
                                         )
+
+        client = DBSession.query(dbClient).filter_by(id=client_id).first()
+        user = client.user
+        for base in DBSession.query(dbBaseGroup).filter_by(dictionary_default=True):
+            new_group = dbGroup(parent=base,
+                              subject_object_id=dbdictionary_obj.object_id,
+                              subject_client_id=dbdictionary_obj.client_id)
+            if user not in new_group.users:
+                new_group.users.append(user)
+            DBSession.add(new_group)
+            DBSession.flush()
         return dbdictionary_obj
 
     @staticmethod
-    @acl_check_by_id('create', 'dictionary')
     @client_id_check()
     def mutate(root, args, context, info):
         ids = args.get("id")
@@ -220,22 +233,25 @@ class CreateDictionary(graphene.Mutation):
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
 
-
         DictionaryPerspective = dictionary.persp_class
         CreateDictionaryPerspective = dictionary.create_persp
         DictionaryPerspectiveToField = dictionary.persptofield_class
         CreateDictionaryPerspectiveToField = dictionary.create_persptofield
         persp_args = args.get("perspectives")
         created_persps = []
-        fields_dict = {}
-
-        fake_ids = dict()
+        # rename it
+        fields_dict = dict()
+        field_ids = dict()
+        persp_fake_ids = dict()
         if persp_args:
             for child_persp in persp_args:
                 persp_translation_gist_id = child_persp["translation_gist_id"]
+                obj_id = None
+                if "id" in child_persp:
+                    obj_id = child_persp["id"][1]
                 new_persp = CreateDictionaryPerspective\
                     .create_perspective(client_id=client_id,
-                                        object_id=object_id,
+                                        object_id=obj_id,
                                         parent_client_id=dbdictionary_obj.client_id,
                                         parent_object_id=dbdictionary_obj.object_id,  # use all object attrs
                                         translation_gist_client_id=persp_translation_gist_id[0],  # TODO: fix it
@@ -243,29 +259,49 @@ class CreateDictionary(graphene.Mutation):
                                         )
                 created_persps.append(new_persp)
                 if "fake_id" in child_persp:
-                    fake_ids[child_persp['fake_id']] = new_persp
-                fields_dict[new_persp] = []
+                    child_id = child_persp['fake_id']
+                    persp_fake_ids[child_id] = new_persp
 
                 if "fields" in child_persp:
                     new_fields = child_persp["fields"]
                     for new_ptofield in new_fields:
-                        fields_dict[new_persp].append(new_ptofield)
-            for persp in fields_dict:
-                for field in fields_dict[persp]:
-                    if field.get('link') and field['link'].get('fake_id'):
-                        field['link'] = fake_ids[field['link']['fake_id']]
+                        if new_ptofield.get('link') and new_ptofield['link'].get('fake_id'):
+                            field_ids[new_ptofield['link'].get('fake_id')] = (new_ptofield['field_id'][0],
+                                                                              new_ptofield['field_id'][1])
+                            if new_persp not in fields_dict:
+                                fields_dict[new_persp] = []
+                            fields_dict[new_persp].append(new_ptofield['link'].get('fake_id'))  # put field id
+                for persp in fields_dict:
+                    for fake_link in fields_dict[persp]:
+                        if fake_link in persp_fake_ids:
+                            persp_to_link = persp_fake_ids[fake_link]
+                            CreateDictionaryPerspectiveToField\
+                                .create_dictionary_persp_to_field(client_id=client_id,
+                                                                  parent_client_id=persp.client_id,
+                                                                  parent_object_id=persp.object_id,
+                                                                  field_client_id=field_ids[fake_link][0],
+                                                                  field_object_id=field_ids[fake_link][1],
+                                                                  self_client_id=None,
+                                                                  self_object_id=None,
+                                                                  link_client_id=persp_to_link.client_id,
+                                                                  link_object_id=persp_to_link.object_id,
+                                                                  position=1)
 
-            dictionary.perspectives = [DictionaryPerspective(id=[persp.client_id, persp.object_id],
-                                                             translation_gist_id=[persp.translation_gist_client_id,
-                                                                                  persp.translation_gist_object_id],
-                                                             fields=[DictionaryPerspectiveToField(id=[persp.client_id,
-                                                                                                      persp.object_id],
-                                                                                                  parent_id=[persp.client_id,
-                                                                                                             persp.object_id],
-                                                                                                  field_id=[f.client_id, f.object_id]
-                                                                                                  ) for f in fields_dict[persp]]
+                    #if field.get('link') and field['link'].get('fake_id'):
+                    #    #field['link'] = fake_ids[field['link']['fake_id']]
 
-                                                             ) for persp in created_persps]
+
+                dictionary.perspectives = [DictionaryPerspective(id=[persp.client_id, persp.object_id],
+                                                                 translation_gist_id=[persp.translation_gist_client_id,
+                                                                                      persp.translation_gist_object_id],
+                                                                 # fields=[DictionaryPerspectiveToField(id=[persp.client_id,
+                                                                 #                                          persp.object_id],
+                                                                 #                                      parent_id=[persp.client_id,
+                                                                 #                                                 persp.object_id],
+                                                                 #                                      field_id=[f.client_id, f.object_id]
+                                                                 #                                      ) for f in fields_dict[persp]]
+
+                                                                 ) for persp in created_persps]
         return CreateDictionary(dictionary=dictionary,
                                 # perspectives=[PERSPECTIVE(id=[persp.client_id, persp.object_id],
                                 #                           translation_gist_id=[persp.translation_gist_client_id,
