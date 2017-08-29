@@ -284,7 +284,7 @@ def basic_sync(request):
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                       object_id=entry['object_id']).first()
         if desk_field:
-            DBSession.delete(desk_field)
+            real_delete_object(desk_field)
 
 
     request.response.status = HTTPOk.code
@@ -695,13 +695,13 @@ def diff_desk(request):
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).first()
         if desk_field:
-            DBSession.delete(desk_field)
+            real_delete_object(desk_field)
 
     for entry in dictionaryperspectivetofield:
         desk_persp_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).first()
         if desk_persp_field:
-            DBSession.delete(desk_persp_field)
+            real_delete_object(desk_persp_field)
 
     for entry in lexicalentry:
         desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
