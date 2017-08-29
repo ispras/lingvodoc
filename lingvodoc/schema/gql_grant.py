@@ -112,7 +112,6 @@ class CreateGrant(graphene.Mutation):
             return ResponseError(message="Error: day, month or year of the end date is missing")
         end = datetime.date(end_year, end_month, end_day)
 
-
         client_id = context["client_id"]
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
@@ -129,7 +128,16 @@ class CreateGrant(graphene.Mutation):
                       begin=begin,
                       end=end
                       )
+        """ 
+        dbgrant.grant_url = grant_url
+        dbgrant.issuer_url = issuer_url
+        dbgrant.grant_number = grant_number
+        dbgrant.begin = begin
+        dbgrant.end = end
+        """
+
         DBSession.add(dbgrant)
+
         DBSession.flush()
 
         grant = Grant(id=dbgrant.id)
@@ -137,6 +145,23 @@ class CreateGrant(graphene.Mutation):
         return CreateGrant(grant=grant, triumph=True)
 
 class UpdateGrant(graphene.Mutation):
+    """
+    mutation {
+        update_grant(grant_id: 14, issuer_url: "abc", grant_url: "def") {
+           grant {
+               id
+               begin
+               end
+               issuer_url
+               grant_url
+               grant_number
+               translation_gist_client_id
+               translation_gist_object_id
+            }
+            triumph
+        }
+    }
+    """
     class Input:
         grant_id = graphene.Int()
         issuer_translation_gist_id = graphene.List(graphene.Int)
@@ -192,6 +217,13 @@ class UpdateGrant(graphene.Mutation):
         raise ResponseError(message="No such grunt in the system")
 
 class DeleteGrant(graphene.Mutation):
+    """
+    mutation {
+        delete_grant(grant_id: 14) {
+            triumph
+        }
+    }
+    """
     class Input:
         grant_id = graphene.Int()
 
@@ -205,7 +237,7 @@ class DeleteGrant(graphene.Mutation):
         if not dbgrant:
             raise ResponseError(message="No such grunt in the system")
 
-        del_object(dbgrant)
-        grant = Grant(id=dbgrant.id)
+        DBSession.delete(dbgrant)
+        grant = Grant(id=grant_id)
         grant.dbObject = dbgrant
         return DeleteGrant(grant=grant, triumph=True)
