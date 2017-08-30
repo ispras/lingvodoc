@@ -38,15 +38,25 @@
 
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-7">
             <h4>
                 <translatable str="You can connect following entries">You can connect following entries</translatable>
             </h4>
         </div>
 
         <div class="col-md-4">
-            <input type="text" class="form-control" placeholder="Filter" ng-model="query">
+            <input type="text" class="form-control" placeholder="Search" ng-model="query">
         </div>
+
+        <div class="col-md-1">
+            <button type="button" class="btn btn-default" ng-click="controller.search()">
+                <span class="glyphicon glyphicon-search"></span>
+            </button>
+            <button type="button" class="btn btn-default" ng-click="controller.reset()">
+                <span class="glyphicon glyphicon-remove-circle"></span>
+            </button>
+        </div>
+
     </div>
 
     <div class="row">
@@ -63,7 +73,7 @@
 
                 <tbody>
 
-                <tr ng-repeat="row in controller.filter(linkedDictionaryTable.rows)">
+                <tr ng-repeat="row in linkedDictionaryTable.rows">
 
                     <td ng-repeat="cell in row.cells"
                         ng-init="rowIndex=$parent.$index; cellIndex=$index; column=linkedDictionaryTable.header[$index]">

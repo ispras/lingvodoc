@@ -212,7 +212,7 @@ class ContributionsController(scope: ContributionsScope,
 
   @JSExport
   override def getPageLink(page: Int): String = {
-    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/publish/$page"
+    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/contributions/$page"
   }
 
   override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
