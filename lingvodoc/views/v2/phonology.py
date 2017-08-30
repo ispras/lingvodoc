@@ -71,6 +71,7 @@ from lingvodoc.models import (
     DBSession,
     Dictionary,
     DictionaryPerspective,
+    DictionaryPerspectiveToField,
     Entity,
     Field,
     LexicalEntry,
@@ -2224,23 +2225,25 @@ def perform_phonology(
         def result_filter(textgrid_result_list):
             return textgrid_result_list
 
-    # Looking through all translations we've got, getting field translation data.
+    # Getting translation field data, for SQLAlchemy regular expression conditionals see
+    # https://stackoverflow.com/a/34989788/2016856.
 
-    data_type_query = DBSession.query(Field) \
-        .join(TranslationGist,
-              and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                   Field.translation_gist_client_id == TranslationGist.client_id)) \
-        .join(TranslationGist.translationatom)
+    field_data = DBSession.query(
+        DictionaryPerspectiveToField, Field, TranslationAtom).filter(
+            DictionaryPerspectiveToField.parent_client_id == perspective_cid,
+            DictionaryPerspectiveToField.parent_object_id == perspective_oid,
+            DictionaryPerspectiveToField.marked_for_deletion == False,
+            Field.client_id == DictionaryPerspectiveToField.field_client_id,
+            Field.object_id == DictionaryPerspectiveToField.field_object_id,
+            TranslationAtom.parent_client_id == Field.translation_gist_client_id,
+            TranslationAtom.parent_object_id == Field.translation_gist_object_id,
+            TranslationAtom.locale_id == 2,
+            TranslationAtom.content.op('~*')('.*translation.*')).first()
 
-    # Finding required field by its translation.
+    if not field_data:
+        raise Exception('Missing translation field.')
 
-    field = data_type_query.filter(
-        TranslationAtom.locale_id == 2,
-        TranslationAtom.content == 'Translation').one()
-
-    if not field:
-        raise Exception('Missing \'Translation\' field.')
-
+    field = field_data.Field
     log.debug('field: {0}/{1}'.format(field.client_id, field.object_id))
 
     # Before everything else we should count how many sound/markup pairs we are to process.
