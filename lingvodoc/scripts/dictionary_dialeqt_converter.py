@@ -348,6 +348,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             else:
                 new_meta = hash_dict
             entity.additional_metadata = new_meta
+            #flag_modified(entity, 'additional_metadata')
         old_meta = entity.additional_metadata
         if data_type == "markup":
             data_type_dict = {"data_type": "praat markup"}
@@ -357,6 +358,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             else:
                 new_meta = data_type_dict
             entity.additional_metadata = new_meta
+            #flag_modified(entity, 'additional_metadata')
         if data_type == "sound":
             data_type_dict = {"data_type": "sound"}
             if old_meta:
@@ -365,6 +367,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             else:
                 new_meta = data_type_dict
             entity.additional_metadata = new_meta
+            #flag_modified(entity, 'additional_metadata')
     elif data_type == 'link':
         try:
             entity.link_client_id = link_client_id
@@ -375,6 +378,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         entity.content = content
     entity.publishingentity.accepted = True
     DBSession.add(entity)
+    DBSession.flush()
     return (entity.client_id, entity.object_id)
 
 def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes,
@@ -421,6 +425,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             else:
                 filename = 'noname.wav'
             audio_counter += 1
+            sound_metadata.update({"hash": audio_hash})
             lvl = create_entity(ids_map[int(word_id)][0],
                                 ids_map[int(word_id)][1],
                                 fields_dict[sound_field][0],
@@ -447,11 +452,12 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                 else:
                     filename = 'noname.TextGrid'
                 markup_hashes.add(markup_hash)
-
+    
                 if not markup_update_flag:
                     le_id = ids_map[int(word_id)]
                 else:
                     le_id = audio_hashes[audio_hash][1]
+                sound_metadata.update({"hash": markup_hash})
                 create_entity(le_id[0],
                               le_id[1],
                               fields_dict[markup_field][0],
@@ -472,6 +478,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             audio_counter = 0
             if markup_counter > 50:
                 DBSession.flush()
+        sound_metadata.clear()
     DBSession.flush()
 
 def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
