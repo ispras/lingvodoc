@@ -275,21 +275,17 @@ def testing(request):
     # Markup fix
     fields = DBSession.query(Field).all()
     for metadata_field in fields:
-        if metadata_field.data_type in ( "Markup"):
-            #print("=> ", metadata_field.data_type, metadata_field.client_id, metadata_field.object_id)
-            entities = DBSession.query(Entity).filter_by(field=metadata_field).all()
+        if metadata_field.data_type == "Markup":
+            entities = DBSession.query(Entity)\
+                .filter_by(field=metadata_field).filter(Entity.additional_metadata.has_key('hash')).all()
             for entity in entities:
-                if "hash" in entity.additional_metadata:
-                    curr_hash = entity.additional_metadata["hash"]
-                    if entity.content:
-                        file_content = requests.get(entity.content).content
-                        new_hash = sha224(file_content).hexdigest()
-                        if curr_hash != new_hash:
-                            #print((entity.client_id, entity.object_id), "|", entity.content, curr_hash, new_hash, entity.additional_metadata, "|")
-                            entity.additional_metadata["hash"] = new_hash
-                            flag_modified(entity, 'additional_metadata')
-
-    #        #entity.additional_metadata["hash"] = sha224(urlsafe_b64decode(entity.content)).hexdigest()
+                curr_hash = entity.additional_metadata["hash"]
+                if entity.content:
+                    file_content = requests.get(entity.content).content
+                    new_hash = sha224(file_content).hexdigest()
+                    if curr_hash != new_hash:
+                        entity.additional_metadata["hash"] = new_hash
+                        flag_modified(entity, 'additional_metadata')
     # Sound fix
     for id in id_to_hash:
         entity = DBSession.query(Entity).filter_by(client_id=id[0], object_id=id[1]).first()
