@@ -1015,10 +1015,42 @@ def edit_perspective_roles(request):
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
 
+
+
+    url = request.route_url('perspective_roles',
+                            client_id=parent_client_id,
+                            object_id=parent_object_id,
+                            perspective_client_id=client_id,
+                            perspective_object_id=object_id)
+    subreq = Request.blank(url)
+    subreq.method = 'GET'
+    headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    previous = request.invoke_subrequest(subreq).json_body
+
+
     if type(request.json_body) == str:
         req = json.loads(request.json_body)
     else:
         req = request.json_body
+
+    for role_name in req['roles_users']:
+        for user in req['roles_users'][role_name]:
+            if user in previous['roles_users'][role_name]:
+                previous['roles_users'][role_name].remove(user)
+
+    for role_name in req['roles_organizations']:
+        for user in req['roles_organizations'][role_name]:
+            if user in previous['roles_organizations'][role_name]:
+                previous['roles_organizations'][role_name].remove(user)
+
+    subreq = Request.blank(url)
+    subreq.json = previous
+    subreq.method = 'PATCH'
+    headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    request.invoke_subrequest(subreq)
+
     roles_users = None
     if 'roles_users' in req:
         roles_users = req['roles_users']
@@ -1117,14 +1149,19 @@ def edit_perspective_roles(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_roles', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='perspective_roles', renderer='json', request_method='PATCH', permission='delete')
 def delete_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
-    req = request.json_body
+
+    if type(request.json_body) == str:
+        req = json.loads(request.json_body)
+    else:
+        req = request.json_body
+
     roles_users = None
     if 'roles_users' in req:
         roles_users = req['roles_users']
