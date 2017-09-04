@@ -1034,22 +1034,45 @@ def edit_perspective_roles(request):
     else:
         req = request.json_body
 
+
     for role_name in req['roles_users']:
+        remove_list = list()
         for user in req['roles_users'][role_name]:
             if user in previous['roles_users'][role_name]:
                 previous['roles_users'][role_name].remove(user)
+                remove_list.append(user)
+        for user in remove_list:
+            req['roles_users'][role_name].remove(user)
 
     for role_name in req['roles_organizations']:
+        remove_list = list()
         for user in req['roles_organizations'][role_name]:
             if user in previous['roles_organizations'][role_name]:
                 previous['roles_organizations'][role_name].remove(user)
+                req['roles_organizations'][role_name].remove(user)
+        for user in remove_list:
+            req['roles_users'][role_name].remove(user)
 
-    subreq = Request.blank(url)
-    subreq.json = previous
-    subreq.method = 'PATCH'
-    headers = {'Cookie': request.headers['Cookie']}
-    subreq.headers = headers
-    request.invoke_subrequest(subreq)
+
+    delete_flag = False
+
+    for role_name in previous['roles_users']:
+        if previous['roles_users'][role_name]:
+            delete_flag = True
+            break
+
+    for role_name in previous['roles_organizations']:
+        if previous['roles_organizations'][role_name]:
+            delete_flag = True
+            break
+
+    if delete_flag:
+        subreq = Request.blank(url)
+        subreq.json = previous
+        subreq.method = 'PATCH'
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        request.invoke_subrequest(subreq)
 
     roles_users = None
     if 'roles_users' in req:
@@ -1101,8 +1124,9 @@ def edit_perspective_roles(request):
                             if user not in group.users:
                                 group.users.append(user)
                 else:
-                    request.response.status = HTTPForbidden.code
-                    return {'error': str("Not enough permission")}
+                    if roles_users[role_name]:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
         if roles_organizations:
             for role_name in roles_organizations:
@@ -1140,8 +1164,9 @@ def edit_perspective_roles(request):
                             if org not in group.organizations:
                                 group.organizations.append(org)
                 else:
-                    request.response.status = HTTPForbidden.code
-                    return {'error': str("Not enough permission")}
+                    if roles_organizations[role_name]:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
         request.response.status = HTTPOk.code
         return response
