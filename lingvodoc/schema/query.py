@@ -115,7 +115,8 @@ class Query(graphene.ObjectType):
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
     user = graphene.Field(User, id=graphene.Int())
     field = graphene.Field(Field, id=graphene.List(graphene.Int))
-    translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
+    translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
+    userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
 
     def resolve_dictionaries(self, args, context, info):
         dbdicts = list()
@@ -233,15 +234,11 @@ class Query(graphene.ObjectType):
         id = args.get('id')
         return PublishingEntity(id=id)
 
-    def resolve_translationatom(self, args, context, info):
-        id = args.get('id')
-        return TranslationAtom(id=id)
-
     def resolve_translationgist(self, args, context, info):
         id = args.get('id')
         return TranslationGist(id=id)
 
-    def resolve_userblobs(self, args, context, info):
+    def resolve_userblob(self, args, context, info):
         id = args.get('id')
         return UserBlobs(id=id)
 

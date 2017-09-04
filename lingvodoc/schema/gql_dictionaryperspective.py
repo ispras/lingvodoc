@@ -137,8 +137,8 @@ class DictionaryPerspective(graphene.ObjectType):
             result.append(gr_field_obj)
         return result
 
-    @acl_check_by_id('view', 'approve_entities')
-    def resolve_lexicalentries(self, args, context, info):
+    # @acl_check_by_id('view', 'approve_entities')
+    def resolve_lexicalEntries(self, args, context, info):
         result = list()
         request = context.get('request')
         # dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()

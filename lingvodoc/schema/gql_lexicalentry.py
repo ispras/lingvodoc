@@ -16,6 +16,7 @@ from lingvodoc.schema.gql_holders import (
 
 from lingvodoc.models import (
     Entity as dbEntity,
+    LexicalEntry as dbLexicalEntry,
     Client,
     DBSession,
     DictionaryPerspective as dbDictionaryPerspective,
@@ -41,7 +42,7 @@ class LexicalEntry(graphene.ObjectType):
     """
     entities = graphene.List(Entity)
 
-    dbType = dbEntity
+    dbType = dbLexicalEntry
     dbObject = None
 
     class Meta:

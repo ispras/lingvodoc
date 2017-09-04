@@ -291,9 +291,13 @@ class SelfHolder(graphene.Interface):
 
 
 class FieldHolder(graphene.Interface):
+    field = graphene.Field('lingvodoc.schema.gql_field.Field')
     field_id = graphene.List(graphene.Int)
     field_client_id = graphene.Int()
     field_object_id = graphene.Int()
+
+    # def resolve_field(self, args, context, info):
+    #     return Field()
 
     @fetch_object("field_id")
     def resolve_field_id(self, args, context, info):

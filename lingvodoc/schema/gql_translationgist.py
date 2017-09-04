@@ -31,6 +31,7 @@ class TranslationGist(graphene.ObjectType):
     """
     dbType = dbTranslationGist
     dbObject = None
+    translationatoms = graphene.Field('translationAtom')
     class Meta:
         interfaces = (CompositeIdHolder,
                       CreatedAt,
