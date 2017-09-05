@@ -596,9 +596,6 @@ def edit_dictionary_roles(request):  # tested & in docs
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-
-
-
     url = request.route_url('dictionary_roles',
                             client_id=client_id,
                             object_id=object_id)
@@ -607,7 +604,6 @@ def edit_dictionary_roles(request):  # tested & in docs
     headers = {'Cookie': request.headers['Cookie']}
     subreq.headers = headers
     previous = request.invoke_subrequest(subreq).json_body
-
 
     if type(request.json_body) == str:
         req = json.loads(request.json_body)
@@ -649,7 +645,10 @@ def edit_dictionary_roles(request):  # tested & in docs
         subreq.method = 'PATCH'
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
-        request.invoke_subrequest(subreq)
+        response = request.invoke_subrequest(subreq)
+        # if response.status_code != 200:
+        #     request.response = response
+        #     return response.json_body
     roles_users = None
     if 'roles_users' in req:
         roles_users = req['roles_users']
@@ -757,7 +756,6 @@ def delete_dictionary_roles(request):  # & in docs
         req = json.loads(request.json_body)
     else:
         req = request.json_body
-    print(req)
 
     roles_users = None
     if 'roles_users' in req:
@@ -808,8 +806,9 @@ def delete_dictionary_roles(request):  # & in docs
                                 if user in group.users:
                                     group.users.remove(user)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_users[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -848,8 +847,9 @@ def delete_dictionary_roles(request):  # & in docs
                                 if org in group.organizations:
                                     group.organizations.remove(org)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_organizations[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             request.response.status = HTTPOk.code
             return response
