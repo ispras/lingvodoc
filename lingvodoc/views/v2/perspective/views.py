@@ -1009,6 +1009,8 @@ def view_perspective_roles(request):  # TODO: test
 
 @view_config(route_name='perspective_roles', renderer='json', request_method='POST', permission='create')
 def edit_perspective_roles(request):
+    DBSession.execute("LOCK TABLE user_to_group_association IN EXCLUSIVE MODE;")
+    DBSession.execute("LOCK TABLE organization_to_group_association IN EXCLUSIVE MODE;")
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
