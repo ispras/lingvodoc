@@ -235,6 +235,7 @@ def accept_userrequest(request):
                     #     group.users.append(admin)
 
             elif userrequest.type == 'participate_org':
+                DBSession.execute("LOCK TABLE user_to_organization_association IN EXCLUSIVE MODE;")
                 org_id = userrequest.subject['org_id']
                 user_id = userrequest.subject['user_id']
                 organization = DBSession.query(Organization).filter_by(id=org_id).first()
