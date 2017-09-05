@@ -137,6 +137,7 @@ def view_organization(request):  # TODO: test
 @view_config(route_name='organization', renderer='json', request_method='PUT')
 def edit_organization(request):  # TODO: test
     try:
+        DBSession.execute("LOCK TABLE user_to_organization_association IN EXCLUSIVE MODE;")
         response = dict()
         organization_id = request.matchdict.get('organization_id')
         organization = DBSession.query(Organization).filter_by(id=organization_id).first()
