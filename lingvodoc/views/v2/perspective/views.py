@@ -1015,8 +1015,6 @@ def edit_perspective_roles(request):
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
 
-
-
     url = request.route_url('perspective_roles',
                             client_id=parent_client_id,
                             object_id=parent_object_id,
@@ -1028,12 +1026,10 @@ def edit_perspective_roles(request):
     subreq.headers = headers
     previous = request.invoke_subrequest(subreq).json_body
 
-
     if type(request.json_body) == str:
         req = json.loads(request.json_body)
     else:
         req = request.json_body
-
 
     for role_name in req['roles_users']:
         remove_list = list()
@@ -1052,7 +1048,6 @@ def edit_perspective_roles(request):
                 req['roles_organizations'][role_name].remove(user)
         for user in remove_list:
             req['roles_users'][role_name].remove(user)
-
 
     delete_flag = False
 
@@ -1240,8 +1235,9 @@ def delete_perspective_roles(request):  # TODO: test
                                 if user in group.users:
                                     group.users.remove(user)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_users[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -1279,8 +1275,9 @@ def delete_perspective_roles(request):  # TODO: test
                                 if org in group.organizations:
                                     group.organizations.remove(org)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_organizations[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             request.response.status = HTTPOk.code
             return response
