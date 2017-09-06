@@ -737,7 +737,7 @@ def configure_routes(config):
     # time interval. Time interval is specified in the same way as for 'stat_perspective'.
     config.add_route(name = 'stat_dictionary',
       pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
-    config.add_route(name='testing_graphene', pattern='/testing_graphene') # TODO: remove it
+    config.add_route(name='graphql', pattern='/graphql') # TODO: remove it
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
