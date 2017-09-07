@@ -260,5 +260,31 @@ class DeleteLanguage(graphene.Mutation):
         language.dbObject = dblanguageobj
         return DeleteLanguage(language=language, triumph=True)
 
+class GetAllLanguages(graphene.Mutation):
+    """
+    {"variables": {}, "query": "mutation get_all_languages{get_all_languages{ languages{id }}}"}
+    """
+
+    class Input:
+        pass #id = graphene.List(graphene.Int)
+
+    language = graphene.Field(Language)
+    triumph = graphene.Boolean()
+    languages = graphene.List(Language)
+
+    @staticmethod
+    #@acl_check_by_id('delete', 'language')
+
+    def mutate(root, args, context, info):
+        result_list = list()
+        langs = DBSession.query(dbLanguage).filter_by(marked_for_deletion=False).all()
+        for lang in langs:
+            result_list.append(Language(id=[lang.client_id, lang.object_id]))
+        #if not dblanguageobj or dblanguageobj.marked_for_deletion:
+        #    raise ResponseError(message="No such language in the system")
+        #    # dbentryobj = dbentityobj.parent - ?
+        #del_object(dblanguageobj)
+
+        return GetAllLanguages(languages=result_list, triumph=True)
 
 # from .gql_dictionary import Dictionary
