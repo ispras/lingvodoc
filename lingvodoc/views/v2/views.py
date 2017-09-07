@@ -1155,7 +1155,6 @@ def graphql(request):
         elif request.content_type == "application/json" and type(request.POST) == NoVars:
             body = request.body.decode('utf-8')
             json_req = json.loads(body)
-            print(json_req, type(json_req))
             if type(json_req) is list:
                 batch = True
             if not batch:   

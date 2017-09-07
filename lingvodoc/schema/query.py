@@ -65,7 +65,6 @@ from lingvodoc.schema.gql_language import (
     CreateLanguage,
     UpdateLanguage,
     DeleteLanguage,
-    GetAllLanguages
 )
 from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
@@ -95,6 +94,7 @@ from lingvodoc.models import (
     DBSession,
     Dictionary as dbDictionary,
     DictionaryPerspective as dbPerspective,
+    Language as dbLanguage
 )
 from pyramid.request import Request
 
@@ -114,6 +114,7 @@ class Query(graphene.ObjectType):
     perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int))
     entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
+    languages = graphene.List(Language)
     user = graphene.Field(User, id=graphene.Int())
     field = graphene.Field(Field, id=graphene.List(graphene.Int))
     translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
@@ -182,6 +183,18 @@ class Query(graphene.ObjectType):
     def resolve_language(self, args, context, info):
         id = args.get('id')
         return Language(id=id)
+
+    def resolve_languages(self, args, context, info):
+        result_list = list()
+        langs = DBSession.query(dbLanguage).filter_by(marked_for_deletion=False).all()
+        for lang in langs:
+            result_list.append(Language(id=[lang.client_id, lang.object_id]))
+        #if not dblanguageobj or dblanguageobj.marked_for_deletion:
+        #    raise ResponseError(message="No such language in the system")
+        #    # dbentryobj = dbentityobj.parent - ?
+        #del_object(dblanguageobj)
+        #print(result_list)
+        return result_list
 
     def resolve_entity(self, args, context, info):
         id = args.get('id')
@@ -274,7 +287,6 @@ class MyMutations(graphene.ObjectType):
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     delete_language = DeleteLanguage.Field()
-    get_all_languages = GetAllLanguages.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
     delete_dictionary = DeleteDictionary.Field()
