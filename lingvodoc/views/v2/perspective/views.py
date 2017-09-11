@@ -1009,16 +1009,68 @@ def view_perspective_roles(request):  # TODO: test
 
 @view_config(route_name='perspective_roles', renderer='json', request_method='POST', permission='create')
 def edit_perspective_roles(request):
+    DBSession.execute("LOCK TABLE user_to_group_association IN EXCLUSIVE MODE;")
+    DBSession.execute("LOCK TABLE organization_to_group_association IN EXCLUSIVE MODE;")
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
 
+    url = request.route_url('perspective_roles',
+                            client_id=parent_client_id,
+                            object_id=parent_object_id,
+                            perspective_client_id=client_id,
+                            perspective_object_id=object_id)
+    subreq = Request.blank(url)
+    subreq.method = 'GET'
+    headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    previous = request.invoke_subrequest(subreq).json_body
+
     if type(request.json_body) == str:
         req = json.loads(request.json_body)
     else:
         req = request.json_body
+
+    for role_name in req['roles_users']:
+        remove_list = list()
+        for user in req['roles_users'][role_name]:
+            if user in previous['roles_users'][role_name]:
+                previous['roles_users'][role_name].remove(user)
+                remove_list.append(user)
+        for user in remove_list:
+            req['roles_users'][role_name].remove(user)
+
+    for role_name in req['roles_organizations']:
+        remove_list = list()
+        for user in req['roles_organizations'][role_name]:
+            if user in previous['roles_organizations'][role_name]:
+                previous['roles_organizations'][role_name].remove(user)
+                req['roles_organizations'][role_name].remove(user)
+        for user in remove_list:
+            req['roles_users'][role_name].remove(user)
+
+    delete_flag = False
+
+    for role_name in previous['roles_users']:
+        if previous['roles_users'][role_name]:
+            delete_flag = True
+            break
+
+    for role_name in previous['roles_organizations']:
+        if previous['roles_organizations'][role_name]:
+            delete_flag = True
+            break
+
+    if delete_flag:
+        subreq = Request.blank(url)
+        subreq.json = previous
+        subreq.method = 'PATCH'
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        request.invoke_subrequest(subreq)
+
     roles_users = None
     if 'roles_users' in req:
         roles_users = req['roles_users']
@@ -1069,8 +1121,9 @@ def edit_perspective_roles(request):
                             if user not in group.users:
                                 group.users.append(user)
                 else:
-                    request.response.status = HTTPForbidden.code
-                    return {'error': str("Not enough permission")}
+                    if roles_users[role_name]:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
         if roles_organizations:
             for role_name in roles_organizations:
@@ -1108,8 +1161,9 @@ def edit_perspective_roles(request):
                             if org not in group.organizations:
                                 group.organizations.append(org)
                 else:
-                    request.response.status = HTTPForbidden.code
-                    return {'error': str("Not enough permission")}
+                    if roles_organizations[role_name]:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
         request.response.status = HTTPOk.code
         return response
@@ -1117,14 +1171,19 @@ def edit_perspective_roles(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_roles', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='perspective_roles', renderer='json', request_method='PATCH', permission='delete')
 def delete_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
-    req = request.json_body
+
+    if type(request.json_body) == str:
+        req = json.loads(request.json_body)
+    else:
+        req = request.json_body
+
     roles_users = None
     if 'roles_users' in req:
         roles_users = req['roles_users']
@@ -1178,8 +1237,9 @@ def delete_perspective_roles(request):  # TODO: test
                                 if user in group.users:
                                     group.users.remove(user)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_users[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -1217,8 +1277,9 @@ def delete_perspective_roles(request):  # TODO: test
                                 if org in group.organizations:
                                     group.organizations.remove(org)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_organizations[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             request.response.status = HTTPOk.code
             return response

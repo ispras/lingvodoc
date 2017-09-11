@@ -278,6 +278,29 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     }
   }
 
+  @JSExport
+  def search(): Unit = {
+    search(scope.query) map { table =>
+      scope.showPagination = false
+      scope.linkedDictionaryTable = table
+    }
+  }
+
+  @JSExport
+  def reset(): Unit = {
+    scope.query = ""
+    scope.showPagination = true
+    loadPage(1)
+  }
+
+
+  private[this] def search(q: String): Future[DictionaryTable] = {
+    backend.search(q, Some(linkPerspectiveId), false) map { results =>
+      val entries = results.map(_.lexicalEntry)
+      DictionaryTable.build(linkedPerspectiveFields, dataTypes, entries)
+    }
+  }
+
   private[this] def load() = {
 
     backend.perspectiveSource(linkPerspectiveId) onComplete {
