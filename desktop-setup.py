@@ -108,7 +108,7 @@ requires = [
 
 
 setup(name='lingvodoc',
-      version='2.1',
+      version='2.1.1',
       description='lingvodoc',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
