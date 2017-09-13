@@ -28,6 +28,9 @@ class TranslationGist(graphene.ObjectType):
      #client_id           | bigint                      | NOT NULL
      #marked_for_deletion | boolean                     | NOT NULL
      #type                | text                        |
+
+     {"variables": {}, "query": "query QUERYNAME { translationgist(id:[578, 6]){id created_at}}"   }
+
     """
     dbType = dbTranslationGist
     dbObject = None
