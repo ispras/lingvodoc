@@ -1085,39 +1085,59 @@ def create_persp_to_field(request):
 
 
 #TODO: Remove it
-@view_config(route_name='testing_graphene', renderer='json')
-def testing_graphene(request):
+@view_config(route_name='graphql', renderer='json')
+def graphql(request):
+    """
+    #####################
+    ### application/json
+    #####################
+    
+    {"variables": {}, "query": "query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"}
+    
+    or a batch of queries:
+    
+    [
+        {"variables": {}, "query": "query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"},
+        {"variables": {}, "query": "query myQuery{ entity(id:[ 742, 5494, ] ) { id}}"}
+    ]
+    
+    #####################
+    ### application/graphql
+    #####################
+    
+    query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"
+    
+    #####################
+    ### application/multipart/form-data
+    #####################
+    
+    MultiDict([
+    ('graphql', "mutation create_entity..."),
+     ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+     ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+     ])
+    
+    """
+    # TODO: rewrite this footwrap
     try:
+        batch = False
+        variable_values={}
         variables = {'auth': request.authenticated_userid}
         client_id = variables["auth"]
+        results = list()
         if not client_id:
             client_id = None
-        # todo: httpnotauthorized?
         locale_id = int(request.cookies.get('locale_id') or 2)
-        # user_id =  get_user_by_client_id(authenticated_userid(request))
-        # if not client_id:
-        #     user_id = None
-        # else:
-        #     user_id = get_user_by_client_id(client_id).id
         if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
                 and type(request.POST) == MultiDict:
             data = request.POST
             if not data:
                 return {'error': 'empty request'}
-            elif not "graphene" in data:
-                return {'error': 'graphene key not nound'}
+            elif not "graphql" in data:
+                return {'error': 'graphql key not nound'}
             elif not "blob" in data:
                 return {'error': 'blob key not nound'}
-            request_string = request.POST.pop("graphene")
-            """
-            data:
-
-            MultiDict([
-            ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
-             ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
-             ('file', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
-             ])
-            """
+            request_string = request.POST.pop("graphene") # TODO: change to query?
             '''
             if data and "file" in data and "graphene" in data:
                 # We can get next file from the list inside file upload mutation resolve
@@ -1130,32 +1150,56 @@ def testing_graphene(request):
                 return {'error': 'wrong data'}
 
             '''
-
-
-            #request_string = request.POST.popitem()
-            #print(request_string)
         elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
-            request_string = request.body.decode("utf-8")
+            request_string = request.body.decode("utf-8") 
+        elif request.content_type == "application/json" and type(request.POST) == NoVars:
+            body = request.body.decode('utf-8')
+            json_req = json.loads(body)
+            if type(json_req) is list:
+                batch = True
+            if not batch:   
+                if not "query" in json_req:
+                    return {'error': 'query key not nound'}
+                request_string = json_req["query"]
+                if "variables" in json_req:
+                    variable_values = json_req["variables"]
+            else:
+                for query in json_req:
+                    
+                    if not "query" in query:
+                        return {'error': 'query key not nound'}
+                    request_string = query["query"]
+                    if "variables" in query:
+                        variable_values = query["variables"]
+                    result = schema.execute(request_string,
+                                            context_value=Context({
+                                                'client_id': client_id,
+                                                'locale_id': locale_id,
+                                                'request': request}),
+                                            variable_values=variable_values)
+                    results.append(result.data)
+                # TODO: check errors
+                return {"data": results}
         else:
             request.response.status = HTTPBadRequest.code
             return {'error': 'wrong content type'}
+        if not batch:
+            published = request.params.get('published')
+            if published is None:
+                published = False  # todo: use this
 
-        published = request.params.get('published')
-        if published is None:
-            published = False  # todo: use this
+            result = schema.execute(request_string,
+                                    context_value=Context({
+                                        'client_id': client_id,
+                                        'locale_id': locale_id,
+                                        'request': request}),
+                                    variable_values=variable_values)
 
-        result = schema.execute(request_string,
-                                context_value=Context({
-                                    'client_id': client_id,
-                                    'locale_id': locale_id,
-                                    'request': request}),
-                                variable_values={})
-
-        if result.invalid:
-            return {'errors': [str(e) for e in result.errors]}
-        if result.errors:
-            return {'errors': [str(e) for e in result.errors]}
-        return result.data
+            if result.invalid:
+                return {'errors': [str(e) for e in result.errors]}
+            if result.errors:
+                return {'errors': [str(e) for e in result.errors]}
+            return {"data": result.data}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}

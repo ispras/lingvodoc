@@ -261,4 +261,5 @@ class DeleteLanguage(graphene.Mutation):
         return DeleteLanguage(language=language, triumph=True)
 
 
+
 # from .gql_dictionary import Dictionary
