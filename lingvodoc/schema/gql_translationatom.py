@@ -84,7 +84,7 @@ class CreateTranslationAtom(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
         locale_id = graphene.Int()
@@ -184,7 +184,7 @@ class UpdateTranslationAtom(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         content = graphene.String()
 

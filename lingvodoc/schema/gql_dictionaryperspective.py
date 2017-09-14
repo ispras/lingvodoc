@@ -99,7 +99,8 @@ class DictionaryPerspective(graphene.ObjectType):
     #     return self.dbObject.get_translation(context.get('locale_id'))
 
     @fetch_object('status')
-    def resolve_status(self, args, context, info):
+    def resolve_status(self, info):
+        context = info.context
         atom = DBSession.query(dbTranslationAtom).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
@@ -111,7 +112,7 @@ class DictionaryPerspective(graphene.ObjectType):
             return None
 
     @fetch_object()  # TODO: ?
-    def resolve_tree(self, args, context, info):
+    def resolve_tree(self, info):
         result = list()
         iteritem = self.dbObject
         while iteritem:
@@ -127,7 +128,8 @@ class DictionaryPerspective(graphene.ObjectType):
         return result
 
     @fetch_object()  # TODO: ?
-    def resolve_fields(self, args, context, info):
+    def resolve_fields(self, info):
+        context = info.context
         locale_id = context.get("locale_id")
         dbfields = self.dbObject.dictionaryperspectivetofield
         result = list()
@@ -138,7 +140,8 @@ class DictionaryPerspective(graphene.ObjectType):
         return result
 
     @acl_check_by_id('view', 'approve_entities')
-    def resolve_lexicalentries(self, args, context, info):
+    def resolve_lexicalentries(self, info):
+        context = info.context
         result = list()
         request = context.get('request')
         # dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
@@ -239,7 +242,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
@@ -381,7 +384,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
@@ -466,7 +469,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
 
