@@ -48,7 +48,7 @@ class TranslationGist(graphene.ObjectType):
                       )
 
     @fetch_object()
-    def resolve_translationatoms(self, args, context, info):
+    def resolve_translationatoms(self, info):
         # TODO: content etc
         result = list()
         atoms = DBSession.query(dbTranslationAtom).filter_by(parent=self.dbObject).all()
@@ -84,7 +84,7 @@ class CreateTranslationGist(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         type = graphene.String()
 
@@ -163,7 +163,7 @@ class DeleteTranslationGist(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
 
     translationgist = graphene.Field(TranslationGist)

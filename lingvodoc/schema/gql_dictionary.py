@@ -122,7 +122,8 @@ class Dictionary(graphene.ObjectType):
         return self._meta.fields['cr_persptofields'].type
 
     @fetch_object('status')
-    def resolve_status(self, args, context, info):
+    def resolve_status(self, info):
+        context = info.context
         atom = DBSession.query(dbTranslationAtom).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
@@ -132,10 +133,10 @@ class Dictionary(graphene.ObjectType):
         else:
             return None
 
-    def resolve_triumph(self, args, context, info):
+    def resolve_triumph(self, info):
         return True
 
-    def resolve_perspectives(self, args, context, info):
+    def resolve_perspectives(self, info):
         if hasattr(self, "perspectives"):
             return self.perspectives
 ###
@@ -165,7 +166,7 @@ class CreateDictionary(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int, required=True)
         parent_id = graphene.List(graphene.Int, required=True)
@@ -349,7 +350,7 @@ class UpdateDictionary(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int, required=True)
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
@@ -427,7 +428,7 @@ class DeleteDictionary(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int, required=True)
 
     dictionary = graphene.Field(Dictionary)
