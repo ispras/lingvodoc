@@ -68,12 +68,12 @@ class Entity(graphene.ObjectType):
 
 
     @fetch_object('data_type')
-    def resolve_data_type(self, args, context, info):
+    def resolve_data_type(self, info):
         return self.dbObject.field.data_type
 
 # Create
 class CreateEntity(graphene.Mutation):
-    class Input:
+    class Arguments:
         """
         input values from request. Look at "LD methods" exel table
         """
@@ -280,7 +280,7 @@ or
 """
 
 class UpdateEntity(graphene.Mutation):
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         published = graphene.Boolean()
         accepted = graphene.Boolean()
@@ -305,7 +305,7 @@ class UpdateEntity(graphene.Mutation):
         raise ResponseError(message="No such entity in the system")
 
 class DeleteEntity(graphene.Mutation):
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
 
     triumph = graphene.Boolean()

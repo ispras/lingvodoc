@@ -1179,7 +1179,7 @@ def graphql(request):
                                             variable_values=variable_values)
                     results.append(result.data)
                 # TODO: check errors
-                return results
+                return {"data": results}
         else:
             request.response.status = HTTPBadRequest.code
             return {'error': 'wrong content type'}
@@ -1199,7 +1199,7 @@ def graphql(request):
                 return {'errors': [str(e) for e in result.errors]}
             if result.errors:
                 return {'errors': [str(e) for e in result.errors]}
-            return result.data
+            return {"data": result.data}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
