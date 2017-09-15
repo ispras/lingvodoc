@@ -75,7 +75,7 @@ class CreateGrant(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         issuer_translation_gist_id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         issuer_url = graphene.String()
@@ -162,7 +162,7 @@ class UpdateGrant(graphene.Mutation):
         }
     }
     """
-    class Input:
+    class Arguments:
         grant_id = graphene.Int()
         issuer_translation_gist_id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
@@ -224,7 +224,7 @@ class DeleteGrant(graphene.Mutation):
         }
     }
     """
-    class Input:
+    class Arguments:
         grant_id = graphene.Int()
 
     grant = graphene.Field(Grant)

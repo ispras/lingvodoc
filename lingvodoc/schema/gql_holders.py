@@ -69,7 +69,7 @@ def acl_check_by_id(action, subject, id_key='id'):
     """
 
     def decorator(resolve_f):
-
+        #todo: rewrite
         def wrapper(self, args, context, *resolve_f_args):
 
             if context.acl_check_if(action, subject, args.get(id_key)):
@@ -224,7 +224,7 @@ class IdHolder(graphene.Interface):
     id = graphene.Int()
     fetch_object("id")
 
-    def resolve_id(self, args, context, info):
+    def resolve_id(self, info):
         return self.dbObject.id
 
 
@@ -234,15 +234,15 @@ class CompositeIdHolder(graphene.Interface):
     object_id = graphene.Int()
 
     @fetch_object("id")
-    def resolve_id(self, args, context, info):
+    def resolve_id(self, info):
         return (self.dbObject.client_id, self.dbObject.object_id)
 
     @fetch_object("client_id")
-    def resolve_client_id(self, args, context, info):
+    def resolve_client_id(self, info):
         return self.dbObject.client_id
 
     @fetch_object("object_id")
-    def resolve_object_id(self, args, context, info):
+    def resolve_object_id(self, info):
         return self.dbObject.object_id
 
 
@@ -250,7 +250,7 @@ class CreatedAt(graphene.Interface):
     created_at = DateTime()
 
     @fetch_object("created_at")
-    def resolve_created_at(self, args, context, info):
+    def resolve_created_at(self, info):
         return self.dbObject.created_at
 
 
@@ -260,15 +260,15 @@ class Relationship(graphene.Interface):
     parent_object_id = graphene.List(graphene.Int)
 
     @fetch_object("parent_id")
-    def resolve_parent_id(self, args, context, info):
+    def resolve_parent_id(self, info):
         return (self.dbObject.parent_client_id, self.dbObject.parent_object_id)
 
     @fetch_object("parent_client_id")
-    def resolve_parent_client_id(self, args, context, info):
+    def resolve_parent_client_id(self, info):
         return self.dbObject.parent_client_id
 
     @fetch_object("parent_object_id")
-    def resolve_parent_object_id(self, args, context, info):
+    def resolve_parent_object_id(self, info):
         return self.dbObject.parent_object_id
 
 
@@ -278,15 +278,15 @@ class SelfHolder(graphene.Interface):
     self_object_id = graphene.Int()
 
     @fetch_object("self_id")
-    def resolve_self_id(self, args, context, info):
+    def resolve_self_id(self, info):
         return (self.dbObject.self_client_id, self.dbObject.self_object_id)
 
     @fetch_object("self_client_id")
-    def resolve_self_client_id(self, args, context, info):
+    def resolve_self_client_id(self, info):
         return self.dbObject.self_client_id
 
     @fetch_object("self_object_id")
-    def resolve_self_object_id(self, args, context, info):
+    def resolve_self_object_id(self, info):
         return self.dbObject.self_object_id
 
 
@@ -296,15 +296,15 @@ class FieldHolder(graphene.Interface):
     field_object_id = graphene.Int()
 
     @fetch_object("field_id")
-    def resolve_field_id(self, args, context, info):
+    def resolve_field_id(self, info):
         return (self.dbObject.field_client_id, self.dbObject.field_object_id)
 
     @fetch_object("field_client_id")
-    def resolve_field_client_id(self, args, context, info):
+    def resolve_field_client_id(self, info):
         return self.dbObject.field_client_id
 
     @fetch_object("field_object_id")
-    def resolve_field_object_id(self, args, context, info):
+    def resolve_field_object_id(self, info):
         return self.dbObject.field_object_id
 
 
@@ -314,15 +314,15 @@ class ParentLink(graphene.Interface):
     link_object_id = graphene.List(graphene.Int)
 
     @fetch_object("link_id")
-    def resolve_link_id(self, args, context, info):
+    def resolve_link_id(self, info):
         return (self.dbObject.link_client_id, self.dbObject.link_object_id)
 
     @fetch_object("link_client_id")
-    def resolve_link_client_id(self, args, context, info):
+    def resolve_link_client_id(self, info):
         return self.dbObject.link_client_id
 
     @fetch_object("link_object_id")
-    def resolve_link_object_id(self, args, context, info):
+    def resolve_link_object_id(self, info):
         return self.dbObject.link_object_id
 
 
@@ -330,7 +330,7 @@ class MarkedForDeletion(graphene.Interface):
     marked_for_deletion = graphene.Boolean()
 
     @fetch_object("marked_for_deletion")
-    def resolve_marked_for_deletion(self, args, context, info):
+    def resolve_marked_for_deletion(self, info):
         return self.dbObject.marked_for_deletion
 
 
@@ -338,7 +338,7 @@ class Position(graphene.Interface):
     position = graphene.Int()
 
     @fetch_object("position")
-    def resolve_position(self, args, context, info):
+    def resolve_position(self, info):
         return self.dbObject.position
 
 
@@ -348,16 +348,16 @@ class TranslationGistHolder(graphene.Interface):
     translation_gist_object_id = graphene.Int()
 
     @fetch_object("translation_gist_id")
-    def resolve_translation_gist_id(self, args, context, info):
+    def resolve_translation_gist_id(self, info):
         return (self.dbObject.translation_gist_client_id,
                 self.dbObject.translation_gist_object_id)
 
     @fetch_object("translation_gist_client_id")
-    def resolve_translation_gist_client_id(self, args, context, info):
+    def resolve_translation_gist_client_id(self, info):
         return self.dbObject.translation_gist_client_id
 
     @fetch_object("translation_gist_object_id")
-    def resolve_translation_gist_object_id(self, args, context, info):
+    def resolve_translation_gist_object_id(self, info):
         return self.dbObject.translation_gist_object_id
 
 
@@ -365,7 +365,7 @@ class UserId(graphene.Interface):
     user_id = graphene.Int()
 
     @fetch_object("user_id")
-    def resolve_user_id(self, args, context, info):
+    def resolve_user_id(self, info):
         return self.dbObject.user_id
 
 
@@ -375,16 +375,16 @@ class StateHolder(graphene.Interface):
     state_translation_gist_object_id = graphene.Int()
 
     @fetch_object("state_translation_gist_id")
-    def resolve_state_translation_gist_id(self, args, context, info):
+    def resolve_state_translation_gist_id(self, info):
         return (self.dbObject.state_translation_gist_client_id,
                 self.dbObject.state_translation_gist_object_id)
 
     @fetch_object("state_translation_gist_client_id")
-    def resolve_state_translation_gist_client_id(self, args, context, info):
+    def resolve_state_translation_gist_client_id(self, info):
         return self.dbObject.state_translation_gist_client_id
 
     @fetch_object("state_translation_gist_object_id")
-    def resolve_state_translation_gist_object_id(self, args, context, info):
+    def resolve_state_translation_gist_object_id(self, info):
         return self.dbObject.state_translation_gist_object_id
 
 
@@ -392,7 +392,7 @@ class TableName(graphene.Interface):
     table_name = graphene.String()
 
     @fetch_object("table_name")
-    def resolve_table_name(self, args, context, info):
+    def resolve_table_name(self, info):
         return self.dbObject.table_name
 
 
@@ -400,7 +400,7 @@ class Name(graphene.Interface):
     name = graphene.String()
 
     @fetch_object("name")
-    def resolve_name(self, args, context, info):
+    def resolve_name(self, info):
         return self.dbObject.name
 
 
@@ -408,7 +408,7 @@ class LocaleId(graphene.Interface):
     locale_id = graphene.Int()
 
     @fetch_object("locale_id")
-    def resolve_locale_id(self, args, context, info):
+    def resolve_locale_id(self, info):
         return self.dbObject.locale_id
 
 
@@ -416,7 +416,7 @@ class Content(graphene.Interface):
     content = graphene.String()
 
     @fetch_object("content")
-    def resolve_content(self, args, context, info):
+    def resolve_content(self, info):
         return self.dbObject.content
 
 
@@ -424,7 +424,7 @@ class TypeHolder(graphene.Interface):
     type = graphene.String()  # rename (?)
 
     @fetch_object("type")
-    def resolve_type(self, args, context, info):
+    def resolve_type(self, info):
         return self.dbObject.type
 
 
@@ -432,7 +432,8 @@ class TranslationHolder(graphene.Interface):
     translation = graphene.String()
 
     @fetch_object("translation")
-    def resolve_translation(self, args, context, info):
+    def resolve_translation(self, info):
+        context = info.context
         return self.dbObject.get_translation(context.get('locale_id')) # TODO: fix it
 
 # rare interfaces
@@ -445,7 +446,7 @@ class About(graphene.Interface):
     about = graphene.String()
 
     @fetch_object("about")
-    def resolve_about(self, args, context, info):
+    def resolve_about(self, info):
         return self.dbObject.about
 
 # PublishedEntity interface
@@ -455,7 +456,7 @@ class Published(graphene.Interface):
     published = graphene.Boolean()
 
     @fetch_object("published")
-    def resolve_about(self, args, context, info):
+    def resolve_about(self, info):
         return self.dbObject.published
 
 
@@ -463,7 +464,7 @@ class Accepted(graphene.Interface):
     accepted = graphene.Boolean()
 
     @fetch_object("accepted")
-    def resolve_accepted(self, args, context, info):
+    def resolve_accepted(self, info):
         return self.dbObject.accepted
 
 # userBlobs interface
@@ -473,7 +474,7 @@ class DataType(graphene.Interface):  # TODO: check all data_type fields
     data_type = graphene.String()
 
     @fetch_object("data_type")
-    def resolve_data_type(self, args, context, info):
+    def resolve_data_type(self, info):
         pass  # return self.dbObject.data_type
 
 # LexicalEntry interface
@@ -483,7 +484,7 @@ class MovedTo(graphene.Interface):
     moved_to = graphene.String()
 
     @fetch_object("moved_to")
-    def resolve_moved_to(self, args, context, info):
+    def resolve_moved_to(self, info):
         return self.dbObject.moved_to
 
 # Field interface
@@ -494,20 +495,20 @@ class DataTypeTranslationGistId(graphene.Interface):
     data_type = graphene.String()
 
     @fetch_object("data_type")
-    def resolve_data_type(self, args, context, info):
+    def resolve_data_type(self, info):
         return self.dbObject.data_type
 
     @fetch_object("data_type_translation_gist_id")
-    def resolve_data_type_translation_gist_id(self, args, context, info):
+    def resolve_data_type_translation_gist_id(self, info):
         return (self.dbObject.data_type_translation_gist_client_id,
                 self.dbObject.data_type_translation_gist_object_id)
 
     @fetch_object("data_type_translation_gist_client_id")
-    def resolve_data_type_translation_gist_client_id(self, args, context, info):
+    def resolve_data_type_translation_gist_client_id(self, info):
         return self.dbObject.data_type_translation_gist_client_id
 
     @fetch_object("data_type_translation_gist_object_id")
-    def resolve_data_type_translation_gist_object_id(self, args, context, info):
+    def resolve_data_type_translation_gist_object_id(self, info):
         return self.dbObject.data_type_translation_gist_object_id
 
 # Metadata section
@@ -517,7 +518,7 @@ class IsTranslatable(graphene.Interface):
     is_translatable = graphene.Boolean()
 
     @fetch_object("is_translatable")
-    def resolve_is_translatable(self, args, context, info):
+    def resolve_is_translatable(self, info):
         return self.dbObject.is_translatable
 
 
@@ -541,46 +542,46 @@ class Metadata(graphene.ObjectType):
     row_id = GenericScalar()
     merged_to = GenericScalar()
 
-    def resolve_hash(self, args, context, info):
+    def resolve_hash(self, info):
         return self.hash
 
-    def resolve_origin_client_id(self, args, context, info):
+    def resolve_origin_client_id(self, info):
         return self.origin_client_id
 
-    def resolve_origin_object_id(self, args, context, info):
+    def resolve_origin_object_id(self, info):
         return self.origin_object_id
 
-    def resolve_info(self, args, context, info):
+    def resolve_info(self, info):
         return self.info
 
-    def resolve_merged_by(self, args, context, info):
+    def resolve_merged_by(self, info):
         return self.merged_by
 
-    def resolve_data_type(self, args, context, info):
+    def resolve_data_type(self, info):
         return self.data_type
 
-    def resolve_blob_description(self, args, context, info):
+    def resolve_blob_description(self, info):
         return self.blob_description
 
-    def resolve_merge(self, args, context, info):
+    def resolve_merge(self, info):
         return self.merge
 
-    def resolve_original_filename(self, args, context, info):
+    def resolve_original_filename(self, info):
         return self.original_filename
 
-    def resolve_location(self, args, context, info):
+    def resolve_location(self, info):
         return self.location
 
-    def resolve_client_id(self, args, context, info):
+    def resolve_client_id(self, info):
         return self.client_id
 
-    def resolve_authors(self, args, context, info):
+    def resolve_authors(self, info):
         return self.authors
 
-    def resolve_row_id(self, args, context, info):
+    def resolve_row_id(self, info):
         return self.row_id
 
-    def resolve_merged_to(self, args, context, info):
+    def resolve_merged_to(self, info):
         return self.merged_to
 
 
@@ -622,7 +623,7 @@ class AdditionalMetadata(graphene.Interface):
     additional_metadata = graphene.Field(Metadata)
 
     @fetch_object()
-    def resolve_additional_metadata(self, args, context, info):
+    def resolve_additional_metadata(self, info):
         db_object = self.dbObject
         additional_metadata_string = None
         if hasattr(self, "additional_metadata_string"):

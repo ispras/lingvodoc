@@ -7,7 +7,8 @@ from lingvodoc.schema.gql_holders import (
     TypeHolder,
     client_id_check,
     acl_check_by_id,
-    ResponseError
+    ResponseError,
+    fetch_object
 )
 
 from lingvodoc.models import (
@@ -17,9 +18,11 @@ from lingvodoc.models import (
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
     ObjectTOC as dbObjectTOC,
-    DBSession
+    DBSession,
+    TranslationAtom as dbTranslationAtom
 )
 from lingvodoc.views.v2.utils import check_client_id, add_user_to_group
+from lingvodoc.schema.gql_translationatom import TranslationAtom
 
 class TranslationGist(graphene.ObjectType):
     """
@@ -28,9 +31,14 @@ class TranslationGist(graphene.ObjectType):
      #client_id           | bigint                      | NOT NULL
      #marked_for_deletion | boolean                     | NOT NULL
      #type                | text                        |
+
+     {"variables": {}, "query": "query QUERYNAME { translationgist(id:[578, 6]){id created_at}}"   }
+
     """
     dbType = dbTranslationGist
     dbObject = None
+    translationatoms = graphene.List(TranslationAtom)
+
     class Meta:
         interfaces = (CompositeIdHolder,
                       CreatedAt,
@@ -39,6 +47,14 @@ class TranslationGist(graphene.ObjectType):
 
                       )
 
+    @fetch_object()
+    def resolve_translationatoms(self, info):
+        # TODO: content etc
+        result = list()
+        atoms = DBSession.query(dbTranslationAtom).filter_by(parent=self.dbObject).all()
+        for atom in atoms:
+            result.append(TranslationAtom(id=[atom.client_id, atom.object_id]))
+        return result
 class CreateTranslationGist(graphene.Mutation):
     """
     example:
@@ -68,7 +84,7 @@ class CreateTranslationGist(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         type = graphene.String()
 
@@ -147,7 +163,7 @@ class DeleteTranslationGist(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
 
     translationgist = graphene.Field(TranslationGist)
