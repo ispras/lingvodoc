@@ -88,7 +88,7 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
         field_id = graphene.List(graphene.Int)
@@ -198,7 +198,7 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
         field_id = graphene.List(graphene.Int)
@@ -276,7 +276,7 @@ class DeleteDictionaryPerspectiveToField(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
 
     perspective_to_field = graphene.Field(DictionaryPerspectiveToField)

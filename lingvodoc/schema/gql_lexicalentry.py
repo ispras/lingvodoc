@@ -51,7 +51,7 @@ class LexicalEntry(graphene.ObjectType):
 
     @fetch_object('entities')
     @acl_check_by_id('view', 'lexical_entries_and_entities')
-    def resolve_entities(self, args, context, info):
+    def resolve_entities(self, info):
         result = list()
         for db_entity in self.dbObject.entity:
             gr_entity_object = Entity(id=[db_entity.client_id, db_entity.object_id])
@@ -87,7 +87,7 @@ class CreateLexicalEntry(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         perspective_id = graphene.List(graphene.Int)
 
@@ -162,7 +162,7 @@ class DeleteLexicalEntry(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
 
     lexicalentry = graphene.Field(LexicalEntry)

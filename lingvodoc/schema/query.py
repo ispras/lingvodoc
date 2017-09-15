@@ -132,10 +132,12 @@ class Query(graphene.ObjectType):
     translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
     userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
+    translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
     organization = graphene.Field(Organization, id=graphene.List(graphene.Int))
     organizations = graphene.List(Organization)
 
-    def resolve_dictionaries(self, args, context, info):
+
+    def resolve_dictionaries(self, info, published):
         """
         example:
 
@@ -151,9 +153,10 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        context = info.context
         dbdicts = list()
         request = context.get('request')
-        if args.get('published'):
+        if published:
 
             subreq = Request.blank('/translation_service_search')
             subreq.method = 'POST'
@@ -210,11 +213,10 @@ class Query(graphene.ObjectType):
                                         translation=dbdict.get_translation(context.get('locale_id'))) for dbdict in dbdicts]
         return dictionaries_list
 
-    def resolve_dictionary(self, args, context, info):
-        id = args.get('id')
+    def resolve_dictionary(self, info, id):
         return Dictionary(id=id)
 
-    def resolve_perspectives(self, args, context, info):
+    def resolve_perspectives(self,info, published):
         """
         example:
 
@@ -230,8 +232,9 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        context = info.context
         request = context.get('request')
-        if args.get('published'):
+        if published:
             subreq = Request.blank('/translation_service_search')
             subreq.method = 'POST'
             subreq.headers = request.headers
@@ -286,16 +289,13 @@ class Query(graphene.ObjectType):
         return perspectives_list
 
 
-    def resolve_perspective(self, args, context, info):
-        id = args.get('id')
+    def resolve_perspective(self, info, id):
         return DictionaryPerspective(id=id)
 
-    def resolve_language(self, args, context, info):
-        id = args.get('id')
+    def resolve_language(self, info, id):
         return Language(id=id)
 
-
-    def resolve_languages(self, args, context, info):
+    def resolve_languages(self, info):
         """
         example:
 
@@ -308,6 +308,7 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        context = info.context
 
         languages = DBSession.query(dbLanguage).filter(dbLanguage.marked_for_deletion == False).all()
         languages_list = [Language(id=[lang.client_id, lang.object_id],
@@ -316,46 +317,39 @@ class Query(graphene.ObjectType):
                                    translation=lang.get_translation(context.get('locale_id'))) for lang in languages]
         return languages_list
 
-    def resolve_entity(self, args, context, info):
-        id = args.get('id')
+    def resolve_entity(self, info, id):
         return Entity(id=id)
 
-    def resolve_user(self, args, context, info):
-        id = args.get('id')
+    def resolve_user(self, info, id):
         return User(id=id)
 
     # def resolve_datetime(self, args, context, info):
     #     id = args.get('id')
     #     return DateTime(id=id)
 
-    def resolve_basegroup(self, args, context, info):
-        id = args.get('id')
+    def resolve_basegroup(self, info, id):
         return BaseGroup(id=id)
 
-    def resolve_client(self, args, context, info):
+    def resolve_client(self, info):
+        context = info.context
         return context.get('client')
 
-    def resolve_dictionaryperspectivetofield(self, args, context, info):
-        id = args.get('id')
+    def resolve_dictionaryperspectivetofield(self, info, id):
         return DictionaryPerspectiveToField(id=id)
 
-    def resolve_email(self, args, context, info):
-        id = args.get('id')
+    def resolve_email(self, info, id):
         return Email(id=id)
 
-    def resolve_grant(self, args, context, info):
-        id = args.get('id')
+    def resolve_grant(self, info, id):
         return Grant(id=id)
 
-    def resolve_group(self, args, context, info):
-        id = args.get('id')
+    def resolve_group(self, info, id):
         return Group(id=id)
 
-    def resolve_organization(self, args, context, info):
-        id = args.get('id')
+    def resolve_organization(self, info, id):
         return Organization(id=id)
 
-    def resolve_organizations(self, args, context, info):
+    def resolve_organizations(self, info):
         organizations = DBSession.query(dbOrganization).filter_by(marked_for_deletion=False).all()
         organizations_list = [Organization(name=organization.name,
                                            about=organization.about) for organization in organizations]
@@ -369,25 +363,23 @@ class Query(graphene.ObjectType):
     #     id = args.get('id')
     #     return ObjectTOC(id=id)
 
-    def resolve_publishingentity(self, args, context, info):
-        id = args.get('id')
+    def resolve_publishingentity(self, info, id):
         return PublishingEntity(id=id)
 
-    def resolve_translationgist(self, args, context, info):
-        id = args.get('id')
+    def resolve_translationatom(self, info, id):
+        return TranslationAtom(id=id)
+
+    def resolve_translationgist(self, info, id):
         return TranslationGist(id=id)
 
-    def resolve_userblob(self, args, context, info):
-        id = args.get('id')
+    def resolve_userblobs(self, info, id):
         return UserBlobs(id=id)
 
-    def resolve_field(self, args, context, info):
-        client_id = context.get("client_id")
-        id = args.get('id')
+    def resolve_field(self, info, id):
+        client_id = info.context.get("client_id")
         return Field(id=id)
 
-    def resolve_lexicalentry(self, args, context, info):
-        id = args.get('id')
+    def resolve_lexicalentry(self, info, id):
         return LexicalEntry(id=id)
 
 
