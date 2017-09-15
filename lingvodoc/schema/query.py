@@ -347,7 +347,7 @@ class Query(graphene.ObjectType):
     def resolve_user(self, info, id):
         return User(id=id)
 
-    def resolve_users(self, args, context, info):
+    def resolve_users(self, info, search):
         """
         example:
 
@@ -359,7 +359,6 @@ class Query(graphene.ObjectType):
             }
         }
         """
-        search = args.get('search')
         users = DBSession.query(dbUser).join(dbUser.email)
         if search:
             name = search + '%'
@@ -423,7 +422,7 @@ class Query(graphene.ObjectType):
     def resolve_translationgist(self, info, id):
         return TranslationGist(id=id)
 
-    def resolve_translationgists(self, args, context, info):
+    def resolve_translationgists(self, info):
         """
         example:
         query GistsList {
@@ -439,8 +438,7 @@ class Query(graphene.ObjectType):
                                       type=gist.type) for gist in gists]
         return gists_list
 
-    def resolve_userblobs(self, args, context, info):
-        id = args.get('id')
+    def resolve_userblobs(self, info, id):
         return UserBlobs(id=id)
 
     def resolve_field(self, info, id):
@@ -451,24 +449,21 @@ class Query(graphene.ObjectType):
         return LexicalEntry(id=id)
 
 
-    def resolve_lexicalentries(self, args, context, info): #basic_search() function
-        searchstring = args.get('searchstring')
+    def resolve_lexicalentries(self, info, searchstring, field_id, perspective_id, can_add_tags, search_in_published): #basic_search() function
         if searchstring:
             if len(searchstring) >= 1:
                 field = None
-                field_id = args.get('field_id')
                 if field_id:
                     field_client_id, field_object_id = field_id[0], field_id[1]
                     field = DBSession.query(dbField).filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
-                client_id = context["client_id"]
+                client_id = info.context["client_id"]
                 group = DBSession.query(dbGroup).filter(dbGroup.subject_override == True).join(dbBaseGroup) \
                     .filter(dbBaseGroup.subject == 'lexical_entries_and_entities', dbBaseGroup.action == 'view') \
                     .join(dbUser, dbGroup.users).join(Client) \
                     .filter(Client.id == client_id).first()
 
                 published_cursor = None
-                perspective_id = args.get('perspective_id')
 
                 if group:
                     results_cursor = DBSession.query(dbEntity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
@@ -487,7 +482,7 @@ class Query(graphene.ObjectType):
                         published_cursor = results_cursor
 
                     ignore_groups = False
-                    request = context.get('request')
+                    request = info.context.get('request')
                     subreq = Request.blank('/translation_service_search')
                     subreq.method = 'POST'
                     subreq.headers = request.headers
@@ -535,8 +530,6 @@ class Query(graphene.ObjectType):
                             dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
                             dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
                             dbEntity.content.like('%' + searchstring + '%'))
-
-                    can_add_tags = args.get('can_add_tags')
 
                     if can_add_tags:
                         results_cursor = results_cursor \
@@ -590,7 +583,6 @@ class Query(graphene.ObjectType):
                             result = resp.json
                             """
                             #print(request)
-                            search_in_published = args.get('search_in_published')
                             lexical_entries.append(entry.track(search_in_published, 1)) #request.cookies['locale_id']
 
                     lexical_entries_list = list()
@@ -646,11 +638,9 @@ class Query(graphene.ObjectType):
                     return lexical_entries_list
             raise ResponseError(message="Bad string")
 
-        def resolve_advanced_lexicalentries(self, args, context, info): #advanced_search() function
+        def resolve_advanced_lexicalentries(self, info, searchstrings, perspectives, adopted, adopted_type, with_etimology): #advanced_search() function
             #from sqlalchemy import bindparam
-            request = context.get('request')
-            searchstrings = args.get('searchstrings')
-            perspectives = args.get('perspectives') or list()
+            request = info.context.get('request')
 
             if not perspectives:
                 subreq = Request.blank('/translation_service_search')
@@ -688,10 +678,6 @@ class Query(graphene.ObjectType):
                              dbPerspective.state_translation_gist_object_id == published_gist[1]),
                         and_(dbPerspective.state_translation_gist_client_id == limited_gist[0],
                              dbPerspective.state_translation_gist_object_id == limited_gist[1]))).all()]
-
-            adopted = args.get('adopted')
-            adopted_type = args.get('adopted_type')
-            with_etimology = args.get('with_etimology')
 
             def make_query(searchstring, perspectives):
                 results_cursor = DBSession.query(dbLexicalEntry).join(dbEntity.parent) \
