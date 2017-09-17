@@ -16,7 +16,7 @@ class Word:
 
     def strip(self, string):
         if type(string) is str:
-            return string.strip()
+            return string.strip().replace("\xad", "-")
         return string
 
     def get_tuple(self):
@@ -115,7 +115,7 @@ class Elan:
                     text_data = res[translation_data][0]
                 if len(res[translation_data]) > 1:
                     lit_transl_data = res[translation_data][1]
-                tr_text = self.word[translation_data]
+                tr_text = self.word[translation_data].replace("\xad", "-")
                 if type(tr_text) is str:
                     if re.search('[-.][\dA-Z]+', tr_text) and \
                             not re.search("[-]INF", tr_text) and \
@@ -189,6 +189,17 @@ class Elan:
                         next.append([Word(j , self.word[j], cur_tier, (i[0], i[1])) ]) #time from text
 
             perspectives.append(next)
+        to_fix = []
+        #  Elements order fix
+        for i, annotations_list in enumerate(perspectives):
+            for j, obj in enumerate(annotations_list):
+                if type(obj) is not list:
+                    to_fix.append((i, j))
+        for indexes in to_fix:
+            index = indexes[0]
+            wrong_obj = indexes[1]
+            ordereddict = perspectives[index].pop(wrong_obj)
+            perspectives[index].append(ordereddict)
         return perspectives
 
 
