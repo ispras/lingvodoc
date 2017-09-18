@@ -449,7 +449,7 @@ class Query(graphene.ObjectType):
     def resolve_lexicalentry(self, info, id):
         return LexicalEntry(id=id)
 
-    def resolve_all_locales(self, info, id):
+    def resolve_all_locales(self, info):
         response = list()
         locales = DBSession.query(dbLocale).all()
         for locale in locales:
