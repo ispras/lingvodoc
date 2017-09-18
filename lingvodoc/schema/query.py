@@ -96,6 +96,7 @@ from lingvodoc.models import (
     DictionaryPerspective as dbPerspective,
     Language as dbLanguage,
     Organization as dbOrganization,
+    Locale as dbLocale,
     TranslationAtom as dbTranslationAtom,
     UserBlobs as dbUserBlobs,
     Client
@@ -133,7 +134,7 @@ class Query(graphene.ObjectType):
     translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
     organization = graphene.Field(Organization, id=graphene.List(graphene.Int))
     organizations = graphene.List(Organization)
-
+    all_locales = graphene.List(graphene.String)
 
     def resolve_dictionaries(self, args, context, info):
         """
@@ -393,6 +394,18 @@ class Query(graphene.ObjectType):
     def resolve_lexicalentry(self, args, context, info):
         id = args.get('id')
         return LexicalEntry(id=id)
+
+    def resolve_all_locales(self, args, context, info):
+        response = list()
+        locales = DBSession.query(dbLocale).all()
+        for locale in locales:
+            locale_json = dict()
+            locale_json['shortcut'] = locale.shortcut
+            locale_json['intl_name'] = locale.intl_name
+            locale_json['created_at'] = locale.created_at
+            locale_json['id'] = locale.id
+            response.append(locale_json)
+        return response
 
 
 class MyMutations(graphene.ObjectType):
