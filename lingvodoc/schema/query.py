@@ -86,7 +86,11 @@ from lingvodoc.schema.gql_grant import (
 from lingvodoc.schema.gql_email import (
     Email
 )
-from lingvodoc.schema.gql_holders import PermissionException
+from lingvodoc.schema.gql_holders import (
+    PermissionException,
+    ResponseError,
+    ObjectVal
+)
 
 import lingvodoc.acl as acl
 
@@ -96,14 +100,24 @@ from lingvodoc.models import (
     DictionaryPerspective as dbPerspective,
     Language as dbLanguage,
     Organization as dbOrganization,
+    Field as dbField,
+    Group as dbGroup,
+    BaseGroup as dbBaseGroup,
+    User as dbUser,
+    Entity as dbEntity,
+    LexicalEntry as dbLexicalEntry,
+    DictionaryPerspectiveToField as dbPerspectiveToField,
     Locale as dbLocale,
     TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
+    Email as dbEmail,
     UserBlobs as dbUserBlobs,
     Client
 )
 from pyramid.request import Request
 
 from sqlalchemy import (
+    func,
     and_,
     or_,
     tuple_
@@ -129,14 +143,26 @@ class Query(graphene.ObjectType):
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
     languages = graphene.List(Language)
     user = graphene.Field(User, id=graphene.Int())
+    users = graphene.List(User, search=graphene.String())
     field = graphene.Field(Field, id=graphene.List(graphene.Int))
     translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
-    translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
     organization = graphene.Field(Organization, id=graphene.List(graphene.Int))
     organizations = graphene.List(Organization)
+    lexicalentry = graphene.Field(LexicalEntry, id=graphene.List(graphene.Int))
+    lexicalentries = graphene.List(LexicalEntry, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
+                                   perspective_id=graphene.List(graphene.Int), field_id=graphene.List(graphene.Int),
+                                   search_in_published=graphene.Boolean())
+    advanced_lexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
+                                            perspectives=graphene.List(graphene.List(graphene.Int)),
+                                            adopted=graphene.Boolean(),
+                                            adopted_type=graphene.List(graphene.Int),
+                                            with_entimology=graphene.Boolean())
+    translationgist = graphene.Field(TranslationGist, id = graphene.List(graphene.Int))
+    translationgists = graphene.List(TranslationGist)
+
     all_locales = graphene.List(graphene.String)
 
-    def resolve_dictionaries(self, args, context, info):
+    def resolve_dictionaries(self, info, published):
         """
         example:
 
@@ -152,9 +178,10 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        context = info.context
         dbdicts = list()
         request = context.get('request')
-        if args.get('published'):
+        if published:
 
             subreq = Request.blank('/translation_service_search')
             subreq.method = 'POST'
@@ -211,11 +238,10 @@ class Query(graphene.ObjectType):
                                         translation=dbdict.get_translation(context.get('locale_id'))) for dbdict in dbdicts]
         return dictionaries_list
 
-    def resolve_dictionary(self, args, context, info):
-        id = args.get('id')
+    def resolve_dictionary(self, info, id):
         return Dictionary(id=id)
 
-    def resolve_perspectives(self, args, context, info):
+    def resolve_perspectives(self,info, published):
         """
         example:
 
@@ -231,8 +257,9 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        context = info.context
         request = context.get('request')
-        if args.get('published'):
+        if published:
             subreq = Request.blank('/translation_service_search')
             subreq.method = 'POST'
             subreq.headers = request.headers
@@ -287,16 +314,13 @@ class Query(graphene.ObjectType):
         return perspectives_list
 
 
-    def resolve_perspective(self, args, context, info):
-        id = args.get('id')
+    def resolve_perspective(self, info, id):
         return DictionaryPerspective(id=id)
 
-    def resolve_language(self, args, context, info):
-        id = args.get('id')
+    def resolve_language(self, info, id):
         return Language(id=id)
 
-
-    def resolve_languages(self, args, context, info):
+    def resolve_languages(self, info):
         """
         example:
 
@@ -309,6 +333,7 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        context = info.context
 
         languages = DBSession.query(dbLanguage).filter(dbLanguage.marked_for_deletion == False).all()
         languages_list = [Language(id=[lang.client_id, lang.object_id],
@@ -317,46 +342,65 @@ class Query(graphene.ObjectType):
                                    translation=lang.get_translation(context.get('locale_id'))) for lang in languages]
         return languages_list
 
-    def resolve_entity(self, args, context, info):
-        id = args.get('id')
+    def resolve_entity(self, info, id):
         return Entity(id=id)
 
-    def resolve_user(self, args, context, info):
-        id = args.get('id')
+    def resolve_user(self, info, id):
         return User(id=id)
+
+    def resolve_users(self, info, search):
+        """
+        example:
+
+        query UsersList {
+            users(search: "modis") {
+                login
+                name
+                intl_name
+            }
+        }
+        """
+        users = DBSession.query(dbUser).join(dbUser.email)
+        if search:
+            name = search + '%'
+            users = users.filter(or_(
+                dbUser.name.startswith(name),
+                dbUser.login.startswith(name),
+                dbUser.intl_name.startswith(name),
+                dbEmail.email.startswith(name)
+            ))
+        users_list = [User(name=user.name,
+                           intl_name=user.intl_name, login=user.login) for user in users]
+        return users_list
+
 
     # def resolve_datetime(self, args, context, info):
     #     id = args.get('id')
     #     return DateTime(id=id)
 
-    def resolve_basegroup(self, args, context, info):
-        id = args.get('id')
+    def resolve_basegroup(self, info, id):
         return BaseGroup(id=id)
 
-    def resolve_client(self, args, context, info):
+    def resolve_client(self, info):
+        context = info.context
         return context.get('client')
 
-    def resolve_dictionaryperspectivetofield(self, args, context, info):
-        id = args.get('id')
+    def resolve_dictionaryperspectivetofield(self, info, id):
         return DictionaryPerspectiveToField(id=id)
 
-    def resolve_email(self, args, context, info):
-        id = args.get('id')
+    def resolve_email(self, info, id):
         return Email(id=id)
 
-    def resolve_grant(self, args, context, info):
-        id = args.get('id')
+    def resolve_grant(self, info, id):
         return Grant(id=id)
 
-    def resolve_group(self, args, context, info):
-        id = args.get('id')
+    def resolve_group(self, info, id):
         return Group(id=id)
 
-    def resolve_organization(self, args, context, info):
-        id = args.get('id')
+    def resolve_organization(self, info, id):
         return Organization(id=id)
 
-    def resolve_organizations(self, args, context, info):
+    def resolve_organizations(self, info):
         organizations = DBSession.query(dbOrganization).filter_by(marked_for_deletion=False).all()
         organizations_list = [Organization(name=organization.name,
                                            about=organization.about) for organization in organizations]
@@ -370,32 +414,42 @@ class Query(graphene.ObjectType):
     #     id = args.get('id')
     #     return ObjectTOC(id=id)
 
-    def resolve_publishingentity(self, args, context, info):
-        id = args.get('id')
+    def resolve_publishingentity(self, info, id):
         return PublishingEntity(id=id)
 
-    def resolve_translationatom(self, args, context, info):
-        id = args.get('id')
+    def resolve_translationatom(self, info, id):
         return TranslationAtom(id=id)
 
-    def resolve_translationgist(self, args, context, info):
-        id = args.get('id')
+    def resolve_translationgist(self, info, id):
         return TranslationGist(id=id)
 
-    def resolve_userblobs(self, args, context, info):
-        id = args.get('id')
+    def resolve_translationgists(self, info):
+        """
+        example:
+        query GistsList {
+            translationgists {
+                id
+                type
+            }
+        }
+        """
+
+        gists = DBSession.query(dbTranslationGist).order_by(dbTranslationGist.type).all()
+        gists_list = [TranslationGist(id=[gist.client_id, gist.object_id],
+                                      type=gist.type) for gist in gists]
+        return gists_list
+
+    def resolve_userblobs(self, info, id):
         return UserBlobs(id=id)
 
-    def resolve_field(self, args, context, info):
-        client_id = context.get("client_id")
-        id = args.get('id')
+    def resolve_field(self, info, id):
+        client_id = info.context.get("client_id")
         return Field(id=id)
 
-    def resolve_lexicalentry(self, args, context, info):
-        id = args.get('id')
+    def resolve_lexicalentry(self, info, id):
         return LexicalEntry(id=id)
 
-    def resolve_all_locales(self, args, context, info):
+    def resolve_all_locales(self, info, id):
         response = list()
         locales = DBSession.query(dbLocale).all()
         for locale in locales:
@@ -406,6 +460,370 @@ class Query(graphene.ObjectType):
             locale_json['id'] = locale.id
             response.append(locale_json)
         return response
+
+
+    def resolve_lexicalentries(self, info, searchstring, field_id, perspective_id, can_add_tags, search_in_published): #basic_search() function
+        if searchstring:
+            if len(searchstring) >= 1:
+                field = None
+                if field_id:
+                    field_client_id, field_object_id = field_id[0], field_id[1]
+                    field = DBSession.query(dbField).filter_by(client_id=field_client_id, object_id=field_object_id).first()
+
+                client_id = info.context["client_id"]
+                group = DBSession.query(dbGroup).filter(dbGroup.subject_override == True).join(dbBaseGroup) \
+                    .filter(dbBaseGroup.subject == 'lexical_entries_and_entities', dbBaseGroup.action == 'view') \
+                    .join(dbUser, dbGroup.users).join(Client) \
+                    .filter(Client.id == client_id).first()
+
+                published_cursor = None
+
+                if group:
+                    results_cursor = DBSession.query(dbEntity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
+                    if perspective_id:
+                        perspective_client_id, perspective_object_id = perspective_id
+                        results_cursor = results_cursor.join(dbLexicalEntry) \
+                            .join(dbPerspective) \
+                            .filter(dbPerspective.client_id == perspective_client_id,
+                                    dbPerspective.object_id == perspective_object_id)
+                else:
+                    results_cursor = DBSession.query(dbEntity) \
+                        .join(dbEntity.parent) \
+                        .join(dbPerspective)
+
+                    if not perspective_id:
+                        published_cursor = results_cursor
+
+                    ignore_groups = False
+                    request = info.context.get('request')
+                    subreq = Request.blank('/translation_service_search')
+                    subreq.method = 'POST'
+                    subreq.headers = request.headers
+                    subreq.json = {'searchstring': 'Published'}
+                    headers = dict()
+                    if request.headers.get('Cookie'):
+                        headers = {'Cookie': request.headers['Cookie']}
+                    subreq.headers = headers
+                    resp = request.invoke_subrequest(subreq)
+
+                    if 'error' not in resp.json:
+                        state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], \
+                                                                                             resp.json['client_id']
+                    else:
+                        raise KeyError("Something wrong with the base", resp.json['error'])
+
+                    if perspective_id:
+                        perspective_client_id, perspective_object_id = perspective_id
+                        results_cursor = results_cursor.filter(dbPerspective.client_id == perspective_client_id,
+                                                               dbPerspective.object_id == perspective_object_id)
+                        persp = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id,
+                                                                                 object_id=perspective_object_id).first()
+                        if persp and persp.state_translation_gist_client_id == state_translation_gist_client_id and persp.state_translation_gist_object_id == state_translation_gist_object_id:
+                            ignore_groups = True
+                    else:
+                        published_cursor = results_cursor
+
+                    if not ignore_groups:
+                        results_cursor = results_cursor.join(dbGroup, and_(
+                            dbPerspective.client_id == dbGroup.subject_client_id,
+                            dbPerspective.object_id == dbGroup.subject_object_id)) \
+                            .join(dbBaseGroup) \
+                            .join(dbUser, dbGroup.users) \
+                            .join(Client) \
+                            .filter(Client.id == client_id,
+                                    dbEntity.content.like('%' + searchstring + '%'), dbEntity.marked_for_deletion == False)
+                    else:
+                        results_cursor = results_cursor.filter(dbEntity.content.like('%' + searchstring + '%'),
+                                                               dbEntity.marked_for_deletion == False)
+                    if published_cursor:
+                        published_cursor = published_cursor \
+                            .join(dbPerspective.parent).filter(
+                            dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                            dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id,
+                            dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                            dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
+                            dbEntity.content.like('%' + searchstring + '%'))
+
+                    if can_add_tags:
+                        results_cursor = results_cursor \
+                            .filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+                                    or_(dbBaseGroup.action == 'create', dbBaseGroup.action == 'view')) \
+                            .group_by(dbEntity).having(func.count('*') == 2)
+                        # results_cursor = list()
+                    else:
+                        results_cursor = results_cursor.filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+                                                       dbBaseGroup.action == 'view')
+
+                    if field:
+                        results_cursor = results_cursor.join(dbPerspective.dictionaryperspectivetofield).filter(
+                            dbPerspectiveToField.field == field)
+                        if published_cursor:
+                            published_cursor = published_cursor.join(
+                                dbPerspective.dictionaryperspectivetofield).filter(
+                                dbPerspectiveToField.field == field)
+
+                    entries = list()
+
+                    for item in results_cursor:
+                        if item.parent not in entries:
+                            entries.append(item.parent)
+                    if published_cursor:
+                        for item in published_cursor:
+                            if item.parent not in entries:
+                                entries.append(item.parent)
+
+                    lexical_entries = list()
+                    for entry in entries:
+                        if not entry.marked_for_deletion:
+                            # print(entry.__class__)
+                            if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_deleted():
+                                continue
+                            if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_hidden():
+                                continue
+                            # if (entry.parent_client_id, entry.parent_object_id) in DictionaryPerspective.get_etymology():
+                            #     continue
+                            """
+                            url = request.route_url('perspective',
+                                                    dictionary_client_id=entry.parent.parent.client_id,
+                                                    dictionary_object_id=entry.parent.parent.object_id,
+                                                    perspective_client_id=entry.parent_client_id,
+                                                    perspective_object_id=entry.parent_object_id)
+                            subreq = Request.blank(url)
+                            subreq.method = 'GET'
+                            headers = {'Cookie': request.headers['Cookie']}
+                            subreq.headers = headers
+                            resp = request.invoke_subrequest(subreq)
+                            result = resp.json
+                            """
+                            #print(request)
+                            lexical_entries.append(entry.track(search_in_published, 1)) #request.cookies['locale_id']
+
+                    lexical_entries_list = list()
+                    for entry in lexical_entries:
+                        entities = []
+                        #print(entry['contains'])
+                        for ent in entry['contains']:
+
+                            # del attributes that Entity class doesn`t have
+                            # the code below has to be refactored
+
+                            del ent["contains"]
+                            del ent["level"]
+                            del ent["accepted"]
+                            del ent["published"]
+                            if "link_client_id" in ent and "link_object_id" in ent:
+                                ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
+                            else:
+                                ent["link_id"] = None
+                            ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
+                            if "self_client_id" in ent and "self_object_id" in ent:
+                                ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
+                            else:
+                                ent["self_id"] = None
+                                # context["request"].body = str(context["request"].body).replace("self_id", "").encode("utf-8")
+                            if "content" not in ent:
+                                ent["content"] = None
+                            if "additional_metadata" in ent:
+                                # used in AdditionalMetadata interface (gql_holders.py) and sets metadata dictionary
+
+                                ent["additional_metadata_string"] = ent["additional_metadata"]
+                                del ent["additional_metadata"]
+                            if 'entity_type' in ent:
+                                del ent['entity_type']
+                            gr_entity_object = Entity(id=[ent['client_id'],
+                                                          ent['object_id']],
+                                                      # link_id = (ent["link_client_id"], ent["link_object_id"]),
+                                                      parent_id=(ent["parent_client_id"], ent["parent_object_id"]),
+                                                      **ent  # all other args from sub_result
+                                                      )
+                            print(ent)
+                            entities.append(gr_entity_object)
+                        #print(entry)
+                        #del entry["entries"]
+                        del entry["published"]
+                        del entry["contains"]
+                        del entry["level"]
+                        gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
+                                                                  entry['object_id']],
+                                                              entities=entities, **entry)
+
+                        lexical_entries_list.append(gr_lexicalentry_object)
+                    return lexical_entries_list
+            raise ResponseError(message="Bad string")
+
+        def resolve_advanced_lexicalentries(self, info, searchstrings, perspectives, adopted, adopted_type, with_etimology): #advanced_search() function
+            #from sqlalchemy import bindparam
+            request = info.context.get('request')
+
+            if not perspectives:
+                subreq = Request.blank('/translation_service_search')
+                subreq.method = 'POST'
+                subreq.headers = request.headers
+                subreq.json = {'searchstring': 'Published'}
+                headers = {'Cookie': request.headers['Cookie']}
+                subreq.headers = headers
+                resp = request.invoke_subrequest(subreq)
+                if 'error' not in resp.json:
+                    state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], \
+                                                                                         resp.json[
+                                                                                             'client_id']
+                    published_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+                else:
+                    raise KeyError("Something wrong with the base", resp.json['error'])
+                subreq = Request.blank('/translation_service_search')
+                subreq.method = 'POST'
+                subreq.headers = request.headers
+                subreq.json = {'searchstring': 'Limited access'}
+                headers = {'Cookie': request.headers['Cookie']}
+                subreq.headers = headers
+                resp = request.invoke_subrequest(subreq)
+                if 'error' not in resp.json:
+                    state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], \
+                                                                                         resp.json[
+                                                                                             'client_id']
+                    limited_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+                else:
+                    raise KeyError("Something wrong with the base", resp.json['error'])
+
+                perspectives = [(persp.client_id, persp.object_id) for persp in DBSession.query(dbPerspective).filter(
+                    dbPerspective.marked_for_deletion == False,
+                    or_(and_(dbPerspective.state_translation_gist_client_id == published_gist[0],
+                             dbPerspective.state_translation_gist_object_id == published_gist[1]),
+                        and_(dbPerspective.state_translation_gist_client_id == limited_gist[0],
+                             dbPerspective.state_translation_gist_object_id == limited_gist[1]))).all()]
+
+            def make_query(searchstring, perspectives):
+                results_cursor = DBSession.query(dbLexicalEntry).join(dbEntity.parent) \
+                    .join(dbEntity.field).join(dbTranslationAtom,
+                                             and_(dbField.translation_gist_client_id == dbTranslationAtom.parent_client_id,
+                                                  dbField.translation_gist_object_id == dbTranslationAtom.parent_object_id,
+                                                  dbField.marked_for_deletion == False)) \
+                    .distinct(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                if perspectives:
+                    results_cursor = results_cursor.filter(
+                        tuple_(dbLexicalEntry.parent_client_id, dbLexicalEntry.parent_object_id).in_(perspectives))
+                if not searchstring['searchstring']:
+                    raise ResponseError(message="Error: bad argument 'searchstring'.")
+                search_parts = searchstring['searchstring'].split()
+                search_expression = dbEntity.content.like('%' + search_parts[0] + '%')
+                to_do_or = searchstring.get('search_by_or', True)
+
+                for part in search_parts[1:]:
+                    search_expression = or_(search_expression, dbEntity.content.like('%' + part + '%'))
+                if 'entity_type' in searchstring and searchstring['entity_type']:
+                    search_expression = and_(search_expression, dbField.client_id == searchstring['entity_type'][0],
+                                             dbField.object_id == searchstring['entity_type'][1])
+
+                results_cursor = results_cursor.filter(search_expression)
+                return results_cursor, to_do_or
+
+            if not searchstrings[0]:
+                raise ResponseError(message="Error: bad argument 'searchstrings'")
+
+            results_cursor, to_do_or = make_query(searchstrings[0], perspectives)
+
+            pre_results = set(results_cursor.all())
+            if adopted:
+                results_cursor = DBSession.query(dbLexicalEntry).join(dbEntity.parent).filter(
+                    dbEntity.content.like('%заим.%'))
+                if adopted_type:
+                    results_cursor = results_cursor.join(dbEntity.field) \
+                        .join(dbTranslationAtom,
+                              and_(dbField.translation_gist_client_id == dbTranslationAtom.parent_client_id,
+                                   dbField.translation_gist_object_id == dbTranslationAtom.parent_object_id,
+                                   dbField.marked_for_deletion == False)) \
+                        .filter(dbTranslationAtom.content == adopted_type,
+                                dbTranslationAtom.locale_id == 2)
+                pre_results = pre_results & set(results_cursor.all())
+            if with_etimology:
+                results_cursor = DBSession.query(dbLexicalEntry).join(dbEntity.parent).join(dbEntity.field) \
+                    .join(dbTranslationAtom,
+                          and_(dbField.data_type_translation_gist_client_id == dbTranslationAtom.parent_client_id,
+                               dbField.data_type_translation_gist_object_id == dbTranslationAtom.parent_object_id,
+                               dbField.marked_for_deletion == False)) \
+                    .filter(dbTranslationAtom.content == 'Grouping Tag',
+                            dbTranslationAtom.locale_id == 2)
+
+            pre_results = pre_results & set(results_cursor.all())
+
+            if with_etimology:
+                results_cursor = DBSession.query(dbLexicalEntry).join(dbEntity.parent).join(dbEntity.field) \
+                    .join(dbTranslationAtom,
+                          and_(dbField.data_type_translation_gist_client_id == dbTranslationAtom.parent_client_id,
+                               dbField.data_type_translation_gist_object_id == dbTranslationAtom.parent_object_id,
+                               dbField.marked_for_deletion == False)) \
+                    .filter(dbTranslationAtom.content == 'Grouping Tag',
+                            dbTranslationAtom.locale_id == 2)
+                pre_results = pre_results & set(results_cursor.all())
+            for search_string in searchstrings[1:]:
+                results_cursor, to_do_or_new = make_query(search_string, perspectives)
+                if to_do_or:
+                    pre_results = pre_results | set(results_cursor.all())
+                else:
+                    pre_results = pre_results & set(results_cursor.all())
+            to_do_or = to_do_or_new
+
+            lexes_composite_list = [(lex.created_at,
+                                     lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                                     lex.marked_for_deletion, lex.additional_metadata,
+                                     lex.additional_metadata.get('came_from')
+                                     if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                                    for lex in pre_results]
+
+            lexical_entries = dbLexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2),
+                                                  publish=True, accept=True)
+
+            lexical_entries_list = list()
+            for entry in lexical_entries:
+                entities = []
+                # print(entry['contains'])
+                for ent in entry['contains']:
+
+                    # del attributes that Entity class doesn`t have
+                    # the code below has to be refactored
+
+                    del ent["contains"]
+                    del ent["level"]
+                    del ent["accepted"]
+                    del ent["published"]
+                    if "link_client_id" in ent and "link_object_id" in ent:
+                        ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
+                    else:
+                        ent["link_id"] = None
+                    ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
+                    if "self_client_id" in ent and "self_object_id" in ent:
+                        ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
+                    else:
+                        ent["self_id"] = None
+                        # context["request"].body = str(context["request"].body).replace("self_id", "").encode("utf-8")
+                    if "content" not in ent:
+                        ent["content"] = None
+                    if "additional_metadata" in ent:
+                        # used in AdditionalMetadata interface (gql_holders.py) and sets metadata dictionary
+
+                        ent["additional_metadata_string"] = ent["additional_metadata"]
+                        del ent["additional_metadata"]
+                    # del ent['entity_type']
+                    gr_entity_object = Entity(id=[ent['client_id'],
+                                                  ent['object_id']],
+                                              # link_id = (ent["link_client_id"], ent["link_object_id"]),
+                                              parent_id=(ent["parent_client_id"], ent["parent_object_id"]),
+                                              # **ent  # all other args from sub_result
+                                              )
+                    # print(ent)
+                    entities.append(gr_entity_object)
+                # print(entry)
+                # del entry["entries"]
+                del entry["published"]
+                del entry["contains"]
+                del entry["level"]
+                gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
+                                                          entry['object_id']],
+                                                      entities=entities, **entry)
+
+                lexical_entries_list.append(gr_lexicalentry_object)
+            return lexical_entries_list
+
 
 
 class MyMutations(graphene.ObjectType):

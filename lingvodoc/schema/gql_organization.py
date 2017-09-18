@@ -64,7 +64,7 @@ class CreateOrganization(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         name = graphene.String()
         about = graphene.String()
 
@@ -130,7 +130,7 @@ class UpdateOrganization(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         organization_id = graphene.Int()
         add_users = graphene.List(graphene.Int)
         delete_users = graphene.List(graphene.Int)
@@ -222,7 +222,7 @@ class DeleteOrganization(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         organization_id = graphene.Int()
 
     organization = graphene.Field(Organization)

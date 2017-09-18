@@ -50,35 +50,35 @@ class User(graphene.ObjectType):
         interfaces = (IdHolder, CreatedAt, AdditionalMetadata, Name)
 
     @fetch_object()
-    def resolve_login(self, args, context, info):
+    def resolve_login(self, info):
         return self.dbObject.login
 
     @fetch_object()
-    def resolve_name(self, args, context, info):
+    def resolve_name(self, info):
         return self.dbObject.name
 
     @fetch_object()
-    def resolve_intl_name(self, args, context, info):
+    def resolve_intl_name(self, info):
         return self.dbObject.intl_name
 
     @fetch_object()
-    def resolve_default_locale_id(self, args, context, info):
+    def resolve_default_locale_id(self, info):
         return self.dbObject.default_locale_id
 
     @fetch_object()
-    def resolve_birthday(self, args, context, info):
+    def resolve_birthday(self, info):
         return self.dbObject.birthday
 
     @fetch_object()
-    def resolve_is_active(self, args, context, info):
+    def resolve_is_active(self, info):
         return self.dbObject.is_active
 
     @fetch_object()
-    def resolve_created_at(self, args, context, info):
+    def resolve_created_at(self, info):
         return self.dbObject.created_at
 
     @fetch_object()
-    def resolve_additional_metadata(self, args, context, info):
+    def resolve_additional_metadata(self, info):
         return self.dbObject.additional_metadata
 
 
@@ -108,7 +108,7 @@ class CreateUser(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         login = graphene.String()
         email = graphene.String()
         name = graphene.String()
@@ -195,7 +195,7 @@ class UpdateUser(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         #id = graphene.List(graphene.Int)
         client_id = graphene.Int()
         user_id = graphene.Int()

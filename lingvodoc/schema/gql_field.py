@@ -59,12 +59,13 @@ class Field(graphene.ObjectType):
     #    #return self.dbObject.data_type
 
     @fetch_object("translation")
-    def resolve_translation(self, args, context, info):
+    def resolve_translation(self, info):
+        context = info.context
         return self.dbObject.get_translation(context.get('locale_id'))
 
 
 class CreateField(graphene.Mutation):
-    class Input:
+    class Arguments:
         translation_gist_id = graphene.List(graphene.Int)
         data_type_translation_gist_id = graphene.List(graphene.Int)
 
@@ -104,7 +105,7 @@ class CreateField(graphene.Mutation):
 
 
 class UpdateField(graphene.Mutation):
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
     field = graphene.Field(Field)
     triumph = graphene.Boolean()
@@ -123,7 +124,7 @@ class UpdateField(graphene.Mutation):
 
 
 class DeleteField(graphene.Mutation):
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
 
     marked_for_deletion = graphene.Boolean()

@@ -44,7 +44,7 @@ class Language(graphene.ObjectType):
         interfaces = (CommonFieldsComposite, TranslationHolder)
 
     @fetch_object()
-    def resolve_dictionaries(self, args, context, info):
+    def resolve_dictionaries(self, info):
         result = list()
         for dictionary in DBSession.query(dbDictionary).filter(
                 and_(dbDictionary.parent_object_id == self.dbObject.object_id,
@@ -90,7 +90,7 @@ class CreateLanguage(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
@@ -180,7 +180,7 @@ class UpdateLanguage(graphene.Mutation):
       }
     }
     """
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
@@ -238,7 +238,7 @@ class DeleteLanguage(graphene.Mutation):
     }
     """
 
-    class Input:
+    class Arguments:
         id = graphene.List(graphene.Int)
 
     language = graphene.Field(Language)
