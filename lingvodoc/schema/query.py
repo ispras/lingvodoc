@@ -107,6 +107,7 @@ from lingvodoc.models import (
     Entity as dbEntity,
     LexicalEntry as dbLexicalEntry,
     DictionaryPerspectiveToField as dbPerspectiveToField,
+    Locale as dbLocale,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     Email as dbEmail,
@@ -145,7 +146,6 @@ class Query(graphene.ObjectType):
     users = graphene.List(User, search=graphene.String())
     field = graphene.Field(Field, id=graphene.List(graphene.Int))
     translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
-    translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
     organization = graphene.Field(Organization, id=graphene.List(graphene.Int))
     organizations = graphene.List(Organization)
     lexicalentry = graphene.Field(LexicalEntry, id=graphene.List(graphene.Int))
@@ -160,6 +160,7 @@ class Query(graphene.ObjectType):
     translationgist = graphene.Field(TranslationGist, id = graphene.List(graphene.Int))
     translationgists = graphene.List(TranslationGist)
 
+    all_locales = graphene.List(graphene.String)
 
     def resolve_dictionaries(self, info, published):
         """
@@ -447,6 +448,18 @@ class Query(graphene.ObjectType):
 
     def resolve_lexicalentry(self, info, id):
         return LexicalEntry(id=id)
+
+    def resolve_all_locales(self, info, id):
+        response = list()
+        locales = DBSession.query(dbLocale).all()
+        for locale in locales:
+            locale_json = dict()
+            locale_json['shortcut'] = locale.shortcut
+            locale_json['intl_name'] = locale.intl_name
+            locale_json['created_at'] = locale.created_at
+            locale_json['id'] = locale.id
+            response.append(locale_json)
+        return response
 
 
     def resolve_lexicalentries(self, info, searchstring, field_id, perspective_id, can_add_tags, search_in_published): #basic_search() function
