@@ -73,11 +73,11 @@ class CreateOrganization(graphene.Mutation):
 
     @staticmethod
     @acl_check_by_id('create', 'organization')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         name = args.get('name')
         about = args.get('about')
 
-        client_id = context["client_id"]
+        client_id = info.context["client_id"]
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
             raise ResponseError(message="Invalid client id (not registered on server). Try to logout and then login.")
@@ -142,11 +142,11 @@ class UpdateOrganization(graphene.Mutation):
 
     @staticmethod
     @acl_check_by_id('edit', 'organization')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         organization_id = args.get('organization_id')
         dborganization = DBSession.query(dbOrganization).filter_by(id=organization_id).first()
 
-        client_id = context["client_id"]
+        client_id = info.context["client_id"]
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
             raise ResponseError(message="Invalid client id (not registered on server). Try to logout and then login.")
@@ -229,7 +229,7 @@ class DeleteOrganization(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         organization_id = args.get('organization_id')
         dborganization = DBSession.query(dbOrganization).filter_by(id=organization_id).first()
         if dborganization:
