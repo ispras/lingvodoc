@@ -686,7 +686,7 @@ def find_max_interval_praat(sound, interval_list):
 
 
 #: Set of vowels used by computation of phonology of dictionary perspectives.
-vowel_set = set('AEIOUYaeiouyÄÆÉØäæéøŒœƆƏƐƗƜƟƱɄɅɐɑɒɔɘəɛɜɞɤɨɪɯɵɶʉʊʌʏ̞̈̽АОаоⱭⱯⱰꞫ')
+vowel_set = set('AEIOUYaeiouyÄÆÉØäæéøŒœƆƏƐƗƜƟƱɄɅɐɑɒɔɘəɛɜɞɤɨɪɯɵɶʉʊʌʏАОаоⱭⱯⱰꞫ')
 
 
 #: List of Unicode characters which can be used to write phonetic transcriptions.
@@ -2628,7 +2628,7 @@ def perform_phonology(
     current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
     result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}'.format(
-        dictionary_name, perspective_name,
+        dictionary_name[:64], perspective_name[:64],
         current_datetime.year,
         current_datetime.month,
         current_datetime.day)
@@ -2653,8 +2653,28 @@ def perform_phonology(
 
     workbook_stream.seek(0)
 
-    with open(storage_path, 'wb+') as workbook_file:
-        copyfileobj(workbook_stream, workbook_file)
+    # If the name of the result file is too long, we try again with a shorter name.
+
+    try:
+        with open(storage_path, 'wb+') as workbook_file:
+            copyfileobj(workbook_stream, workbook_file)
+
+    except OSError as os_error:
+
+        if os_error.errno != 36:
+            raise
+
+        result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}'.format(
+            dictionary_name[:32], perspective_name[:32],
+            current_datetime.year,
+            current_datetime.month,
+            current_datetime.day)
+
+        table_filename = sanitize_filename(result_filename + '.xlsx')
+        storage_path = path.join(storage_dir, table_filename)
+
+        with open(storage_path, 'wb+') as workbook_file:
+            copyfileobj(workbook_stream, workbook_file)
 
     # Storing 3d F1/F2/F3 scatter charts, if we have any.
 
