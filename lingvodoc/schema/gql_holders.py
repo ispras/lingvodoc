@@ -246,7 +246,7 @@ class CompositeIdHolder(graphene.Interface):
 
 
 class CreatedAt(graphene.Interface):
-    created_at = DateTime()
+    created_at = graphene.Int() #DateTime()
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
