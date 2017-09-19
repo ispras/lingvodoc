@@ -70,10 +70,10 @@ def acl_check_by_id(action, subject, id_key='id'):
 
     def decorator(resolve_f):
         #todo: rewrite
-        def wrapper(self, args, context, *resolve_f_args):
+        def wrapper(self, args, context, id_key='id', *resolve_f_args):
 
             if context.acl_check_if(action, subject, args.get(id_key)):
-                return resolve_f(self, args, context, *resolve_f_args)
+                return resolve_f(self, args, context, id_key='id', *resolve_f_args)
 
             else:
                 raise PermissionException(context.client_id, action, subject, args.get(id_key))
