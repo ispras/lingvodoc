@@ -133,9 +133,9 @@ class CreateTranslationAtom(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         ids = args.get("id")
-        client_id = ids[0] if ids else context["client_id"]
+        client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0]
@@ -193,7 +193,7 @@ class UpdateTranslationAtom(graphene.Mutation):
 
     @staticmethod
     @acl_check_by_id('edit', 'translations')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         content = args.get('content')
         id = args.get('id')
         client_id = id[0]

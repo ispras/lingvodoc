@@ -216,9 +216,9 @@ class CreateDictionary(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         ids = args.get("id")
-        client_id = ids[0] if ids else context["client_id"]
+        client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
         parent_client_id, parent_object_id = args.get('parent_id')
         translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
@@ -386,9 +386,9 @@ class UpdateDictionary(graphene.Mutation):
     @staticmethod
     @client_id_check()
     @acl_check_by_id('edit', 'dictionary')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         ids = args.get('id')
-        client_id = ids[0] if ids else context["client_id"]
+        client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0] if parent_id else None
@@ -437,7 +437,7 @@ class DeleteDictionary(graphene.Mutation):
     @staticmethod
     @client_id_check()
     @acl_check_by_id('delete', 'dictionary')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         ids = args.get('id')
         if not ids:
             raise ResponseError(message="id not found")

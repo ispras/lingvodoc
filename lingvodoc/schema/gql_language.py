@@ -128,9 +128,9 @@ class CreateLanguage(graphene.Mutation):
     @staticmethod
     @client_id_check()
     @acl_check_by_id('create', 'language')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0] if id else context["client_id"]
+        client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0] if parent_id else None
@@ -191,7 +191,7 @@ class UpdateLanguage(graphene.Mutation):
     @staticmethod
     @client_id_check()
     @acl_check_by_id('edit', 'language')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]
@@ -246,7 +246,7 @@ class DeleteLanguage(graphene.Mutation):
 
     @staticmethod
     @acl_check_by_id('delete', 'language')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]
