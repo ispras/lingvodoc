@@ -160,7 +160,7 @@ class Query(graphene.ObjectType):
     translationgist = graphene.Field(TranslationGist, id = graphene.List(graphene.Int))
     translationgists = graphene.List(TranslationGist)
 
-    all_locales = graphene.List(graphene.String)
+    all_locales = graphene.List(ObjectVal)
 
     def resolve_dictionaries(self, info, published):
         """
