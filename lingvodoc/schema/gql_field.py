@@ -77,9 +77,9 @@ class CreateField(graphene.Mutation):
     id = graphene.List(graphene.Int)
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         #subject = 'language'
-        client_id = context["client_id"]
+        client_id = info.context["client_id"]
         if client_id:
             data_type_translation_gist_id = args.get('data_type_translation_gist_id')
             translation_gist_id = args.get('translation_gist_id')
@@ -111,10 +111,10 @@ class UpdateField(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         #print(args.get('locale_id'))
         #client_id = context.authenticated_userid
-        client_id = context["client_id"]
+        client_id = info.context["client_id"]
         #print(args)
         id = args.get('id')
         dbfield_obj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
@@ -132,12 +132,12 @@ class DeleteField(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         #client_id = context.authenticated_userid
-        client_id = context["client_id"]
+        client_id = info.context["client_id"]
         id = args.get('id')
         fieldobj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
         del_object(fieldobj)
         field = Field(id = id)
-        return DeleteField(field=field, triumph = true)
+        return DeleteField(field=field, triumph = True)
 

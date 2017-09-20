@@ -89,7 +89,7 @@ class CreateGrant(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         issuer_translation_gist_client_id, issuer_translation_gist_object_id = args.get('issuer_translation_gist_id')
         translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
         issuer_url = args.get('issuer_url')
@@ -112,7 +112,7 @@ class CreateGrant(graphene.Mutation):
             return ResponseError(message="Error: day, month or year of the end date is missing")
         end = datetime.date(end_year, end_month, end_day)
 
-        client_id = context["client_id"]
+        client_id = info.context["client_id"]
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
@@ -177,7 +177,7 @@ class UpdateGrant(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         grant_id = args.get('grant_id')
         issuer_translation_gist_id = args.get('issuer_translation_gist_id')
         translation_gist_id = args.get('translation_gist_id')
@@ -231,7 +231,7 @@ class DeleteGrant(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         grant_id = args.get('grant_id')
         dbgrant = DBSession.query(dbGrant).filter_by(id=grant_id).first()
         if not dbgrant:
