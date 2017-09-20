@@ -92,7 +92,7 @@ class CreateTranslationGist(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         type = args.get('type')
         id = args.get('id')
 
@@ -104,7 +104,7 @@ class CreateTranslationGist(graphene.Mutation):
             client_id_from_args = id[0]
             object_id = id[1]
 
-        client_id = context["client_id"]
+        client_id = info.context["client_id"]
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
@@ -170,7 +170,7 @@ class DeleteTranslationGist(graphene.Mutation):
 
     @staticmethod
     @acl_check_by_id('delete', 'translations')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]

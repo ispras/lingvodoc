@@ -1175,7 +1175,9 @@ def graphql(request):
                                             context_value=Context({
                                                 'client_id': client_id,
                                                 'locale_id': locale_id,
-                                                'request': request}),
+                                                'request': request,
+                                                'headers': request.headers,
+                                                'cookies': dict(request.cookies)}),
                                             variable_values=variable_values)
                     results.append(result.data)
                 # TODO: check errors

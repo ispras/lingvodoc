@@ -100,11 +100,10 @@ class DictionaryPerspective(graphene.ObjectType):
 
     @fetch_object('status')
     def resolve_status(self, info):
-        context = info.context
         atom = DBSession.query(dbTranslationAtom).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
-            locale_id=int(context.get('locale_id'))
+            locale_id=int(info.context.get('locale_id'))
         ).first()
         if atom:
             return atom.content
@@ -129,8 +128,7 @@ class DictionaryPerspective(graphene.ObjectType):
 
     @fetch_object()  # TODO: ?
     def resolve_fields(self, info):
-        context = info.context
-        locale_id = context.get("locale_id")
+        locale_id = info.context.get("locale_id")
         dbfields = self.dbObject.dictionaryperspectivetofield
         result = list()
         for dbfield in dbfields:
@@ -141,9 +139,8 @@ class DictionaryPerspective(graphene.ObjectType):
 
     @acl_check_by_id('view', 'approve_entities')
     def resolve_lexicalentries(self, info):
-        context = info.context
         result = list()
-        request = context.get('request')
+        request = info.context.get('request')
         # dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
         lexes = DBSession.query(dbLexicalEntry).filter_by(parent=self.dbObject)
 
@@ -320,9 +317,10 @@ class CreateDictionaryPerspective(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    @acl_check_by_id('create', 'perspective', id_key = "parent_id")
+    def mutate(root, info, **args):
         id = args.get("id")
-        client_id = id[0] if id else context["client_id"]
+        client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0]
@@ -396,7 +394,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
     @staticmethod
     @client_id_check()
     @acl_check_by_id('edit', 'perspective')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0]
         object_id = id[1]
@@ -479,7 +477,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
     @staticmethod
     @client_id_check()
     @acl_check_by_id('delete', 'perspective')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0]
         object_id = id[1]

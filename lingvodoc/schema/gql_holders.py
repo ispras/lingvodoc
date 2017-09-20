@@ -63,20 +63,18 @@ def acl_check_by_id(action, subject, id_key='id'):
             ...
     With different identifier argument key, that is, assuming that subject identifier is  args.get(
     'different_id_key'):
-        @acl_check_by_id('view', 'dictionary_role', 'different_id_key')
-        def resolve_dictionary_role(self, args, context, info):
+     @client_id_check()
+     @acl_check_by_id('create', 'perspective', id_key = "parent_id")
             ...
     """
 
     def decorator(resolve_f):
-        #todo: rewrite
-        def wrapper(self, args, context, *resolve_f_args):
-
-            if context.acl_check_if(action, subject, args.get(id_key)):
-                return resolve_f(self, args, context, *resolve_f_args)
+        def wrapper(self,info, kwargs):
+            if info.context.acl_check_if(action, subject, kwargs.get(id_key)):
+                return resolve_f(self, info, **kwargs )
 
             else:
-                raise PermissionException(context.client_id, action, subject, args.get(id_key))
+                raise PermissionException(info.context.client_id, action, subject, kwargs.get(id_key))
 
         return wrapper
 
@@ -93,9 +91,10 @@ def client_id_check():
                 return wrapper_args["id"][0]
 
     def decorator(resolve_f):
-        def wrapper(self, args, context, *resolve_f_args):
-            client_id = get_client_id_from_args(args)
-            authenticated = context.client_id
+        def wrapper(self, *args, **kwargs):
+            client_id = get_client_id_from_args(kwargs)
+            info = args[0]
+            authenticated = info.context.client_id
             if client_id:
                 if not check_client_id(authenticated, client_id):
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -105,7 +104,7 @@ def client_id_check():
                 if not client:
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                                    authenticated)
-            return resolve_f(self, args, context, *resolve_f_args)
+            return resolve_f(self, args[0], kwargs)
 
         return wrapper
 
@@ -247,11 +246,11 @@ class CompositeIdHolder(graphene.Interface):
 
 
 class CreatedAt(graphene.Interface):
-    created_at = DateTime()
+    created_at = graphene.Int() #DateTime()
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
-        return self.dbObject.created_at
+        return self.dbObject.created_at.timestamp()
 
 
 class Relationship(graphene.Interface):

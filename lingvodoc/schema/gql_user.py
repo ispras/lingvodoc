@@ -119,7 +119,7 @@ class CreateUser(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         login = args.get('login')
         name = args.get('name')
         email = args.get('email')
@@ -213,7 +213,7 @@ class UpdateUser(graphene.Mutation):
     @staticmethod
     @client_id_check()
     @acl_check_by_id('edit', 'edit_user')
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         #id = args.get('id')
         client_id = args.get('client_id')
         user_id = args.get('user_id')

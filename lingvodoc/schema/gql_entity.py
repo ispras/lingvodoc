@@ -116,9 +116,9 @@ class CreateEntity(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0] if id else context["client_id"]
+        client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         parent_client_id, parent_object_id = args.get('lexical_entry_id')
 
@@ -289,7 +289,7 @@ class UpdateEntity(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         dbpublishingentity = DBSession.query(dbPublishingEntity).filter_by(client_id=client_id, object_id=object_id).first()
         if dbpublishingentity:
@@ -312,7 +312,7 @@ class DeleteEntity(graphene.Mutation):
     entity = graphene.Field(Entity)
 
     @staticmethod
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         client_id, object_id = args.get('id')
 
         dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()

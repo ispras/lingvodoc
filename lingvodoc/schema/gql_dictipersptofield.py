@@ -132,9 +132,9 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get("id")
-        client_id = id[0] if id else context["client_id"]
+        client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         parent_id = args.get('parent_id')
         parent_client_id = parent_id[0]
@@ -210,7 +210,7 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0]
         object_id = id[1]
@@ -284,7 +284,7 @@ class DeleteDictionaryPerspectiveToField(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, args, context, info):
+    def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]
