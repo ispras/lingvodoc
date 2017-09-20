@@ -248,50 +248,14 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
 def testing(request):
     import requests
     from sqlalchemy.orm.attributes import flag_modified
-    id_to_hash = {  (330, 1511) : "7eaa0525eb53b442aff3694a6aed7bbb834e11d7755b3809afa56091",
-                    (303, 6503) : "c2355bfeb03e8c9b22f384073dd5bc0ed3c6475f49069b8604867299",
-                    (277, 5799) : "359f5c42aea967c8709424fdc45612fb581a1e97dc9bfa359a81432b",
-                    (224, 6101) : "facfa20b673bb82c5baab083b4e5a58fb97a147628c6091f5d3e5b9f",
-                    (84, 10919) : "a49fb0ceedcec5175093dfdbb97b912c457a0011a6d54a9d25c86386",
-                    (77, 6424) : "2a7f26edac7b13a61a4ca29a753ca6b2f10e2a34e16b1d97cc540214",
-                    (85, 16183) : "1a6690b6f2b9a457946aec1df553ef2567f5d39a73eaf93bb91e0e26",
-                    (82, 8216) : "c00d86385b1fa6b2f255ce19f547d4b85b81a446f0af7ece322040ee",
-                    (78, 5020) : "906f45a9b1d28a1e63c4cedb4371f38738f78063c8f5a0e89454f7c2",
-                    (78, 5254) : "d7c1dbf342a45e2c81000f0bbde1f98f4f140e2ba2ac797b4c64c16b",
-                    (75, 3437) : "da7b7f2c3b0beae2343caa1596e7a42112acb9e54020d63ac8f930b4",
-                    (75, 3763) : "411edb3609b2689de9937f86ae2838e8b98dc4b3706d543dfbc1af88",
-                    (126, 7951) : "95508de6acdeecf9d6b183f162880942a163615d0013c161eb768db3",
-                    (425, 3709) : "f47e9e3183e0016192ae1fe173c5ffd2b70064614f11f17c65a50aa2",
-                    (522, 15499) : "1792751f3644bfcadecf0579a33337477f9d13c2917eb999958438ad",
-                    (630, 16966) : "b0aa5f52543f315fb7f896ce7f693d83fbbd379cdbf511a0ac432bd8",
-                    (660, 12386) : "d0189e84d06d6e44c01076f5304109a3b3f84105f20ebf19d76955a3",
-                    (662, 5738) : "ed83de4601db161147d152b3e90e4ae952965974d97d10300dd543a0",
-                    (662, 5886) : "037180a022d30f92f3c15d8fd7d954e7b6b0b09a12bb55cfb2f3e048",
-                    (704, 11885) : "e54f392e4514c776efaa10dfc13d9b9260b76414e5c0257f1f3e43ac",
-                    (731, 9200) : "fe94b726457729edabd90363a19caf0d13e64220733f99b6cd8afc39",
-                    (743, 4391) : "76bb8a521ab6d4b89c6df9f7147e7a5f3e14193b992c9fbff3b617d9"
-                  }
-
-    # Markup fix
-    fields = DBSession.query(Field).all()
-    for metadata_field in fields:
-        if metadata_field.data_type == "Markup":
-            entities = DBSession.query(Entity)\
-                .filter_by(field=metadata_field).filter(Entity.additional_metadata.has_key('hash')).all()
-            for entity in entities:
-                curr_hash = entity.additional_metadata["hash"]
-                if entity.content:
-                    file_content = requests.get(entity.content).content
-                    new_hash = sha224(file_content).hexdigest()
-                    if curr_hash != new_hash:
-                        entity.additional_metadata["hash"] = new_hash
-                        flag_modified(entity, 'additional_metadata')
-    # Sound fix
-    for id in id_to_hash:
-        entity = DBSession.query(Entity).filter_by(client_id=id[0], object_id=id[1]).first()
-        entity.additional_metadata["hash"] = id_to_hash[id]
-        flag_modified(entity, 'additional_metadata')
+    dmgd_persp = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=1139, object_id=2549).one()
+    dmgd_persp.marked_for_deletion = True
+    dmgd_persp = DBSession.query(ObjectTOC).filter_by(client_id=dmgd_persp.client_id,
+                                                         object_id=dmgd_persp.object_id).one()
+    dmgd_persp.marked_for_deletion = True
     return {"success": True}
+
+
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
 def main_get(request):
     client_id = authenticated_userid(request)
