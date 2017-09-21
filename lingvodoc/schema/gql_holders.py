@@ -250,6 +250,8 @@ class CreatedAt(graphene.Interface):
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
+        if type(self.dbObject.created_at) is int:
+            return self.dbObject.created_at
         return self.dbObject.created_at.timestamp()
 
 
