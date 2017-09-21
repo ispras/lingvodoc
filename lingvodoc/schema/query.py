@@ -161,6 +161,7 @@ class Query(graphene.ObjectType):
     translationgists = graphene.List(TranslationGist)
     translation_search = graphene.List(TranslationGist, searchstring=graphene.String(), translation_type=graphene.String())
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
+    advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
 
     def resolve_dictionaries(self, info, published):
@@ -487,6 +488,18 @@ class Query(graphene.ObjectType):
         raise ResponseError(message="Error: no result")
 
     def resolve_translation_service_search(self, info, searchstring):
+        """
+        query TranslationsList {
+            translation_service_search(searchstring: "Converting 80%") {
+                id
+                type
+                translationatoms {
+                     id
+                     content
+                }
+            }
+        }
+        """
         translationatom = DBSession.query(dbTranslationAtom) \
             .join(dbTranslationGist). \
             filter(dbTranslationAtom.content == searchstring,
@@ -513,6 +526,55 @@ class Query(graphene.ObjectType):
             return translationgist_object
         raise ResponseError(message="Error: no result")
 
+    def resolve_advanced_translation_search(self, info, searchstrings):
+        """
+        query TranslationsList {
+            advanced_translation_search(searchstrings: ["Converting 80%", "Available dictionaries"]) {
+                id
+                type
+                translationatoms {
+                     id
+                     content
+                }
+            }
+        }
+        """
+        if not searchstrings[0]:
+            raise ResponseError(message="Error: no search strings")
+
+        translationatoms = DBSession.query(dbTranslationAtom) \
+            .join(dbTranslationGist). \
+            filter(dbTranslationAtom.content.in_(searchstrings),
+                   dbTranslationAtom.locale_id == 2,
+                   dbTranslationGist.type == 'Service') \
+            .all()
+
+        translationgists = list()
+        for translationatom in translationatoms:
+            parent = translationatom.parent
+            if parent not in translationgists:
+                translationgists.append(parent)
+
+        if translationgists:
+            translationgists_list = list()
+            for translationgist in translationgists:
+                translationatoms_list = list()
+                for translationatom in translationgist.translationatom:
+                    translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
+                                                             parent_id=[translationatom.parent_client_id,
+                                                                        translationatom.parent_object_id],
+                                                             content=translationatom.content,
+                                                             locale_id=translationatom.locale_id,
+                                                             created_at=translationatom.created_at
+                                                             )
+                    translationatoms_list.append(translationatom_object)
+                translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
+                                                         type=translationgist.type,
+                                                         created_at=translationgist.created_at,
+                                                         translationatoms=translationatoms_list)
+                translationgists_list.append(translationgist_object)
+            return translationgists_list
+        raise ResponseError(message="Error: no result")
 
     def resolve_userblobs(self, info, id):
         return UserBlobs(id=id)
