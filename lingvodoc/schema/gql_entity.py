@@ -72,7 +72,6 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
             shutil.copyfileobj(content, f)
 
     real_location = storage_path
-    print(storage)
     url = "".join((storage["prefix"],
                   storage["static_route"],
                   obj.__tablename__,

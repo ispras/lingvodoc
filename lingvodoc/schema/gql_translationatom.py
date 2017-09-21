@@ -193,7 +193,7 @@ class UpdateTranslationAtom(graphene.Mutation):
     locale_id = graphene.Int()
 
     @staticmethod
-    #@acl_check_by_id('edit', 'translations', id_key="id")
+    @acl_check_by_id('edit', 'translations')
     def mutate(root, info, **args):
         content = args.get('content')
         id = args.get('id')
