@@ -152,14 +152,15 @@ class Query(graphene.ObjectType):
     lexicalentries = graphene.List(LexicalEntry, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
                                    perspective_id=graphene.List(graphene.Int), field_id=graphene.List(graphene.Int),
                                    search_in_published=graphene.Boolean())
-    advancedlexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
+    advanced_lexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
                                             perspectives=graphene.List(graphene.List(graphene.Int)),
                                             adopted=graphene.Boolean(),
                                             adopted_type=graphene.List(graphene.Int),
                                             with_entimology=graphene.Boolean())
     translationgist = graphene.Field(TranslationGist, id = graphene.List(graphene.Int))
     translationgists = graphene.List(TranslationGist)
-
+    translation_search = graphene.List(TranslationGist, searchstring=graphene.String(), translation_type=graphene.String())
+    translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     all_locales = graphene.List(ObjectVal)
 
     def resolve_dictionaries(self, info, published):
@@ -439,6 +440,80 @@ class Query(graphene.ObjectType):
                                       type=gist.type) for gist in gists]
         return gists_list
 
+    def resolve_translation_search(self, info, searchstring, translation_type=None):
+        """
+        query TranslationsList {
+            translation_search(searchstring: "словарь") {
+                id
+                type
+                translationatoms {
+                     id
+                     content
+                }
+            }
+        }
+        """
+        translationatoms = DBSession.query(dbTranslationAtom).filter(dbTranslationAtom.content.like('%' + searchstring + '%'))
+        if translation_type:
+            translationatoms = translationatoms.join(dbTranslationGist).filter(dbTranslationGist.type == translation_type).all()
+        else:
+            translationatoms = translationatoms.all()
+
+        translationgists = list()
+        for translationatom in translationatoms:
+            parent = translationatom.parent
+            if parent not in translationgists:
+                translationgists.append(parent)
+
+        if translationgists:
+            translationgists_list = list()
+            for translationgist in translationgists:
+                translationatoms_list = list()
+                for translationatom in translationgist.translationatom:
+                    translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
+                                                             parent_id=[translationatom.parent_client_id,
+                                                                        translationatom.parent_object_id],
+                                                             content=translationatom.content,
+                                                             locale_id=translationatom.locale_id,
+                                                             created_at=translationatom.created_at
+                                                             )
+                    translationatoms_list.append(translationatom_object)
+                translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
+                                                         type=translationgist.type,
+                                                         created_at=translationgist.created_at,
+                                                         translationatoms=translationatoms_list)
+                translationgists_list.append(translationgist_object)
+            return translationgists_list
+        raise ResponseError(message="Error: no result")
+
+    def resolve_translation_service_search(self, info, searchstring):
+        translationatom = DBSession.query(dbTranslationAtom) \
+            .join(dbTranslationGist). \
+            filter(dbTranslationAtom.content == searchstring,
+                   dbTranslationAtom.locale_id == 2,
+                   dbTranslationGist.type == 'Service') \
+            .one()
+        if translationatom and translationatom.parent:
+            translationgist = translationatom.parent
+
+            translationatoms_list = list()
+            for translationatom in translationgist.translationatom:
+                translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
+                                                         parent_id=[translationatom.parent_client_id,
+                                                                    translationatom.parent_object_id],
+                                                         content=translationatom.content,
+                                                         locale_id=translationatom.locale_id,
+                                                         created_at=translationatom.created_at
+                                                         )
+                translationatoms_list.append(translationatom_object)
+            translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
+                                                     type=translationgist.type,
+                                                     created_at=translationgist.created_at,
+                                                     translationatoms=translationatoms_list)
+            return translationgist_object
+        raise ResponseError(message="Error: no result")
+
+
     def resolve_userblobs(self, info, id):
         return UserBlobs(id=id)
 
@@ -636,12 +711,12 @@ class Query(graphene.ObjectType):
                     return lexical_entries_list
             raise ResponseError(message="Bad string")
 
-    def resolve_advancedlexicalentries(self, info, searchstrings, perspectives=None, adopted=None,
+    def resolve_advanced_lexicalentries(self, info, searchstrings, perspectives=None, adopted=None,
                                         adopted_type=None, with_etimology=None): #advanced_search() function
 
         """
         query EntriesList {
-            advancedlexicalentries(searchstrings: [{searchstring: "смотреть следить"}]) {
+            advanced_lexicalentries(searchstrings: [{searchstring: "смотреть следить"}]) {
                 id
                 entities {
                      id
