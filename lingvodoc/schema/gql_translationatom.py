@@ -205,8 +205,8 @@ class UpdateTranslationAtom(graphene.Mutation):
             filter_by(client_id=client_id, object_id=object_id).first()
         if dbtranslationatom:
             key = "translation:%s:%s:%s" % (
-                str(dbtranslationatom.translation_gist_client_id),
-                str(dbtranslationatom.translation_gist_object_id),
+                str(dbtranslationatom.parent_client_id),
+                str(dbtranslationatom.parent_object_id),
                 str(dbtranslationatom.locale_id))
             CACHE.rem(key)
             if content:
