@@ -1,3 +1,6 @@
+import os
+import shutil
+from pathvalidate import sanitize_filename
 import graphene
 from sqlalchemy import and_
 from lingvodoc.models import DBSession
@@ -38,12 +41,48 @@ from sqlalchemy import (
     and_,
 )
 
-from lingvodoc.views.v2.utils import (
-    create_object
-)
+# from lingvodoc.views.v2.utils import (
+#     create_object
+# )
 
 import base64
 import hashlib
+
+def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
+    filename = sanitize_filename(filename)
+    storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
+    if create_dir:
+        os.makedirs(storage_dir, exist_ok=True)
+    storage_path = os.path.join(storage_dir, filename)
+    return storage_path, filename
+
+def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
+    import errno
+    storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
+    directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
+    try:
+        os.makedirs(directory)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    with open(storage_path, 'wb+') as f:
+        if json_input:
+            f.write(base64.urlsafe_b64decode(content))
+        else:
+            shutil.copyfileobj(content, f)
+
+    real_location = storage_path
+    print(storage)
+    url = "".join((storage["prefix"],
+                  storage["static_route"],
+                  obj.__tablename__,
+                  '/',
+                  folder_name,
+                  '/',
+                  str(obj.client_id), '/',
+                  str(obj.object_id), '/',
+                  filename))
+    return real_location, url
 
 # Read
 class Entity(graphene.ObjectType):
@@ -78,9 +117,9 @@ class CreateEntity(graphene.Mutation):
         input values from request. Look at "LD methods" exel table
         """
         id = graphene.List(graphene.Int)
-        lexical_entry_id = graphene.List(graphene.Int)
+        parent_id = graphene.List(graphene.Int, required=True)
         additional_metadata = ObjectVal()
-        field_id = graphene.List(graphene.Int)
+        field_id = graphene.List(graphene.Int, required=True)
         self_id = graphene.List(graphene.Int)
         link_id = graphene.List(graphene.Int)
         locale_id = graphene.Int()
@@ -120,8 +159,10 @@ class CreateEntity(graphene.Mutation):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
-        parent_client_id, parent_object_id = args.get('lexical_entry_id')
-
+        lexical_entry_id = args.get('parent_id')
+        if not lexical_entry_id:
+            raise ResponseError(message="Lexical entry not found")
+        parent_client_id, parent_object_id = lexical_entry_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
@@ -142,7 +183,8 @@ class CreateEntity(graphene.Mutation):
             dbTranslationGist.client_id == dbField.data_type_translation_gist_client_id,
             dbTranslationGist.object_id == dbField.data_type_translation_gist_object_id)).filter(
             dbField.client_id == field_client_id, dbField.object_id == field_object_id).first()
-
+        if not tr_atom:
+             raise ResponseError(message="No such field in the system")
         data_type = tr_atom.content.lower()
 
         if args.get('self_id'):
@@ -175,9 +217,13 @@ class CreateEntity(graphene.Mutation):
         filename = args.get('filename')
         real_location = None
         url = None
-        content = args.get('content')
+        blob = info.context.request.POST.pop("blob")
+        content= args.get("content")
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-            real_location, url = create_object(args, content, dbentity, data_type, filename)
+            filename=blob.filename
+            content = blob.file
+            #filename=
+            real_location, url = create_object(args, content, dbentity, data_type, filename, "entity_sounds", {})
             dbentity.content = url
             old_meta = dbentity.additional_metadata
             need_hash = True

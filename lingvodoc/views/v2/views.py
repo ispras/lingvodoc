@@ -1133,11 +1133,12 @@ def graphql(request):
             data = request.POST
             if not data:
                 return {'error': 'empty request'}
-            elif not "graphql" in data:
-                return {'error': 'graphql key not nound'}
+            elif not "query" in data:
+                return {'error': 'query key not nound'}
             elif not "blob" in data:
                 return {'error': 'blob key not nound'}
-            request_string = request.POST.pop("graphene") # TODO: change to query?
+            request_string = request.POST.pop("query") # TODO: change to query?
+            request_string= request_string.rstrip()
             '''
             if data and "file" in data and "graphene" in data:
                 # We can get next file from the list inside file upload mutation resolve

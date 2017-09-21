@@ -104,7 +104,7 @@ def client_id_check():
                 if not client:
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                                    authenticated)
-            return resolve_f(self, args[0], kwargs)
+            return resolve_f(self, args[0], **kwargs)
 
         return wrapper
 
