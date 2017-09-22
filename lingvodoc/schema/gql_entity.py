@@ -65,7 +65,7 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
-    with open(storage_path, 'wb+') as f:
+    with open(str(storage_path), 'wb+') as f:
         if json_input:
             f.write(base64.urlsafe_b64decode(content))
         else:
@@ -133,20 +133,10 @@ class CreateEntity(graphene.Mutation):
 
     """
     example:
-    mutation  {
-        create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
-            field {
-                id
-            }
-            status
-        }
-    }
-    or
-    mutation  {
-        create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
-            status
-        }
-    }
+    curl -i -X POST  -H "Cookie: auth_tkt="
+    -H "Content-Type: multipart/form-data" -F "blob=@белка.wav" -F 'query=mutation {
+            create_entity(parent_id: [66, 69],  field_id:  [66,12] ) {entity{id, parent_id} triumph}}' http://localhost:6543/graphql
+
     """
     # Used for convenience
 
@@ -159,6 +149,9 @@ class CreateEntity(graphene.Mutation):
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         lexical_entry_id = args.get('parent_id')
+        locale_id = args.get('locale_id')
+        if not locale_id:
+            locale_id=2
         if not lexical_entry_id:
             raise ResponseError(message="Lexical entry not found")
         parent_client_id, parent_object_id = lexical_entry_id
@@ -196,7 +189,7 @@ class CreateEntity(graphene.Mutation):
                         object_id=object_id,
                         field_client_id=field_client_id,
                         field_object_id=field_object_id,
-                        locale_id=args.get('locale_id'),
+                        locale_id=locale_id,
                         additional_metadata=additional_metadata,
                         parent=parent)
         group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
@@ -208,11 +201,11 @@ class CreateEntity(graphene.Mutation):
             dbBaseGroup.subject == 'lexical_entries_and_entities',
             dbGroup.subject_override == True,
             dbBaseGroup.action == 'create').one()
-        if user in group.users or user in override_group.users:
-            dbentity.publishingentity.accepted = True
+        #if user in group.users or user in override_group.users:
+        #    dbentity.publishingentity.accepted = True
         if upper_level:
             dbentity.upper_level = upper_level
-
+        dbentity.publishingentity.accepted = True
         filename = args.get('filename')
         real_location = None
         url = None
@@ -220,9 +213,9 @@ class CreateEntity(graphene.Mutation):
         content= args.get("content")
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
             filename=blob.filename
-            content = blob.file
+            content = blob.file.read()
             #filename=
-            real_location, url = create_object(args, content, dbentity, data_type, filename, "entity_sounds", {})
+            real_location, url = create_object(base64.urlsafe_b64encode(content).decode(), dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
             dbentity.content = url
             old_meta = dbentity.additional_metadata
             need_hash = True
@@ -230,7 +223,7 @@ class CreateEntity(graphene.Mutation):
                 if old_meta.get('hash'):
                     need_hash = False
             if need_hash:
-                hash = hashlib.sha224(base64.urlsafe_b64decode(content)).hexdigest()
+                hash = hashlib.sha224(base64.urlsafe_b64decode(base64.urlsafe_b64encode(content).decode())).hexdigest()
                 hash_dict = {'hash': hash}
                 if old_meta:
                     old_meta.update(hash_dict)
