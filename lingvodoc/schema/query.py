@@ -89,7 +89,8 @@ from lingvodoc.schema.gql_email import (
 from lingvodoc.schema.gql_holders import (
     PermissionException,
     ResponseError,
-    ObjectVal
+    ObjectVal,
+    client_id_check
 )
 
 import lingvodoc.acl as acl
@@ -163,6 +164,7 @@ class Query(graphene.ObjectType):
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
+    user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
 
     def resolve_dictionaries(self, info, published):
         """
@@ -943,6 +945,29 @@ class Query(graphene.ObjectType):
 
             lexical_entries_list.append(gr_lexicalentry_object)
         return lexical_entries_list
+
+    @client_id_check()
+    def resolve_user_blobs(self, info, data_type=None, is_global=None):
+        allowed_global_types = ["sociolinguistics"]
+        client_id = info.context.get('client_id')
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if data_type:
+            if not is_global:
+                user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id, data_type=data_type).all()
+            else:
+                if data_type in allowed_global_types:
+                    user_blobs = DBSession.query(dbUserBlobs).filter_by(data_type=data_type).all()
+                else:
+                    raise ResponseError(message="Error: you can not list that data type globally.")
+        else:
+            user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id).all()
+        user_blobs_list = [UserBlobs(id=[blob.client_id, blob.object_id],
+                                     name=blob.name,
+                                     content=blob.content,
+                                     data_type=blob.data_type,
+                                     created_at=blob.created_at) for blob in user_blobs]
+        return user_blobs_list
+
 
 
 
