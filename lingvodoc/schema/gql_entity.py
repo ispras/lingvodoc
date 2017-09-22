@@ -252,7 +252,7 @@ class CreateEntity(graphene.Mutation):
             #     field.is_translatable = bool(args['is_translatable'])
         DBSession.add(dbentity)
         DBSession.flush()
-        entity = Entity(id = [dbentity.client_id, dbentity.object_id])
+        entity = Entity(id = [dbentity.client_id, dbentity.object_id]) # TODO: more args
         entity.dbObject = dbentity
         return CreateEntity(entity=entity, triumph=True)
 

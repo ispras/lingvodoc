@@ -38,7 +38,8 @@ from lingvodoc.schema.gql_translationgist import (
     DeleteTranslationGist
 )
 from lingvodoc.schema.gql_userblobs import (
-    UserBlobs
+    UserBlobs,
+    CreateUserBlob
 )
 from lingvodoc.schema.gql_field import (
     Field,
@@ -161,6 +162,7 @@ class Query(graphene.ObjectType):
     translationgists = graphene.List(TranslationGist)
 
     all_locales = graphene.List(ObjectVal)
+    userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
 
     def resolve_dictionaries(self, info, published):
         """
@@ -440,6 +442,9 @@ class Query(graphene.ObjectType):
         return gists_list
 
     def resolve_userblobs(self, info, id):
+        return UserBlobs(id=id)
+
+    def resolve_userblob(self, info, id):
         return UserBlobs(id=id)
 
     def resolve_field(self, info, id):
@@ -848,6 +853,7 @@ class MyMutations(graphene.ObjectType):
     create_grant = CreateGrant.Field()
     update_grant = UpdateGrant.Field()
     delete_grant = DeleteGrant.Field()
+    create_userblob = CreateUserBlob.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
