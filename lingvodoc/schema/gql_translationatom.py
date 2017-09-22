@@ -132,7 +132,7 @@ class CreateTranslationAtom(graphene.Mutation):
             return dbtranslationatom
 
     @staticmethod
-    @client_id_check()
+    #@client_id_check()
     def mutate(root, info, **args):
         ids = args.get("id")
         client_id = ids[0] if ids else info.context["client_id"]
