@@ -89,7 +89,8 @@ from lingvodoc.schema.gql_email import (
 from lingvodoc.schema.gql_holders import (
     PermissionException,
     ResponseError,
-    ObjectVal
+    ObjectVal,
+    client_id_check
 )
 
 import lingvodoc.acl as acl
@@ -163,6 +164,8 @@ class Query(graphene.ObjectType):
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
+    user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
+    perspective_authors = graphene.List(User, perspective_id=graphene.List(graphene.Int))
 
     def resolve_dictionaries(self, info, published):
         """
@@ -261,12 +264,13 @@ class Query(graphene.ObjectType):
         """
         context = info.context
         request = context.get('request')
+        cookies = info.context.get('cookies')
         if published:
             subreq = Request.blank('/translation_service_search')
             subreq.method = 'POST'
             subreq.headers = request.headers
             subreq.json = {'searchstring': 'Published'}
-            headers = {'Cookie': request.headers['Cookie']}
+            headers = {'Cookie': cookies}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
             if 'error' not in resp.json:
@@ -279,7 +283,7 @@ class Query(graphene.ObjectType):
             subreq.method = 'POST'
             subreq.headers = request.headers
             subreq.json = {'searchstring': 'Limited access'}
-            headers = {'Cookie': request.headers['Cookie']}
+            headers = {'Cookie': cookies}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
             if 'error' not in resp.json:
@@ -943,6 +947,48 @@ class Query(graphene.ObjectType):
 
             lexical_entries_list.append(gr_lexicalentry_object)
         return lexical_entries_list
+
+    @client_id_check()
+    def resolve_user_blobs(self, info, data_type=None, is_global=None):
+        allowed_global_types = ["sociolinguistics"]
+        client_id = info.context.get('client_id')
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if data_type:
+            if not is_global:
+                user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id, data_type=data_type).all()
+            else:
+                if data_type in allowed_global_types:
+                    user_blobs = DBSession.query(dbUserBlobs).filter_by(data_type=data_type).all()
+                else:
+                    raise ResponseError(message="Error: you can not list that data type globally.")
+        else:
+            user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id).all()
+        user_blobs_list = [UserBlobs(id=[blob.client_id, blob.object_id],
+                                     name=blob.name,
+                                     content=blob.content,
+                                     data_type=blob.data_type,
+                                     created_at=blob.created_at) for blob in user_blobs]
+        return user_blobs_list
+
+    def resolve_perspective_authors(self, info, perspective_id):
+        client_id, object_id = perspective_id[0], perspective_id[1]
+
+        parent = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if parent and not parent.marked_for_deletion:
+            authors = DBSession.query(dbUser).join(dbUser.clients).join(dbEntity, dbEntity.client_id == Client.id) \
+                .join(dbEntity.parent).join(dbEntity.publishingentity) \
+                .filter(dbLexicalEntry.parent_client_id == parent.client_id,
+                        dbLexicalEntry.parent_object_id == parent.object_id,
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.marked_for_deletion == False)
+
+            authors_list = [User(id=author.id,
+                                 name=author.name,
+                                 intl_name=author.intl_name,
+                                 login=author.login) for author in authors]
+            return authors_list
+        raise ResponseError(message="Error: no such perspective in the system.")
+
 
 
 

@@ -221,8 +221,8 @@ def fetch_object(attrib_name=None):
 
 class IdHolder(graphene.Interface):
     id = graphene.Int()
-    fetch_object("id")
 
+    @fetch_object("id")
     def resolve_id(self, info):
         return self.dbObject.id
 
