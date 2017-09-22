@@ -69,7 +69,7 @@ def acl_check_by_id(action, subject, id_key='id'):
     """
 
     def decorator(resolve_f):
-        def wrapper(self,info, kwargs):
+        def wrapper(self,info, **kwargs):
             if info.context.acl_check_if(action, subject, kwargs.get(id_key)):
                 return resolve_f(self, info, **kwargs )
 
@@ -104,7 +104,7 @@ def client_id_check():
                 if not client:
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                                    authenticated)
-            return resolve_f(self, args[0], kwargs)
+            return resolve_f(self, args[0], **kwargs)
 
         return wrapper
 
@@ -250,6 +250,8 @@ class CreatedAt(graphene.Interface):
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
+        if type(self.dbObject.created_at) is int:
+            return self.dbObject.created_at
         return self.dbObject.created_at.timestamp()
 
 
