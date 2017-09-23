@@ -7,6 +7,8 @@ try: from xml.etree import cElementTree as ElementTree
 except ImportError: from xml.etree import ElementTree
 
 def hyphen_to_dash(string_with_hyphen):
+    if not string_with_hyphen:
+        return string_with_hyphen
     restricted_symbs = ["\xad",  # Soft hyphen
                         "\xAF",  # Spacing macron
                         "\x96", # en dash
