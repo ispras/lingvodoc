@@ -11,6 +11,7 @@ from lingvodoc.models import (
     TranslationGist as dbTranslationGist,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
+    Entity as dbEntity,
     ObjectTOC,
     DBSession
 )
@@ -32,6 +33,7 @@ from lingvodoc.schema.gql_dictipersptofield import DictionaryPerspectiveToField
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
+from  lingvodoc.schema.gql_user import User
 
 from lingvodoc.views.v2.utils import add_user_to_group
 
@@ -206,6 +208,61 @@ class DictionaryPerspective(graphene.ObjectType):
 
             result.append(gr_lexicalentry_object)
         return result
+
+    def resolve_perspective_authors(self, info, perspective_id):
+        client_id, object_id = perspective_id[0], perspective_id[1]
+
+        parent = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if parent and not parent.marked_for_deletion:
+            authors = DBSession.query(dbUser).join(dbUser.clients).join(dbEntity, dbEntity.client_id == Client.id) \
+                .join(dbEntity.parent).join(dbEntity.publishingentity) \
+                .filter(dbLexicalEntry.parent_client_id == parent.client_id,
+                        dbLexicalEntry.parent_object_id == parent.object_id,
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.marked_for_deletion == False)
+
+            authors_list = [User(id=author.id,
+                                 name=author.name,
+                                 intl_name=author.intl_name,
+                                 login=author.login) for author in authors]
+            return authors_list
+        raise ResponseError(message="Error: no such perspective in the system.")
+
+    def resolve_perspective_roles(self, info, perspective_id, id):
+        response = dict()
+        client_id, object_id = perspective_id
+        parent_client_id, parent_object_id = id
+
+        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            raise ResponseError(message="No such dictionary in the system")
+
+        perspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if perspective:
+            if not perspective.marked_for_deletion:
+                bases = DBSession.query(dbBaseGroup).filter_by(perspective_default=True)
+                roles_users = dict()
+                roles_organizations = dict()
+                for base in bases:
+                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
+                    if not group:
+                        print(base.name)
+                        continue
+                    perm = base.name
+                    users = []
+                    for user in group.users:
+                        users += [user.id]
+                    organizations = []
+                    for org in group.organizations:
+                        organizations += [org.id]
+                    roles_users[perm] = users
+                    roles_organizations[perm] = organizations
+                response['roles_users'] = roles_users
+                response['roles_organizations'] = roles_organizations
+                return response
+        raise ResponseError(message="No such perspective in the system")
 
 
 class CreateDictionaryPerspective(graphene.Mutation):
