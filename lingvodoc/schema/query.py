@@ -39,7 +39,8 @@ from lingvodoc.schema.gql_translationgist import (
 )
 from lingvodoc.schema.gql_userblobs import (
     UserBlobs,
-    CreateUserBlob
+    CreateUserBlob,
+    DeleteUserBlob
 )
 from lingvodoc.schema.gql_field import (
     Field,
@@ -1037,6 +1038,7 @@ class MyMutations(graphene.ObjectType):
     update_grant = UpdateGrant.Field()
     delete_grant = DeleteGrant.Field()
     create_userblob = CreateUserBlob.Field()
+    delete_userblob = DeleteUserBlob.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
