@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers.desktop
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.ModalService
 import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.raw.HTMLInputElement
+import org.scalajs.dom.raw.{HTMLButtonElement, HTMLInputElement}
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits._
@@ -186,12 +186,22 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
   @JSExport
   def updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, event: Event): Unit = {
-    val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
-    val newTextValue = e.target.asInstanceOf[HTMLInputElement].value
-    val oldTextValue = entity.content
-    if (newTextValue != oldTextValue) {
-      updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, newTextValue)
-    }
+    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
+    val target = e.target.asInstanceOf[HTMLButtonElement]
+    val p = target.parentElement.parentElement
+
+    val result = (0 until p.childNodes.length).toList.find(index => {
+      p.childNodes.item(index).isInstanceOf[HTMLInputElement]
+    }).map(i => p.childNodes.item(i).asInstanceOf[HTMLInputElement])
+
+    result.foreach(node => {
+      val newTextValue = node.value
+      val oldTextValue = entity.content
+
+      if (oldTextValue != newTextValue) {
+        updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, newTextValue)
+      }
+    })
   }
 
   @JSExport
