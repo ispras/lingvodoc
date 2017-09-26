@@ -4,7 +4,7 @@ import com.greencatsoft.angularjs.Controller
 import com.greencatsoft.angularjs.core.Event
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import org.scalajs.dom.console
-import org.scalajs.dom.raw.HTMLInputElement
+import org.scalajs.dom.raw.{HTMLButtonElement, HTMLInputElement}
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
@@ -88,15 +88,9 @@ trait Edit {
     editInputs.contains(entity.getId)
   }
 
-  @JSExport
-  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]): Unit = {
-
-    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
-    val textValue = e.target.asInstanceOf[HTMLInputElement].value
+  private[this] def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, textValue: String, parent: UndefOr[Value]): Unit = {
 
     val entryId = CompositeId.fromObject(entry)
-
-
     val entity = EntityData(field.clientId, field.objectId, getCurrentLocale)
     entity.content = Some(Left(textValue))
 
@@ -122,6 +116,33 @@ trait Edit {
           case Failure(ex) => console.log(ex.getMessage)
         }
       case Failure(ex) => console.log(ex.getMessage)
+    }
+  }
+
+
+  @JSExport
+  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]): Unit = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
+    val target = e.target.asInstanceOf[HTMLButtonElement]
+    val p = target.parentElement.parentElement
+
+    val result = (0 until p.childNodes.length).toList.find(index => {
+      p.childNodes.item(index).isInstanceOf[HTMLInputElement]
+    }).map(i => p.childNodes.item(i).asInstanceOf[HTMLInputElement])
+
+    result.foreach(node =>
+      saveTextValue(inputId, entry, field, node.value, parent)
+    )
+  }
+
+
+  @JSExport
+  def saveTextValueKeydown(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]): Unit = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
+    val textValue = e.target.asInstanceOf[HTMLInputElement].value
+
+    if (e.keyCode == 13) {
+      saveTextValue(inputId, entry, field, textValue, parent)
     }
   }
 
@@ -156,7 +177,6 @@ trait Edit {
         }
       case Failure(ex) => console.log(ex.getMessage)
     }
-
   }
 
   @JSExport
