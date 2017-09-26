@@ -103,7 +103,6 @@ class Dictionary(graphene.ObjectType):
         .Field('lingvodoc.schema.gql_dictipersptofield.DictionaryPerspectiveToField')
     cr_persptofields = graphene\
         .Field('lingvodoc.schema.gql_dictipersptofield.CreateDictionaryPerspectiveToField')
-    #DictionaryPerspective = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
@@ -142,21 +141,14 @@ class Dictionary(graphene.ObjectType):
 
     @client_id_check()
     def resolve_perspectives(self, info):
-        print(self.id)
-        dictionary_client_id, dictionary_object_id = self.id#self.dbObject.client_id, self.dbObject.object_id
-        print(dictionary_client_id, dictionary_object_id )
-        #client_id = ids[0] if ids else info.context["client_id"]
-        #object_id = ids[1] if ids else None
+        dictionary_client_id, dictionary_object_id = self.id  #self.dbObject.client_id, self.dbObject.object_id
+
         perspectives = list()
         child_persps = DBSession.query(dbDictionaryPerspective)\
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id).all()
-        print(child_persps)
         for persp in child_persps:
             persp.dbObject = persp
             perspectives.append(persp)
-            #perspectives.append(DictionaryPerspective(id=[persp.client_id. persp.object_id]))   # TODO: other args
-        #if hasattr(self, "perspectives"):
-        #    return self.perspectives
         return perspectives
 
     def resolve_roles(self, info):
