@@ -84,7 +84,8 @@
                                 <span ng-hide="controller.isEditActive(value.entity)">{{ value.getContent() }} <span class="badge" ng-if="column.field.isTranslatable"> {{ controller.getTranslationLanguage(value.entity, column.field) }} </span></span>
 
                                 <span ng-show="controller.isEditActive(value.entity)">
-                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, value.entity, column.field, $event)">
+                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, value.entity, column.field, $event)">
+                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.updateTextEntity(row.entry, value.entity, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
                                 </span>
 
                                 <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, value.entity)" ng-hide="controller.isEditActive(value.entity)">
@@ -104,7 +105,8 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                                    <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(cell.internalId, row.entry, column.field, $event)">
+                                    <input type="text" value="" placeholder="" ng-keydown="controller.saveTextValueKeydown(cell.internalId, row.entry, column.field, $event)">
+                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.saveTextValue(cell.internalId, row.entry, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
                                 </div>
 
                             </li>
@@ -118,7 +120,8 @@
                                 <span ng-hide="controller.isEditActive(value.entity)">{{ value.getContent() }}</span>
 
                                 <span ng-show="controller.isEditActive(value.entity)">
-                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, value.entity, column.field, $event)">
+                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, value.entity, column.field, $event)">
+                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.updateTextEntity(row.entry, value.entity, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
                                 </span>
 
                                 <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, value.entity)" ng-hide="controller.isEditActive(value.entity)">
@@ -136,7 +139,8 @@
                                             <span ng-hide="controller.isEditActive(value.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.entity, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.entity, column.field, $event)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.updateTextEntity(row.entry, linkedValue.entity, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(value.entity)">
@@ -179,7 +183,8 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextValueKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)"><span class="glyphicon glyphicon-ok"></span></button>
                                             </div>
                                         </div>
 
@@ -208,7 +213,8 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                                    <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(cell.internalId, row.entry, column.field, $event)">
+                                    <input type="text" value="" placeholder="" ng-keydown="controller.saveTextValueKeydown(cell.internalId, row.entry, column.field, $event)">
+                                    <button type="button" class="btn btn-default btn-xs" ng-click="controller.saveTextValue(cell.internalId, row.entry, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
                                 </div>
 
                             </li>
@@ -277,7 +283,8 @@
                                             <span ng-hide="controller.isEditActive(linkedValue.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(linkedValue.entity)">
@@ -332,7 +339,8 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextValueKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)"><span class="glyphicon glyphicon-ok"></span></button>
                                             </div>
                                         </div>
 
@@ -411,7 +419,8 @@
                                             <span ng-hide="controller.isEditActive(linkedValue.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(linkedValue.entity)">
@@ -454,7 +463,9 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextValueKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)"><span class="glyphicon glyphicon-ok"></span></button>
+
                                             </div>
                                         </div>
 
@@ -534,7 +545,9 @@
                                             <span ng-hide="controller.isEditActive(linkedValue.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)"><span class="glyphicon glyphicon-ok"></span></button>
+
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(linkedValue.entity)">
@@ -584,7 +597,9 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextValueKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)"><span class="glyphicon glyphicon-ok"></span></button>
+
                                             </div>
                                         </div>
 
