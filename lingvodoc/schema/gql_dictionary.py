@@ -7,6 +7,7 @@ from lingvodoc.models import (
     Client as dbClient,
     Language as dbLanguage,
     User as dbUser,
+    DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
     Group as dbGroup
 )
@@ -30,6 +31,7 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     acl_check_by_id
 )
+#from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective
 from lingvodoc.views.v2.delete import real_delete_dictionary
 from lingvodoc.views.v2.utils import (
     check_client_id
@@ -79,15 +81,16 @@ class Dictionary(graphene.ObjectType):
         additional_metadata {
           blob_description
         }
+         perspectives{id translation}
       }
     }
-
     """
 
     dbType = dbDictionary
     dbObject = None
     category = graphene.Int()
     domain = graphene.Int()
+    roles = graphene.List(ObjectVal)
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
@@ -100,6 +103,7 @@ class Dictionary(graphene.ObjectType):
         .Field('lingvodoc.schema.gql_dictipersptofield.DictionaryPerspectiveToField')
     cr_persptofields = graphene\
         .Field('lingvodoc.schema.gql_dictipersptofield.CreateDictionaryPerspectiveToField')
+    #DictionaryPerspective = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
@@ -118,7 +122,7 @@ class Dictionary(graphene.ObjectType):
         return self._meta.fields['persptofields'].type
 
     @property
-    def create_persptofield(self):
+    def create_persptofield(self):  # TODO: to delete
         return self._meta.fields['cr_persptofields'].type
 
     @fetch_object('status')
@@ -136,9 +140,55 @@ class Dictionary(graphene.ObjectType):
     def resolve_triumph(self, info):
         return True
 
+    @client_id_check()
     def resolve_perspectives(self, info):
-        if hasattr(self, "perspectives"):
-            return self.perspectives
+        print(self.id)
+        dictionary_client_id, dictionary_object_id = self.id#self.dbObject.client_id, self.dbObject.object_id
+        print(dictionary_client_id, dictionary_object_id )
+        #client_id = ids[0] if ids else info.context["client_id"]
+        #object_id = ids[1] if ids else None
+        perspectives = list()
+        child_persps = DBSession.query(dbDictionaryPerspective)\
+            .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id).all()
+        print(child_persps)
+        for persp in child_persps:
+            persp.dbObject = persp
+            perspectives.append(persp)
+            #perspectives.append(DictionaryPerspective(id=[persp.client_id. persp.object_id]))   # TODO: other args
+        #if hasattr(self, "perspectives"):
+        #    return self.perspectives
+        return perspectives
+
+    def resolve_roles(self, info):
+        response = dict()
+        client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
+        dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dictionary or dictionary.marked_for_deletion:
+            raise ResponseError(message="Dictionary with such ID already exists in the system")
+
+
+        bases = DBSession.query(dbBaseGroup).filter_by(dictionary_default=True)
+        roles_users = dict()
+        roles_organizations = dict()
+        for base in bases:
+            group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                     subject_object_id=object_id,
+                                                     subject_client_id=client_id).first()
+            perm = base.name
+            users = []
+            for user in group.users:
+                users += [user.id]
+            organizations = []
+            for org in group.organizations:
+                organizations += [org.id]
+            roles_users[perm] = users
+            roles_organizations[perm] = organizations
+        response['roles_users'] = roles_users
+        response['roles_organizations'] = roles_organizations
+
+        #request.response.status = HTTPOk.code
+        return response
+
 ###
 # CrUd functions
 #
