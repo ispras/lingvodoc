@@ -95,7 +95,7 @@ class CreateLexicalEntry(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id('create', 'lexical_entries_and_entities')
+    @acl_check_by_id('create', 'lexical_entries_and_entities', 'parent_id')
     def mutate(root, info, **args):
         perspective_id = args.get('perspective_id')
         perspective_client_id = perspective_id[0]

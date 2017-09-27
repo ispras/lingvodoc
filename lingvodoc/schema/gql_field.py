@@ -7,10 +7,13 @@ from lingvodoc.schema.gql_holders import (
     CreatedAt,
     MarkedForDeletion,
     DataTypeTranslationGistId,
+    DataType,
     IsTranslatable,
+    TranslationHolder,
     #TranslationHolder
     fetch_object,
-    del_object
+    del_object,
+    client_id_check
 
 )
 
@@ -37,8 +40,7 @@ class Field(graphene.ObjectType):
      + .translation
     """
 
-    locale_id2 = graphene.Int() ##########
-    data_type = graphene.String()
+    #data_type = graphene.String()
     translation = graphene.String()
     dbType = dbField
     dbObject = None
@@ -49,23 +51,25 @@ class Field(graphene.ObjectType):
                       CreatedAt,
                       MarkedForDeletion,
                       DataTypeTranslationGistId,
+                      DataType,
                       IsTranslatable,
-                      #TranslationHolder
+                      TranslationHolder
                       )
 
-    #@fetch_object("data_type")
-    #def resolve_data_type(self, args, context, info):
+    # @fetch_object("data_type")
+    # def resolve_data_type(self, args, context, info):
     #    pass#print (self.dbObject.data_type)
-    #    #return self.dbObject.data_type
+    #    return self.dbObject.data_type
 
-    @fetch_object("translation")
-    def resolve_translation(self, info):
-        context = info.context
-        return self.dbObject.get_translation(context.get('locale_id'))
+    # @fetch_object("translation")
+    # def resolve_translation(self, info):
+    #     context = info.context
+    #     return self.dbObject.get_translation(context.get('locale_id'))
 
 
 class CreateField(graphene.Mutation):
     class Arguments:
+        # TODO: id?
         translation_gist_id = graphene.List(graphene.Int)
         data_type_translation_gist_id = graphene.List(graphene.Int)
 
@@ -73,10 +77,10 @@ class CreateField(graphene.Mutation):
     marked_for_deletion = graphene.Boolean()
     field = graphene.Field(Field)
     triumph = graphene.Boolean()
-    errors = graphene.List(graphene.String)
-    id = graphene.List(graphene.Int)
+
 
     @staticmethod
+    @client_id_check()
     def mutate(root, info, **args):
         #subject = 'language'
         client_id = info.context["client_id"]
@@ -119,7 +123,7 @@ class UpdateField(graphene.Mutation):
         id = args.get('id')
         dbfield_obj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
         field = Field( **args)
-        field.dbObject = dbfield_obj
+        field.dbObject = dbfield_obj  # TODO: fix Update
         return UpdateField(field=field, triumph = True)
 
 
