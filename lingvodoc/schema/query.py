@@ -53,6 +53,8 @@ from lingvodoc.schema.gql_dictionary import (
     Dictionary,
     CreateDictionary,
     UpdateDictionary,
+    UpdateDictionaryStatus,
+    UpdateDictionaryRoles,
     DeleteDictionary
 )
 
@@ -72,6 +74,8 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
     UpdateDictionaryPerspective,
+    UpdatePerspectiveStatus,
+    UpdatePerspectiveRoles,
     DeleteDictionaryPerspective
 )
 from lingvodoc.schema.gql_user import (
@@ -167,7 +171,7 @@ class Query(graphene.ObjectType):
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
     user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
-    perspective_authors = graphene.List(User, perspective_id=graphene.List(graphene.Int))
+    userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
 
     def resolve_dictionaries(self, info, published):
         """
@@ -582,7 +586,7 @@ class Query(graphene.ObjectType):
             return translationgists_list
         raise ResponseError(message="Error: no result")
 
-    def resolve_userblobs(self, info, id):
+    def resolve_userblob(self, info, id):
         return UserBlobs(id=id)
 
     def resolve_field(self, info, id):
@@ -972,28 +976,6 @@ class Query(graphene.ObjectType):
                                      created_at=blob.created_at) for blob in user_blobs]
         return user_blobs_list
 
-    def resolve_perspective_authors(self, info, perspective_id):
-        client_id, object_id = perspective_id[0], perspective_id[1]
-
-        parent = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if parent and not parent.marked_for_deletion:
-            authors = DBSession.query(dbUser).join(dbUser.clients).join(dbEntity, dbEntity.client_id == Client.id) \
-                .join(dbEntity.parent).join(dbEntity.publishingentity) \
-                .filter(dbLexicalEntry.parent_client_id == parent.client_id,
-                        dbLexicalEntry.parent_object_id == parent.object_id,
-                        dbLexicalEntry.marked_for_deletion == False,
-                        dbEntity.marked_for_deletion == False)
-
-            authors_list = [User(id=author.id,
-                                 name=author.name,
-                                 intl_name=author.intl_name,
-                                 login=author.login) for author in authors]
-            return authors_list
-        raise ResponseError(message="Error: no such perspective in the system.")
-
-
-
-
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -1014,6 +996,8 @@ class MyMutations(graphene.ObjectType):
     delete_language = DeleteLanguage.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
+    update_dictionary_status = UpdateDictionaryStatus.Field()
+    update_dictionary_roles = UpdateDictionaryRoles.Field()
     delete_dictionary = DeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
     update_organization = UpdateOrganization.Field()
@@ -1026,6 +1010,8 @@ class MyMutations(graphene.ObjectType):
     delete_lexicalentry = DeleteLexicalEntry.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
+    update_perspective_status = UpdatePerspectiveStatus.Field()
+    update_perspective_roles = UpdatePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
     create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()
     update_perspective_to_field = UpdateDictionaryPerspectiveToField.Field()
