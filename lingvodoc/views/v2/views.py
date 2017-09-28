@@ -1,3 +1,4 @@
+from passlib.hash import bcrypt
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
     view_field_from_object,
@@ -24,7 +25,8 @@ from lingvodoc.models import (
     ObjectTOC,
     LexicalEntry,
     Dictionary,
-    Entity
+    Entity,
+    Passhash
 )
 
 from sqlalchemy import (
@@ -582,6 +584,22 @@ def create_persp_to_field(request):
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
+
+@view_config(route_name='change_user_password', renderer="json", request_method='POST', permission='admin')
+def change_user_password(request):
+    login = request.matchdict.get('login')
+    req = request.json_body
+    user = DBSession.query(User).filter_by(login=login).first()
+    if not user:
+        raise CommonException("This login is orphaned")
+    new_password = req.get('password')
+    if not new_password:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str("Need new password to confirm")}
+    old_hash = DBSession.query(Passhash).filter_by(user_id=user.id).first()
+    old_hash.hash = bcrypt.encrypt(new_password)
+    request.response.status = HTTPOk.code
+    return {"success": True}
 
 
 conn_err_msg = """\
