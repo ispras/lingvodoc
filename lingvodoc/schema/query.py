@@ -99,6 +99,14 @@ from lingvodoc.schema.gql_holders import (
     client_id_check
 )
 
+from lingvodoc.schema.gql_userrequest import (
+    UserRequest,
+    CreateGrantPermission,
+    AddDictionaryToGrant,
+    AdministrateOrg,
+    ParticipateOrg
+)
+
 import lingvodoc.acl as acl
 
 from lingvodoc.models import (
@@ -172,6 +180,7 @@ class Query(graphene.ObjectType):
     all_locales = graphene.List(ObjectVal)
     user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
     userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
+    userrequest = graphene.Field(UserRequest, id=graphene.Int())
 
     def resolve_dictionaries(self, info, published):
         """
@@ -976,6 +985,9 @@ class Query(graphene.ObjectType):
                                      created_at=blob.created_at) for blob in user_blobs]
         return user_blobs_list
 
+    def resolve_userrequest(self, info, id):
+        return UserRequest(id=id)
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -1021,6 +1033,10 @@ class MyMutations(graphene.ObjectType):
     delete_grant = DeleteGrant.Field()
     create_userblob = CreateUserBlob.Field()
     delete_userblob = DeleteUserBlob.Field()
+    create_grant_permission = CreateGrantPermission.Field()
+    add_dictionary_to_grant = AddDictionaryToGrant.Field()
+    administrate_org = AdministrateOrg.Field()
+    participate_org = ParticipateOrg.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
