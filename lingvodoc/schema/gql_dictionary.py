@@ -11,7 +11,8 @@ from lingvodoc.models import (
     Field as dbField,
     DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
-    Group as dbGroup
+    Group as dbGroup,
+    Organization as dbOrganization
 )
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.schema.gql_user import User
@@ -23,6 +24,7 @@ from lingvodoc.schema.gql_holders import (
     ResponseError
 )
 from lingvodoc.views.v2.translations import translationgist_contents
+from lingvodoc.views.v2.utils import cache_clients
 # from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
@@ -458,6 +460,143 @@ class UpdateDictionary(graphene.Mutation):
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
         return UpdateDictionary(dictionary=dictionary, triumph=True)
+
+class UpdateDictionaryStatus(graphene.Mutation):
+    """
+    mutation  {
+        update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
+            triumph
+            dictionary{
+                id
+                translation
+                marked_for_deletion
+                created_at
+                status
+                translation
+                            additional_metadata{
+             hash
+            }
+            }
+        }
+    }
+    """
+    class Arguments:
+        id = graphene.List(graphene.Int)
+        state_translation_gist_id = graphene.List(graphene.Int)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
+            dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
+            dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
+            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
+                                                              parent_object_id=state_translation_gist_object_id,
+                                                              locale_id=info.context.get('locale_id')).first()
+            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
+            dictionary.dbObject = dbdictionary
+            return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="No such dictionary in the system")
+
+class UpdateDictionaryRoles(graphene.Mutation):
+    class Arguments:
+        id = graphene.List(graphene.Int)
+        roles_users = graphene.List(graphene.String)
+        roles_organizations = graphene.List(graphene.String)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    #@client_id_check
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        roles_users = args.get('roles_users')
+        roles_organizations = args.get('roles_organizations')
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
+            if roles_users:
+                for role_name in roles_users:
+                    base = DBSession.query(dbBaseGroup).filter_by(name=role_name, dictionary_default=True).first()
+                    if not base:
+                        raise ResponseError(message="No such role in the system")
+                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
+
+                    client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
+
+                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+                    if not permitted:
+                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                                          subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
+
+                    if permitted:
+                        users = roles_users[role_name]
+                        for userid in users:
+                            user = DBSession.query(dbUser).filter_by(id=userid).first()
+                            if user:
+                                if user not in group.users:
+                                    group.users.append(user)
+                    else:
+                        raise ResponseError(message="Not enough permission")
+            if roles_organizations:
+                for role_name in roles_organizations:
+                    base = DBSession.query(dbBaseGroup).filter_by(name=role_name, dictionary_default=True).first()
+                    if not base:
+                        raise ResponseError(message="No such role in the system")
+
+                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                               subject_object_id=object_id,
+                                                               subject_client_id=client_id).first()
+
+                    client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
+
+                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+                    if not permitted:
+                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                                          subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
+
+                    if permitted:
+                        orgs = roles_organizations[role_name]
+                        for orgid in orgs:
+                            org = DBSession.query(dbOrganization).filter_by(id=orgid).first()
+                            if org:
+                                if org not in group.organizations:
+                                    group.organizations.append(org)
+                    else:
+                        raise ResponseError(message="Not enough permission")
+
+            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
+            dictionary.dbObject = dbdictionary
+            return UpdateDictionaryRoles(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="No such dictionary in the system")
 
 
 class DeleteDictionary(graphene.Mutation):

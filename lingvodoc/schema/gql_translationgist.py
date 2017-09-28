@@ -55,6 +55,8 @@ class TranslationGist(graphene.ObjectType):
         for atom in atoms:
             result.append(TranslationAtom(id=[atom.client_id, atom.object_id]))
         return result
+
+
 class CreateTranslationGist(graphene.Mutation):
     """
     example:
