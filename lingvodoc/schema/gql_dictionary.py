@@ -1,3 +1,4 @@
+import datetime
 import graphene
 from lingvodoc.models import (
     Dictionary as dbDictionary,
@@ -7,6 +8,7 @@ from lingvodoc.models import (
     Client as dbClient,
     Language as dbLanguage,
     User as dbUser,
+    Field as dbField,
     DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
@@ -15,7 +17,9 @@ from lingvodoc.models import (
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.schema.gql_user import User
 
-from lingvodoc.views.v2.utils import update_metadata
+from lingvodoc.views.v2.utils import (
+    update_metadata,
+    cache_clients)
 from lingvodoc.schema.gql_holders import (
     ResponseError
 )
@@ -93,6 +97,8 @@ class Dictionary(graphene.ObjectType):
     category = graphene.Int()
     domain = graphene.Int()
     roles = graphene.List(ObjectVal)
+    starting_date = graphene.Int()
+    ending_date = graphene.Int()
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
@@ -143,6 +149,8 @@ class Dictionary(graphene.ObjectType):
 
     @client_id_check()
     def resolve_perspectives(self, info):
+        if not self.id:
+            raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
         dictionary_client_id, dictionary_object_id = self.id  #self.dbObject.client_id, self.dbObject.object_id
 
         perspectives = list()
