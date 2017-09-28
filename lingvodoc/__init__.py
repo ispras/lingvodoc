@@ -183,6 +183,9 @@ def configure_routes(config):
 
     # API #GET
     config.add_route('users', '/users')  # tested
+    config.add_route(name='change_user_password',
+                     pattern='/users/{login}',
+                     factory='lingvodoc.models.AdminAcl')  # new
 
     # web-view
     config.add_route(name='new_dictionary', pattern='/create_dictionary')
