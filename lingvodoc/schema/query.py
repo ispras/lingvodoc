@@ -104,7 +104,8 @@ from lingvodoc.schema.gql_userrequest import (
     CreateGrantPermission,
     AddDictionaryToGrant,
     AdministrateOrg,
-    ParticipateOrg
+    ParticipateOrg,
+    AcceptUserRequest
 )
 
 import lingvodoc.acl as acl
@@ -1037,6 +1038,7 @@ class MyMutations(graphene.ObjectType):
     add_dictionary_to_grant = AddDictionaryToGrant.Field()
     administrate_org = AdministrateOrg.Field()
     participate_org = ParticipateOrg.Field()
+    accept_user_request = AcceptUserRequest.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
