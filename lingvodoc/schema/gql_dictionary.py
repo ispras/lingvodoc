@@ -42,7 +42,7 @@ from lingvodoc.views.v2.delete import real_delete_dictionary
 from lingvodoc.views.v2.utils import (
     check_client_id
 )
-
+from graphene.types.generic import GenericScalar
 
 def translation_service_search(searchstring):
     translationatom = DBSession.query(dbTranslationAtom)\
@@ -55,6 +55,15 @@ def translation_service_search(searchstring):
     response = translationgist_contents(translationatom.parent)
     return response
 
+class UserAndOrganizationsRoles(graphene.ObjectType):
+    roles_users = graphene.List(graphene.String)
+    roles_organizations = graphene.List(graphene.String)
+
+    def resolve_roles_users(self, info):
+        return self.roles_users
+
+    def resolve_roles_organizations(self, info):
+        return self.roles_organizations
 
 class Dictionary(graphene.ObjectType):
     # TODO: resolve_dataType(?)
@@ -88,6 +97,10 @@ class Dictionary(graphene.ObjectType):
           blob_description
         }
          perspectives{id translation}
+         roles{
+             roles_users
+             roles_organizations
+         }
       }
     }
     """
@@ -96,7 +109,7 @@ class Dictionary(graphene.ObjectType):
     dbObject = None
     category = graphene.Int()
     domain = graphene.Int()
-    roles = graphene.List(ObjectVal)
+    roles = graphene.Field(UserAndOrganizationsRoles)
     starting_date = graphene.Int()
     ending_date = graphene.Int()
     # parent_object_id
@@ -189,7 +202,8 @@ class Dictionary(graphene.ObjectType):
         response['roles_organizations'] = roles_organizations
 
         #request.response.status = HTTPOk.code
-        return response
+        #return response
+        return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
 
 ###
 # CrUd functions
