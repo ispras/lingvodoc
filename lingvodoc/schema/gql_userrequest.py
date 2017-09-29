@@ -429,3 +429,16 @@ class ParticipateOrg(graphene.Mutation):
             req_id = create_one_userrequest(req, client_id)
 
         return ParticipateOrg(triumph=True)
+
+class DeleteUserRequest(graphene.Mutation):
+    class Arguments:
+        id = graphene.Int()
+
+    triumph = graphene.Boolean()
+    def mutate(root, info, **args):
+        userrequest_id = args.get('id')
+        userrequest = DBSession.query(dbUserRequest).filter_by(id=userrequest_id).first()
+        if userrequest:
+            DBSession.delete(userrequest)
+            return DeleteUserRequest(triumph=True)
+        raise ResponseError(message="No such userrequest in the system")

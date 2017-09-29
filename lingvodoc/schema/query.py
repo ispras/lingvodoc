@@ -105,7 +105,8 @@ from lingvodoc.schema.gql_userrequest import (
     AddDictionaryToGrant,
     AdministrateOrg,
     ParticipateOrg,
-    AcceptUserRequest
+    AcceptUserRequest,
+    DeleteUserRequest
 )
 
 import lingvodoc.acl as acl
@@ -128,6 +129,7 @@ from lingvodoc.models import (
     TranslationGist as dbTranslationGist,
     Email as dbEmail,
     UserBlobs as dbUserBlobs,
+    UserRequest as dbUserRequest,
     Client
 )
 from pyramid.request import Request
@@ -182,6 +184,7 @@ class Query(graphene.ObjectType):
     user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
     userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
+    userrequests = graphene.List(UserRequest)
 
     def resolve_dictionaries(self, info, published):
         """
@@ -989,6 +992,32 @@ class Query(graphene.ObjectType):
     def resolve_userrequest(self, info, id):
         return UserRequest(id=id)
 
+    @client_id_check()
+    def resolve_userrequests(self, info):
+        client_id = info.context.get('client_id')
+
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        if not user:
+            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        userrequests = DBSession.query(dbUserRequest).filter(dbUserRequest.recipient_id == user.id).order_by(
+            dbUserRequest.created_at).all()
+
+        userrequests_list = [UserRequest(id=userrequest.id,
+                                         sender_id=userrequest.sender_id,
+                                         recipient_id=userrequest.recipient_id,
+                                         broadcast_uuid=userrequest.broadcast_uuid,
+                                         type=userrequest.type,
+                                         subject=userrequest.subject,
+                                         message=userrequest.message,
+                                         created_at=userrequest.message) for userrequest in userrequests]
+
+        return userrequests_list
+
+
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -1038,7 +1067,8 @@ class MyMutations(graphene.ObjectType):
     add_dictionary_to_grant = AddDictionaryToGrant.Field()
     administrate_org = AdministrateOrg.Field()
     participate_org = ParticipateOrg.Field()
-    accept_user_request = AcceptUserRequest.Field()
+    accept_userrequest = AcceptUserRequest.Field()
+    delete_userrequest = DeleteUserRequest.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
