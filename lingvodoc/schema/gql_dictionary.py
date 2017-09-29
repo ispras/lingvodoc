@@ -507,8 +507,8 @@ class UpdateDictionaryStatus(graphene.Mutation):
 class UpdateDictionaryRoles(graphene.Mutation):
     class Arguments:
         id = graphene.List(graphene.Int)
-        roles_users = graphene.List(graphene.String)
-        roles_organizations = graphene.List(graphene.String)
+        roles_users = ObjectVal()
+        roles_organizations = ObjectVal()
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()

@@ -537,8 +537,8 @@ class UpdatePerspectiveRoles(graphene.Mutation):
     class Arguments:
         id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
-        roles_users = graphene.List(graphene.String)
-        roles_organizations = graphene.List(graphene.String)
+        roles_users = ObjectVal()
+        roles_organizations = ObjectVal()
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
