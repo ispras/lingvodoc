@@ -99,8 +99,8 @@ class CreateGrantPermission(graphene.Mutation):
     #userrequest = graphene.Field(UserRequest)
     triumph = graphene.Boolean()
 
-    @acl_check_by_id()
     @staticmethod
+    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -118,7 +118,7 @@ class CreateGrantPermission(graphene.Mutation):
         req['type'] = 'grant_permission'
         req['subject'] = {'grant_id': grant_id, 'user_id': user_id}
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+        if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
             raise ResponseError(message="Request already exists")
 
@@ -146,6 +146,8 @@ class AddDictionaryToGrant(graphene.Mutation):
 
     triumph = graphene.Boolean()
 
+    @staticmethod
+    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -162,11 +164,10 @@ class AddDictionaryToGrant(graphene.Mutation):
         req['type'] = 'add_dict_to_grant'
         req['subject'] = request_json
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+        if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
             raise ResponseError(message="Request already exists")
 
-        grantadmins = list()
 
         grant = DBSession.query(dbGrant).filter_by(id=request_json['grant_id']).first()
         grantadmins = grant.owners
@@ -183,8 +184,10 @@ class AdministrateOrg(graphene.Mutation):
     class Arguments:
         org_id = graphene.Int()
 
-    triumph = True
+    triumph = graphene.Boolean()
 
+    @staticmethod
+    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -201,7 +204,7 @@ class AdministrateOrg(graphene.Mutation):
         req['type'] = 'administrate_org'
         req['subject'] = {'org_id': org_id, 'user_id': user_id}
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+        if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
             raise ResponseError(message="Request already exists")
 
@@ -225,8 +228,10 @@ class ParticipateOrg(graphene.Mutation):
     class Arguments:
         org_id = graphene.Int()
 
-    triumph = True
+    triumph = graphene.Boolean()
 
+    @staticmethod
+    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -243,7 +248,7 @@ class ParticipateOrg(graphene.Mutation):
         req['type'] = 'administrate_org'
         req['subject'] = {'org_id': org_id, 'user_id': user_id}
         req['message'] = ''
-        if DBSession.query(UserRequest).filter_by(type=req['type'], subject=req['subject'],
+        if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
             raise ResponseError(message="Request already exists")
 
