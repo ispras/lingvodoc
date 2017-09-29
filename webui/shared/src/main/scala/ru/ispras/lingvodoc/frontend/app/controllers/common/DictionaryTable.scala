@@ -283,8 +283,10 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
 
   def updateEntity(entry: LexicalEntry, oldEntity: Entity, newEntity: Entity) = {
     rows.find { row => row.entry.getId == entry.getId } foreach { row =>
-      row.cells.zipWithIndex.find { case (cell, i) => cell.getField.clientId == oldEntity.fieldClientId && cell.getField.objectId == oldEntity.fieldObjectId } foreach { case (cell, i) =>
-        cell.getValues.update(i, entityToValue(newEntity))
+      row.cells.find { cell => cell.getField.clientId == oldEntity.fieldClientId && cell.getField.objectId == oldEntity.fieldObjectId } foreach { cell =>
+        cell.getValues.zipWithIndex.find { case (value, _) => value.getEntity.getId == oldEntity.getId} foreach { case (_, i) =>
+          cell.getValues.update(i, entityToValue(newEntity))
+        }
       }
     }
   }
