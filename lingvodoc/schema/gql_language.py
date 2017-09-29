@@ -145,8 +145,10 @@ class CreateLanguage(graphene.Mutation):
 
 
         tr_atoms = args.get("translation_atoms")
-        if not tr_atoms:
+        if type(tr_atoms) is not list:  # TODO: look at this
             translation_gist_id = args.get('translation_gist_id')
+            if not translation_gist_id:
+                raise ResponseError(message="translation_gist_id arg not found")
             translation_gist_client_id = translation_gist_id[0]
             translation_gist_object_id = translation_gist_id[1]
         else:
