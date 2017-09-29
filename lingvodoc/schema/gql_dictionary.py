@@ -230,7 +230,7 @@ class CreateDictionary(graphene.Mutation):
     perspectives = graphene.List(Dictionary)
 
     @staticmethod
-    @client_id_check()
+    #@client_id_check()
     def create_dbdictionary(client_id=None,
                             object_id=None,
                             parent_client_id=None,
