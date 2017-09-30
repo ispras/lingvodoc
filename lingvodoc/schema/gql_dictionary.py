@@ -43,6 +43,7 @@ from lingvodoc.views.v2.utils import (
     check_client_id
 )
 from graphene.types.generic import GenericScalar
+from lingvodoc.views.v2.utils import  add_user_to_group
 
 def translation_service_search(searchstring):
     translationatom = DBSession.query(dbTranslationAtom)\
@@ -173,7 +174,7 @@ class Dictionary(graphene.ObjectType):
             persp.dbObject = persp
             perspectives.append(persp)
         return perspectives
-
+    @fetch_object()
     def resolve_roles(self, info):
         response = dict()
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
@@ -230,11 +231,43 @@ class CreateDictionary(graphene.Mutation):
         }
       }
     }
+
+    complex_create:
+    mutation CreateDictionary1{
+      create_dictionary( translation_gist_id: [714, 3],parent_id: [500, 121], additional_metadata: {hash: "1234567"},  perspectives: [
+      {
+    translation_atoms: [
+      {
+       locale_id: 1,
+       content: "my text v1"
+      },
+      {
+       locale_id: 2,
+       content: "my text v2"
+      }
+     ]
+        }
+     ]
+
+     ) {
+        dictionary {
+          id
+          perspectives {
+            id
+            created_at
+            translation
+          }
+          translation
+
+        }
+      }
+    }
+
     """
 
     class Arguments:
         id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int, required=True)
+        translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int, required=True)
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
@@ -242,6 +275,7 @@ class CreateDictionary(graphene.Mutation):
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
     perspectives = graphene.List(Dictionary)
+    translation_atoms = graphene.List(ObjectVal)
 
     @staticmethod
     #@client_id_check()
@@ -287,7 +321,8 @@ class CreateDictionary(graphene.Mutation):
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
         parent_client_id, parent_object_id = args.get('parent_id')
-        translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
+        if args.get('translation_gist_id'):
+            translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
         additional_metadata = args.get("additional_metadata")
 
         dbdictionary_obj = CreateDictionary.create_dbdictionary(client_id=client_id,
@@ -312,7 +347,55 @@ class CreateDictionary(graphene.Mutation):
         persp_fake_ids = dict()
         if persp_args:
             for child_persp in persp_args:
-                persp_translation_gist_id = child_persp["translation_gist_id"]
+                if "translation_atoms" in child_persp:
+                    client = DBSession.query(dbClient).filter_by(id=client_id).first()
+                    user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    atoms_to_create = child_persp["translation_atoms"]
+                    dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
+                    translation_gist_client_id = dbtranslationgist.client_id
+                    translation_gist_object_id = dbtranslationgist.object_id
+                    persp_translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
+                    DBSession.add(dbtranslationgist)
+                    DBSession.flush()
+                    basegroups = list()
+                    basegroups.append(DBSession.query(dbBaseGroup).filter_by(name="Can delete translationgist").first())
+                    if not object_id:
+                        groups = []
+                        for base in basegroups:
+                            group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
+                                          parent=base)
+                            groups += [group]
+                        for group in groups:
+                            add_user_to_group(user, group)
+
+                    for atom_dict in atoms_to_create:
+                        if "locale_id" in atom_dict and "content" in atom_dict:
+                            locale_id = atom_dict["locale_id"]
+                            content = atom_dict["content"]
+                            dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                                  object_id=object_id,
+                                                                  parent=dbtranslationgist,
+                                                                  locale_id=locale_id,
+                                                                  content=content)
+                            DBSession.add(dbtranslationatom)
+                            DBSession.flush()
+                            if not object_id:
+                                basegroups = []
+                                basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
+                                if not object_id:
+                                    groups = []
+                                    for base in basegroups:
+                                        group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                                        subject_object_id=dbtranslationatom.object_id,
+                                                        parent=base)
+                                        groups += [group]
+                                    for group in groups:
+                                        add_user_to_group(user, group)
+                        else:
+                            raise ResponseError(message="locale_id and content args not found")
+                else:
+                    if "translation_gist_id" in child_persp:
+                        persp_translation_gist_id = child_persp["translation_gist_id"]
                 obj_id = None
                 if "id" in child_persp:
                     obj_id = child_persp["id"][1]
