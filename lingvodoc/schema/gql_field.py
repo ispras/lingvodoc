@@ -68,6 +68,16 @@ class Field(graphene.ObjectType):
 
 
 class CreateField(graphene.Mutation):
+    """
+    mutation  {
+    create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
+        field {
+            id
+        }
+
+    }
+}
+    """
     class Arguments:
         # TODO: id?
         translation_gist_id = graphene.List(graphene.Int)
@@ -128,6 +138,17 @@ class UpdateField(graphene.Mutation):
 
 
 class DeleteField(graphene.Mutation):
+    """
+    mutation  {
+    delete_field(id: [880,2]) {
+        field {
+            created_at,
+            translation
+        }
+
+    }
+}
+    """
     class Arguments:
         id = graphene.List(graphene.Int)
 
