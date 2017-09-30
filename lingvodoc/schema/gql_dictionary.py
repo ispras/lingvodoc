@@ -105,6 +105,9 @@ class Dictionary(graphene.ObjectType):
          }
       }
     }
+    or
+
+          dictionary(id: [126, 3], starting_time: 0, ending_time: 100) { statistic   ...
     """
 
     dbType = dbDictionary
@@ -278,7 +281,6 @@ class CreateDictionary(graphene.Mutation):
         }
       }
     }
-
     """
 
     class Arguments:

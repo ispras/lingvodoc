@@ -30,6 +30,7 @@ class ResponseError(Exception):
         self.message = str(message)
         self.code = code
         self.params = params
+        #DBSession.rollback()
 
 
 class PermissionException(ResponseError):
