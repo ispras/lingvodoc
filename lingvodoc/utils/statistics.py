@@ -1,5 +1,54 @@
 
-def stat_perspective(perspective_id):
+# Standard library imports.
+
+import ast
+import collections
+import datetime
+import io
+import logging
+import pdb
+import pprint
+import traceback
+
+# External imports.
+
+from pyramid.response import Response
+from pyramid.view import view_config
+
+from sqlalchemy import and_, BigInteger, cast, extract, func, tuple_
+from sqlalchemy.orm import aliased
+
+# Lingvodoc imports.
+
+from lingvodoc.models import (
+    Client,
+    DBSession,
+    Dictionary,
+    DictionaryPerspective,
+    DictionaryPerspectiveToField,
+    ENGLISH_LOCALE,
+    Entity,
+    Field,
+    LexicalEntry,
+    PublishingEntity,
+    RUSSIAN_LOCALE,
+    TranslationAtom,
+    TranslationGist,
+    User,
+)
+
+from lingvodoc.views.v2.utils import message, unimplemented
+
+
+log = logging.getLogger(__name__)
+
+
+#: Set of statistically simple field types, statistics of entities belonging to fields with these types are
+#: simple counts.
+simple_field_type_set = set(['image', 'link', 'markup', 'sound', 'text'])
+
+
+def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
     """
     Gathers user participation statistics for a specified perspective in a given time interval
     [time_begin, time_end).
@@ -12,21 +61,24 @@ def stat_perspective(perspective_id):
     #log.debug('stat_perspective')
 
     try:
-        # TODO: id check
-        perspective_client_id = perspective_id[0]
-        perspective_object_id = perspective_id[1]
+        """
+
 
         # Trying to determine time interval.
 
         time_begin_string = request.params.get('time_begin', '0')
-        time_begin = try_parse_datetime(time_begin_string)
+        time_begin = try_parse_datetime(time_begin_string) ####################
 
         if time_begin is None:
             return {'error': message('Invalid time representation \'{0}\'.'.format(time_begin_string))}
 
         time_end_string = request.params.get('time_end', '2038-01-01t00:00:00')
-        time_end = try_parse_datetime(time_end_string)
-
+        time_end = try_parse_datetime(time_end_string)   ####################
+        ###################################################################################################
+        """
+        # TODO: id check
+        perspective_client_id = perspective_id[0] ###########
+        perspective_object_id = perspective_id[1] ############
         if time_end is None:
             return {'error': message('Invalid time representation \'{0}\'.'.format(time_end_string))}
 
@@ -102,7 +154,7 @@ def stat_perspective(perspective_id):
 
         # Getting perspective's field data.
 
-        locale_id = int(request.cookies.get('locale_id') or 2)
+        #####locale_id = int(request.cookies.get('locale_id') or 2)
 
         field_data_list = DBSession.query(Field).filter(and_(
             DictionaryPerspectiveToField.parent_client_id == perspective_client_id,
@@ -282,7 +334,7 @@ def stat_perspective(perspective_id):
         return {'error': message('\n' + traceback_string)}
 
 
-def stat_dictionary(request):
+def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
     """
     Gathers cumulative user participation statistics for all perspectives of a specified dictionary in a
     given time interval [time_begin, time_end).
@@ -294,24 +346,23 @@ def stat_dictionary(request):
     log.debug('stat_dictionary')
 
     try:
-
-        dictionary_client_id = request.matchdict.get('dictionary_client_id')
-        dictionary_object_id = request.matchdict.get('dictionary_object_id')
-
+        """
         # Trying to determine time interval.
 
         time_begin_string = request.params.get('time_begin', '0')
-        time_begin = try_parse_datetime(time_begin_string)
+        time_begin = try_parse_datetime(time_begin_string) ######################
 
         if time_begin is None:
             return {'error': message('Invalid time representation \'{0}\'.'.format(time_begin_string))}
 
         time_end_string = request.params.get('time_end', '2038-01-01t00:00:00')
-        time_end = try_parse_datetime(time_end_string)
+        time_end = try_parse_datetime(time_end_string)    ###################
 
         if time_end is None:
             return {'error': message('Invalid time representation \'{0}\'.'.format(time_end_string))}
-
+        """
+        dictionary_client_id = dictionary_id[0]#request.matchdict.get('dictionary_client_id')
+        dictionary_object_id = dictionary_id[1]#request.matchdict.get('dictionary_object_id')
         log.debug('stat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5})'.format(
             dictionary_client_id, dictionary_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
@@ -327,7 +378,7 @@ def stat_dictionary(request):
             return {'error': message('No such dictionary {0}/{1}.'.format(
                 dictionary_client_id, dictionary_object_id))}
 
-        primary_locale_id = int(request.cookies.get('locale_id') or 2)
+        primary_locale_id = int(locale_id or 2)
 
         secondary_locale_id = (ENGLISH_LOCALE
             if primary_locale_id != ENGLISH_LOCALE else RUSSIAN_LOCALE)

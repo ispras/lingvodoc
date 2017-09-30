@@ -44,6 +44,7 @@ from lingvodoc.views.v2.utils import (
 )
 from graphene.types.generic import GenericScalar
 from lingvodoc.views.v2.utils import  add_user_to_group
+from lingvodoc.utils import statistics
 
 def translation_service_search(searchstring):
     translationatom = DBSession.query(dbTranslationAtom)\
@@ -111,13 +112,14 @@ class Dictionary(graphene.ObjectType):
     category = graphene.Int()
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
-    starting_date = graphene.Int()
-    ending_date = graphene.Int()
+    starting_time = graphene.Int()  # date
+    ending_time = graphene.Int()
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
     triumph = graphene.Boolean()
     status = graphene.String()
+    statistic = ObjectVal()
     persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
     cr_persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.CreateDictionaryPerspective')
     perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
@@ -130,7 +132,7 @@ class Dictionary(graphene.ObjectType):
         interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
     # @property
 
-    @property
+    @property  # TODO: delete
     def persp_class(self):
         return self._meta.fields['persp'].type
 
@@ -157,6 +159,20 @@ class Dictionary(graphene.ObjectType):
             return atom.content
         else:
             return None
+
+    @fetch_object()
+    def resolve_statistic(self, info):
+        #print(starting_time)
+        starting_time = self.starting_time
+        ending_time = self.ending_time
+        if starting_time is None or ending_time is None:
+            raise ResponseError(message="Time error")
+        locale_id = info.context.get('locale_id')
+        return statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
+                                   starting_time,
+                                   ending_time,
+                                   locale_id=locale_id
+                                   )
 
     def resolve_triumph(self, info):
         return True
