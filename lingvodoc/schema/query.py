@@ -154,7 +154,8 @@ ENGLISH_LOCALE = 2
 class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
-    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int))
+    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int()
+                              )
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int))
     entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
@@ -262,8 +263,8 @@ class Query(graphene.ObjectType):
                                         translation=dbdict.get_translation(context.get('locale_id'))) for dbdict in dbdicts]
         return dictionaries_list
 
-    def resolve_dictionary(self, info, id):
-        return Dictionary(id=id)
+    def resolve_dictionary(self, info, id, starting_time, ending_time):
+        return Dictionary(id=id, starting_time=starting_time, ending_time=ending_time)
 
     def resolve_perspectives(self,info, published):
         """

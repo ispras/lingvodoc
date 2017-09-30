@@ -361,8 +361,8 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
         if time_end is None:
             return {'error': message('Invalid time representation \'{0}\'.'.format(time_end_string))}
         """
-        dictionary_client_id = request.matchdict.get('dictionary_client_id')
-        dictionary_object_id = request.matchdict.get('dictionary_object_id')
+        dictionary_client_id = dictionary_id[0]#request.matchdict.get('dictionary_client_id')
+        dictionary_object_id = dictionary_id[1]#request.matchdict.get('dictionary_object_id')
         log.debug('stat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5})'.format(
             dictionary_client_id, dictionary_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
