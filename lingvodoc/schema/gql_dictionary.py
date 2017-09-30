@@ -165,6 +165,8 @@ class Dictionary(graphene.ObjectType):
         #print(starting_time)
         starting_time = self.starting_time
         ending_time = self.ending_time
+        if starting_time is None or ending_time is None:
+            raise ResponseError(message="Time error")
         locale_id = info.context.get('locale_id')
         return statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
                                    starting_time,

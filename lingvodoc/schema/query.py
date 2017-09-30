@@ -263,7 +263,7 @@ class Query(graphene.ObjectType):
                                         translation=dbdict.get_translation(context.get('locale_id'))) for dbdict in dbdicts]
         return dictionaries_list
 
-    def resolve_dictionary(self, info, id, starting_time, ending_time):
+    def resolve_dictionary(self, info, id, starting_time=None, ending_time=None):
         return Dictionary(id=id, starting_time=starting_time, ending_time=ending_time)
 
     def resolve_perspectives(self,info, published):
