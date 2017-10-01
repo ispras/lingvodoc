@@ -185,6 +185,7 @@ class Query(graphene.ObjectType):
     userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
+    all_basegroups = graphene.List(ObjectVal)
 
     def resolve_dictionaries(self, info, published):
         """
@@ -1015,8 +1016,11 @@ class Query(graphene.ObjectType):
 
         return userrequests_list
 
-
-
+    def resolve_all_basegroups(self, info):
+        basegroups = dict()
+        for basegroup_object in DBSession.query(dbBaseGroup).all():
+            basegroups[basegroup_object.id] = basegroup_object.name
+        return basegroups
 
 class MyMutations(graphene.ObjectType):
     """
