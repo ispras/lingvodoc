@@ -115,6 +115,7 @@ class Dictionary(graphene.ObjectType):
     category = graphene.Int()
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
+    statistic = ObjectVal()
     starting_time = graphene.Int()  # date
     ending_time = graphene.Int()
     # parent_object_id
@@ -122,7 +123,6 @@ class Dictionary(graphene.ObjectType):
     # state_translation_gist_client_id
     triumph = graphene.Boolean()
     status = graphene.String()
-    statistic = ObjectVal()
     persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
     cr_persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.CreateDictionaryPerspective')
     perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
