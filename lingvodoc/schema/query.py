@@ -154,10 +154,9 @@ ENGLISH_LOCALE = 2
 class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
-    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int()
-                              )
+    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int())
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
-    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int))
+    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int())
     entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
     languages = graphene.List(Language)
@@ -340,8 +339,8 @@ class Query(graphene.ObjectType):
         return perspectives_list
 
 
-    def resolve_perspective(self, info, id):
-        return DictionaryPerspective(id=id)
+    def resolve_perspective(self, info, id, starting_time=None, ending_time=None):
+        return DictionaryPerspective(id=id, starting_time=starting_time, ending_time=ending_time)
 
     def resolve_language(self, info, id):
         return Language(id=id)

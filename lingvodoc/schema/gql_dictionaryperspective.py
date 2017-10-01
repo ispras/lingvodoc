@@ -39,7 +39,7 @@ from  lingvodoc.schema.gql_user import User
 from lingvodoc.views.v2.utils import add_user_to_group
 
 from lingvodoc.views.v2.translations import translationgist_contents
-
+from lingvodoc.utils import statistics
 from pyramid.request import Request
 
 def translation_service_search(searchstring):
@@ -73,6 +73,15 @@ class DictionaryPerspective(graphene.ObjectType):
      + .translation
      + status
      + tree
+
+         query myQuery {
+      perspective(id: [66, 5], starting_time: 0, ending_time: 1506812557) {
+        id
+        statistic
+
+
+      }
+    }
     """
     data_type = graphene.String()
 
@@ -89,6 +98,9 @@ class DictionaryPerspective(graphene.ObjectType):
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     # stats = graphene.String() # ?
     roles = graphene.List(ObjectVal)
+    statistic = ObjectVal()
+    starting_time = graphene.Int()  # date
+    ending_time = graphene.Int()
 
     dbType = dbPerspective
     dbObject = None
@@ -267,6 +279,19 @@ class DictionaryPerspective(graphene.ObjectType):
                 response['roles_organizations'] = roles_organizations
                 return response
         raise ResponseError(message="No such perspective in the system")
+
+    @fetch_object()
+    def resolve_statistic(self, info):
+        starting_time = self.starting_time
+        ending_time = self.ending_time
+        if starting_time is None or ending_time is None:
+            raise ResponseError(message="Time error")
+        locale_id = info.context.get('locale_id')
+        return statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
+                                   starting_time,
+                                   ending_time,
+                                   locale_id=locale_id
+                                   )
 
 
 class CreateDictionaryPerspective(graphene.Mutation):
