@@ -188,6 +188,22 @@ class Query(graphene.ObjectType):
     all_basegroups = graphene.List(ObjectVal)
     all_data_types = graphene.List(TranslationGist)
     all_fields = graphene.List(Field)
+    all_statuses = graphene.List(TranslationGist)
+
+    def resolve_all_statuses(self, info):
+        request = info.context.request
+        response = list()
+        for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = {'searchstring': status}
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            jn = resp.json
+            response.append(TranslationGist(id=[jn["client_id"], jn["object_id"] ]))
+        return response
 
     def resolve_all_fields(self, info):
         fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync

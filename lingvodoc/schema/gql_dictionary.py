@@ -252,22 +252,14 @@ class CreateDictionary(graphene.Mutation):
     }
 
     complex_create:
-    mutation CreateDictionary1{
-      create_dictionary( translation_gist_id: [714, 3],parent_id: [500, 121], additional_metadata: {hash: "1234567"},  perspectives: [
-      {
-    translation_atoms: [
-      {
-       locale_id: 1,
-       content: "my text v1"
-      },
-      {
-       locale_id: 2,
-       content: "my text v2"
-      }
-     ]
-        }
-     ]
-
+    mutation CreateDictionary1($persp_tr:[ObjectVal],
+        $metadata: ObjectVal,
+        $dictionary_atoms:[ObjectVal]){
+        create_dictionary(
+                parent_id: [500, 121],
+                additional_metadata: $metadata,
+                translation_atoms: $dictionary_atoms,
+                perspectives: $persp_tr
      ) {
         dictionary {
           id
@@ -277,9 +269,65 @@ class CreateDictionary(graphene.Mutation):
             translation
           }
           translation
-
         }
       }
+    }
+    ============================
+      # variables:
+    ============================
+
+    {
+       "dictionary_atoms":[
+          {
+             "content":"dictionary_name",
+             "locale_id":2
+          }
+       ],
+       "metadata":{
+          "hash":"1234567"
+       },
+       "persp_tr":[
+          {
+             "translation_atoms":[
+                {
+                   "locale_id":2,
+                   "content":"The first perspective"
+                }
+             ],
+             "fake_id":"0ce97e69-ece9-400b-a625-e7a20110246e3",
+             "fields":[
+                {
+                   "field_id":[
+                      1,
+                      213
+                   ],
+                   "link":{
+                      "fake_id":"2e3684b7-6d81-4d103-a10e10-295517ad2f75"
+                   }
+                }
+             ]
+          },
+          {
+             "translation_atoms":[
+                {
+                   "locale_id":2,
+                   "content":"The second perspective"
+                }
+             ],
+             "fake_id":"2e3684b7-6d81-4d103-a10e10-295517ad2f75",
+             "fields":[
+                {
+                   "field_id":[
+                      1,
+                      213
+                   ],
+                   "link":{
+                      "fake_id":"0ce97e69-ece9-400b-a625-e7a20110246e3"
+                   }
+                }
+             ]
+          }
+       ]
     }
     """
 
@@ -289,6 +337,7 @@ class CreateDictionary(graphene.Mutation):
         parent_id = graphene.List(graphene.Int, required=True)
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
+        translation_atoms = graphene.List(ObjectVal)
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -339,8 +388,58 @@ class CreateDictionary(graphene.Mutation):
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
         parent_client_id, parent_object_id = args.get('parent_id')
-        if args.get('translation_gist_id'):
-            translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
+        tr_atoms = args.get("translation_atoms")
+        if type(tr_atoms) is not list:  # TODO: look at this
+            translation_gist_id = args.get('translation_gist_id')
+            if not translation_gist_id:
+                raise ResponseError(message="translation_gist_id arg not found")
+            translation_gist_client_id = translation_gist_id[0]
+            translation_gist_object_id = translation_gist_id[1]
+        else:
+            client = DBSession.query(dbClient).filter_by(id=client_id).first()
+
+            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+            dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
+            translation_gist_client_id = dbtranslationgist.client_id
+            translation_gist_object_id = dbtranslationgist.object_id
+            DBSession.add(dbtranslationgist)
+            DBSession.flush()
+            basegroups = list()
+            basegroups.append(DBSession.query(dbBaseGroup).filter_by(name="Can delete translationgist").first())
+            if not object_id:
+                groups = []
+                for base in basegroups:
+                    group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
+                                  parent=base)
+                    groups += [group]
+                for group in groups:
+                    add_user_to_group(user, group)
+
+            for atom_dict in tr_atoms:
+                if "locale_id" in atom_dict and "content" in atom_dict:
+                    locale_id = atom_dict["locale_id"]
+                    content = atom_dict["content"]
+                    dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                          object_id=object_id,
+                                                          parent=dbtranslationgist,
+                                                          locale_id=locale_id,
+                                                          content=content)
+                    DBSession.add(dbtranslationatom)
+                    DBSession.flush()
+                    if not object_id:
+                        basegroups = []
+                        basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
+                        if not object_id:
+                            groups = []
+                            for base in basegroups:
+                                group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                                subject_object_id=dbtranslationatom.object_id,
+                                                parent=base)
+                                groups += [group]
+                            for group in groups:
+                                add_user_to_group(user, group)
+                else:
+                    raise ResponseError(message="locale_id and content args not found")
         additional_metadata = args.get("additional_metadata")
 
         dbdictionary_obj = CreateDictionary.create_dbdictionary(client_id=client_id,
