@@ -53,7 +53,7 @@ from lingvodoc.schema.gql_dictionary import (
     Dictionary,
     CreateDictionary,
     UpdateDictionary,
-    UpdateDictionaryStatus,
+    #UpdateDictionaryStatus,
     UpdateDictionaryRoles,
     DeleteDictionary
 )
@@ -74,7 +74,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
     UpdateDictionaryPerspective,
-    UpdatePerspectiveStatus,
+    #UpdatePerspectiveStatus,
     UpdatePerspectiveRoles,
     DeleteDictionaryPerspective
 )
