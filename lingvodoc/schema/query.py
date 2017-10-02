@@ -187,6 +187,19 @@ class Query(graphene.ObjectType):
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(ObjectVal)
     all_data_types = graphene.List(ObjectVal)
+    all_fields = graphene.List(Field)
+
+    def resolve_all_fields(self, info):
+        fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
+        response = list()
+        for field in fields:
+            f = Field(id=[field.client_id, field.object_id],
+                      translation=field.get_translation(info.context.get('locale_id'))
+                      )
+            #f.dbObject = field
+            response.append(f)
+
+        return response
 
     def resolve_all_data_types(self, info):
         import json

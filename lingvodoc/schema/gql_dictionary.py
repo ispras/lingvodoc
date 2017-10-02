@@ -132,7 +132,7 @@ class Dictionary(graphene.ObjectType):
         .Field('lingvodoc.schema.gql_dictipersptofield.CreateDictionaryPerspectiveToField')
 
     class Meta:
-        interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
+        interfaces = (CommonFieldsComposite, StateHolder)
     # @property
 
     @property  # TODO: delete

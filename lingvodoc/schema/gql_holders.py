@@ -664,9 +664,9 @@ class AdditionalMetadata(graphene.Interface):
 
 
 class CommonFieldsComposite(MarkedForDeletion, AdditionalMetadata, CreatedAt, CompositeIdHolder, Relationship,
-                            TranslationGistHolder):
+                            TranslationGistHolder, TranslationHolder):
     """
     used in Dictionary, DictionaryPerspective and Language classes as Interfaces because function
     tree = graphene.List(CommonFieldsComposite, ) does not support listing
     """
-    fieldType = graphene.String()  # depricated? -> data_typeString()
+    pass#fieldType = graphene.String()  # depricated? -> data_typeString()
