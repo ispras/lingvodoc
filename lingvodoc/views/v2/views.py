@@ -771,14 +771,14 @@ def testing_translations(request):
                     TranslationGist.marked_for_deletion==False,
                     TranslationGist.type != "Service")  # We must be careful here
                     ).all():
-        if not (transl_gist.client_id, transl_gist.object_id) in gists:
+        if (transl_gist.client_id, transl_gist.object_id) not in gists:
             tr_atoms = DBSession.query(TranslationAtom).filter(and_(
                 TranslationAtom.parent_client_id == transl_gist.client_id,
                 TranslationAtom.parent_object_id == transl_gist.object_id,
                 TranslationAtom.marked_for_deletion==False)
                 ).all()
             for tratom in tr_atoms:
-                if not (tratom.client_id, tratom.object_id) in atoms:
+                if (tratom.client_id, tratom.object_id) not in atoms:
                     res["(%s, %s) [%s]" % (transl_gist.client_id,
                                            transl_gist.object_id,
                                            transl_gist.type)].append( tratom.content)
@@ -1119,6 +1119,7 @@ def graphql(request):
     
     """
     # TODO: rewrite this footwrap
+    sp = request.tm.savepoint()
     try:
         batch = False
         variable_values={}
@@ -1128,6 +1129,7 @@ def graphql(request):
         if not client_id:
             client_id = None
         locale_id = int(request.cookies.get('locale_id') or 2)
+
         if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
                 and type(request.POST) == MultiDict:
             data = request.POST
@@ -1159,7 +1161,7 @@ def graphql(request):
             if type(json_req) is list:
                 batch = True
             if not batch:   
-                if not "query" in json_req:
+                if "query" not in json_req:
                     return {'error': 'query key not nound'}
                 request_string = json_req["query"]
                 if "variables" in json_req:
@@ -1167,7 +1169,7 @@ def graphql(request):
             else:
                 for query in json_req:
                     
-                    if not "query" in query:
+                    if "query" not in query:
                         return {'error': 'query key not nound'}
                     request_string = query["query"]
                     if "variables" in query:
@@ -1201,6 +1203,7 @@ def graphql(request):
             if result.invalid:
                 return {'errors': [str(e) for e in result.errors]}
             if result.errors:
+                sp.rollback()
                 return {'errors': [str(e) for e in result.errors]}
             return {"data": result.data}
     except KeyError as e:
@@ -1214,6 +1217,7 @@ def graphql(request):
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
+
 
 
 conn_err_msg = """\

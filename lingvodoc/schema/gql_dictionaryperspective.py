@@ -522,41 +522,41 @@ class UpdateDictionaryPerspective(graphene.Mutation):
                                             is_template=dbperspective.is_template)
         perspective.dbObject = dbperspective
         return UpdateDictionaryPerspective(perspective=perspective, triumph=True)
-
-class UpdatePerspectiveStatus(graphene.Mutation):
-    class Arguments:
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
-        state_translation_gist_id = graphene.List(graphene.Int)
-
-    perspective = graphene.Field(DictionaryPerspective)
-    triumph = graphene.Boolean()
-
-    @staticmethod
-    @client_id_check()
-    def mutate(root, info, **args):
-        client_id, object_id = args.get('id')
-        parent_client_id, parent_object_id = args.get('parent_id')
-        state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-
-        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            raise ResponseError(message="No such dictionary in the system")
-
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbperspective and not dbperspective.marked_for_deletion:
-            if dbperspective.parent != parent:
-                raise ResponseError(message="No such pair of dictionary/perspective in the system")
-
-            dbperspective.state_translation_gist_client_id = state_translation_gist_client_id
-            dbperspective.state_translation_gist_object_id = state_translation_gist_object_id
-            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
-                                                              parent_object_id=state_translation_gist_object_id,
-                                                              locale_id=info.context.get('locale_id')).first()
-            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
-                                                status=atom.content)
-            perspective.dbObject = dbperspective
-            return UpdatePerspectiveStatus(perspective=perspective, triumph=True)
+#
+# class UpdatePerspectiveStatus(graphene.Mutation):
+#     class Arguments:
+#         id = graphene.List(graphene.Int)
+#         parent_id = graphene.List(graphene.Int)
+#         state_translation_gist_id = graphene.List(graphene.Int)
+#
+#     perspective = graphene.Field(DictionaryPerspective)
+#     triumph = graphene.Boolean()
+#
+#     @staticmethod
+#     @client_id_check()
+#     def mutate(root, info, **args):
+#         client_id, object_id = args.get('id')
+#         parent_client_id, parent_object_id = args.get('parent_id')
+#         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
+#
+#         parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+#         if not parent:
+#             raise ResponseError(message="No such dictionary in the system")
+#
+#         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+#         if dbperspective and not dbperspective.marked_for_deletion:
+#             if dbperspective.parent != parent:
+#                 raise ResponseError(message="No such pair of dictionary/perspective in the system")
+#
+#             dbperspective.state_translation_gist_client_id = state_translation_gist_client_id
+#             dbperspective.state_translation_gist_object_id = state_translation_gist_object_id
+#             atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
+#                                                               parent_object_id=state_translation_gist_object_id,
+#                                                               locale_id=info.context.get('locale_id')).first()
+#             perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
+#                                                 status=atom.content)
+#             perspective.dbObject = dbperspective
+#             return UpdatePerspectiveStatus(perspective=perspective, triumph=True)
 
 class UpdatePerspectiveRoles(graphene.Mutation):
     class Arguments:

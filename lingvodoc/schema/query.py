@@ -53,7 +53,7 @@ from lingvodoc.schema.gql_dictionary import (
     Dictionary,
     CreateDictionary,
     UpdateDictionary,
-    UpdateDictionaryStatus,
+    #UpdateDictionaryStatus,
     UpdateDictionaryRoles,
     DeleteDictionary
 )
@@ -74,7 +74,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
     UpdateDictionaryPerspective,
-    UpdatePerspectiveStatus,
+    #UpdatePerspectiveStatus,
     UpdatePerspectiveRoles,
     DeleteDictionaryPerspective
 )
@@ -186,6 +186,22 @@ class Query(graphene.ObjectType):
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(ObjectVal)
+    all_data_types = graphene.List(ObjectVal)
+
+    def resolve_all_data_types(self, info):
+        import json
+        request = info.context.request
+        response = list()
+        for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link', 'Grouping Tag']:
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = {'searchstring': data_type}
+            # headers = {'Cookie': request.headers['Cookie']}
+            # subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            response.append(resp.json)
+        return response
 
     def resolve_dictionaries(self, info, published):
         """
@@ -1042,7 +1058,7 @@ class MyMutations(graphene.ObjectType):
     delete_language = DeleteLanguage.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
-    update_dictionary_status = UpdateDictionaryStatus.Field()
+    #update_dictionary_status = UpdateDictionaryStatus.Field()
     update_dictionary_roles = UpdateDictionaryRoles.Field()
     delete_dictionary = DeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
@@ -1056,7 +1072,7 @@ class MyMutations(graphene.ObjectType):
     delete_lexicalentry = DeleteLexicalEntry.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
-    update_perspective_status = UpdatePerspectiveStatus.Field()
+    #update_perspective_status = UpdatePerspectiveStatus.Field()
     update_perspective_roles = UpdatePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
     create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()
