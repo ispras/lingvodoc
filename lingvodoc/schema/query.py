@@ -186,7 +186,7 @@ class Query(graphene.ObjectType):
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(ObjectVal)
-    all_data_types = graphene.List(ObjectVal)
+    all_data_types = graphene.List(TranslationGist)
     all_fields = graphene.List(Field)
 
     def resolve_all_fields(self, info):
@@ -213,7 +213,10 @@ class Query(graphene.ObjectType):
             # headers = {'Cookie': request.headers['Cookie']}
             # subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
-            response.append(resp.json)
+            jn = resp.json
+            #if "contains" in jn:
+            #    del jn["contains"]
+            response.append(TranslationGist(id=[jn["client_id"], jn["object_id"] ]))
         return response
 
     def resolve_dictionaries(self, info, published):
