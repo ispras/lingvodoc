@@ -186,6 +186,22 @@ class Query(graphene.ObjectType):
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(ObjectVal)
+    all_data_types = graphene.List(ObjectVal)
+
+    def resolve_all_data_types(self, info):
+        import json
+        request = info.context.request
+        response = list()
+        for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link', 'Grouping Tag']:
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = {'searchstring': data_type}
+            # headers = {'Cookie': request.headers['Cookie']}
+            # subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            response.append(resp.json)
+        return response
 
     def resolve_dictionaries(self, info, published):
         """
