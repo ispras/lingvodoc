@@ -576,48 +576,48 @@ class UpdateDictionary(graphene.Mutation):
         dictionary.dbObject = dbdictionary
         return UpdateDictionary(dictionary=dictionary, triumph=True)
 
-class UpdateDictionaryStatus(graphene.Mutation):
-    """
-    mutation  {
-        update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
-            triumph
-            dictionary{
-                id
-                translation
-                marked_for_deletion
-                created_at
-                status
-                translation
-                            additional_metadata{
-             hash
-            }
-            }
-        }
-    }
-    """
-    class Arguments:
-        id = graphene.List(graphene.Int)
-        state_translation_gist_id = graphene.List(graphene.Int)
-
-    dictionary = graphene.Field(Dictionary)
-    triumph = graphene.Boolean()
-
-    @staticmethod
-    @client_id_check()
-    def mutate(root, info, **args):
-        client_id, object_id = args.get('id')
-        state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbdictionary and not dbdictionary.marked_for_deletion:
-            dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
-            dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
-            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
-                                                              parent_object_id=state_translation_gist_object_id,
-                                                              locale_id=info.context.get('locale_id')).first()
-            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
-            dictionary.dbObject = dbdictionary
-            return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
-        raise ResponseError(message="No such dictionary in the system")
+# class UpdateDictionaryStatus(graphene.Mutation):
+#     """
+#     mutation  {
+#         update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
+#             triumph
+#             dictionary{
+#                 id
+#                 translation
+#                 marked_for_deletion
+#                 created_at
+#                 status
+#                 translation
+#                             additional_metadata{
+#              hash
+#             }
+#             }
+#         }
+#     }
+#     """
+#     class Arguments:
+#         id = graphene.List(graphene.Int)
+#         state_translation_gist_id = graphene.List(graphene.Int)
+#
+#     dictionary = graphene.Field(Dictionary)
+#     triumph = graphene.Boolean()
+#
+#     @staticmethod
+#     @client_id_check()
+#     def mutate(root, info, **args):
+#         client_id, object_id = args.get('id')
+#         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
+#         dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+#         if dbdictionary and not dbdictionary.marked_for_deletion:
+#             dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
+#             dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
+#             atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
+#                                                               parent_object_id=state_translation_gist_object_id,
+#                                                               locale_id=info.context.get('locale_id')).first()
+#             dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
+#             dictionary.dbObject = dbdictionary
+#             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
+#         raise ResponseError(message="No such dictionary in the system")
 
 class UpdateDictionaryRoles(graphene.Mutation):
     class Arguments:
