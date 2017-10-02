@@ -1119,6 +1119,7 @@ def graphql(request):
     
     """
     # TODO: rewrite this footwrap
+    sp = request.tm.savepoint()
     try:
         batch = False
         variable_values={}
@@ -1128,6 +1129,7 @@ def graphql(request):
         if not client_id:
             client_id = None
         locale_id = int(request.cookies.get('locale_id') or 2)
+
         if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
                 and type(request.POST) == MultiDict:
             data = request.POST
@@ -1201,6 +1203,7 @@ def graphql(request):
             if result.invalid:
                 return {'errors': [str(e) for e in result.errors]}
             if result.errors:
+                sp.rollback()
                 return {'errors': [str(e) for e in result.errors]}
             return {"data": result.data}
     except KeyError as e:
@@ -1214,6 +1217,7 @@ def graphql(request):
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
+
 
 
 conn_err_msg = """\
