@@ -190,6 +190,7 @@ class UpdateTranslationAtom(graphene.Mutation):
 
     translationatom = graphene.Field(TranslationAtom)
     triumph = graphene.Boolean()
+    locale_id = graphene.Int()
 
     @staticmethod
     @acl_check_by_id('edit', 'translations')
@@ -198,20 +199,23 @@ class UpdateTranslationAtom(graphene.Mutation):
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]
+        locale = locale = args.get("locale_id")
 
         dbtranslationatom = DBSession.query(dbTranslationAtom).\
             filter_by(client_id=client_id, object_id=object_id).first()
         if dbtranslationatom:
             key = "translation:%s:%s:%s" % (
-                str(dbtranslationatom.translation_gist_client_id),
-                str(dbtranslationatom.translation_gist_object_id),
+                str(dbtranslationatom.parent_client_id),
+                str(dbtranslationatom.parent_object_id),
                 str(dbtranslationatom.locale_id))
             CACHE.rem(key)
-
-            dbtranslationatom.content = content
+            if content:
+                dbtranslationatom.content = content
+            if locale:
+                dbtranslationatom.locale_id = locale
 
             translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
-                                              content=dbtranslationatom.content)
+                                              content=dbtranslationatom.content, locale_id=locale)
             translationatom.dbObject = dbtranslationatom
             return UpdateTranslationAtom(translationatom=translationatom, triumph=True)
         raise ResponseError(message="Error: no such translationatom in the system")

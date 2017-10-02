@@ -1,3 +1,6 @@
+import os
+import shutil
+from pathvalidate import sanitize_filename
 import graphene
 from sqlalchemy import and_
 from lingvodoc.models import DBSession
@@ -38,12 +41,47 @@ from sqlalchemy import (
     and_,
 )
 
-from lingvodoc.views.v2.utils import (
-    create_object
-)
+# from lingvodoc.views.v2.utils import (
+#     create_object
+# )
 
 import base64
 import hashlib
+
+def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
+    filename = sanitize_filename(filename)
+    storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
+    if create_dir:
+        os.makedirs(storage_dir, exist_ok=True)
+    storage_path = os.path.join(storage_dir, filename)
+    return storage_path, filename
+
+def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
+    import errno
+    storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
+    directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
+    try:
+        os.makedirs(directory)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    with open(str(storage_path), 'wb+') as f:
+        if json_input:
+            f.write(base64.urlsafe_b64decode(content))
+        else:
+            shutil.copyfileobj(content, f)
+
+    real_location = storage_path
+    url = "".join((storage["prefix"],
+                  storage["static_route"],
+                  obj.__tablename__,
+                  '/',
+                  folder_name,
+                  '/',
+                  str(obj.client_id), '/',
+                  str(obj.object_id), '/',
+                  filename))
+    return real_location, url
 
 # Read
 class Entity(graphene.ObjectType):
@@ -78,9 +116,9 @@ class CreateEntity(graphene.Mutation):
         input values from request. Look at "LD methods" exel table
         """
         id = graphene.List(graphene.Int)
-        lexical_entry_id = graphene.List(graphene.Int)
+        parent_id = graphene.List(graphene.Int, required=True)
         additional_metadata = ObjectVal()
-        field_id = graphene.List(graphene.Int)
+        field_id = graphene.List(graphene.Int, required=True)
         self_id = graphene.List(graphene.Int)
         link_id = graphene.List(graphene.Int)
         locale_id = graphene.Int()
@@ -95,20 +133,10 @@ class CreateEntity(graphene.Mutation):
 
     """
     example:
-    mutation  {
-        create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
-            field {
-                id
-            }
-            status
-        }
-    }
-    or
-    mutation  {
-        create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
-            status
-        }
-    }
+    curl -i -X POST  -H "Cookie: auth_tkt="
+    -H "Content-Type: multipart/form-data" -F "blob=@белка.wav" -F 'query=mutation {
+            create_entity(parent_id: [66, 69],  field_id:  [66,12] ) {entity{id, parent_id} triumph}}' http://localhost:6543/graphql
+
     """
     # Used for convenience
 
@@ -120,8 +148,13 @@ class CreateEntity(graphene.Mutation):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
-        parent_client_id, parent_object_id = args.get('lexical_entry_id')
-
+        lexical_entry_id = args.get('parent_id')
+        locale_id = args.get('locale_id')
+        if not locale_id:
+            locale_id=2
+        if not lexical_entry_id:
+            raise ResponseError(message="Lexical entry not found")
+        parent_client_id, parent_object_id = lexical_entry_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
@@ -142,7 +175,8 @@ class CreateEntity(graphene.Mutation):
             dbTranslationGist.client_id == dbField.data_type_translation_gist_client_id,
             dbTranslationGist.object_id == dbField.data_type_translation_gist_object_id)).filter(
             dbField.client_id == field_client_id, dbField.object_id == field_object_id).first()
-
+        if not tr_atom:
+             raise ResponseError(message="No such field in the system")
         data_type = tr_atom.content.lower()
 
         if args.get('self_id'):
@@ -155,7 +189,7 @@ class CreateEntity(graphene.Mutation):
                         object_id=object_id,
                         field_client_id=field_client_id,
                         field_object_id=field_object_id,
-                        locale_id=args.get('locale_id'),
+                        locale_id=locale_id,
                         additional_metadata=additional_metadata,
                         parent=parent)
         group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
@@ -167,17 +201,21 @@ class CreateEntity(graphene.Mutation):
             dbBaseGroup.subject == 'lexical_entries_and_entities',
             dbGroup.subject_override == True,
             dbBaseGroup.action == 'create').one()
-        if user in group.users or user in override_group.users:
-            dbentity.publishingentity.accepted = True
+        #if user in group.users or user in override_group.users:
+        #    dbentity.publishingentity.accepted = True
         if upper_level:
             dbentity.upper_level = upper_level
-
+        dbentity.publishingentity.accepted = True
         filename = args.get('filename')
         real_location = None
         url = None
-        content = args.get('content')
+        blob = info.context.request.POST.pop("blob")
+        content= args.get("content")
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-            real_location, url = create_object(args, content, dbentity, data_type, filename)
+            filename=blob.filename
+            content = blob.file.read()
+            #filename=
+            real_location, url = create_object(base64.urlsafe_b64encode(content).decode(), dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
             dbentity.content = url
             old_meta = dbentity.additional_metadata
             need_hash = True
@@ -185,7 +223,7 @@ class CreateEntity(graphene.Mutation):
                 if old_meta.get('hash'):
                     need_hash = False
             if need_hash:
-                hash = hashlib.sha224(base64.urlsafe_b64decode(content)).hexdigest()
+                hash = hashlib.sha224(base64.urlsafe_b64decode(base64.urlsafe_b64encode(content).decode())).hexdigest()
                 hash_dict = {'hash': hash}
                 if old_meta:
                     old_meta.update(hash_dict)
@@ -214,7 +252,7 @@ class CreateEntity(graphene.Mutation):
             #     field.is_translatable = bool(args['is_translatable'])
         DBSession.add(dbentity)
         DBSession.flush()
-        entity = Entity(id = [dbentity.client_id, dbentity.object_id])
+        entity = Entity(id = [dbentity.client_id, dbentity.object_id]) # TODO: more args
         entity.dbObject = dbentity
         return CreateEntity(entity=entity, triumph=True)
 

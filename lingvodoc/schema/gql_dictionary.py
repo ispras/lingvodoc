@@ -1,3 +1,4 @@
+import datetime
 import graphene
 from lingvodoc.models import (
     Dictionary as dbDictionary,
@@ -7,17 +8,23 @@ from lingvodoc.models import (
     Client as dbClient,
     Language as dbLanguage,
     User as dbUser,
+    Field as dbField,
+    DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
-    Group as dbGroup
+    Group as dbGroup,
+    Organization as dbOrganization
 )
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.schema.gql_user import User
 
-from lingvodoc.views.v2.utils import update_metadata
+from lingvodoc.views.v2.utils import (
+    update_metadata,
+    cache_clients)
 from lingvodoc.schema.gql_holders import (
     ResponseError
 )
 from lingvodoc.views.v2.translations import translationgist_contents
+from lingvodoc.views.v2.utils import cache_clients
 # from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
@@ -30,11 +37,14 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     acl_check_by_id
 )
+#from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective
 from lingvodoc.views.v2.delete import real_delete_dictionary
 from lingvodoc.views.v2.utils import (
     check_client_id
 )
-
+from graphene.types.generic import GenericScalar
+from lingvodoc.views.v2.utils import  add_user_to_group
+from lingvodoc.utils import statistics
 
 def translation_service_search(searchstring):
     translationatom = DBSession.query(dbTranslationAtom)\
@@ -47,6 +57,15 @@ def translation_service_search(searchstring):
     response = translationgist_contents(translationatom.parent)
     return response
 
+class UserAndOrganizationsRoles(graphene.ObjectType):
+    roles_users = graphene.List(graphene.String)
+    roles_organizations = graphene.List(graphene.String)
+
+    def resolve_roles_users(self, info):
+        return self.roles_users
+
+    def resolve_roles_organizations(self, info):
+        return self.roles_organizations
 
 class Dictionary(graphene.ObjectType):
     # TODO: resolve_dataType(?)
@@ -79,15 +98,26 @@ class Dictionary(graphene.ObjectType):
         additional_metadata {
           blob_description
         }
+         perspectives{id translation}
+         roles{
+             roles_users
+             roles_organizations
+         }
       }
     }
+    or
 
+          dictionary(id: [126, 3], starting_time: 0, ending_time: 100) { statistic   ...
     """
 
     dbType = dbDictionary
     dbObject = None
     category = graphene.Int()
     domain = graphene.Int()
+    roles = graphene.Field(UserAndOrganizationsRoles)
+    statistic = ObjectVal()
+    starting_time = graphene.Int()  # date
+    ending_time = graphene.Int()
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
@@ -105,7 +135,7 @@ class Dictionary(graphene.ObjectType):
         interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
     # @property
 
-    @property
+    @property  # TODO: delete
     def persp_class(self):
         return self._meta.fields['persp'].type
 
@@ -118,7 +148,7 @@ class Dictionary(graphene.ObjectType):
         return self._meta.fields['persptofields'].type
 
     @property
-    def create_persptofield(self):
+    def create_persptofield(self):  # TODO: to delete
         return self._meta.fields['cr_persptofields'].type
 
     @fetch_object('status')
@@ -133,12 +163,68 @@ class Dictionary(graphene.ObjectType):
         else:
             return None
 
+    @fetch_object()
+    def resolve_statistic(self, info):
+        #print(starting_time)
+        starting_time = self.starting_time
+        ending_time = self.ending_time
+        if starting_time is None or ending_time is None:
+            raise ResponseError(message="Time error")
+        locale_id = info.context.get('locale_id')
+        return statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
+                                   starting_time,
+                                   ending_time,
+                                   locale_id=locale_id
+                                   )
+
     def resolve_triumph(self, info):
         return True
 
+    @client_id_check()
     def resolve_perspectives(self, info):
-        if hasattr(self, "perspectives"):
-            return self.perspectives
+        if not self.id:
+            raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
+        dictionary_client_id, dictionary_object_id = self.id  #self.dbObject.client_id, self.dbObject.object_id
+
+        perspectives = list()
+        child_persps = DBSession.query(dbDictionaryPerspective)\
+            .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id).all()
+        for persp in child_persps:
+            persp.dbObject = persp
+            perspectives.append(persp)
+        return perspectives
+    @fetch_object()
+    def resolve_roles(self, info):
+        response = dict()
+        client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
+        dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dictionary or dictionary.marked_for_deletion:
+            raise ResponseError(message="Dictionary with such ID already exists in the system")
+
+
+        bases = DBSession.query(dbBaseGroup).filter_by(dictionary_default=True)
+        roles_users = dict()
+        roles_organizations = dict()
+        for base in bases:
+            group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                     subject_object_id=object_id,
+                                                     subject_client_id=client_id).first()
+            perm = base.name
+            users = []
+            for user in group.users:
+                users += [user.id]
+            organizations = []
+            for org in group.organizations:
+                organizations += [org.id]
+            roles_users[perm] = users
+            roles_organizations[perm] = organizations
+        response['roles_users'] = roles_users
+        response['roles_organizations'] = roles_organizations
+
+        #request.response.status = HTTPOk.code
+        #return response
+        return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
+
 ###
 # CrUd functions
 #
@@ -164,11 +250,42 @@ class CreateDictionary(graphene.Mutation):
         }
       }
     }
+
+    complex_create:
+    mutation CreateDictionary1{
+      create_dictionary( translation_gist_id: [714, 3],parent_id: [500, 121], additional_metadata: {hash: "1234567"},  perspectives: [
+      {
+    translation_atoms: [
+      {
+       locale_id: 1,
+       content: "my text v1"
+      },
+      {
+       locale_id: 2,
+       content: "my text v2"
+      }
+     ]
+        }
+     ]
+
+     ) {
+        dictionary {
+          id
+          perspectives {
+            id
+            created_at
+            translation
+          }
+          translation
+
+        }
+      }
+    }
     """
 
     class Arguments:
         id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int, required=True)
+        translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int, required=True)
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
@@ -176,9 +293,10 @@ class CreateDictionary(graphene.Mutation):
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
     perspectives = graphene.List(Dictionary)
+    translation_atoms = graphene.List(ObjectVal)
 
     @staticmethod
-    @client_id_check()
+    #@client_id_check()
     def create_dbdictionary(client_id=None,
                             object_id=None,
                             parent_client_id=None,
@@ -221,7 +339,8 @@ class CreateDictionary(graphene.Mutation):
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
         parent_client_id, parent_object_id = args.get('parent_id')
-        translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
+        if args.get('translation_gist_id'):
+            translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
         additional_metadata = args.get("additional_metadata")
 
         dbdictionary_obj = CreateDictionary.create_dbdictionary(client_id=client_id,
@@ -246,7 +365,55 @@ class CreateDictionary(graphene.Mutation):
         persp_fake_ids = dict()
         if persp_args:
             for child_persp in persp_args:
-                persp_translation_gist_id = child_persp["translation_gist_id"]
+                if "translation_atoms" in child_persp:
+                    client = DBSession.query(dbClient).filter_by(id=client_id).first()
+                    user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    atoms_to_create = child_persp["translation_atoms"]
+                    dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
+                    translation_gist_client_id = dbtranslationgist.client_id
+                    translation_gist_object_id = dbtranslationgist.object_id
+                    persp_translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
+                    DBSession.add(dbtranslationgist)
+                    DBSession.flush()
+                    basegroups = list()
+                    basegroups.append(DBSession.query(dbBaseGroup).filter_by(name="Can delete translationgist").first())
+                    if not object_id:
+                        groups = []
+                        for base in basegroups:
+                            group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
+                                          parent=base)
+                            groups += [group]
+                        for group in groups:
+                            add_user_to_group(user, group)
+
+                    for atom_dict in atoms_to_create:
+                        if "locale_id" in atom_dict and "content" in atom_dict:
+                            locale_id = atom_dict["locale_id"]
+                            content = atom_dict["content"]
+                            dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                                  object_id=object_id,
+                                                                  parent=dbtranslationgist,
+                                                                  locale_id=locale_id,
+                                                                  content=content)
+                            DBSession.add(dbtranslationatom)
+                            DBSession.flush()
+                            if not object_id:
+                                basegroups = []
+                                basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
+                                if not object_id:
+                                    groups = []
+                                    for base in basegroups:
+                                        group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                                        subject_object_id=dbtranslationatom.object_id,
+                                                        parent=base)
+                                        groups += [group]
+                                    for group in groups:
+                                        add_user_to_group(user, group)
+                        else:
+                            raise ResponseError(message="locale_id and content args not found")
+                else:
+                    if "translation_gist_id" in child_persp:
+                        persp_translation_gist_id = child_persp["translation_gist_id"]
                 obj_id = None
                 if "id" in child_persp:
                     obj_id = child_persp["id"][1]
@@ -408,6 +575,143 @@ class UpdateDictionary(graphene.Mutation):
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
         return UpdateDictionary(dictionary=dictionary, triumph=True)
+
+class UpdateDictionaryStatus(graphene.Mutation):
+    """
+    mutation  {
+        update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
+            triumph
+            dictionary{
+                id
+                translation
+                marked_for_deletion
+                created_at
+                status
+                translation
+                            additional_metadata{
+             hash
+            }
+            }
+        }
+    }
+    """
+    class Arguments:
+        id = graphene.List(graphene.Int)
+        state_translation_gist_id = graphene.List(graphene.Int)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
+            dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
+            dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
+            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
+                                                              parent_object_id=state_translation_gist_object_id,
+                                                              locale_id=info.context.get('locale_id')).first()
+            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
+            dictionary.dbObject = dbdictionary
+            return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="No such dictionary in the system")
+
+class UpdateDictionaryRoles(graphene.Mutation):
+    class Arguments:
+        id = graphene.List(graphene.Int)
+        roles_users = ObjectVal()
+        roles_organizations = ObjectVal()
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    #@client_id_check
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        roles_users = args.get('roles_users')
+        roles_organizations = args.get('roles_organizations')
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
+            if roles_users:
+                for role_name in roles_users:
+                    base = DBSession.query(dbBaseGroup).filter_by(name=role_name, dictionary_default=True).first()
+                    if not base:
+                        raise ResponseError(message="No such role in the system")
+                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
+
+                    client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
+
+                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+                    if not permitted:
+                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                                          subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
+
+                    if permitted:
+                        users = roles_users[role_name]
+                        for userid in users:
+                            user = DBSession.query(dbUser).filter_by(id=userid).first()
+                            if user:
+                                if user not in group.users:
+                                    group.users.append(user)
+                    else:
+                        raise ResponseError(message="Not enough permission")
+            if roles_organizations:
+                for role_name in roles_organizations:
+                    base = DBSession.query(dbBaseGroup).filter_by(name=role_name, dictionary_default=True).first()
+                    if not base:
+                        raise ResponseError(message="No such role in the system")
+
+                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                               subject_object_id=object_id,
+                                                               subject_client_id=client_id).first()
+
+                    client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
+
+                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+                    if not permitted:
+                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                                          subject_override=True).first()
+                        if userlogged in override_group.users:
+                            permitted = True
+
+                    if permitted:
+                        orgs = roles_organizations[role_name]
+                        for orgid in orgs:
+                            org = DBSession.query(dbOrganization).filter_by(id=orgid).first()
+                            if org:
+                                if org not in group.organizations:
+                                    group.organizations.append(org)
+                    else:
+                        raise ResponseError(message="Not enough permission")
+
+            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
+            dictionary.dbObject = dbdictionary
+            return UpdateDictionaryRoles(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="No such dictionary in the system")
 
 
 class DeleteDictionary(graphene.Mutation):

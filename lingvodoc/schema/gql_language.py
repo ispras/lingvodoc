@@ -3,9 +3,13 @@ from sqlalchemy import and_
 from lingvodoc.models import (
     Language as dbLanguage,
     Dictionary as dbDictionary,
-    Client,
+    TranslationAtom as dbTranslationAtom,
+    Client as dbClient,
     User as dbUser,
-    DBSession
+    DBSession,
+    TranslationGist as dbTranslationGist,
+    BaseGroup as dbBaseGroup,
+    Group as dbGroup
 )
 
 from lingvodoc.schema.gql_holders import (
@@ -15,9 +19,11 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     client_id_check,
     ResponseError,
-    acl_check_by_id
+    acl_check_by_id,
+    ObjectVal
 )
 from .gql_dictionary import Dictionary
+from lingvodoc.views.v2.utils import  add_user_to_group
 # from lingvodoc.schema.gql_dictionary import Dictionary
 
 
@@ -95,6 +101,7 @@ class CreateLanguage(graphene.Mutation):
         translation_gist_id = graphene.List(graphene.Int)
         parent_id = graphene.List(graphene.Int)
         locale_exist = graphene.Boolean()
+        translation_atoms = graphene.List(ObjectVal)
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -127,7 +134,7 @@ class CreateLanguage(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id('create', 'language')
+    #@acl_check_by_id('create', 'language', id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
@@ -136,9 +143,58 @@ class CreateLanguage(graphene.Mutation):
         parent_client_id = parent_id[0] if parent_id else None
         parent_object_id = parent_id[1] if parent_id else None
 
-        translation_gist_id = args.get('translation_gist_id')
-        translation_gist_client_id = translation_gist_id[0]
-        translation_gist_object_id = translation_gist_id[1]
+
+        tr_atoms = args.get("translation_atoms")
+        if type(tr_atoms) is not list:  # TODO: look at this
+            translation_gist_id = args.get('translation_gist_id')
+            if not translation_gist_id:
+                raise ResponseError(message="translation_gist_id arg not found")
+            translation_gist_client_id = translation_gist_id[0]
+            translation_gist_object_id = translation_gist_id[1]
+        else:
+            client = DBSession.query(dbClient).filter_by(id=client_id).first()
+
+            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+            dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
+            translation_gist_client_id = dbtranslationgist.client_id
+            translation_gist_object_id = dbtranslationgist.object_id
+            DBSession.add(dbtranslationgist)
+            DBSession.flush()
+            basegroups = list()
+            basegroups.append(DBSession.query(dbBaseGroup).filter_by(name="Can delete translationgist").first())
+            if not object_id:
+                groups = []
+                for base in basegroups:
+                    group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
+                                  parent=base)
+                    groups += [group]
+                for group in groups:
+                    add_user_to_group(user, group)
+            for atom_dict in tr_atoms:
+                if "locale_id" in atom_dict and "content" in atom_dict:
+                    locale_id = atom_dict["locale_id"]
+                    content = atom_dict["content"]
+                    dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                          object_id=object_id,
+                                                          parent=dbtranslationgist,
+                                                          locale_id=locale_id,
+                                                          content=content)
+                    DBSession.add(dbtranslationatom)
+                    DBSession.flush()
+                    if not object_id:
+                        basegroups = []
+                        basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
+                        if not object_id:
+                            groups = []
+                            for base in basegroups:
+                                group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                                subject_object_id=dbtranslationatom.object_id,
+                                                parent=base)
+                                groups += [group]
+                            for group in groups:
+                                add_user_to_group(user, group)
+                else:
+                    raise ResponseError(message="locale_id and content args not found")
 
         dblanguage = CreateLanguage.create_dblanguage(client_id=client_id,
                                                       object_id=object_id,
@@ -190,7 +246,7 @@ class UpdateLanguage(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id('edit', 'language')
+    #@acl_check_by_id('edit', 'language')
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]
