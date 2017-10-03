@@ -115,9 +115,7 @@ class Dictionary(graphene.ObjectType):
     category = graphene.Int()
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
-    statistic = ObjectVal()
-    starting_time = graphene.Int()  # date
-    ending_time = graphene.Int()
+    statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
@@ -164,10 +162,8 @@ class Dictionary(graphene.ObjectType):
             return None
 
     @fetch_object()
-    def resolve_statistic(self, info):
+    def resolve_statistic(self, info, starting_time=None, ending_time=None):
         #print(starting_time)
-        starting_time = self.starting_time
-        ending_time = self.ending_time
         if starting_time is None or ending_time is None:
             raise ResponseError(message="Time error")
         locale_id = info.context.get('locale_id')

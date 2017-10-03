@@ -140,7 +140,9 @@ from sqlalchemy import (
     or_,
     tuple_
 )
-
+from lingvodoc.views.v2.utils import (
+    view_field_from_object,
+)
 from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
@@ -189,7 +191,54 @@ class Query(graphene.ObjectType):
     all_data_types = graphene.List(TranslationGist)
     all_fields = graphene.List(Field)
     all_statuses = graphene.List(TranslationGist)
+    template_fields = graphene.List(Field, mode=graphene.String())
+    template_modes = graphene.List(graphene.String)
 
+    def resolve_template_modes(self, info):
+        return ['corpora']
+
+    def resolve_template_fields(self, info, mode=None):
+        response = list()
+        request = info.context.request
+        if mode == 'corpora':
+            data_type_query = DBSession.query(dbField) \
+                .join(dbTranslationGist,
+                      and_(dbField.translation_gist_object_id == dbTranslationGist.object_id,
+                           dbField.translation_gist_client_id == dbTranslationGist.client_id)) \
+                .join(dbTranslationGist.translationatom)
+            sound_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+                                                 dbTranslationAtom.content == 'Sound').one()  # todo: a way to find this fields if wwe cannot use one
+            markup_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+                                                  dbTranslationAtom.content == 'Markup').one()
+            comment_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+                                                    dbTranslationAtom.content == 'Comment').one()
+            sound_field =view_field_from_object(request=request, field=sound_field)
+            markup_field = view_field_from_object(request=request, field=markup_field)
+            comment_field = view_field_from_object(request=request, field=comment_field)
+            fake_id_1 = '6f355d7a-e68d-44ab-9cf6-36f78e8f1b34'  # chosen by fair dice roll
+            fake_id_2 = '51fbe0b6-2cea-4d40-a994-f6bb6f501d48'  # guaranteed to be random
+            f = Field(id=[sound_field["client_id"], sound_field["object_id"]], fake_id = fake_id_1)
+            f2 = Field(id=[markup_field["client_id"], markup_field["object_id"]], fake_id = fake_id_2, self_fake_id = fake_id_1)
+            f.dbObject = DBSession.query(dbField).filter_by(client_id=sound_field["client_id"], object_id=sound_field["object_id"]).first()
+            f2.dbObject = DBSession.query(dbField).filter_by(client_id=markup_field["client_id"], object_id=markup_field["object_id"]).first()
+            response.append(f)
+            response.append(f2)
+
+            f3 = Field(id=[comment_field["client_id"], comment_field["object_id"]])
+            f3.dbObject = DBSession.query(dbField).filter_by(client_id=comment_field["client_id"]).first()
+            response.append(f3)
+            # response[0]['contains'] = [view_field_from_object(request=request, field=markup_field)]
+            # response.append(view_field_from_object(request=request, field=markup_field))
+            # response.append(view_field_from_object(request=request, field=comment_field))
+            #
+            # return response
+            #
+            # response.append(TranslationGist(id=[sound_field.translation_gist_client_id, sound_field.data_type_translation_gist_object_id]))
+            # response.append(TranslationGist(id=[markup_field.data_type_translation_gist_client_id, markup_field.data_type_translation_gist_object_id]))
+            # response.append(TranslationGist(id=[comment_field.data_type_translation_gist_client_id, comment_field.data_type_translation_gist_object_id]))
+            return response
+        else:
+            raise ResponseError(message='no such mode')
     def resolve_all_statuses(self, info):
         request = info.context.request
         response = list()
@@ -311,8 +360,8 @@ class Query(graphene.ObjectType):
                                         translation=dbdict.get_translation(context.get('locale_id'))) for dbdict in dbdicts]
         return dictionaries_list
 
-    def resolve_dictionary(self, info, id, starting_time=None, ending_time=None):
-        return Dictionary(id=id, starting_time=starting_time, ending_time=ending_time)
+    def resolve_dictionary(self, info, id):
+        return Dictionary(id=id)
 
     def resolve_perspectives(self,info, published):
         """
