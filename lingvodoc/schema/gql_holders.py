@@ -202,7 +202,7 @@ def fetch_object(attrib_name=None):
         def wrapper(*args, **kwargs):
             cls = args[0]
             if attrib_name:
-                if hasattr(cls, attrib_name):
+                if hasattr(cls, attrib_name) and not hasattr(getattr(cls, attrib_name), '_meta'):
                     return getattr(cls, attrib_name)
             if not cls.dbObject:
                 if type(cls.id) is int:
@@ -442,7 +442,7 @@ class TranslationHolder(graphene.Interface):
     @fetch_object("translation")
     def resolve_translation(self, info):
         context = info.context
-        return self.dbObject.get_translation(context.get('locale_id')) # TODO: fix it
+        return str(self.dbObject.get_translation(context.get('locale_id'))) # TODO: fix it
 
 # rare interfaces
 
@@ -484,6 +484,11 @@ class DataType(graphene.Interface):  # TODO: check all data_type fields
     @fetch_object("data_type")
     def resolve_data_type(self, info):
         return self.dbObject.data_type
+
+class FakeIds(graphene.Interface):
+    fake_id = graphene.String()
+    self_fake_id = graphene.String()
+
 
 # LexicalEntry interface
 
