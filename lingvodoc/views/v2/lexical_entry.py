@@ -52,25 +52,35 @@ def view_connected_words(request):
     response = list()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    field_client_id=request.params.get('field_client_id')
-    field_object_id=request.params.get('field_object_id')
+    accepted = request.params.get('accepted', False)
+    if type(accepted) == str and 'false' in accepted.lower():
+        accepted = False
+    if accepted:
+        accepted = True
+    published = request.params.get('published', False)
+    if type(published) == str and 'false' in published.lower():
+        published = False
+    if published:
+        published = True
+    field_client_id = int(request.params.get('field_client_id'))
+    field_object_id = int(request.params.get('field_object_id'))
     lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if lexical_entry and not lexical_entry.marked_for_deletion:
-        tags = find_all_tags(lexical_entry, field_client_id, field_object_id)
-        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
-        for lex in lexes:
-            path = request.route_url('lexical_entry',  # todo: method in utils (or just use track)
-                                     client_id=lex.client_id,
-                                     object_id=lex.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'GET'
-            subreq.headers = request.headers
-            try:
-                resp = request.invoke_subrequest(subreq)
-                if resp.json and resp.json not in response and 'error' not in resp.json:
-                    response.append(resp.json)
-            except HTTPForbidden:
-                pass
+        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accepted)
+        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
+        lexes_composite_list = [(lex.created_at,
+                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                                 lex.marked_for_deletion, lex.additional_metadata,
+                                 lex.additional_metadata.get('came_from')
+                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                                for lex in lexes]
+
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2),
+                                             publish=published, accept=accepted)
+        if published:
+            result = [lex for lex in result if have_tag(lex, tags, field_client_id, field_object_id)]
+
+        response = list(result)
         request.response.status = HTTPOk.code
         return response
 
@@ -78,22 +88,32 @@ def view_connected_words(request):
     return {'error': str("No such lexical entry in the system")}
 
 
-def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
-    return DBSession.query(LexicalEntry) \
+def have_tag(lex, tags, field_client_id, field_object_id):
+    return bool([x for x in lex['contains'] if x['field_client_id'] == field_client_id and x['field_object_id'] == field_object_id and x['content'] in tags and x['published'] and x['accepted']])
+
+
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted):
+    result = DBSession.query(LexicalEntry) \
         .join(LexicalEntry.entity) \
         .join(Entity.publishingentity) \
         .join(Entity.field) \
         .filter(Entity.content.in_(tags),
-                PublishingEntity.accepted == True,
-                Entity.marked_for_deletion==False,
+                Entity.marked_for_deletion == False,
                 Field.client_id == field_client_id,
-                Field.object_id == field_object_id).all()
+                Field.object_id == field_object_id)
+    if accepted:
+        result = result.filter(PublishingEntity.accepted == True)
+    result = result.all()
+    return result
 
 
-def find_all_tags(lexical_entry, field_client_id, field_object_id):
+def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
     tag = None
     for entity in lexical_entry.entity:
-        if not entity.marked_for_deletion and entity.field.data_type == 'Grouping Tag':
+        if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id:
+            if accepted:
+                if not entity.publishingentity.accepted:
+                    continue
             tag = entity.content
             break
     if not tag:
@@ -102,17 +122,20 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id):
         tags = [tag]
         new_tags = [tag]
         while new_tags:
-            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id)
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
             new_tags = list()
             for lex in lexical_entries:
                 entities = DBSession.query(Entity) \
                     .join(Entity.field) \
                     .join(Entity.publishingentity) \
                     .filter(Entity.parent == lex,
-                            PublishingEntity.accepted == True,
                             Field.client_id == field_client_id,
                             Field.object_id == field_object_id,
-                            Entity.marked_for_deletion==False).all()
+                            Entity.marked_for_deletion==False)
+                if accepted:
+                    entities = entities.filter(PublishingEntity.accepted == True)
+
+                entities = entities.all()
                 for entity in entities:
                     if entity.content not in tags:
                         tags.append(entity.content)
@@ -130,6 +153,16 @@ def bulk_group_entities(request):  # tested
         field_client_id = req['field_client_id']
         field_object_id = req['field_object_id']
         counter = req['counter']
+        accepted = request.params.get('accepted', False)
+        if type(accepted) == str and 'false' in accepted.lower():
+            accepted = False
+        if accepted:
+            accepted = True
+        published = request.params.get('published', False)
+        if type(published) == str and 'false' in published.lower():
+            published = False
+        if published:
+            published = True
         field = DBSession.query(Field).\
             filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
@@ -182,11 +215,11 @@ def bulk_group_entities(request):  # tested
             if not parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such lexical entry in the system")}
-            par_tags = find_all_tags(parent, field_client_id, field_object_id)
+            par_tags = find_all_tags(parent, field_client_id, field_object_id, accepted)
             for tag in par_tags:
                 if tag not in tags:
                     tags.append(tag)
-            lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+            lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 
@@ -194,7 +227,9 @@ def bulk_group_entities(request):  # tested
                 for tag in tags:
                     tag_entity = DBSession.query(Entity) \
                         .join(Entity.field) \
+                        .join(Entity.publishingentity) \
                         .filter(Entity.parent == lex,
+                                Entity.marked_for_deletion == False,
                                 Field.client_id == field_client_id,
                                 Field.object_id == field_object_id,
                                 Entity.content == tag).first()
@@ -259,7 +294,7 @@ def create_group_entity(request):  # tested
             if not parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such lexical entry in the system")}
-            par_tags = find_all_tags(parent, field_client_id, field_object_id)
+            par_tags = find_all_tags(parent, field_client_id, field_object_id, False)
             for tag in par_tags:
                 if tag not in tags:
                     tags.append(tag)
@@ -268,7 +303,7 @@ def create_group_entity(request):  # tested
             tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                          for c in range(n))
             tags.append(tag)
-        lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+        lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, False)
         for par in req['connections']:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
@@ -279,10 +314,12 @@ def create_group_entity(request):  # tested
             for tag in tags:
                 tag_entity = DBSession.query(Entity) \
                     .join(Entity.field) \
+                    .join(Entity.publishingentity) \
                     .filter(Entity.parent == lex,
                             Field.client_id == field_client_id,
                             Field.object_id == field_object_id,
-                            Entity.content == tag).first()
+                            Entity.content == tag,
+                            Entity.marked_for_deletion == False).first()
                 if not tag_entity:
                     tag_entity = Entity(client_id=client.id,
                                         object_id=object_id,

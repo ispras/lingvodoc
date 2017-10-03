@@ -51,6 +51,17 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
   private[this] val fieldId = CompositeId.fromObject(field)
 
+  private[this] val published = params.get("published") match {
+    case Some(x) =>
+      x.asInstanceOf[Boolean]
+    case None => false
+  }
+
+  private[this] val edit = params.get("edit") match {
+    case Some(x) => x.asInstanceOf[Boolean]
+    case None => false
+  }
+
   private[this] var foundEntries = Seq[Seq[LexicalEntry]]()
   private[this] var dataTypes = Seq[TranslationGist]()
   private[this] var statuses = Seq[TranslationGist]()
@@ -58,6 +69,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   private[this] var perspectives = Seq[Perspective]()
   private[this] var searchDictionaries = Seq[Dictionary]()
   private[this] var searchPerspectives = Seq[Perspective]()
+
+  private[this] var connectedLexicalEntries = Seq[LexicalEntry]()
 
   override def spectrogramId: String = "#spectrogram-modal"
 
@@ -116,9 +129,14 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   @JSExport
   def remove(entry: LexicalEntry): Unit = {
-    backend.disconnectLexicalEntry(entry, CompositeId.fromObject(field)).foreach { _ =>
-      loadConnectedEntries()
+
+    var requests = connectedLexicalEntries.map { e =>
+      backend.disconnectLexicalEntry(entry, CompositeId.fromObject(field))
     }
+
+    Future.sequence(requests)
+
+
   }
 
   @JSExport
@@ -165,6 +183,11 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   @JSExport
+  def etymologyPendingApproval(entry: LexicalEntry): Boolean = {
+    entry.entities.toSeq.exists(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId && !e.accepted)
+  }
+
+  @JSExport
   def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
 
     perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
@@ -185,7 +208,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
               perspectiveObjectId = perspective.objectId,
               lexicalEntry = entry.asInstanceOf[js.Object],
               field = field.asInstanceOf[js.Object],
-              values = values.asInstanceOf[js.Object]
+              values = values.asInstanceOf[js.Object],
+              edit = true
             )
           }
         ).asInstanceOf[js.Dictionary[Any]]
@@ -219,7 +243,9 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
               perspectiveObjectId = perspective.objectId,
               lexicalEntry = entry.asInstanceOf[js.Object],
               field = field.asInstanceOf[js.Object],
-              values = values.asInstanceOf[js.Object]
+              values = values.asInstanceOf[js.Object],
+              edit = edit,
+              published = published
             )
           }
         ).asInstanceOf[js.Dictionary[Any]]
@@ -268,8 +294,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   }
 
   private[this] def loadConnectedEntries() = {
-
-    backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
+    backend.connectedLexicalEntries(lexicalEntryId, fieldId, !edit, published) map { connectedEntries =>
+      connectedLexicalEntries = connectedEntries
       val tf = connectedEntries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq map { entryGroup =>
         val firstEntry = entryGroup.head
         backend.getPerspective(CompositeId(firstEntry.parentClientId, firstEntry.parentObjectId)) flatMap { connectedPerspective =>

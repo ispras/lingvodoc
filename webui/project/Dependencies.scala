@@ -14,7 +14,6 @@ object Dependencies {
     def upickle = "com.lihaoyi" %%%! "upickle" % "0.3.9"
     def scalaAngular = "com.greencatsoft" %%%! "scalajs-angular" % "0.8-SNAPSHOT"
     def pamphlet = "io.plasmap" %%%! "pamphlet" % "0.9-SNAPSHOT"
-    def scalaXml = "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
     def scalaJquery = "be.doeraene" %%%! "scalajs-jquery" % "0.9.0"
     def base64 = "com.github.marklister" %%%! "base64" % "0.2.3"
   }

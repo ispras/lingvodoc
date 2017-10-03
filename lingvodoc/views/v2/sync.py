@@ -163,6 +163,8 @@ def basic_sync(request):
     new_entries = list()
     old_langs = dict()
     langs = list()
+
+    # todo: rework diff
     for table in [Locale, User, Client, BaseGroup, TranslationGist, TranslationAtom, Field, Group, Language]:
         curr_server = server[table.__tablename__]
         curr_existing = existing[table.__tablename__]
@@ -284,7 +286,7 @@ def basic_sync(request):
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                       object_id=entry['object_id']).first()
         if desk_field:
-            DBSession.delete(desk_field)
+            real_delete_object(desk_field)
 
 
     request.response.status = HTTPOk.code
@@ -325,6 +327,8 @@ def all_toc(request):
 
 @view_config(route_name='diff_server', renderer='json', request_method='POST')
 def diff_server(request):
+
+    # todo: rework diff
     tmp_list = DBSession.query(ObjectTOC).yield_per(10000).enable_eagerloads(False)
     existing = [row2dict(entry) for entry in tmp_list]
     req = request.json_body
@@ -340,6 +344,8 @@ def diff_server(request):
 
 @view_config(route_name='diff_group_server', renderer='json', request_method='POST')
 def diff_group_server(request):
+
+    # todo: rework diff
     upload = list()
     groups = DBSession.query(Group).all()
     existing = [entry.id for entry in groups]
@@ -418,6 +424,8 @@ def diff_desk(request):
     userblobs = list()
     translationgist = list()
     translationatom = list()
+
+    # todo: rework diff
     for entry in server:
         if entry['table_name'] == 'language':
             language.append(entry)
@@ -695,13 +703,13 @@ def diff_desk(request):
         desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).first()
         if desk_field:
-            DBSession.delete(desk_field)
+            real_delete_object(desk_field)
 
     for entry in dictionaryperspectivetofield:
         desk_persp_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
                                                         object_id=entry['object_id']).first()
         if desk_persp_field:
-            DBSession.delete(desk_persp_field)
+            real_delete_object(desk_persp_field)
 
     for entry in lexicalentry:
         desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],

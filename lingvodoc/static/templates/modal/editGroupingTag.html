@@ -25,7 +25,7 @@
                 <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
             </button>
 
-            <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
+            <waveplayer on-ready="controller.onReady($waveSurfer)"></waveplayer>
             <div id="spectrogram-modal"></div>
 
         </div>
@@ -310,6 +310,7 @@
                 <table class="table table-striped table-bordered">
                     <thead>
                     <tr>
+                        <td></td>
                         <td><!-- dictionary name --></td>
                         <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
                         <td><!-- remove button --></td>
@@ -319,6 +320,12 @@
                     <tbody>
 
                     <tr ng-repeat="row in dictionaryTable.rows">
+
+                        <td>
+                            <div ng-if="controller.etymologyPendingApproval(row.entry)">
+                                Pending approval
+                            </div>
+                        </td>
 
                         <td>{{ controller.getSource(row.entry) }}</td>
                         <td ng-repeat="cell in row.cells" ng-init="rowIndex=$parent.$index; cellIndex=$index; column=dictionaryTable.header[$index]">

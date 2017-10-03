@@ -17,6 +17,9 @@ import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
+import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.UndefOr
+
 
 
 
@@ -30,6 +33,8 @@ trait EditDictionaryScope extends Scope {
   var pageCount: Int = js.native
   // total number of pages
   var dictionaryTable: DictionaryTable = js.native
+  var locales: js.Array[Locale] = js.native
+  var translationLocaleId: Int = js.native
   var pageLoaded: Boolean = js.native
 }
 
@@ -186,6 +191,15 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
 
+  @JSExport
+  def getTranslationLanguage(entity: Entity, field: Field): UndefOr[String] = {
+    if (field.isTranslatable) {
+      scope.locales.toSeq.find(_.id == entity.localeId).map(_.shortcut).orUndefined
+    } else {
+      Option.empty[String].orUndefined
+    }
+  }
+
 
   @JSExport
   def isRemovable(entry: LexicalEntry, entity: Entity): Boolean = {
@@ -214,8 +228,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
   }
 
   @JSExport
-  def getSortByPageLink(sort: String): String = {
-    getPageLink(scope.pageNumber) + "/" + sort
+  def getSortByPageLink(field: Field): String = {
+    getPageLink(scope.pageNumber) + "/" + field.getId
   }
 
   override protected def onStartRequest(): Unit = {
@@ -228,6 +242,12 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
 
   load(() => {
+
+    backend.getLocales() map { locales =>
+      scope.locales = locales.toJSArray
+      scope.translationLocaleId = Utils.getLocale().getOrElse(2)
+    }
+
     backend.perspectiveSource(perspectiveId) flatMap {
       sources =>
         scope.path = sources.reverse.map {
@@ -270,6 +290,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
       case e: Throwable => Future.failed(e)
     }
   })
+
+  override protected[this] def getCurrentLocale: Int = scope.translationLocaleId
 
   override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable
 }

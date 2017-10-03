@@ -87,6 +87,9 @@
 
                         <li><a href="" ng-click="controller.editProfile()"><translatable str="Edit profile">Edit profile</translatable></a></li>
                         <li><a href="#/files"><translatable str="My files">My files</translatable></a></li>
+                        <li><a href="#/user_requests"><translatable str="Requests">Requests</translatable></a></li>
+                        <li><a href="#/grants"><translatable str="Grants">Grants</translatable></a></li>
+                        <li ng-if="controller.getAuthenticatedUser().id == 1"><a href="#/grants_admin"><translatable str="Manage grants">Manage grants</translatable></a></li>
                         <li><a href="#/logout"><translatable str="Sign out">Sign out</translatable></a></li>
                     </ul>
                 </li>
