@@ -49,7 +49,7 @@ WaveSurfer.Spectrogram = {
         this.windowFunc = params.windowFunc;
         this.alpha = params.alpha;
 
-        this.getColor = new chroma.scale(['navy', 'yellow']).mode('lch').domain([0, 300]);
+        this.getColor = new chroma.scale(['white', 'black']).mode('lch').domain([0, 300]);
         this.realtime = !!this.params.realtime;
 
         this.createWrapper();

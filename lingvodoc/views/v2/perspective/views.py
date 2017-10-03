@@ -1009,16 +1009,68 @@ def view_perspective_roles(request):  # TODO: test
 
 @view_config(route_name='perspective_roles', renderer='json', request_method='POST', permission='create')
 def edit_perspective_roles(request):
+    DBSession.execute("LOCK TABLE user_to_group_association IN EXCLUSIVE MODE;")
+    DBSession.execute("LOCK TABLE organization_to_group_association IN EXCLUSIVE MODE;")
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
 
+    url = request.route_url('perspective_roles',
+                            client_id=parent_client_id,
+                            object_id=parent_object_id,
+                            perspective_client_id=client_id,
+                            perspective_object_id=object_id)
+    subreq = Request.blank(url)
+    subreq.method = 'GET'
+    headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    previous = request.invoke_subrequest(subreq).json_body
+
     if type(request.json_body) == str:
         req = json.loads(request.json_body)
     else:
         req = request.json_body
+
+    for role_name in req['roles_users']:
+        remove_list = list()
+        for user in req['roles_users'][role_name]:
+            if user in previous['roles_users'][role_name]:
+                previous['roles_users'][role_name].remove(user)
+                remove_list.append(user)
+        for user in remove_list:
+            req['roles_users'][role_name].remove(user)
+
+    for role_name in req['roles_organizations']:
+        remove_list = list()
+        for user in req['roles_organizations'][role_name]:
+            if user in previous['roles_organizations'][role_name]:
+                previous['roles_organizations'][role_name].remove(user)
+                req['roles_organizations'][role_name].remove(user)
+        for user in remove_list:
+            req['roles_users'][role_name].remove(user)
+
+    delete_flag = False
+
+    for role_name in previous['roles_users']:
+        if previous['roles_users'][role_name]:
+            delete_flag = True
+            break
+
+    for role_name in previous['roles_organizations']:
+        if previous['roles_organizations'][role_name]:
+            delete_flag = True
+            break
+
+    if delete_flag:
+        subreq = Request.blank(url)
+        subreq.json = previous
+        subreq.method = 'PATCH'
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        request.invoke_subrequest(subreq)
+
     roles_users = None
     if 'roles_users' in req:
         roles_users = req['roles_users']
@@ -1069,8 +1121,9 @@ def edit_perspective_roles(request):
                             if user not in group.users:
                                 group.users.append(user)
                 else:
-                    request.response.status = HTTPForbidden.code
-                    return {'error': str("Not enough permission")}
+                    if roles_users[role_name]:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
         if roles_organizations:
             for role_name in roles_organizations:
@@ -1108,8 +1161,9 @@ def edit_perspective_roles(request):
                             if org not in group.organizations:
                                 group.organizations.append(org)
                 else:
-                    request.response.status = HTTPForbidden.code
-                    return {'error': str("Not enough permission")}
+                    if roles_organizations[role_name]:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
         request.response.status = HTTPOk.code
         return response
@@ -1117,14 +1171,19 @@ def edit_perspective_roles(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_roles', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='perspective_roles', renderer='json', request_method='PATCH', permission='delete')
 def delete_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
-    req = request.json_body
+
+    if type(request.json_body) == str:
+        req = json.loads(request.json_body)
+    else:
+        req = request.json_body
+
     roles_users = None
     if 'roles_users' in req:
         roles_users = req['roles_users']
@@ -1178,8 +1237,9 @@ def delete_perspective_roles(request):  # TODO: test
                                 if user in group.users:
                                     group.users.remove(user)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_users[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -1217,8 +1277,9 @@ def delete_perspective_roles(request):  # TODO: test
                                 if org in group.organizations:
                                     group.organizations.remove(org)
                     else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                        if roles_organizations[role_name]:
+                            request.response.status = HTTPForbidden.code
+                            return {'error': str("Not enough permission")}
 
             request.response.status = HTTPOk.code
             return response
@@ -1572,18 +1633,13 @@ def lexical_entries_all(request):
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    sort_criterion = request.params.get('sort_by') or 'Translation'  # TODO: make it work
+    field_client_id = int(request.params.get('field_client_id', 66))
+    field_object_id = int(request.params.get('field_object_id', 10))
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
-        field = DBSession.query(Field) \
-            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
-                                        Field.marked_for_deletion == False)) \
-            .filter(TranslationAtom.content == sort_criterion,
-                    TranslationAtom.locale_id == 2).one()  # TODO: make it harder better faster stronger
 
         lexes = DBSession.query(LexicalEntry).join(LexicalEntry.entity).join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion == False,
@@ -1600,8 +1656,8 @@ def lexical_entries_all(request):
             lexes = lexes.filter(Entity.created_at <= end_date)  # todo: check if field=field ever works
         lexes = lexes \
             .order_by(func.min(case(
-            [(or_(Entity.field_client_id != field.client_id,
-                  Entity.field_object_id != field.object_id),
+            [(or_(Entity.field_client_id != field_client_id,
+                  Entity.field_object_id != field_object_id),
               'яяяяяя')],
             else_=Entity.content))) \
             .group_by(LexicalEntry) \
@@ -1680,7 +1736,8 @@ def lexical_entries_published(request):
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    sort_criterion = request.params.get('sort_by') or 'Translation'
+    field_client_id = int(request.params.get('field_client_id', 66))
+    field_object_id = int(request.params.get('field_object_id', 10))
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
     preview_mode = False
@@ -1691,32 +1748,6 @@ def lexical_entries_published(request):
         if (parent.state == 'Limited access' or parent.parent.state == 'Limited access') and "view:lexical_entries_and_entities:" + client_id + ":" + object_id not in request.effective_principals:
             log.debug("PREVIEW MODE")
             preview_mode = True
-
-        field = DBSession.query(Field) \
-            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
-                                        Field.marked_for_deletion == False)) \
-            .filter(TranslationAtom.content == sort_criterion,
-                    TranslationAtom.locale_id == 2).one()
-        # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
-        # NOTE: IMPORTANT: 'яяяяя' is a hack - something wrong with postgres collation if we use \uffff
-        # lexes = DBSession.query(LexicalEntry) \
-        #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-        #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-        #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-        #     .options(joinedload('publishleveloneentity')) \
-        #     .options(joinedload('publishleveltwoentity')) \
-        #     .options(joinedload('publishgroupingentity')) \
-        #     .filter(LexicalEntry.parent == parent) \
-        #     .group_by(LexicalEntry, LevelOneEntity.content) \
-        #     .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-        #                                LevelOneEntity.parent_object_id == LexicalEntry.object_id,
-        #                                LevelOneEntity.marked_for_deletion == False)) \
-        #     .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-        #                                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id,
-        #                                       PublishLevelOneEntity.marked_for_deletion == False)) \
-        #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
-        #     .offset(start_from).limit(count)
         lexes = DBSession.query(LexicalEntry) \
             .join(LexicalEntry.entity).join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, PublishingEntity.published == True,
@@ -1733,8 +1764,8 @@ def lexical_entries_published(request):
             lexes = lexes.filter(Entity.created_at <= end_date)
         lexes = lexes.group_by(LexicalEntry) \
             .order_by(func.min(case(
-            [(or_(Entity.field_client_id != field.client_id,
-                  Entity.field_object_id != field.object_id),
+            [(or_(Entity.field_client_id != field_client_id,
+                  Entity.field_object_id != field_object_id),
               'яяяяяя')],
             else_=Entity.content))) \
             .group_by(LexicalEntry) \
@@ -1783,18 +1814,13 @@ def lexical_entries_not_accepted(request):
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    sort_criterion = request.params.get('sort_by') or 'Translation'
+    field_client_id = int(request.params.get('field_client_id', 66))
+    field_object_id = int(request.params.get('field_object_id', 10))
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
-        field = DBSession.query(Field) \
-            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
-                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id,
-                                        Field.marked_for_deletion == False)) \
-            .filter(TranslationAtom.content == sort_criterion,
-                    TranslationAtom.locale_id == 2).one()
         lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
                                                         parent_object_id=parent.object_id) \
             .join(LexicalEntry.entity).join(Entity.publishingentity) \
@@ -1811,8 +1837,8 @@ def lexical_entries_not_accepted(request):
             lexes = lexes.filter(Entity.created_at <= end_date)
         lexes = lexes.group_by(LexicalEntry) \
             .order_by(func.min(case(
-            [(or_(Entity.field_client_id != field.client_id,
-                  Entity.field_object_id != field.object_id),
+            [(or_(Entity.field_client_id != field_client_id,
+                  Entity.field_object_id != field_object_id),
               'яяяяяя')],
             else_=Entity.content))) \
             .group_by(LexicalEntry) \

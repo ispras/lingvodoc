@@ -10,7 +10,7 @@ import scala.scalajs.js
 trait Messages extends AngularExecutionContextProvider {
   this: Controller[_] =>
 
-  def modalService: ModalService
+  def modal: ModalService
 
   def showException(e: Throwable): Unit = {
     val options = ModalOptions()
@@ -25,7 +25,7 @@ trait Messages extends AngularExecutionContextProvider {
       }
     ).asInstanceOf[js.Dictionary[Any]]
 
-    modalService.open[Unit](options)
+    modal.open[Unit](options)
   }
 
   def showMessage(title: String, message: String): Unit = {
@@ -40,13 +40,13 @@ trait Messages extends AngularExecutionContextProvider {
         js.Dynamic.literal("title" -> title, "message" -> message)
       }
     ).asInstanceOf[js.Dictionary[Any]]
-    modalService.open[Unit](options)
+    modal.open[Unit](options)
   }
 
   def yesNo(title: String, message: String): Future[Boolean] = {
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/messages/yesno.html"
-    options.controller = "MessageModalController"
+    options.templateUrl = "/static/templates/modal/yesno.html"
+    options.controller = "MessageController"
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
@@ -55,7 +55,7 @@ trait Messages extends AngularExecutionContextProvider {
         js.Dynamic.literal("title" -> title, "message" -> message)
       }
     ).asInstanceOf[js.Dictionary[Any]]
-    modalService.open[Boolean](options).result flatMap { result =>
+    modal.open[Boolean](options).result flatMap { result =>
       Future.successful(result)
     }
   }

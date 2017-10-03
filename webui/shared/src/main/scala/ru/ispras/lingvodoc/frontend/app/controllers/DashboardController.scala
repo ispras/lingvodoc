@@ -4,7 +4,7 @@ import com.greencatsoft.angularjs.core.{ExceptionHandler, Location, Scope, Timeo
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Messages}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
@@ -33,14 +33,21 @@ trait DashboardScope extends Scope {
 
 @JSExport
 @injectable("DashboardController")
-class DashboardController(scope: DashboardScope, modal: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends
+class DashboardController(scope: DashboardScope, val modal: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends
   AbstractController[DashboardScope](scope)
   with AngularExecutionContextProvider
-  with LoadingPlaceholder {
+  with LoadingPlaceholder
+  with Messages
+{
 
   scope.dictionaries = js.Array[Dictionary]()
   scope.statuses = js.Array[TranslationGist]()
   scope.status = false
+
+  private[this] var hasGlobalChangeStatusRole = false
+  private[this] var hasChangeStatusRole = Seq.empty[CompositeId]
+  private[this] var hasGlobalPerspectiveChangeStatusRole = false
+  private[this] var hasChangePerspectiveStatusRole = Seq.empty[CompositeId]
 
 
   @JSExport
@@ -240,12 +247,24 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
 
   @JSExport
   def removeDictionary(dictionary: Dictionary) = {
-    backend.removeDictionary(dictionary)
+    backend.removeDictionary(dictionary) map { _ =>
+      scope.dictionaries = scope.dictionaries.filterNot(_.getId == dictionary.getId)
+    } recover {
+      case e: Throwable =>
+        showException(e)
+    }
   }
 
   @JSExport
   def removePerspective(dictionary: Dictionary, perspective: Perspective) = {
-    backend.removePerspective(dictionary, perspective)
+    backend.removePerspective(dictionary, perspective) map { _ =>
+      scope.dictionaries.find(_.getId == dictionary.getId) foreach { d =>
+        d.perspectives = d.perspectives.filterNot(_.getId == perspective.getId)
+      }
+    } recover {
+      case e: Throwable =>
+        showException(e)
+    }
   }
 
   @JSExport
@@ -254,6 +273,16 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
     scope.statuses.flatMap(gist =>
       gist.atoms.find(atom => atom.localeId == localeId)
     )
+  }
+
+  @JSExport
+  def changingDictionaryStatusDisabled(dictionary: Dictionary): Boolean = {
+    !(hasGlobalChangeStatusRole || hasChangeStatusRole.exists(_.getId == dictionary.getId))
+  }
+
+  @JSExport
+  def changingPerspectveStatusDisabled(perspective: Perspective): Boolean = {
+    !(hasGlobalPerspectiveChangeStatusRole || hasChangePerspectiveStatusRole.exists(_.getId == perspective.getId))
   }
 
   @JSExport
@@ -347,6 +376,13 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
     backend.allStatuses().flatMap(statuses => {
       scope.statuses = statuses.toJSArray
       backend.getCurrentUser flatMap { user =>
+
+        hasGlobalChangeStatusRole = user.roles.filter(_.name == "Can edit dictionary status").exists(_.subjectOverride)
+        hasChangeStatusRole = user.roles.filter(_.name == "Can edit dictionary status").filter(_.subject.nonEmpty).flatMap(_.subject)
+
+        hasGlobalPerspectiveChangeStatusRole = user.roles.filter(_.name == "Can edit perspective status").exists(_.subjectOverride)
+        hasChangePerspectiveStatusRole = user.roles.filter(_.name == "Can edit perspective status").filter(_.subject.nonEmpty).flatMap(_.subject)
+
         userService.setUser(user)
         // load dictionary list
         val query = DictionaryQuery()
