@@ -155,7 +155,6 @@ def upload_user_blob(request):  # TODO: remove blob Object
             return response
 
     DBSession.add(blob_object)
-    DBSession.add(current_user)
     DBSession.flush()
 
     request.response.status = HTTPOk.code

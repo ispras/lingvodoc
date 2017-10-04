@@ -21,14 +21,20 @@
                 <input id="intl_name_input_id" class="form-control input-lg" type="text" ng-model="user.intlName">
             </div>
 
+
             <div class="form-group">
-                <label for="password_input_id">Password</label>
-                <input id="password_input_id" class="form-control input-lg" type="password" ng-model="user.password" disabled>
+                <label for="current_password_input_id">Current password</label>
+                <input id="current_password_input_id" class="form-control input-lg" type="password" ng-model="password">
+            </div>
+
+            <div class="form-group">
+                <label for="password_input_id">New password</label>
+                <input id="password_input_id" class="form-control input-lg" type="password" ng-model="newPassword">
             </div>
 
             <div class="form-group">
                 <label for="password_confirmation_input_id">Password confirmation</label>
-                <input id="password_confirmation_input_id" class="form-control input-lg" type="password" ng-model="passwordConfirmation" disabled>
+                <input id="password_confirmation_input_id" class="form-control input-lg" type="password" ng-model="passwordConfirmation">
             </div>
         </form>
 
@@ -37,6 +43,6 @@
 </div>
 
 <div class="modal-footer">
-    <button class="btn btn-primary" type="button" ng-click="controller.save()">Save</button>
+    <button class="btn btn-primary" type="button" ng-click="controller.save()" ng-disabled="controller.saveDisabled()">Save</button>
     <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
 </div>

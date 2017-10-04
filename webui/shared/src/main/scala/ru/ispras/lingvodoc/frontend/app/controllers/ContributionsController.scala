@@ -206,13 +206,13 @@ class ContributionsController(scope: ContributionsScope,
   }
 
   @JSExport
-  def getSortByPageLink(sort: String): String = {
-    getPageLink(scope.pageNumber) + "/" + sort
+  def getSortByPageLink(field: Field): String = {
+    getPageLink(scope.pageNumber) + "/" + field.getId
   }
 
   @JSExport
   override def getPageLink(page: Int): String = {
-    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/publish/$page"
+    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/contributions/$page"
   }
 
   override protected[this] def dictionaryTable: DictionaryTable = scope.dictionaryTable

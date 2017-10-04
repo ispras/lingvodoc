@@ -9,10 +9,11 @@ with open(os.path.join(here, 'CHANGES.md')) as f:
     CHANGES = f.read()
 
 requires = [
+    'pyramid',
     ]
 
 setup(name='lingvodoc',
-      version='2.1',
+      version='2.1.1',
       description='lingvodoc',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[

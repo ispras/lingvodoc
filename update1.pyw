@@ -422,6 +422,8 @@ class Example(QWidget):
             self.progress.setValue(60)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)
 
+            if os.path.exists('source/build'):
+                remove('source/build')
             proc = Popen([pythonw, setup, 'install'], stdout=PIPE, stderr=PIPE, cwd='%s\\source' % cur_path)
             streamdata = proc.communicate()[1]
             rc = proc.returncode
@@ -432,6 +434,8 @@ class Example(QWidget):
                 )
                 return
             proc.terminate()
+            if os.path.exists('source/build'):
+                remove('source/build')
             self.changetext("Updating in progress. Setup complete. Starting database update")
             self.progress.setValue(65)
             self.loop.processEvents(QEventLoop.ExcludeUserInputEvents)

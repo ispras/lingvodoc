@@ -92,7 +92,7 @@ class DictionaryPerspective(graphene.ObjectType):
 
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     fields = graphene.List(DictionaryPerspectiveToField)
-    lexicalEntries = graphene.List(LexicalEntry, offset=graphene.Int(),
+    lexical_entries = graphene.List(LexicalEntry, offset=graphene.Int(),
                                    count=graphene.Int(),
                                    mode=graphene.String())
     authors = graphene.List('lingvodoc.schema.gql_user.User')
@@ -106,7 +106,7 @@ class DictionaryPerspective(graphene.ObjectType):
     dbObject = None
 
     class Meta:
-        interfaces = (CommonFieldsComposite, StateHolder, TranslationHolder)
+        interfaces = (CommonFieldsComposite, StateHolder)
 
     # @fetch_object()
     # def resolve_additional_metadata(self, args, context, info):
@@ -155,8 +155,9 @@ class DictionaryPerspective(graphene.ObjectType):
             result.append(gr_field_obj)
         return result
 
-    @acl_check_by_id('view', 'approve_entities')
-    def resolve_lexicalentries(self, info):
+    #@acl_check_by_id('view', 'approve_entities')
+    @fetch_object()  # TODO: ?
+    def resolve_lexical_entries(self, info):
         result = list()
         request = info.context.get('request')
         # dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
@@ -190,8 +191,11 @@ class DictionaryPerspective(graphene.ObjectType):
                 del ent["published"]
                 if "link_client_id" in ent and "link_object_id" in ent:
                     ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
+                    del ent["link_client_id"]
+                    del ent["link_object_id"]
                 else:
                     ent["link_id"] = None
+
                 ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
                 if "self_client_id" in ent and "self_object_id" in ent:
                     ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
@@ -206,10 +210,17 @@ class DictionaryPerspective(graphene.ObjectType):
 
                     ent["additional_metadata_string"] = ent["additional_metadata"]
                     del ent["additional_metadata"]
-                gr_entity_object = Entity(id=[ent['client_id'],
-                                       ent['object_id']],
+                tmp_id = [ent['client_id'], ent['object_id']]
+                del ent["client_id"]
+                del ent["object_id"]
+                del ent["field_client_id"]
+                del ent["field_object_id"]
+                parent_client_id, parent_object = ent["parent_client_id"], ent["parent_object_id"]
+                del ent["parent_client_id"]
+                del ent["parent_object_id"]
+                gr_entity_object = Entity(id=tmp_id,
                                        # link_id = (ent["link_client_id"], ent["link_object_id"]),
-                                       parent_id = (ent["parent_client_id"], ent["parent_object_id"]),
+                                       parent_id = (parent_client_id, parent_object),
                                        **ent  # all other args from sub_result
                                           )
                 #print(ent)
@@ -218,8 +229,14 @@ class DictionaryPerspective(graphene.ObjectType):
             del entry["published"]
             del entry["contains"]
             del entry["level"]
-            gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
-                                                      entry['object_id']],
+            tmp_id = [entry['client_id'], entry['object_id']]
+            del entry["client_id"]
+            del entry["object_id"]
+            if "parent_client_id" in entry:
+                del entry["parent_client_id"]
+            if "parent_object_id" in entry:
+                del entry["parent_object_id"]
+            gr_lexicalentry_object = LexicalEntry(id=tmp_id,
                                                   entities=entities, **entry)
 
             result.append(gr_lexicalentry_object)
@@ -522,41 +539,41 @@ class UpdateDictionaryPerspective(graphene.Mutation):
                                             is_template=dbperspective.is_template)
         perspective.dbObject = dbperspective
         return UpdateDictionaryPerspective(perspective=perspective, triumph=True)
-
-class UpdatePerspectiveStatus(graphene.Mutation):
-    class Arguments:
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
-        state_translation_gist_id = graphene.List(graphene.Int)
-
-    perspective = graphene.Field(DictionaryPerspective)
-    triumph = graphene.Boolean()
-
-    @staticmethod
-    @client_id_check()
-    def mutate(root, info, **args):
-        client_id, object_id = args.get('id')
-        parent_client_id, parent_object_id = args.get('parent_id')
-        state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-
-        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            raise ResponseError(message="No such dictionary in the system")
-
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbperspective and not dbperspective.marked_for_deletion:
-            if dbperspective.parent != parent:
-                raise ResponseError(message="No such pair of dictionary/perspective in the system")
-
-            dbperspective.state_translation_gist_client_id = state_translation_gist_client_id
-            dbperspective.state_translation_gist_object_id = state_translation_gist_object_id
-            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
-                                                              parent_object_id=state_translation_gist_object_id,
-                                                              locale_id=info.context.get('locale_id')).first()
-            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
-                                                status=atom.content)
-            perspective.dbObject = dbperspective
-            return UpdatePerspectiveStatus(perspective=perspective, triumph=True)
+#
+# class UpdatePerspectiveStatus(graphene.Mutation):
+#     class Arguments:
+#         id = graphene.List(graphene.Int)
+#         parent_id = graphene.List(graphene.Int)
+#         state_translation_gist_id = graphene.List(graphene.Int)
+#
+#     perspective = graphene.Field(DictionaryPerspective)
+#     triumph = graphene.Boolean()
+#
+#     @staticmethod
+#     @client_id_check()
+#     def mutate(root, info, **args):
+#         client_id, object_id = args.get('id')
+#         parent_client_id, parent_object_id = args.get('parent_id')
+#         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
+#
+#         parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+#         if not parent:
+#             raise ResponseError(message="No such dictionary in the system")
+#
+#         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+#         if dbperspective and not dbperspective.marked_for_deletion:
+#             if dbperspective.parent != parent:
+#                 raise ResponseError(message="No such pair of dictionary/perspective in the system")
+#
+#             dbperspective.state_translation_gist_client_id = state_translation_gist_client_id
+#             dbperspective.state_translation_gist_object_id = state_translation_gist_object_id
+#             atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
+#                                                               parent_object_id=state_translation_gist_object_id,
+#                                                               locale_id=info.context.get('locale_id')).first()
+#             perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
+#                                                 status=atom.content)
+#             perspective.dbObject = dbperspective
+#             return UpdatePerspectiveStatus(perspective=perspective, triumph=True)
 
 class UpdatePerspectiveRoles(graphene.Mutation):
     class Arguments:
