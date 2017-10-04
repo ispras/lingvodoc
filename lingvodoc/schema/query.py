@@ -130,6 +130,7 @@ from lingvodoc.models import (
     Email as dbEmail,
     UserBlobs as dbUserBlobs,
     UserRequest as dbUserRequest,
+    Grant as dbGrant,
     Client
 )
 from pyramid.request import Request
@@ -195,6 +196,8 @@ class Query(graphene.ObjectType):
     all_statuses = graphene.List(TranslationGist)
     template_fields = graphene.List(Field, mode=graphene.String())
     template_modes = graphene.List(graphene.String)
+    grant = graphene.Field(Grant, id=graphene.Int())
+    grants = graphene.List(Grant)
 
     def resolve_template_modes(self, info):
         return ['corpora']
@@ -527,7 +530,8 @@ class Query(graphene.ObjectType):
 
     def resolve_organizations(self, info):
         organizations = DBSession.query(dbOrganization).filter_by(marked_for_deletion=False).all()
-        organizations_list = [Organization(name=organization.name,
+        organizations_list = [Organization(id=organization.id,
+                                           name=organization.name,
                                            about=organization.about) for organization in organizations]
         return organizations_list
 
@@ -1090,10 +1094,26 @@ class Query(graphene.ObjectType):
         return user_blobs_list
 
     def resolve_userrequest(self, info, id):
+        """
+        query myQuery {
+          userrequest(id: 6) {
+                id
+           }
+        }
+        """
         return UserRequest(id=id)
 
-    @client_id_check()
+    #@client_id_check()
     def resolve_userrequests(self, info):
+        """
+        query myQuery {
+          userrequests {
+                id
+                sender_id
+                type
+           }
+        }
+        """
         client_id = info.context.get('client_id')
 
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -1120,6 +1140,42 @@ class Query(graphene.ObjectType):
         for basegroup_object in DBSession.query(dbBaseGroup).all():
             basegroups[basegroup_object.id] = basegroup_object.name
         return basegroups
+
+    def resolve_grant(self, info, id):
+        grant = DBSession.query(dbGrant).filter_by(id=id).first()
+        if not grant:
+            raise ResponseError(message="No such grant in the system")
+
+        return Grant(id=grant.id,
+                     issuer_translation_gist_id=[grant.issuer_translation_gist_client_id, grant.issuer_translation_gist_object_id],
+                     translation_gist_id=[grant.translation_gist_client_id, grant.translation_gist_object_id],
+                     issuer_url=grant.issuer_url,
+                     grant_number=grant.grant_number,
+                     owners=grant.owners,
+                     begin=grant.begin.strftime("%d.%m.%Y"),
+                     end=grant.end.strftime("%d.%m.%Y"),
+                     created_at=grant.created_at)
+
+    def resolve_grants(self, info):
+        """
+        query myQuery {
+          grants {
+                id
+           }
+        }
+        """
+        grants = DBSession.query(dbGrant).order_by(dbGrant.grant_number).all()
+
+        grants_list = [Grant(id=grant.id,
+                     issuer_translation_gist_id=[grant.issuer_translation_gist_client_id, grant.issuer_translation_gist_object_id],
+                     translation_gist_id=[grant.translation_gist_client_id, grant.translation_gist_object_id],
+                     issuer_url=grant.issuer_url,
+                     grant_number=grant.grant_number,
+                     owners=grant.owners,
+                     begin=grant.begin.strftime("%d.%m.%Y"),
+                     end=grant.end.strftime("%d.%m.%Y"),
+                     created_at=grant.created_at) for grant in grants]
+        return grants_list
 
 class MyMutations(graphene.ObjectType):
     """

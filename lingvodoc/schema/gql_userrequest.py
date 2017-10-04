@@ -74,6 +74,13 @@ class UserRequest(graphene.ObjectType): # show only
     #     locale_id=2).scalar()
 
 class AcceptUserRequest(graphene.Mutation):
+    """
+    mutation {
+       accept_userrequest(id: 6, accept: true) {
+          triumph
+        }
+    }
+    """
     class Arguments:
         id = graphene.Int()
         accept = graphene.Boolean()
@@ -81,7 +88,6 @@ class AcceptUserRequest(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         userrequest_id = args.get('id')
         client_id = info.context.get('client_id')
@@ -255,6 +261,13 @@ def create_one_userrequest(req, client_id):
     return userrequest.id
 
 class CreateGrantPermission(graphene.Mutation):
+    """
+    mutation {
+        create_grant_permission(grant_id: 2) {
+            triumph
+        }
+    }
+    """
     class Arguments:
         grant_id = graphene.Int()
 
@@ -262,7 +275,6 @@ class CreateGrantPermission(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -303,13 +315,19 @@ class CreateGrantPermission(graphene.Mutation):
         return CreateGrantPermission(triumph=True)
 
 class AddDictionaryToGrant(graphene.Mutation):
+    """
+    mutation  {
+        add_dictionary_to_grant(request_json: {grant_id: 2, user_id: 21}) {
+            triumph
+        }
+    }
+    """
     class Arguments:
         request_json = ObjectVal()
 
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -343,13 +361,19 @@ class AddDictionaryToGrant(graphene.Mutation):
         return AddDictionaryToGrant(triumph=True)
 
 class AdministrateOrg(graphene.Mutation):
+    """
+    mutation  {
+        administrate_org(org_id: 1) {
+            triumph
+        }
+    }
+    """
     class Arguments:
         org_id = graphene.Int()
 
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -387,13 +411,19 @@ class AdministrateOrg(graphene.Mutation):
         return AdministrateOrg(triumph=True)
 
 class ParticipateOrg(graphene.Mutation):
+    """
+    mutation  {
+        participate_org(org_id: 1) {
+            triumph
+        }
+    }
+    """
     class Arguments:
         org_id = graphene.Int()
 
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -431,10 +461,20 @@ class ParticipateOrg(graphene.Mutation):
         return ParticipateOrg(triumph=True)
 
 class DeleteUserRequest(graphene.Mutation):
+    """
+    mutation {
+        delete_userrequest(id: 7) {
+            triumph
+        }
+    }
+
+    """
     class Arguments:
         id = graphene.Int()
 
     triumph = graphene.Boolean()
+
+    @staticmethod
     def mutate(root, info, **args):
         userrequest_id = args.get('id')
         userrequest = DBSession.query(dbUserRequest).filter_by(id=userrequest_id).first()
