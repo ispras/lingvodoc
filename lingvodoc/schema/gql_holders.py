@@ -543,7 +543,7 @@ class Metadata(graphene.ObjectType):
     hash = GenericScalar()
     origin_client_id = GenericScalar()
     origin_object_id = GenericScalar()
-    info = GenericScalar()
+    blobs = GenericScalar()
     merged_by = GenericScalar()
     data_type = GenericScalar()
     blob_description = GenericScalar()
@@ -564,8 +564,8 @@ class Metadata(graphene.ObjectType):
     def resolve_origin_object_id(self, info):
         return self.origin_object_id
 
-    def resolve_info(self, info):
-        return self.info
+    def resolve_blobs(self, info):
+        return self.blobs
 
     def resolve_merged_by(self, info):
         return self.merged_by
@@ -649,7 +649,7 @@ class AdditionalMetadata(graphene.Interface):
                                                                      "origin_client_id"),
                                    origin_object_id=get_value_by_key(db_object, additional_metadata_string,
                                                                      "origin_object_id"),
-                                   info=get_value_by_key(db_object, additional_metadata_string, "info"),
+                                   blobs=get_value_by_key(db_object, additional_metadata_string, "blobs"),
                                    merged_by=get_value_by_key(db_object, additional_metadata_string, "merged_by"),
                                    data_type=get_value_by_key(db_object, additional_metadata_string, "data_type"),
                                    blob_description=get_value_by_key(db_object, additional_metadata_string,
