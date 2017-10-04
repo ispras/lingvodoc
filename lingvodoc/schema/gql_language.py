@@ -4,7 +4,7 @@ from lingvodoc.models import (
     Language as dbLanguage,
     Dictionary as dbDictionary,
     TranslationAtom as dbTranslationAtom,
-    Client,
+    Client as dbClient,
     User as dbUser,
     DBSession,
     TranslationGist as dbTranslationGist,
@@ -152,7 +152,7 @@ class CreateLanguage(graphene.Mutation):
             translation_gist_client_id = translation_gist_id[0]
             translation_gist_object_id = translation_gist_id[1]
         else:
-            client = DBSession.query(Client).filter_by(id=client_id).first()
+            client = DBSession.query(dbClient).filter_by(id=client_id).first()
 
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
@@ -246,7 +246,7 @@ class UpdateLanguage(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id('edit', 'language')
+    #@acl_check_by_id('edit', 'language')
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]

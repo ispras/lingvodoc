@@ -13,7 +13,8 @@ from lingvodoc.schema.gql_holders import (
     #TranslationHolder
     fetch_object,
     del_object,
-    client_id_check
+    client_id_check,
+    FakeIds
 
 )
 
@@ -41,7 +42,6 @@ class Field(graphene.ObjectType):
     """
 
     #data_type = graphene.String()
-    translation = graphene.String()
     dbType = dbField
     dbObject = None
     class Meta:
@@ -53,7 +53,8 @@ class Field(graphene.ObjectType):
                       DataTypeTranslationGistId,
                       DataType,
                       IsTranslatable,
-                      TranslationHolder
+                      TranslationHolder,
+                      FakeIds
                       )
 
     # @fetch_object("data_type")
@@ -68,6 +69,16 @@ class Field(graphene.ObjectType):
 
 
 class CreateField(graphene.Mutation):
+    """
+    mutation  {
+    create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
+        field {
+            id
+        }
+
+    }
+}
+    """
     class Arguments:
         # TODO: id?
         translation_gist_id = graphene.List(graphene.Int)
@@ -128,6 +139,17 @@ class UpdateField(graphene.Mutation):
 
 
 class DeleteField(graphene.Mutation):
+    """
+    mutation  {
+    delete_field(id: [880,2]) {
+        field {
+            created_at,
+            translation
+        }
+
+    }
+}
+    """
     class Arguments:
         id = graphene.List(graphene.Int)
 

@@ -55,7 +55,7 @@ def basic_search(request):
             #     group = 1
             published_cursor = None
             if group: # todo: change!!!!!
-                results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'))
+                results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'), Entity.marked_for_deletion == False)
                 # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.join(LexicalEntry)\
@@ -101,9 +101,9 @@ def basic_search(request):
                         .join(BaseGroup)\
                         .join(User, Group.users)\
                         .join(Client)\
-                        .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
+                        .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'), Entity.marked_for_deletion == False)
                 else:
-                    results_cursor = results_cursor.filter(Entity.content.like('%'+searchstring+'%'))
+                    results_cursor = results_cursor.filter(Entity.content.like('%'+searchstring+'%'), Entity.marked_for_deletion == False)
                 if published_cursor:
 
                     published_cursor = published_cursor \
@@ -270,7 +270,7 @@ def advanced_search(request):
                            Field.marked_for_deletion == False)) \
                 .filter(TranslationAtom.content == adopted_type,
                         TranslationAtom.locale_id == 2)
-        pre_results = pre_results and set(results_cursor.all())
+        pre_results = pre_results & set(results_cursor.all())
     if with_etimology:
         results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).join(Entity.field) \
             .join(TranslationAtom,
@@ -279,13 +279,13 @@ def advanced_search(request):
                        Field.marked_for_deletion == False)) \
             .filter(TranslationAtom.content == 'Grouping Tag',
                     TranslationAtom.locale_id == 2)
-        pre_results = pre_results and set(results_cursor.all())
+        pre_results = pre_results & set(results_cursor.all())
     for search_string in searchstrings[1:]:
         results_cursor, to_do_or_new = make_query(search_string, perspectives)
         if to_do_or:
-            pre_results = pre_results or set(results_cursor.all())
+            pre_results = pre_results | set(results_cursor.all())
         else:
-            pre_results = pre_results and set(results_cursor.all())
+            pre_results = pre_results & set(results_cursor.all())
         to_do_or = to_do_or_new
 
 

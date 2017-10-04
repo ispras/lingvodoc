@@ -348,6 +348,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             else:
                 new_meta = hash_dict
             entity.additional_metadata = new_meta
+            #flag_modified(entity, 'additional_metadata')
         old_meta = entity.additional_metadata
         if data_type == "markup":
             data_type_dict = {"data_type": "praat markup"}
@@ -357,6 +358,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             else:
                 new_meta = data_type_dict
             entity.additional_metadata = new_meta
+            #flag_modified(entity, 'additional_metadata')
         if data_type == "sound":
             data_type_dict = {"data_type": "sound"}
             if old_meta:
@@ -365,6 +367,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             else:
                 new_meta = data_type_dict
             entity.additional_metadata = new_meta
+            #flag_modified(entity, 'additional_metadata')
     elif data_type == 'link':
         try:
             entity.link_client_id = link_client_id
@@ -375,6 +378,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         entity.content = content
     entity.publishingentity.accepted = True
     DBSession.add(entity)
+    DBSession.flush()
     return (entity.client_id, entity.object_id)
 
 def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes,
@@ -389,6 +393,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
     markup_counter = 0
     audio_counter = 0
     for cursor in sound_and_markup_cursor:
+        markup_update_flag = False
         lvl = None
         blob_id = cursor[0]
         description_type = int(cursor[5])
@@ -420,6 +425,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             else:
                 filename = 'noname.wav'
             audio_counter += 1
+            sound_metadata.update({"hash": audio_hash})
             lvl = create_entity(ids_map[int(word_id)][0],
                                 ids_map[int(word_id)][1],
                                 fields_dict[sound_field][0],
@@ -431,6 +437,9 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                                 content=base64.urlsafe_b64encode(audio).decode(),
                                 folder_name="%s_sounds"%folder_name,
                                 storage=storage)
+        else:
+            lvl = audio_hashes[audio_hash][0]
+            markup_update_flag = True
         if markup and markup_hash not in markup_hashes:
             if lvl:
                 if common_name:
@@ -443,8 +452,14 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                 else:
                     filename = 'noname.TextGrid'
                 markup_hashes.add(markup_hash)
-                create_entity(ids_map[int(word_id)][0],
-                              ids_map[int(word_id)][1],
+    
+                if not markup_update_flag:
+                    le_id = ids_map[int(word_id)]
+                else:
+                    le_id = audio_hashes[audio_hash][1]
+                sound_metadata.update({"hash": markup_hash})
+                create_entity(le_id[0],
+                              le_id[1],
                               fields_dict[markup_field][0],
                               fields_dict[markup_field][1],
                               sound_metadata,
@@ -463,6 +478,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             audio_counter = 0
             if markup_counter > 50:
                 DBSession.flush()
+        sound_metadata.clear()
     DBSession.flush()
 
 def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
@@ -497,7 +513,7 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
                 filename = "%s.%s" % (fname, ext)
             else:
                 filename = 'noname.wav'
-            audio_hashes.add(audio_hash)
+
             audio_counter += 1
             lvl = create_entity(ids_map[int(word_id)][0],
                                 ids_map[int(word_id)][1],
@@ -510,6 +526,7 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
                                 content=base64.urlsafe_b64encode(audio).decode(),
                                 folder_name="%s_sounds" % folder_name,
                                 storage=storage)
+            audio_hashes[audio_hash] = None
         if audio_counter > 50:
             DBSession.flush()
             audio_counter = 0
@@ -572,7 +589,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
     log = logging.getLogger(__name__)
     #from lingvodoc.cache.caching import CACHE
     task_status.set(1, 1, "Preparing")
-    hashes = set()
+    hashes = dict()
     markups = set()
     time.sleep(3)
     field_ids = {}
@@ -805,10 +822,13 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             else:
                 task_status.set(None, -1, "Conversion failed: Paradigms perspective not found")
                 return {}
-            hashes = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Sound"]
-            hashes = hashes[:] + \
-                     [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Sound"]
-            hashes = set(hashes)
+            #hashes = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Sound"]
+            #hashes = hashes[:] + \
+            #         [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Sound"]
+            #hashes = set(hashes)
+            hashes = {key[2].additional_metadata["hash"]: ((key[2].client_id, key[2].object_id), (key[1].client_id, key[1].object_id)) for key in lexes if key[2].field.data_type == "Sound"}
+            par_hashes = {key[2].additional_metadata["hash"]: ((key[2].client_id, key[2].object_id), (key[1].client_id, key[1].object_id)) for key in p_lexes if key[2].field.data_type == "Sound"}
+            hashes.update(par_hashes)
             markups = [x[2].additional_metadata["hash"]  for x in lexes if x[2].field.data_type == "Markup"]
             markups = markups[:] + \
                       [x[2].additional_metadata["hash"]  for x in p_lexes if x[2].field.data_type == "Markup"]
@@ -946,7 +966,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             p_lexes_with_text = [x for x in p_lexes if x[2].field.data_type == "Text"
                                  and (x[2].field.client_id, x[2].field.object_id) in field_ids.values()]
         else:
-            audio_hashes = set()
+            audio_hashes = dict()
             markup_hashes = set()
         ###################
         ## Lexical entries
@@ -968,15 +988,16 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             if update_flag:
                 match_dict = defaultdict(list)
                 for lex in lexes_with_text:
-                    if lex[2].content == word:
-                        if field_ids["Word"] == (lex[2].field.client_id, lex[2].field.object_id):
-                            match_dict[lex[1]].append(lex)
-                    if lex[2].content == transcription:
-                        if field_ids["Transcription"] == (lex[2].field.client_id, lex[2].field.object_id):
-                            match_dict[lex[1]].append(lex)
-                    if lex[2].content == translation:
-                        if field_ids["Translation"] == (lex[2].field.client_id, lex[2].field.object_id):
-                            match_dict[lex[1]].append(lex)
+                    if lex[2].content:
+                        if lex[2].content == word:
+                            if field_ids["Word"] == (lex[2].field.client_id, lex[2].field.object_id):
+                                match_dict[lex[1]].append(lex)
+                        if lex[2].content == transcription:
+                            if field_ids["Transcription"] == (lex[2].field.client_id, lex[2].field.object_id):
+                                match_dict[lex[1]].append(lex)
+                        if lex[2].content == translation:
+                            if field_ids["Translation"] == (lex[2].field.client_id, lex[2].field.object_id):
+                                match_dict[lex[1]].append(lex)
                 match_dict = { k: v for k, v in match_dict.items()
                                if len(v) >= 2 or len(v) == 1 and [x[1] for x in lexes_with_text].count(k) == 1}
                 max_sim = None
@@ -1117,15 +1138,16 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                 for lex in p_lexes_with_text:
                     entity = lex[2]
                     entity_field_ids = (entity.field.client_id, entity.field.object_id)
-                    if entity.content == word:
-                        if field_ids["Word of Paradigmatic forms"] == entity_field_ids:
-                            p_match_dict[lex[1]].append(lex)
-                    if entity.content == transcription:
-                        if field_ids["Transcription of Paradigmatic forms"] == entity_field_ids:
-                            p_match_dict[lex[1]].append(lex)
-                    if entity.content == translation:
-                        if field_ids["Translation of Paradigmatic forms"] == entity_field_ids:
-                            p_match_dict[lex[1]].append(lex)
+                    if entity.content:
+                        if entity.content == word:
+                            if field_ids["Word of Paradigmatic forms"] == entity_field_ids:
+                                p_match_dict[lex[1]].append(lex)
+                        if entity.content == transcription:
+                            if field_ids["Transcription of Paradigmatic forms"] == entity_field_ids:
+                                p_match_dict[lex[1]].append(lex)
+                        if entity.content == translation:
+                            if field_ids["Translation of Paradigmatic forms"] == entity_field_ids:
+                                p_match_dict[lex[1]].append(lex)
                 p_match_dict = { k: v for k, v in p_match_dict.items()
                                  if len(v) >= 2 or len(v) == 1 and [x[1] for x in p_lexes_with_text].count(k) == 1}
                 max_sim = None

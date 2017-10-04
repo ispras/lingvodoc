@@ -20,6 +20,11 @@ from .acl import (
 )
 import multiprocess
 
+# def add_route_custom(config, name, pattern, api_version=[]):
+
+#     for api in api_version:
+#         config.add_route(name=%s %s, pattern="%s/%s" % (api_version, pattern))
+
 def configure_routes(config):
     """
     This function registers views from .views for pyramid event loop. Actually all listed items here is our
@@ -30,6 +35,32 @@ def configure_routes(config):
     3) internal calls for frontend (in most cases it's API but not always). If it's not API part, will be marked
        separately. Will be marked as 'internal'
     """
+    # version = ''
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_version' % version, pattern='/%stesting_version' % version)
+    # config.add_view(view='lingvodoc.views.' + prefix + '.views.testing_add_view', route_name='%stesting_version' % version, renderer='json')
+    #
+    # version = 'v2/'
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_version' % version, pattern='/%stesting_version' % version)
+    # config.add_view(view='lingvodoc.views.' + prefix + '.views.testing_add_view', route_name='%stesting_version' % version, renderer='json')
+    #
+    # version = 'v3/'
+    # prefix = 'v3'
+    # config.add_route(name='%stesting_version' % version, pattern='/%stesting_version' % version)
+    # config.add_view(view='lingvodoc.views.' + prefix + '.views.testing_add_view', route_name='%stesting_version' % version, renderer='json')
+    #
+    # version = ''
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_decorator' % version, pattern='/%stesting_decorator' % version)
+    # version = 'v2/'
+    # prefix = 'v2'
+    # config.add_route(name='%stesting_decorator' % version, pattern='/%stesting_decorator' % version)
+    version = 'v3/'
+    prefix = 'v3'
+    config.add_route(name='%stesting_graphene' % version, pattern='/%stesting_graphene' % version)
+
+
 
     # web-view #GET
     config.add_route(name='main', pattern='/')
@@ -45,6 +76,26 @@ def configure_routes(config):
     # API #POST
     # this is the same operation as login - but params are sent via json
     config.add_route(name='signin', pattern='/signin')
+
+    config.add_route(name='create_grant', pattern='/grant',
+                     factory='lingvodoc.models.GrantAcl')
+    config.add_route(name='grant', pattern='/grant/{id}',
+                     factory='lingvodoc.models.GrantAcl')
+    config.add_route(name='all_grants', pattern='/all_grants')
+    config.add_route(name='home_page_text', pattern='/home_page_text')
+
+
+    config.add_route(name='userrequest', pattern='/userrequest/{id}')
+    config.add_route(name='get_current_userrequests', pattern='/get_current_userrequests')
+    config.add_route(name='accept_userrequest', pattern='/accept_userrequest/{id}')
+    config.add_route(name='get_grant_permission', pattern='/get_grant_permission/{id}')
+    config.add_route(name='participate_org', pattern='/participate_org/{id}')
+    config.add_route(name='administrate_org', pattern='/administrate_org/{id}')
+    config.add_route(name='add_dictionary_to_grant', pattern='add_dictionary_to_grant')
+
+    # config.add_route(name='create_grant', pattern='/grant')
+
+
     config.add_route(name='desk_signin', pattern='/signin/desktop')
     config.add_route(name='sync_signin', pattern='/signin/sync')
     config.add_route(name='cheatlogin', pattern='/cheatlogin')
@@ -132,6 +183,9 @@ def configure_routes(config):
 
     # API #GET
     config.add_route('users', '/users')  # tested
+    config.add_route(name='change_user_password',
+                     pattern='/users/{login}',
+                     factory='lingvodoc.models.AdminAcl')  # new
 
     # web-view
     config.add_route(name='new_dictionary', pattern='/create_dictionary')
@@ -165,13 +219,11 @@ def configure_routes(config):
 
     # API #POST
     # Creating organization
-    config.add_route(name='create_organization', pattern='/organization',
-                     factory='lingvodoc.models.OrganizationAcl')  # ?TODO: ?test
+    config.add_route(name='create_organization', pattern='/organization')  # ?TODO: ?test
 
     # API #GET && PUT && DELETE
     # Gets/puts info about organization
-    config.add_route(name='organization', pattern='/organization/{organization_id}',
-                     factory='lingvodoc.models.OrganizationAcl')  # TODO: ?test
+    config.add_route(name='organization', pattern='/organization/{organization_id}')  # TODO: ?test
 
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create and modify perspectives)
@@ -184,7 +236,7 @@ def configure_routes(config):
     # Change visibility state for dictionary. States are: 'frozen', 'WiP', 'published', 'merging'
     config.add_route(name='dictionary_status',
                      pattern='/dictionary/{client_id}/{object_id}/state',
-                     factory='lingvodoc.models.DictionaryAcl')  # tested
+                     factory='lingvodoc.models.DictionaryStatusAcl')  # tested
 
     # API #GET && PUT && DELETE
     # Gets/puts info about perspective.
@@ -270,7 +322,7 @@ def configure_routes(config):
     config.add_route(name='perspective_status',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/state',
-                     factory='lingvodoc.models.PerspectiveAcl')  # tested
+                     factory='lingvodoc.models.PerspectiveStatusAcl')  # tested
 
     # API #GET && POST && DELETE
     # Configuring columns in perspective table.
@@ -686,7 +738,8 @@ def configure_routes(config):
                      factory='lingvodoc.models.AdminAcl')
     config.add_route(name='fix_groups', pattern='/fix_groups',
                      factory='lingvodoc.models.AdminAcl')
-    config.add_route(name='fix_fields', pattern='/fix_fields',
+
+    config.add_route(name='save_media', pattern='/save_media',
                      factory='lingvodoc.models.AdminAcl')
 
     config.add_route(name='create_translationgist', pattern='/translationgist',
@@ -737,7 +790,11 @@ def configure_routes(config):
     # time interval. Time interval is specified in the same way as for 'stat_perspective'.
     config.add_route(name = 'stat_dictionary',
       pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
-    config.add_route(name='graphql', pattern='/graphql') # TODO: remove it
+
+    # Compiles archive of sound recordings and corresponding markups for a specified perspective.
+    config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
+    config.add_route(name = "graphql", pattern = "/graphql")
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
@@ -800,7 +857,8 @@ def main(global_config, **settings):
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
-    config.add_route('testing', '/testing')
+    config.add_route('testing', '/testing',
+                     factory='lingvodoc.models.AdminAcl')
     config.add_route('testing_translations', '/testing_translations')
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
     #    config.add_route('home', '/')
@@ -813,5 +871,13 @@ def main(global_config, **settings):
 
     #    config.add_route('metaword', 'dictionary/{dictionary_id}/etymology/metaword')
 
+    # config.route_prefix = 'v3/'
+    # config.add_route('v3/testing_scan', '/testing_scan')
+    # config.route_prefix = 'v2/'
+    # config.add_route('v2/testing_scan', '/testing_scan')
+    # config.route_prefix = None
+    config.add_route('testing_scan', '/testing_scan')
     config.scan('.views')
+    # from lingvodoc.views.v2.views import testing_decorator
+    # testing_decorator(None)
     return config.make_wsgi_app()

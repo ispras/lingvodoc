@@ -586,6 +586,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
   def setPerspectiveMeta(dictionaryId: CompositeId, perspectiveId: CompositeId, metadata: MetaData) = {
     val p = Promise[Unit]()
+    org.scalajs.dom.console.log(write(metadata))
+
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) +
       "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/meta"
     $http.put(getMethodUrl(url), write(metadata)) onComplete {
@@ -651,8 +653,17 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def updatePassword(oldPassword: String, newPassword: String): Future[Unit] = {
+    val p = Promise[Unit]()
 
-
+    val req = js.Dynamic.literal("old_password" -> oldPassword, "new_password" -> newPassword)
+    $http.put[js.Object](getMethodUrl("user"), JSON.stringify(req)) onComplete {
+      case Success(js) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update user password", e))
+    }
+    p.future
+  }
 
   def getUser(userId: Int): Future[User] = {
     val p = Promise[User]()
@@ -823,7 +834,11 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     url = addUrlParameter(url, "count", count.toString)
 
     sortBy.foreach { s =>
-      url = addUrlParameter(url, "sort_by", s)
+      val ids = s.split("_")
+      if (ids.length == 2) {
+        url = addUrlParameter(url, "field_client_id", ids(0))
+        url = addUrlParameter(url, "field_object_id", ids(1))
+      }
     }
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
@@ -874,10 +889,10 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
 
 
-  def connectedLexicalEntries(entryId: CompositeId, fieldId: CompositeId) = {
+  def connectedLexicalEntries(entryId: CompositeId, fieldId: CompositeId, onlyConnected: Boolean = false, published: Boolean = false) = {
     val p = Promise[Seq[LexicalEntry]]()
 
-    val url = s"lexical_entry/${encodeURIComponent(entryId.clientId.toString)}/${encodeURIComponent(entryId.objectId.toString)}/connected?field_client_id=${encodeURIComponent(fieldId.clientId.toString)}&field_object_id=${encodeURIComponent(fieldId.objectId.toString)}"
+    val url = s"lexical_entry/${encodeURIComponent(entryId.clientId.toString)}/${encodeURIComponent(entryId.objectId.toString)}/connected?field_client_id=${encodeURIComponent(fieldId.clientId.toString)}&field_object_id=${encodeURIComponent(fieldId.objectId.toString)}&accepted=${encodeURIComponent(onlyConnected.toString)}&published=${encodeURIComponent(published.toString)}"
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
@@ -2496,6 +2511,253 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
       case Failure(e) => p.failure(BackendException(
         "Failed to get phonology markup tier list: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
+
+  def createGrant(grant: GrantRequest): Future[Unit] = {
+    val p = Promise[Unit]()
+    $http.post[js.Dynamic](getMethodUrl("grant"), write[GrantRequest](grant)) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to create grant", e))
+    }
+    p.future
+  }
+
+
+  def updateGrant(grant: Grant): Future[Unit] = {
+    val p = Promise[Unit]()
+    $http.put[js.Dynamic](getMethodUrl("grant/" + encodeURIComponent(grant.id.toString)), write[Grant](grant)) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to create grant", e))
+    }
+    p.future
+  }
+
+  def grant(grantId: Int): Future[Grant] = {
+    val p = Promise[Grant]()
+    $http.get[js.Dynamic](getMethodUrl("grants/" + encodeURIComponent(grantId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(read[Grant](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get grant", e))
+    }
+    p.future
+  }
+
+  def grants(): Future[Seq[Grant]] = {
+    val p = Promise[Seq[Grant]]()
+    $http.get[js.Dynamic](getMethodUrl("all_grants")) onComplete {
+      case Success(response)  =>
+        p.success(read[Seq[Grant]](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get list of grants", e))
+    }
+    p.future
+  }
+
+  def grantUserRequests(): Future[Seq[UserRequest]] = {
+    val p = Promise[Seq[UserRequest]]()
+    $http.get[js.Dynamic](getMethodUrl("get_current_userrequests")) onComplete {
+      case Success(response)  =>
+        p.success(read[Seq[UserRequest]](js.JSON.stringify(response)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get list of grant requests", e))
+    }
+    p.future
+  }
+
+
+  def addDictionaryToGrant(grantId: Int, dictionaryId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "grant_id" -> grantId,
+      "client_id" -> dictionaryId.clientId,
+      "object_id" -> dictionaryId.objectId
+    )
+
+    $http.post[js.Dynamic](getMethodUrl("add_dictionary_to_grant"), req) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add dictionary to grant", e))
+    }
+    p.future
+  }
+
+  def addUserToGrant(grantId: Int, userId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "grant_id" -> grantId,
+      "user_id" -> userId
+    )
+
+    $http.post[js.Dynamic](getMethodUrl("add_user_to_grant"), req) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to grant", e))
+    }
+    p.future
+  }
+
+
+  def acceptUserRequest(requestId: Int, accept: Boolean): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal(
+      "accept" -> accept
+    )
+
+    $http.post[js.Dynamic](getMethodUrl("accept_userrequest/" + encodeURIComponent(requestId.toString)), req) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to grant", e))
+    }
+    p.future
+  }
+
+  def grantUserPermission(grantId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("get_grant_permission/" + encodeURIComponent(grantId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to grant", e))
+    }
+    p.future
+  }
+
+  def organizations(): Future[Seq[Organization]] = {
+    val p = Promise[Seq[Organization]]()
+
+    $http.get[js.Dynamic](getMethodUrl("organization_list")) onComplete {
+      case Success(response)  =>
+        p.success(read[Seq[Organization]](js.JSON.stringify(response.organizations)))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to obtain list of organizations", e))
+    }
+    p.future
+  }
+
+  def createOrganization(name: String, about: String): Future[Int] = {
+    val p = Promise[Int]()
+    $http.post[js.Dynamic](getMethodUrl("organization"), js.Dynamic.literal(
+      "name" -> name,
+      "about" -> about
+    )) onComplete {
+      case Success(response)  =>
+        p.success(response.organization_id.asInstanceOf[Int])
+      case Failure(e) =>
+        p.failure(BackendException("Failed to create organization", e))
+    }
+    p.future
+  }
+
+  def updateOrganization(organization: Organization, addUsers: Seq[Int] = Seq[Int](), removeUsers: Seq[Int] = Seq[Int]()): Future[Int] = {
+    val p = Promise[Int]()
+
+    val req = js.JSON.parse(write(organization))
+    req.add_users = addUsers.toJSArray
+    req.remove_users = removeUsers.toJSArray
+
+    $http.put[js.Dynamic](getMethodUrl("organization/" + encodeURIComponent(organization.id.toString)), req) onComplete {
+      case Success(response)  =>
+        p.success(response.organization_id.asInstanceOf[Int])
+      case Failure(e) =>
+        p.failure(BackendException("Failed to update organization", e))
+    }
+    p.future
+  }
+
+  def joinOrganization(organizationId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("participate_org/" + encodeURIComponent(organizationId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to organization", e))
+    }
+    p.future
+  }
+
+  def joinOrganizationAdmin(organizationId: Int): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("administrate_org/" + encodeURIComponent(organizationId.toString))) onComplete {
+      case Success(response)  =>
+        p.success(())
+      case Failure(e) =>
+        p.failure(BackendException("Failed to add user to organization's admins", e))
+    }
+    p.future
+  }
+
+  def homePageText(): Future[String] = {
+    val p = Promise[String]()
+
+    $http.get[String](getMethodUrl("home_page_text")) onComplete {
+      case Success(response)  =>
+        p.success(response)
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get home page text", e))
+    }
+    p.future
+  }
+
+  /** Sound/markup archive generation request. */
+  def sound_and_markup(
+    perspectiveId: CompositeId,
+    published_mode: String):
+    Future[Unit] =
+  {
+    val p = Promise[Unit]
+
+    val url = s"""sound_and_markup?
+      |perspective_client_id=${perspectiveId.clientId}&
+      |perspective_object_id=${perspectiveId.objectId}&
+      |published_mode=${published_mode}
+      |""".stripMargin.replaceAll("\n", "")
+
+    $http.get[js.Dynamic](url) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while launching sound/markup archive generation:\n" + response.error))
+
+          else p.success(())
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to launch sound/markup archive generation: " + e.getMessage, e))
     }
 
     p.future

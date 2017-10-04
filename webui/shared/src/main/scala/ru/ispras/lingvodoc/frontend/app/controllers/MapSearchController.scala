@@ -253,7 +253,8 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
               perspectiveObjectId = perspective.objectId,
               lexicalEntry = entry.asInstanceOf[js.Object],
               field = field.asInstanceOf[js.Object],
-              values = values.asInstanceOf[js.Object])
+              values = values.asInstanceOf[js.Object],
+              edit = false)
           }).asInstanceOf[js.Dictionary[Any]]
 
         val instance = modal.open[Unit](options)

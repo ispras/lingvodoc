@@ -174,7 +174,7 @@ def signin(request):
         result = dict()
         result['client_id'] = client.id
         request.response.status = HTTPOk.code
-        print(result)
+        #print(result)
         # request.response.headers = headers
         # return response
         return HTTPOk(headers=response.headers, json_body=result)
@@ -453,6 +453,17 @@ def get_user_info(request):  # tested
     for organization in user.organizations:
         organizations += [{'organization_id':organization.id}]
     response['organizations'] = organizations
+    roles = list()
+    for group in user.groups:
+        role = dict()
+        role['name'] = group.parent.name
+        role['subject_override'] = group.subject_override
+        if group.subject_client_id:
+            role['subject_client_id'] = group.subject_client_id
+        if group.subject_object_id:
+            role['subject_object_id'] = group.subject_object_id
+        roles.append(role)
+    response['roles'] = roles
     request.response.status = HTTPOk.code
     return response
 
@@ -463,27 +474,19 @@ def edit_user_info(request):  # TODO: test
     response = dict()
 
     req = request.json_body
-    client_id = req.get('client_id')
-    user_id = req.get('user_id')
     user = None
-    if client_id:
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        if not client:
 
-            request.response.status = HTTPNotFound.code
-            return {'error': str("No such client in the system")}
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
-        user_id = client.user_id
-        if not user:
 
-            request.response.status = HTTPNotFound.code
-            return {'error': str("No such user in the system")}
-    else:
-        user = DBSession.query(User).filter_by(id=user_id).first()
-        if not user:
+    variables = {'auth': request.authenticated_userid}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                       variables['auth'])
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
-            request.response.status = HTTPNotFound.code
-            return {'error': str("No such user in the system")}
+
     new_password = req.get('new_password')
     old_password = req.get('old_password')
 
@@ -491,7 +494,7 @@ def edit_user_info(request):  # TODO: test
         if not old_password:
             request.response.status = HTTPBadRequest.code
             return {'error': str("Need old password to confirm")}
-        old_hash = DBSession.query(Passhash).filter_by(user_id=user_id).first()
+        old_hash = DBSession.query(Passhash).filter_by(user_id=user.id).first()
         if old_hash:
             if not user.check_password(old_password):
                 request.response.status = HTTPBadRequest.code

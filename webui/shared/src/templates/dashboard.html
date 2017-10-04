@@ -48,10 +48,10 @@
                 </div>
                 <div class="btn-group col-md-4 col-sm-4 col-lg-4">
                     <button type="button" class="btn btn-info col-md-10 col-lg-11 col-sm-10 col-xs-8"
-                            data-toggle="dropdown">{{ controller.getDictionaryStatus(dictionary).content }}
+                            data-toggle="dropdown" ng-disabled="controller.changingDictionaryStatusDisabled(dictionary)">{{ controller.getDictionaryStatus(dictionary).content }}
                     </button>
                     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
-                            aria-haspopup="true" aria-expanded="false">
+                            aria-haspopup="true" aria-expanded="false" ng-disabled="controller.changingDictionaryStatusDisabled(dictionary)">
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
@@ -111,16 +111,15 @@
                     <div class="btn-group btn-group-xs col-md-4 col-sm-4 col-lg-4 col-xs-4 ">
                         <button type="button"
                                 class="btn btn-info dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-8"
-                                data-toggle="dropdown">{{ controller.getPerspectiveStatus(perspective).content }}
+                                data-toggle="dropdown" ng-disabled="controller.changingPerspectveStatusDisabled(perspective)">{{ controller.getPerspectiveStatus(perspective).content }}
                         </button>
                         <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
-                                aria-haspopup="true" aria-expanded="false">
+                                aria-haspopup="true" aria-expanded="false" ng-disabled="controller.changingPerspectveStatusDisabled(perspective)">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li ng-repeat="status in controller.getStatuses()"><a href=""
-                                                                                  ng-click="controller.setPerspectiveStatus(perspective, status)">{{status.content}}</a>
+                            <li ng-repeat="status in controller.getStatuses()"><a href="" ng-click="controller.setPerspectiveStatus(perspective, status)">{{status.content}}</a>
                             </li>
                         </ul>
                     </div>

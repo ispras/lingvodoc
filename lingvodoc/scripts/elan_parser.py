@@ -6,6 +6,19 @@ import collections
 try: from xml.etree import cElementTree as ElementTree
 except ImportError: from xml.etree import ElementTree
 
+def hyphen_to_dash(string_with_hyphen):
+    if not string_with_hyphen:
+        return string_with_hyphen
+    restricted_symbs = ["\xad",  # Soft hyphen
+                        "\xAF",  # Spacing macron
+                        "\x96", # en dash
+                        "\u2013",
+                        "\x97", # em dash
+                        "\u2014"
+                        ]
+    for symbol in restricted_symbs:
+        string_with_hyphen = string_with_hyphen.replace(symbol, "-")
+    return string_with_hyphen
 
 class Word:
     def __init__(self, index=None, text=None, tier=None, time=None):
@@ -16,7 +29,7 @@ class Word:
 
     def strip(self, string):
         if type(string) is str:
-            return string.strip()
+            return hyphen_to_dash(string.strip())
         return string
 
     def get_tuple(self):
@@ -115,7 +128,7 @@ class Elan:
                     text_data = res[translation_data][0]
                 if len(res[translation_data]) > 1:
                     lit_transl_data = res[translation_data][1]
-                tr_text = self.word[translation_data]
+                tr_text = hyphen_to_dash(self.word[translation_data])
                 if type(tr_text) is str:
                     if re.search('[-.][\dA-Z]+', tr_text) and \
                             not re.search("[-]INF", tr_text) and \
@@ -189,6 +202,17 @@ class Elan:
                         next.append([Word(j , self.word[j], cur_tier, (i[0], i[1])) ]) #time from text
 
             perspectives.append(next)
+        to_fix = []
+        #  Elements order fix
+        for i, annotations_list in enumerate(perspectives):
+            for j, obj in enumerate(annotations_list):
+                if type(obj) is not list:
+                    to_fix.append((i, j))
+        for indexes in to_fix:
+            index = indexes[0]
+            wrong_obj = indexes[1]
+            ordereddict = perspectives[index].pop(wrong_obj)
+            perspectives[index].append(ordereddict)
         return perspectives
 
 

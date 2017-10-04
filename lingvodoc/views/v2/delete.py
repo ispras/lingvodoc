@@ -42,9 +42,12 @@ from pyramid.httpexceptions import (
 from lingvodoc.exceptions import CommonException
 from sqlalchemy.exc import IntegrityError
 
+# todo: all of this should be in models
+
 
 def real_delete_object(obj):
     DBSession.delete(DBSession.query(ObjectTOC).filter_by(client_id=obj.client_id, object_id=obj.object_id).first())
+    DBSession.delete(obj)
 
 
 def real_delete_language(language, settings):
@@ -53,24 +56,20 @@ def real_delete_language(language, settings):
     for dictionary in language.dictionary:
         real_delete_dictionary(dictionary, settings)
     real_delete_object(language)
-    DBSession.delete(language)
 
 
 def real_delete_dictionary(dictionary, settings):
     for perspective in dictionary.perspectives:
         real_delete_perspective(perspective, settings)
     real_delete_object(dictionary)
-    DBSession.delete(dictionary)
 
 
 def real_delete_perspective(perspective, settings):
     for field in perspective.dictionaryperspectivetofield:
         real_delete_object(field)
-        DBSession.delete(field)
     for lex in perspective.lexicalentry:
         real_delete_lexical_entry(lex, settings)
     real_delete_object(perspective)
-    DBSession.delete(perspective)
 
 
 def real_delete_lexical_entry(lexical_entry, settings):
@@ -78,7 +77,6 @@ def real_delete_lexical_entry(lexical_entry, settings):
         if not entity.upper_level:
             real_delete_entity(entity, settings)
     real_delete_object(lexical_entry)
-    DBSession.delete(lexical_entry)
 
 
 def real_delete_entity(entity, settings):
@@ -97,13 +95,9 @@ def real_delete_entity(entity, settings):
         except:
             print('fail with entity', entity.client_id, entity.object_id)
     real_delete_object(entity)
-    DBSession.delete(entity.publishingentity)
-    DBSession.delete(entity)
 
 
 def real_delete_translation_gist(translation_gist, settings):
     for translation_atom in translation_gist.translationatom:
         real_delete_object(translation_atom)
-        DBSession.delete(translation_atom)
     real_delete_object(translation_gist)
-    DBSession.delete(translation_gist)

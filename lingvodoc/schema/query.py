@@ -53,7 +53,7 @@ from lingvodoc.schema.gql_dictionary import (
     Dictionary,
     CreateDictionary,
     UpdateDictionary,
-    UpdateDictionaryStatus,
+    #UpdateDictionaryStatus,
     UpdateDictionaryRoles,
     DeleteDictionary
 )
@@ -74,7 +74,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
     UpdateDictionaryPerspective,
-    UpdatePerspectiveStatus,
+    #UpdatePerspectiveStatus,
     UpdatePerspectiveRoles,
     DeleteDictionaryPerspective
 )
@@ -140,7 +140,9 @@ from sqlalchemy import (
     or_,
     tuple_
 )
-
+from lingvodoc.views.v2.utils import (
+    view_field_from_object,
+)
 from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
@@ -154,9 +156,9 @@ ENGLISH_LOCALE = 2
 class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
-    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int))
+    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int())
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
-    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int))
+    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int())
     entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
     languages = graphene.List(Language)
@@ -185,6 +187,102 @@ class Query(graphene.ObjectType):
     userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
+    all_basegroups = graphene.List(ObjectVal)
+    all_data_types = graphene.List(TranslationGist)
+    all_fields = graphene.List(Field)
+    all_statuses = graphene.List(TranslationGist)
+    template_fields = graphene.List(Field, mode=graphene.String())
+    template_modes = graphene.List(graphene.String)
+
+    def resolve_template_modes(self, info):
+        return ['corpora']
+
+    def resolve_template_fields(self, info, mode=None):
+        response = list()
+        request = info.context.request
+        if mode == 'corpora':
+            data_type_query = DBSession.query(dbField) \
+                .join(dbTranslationGist,
+                      and_(dbField.translation_gist_object_id == dbTranslationGist.object_id,
+                           dbField.translation_gist_client_id == dbTranslationGist.client_id)) \
+                .join(dbTranslationGist.translationatom)
+            sound_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+                                                 dbTranslationAtom.content == 'Sound').one()  # todo: a way to find this fields if wwe cannot use one
+            markup_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+                                                  dbTranslationAtom.content == 'Markup').one()
+            comment_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+                                                    dbTranslationAtom.content == 'Comment').one()
+            sound_field =view_field_from_object(request=request, field=sound_field)
+            markup_field = view_field_from_object(request=request, field=markup_field)
+            comment_field = view_field_from_object(request=request, field=comment_field)
+            fake_id_1 = '6f355d7a-e68d-44ab-9cf6-36f78e8f1b34'  # chosen by fair dice roll
+            fake_id_2 = '51fbe0b6-2cea-4d40-a994-f6bb6f501d48'  # guaranteed to be random
+            f = Field(id=[sound_field["client_id"], sound_field["object_id"]], fake_id = fake_id_1)
+            f2 = Field(id=[markup_field["client_id"], markup_field["object_id"]], fake_id = fake_id_2, self_fake_id = fake_id_1)
+            f.dbObject = DBSession.query(dbField).filter_by(client_id=sound_field["client_id"], object_id=sound_field["object_id"]).first()
+            f2.dbObject = DBSession.query(dbField).filter_by(client_id=markup_field["client_id"], object_id=markup_field["object_id"]).first()
+            response.append(f)
+            response.append(f2)
+
+            f3 = Field(id=[comment_field["client_id"], comment_field["object_id"]])
+            f3.dbObject = DBSession.query(dbField).filter_by(client_id=comment_field["client_id"]).first()
+            response.append(f3)
+            # response[0]['contains'] = [view_field_from_object(request=request, field=markup_field)]
+            # response.append(view_field_from_object(request=request, field=markup_field))
+            # response.append(view_field_from_object(request=request, field=comment_field))
+            #
+            # return response
+            #
+            # response.append(TranslationGist(id=[sound_field.translation_gist_client_id, sound_field.data_type_translation_gist_object_id]))
+            # response.append(TranslationGist(id=[markup_field.data_type_translation_gist_client_id, markup_field.data_type_translation_gist_object_id]))
+            # response.append(TranslationGist(id=[comment_field.data_type_translation_gist_client_id, comment_field.data_type_translation_gist_object_id]))
+            return response
+        else:
+            raise ResponseError(message='no such mode')
+    def resolve_all_statuses(self, info):
+        request = info.context.request
+        response = list()
+        for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = {'searchstring': status}
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            jn = resp.json
+            response.append(TranslationGist(id=[jn["client_id"], jn["object_id"] ]))
+        return response
+
+    def resolve_all_fields(self, info):
+        fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
+        response = list()
+        for field in fields:
+            f = Field(id=[field.client_id, field.object_id],
+                      translation=field.get_translation(info.context.get('locale_id'))
+                      )
+            #f.dbObject = field
+            response.append(f)
+
+        return response
+
+    def resolve_all_data_types(self, info):
+        import json
+        request = info.context.request
+        response = list()
+        for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link', 'Grouping Tag']:
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = {'searchstring': data_type}
+            # headers = {'Cookie': request.headers['Cookie']}
+            # subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            jn = resp.json
+            #if "contains" in jn:
+            #    del jn["contains"]
+            response.append(TranslationGist(id=[jn["client_id"], jn["object_id"] ]))
+        return response
 
     def resolve_dictionaries(self, info, published):
         """
@@ -339,8 +437,8 @@ class Query(graphene.ObjectType):
         return perspectives_list
 
 
-    def resolve_perspective(self, info, id):
-        return DictionaryPerspective(id=id)
+    def resolve_perspective(self, info, id, starting_time=None, ending_time=None):
+        return DictionaryPerspective(id=id, starting_time=starting_time, ending_time=ending_time)
 
     def resolve_language(self, info, id):
         return Language(id=id)
@@ -1015,8 +1113,11 @@ class Query(graphene.ObjectType):
 
         return userrequests_list
 
-
-
+    def resolve_all_basegroups(self, info):
+        basegroups = dict()
+        for basegroup_object in DBSession.query(dbBaseGroup).all():
+            basegroups[basegroup_object.id] = basegroup_object.name
+        return basegroups
 
 class MyMutations(graphene.ObjectType):
     """
@@ -1038,7 +1139,7 @@ class MyMutations(graphene.ObjectType):
     delete_language = DeleteLanguage.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
-    update_dictionary_status = UpdateDictionaryStatus.Field()
+    #update_dictionary_status = UpdateDictionaryStatus.Field()
     update_dictionary_roles = UpdateDictionaryRoles.Field()
     delete_dictionary = DeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
@@ -1052,7 +1153,7 @@ class MyMutations(graphene.ObjectType):
     delete_lexicalentry = DeleteLexicalEntry.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
-    update_perspective_status = UpdatePerspectiveStatus.Field()
+    #update_perspective_status = UpdatePerspectiveStatus.Field()
     update_perspective_roles = UpdatePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
     create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()
