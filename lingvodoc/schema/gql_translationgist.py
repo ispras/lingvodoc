@@ -38,7 +38,6 @@ class TranslationGist(graphene.ObjectType):
     dbType = dbTranslationGist
     dbObject = None
     translationatoms = graphene.List(TranslationAtom)
-
     class Meta:
         interfaces = (CompositeIdHolder,
                       CreatedAt,

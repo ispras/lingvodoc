@@ -10,7 +10,9 @@ from lingvodoc.schema.gql_holders import (
     Position,
     client_id_check,
     del_object,
-    ResponseError
+    ResponseError,
+    TranslationHolder,
+    TranslationGistHolder
 )
 from lingvodoc.models import (
     DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,

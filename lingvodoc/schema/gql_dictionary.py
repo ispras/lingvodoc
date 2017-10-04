@@ -189,7 +189,8 @@ class Dictionary(graphene.ObjectType):
             persp.dbObject = persp
             perspectives.append(persp)
         return perspectives
-    @fetch_object()
+
+    @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
     def resolve_roles(self, info):
         response = dict()
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id

@@ -165,6 +165,8 @@ class Query(graphene.ObjectType):
     user = graphene.Field(User, id=graphene.Int())
     users = graphene.List(User, search=graphene.String())
     field = graphene.Field(Field, id=graphene.List(graphene.Int))
+    translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
+    userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
     organization = graphene.Field(Organization, id=graphene.List(graphene.Int))
     organizations = graphene.List(Organization)
