@@ -45,7 +45,7 @@ class CreateOrganization(graphene.Mutation):
     example:
     mutation  {
         create_organization(name: "new", about: "about") {
-            field {
+            organization {
                 name
             }
             triumph
@@ -72,7 +72,7 @@ class CreateOrganization(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('create', 'organization')
+    #@acl_check_by_id('create', 'organization')
     def mutate(root, info, **args):
         name = args.get('name')
         about = args.get('about')
