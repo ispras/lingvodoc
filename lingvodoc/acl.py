@@ -54,7 +54,20 @@ def groupfinder(client_id, request, factory = None, subject = None):
             pass
 
     if not subject or subject == 'no op subject':
-        return []
+        try:
+            user = DBSession.query(User) \
+                        .join(Client) \
+                        .filter(Client.id == client_id).first()
+
+        except AttributeError as e:
+                log.error('forget in acl.py')
+                forget(request)
+                return None
+
+        groupset = set()
+        if user.id == 1:
+            groupset.add('Admin')
+        return groupset
 
     try:
         user = DBSession.query(User) \
