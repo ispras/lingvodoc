@@ -724,6 +724,9 @@ def storage_file(storage_config, url):
 def update_metadata(dbobject, new_metadata=None):
     if new_metadata:
         old_meta = dbobject.additional_metadata
-        old_meta.update(new_metadata)
-        dbobject.additional_metadata = old_meta
+        if old_meta is None:
+            dbobject.additional_metadata = new_metadata
+        else:
+            old_meta.update(new_metadata)
+            dbobject.additional_metadata = old_meta
         flag_modified(dbobject, 'additional_metadata')

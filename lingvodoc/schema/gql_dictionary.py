@@ -45,6 +45,7 @@ from lingvodoc.views.v2.utils import (
 from graphene.types.generic import GenericScalar
 from lingvodoc.views.v2.utils import  add_user_to_group
 from lingvodoc.utils import statistics
+from lingvodoc.utils.creation import create_perspective
 
 def translation_service_search(searchstring):
     translationatom = DBSession.query(dbTranslationAtom)\
@@ -67,7 +68,7 @@ class UserAndOrganizationsRoles(graphene.ObjectType):
     def resolve_roles_organizations(self, info):
         return self.roles_organizations
 
-class Dictionary(graphene.ObjectType):
+class Dictionary(graphene.ObjectType):  # tested
     # TODO: resolve_dataType(?)
     """
      #created_at                       | timestamp without time zone | NOT NULL
@@ -107,7 +108,7 @@ class Dictionary(graphene.ObjectType):
     }
     or
 
-          dictionary(id: [126, 3], starting_time: 0, ending_time: 100) { statistic   ...
+          dictionary(id: [126, 3], starting_time: 0, ending_time: 100) { statistic   ... # todo timestamp
     """
 
     dbType = dbDictionary
@@ -119,10 +120,10 @@ class Dictionary(graphene.ObjectType):
     # parent_object_id
     # translation_gist_client_id
     # state_translation_gist_client_id
-    triumph = graphene.Boolean()
+    #triumph = graphene.Boolean()
     status = graphene.String()
     persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
-    cr_persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.CreateDictionaryPerspective')
+    #cr_persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.CreateDictionaryPerspective')
     perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
     persptofields = graphene\
         .Field('lingvodoc.schema.gql_dictipersptofield.DictionaryPerspectiveToField')
@@ -137,9 +138,9 @@ class Dictionary(graphene.ObjectType):
     def persp_class(self):
         return self._meta.fields['persp'].type
 
-    @property
-    def create_persp(self):
-        return self._meta.fields['cr_persp'].type
+    # @property
+    # def create_persp(self):
+    #     return self._meta.fields['cr_persp'].type
 
     @property
     def persptofield_class(self):
@@ -173,8 +174,8 @@ class Dictionary(graphene.ObjectType):
                                    locale_id=locale_id
                                    )
 
-    def resolve_triumph(self, info):
-        return True
+    # def resolve_triumph(self, info):
+    #     return True
 
     @client_id_check()
     def resolve_perspectives(self, info):
@@ -195,7 +196,7 @@ class Dictionary(graphene.ObjectType):
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
         dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not dictionary or dictionary.marked_for_deletion:
-            raise ResponseError(message="Dictionary with such ID already exists in the system")
+            raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
 
 
         bases = DBSession.query(dbBaseGroup).filter_by(dictionary_default=True)
@@ -297,6 +298,8 @@ class CreateDictionary(graphene.Mutation):
                       1,
                       213
                    ],
+					"fake_id": "123",
+					"self_fake_id": "321",
                    "link":{
                       "fake_id":"2e3684b7-6d81-4d103-a10e10-295517ad2f75"
                    }
@@ -341,7 +344,6 @@ class CreateDictionary(graphene.Mutation):
     translation_atoms = graphene.List(ObjectVal)
 
     @staticmethod
-    #@client_id_check()
     def create_dbdictionary(client_id=None,
                             object_id=None,
                             parent_client_id=None,
@@ -378,8 +380,9 @@ class CreateDictionary(graphene.Mutation):
         return dbdictionary_obj
 
     @staticmethod
-    @client_id_check()
+    @client_id_check()  # tested
     def mutate(root, info, **args):
+        # TODO: complex_create with fields
         ids = args.get("id")
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
@@ -449,17 +452,18 @@ class CreateDictionary(graphene.Mutation):
         dictionary.dbObject = dbdictionary_obj
 
         DictionaryPerspective = dictionary.persp_class
-        CreateDictionaryPerspective = dictionary.create_persp
         DictionaryPerspectiveToField = dictionary.persptofield_class
         CreateDictionaryPerspectiveToField = dictionary.create_persptofield
         persp_args = args.get("perspectives")
         created_persps = []
-        # rename it
+        # TODO:  rename it
         fields_dict = dict()
         field_ids = dict()
         persp_fake_ids = dict()
+
         if persp_args:
             for child_persp in persp_args:
+                counter = 0
                 if "translation_atoms" in child_persp:
                     client = DBSession.query(dbClient).filter_by(id=client_id).first()
                     user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
@@ -512,8 +516,7 @@ class CreateDictionary(graphene.Mutation):
                 obj_id = None
                 if "id" in child_persp:
                     obj_id = child_persp["id"][1]
-                new_persp = CreateDictionaryPerspective\
-                    .create_perspective(client_id=client_id,
+                new_persp = create_perspective(client_id=client_id,
                                         object_id=obj_id,
                                         parent_client_id=dbdictionary_obj.client_id,
                                         parent_object_id=dbdictionary_obj.object_id,  # use all object attrs
@@ -538,6 +541,7 @@ class CreateDictionary(graphene.Mutation):
                     for fake_link in fields_dict[persp]:
                         if fake_link in persp_fake_ids:
                             persp_to_link = persp_fake_ids[fake_link]
+                            counter+=1
                             CreateDictionaryPerspectiveToField\
                                 .create_dictionary_persp_to_field(client_id=client_id,
                                                                   parent_client_id=persp.client_id,
@@ -548,7 +552,7 @@ class CreateDictionary(graphene.Mutation):
                                                                   self_object_id=None,
                                                                   link_client_id=persp_to_link.client_id,
                                                                   link_object_id=persp_to_link.object_id,
-                                                                  position=1)
+                                                                  position=counter)
 
                     #if field.get('link') and field['link'].get('fake_id'):
                     #    #field['link'] = fake_ids[field['link']['fake_id']]
@@ -646,9 +650,8 @@ class UpdateDictionary(graphene.Mutation):
         return db_dictionary
 
     @staticmethod
-    @client_id_check()
-    @acl_check_by_id('edit', 'dictionary')
-    def mutate(root, info, **args):
+    @acl_check_by_id('edit', 'dictionary')  # tested
+    def mutate(root, info, **args):  # tested
         ids = args.get('id')
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
@@ -671,48 +674,48 @@ class UpdateDictionary(graphene.Mutation):
         dictionary.dbObject = dbdictionary
         return UpdateDictionary(dictionary=dictionary, triumph=True)
 
-# class UpdateDictionaryStatus(graphene.Mutation):
-#     """
-#     mutation  {
-#         update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
-#             triumph
-#             dictionary{
-#                 id
-#                 translation
-#                 marked_for_deletion
-#                 created_at
-#                 status
-#                 translation
-#                             additional_metadata{
-#              hash
-#             }
-#             }
-#         }
-#     }
-#     """
-#     class Arguments:
-#         id = graphene.List(graphene.Int)
-#         state_translation_gist_id = graphene.List(graphene.Int)
-#
-#     dictionary = graphene.Field(Dictionary)
-#     triumph = graphene.Boolean()
-#
-#     @staticmethod
-#     @client_id_check()
-#     def mutate(root, info, **args):
-#         client_id, object_id = args.get('id')
-#         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-#         dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-#         if dbdictionary and not dbdictionary.marked_for_deletion:
-#             dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
-#             dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
-#             atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
-#                                                               parent_object_id=state_translation_gist_object_id,
-#                                                               locale_id=info.context.get('locale_id')).first()
-#             dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
-#             dictionary.dbObject = dbdictionary
-#             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
-#         raise ResponseError(message="No such dictionary in the system")
+class UpdateDictionaryStatus(graphene.Mutation):
+    """
+    mutation  {
+        update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
+            triumph
+            dictionary{
+                id
+                translation
+                marked_for_deletion
+                created_at
+                status
+                translation
+                            additional_metadata{
+             hash
+            }
+            }
+        }
+    }
+    """
+    class Arguments:
+        id = graphene.List(graphene.Int)
+        state_translation_gist_id = graphene.List(graphene.Int)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id("edit", "dictionary_status")
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
+            dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
+            dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
+            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
+                                                              parent_object_id=state_translation_gist_object_id,
+                                                              locale_id=info.context.get('locale_id')).first()
+            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
+            dictionary.dbObject = dbdictionary
+            return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="No such dictionary in the system")
 
 class UpdateDictionaryRoles(graphene.Mutation):
     class Arguments:
@@ -834,7 +837,6 @@ class DeleteDictionary(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     @acl_check_by_id('delete', 'dictionary')
     def mutate(root, info, **args):
         ids = args.get('id')
