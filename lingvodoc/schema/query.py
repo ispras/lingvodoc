@@ -150,6 +150,8 @@ from sqlalchemy.sql.functions import coalesce
 
 from pyramid.security import authenticated_userid
 
+from lingvodoc.utils.phonology import phonology as utils_phonology
+
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -198,6 +200,17 @@ class Query(graphene.ObjectType):
     template_modes = graphene.List(graphene.String)
     grant = graphene.Field(Grant, id=graphene.Int())
     grants = graphene.List(Grant)
+    phonology = graphene.Field(graphene.Boolean, perspective_id=graphene.List(graphene.Int),
+        limit=graphene.Int(),
+        limit_exception=graphene.Int(),
+        limit_no_vowel=graphene.Int(),
+        limit_result=graphene.Int(),
+        group_by_description=graphene.Boolean(),
+        only_first_translation=graphene.Boolean(),
+        vowel_selection=graphene.Boolean(),
+        maybe_tier_list=graphene.List(graphene.String),
+        maybe_tier_set=graphene.List(graphene.String),
+        synchronous=graphene.Boolean())
 
     def resolve_template_modes(self, info):
         return ['corpora']
@@ -1176,6 +1189,21 @@ class Query(graphene.ObjectType):
                      end=grant.end.strftime("%d.%m.%Y"),
                      created_at=grant.created_at) for grant in grants]
         return grants_list
+
+    def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
+                          vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
+                            limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False):
+
+        perspective_cid, perspective_oid = perspective_id
+        locale_id = info.context.get('locale_id')
+        request = info.context.get('request')
+
+        utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
+                  synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
+                  limit_exception, limit_no_vowel, limit_result, locale_id)
+
+        return True
+
 
 class MyMutations(graphene.ObjectType):
     """
