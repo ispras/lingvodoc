@@ -109,6 +109,8 @@ from lingvodoc.schema.gql_userrequest import (
     DeleteUserRequest
 )
 
+from lingvodoc.schema.gql_phonology import PerformPhonology
+
 import lingvodoc.acl as acl
 
 from lingvodoc.models import (
@@ -1226,6 +1228,7 @@ class MyMutations(graphene.ObjectType):
     participate_org = ParticipateOrg.Field()
     accept_userrequest = AcceptUserRequest.Field()
     delete_userrequest = DeleteUserRequest.Field()
+    perform_phonology = PerformPhonology.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
