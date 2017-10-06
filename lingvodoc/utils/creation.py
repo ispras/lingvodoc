@@ -9,12 +9,28 @@ from lingvodoc.models import (
     BaseGroup,
     DictionaryPerspective,
     Language,
-    DictionaryPerspectiveToField
+    DictionaryPerspectiveToField,
+    LexicalEntry,
+    Entity,
+    Field
 )
 
 from lingvodoc.views.v2.utils import add_user_to_group
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.views.v2.translations import translationgist_contents
+
+from sqlalchemy import (
+    and_,
+)
+
+from lingvodoc.views.v2.utils import (
+     create_object
+)
+
+import base64
+import hashlib
+
+
 
 def translation_service_search(searchstring):
     translationatom = DBSession.query(TranslationAtom)\
@@ -150,3 +166,111 @@ def create_dictionary_persp_to_field(client_id=None,
     DBSession.add(field_object)
     DBSession.flush()
     return field_object
+
+def create_entity(id=None,
+        parent_id=None,
+        additional_metadata=None,
+        field_id=None,
+        self_id=None,
+        link_id=None,
+        locale_id=2,
+        filename=None,
+        content=None,
+        registry=None,
+        request=None,
+        save_object=False):
+
+    parent_client_id, parent_object_id = parent_id
+    parent = DBSession.query(LexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        raise ResponseError(message="No such lexical entry in the system")
+
+    upper_level = None
+
+    field_client_id, field_object_id = field_id
+    tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+        TranslationAtom.locale_id == 2,
+        TranslationAtom.parent_client_id == TranslationGist.client_id,
+        TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+        TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+        TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+        Field.client_id == field_client_id, Field.object_id == field_object_id).first()
+    if not tr_atom:
+        raise ResponseError(message="No such field in the system")
+    data_type = tr_atom.content.lower()
+
+    if self_id:
+        self_client_id, self_object_id = self_id
+        upper_level = DBSession.query(Entity).filter_by(client_id=self_client_id,
+                                                          object_id=self_object_id).first()
+        if not upper_level:
+            raise ResponseError(message="No such upper level in the system")
+
+    client_id, object_id = id
+    dbentity = Entity(client_id=client_id,
+                        object_id=object_id,
+                        field_client_id=field_client_id,
+                        field_object_id=field_object_id,
+                        locale_id=locale_id,
+                        additional_metadata=additional_metadata,
+                        parent=parent)
+    group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'lexical_entries_and_entities',
+                                                              Group.subject_client_id == dbentity.parent.parent.client_id,
+                                                              Group.subject_object_id == dbentity.parent.parent.object_id,
+                                                              BaseGroup.action == 'create').one()
+
+    override_group = DBSession.query(Group).join(BaseGroup).filter(
+        BaseGroup.subject == 'lexical_entries_and_entities',
+        Group.subject_override == True,
+        BaseGroup.action == 'create').one()
+    # if user in group.users or user in override_group.users:
+    #    dbentity.publishingentity.accepted = True
+    if upper_level:
+        dbentity.upper_level = upper_level
+    dbentity.publishingentity.accepted = True
+    real_location = None
+    url = None
+    blob = request.POST.pop("blob")
+    if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+        filename = blob.filename
+        content = blob.file.read()
+        # filename=
+        real_location, url = create_object(base64.urlsafe_b64encode(content).decode(), dbentity, data_type, filename,
+                                           "graphql_files", request.registry.settings["storage"])
+        dbentity.content = url
+        old_meta = dbentity.additional_metadata
+        need_hash = True
+        if old_meta:
+            if old_meta.get('hash'):
+                need_hash = False
+        if need_hash:
+            hash = hashlib.sha224(base64.urlsafe_b64decode(base64.urlsafe_b64encode(content).decode())).hexdigest()
+            hash_dict = {'hash': hash}
+            if old_meta:
+                old_meta.update(hash_dict)
+            else:
+                old_meta = hash_dict
+            dbentity.additional_metadata = old_meta
+        if 'markup' in data_type:
+            name = filename.split('.')
+            ext = name[len(name) - 1]
+            if ext.lower() == 'textgrid':
+                data_type = 'praat markup'
+            elif ext.lower() == 'eaf':
+                data_type = 'elan markup'
+        dbentity.additional_metadata['data_type'] = data_type
+    elif data_type == 'link':
+        if link_id:
+            link_client_id, link_object_id = link_id
+            dbentity.link_client_id = link_client_id
+            dbentity.link_object_id = link_object_id
+        else:
+            raise ResponseError(
+                message="The field is of link type. You should provide client_id and object id in the content")
+    else:
+        dbentity.content = content
+
+    if save_object:
+        DBSession.add(dbentity)
+        DBSession.flush()
+    return dbentity
