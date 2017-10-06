@@ -35,7 +35,9 @@ from lingvodoc.schema.gql_holders import (
     Content,
     del_object,
     ResponseError,
-    client_id_check
+    client_id_check,
+    Published,
+    Accepted
 )
 from sqlalchemy import (
     and_,
@@ -101,7 +103,9 @@ class Entity(graphene.ObjectType):
                       ParentLink,
                       Content,
                       #TranslationHolder,
-                      LocaleId
+                      LocaleId,
+                      Published,
+                      Accepted
                       )
 
 
