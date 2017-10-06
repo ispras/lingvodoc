@@ -53,7 +53,7 @@ from lingvodoc.schema.gql_dictionary import (
     Dictionary,
     CreateDictionary,
     UpdateDictionary,
-    #UpdateDictionaryStatus,
+    UpdateDictionaryStatus,
     UpdateDictionaryRoles,
     DeleteDictionary
 )
@@ -74,7 +74,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
     UpdateDictionaryPerspective,
-    #UpdatePerspectiveStatus,
+    UpdatePerspectiveStatus,
     UpdatePerspectiveRoles,
     DeleteDictionaryPerspective
 )
@@ -159,15 +159,17 @@ ENGLISH_LOCALE = 2
 class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
-    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int())
+    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int))
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
-    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int),  starting_time=graphene.Int(), ending_time=graphene.Int())
+    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int))
     entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
     language = graphene.Field(Language, id=graphene.List(graphene.Int))
     languages = graphene.List(Language)
     user = graphene.Field(User, id=graphene.Int())
     users = graphene.List(User, search=graphene.String())
     field = graphene.Field(Field, id=graphene.List(graphene.Int))
+    translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
+    userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
     organization = graphene.Field(Organization, id=graphene.List(graphene.Int))
     organizations = graphene.List(Organization)
@@ -190,7 +192,7 @@ class Query(graphene.ObjectType):
     userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
-    all_basegroups = graphene.List(ObjectVal)
+    all_basegroups = graphene.List(BaseGroup)
     all_data_types = graphene.List(TranslationGist)
     all_fields = graphene.List(Field)
     all_statuses = graphene.List(TranslationGist)
@@ -453,8 +455,8 @@ class Query(graphene.ObjectType):
         return perspectives_list
 
 
-    def resolve_perspective(self, info, id, starting_time=None, ending_time=None):
-        return DictionaryPerspective(id=id, starting_time=starting_time, ending_time=ending_time)
+    def resolve_perspective(self, info, id):
+        return DictionaryPerspective(id=id)
 
     def resolve_language(self, info, id):
         return Language(id=id)
@@ -1146,10 +1148,12 @@ class Query(graphene.ObjectType):
 
         return userrequests_list
 
-    def resolve_all_basegroups(self, info):
-        basegroups = dict()
+    def resolve_all_basegroups(self, info):  # tested
+        basegroups = list()
         for basegroup_object in DBSession.query(dbBaseGroup).all():
-            basegroups[basegroup_object.id] = basegroup_object.name
+            basegroup = BaseGroup(id=basegroup_object.id)
+            basegroup.dbObject = basegroup_object
+            basegroups.append(basegroup)
         return basegroups
 
     def resolve_grant(self, info, id):
@@ -1223,7 +1227,7 @@ class MyMutations(graphene.ObjectType):
     delete_language = DeleteLanguage.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
-    #update_dictionary_status = UpdateDictionaryStatus.Field()
+    update_dictionary_status = UpdateDictionaryStatus.Field()
     update_dictionary_roles = UpdateDictionaryRoles.Field()
     delete_dictionary = DeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
@@ -1237,7 +1241,7 @@ class MyMutations(graphene.ObjectType):
     delete_lexicalentry = DeleteLexicalEntry.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
-    #update_perspective_status = UpdatePerspectiveStatus.Field()
+    update_perspective_status = UpdatePerspectiveStatus.Field()
     update_perspective_roles = UpdatePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
     create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()

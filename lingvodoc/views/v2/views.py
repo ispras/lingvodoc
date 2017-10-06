@@ -261,14 +261,16 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
 
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
-    import requests
-    from sqlalchemy.orm.attributes import flag_modified
-    dmgd_persp = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=1139, object_id=2549).one()
-    dmgd_persp.marked_for_deletion = True
-    dmgd_persp = DBSession.query(ObjectTOC).filter_by(client_id=dmgd_persp.client_id,
-                                                         object_id=dmgd_persp.object_id).one()
-    dmgd_persp.marked_for_deletion = True
-    return {"success": True}
+    # Hello, testing, my old friend
+    # I've come to use you once again
+    persps = list()
+    persp_to_dict = lambda x: [
+        {'additional_metadata': p.additional_metadata,
+         'client_id': p.client_id,
+         'object_id': p.object_id} for p in x]
+    persps = DBSession.query(DictionaryPerspective).filter(
+        DictionaryPerspective.additional_metadata['location'] is not None).all()
+    return persp_to_dict(persps)
 
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')

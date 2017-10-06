@@ -185,7 +185,7 @@ def del_object(tmp_object):
     tmp_objecttoc.marked_for_deletion = True
 
 
-def fetch_object(attrib_name=None):
+def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
     """
     This magic decorator, which the resolve_* functions have, sets the dbObject atribute
     after execution of a request to a DB or force the function to return attribute by attrib_name.
@@ -201,9 +201,13 @@ def fetch_object(attrib_name=None):
     def dec(func):
         def wrapper(*args, **kwargs):
             cls = args[0]
+            context = args[1].context
             if attrib_name:
                 if hasattr(cls, attrib_name) and not hasattr(getattr(cls, attrib_name), '_meta'):
                     return getattr(cls, attrib_name)
+            if ACLSubject and ACLKey == 'id':
+                context.acl_check('view', ACLSubject, cls.id)
+
             if not cls.dbObject:
                 if type(cls.id) is int:
                     # example: (id: 1)
@@ -213,8 +217,14 @@ def fetch_object(attrib_name=None):
                     # example: (id: [2,3])
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
                                                                          object_id=cls.id[1]).one()
+            if ACLSubject and '_' in ACLKey:
+                context.acl_check('view', ACLSubject,
+                                  [getattr(cls.dbObject, ACLKey.replace('_', '_client_')),
+                                   getattr(cls.dbObject, ACLKey.replace('_', '_object_'))])
             return func(*args, **kwargs)
+
         return wrapper
+
     return dec
 
 
@@ -293,9 +303,13 @@ class SelfHolder(graphene.Interface):
 
 
 class FieldHolder(graphene.Interface):
+    field = graphene.Field('lingvodoc.schema.gql_field.Field')
     field_id = graphene.List(graphene.Int)
     # field_client_id = graphene.Int()
     # field_object_id = graphene.Int()
+
+    # def resolve_field(self, args, context, info):
+    #     return Field()
 
     @fetch_object("field_id")
     def resolve_field_id(self, info):
@@ -543,7 +557,7 @@ class Metadata(graphene.ObjectType):
     hash = GenericScalar()
     origin_client_id = GenericScalar()
     origin_object_id = GenericScalar()
-    info = GenericScalar()
+    blobs = GenericScalar()
     merged_by = GenericScalar()
     data_type = GenericScalar()
     blob_description = GenericScalar()
@@ -564,8 +578,8 @@ class Metadata(graphene.ObjectType):
     def resolve_origin_object_id(self, info):
         return self.origin_object_id
 
-    def resolve_info(self, info):
-        return self.info
+    def resolve_blobs(self, info):
+        return self.blobs
 
     def resolve_merged_by(self, info):
         return self.merged_by
@@ -649,7 +663,7 @@ class AdditionalMetadata(graphene.Interface):
                                                                      "origin_client_id"),
                                    origin_object_id=get_value_by_key(db_object, additional_metadata_string,
                                                                      "origin_object_id"),
-                                   info=get_value_by_key(db_object, additional_metadata_string, "info"),
+                                   blobs=get_value_by_key(db_object, additional_metadata_string, "blobs"),
                                    merged_by=get_value_by_key(db_object, additional_metadata_string, "merged_by"),
                                    data_type=get_value_by_key(db_object, additional_metadata_string, "data_type"),
                                    blob_description=get_value_by_key(db_object, additional_metadata_string,
