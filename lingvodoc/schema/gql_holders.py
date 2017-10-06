@@ -303,26 +303,13 @@ class SelfHolder(graphene.Interface):
 
 
 class FieldHolder(graphene.Interface):
-    field = graphene.Field('lingvodoc.schema.gql_field.Field')
     field_id = graphene.List(graphene.Int)
     # field_client_id = graphene.Int()
     # field_object_id = graphene.Int()
 
-    # def resolve_field(self, args, context, info):
-    #     return Field()
-
     @fetch_object("field_id")
     def resolve_field_id(self, info):
         return (self.dbObject.field_client_id, self.dbObject.field_object_id)
-
-    # @fetch_object("field_client_id")
-    # def resolve_field_client_id(self, info):
-    #     return self.dbObject.field_client_id
-    #
-    # @fetch_object("field_object_id")
-    # def resolve_field_object_id(self, info):
-    #     return self.dbObject.field_object_id
-
 
 class ParentLink(graphene.Interface):
     link_id = graphene.List(graphene.Int)
@@ -453,6 +440,7 @@ class TypeHolder(graphene.Interface):
 class TranslationHolder(graphene.Interface):
     translation = graphene.String()
 
+
     @fetch_object("translation")
     def resolve_translation(self, info):
         context = info.context
@@ -478,8 +466,8 @@ class Published(graphene.Interface):
     published = graphene.Boolean()
 
     @fetch_object("published")
-    def resolve_about(self, info):
-        return self.dbObject.published
+    def resolve_published(self, info):
+        return self.dbObject.publishingentity.published
 
 
 class Accepted(graphene.Interface):
@@ -487,7 +475,7 @@ class Accepted(graphene.Interface):
 
     @fetch_object("accepted")
     def resolve_accepted(self, info):
-        return self.dbObject.accepted
+        return self.dbObject.publishingentity.accepted
 
 # userBlobs interface
 

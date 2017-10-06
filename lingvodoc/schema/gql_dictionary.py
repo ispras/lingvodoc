@@ -99,9 +99,14 @@ class Dictionary(graphene.ObjectType):  # tested
     status = graphene.String()
 
     perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
-
+    persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
+
+
+    @property
+    def persp_class(self):
+        return self._meta.fields['persp'].type
 
     @fetch_object('status')
     def resolve_status(self, info):
@@ -137,8 +142,9 @@ class Dictionary(graphene.ObjectType):  # tested
         child_persps = DBSession.query(dbDictionaryPerspective)\
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id).all()
         for persp in child_persps:
-            persp.dbObject = persp
-            perspectives.append(persp)
+            persp_object = self.persp_class(id = [persp.client_id, persp.object_id])
+            persp_object.dbObject = persp
+            perspectives.append(persp_object)
         return perspectives
 
     @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
