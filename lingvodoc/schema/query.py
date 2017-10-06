@@ -4,7 +4,8 @@ from lingvodoc.schema.gql_entity import (
     Entity,
     CreateEntity,
     UpdateEntity,
-    DeleteEntity
+    DeleteEntity,
+    BulkCreateEntity
 )
 from lingvodoc.schema.gql_dictipersptofield import (
     DictionaryPerspectiveToField,
@@ -1220,6 +1221,7 @@ class MyMutations(graphene.ObjectType):
     create_entity = CreateEntity.Field()
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
+    bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
     create_language = CreateLanguage.Field()
