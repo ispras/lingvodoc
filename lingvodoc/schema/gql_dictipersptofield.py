@@ -100,35 +100,35 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def create_dictionary_persp_to_field(client_id=None,
-                                         object_id=None,
-                                         parent_client_id=None,
-                                         parent_object_id=None,
-                                         field_client_id=None,
-                                         field_object_id=None,
-                                         self_client_id=None,
-                                         self_object_id=None,
-                                         link_client_id=None,
-                                         link_object_id=None,
-                                         position=1):
-        if DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
-                                                                     object_id=object_id).first():
-            raise ResponseError(message="This field already exists")
-        field_object = dbDictionaryPerspectiveToField(client_id=client_id,
-                                                      object_id=object_id,
-                                                      parent_client_id=parent_client_id,
-                                                      parent_object_id=parent_object_id,
-                                                      field_client_id=field_client_id,
-                                                      field_object_id=field_object_id,
-                                                      self_client_id=self_client_id,
-                                                      self_object_id=self_object_id,
-                                                      link_client_id=link_client_id,
-                                                      link_object_id=link_object_id,
-                                                      position=position
-                                                      )
-        DBSession.add(field_object)
-        DBSession.flush()
-        return field_object
+    # def create_dictionary_persp_to_field(client_id=None,
+    #                                      object_id=None,
+    #                                      parent_client_id=None,
+    #                                      parent_object_id=None,
+    #                                      field_client_id=None,
+    #                                      field_object_id=None,
+    #                                      self_client_id=None,
+    #                                      self_object_id=None,
+    #                                      link_client_id=None,
+    #                                      link_object_id=None,
+    #                                      position=1):
+    #     if DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
+    #                                                                  object_id=object_id).first():
+    #         raise ResponseError(message="This field already exists")
+    #     field_object = dbDictionaryPerspectiveToField(client_id=client_id,
+    #                                                   object_id=object_id,
+    #                                                   parent_client_id=parent_client_id,
+    #                                                   parent_object_id=parent_object_id,
+    #                                                   field_client_id=field_client_id,
+    #                                                   field_object_id=field_object_id,
+    #                                                   self_client_id=self_client_id,
+    #                                                   self_object_id=self_object_id,
+    #                                                   link_client_id=link_client_id,
+    #                                                   link_object_id=link_object_id,
+    #                                                   position=position
+    #                                                   )
+    #     DBSession.add(field_object)
+    #     DBSession.flush()
+    #     return field_object
 
     @staticmethod
     @client_id_check()

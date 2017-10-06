@@ -14,18 +14,11 @@ from lingvodoc.models import (
     Group as dbGroup,
     Organization as dbOrganization
 )
-from sqlalchemy.orm.attributes import flag_modified
-from lingvodoc.schema.gql_user import User
 
 from lingvodoc.views.v2.utils import (
     update_metadata,
     cache_clients)
-from lingvodoc.schema.gql_holders import (
-    ResponseError
-)
-from lingvodoc.views.v2.translations import translationgist_contents
-from lingvodoc.views.v2.utils import cache_clients
-# from lingvodoc.schema.gql_language import Language
+
 from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     StateHolder,
@@ -37,26 +30,12 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     acl_check_by_id
 )
-#from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective
-from lingvodoc.views.v2.delete import real_delete_dictionary
-from lingvodoc.views.v2.utils import (
-    check_client_id
-)
-from graphene.types.generic import GenericScalar
+
 from lingvodoc.views.v2.utils import  add_user_to_group
 from lingvodoc.utils import statistics
-from lingvodoc.utils.creation import create_perspective
-
-def translation_service_search(searchstring):
-    translationatom = DBSession.query(dbTranslationAtom)\
-        .join(dbTranslationGist).\
-        filter(dbTranslationAtom.content == searchstring,
-               dbTranslationAtom.locale_id == 2,
-               dbTranslationGist.type == 'Service')\
-        .order_by(dbTranslationAtom.client_id)\
-        .first()
-    response = translationgist_contents(translationatom.parent)
-    return response
+from lingvodoc.utils.creation import (create_perspective,
+                                      create_dbdictionary,
+                                      create_dictionary_persp_to_field)
 
 class UserAndOrganizationsRoles(graphene.ObjectType):
     roles_users = graphene.List(graphene.String)
@@ -117,38 +96,12 @@ class Dictionary(graphene.ObjectType):  # tested
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
-    # parent_object_id
-    # translation_gist_client_id
-    # state_translation_gist_client_id
-    #triumph = graphene.Boolean()
     status = graphene.String()
-    persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
-    #cr_persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.CreateDictionaryPerspective')
+
     perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
-    persptofields = graphene\
-        .Field('lingvodoc.schema.gql_dictipersptofield.DictionaryPerspectiveToField')
-    cr_persptofields = graphene\
-        .Field('lingvodoc.schema.gql_dictipersptofield.CreateDictionaryPerspectiveToField')
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
-    # @property
-
-    @property  # TODO: delete
-    def persp_class(self):
-        return self._meta.fields['persp'].type
-
-    # @property
-    # def create_persp(self):
-    #     return self._meta.fields['cr_persp'].type
-
-    @property
-    def persptofield_class(self):
-        return self._meta.fields['persptofields'].type
-
-    @property
-    def create_persptofield(self):  # TODO: to delete
-        return self._meta.fields['cr_persptofields'].type
 
     @fetch_object('status')
     def resolve_status(self, info):
@@ -173,11 +126,8 @@ class Dictionary(graphene.ObjectType):  # tested
                                    ending_time,
                                    locale_id=locale_id
                                    )
-
-    # def resolve_triumph(self, info):
-    #     return True
-
     @client_id_check()
+    @fetch_object()
     def resolve_perspectives(self, info):
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
@@ -218,9 +168,6 @@ class Dictionary(graphene.ObjectType):  # tested
             roles_organizations[perm] = organizations
         response['roles_users'] = roles_users
         response['roles_organizations'] = roles_organizations
-
-        #request.response.status = HTTPOk.code
-        #return response
         return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
 
 ###
@@ -344,41 +291,6 @@ class CreateDictionary(graphene.Mutation):
     perspectives = graphene.List(Dictionary)
     translation_atoms = graphene.List(ObjectVal)
 
-    @staticmethod
-    def create_dbdictionary(client_id=None,
-                            object_id=None,
-                            parent_client_id=None,
-                            parent_object_id=None,
-                            translation_gist_client_id=None,
-                            translation_gist_object_id=None,
-                            additional_metadata=None):
-        duplicate_check = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).all()
-        if duplicate_check:
-            raise ResponseError(message="Dictionary with such ID already exists in the system")
-        parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-        dbdictionary_obj = dbDictionary(client_id=client_id,
-                                        object_id=object_id,
-                                        state_translation_gist_object_id=state_translation_gist_object_id,
-                                        state_translation_gist_client_id=state_translation_gist_client_id,
-                                        parent=parent,
-                                        translation_gist_client_id=translation_gist_client_id,
-                                        translation_gist_object_id=translation_gist_object_id,
-                                        additional_metadata=additional_metadata
-                                        )
-
-        client = DBSession.query(dbClient).filter_by(id=client_id).first()
-        user = client.user
-        for base in DBSession.query(dbBaseGroup).filter_by(dictionary_default=True):
-            new_group = dbGroup(parent=base,
-                              subject_object_id=dbdictionary_obj.object_id,
-                              subject_client_id=dbdictionary_obj.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            DBSession.add(new_group)
-            DBSession.flush()
-        return dbdictionary_obj
 
     @staticmethod
     @client_id_check()  # tested
@@ -442,7 +354,7 @@ class CreateDictionary(graphene.Mutation):
                     raise ResponseError(message="locale_id and content args not found")
         additional_metadata = args.get("additional_metadata")
 
-        dbdictionary_obj = CreateDictionary.create_dbdictionary(client_id=client_id,
+        dbdictionary_obj = create_dbdictionary(client_id=client_id,
                                                                 object_id=object_id,
                                                                 parent_client_id=parent_client_id,
                                                                 parent_object_id=parent_object_id,
@@ -452,9 +364,6 @@ class CreateDictionary(graphene.Mutation):
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
 
-        DictionaryPerspective = dictionary.persp_class
-        DictionaryPerspectiveToField = dictionary.persptofield_class
-        CreateDictionaryPerspectiveToField = dictionary.create_persptofield
         persp_args = args.get("perspectives")
         created_persps = []
         # TODO:  rename it
@@ -543,8 +452,7 @@ class CreateDictionary(graphene.Mutation):
                         if fake_link in persp_fake_ids:
                             persp_to_link = persp_fake_ids[fake_link]
                             counter+=1
-                            CreateDictionaryPerspectiveToField\
-                                .create_dictionary_persp_to_field(client_id=client_id,
+                            create_dictionary_persp_to_field(client_id=client_id,
                                                                   parent_client_id=persp.client_id,
                                                                   parent_object_id=persp.object_id,
                                                                   field_client_id=field_ids[fake_link][0],
@@ -555,26 +463,7 @@ class CreateDictionary(graphene.Mutation):
                                                                   link_object_id=persp_to_link.object_id,
                                                                   position=counter)
 
-                    #if field.get('link') and field['link'].get('fake_id'):
-                    #    #field['link'] = fake_ids[field['link']['fake_id']]
-
-
-                dictionary.perspectives = [DictionaryPerspective(id=[persp.client_id, persp.object_id],
-                                                                 translation_gist_id=[persp.translation_gist_client_id,
-                                                                                      persp.translation_gist_object_id],
-                                                                 # fields=[DictionaryPerspectiveToField(id=[persp.client_id,
-                                                                 #                                          persp.object_id],
-                                                                 #                                      parent_id=[persp.client_id,
-                                                                 #                                                 persp.object_id],
-                                                                 #                                      field_id=[f.client_id, f.object_id]
-                                                                 #                                      ) for f in fields_dict[persp]]
-
-                                                                 ) for persp in created_persps]
         return CreateDictionary(dictionary=dictionary,
-                                # perspectives=[PERSPECTIVE(id=[persp.client_id, persp.object_id],
-                                #                           translation_gist_id=[persp.translation_gist_client_id,
-                                #                                                persp.translation_gist_object_id]
-                                #                           ) for persp in created_persps],
                                 triumph=True)
 
 
