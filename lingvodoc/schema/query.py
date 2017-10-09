@@ -89,9 +89,9 @@ from lingvodoc.schema.gql_grant import (
     UpdateGrant,
     DeleteGrant
 )
-from lingvodoc.schema.gql_email import (
-    Email
-)
+# from lingvodoc.schema.gql_email import (
+#     Email
+# )
 from lingvodoc.schema.gql_holders import (
     PermissionException,
     ResponseError,
