@@ -24,9 +24,9 @@ from lingvodoc.schema.gql_organization import (
     UpdateOrganization,
     DeleteOrganization
 )
-from lingvodoc.schema.gql_publishingentity import (
-    PublishingEntity
-)
+# from lingvodoc.schema.gql_publishingentity import (
+#     PublishingEntity
+# )
 from lingvodoc.schema.gql_translationatom import (
     TranslationAtom,
     CreateTranslationAtom,
