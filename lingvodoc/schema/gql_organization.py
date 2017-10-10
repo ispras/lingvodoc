@@ -134,7 +134,7 @@ class UpdateOrganization(graphene.Mutation):
     class Arguments:
         organization_id = graphene.Int()
         add_users = LingvodocID()
-        delete_users = graphene.List(graphene.Int)  # TODO: LingvodocID()?
+        delete_users = graphene.List(graphene.Int)  # TODO: LingvodocID()? (no)
         name = graphene.String()
         about = graphene.String()
 
