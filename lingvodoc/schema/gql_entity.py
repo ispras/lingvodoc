@@ -52,6 +52,8 @@ from sqlalchemy import (
 import base64
 import hashlib
 
+from lingvodoc.utils.creation import create_entity
+
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     filename = sanitize_filename(filename)
     storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
@@ -154,112 +156,53 @@ class CreateEntity(graphene.Mutation):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
-        lexical_entry_id = args.get('parent_id')
-        locale_id = args.get('locale_id')
-        if not locale_id:
-            locale_id=2
-        if not lexical_entry_id:
-            raise ResponseError(message="Lexical entry not found")
-        parent_client_id, parent_object_id = lexical_entry_id
+        id = [client_id, object_id]
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
 
-        parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            raise ResponseError(message="No such lexical entry in the system")
-
-        additional_metadata = args.get('additional_metadata')
-        upper_level = None
-
-        field_client_id, field_object_id = args.get('field_id')
-        tr_atom = DBSession.query(dbTranslationAtom).join(dbTranslationGist, and_(
-            dbTranslationAtom.locale_id == 2,
-            dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
-            dbTranslationAtom.parent_object_id == dbTranslationGist.object_id)).join(dbField, and_(
-            dbTranslationGist.client_id == dbField.data_type_translation_gist_client_id,
-            dbTranslationGist.object_id == dbField.data_type_translation_gist_object_id)).filter(
-            dbField.client_id == field_client_id, dbField.object_id == field_object_id).first()
-        if not tr_atom:
-             raise ResponseError(message="No such field in the system")
-        data_type = tr_atom.content.lower()
-
-        if args.get('self_id'):
-            self_client_id, self_object_id = args.get('self_id')
-            upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
-                                                            object_id=self_object_id).first()
-            if not upper_level:
-                raise ResponseError(message="No such upper level in the system")
-        dbentity = dbEntity(client_id=client_id,
-                        object_id=object_id,
-                        field_client_id=field_client_id,
-                        field_object_id=field_object_id,
-                        locale_id=locale_id,
-                        additional_metadata=additional_metadata,
-                        parent=parent)
-        group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                                              dbGroup.subject_client_id == dbentity.parent.parent.client_id,
-                                                              dbGroup.subject_object_id == dbentity.parent.parent.object_id,
-                                                              dbBaseGroup.action == 'create').one()
-
-        override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-            dbBaseGroup.subject == 'lexical_entries_and_entities',
-            dbGroup.subject_override == True,
-            dbBaseGroup.action == 'create').one()
-        #if user in group.users or user in override_group.users:
-        #    dbentity.publishingentity.accepted = True
-        if upper_level:
-            dbentity.upper_level = upper_level
-        dbentity.publishingentity.accepted = True
-        filename = args.get('filename')
-        real_location = None
-        url = None
-        blob = info.context.request.POST.pop("blob")
-        content= args.get("content")
-        if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-            if not blob:
-                raise ResponseError(message="Please set blob or another field")
-            filename=blob.filename
-            content = blob.file.read()
-            #filename=
-            real_location, url = create_object(content, dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
-            dbentity.content = url
-            old_meta = dbentity.additional_metadata
-            need_hash = True
-            if old_meta:
-                if old_meta.get('hash'):
-                    need_hash = False
-            if need_hash:
-                hash = hashlib.sha224(base64.urlsafe_b64decode(base64.urlsafe_b64encode(content).decode())).hexdigest()
-                hash_dict = {'hash': hash}
-                if old_meta:
-                    old_meta.update(hash_dict)
-                else:
-                    old_meta = hash_dict
-                dbentity.additional_metadata = old_meta
-            if 'markup' in data_type:
-                name = filename.split('.')
-                ext = name[len(name) - 1]
-                if ext.lower() == 'textgrid':
-                    data_type = 'praat markup'
-                elif ext.lower() == 'eaf':
-                    data_type = 'elan markup'
-            dbentity.additional_metadata['data_type'] = data_type
-        elif data_type == 'link':
-            if args.get('link_id'):
-                link_client_id, link_object_id = args.get('link_id')
-                dbentity.link_client_id = link_client_id
-                dbentity.link_object_id = link_object_id
-            else:
-                raise ResponseError(message="The field is of link type. You should provide client_id and object id in the content")
+        parent_id = None
+        if 'parent_id' in args:
+            parent_id = args["parent_id"]
         else:
-            dbentity.content = content
+            raise ResponseError(message="Lexical entry not found")
 
-            # if args.get('is_translatable', None): # TODO: fix it
-            #     field.is_translatable = bool(args['is_translatable'])
-        DBSession.add(dbentity)
-        DBSession.flush()
+        additional_metadata = None
+        if 'additional_metadata' in args:
+            additional_metadata = args["additional_metadata"]
+
+        field_id = None
+        if 'field_id' in args:
+            field_id = args["field_id"]
+
+        self_id = None
+        if 'self_id' in args:
+            self_id = args["self_id"]
+
+        link_id = None
+        if 'link_id' in args:
+            link_id = args["link_id"]
+
+        locale_id = 2
+        if 'locale_id' in args:
+            locale_id = args["locale_id"]
+
+        filename = None
+        if 'filename' in args:
+            filename = args["filename"]
+
+        content = None
+        if 'content' in args:
+            content = args["content"]
+
+        registry = None
+        if 'registry' in args:
+            registry = args["registry"]
+
+        dbentity = create_entity(id, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
+                                 filename, content, registry, info.context.request, True)
+
         entity = Entity(id = [dbentity.client_id, dbentity.object_id]) # TODO: more args
         entity.dbObject = dbentity
         return CreateEntity(entity=entity, triumph=True)
@@ -369,3 +312,74 @@ class DeleteEntity(graphene.Mutation):
             entity.dbObject=dbentity
             return DeleteEntity(entity=entity, triumph=True)
         raise ResponseError(message="No such entity in the system")
+
+class BulkCreateEntity(graphene.Mutation):
+    """
+    mutation {
+            bulk_create_entity(entities: [{id: [1199, 4], parent_id: [66, 69],  field_id:  [66, 6]}]) {
+                   triumph
+        }
+    }
+    """
+    class Arguments:
+        entities = graphene.List(ObjectVal)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+        entity_objects = args.get('entities')
+        dbentities_list = list()
+        request = info.context.request
+
+        for entity_obj in entity_objects:
+            id = None
+            if 'id' in entity_obj:
+                id = entity_obj["id"]
+            else:
+                raise ResponseError(message="Bad entity object")
+
+            parent_id = None
+            if 'parent_id' in entity_obj:
+                parent_id = entity_obj["parent_id"]
+
+            additional_metadata = None
+            if 'additional_metadata' in entity_obj:
+                additional_metadata = entity_obj["additional_metadata"]
+
+            field_id = None
+            if 'field_id' in entity_obj:
+                field_id = entity_obj["field_id"]
+
+            self_id = None
+            if 'self_id' in entity_obj:
+                self_id = entity_obj["self_id"]
+
+            link_id = None
+            if 'link_id' in entity_obj:
+                link_id = entity_obj["link_id"]
+
+            locale_id = 2
+            if 'locale_id' in entity_obj:
+                locale_id = entity_obj["locale_id"]
+
+            filename = None
+            if 'filename' in entity_obj:
+                filename = entity_obj["filename"]
+
+            content = None
+            if 'content' in entity_obj:
+                content = entity_obj["content"]
+
+            registry = None
+            if 'registry' in entity_obj:
+                registry = entity_obj["registry"]
+
+            dbentity = create_entity(id, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
+                                     filename, content, registry, request, False)
+
+            dbentities_list.append(dbentity)
+
+        DBSession.bulk_save_objects(dbentities_list)
+        DBSession.flush()
+        return BulkCreateEntity(triumph=True)
