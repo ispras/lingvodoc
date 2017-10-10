@@ -270,7 +270,7 @@ or
 
 class UpdateEntity(graphene.Mutation):
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
         published = graphene.Boolean()
         accepted = graphene.Boolean()
 
@@ -295,7 +295,7 @@ class UpdateEntity(graphene.Mutation):
 
 class DeleteEntity(graphene.Mutation):
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     triumph = graphene.Boolean()
     entity = graphene.Field(Entity)

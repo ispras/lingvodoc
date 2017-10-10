@@ -91,7 +91,7 @@ class DictionaryPerspective(graphene.ObjectType):
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     fields = graphene.List(DictionaryPerspectiveToField)
     entities = graphene.List(Entity, mode=graphene.String())
-    lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(graphene.List(graphene.Int)))
+    lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     # stats = graphene.String() # ?
     roles = graphene.List(ObjectVal)

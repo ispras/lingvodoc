@@ -288,7 +288,7 @@ class CreateDictionary(graphene.Mutation):
     class Arguments:
         id = LingvodocID()
         translation_gist_id = LingvodocID()
-        parent_id = graphene.List(graphene.Int, required=True)
+        parent_id = LingvodocID(required=True)
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
         translation_atoms = graphene.List(ObjectVal)

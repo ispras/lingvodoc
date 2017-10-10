@@ -82,8 +82,8 @@ class CreateGrant(graphene.Mutation):
         issuer_url = graphene.String()
         grant_url = graphene.String()
         grant_number = graphene.String()
-        begin = graphene.List(graphene.Int)
-        end = graphene.List(graphene.Int)
+        begin = LingvodocID()
+        end = LingvodocID()
 
     grant = graphene.Field(Grant)
     triumph = graphene.Boolean()
