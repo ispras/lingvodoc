@@ -37,7 +37,8 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     client_id_check,
     Published,
-    Accepted
+    Accepted,
+
 )
 from sqlalchemy import (
     and_,
@@ -69,7 +70,7 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
             raise
     with open(str(storage_path), 'wb+') as f:
         if json_input:
-            f.write(base64.urlsafe_b64decode(content))
+            f.write(content)
         else:
             shutil.copyfileobj(content, f)
 
@@ -216,10 +217,12 @@ class CreateEntity(graphene.Mutation):
         blob = info.context.request.POST.pop("blob")
         content= args.get("content")
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+            if not blob:
+                raise ResponseError(message="Please set blob or another field")
             filename=blob.filename
             content = blob.file.read()
             #filename=
-            real_location, url = create_object(base64.urlsafe_b64encode(content).decode(), dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
+            real_location, url = create_object(content, dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
             dbentity.content = url
             old_meta = dbentity.additional_metadata
             need_hash = True

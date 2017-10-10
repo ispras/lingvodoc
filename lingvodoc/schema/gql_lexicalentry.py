@@ -169,7 +169,7 @@ class DeleteLexicalEntry(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('delete', 'lexical_entries_and_entities')
+    @acl_check_by_id('delete', 'lexical_entries_and_entities', id_key= "parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]

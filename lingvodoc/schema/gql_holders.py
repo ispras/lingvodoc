@@ -1,7 +1,7 @@
 import json
 import datetime
 import graphene
-from graphql.language.ast import ObjectValue
+from graphql.language.ast import ObjectValue, ListValue, IntValue
 from graphql.language import ast
 from graphene.types import Scalar
 from graphene.types.json import JSONString as JSONtype
@@ -111,6 +111,34 @@ def client_id_check():
 
     return decorator
 
+
+class LingvodocID(Scalar):
+    """
+    ObjectVal is GraphQL scalar value must be Object
+    This class was obtained from from "GenericScalar" and restrict users to input string or float data
+    """
+
+    @staticmethod
+    def identity(value):
+        return value
+
+    serialize = identity
+    parse_value = identity
+
+    @staticmethod
+    def parse_literal(ast):
+        if isinstance(ast, ListValue):
+            if len(ast.values) != 2:
+                return None
+            result = list()
+            for intvalue in ast.values:
+                if isinstance(intvalue, IntValue):
+                    result.append(intvalue.value)
+                else:
+                    return None
+            return result
+        else:
+            return None
 
 class ObjectVal(Scalar):
     """
@@ -239,7 +267,7 @@ class IdHolder(graphene.Interface):
 
 
 class CompositeIdHolder(graphene.Interface):
-    id = graphene.List(graphene.Int)
+    id = LingvodocID()
     # client_id = graphene.Int()
     # object_id = graphene.Int()
 
@@ -267,7 +295,7 @@ class CreatedAt(graphene.Interface):
 
 
 class Relationship(graphene.Interface):
-    parent_id = graphene.List(graphene.Int)
+    parent_id = LingvodocID()
     # parent_client_id = graphene.List(graphene.Int)
     # parent_object_id = graphene.List(graphene.Int)
 
