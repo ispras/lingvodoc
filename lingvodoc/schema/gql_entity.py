@@ -194,8 +194,6 @@ class CreateEntity(graphene.Mutation):
         if 'registry' in args:
             registry = args["registry"]
 
-        print(info.context.request)
-
         dbentity = create_entity(id, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
                                  filename, content, registry, info.context.request, True)
 
@@ -379,6 +377,3 @@ class BulkCreateEntity(graphene.Mutation):
         DBSession.bulk_save_objects(dbentities_list)
         DBSession.flush()
         return BulkCreateEntity(triumph=True)
-
-
-
