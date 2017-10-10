@@ -230,8 +230,9 @@ def create_entity(id=None,
     dbentity.publishingentity.accepted = True
     real_location = None
     url = None
-    blob = request.POST.pop("blob")
+
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+        blob = request.POST.pop("blob")
         filename = blob.filename
         content = blob.file.read()
         # filename=
@@ -274,3 +275,18 @@ def create_entity(id=None,
         DBSession.add(dbentity)
         DBSession.flush()
     return dbentity
+
+def create_lexicalentry(id, perspective_id, save_object=False):
+    client_id, object_id = id
+    perspective_client_id, perspective_object_id = perspective_id
+    perspective = DBSession.query(DictionaryPerspective). \
+        filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
+    if not perspective:
+        raise ResponseError(message="No such perspective in the system")
+
+    dblexentry = LexicalEntry(object_id=object_id, client_id=client_id,
+                                parent_object_id=perspective_object_id, parent=perspective)
+    if save_object:
+        DBSession.add(dblexentry)
+        DBSession.flush()
+    return dblexentry

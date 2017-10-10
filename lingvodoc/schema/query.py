@@ -62,7 +62,8 @@ from lingvodoc.schema.gql_dictionary import (
 from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
     CreateLexicalEntry,
-    DeleteLexicalEntry
+    DeleteLexicalEntry,
+    BulkCreateLexicalEntry
 )
 
 from lingvodoc.schema.gql_language import (
@@ -1241,6 +1242,7 @@ class MyMutations(graphene.ObjectType):
     delete_translationgist = DeleteTranslationGist.Field()
     create_lexicalentry = CreateLexicalEntry.Field()
     delete_lexicalentry = DeleteLexicalEntry.Field()
+    bulk_create_lexicalentry = BulkCreateLexicalEntry.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
     update_perspective_status = UpdatePerspectiveStatus.Field()
