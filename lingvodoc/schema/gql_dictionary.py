@@ -28,7 +28,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     ResponseError,
     ObjectVal,
-    acl_check_by_id
+    acl_check_by_id,
+    LingvodocID
 )
 
 from lingvodoc.views.v2.utils import  add_user_to_group
@@ -285,8 +286,8 @@ class CreateDictionary(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
+        id = LingvodocID()
+        translation_gist_id = LingvodocID()
         parent_id = graphene.List(graphene.Int, required=True)
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
@@ -514,9 +515,9 @@ class UpdateDictionary(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int, required=True,)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
         additional_metadata = ObjectVal()
 
     dictionary = graphene.Field(Dictionary)
@@ -580,8 +581,8 @@ class UpdateDictionaryStatus(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
-        state_translation_gist_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        state_translation_gist_id = LingvodocID(required=True)
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -605,7 +606,7 @@ class UpdateDictionaryStatus(graphene.Mutation):
 
 class UpdateDictionaryRoles(graphene.Mutation):
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
         roles_users = ObjectVal()
         roles_organizations = ObjectVal()
 
@@ -717,7 +718,7 @@ class DeleteDictionary(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int, required=True)
+        id = LingvodocID(required=True)
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -726,10 +727,7 @@ class DeleteDictionary(graphene.Mutation):
     @acl_check_by_id('delete', 'dictionary')
     def mutate(root, info, **args):
         ids = args.get('id')
-        if not ids:
-            raise ResponseError(message="id not found")
-        client_id = ids[0]
-        object_id = ids[1]
+        client_id, object_id = ids
         dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")

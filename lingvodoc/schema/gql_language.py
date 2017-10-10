@@ -20,7 +20,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     ResponseError,
     acl_check_by_id,
-    ObjectVal
+    ObjectVal,
+    LingvodocID
 )
 from .gql_dictionary import Dictionary
 from lingvodoc.views.v2.utils import  add_user_to_group
@@ -58,14 +59,6 @@ class Language(graphene.ObjectType):
             result.append(Dictionary(id=[dictionary.client_id, dictionary.object_id]))
         return result
 
-    # @fetch_object('translation')
-    # def resolve_translation(self, args, context, info):
-    #     return self.dbObject.get_translation(context.get('locale_id'))
-
-        # @fetch_object()
-        # def resolve_created_at(self, args, context, info):
-        #    return self.dbObject.created_at
-
 
 class CreateLanguage(graphene.Mutation):
     """
@@ -97,9 +90,9 @@ class CreateLanguage(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID()
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
         locale_exist = graphene.Boolean()
         translation_atoms = graphene.List(ObjectVal)
 
@@ -237,9 +230,9 @@ class UpdateLanguage(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -295,7 +288,7 @@ class DeleteLanguage(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -304,8 +297,7 @@ class DeleteLanguage(graphene.Mutation):
     @acl_check_by_id('delete', 'language')
     def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
+        client_id, object_id = id
         dblanguageobj = DBSession.query(dbLanguage).filter_by(client_id=client_id, object_id=object_id).first()
 
         if not dblanguageobj or dblanguageobj.marked_for_deletion:

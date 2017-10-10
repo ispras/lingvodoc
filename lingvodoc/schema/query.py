@@ -96,7 +96,8 @@ from lingvodoc.schema.gql_holders import (
     PermissionException,
     ResponseError,
     ObjectVal,
-    client_id_check
+    client_id_check,
+    LingvodocID
 )
 
 from lingvodoc.schema.gql_userrequest import (
@@ -159,37 +160,35 @@ ENGLISH_LOCALE = 2
 class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
-    dictionary = graphene.Field(Dictionary, id=graphene.List(graphene.Int))
+    dictionary = graphene.Field(Dictionary, id=LingvodocID())
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
-    perspective = graphene.Field(DictionaryPerspective, id=graphene.List(graphene.Int))
-    entity = graphene.Field(Entity, id=graphene.List(graphene.Int))
-    language = graphene.Field(Language, id=graphene.List(graphene.Int))
+    perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
+    entity = graphene.Field(Entity, id=LingvodocID())
+    language = graphene.Field(Language, id=LingvodocID())
     languages = graphene.List(Language)
     user = graphene.Field(User, id=graphene.Int())
     users = graphene.List(User, search=graphene.String())
-    field = graphene.Field(Field, id=graphene.List(graphene.Int))
-    translationgist = graphene.Field(TranslationGist, id=graphene.List(graphene.Int))
-    userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
-    translationatom = graphene.Field(TranslationAtom, id=graphene.List(graphene.Int))
-    organization = graphene.Field(Organization, id=graphene.List(graphene.Int))
+    field = graphene.Field(Field, id=LingvodocID())
+    translationgist = graphene.Field(TranslationGist, id=LingvodocID())
+    userblob = graphene.Field(UserBlobs, id=LingvodocID())
+    translationatom = graphene.Field(TranslationAtom, id=LingvodocID())
+    organization = graphene.Field(Organization, id=LingvodocID())
     organizations = graphene.List(Organization)
-    lexicalentry = graphene.Field(LexicalEntry, id=graphene.List(graphene.Int))
+    lexicalentry = graphene.Field(LexicalEntry, id=LingvodocID())
     lexicalentries = graphene.List(LexicalEntry, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
-                                   perspective_id=graphene.List(graphene.Int), field_id=graphene.List(graphene.Int),
+                                   perspective_id=LingvodocID(), field_id=LingvodocID(),
                                    search_in_published=graphene.Boolean())
     advanced_lexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
-                                            perspectives=graphene.List(graphene.List(graphene.Int)),
+                                            perspectives=LingvodocID(),
                                             adopted=graphene.Boolean(),
-                                            adopted_type=graphene.List(graphene.Int),
+                                            adopted_type=LingvodocID(),
                                             with_entimology=graphene.Boolean())
-    translationgist = graphene.Field(TranslationGist, id = graphene.List(graphene.Int))
     translationgists = graphene.List(TranslationGist)
     translation_search = graphene.List(TranslationGist, searchstring=graphene.String(), translation_type=graphene.String())
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
     user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
-    userblob = graphene.Field(UserBlobs, id=graphene.List(graphene.Int))
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(BaseGroup)
@@ -200,7 +199,7 @@ class Query(graphene.ObjectType):
     template_modes = graphene.List(graphene.String)
     grant = graphene.Field(Grant, id=graphene.Int())
     grants = graphene.List(Grant)
-    phonology = graphene.Field(graphene.Boolean, perspective_id=graphene.List(graphene.Int),
+    phonology = graphene.Field(graphene.Boolean, perspective_id=LingvodocID(),
         limit=graphene.Int(),
         limit_exception=graphene.Int(),
         limit_no_vowel=graphene.Int(),
@@ -529,8 +528,6 @@ class Query(graphene.ObjectType):
     def resolve_dictionaryperspectivetofield(self, info, id):
         return DictionaryPerspectiveToField(id=id)
 
-    def resolve_email(self, info, id):
-        return Email(id=id)
 
     def resolve_grant(self, info, id):
         return Grant(id=id)
@@ -556,8 +553,6 @@ class Query(graphene.ObjectType):
     #     id = args.get('id')
     #     return ObjectTOC(id=id)
 
-    def resolve_publishingentity(self, info, id):
-        return PublishingEntity(id=id)
 
     def resolve_translationatom(self, info, id):
         return TranslationAtom(id=id)

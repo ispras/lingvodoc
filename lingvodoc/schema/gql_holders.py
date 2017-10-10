@@ -296,66 +296,31 @@ class CreatedAt(graphene.Interface):
 
 class Relationship(graphene.Interface):
     parent_id = LingvodocID()
-    # parent_client_id = graphene.List(graphene.Int)
-    # parent_object_id = graphene.List(graphene.Int)
 
     @fetch_object("parent_id")
     def resolve_parent_id(self, info):
         return (self.dbObject.parent_client_id, self.dbObject.parent_object_id)
 
-    # @fetch_object("parent_client_id")
-    # def resolve_parent_client_id(self, info):
-    #     return self.dbObject.parent_client_id
-    #
-    # @fetch_object("parent_object_id")
-    # def resolve_parent_object_id(self, info):
-    #     return self.dbObject.parent_object_id
-
-
 class SelfHolder(graphene.Interface):
-    self_id = graphene.List(graphene.Int)
-    # self_client_id = graphene.Int()
-    # self_object_id = graphene.Int()
+    self_id = LingvodocID()
 
     @fetch_object("self_id")
     def resolve_self_id(self, info):
         return (self.dbObject.self_client_id, self.dbObject.self_object_id)
 
-    # @fetch_object("self_client_id")
-    # def resolve_self_client_id(self, info):
-    #     return self.dbObject.self_client_id
-    #
-    # @fetch_object("self_object_id")
-    # def resolve_self_object_id(self, info):
-    #     return self.dbObject.self_object_id
-
-
 class FieldHolder(graphene.Interface):
-    field_id = graphene.List(graphene.Int)
-    # field_client_id = graphene.Int()
-    # field_object_id = graphene.Int()
+    field_id = LingvodocID()
 
     @fetch_object("field_id")
     def resolve_field_id(self, info):
         return (self.dbObject.field_client_id, self.dbObject.field_object_id)
 
 class ParentLink(graphene.Interface):
-    link_id = graphene.List(graphene.Int)
-    # link_client_id = graphene.List(graphene.Int)
-    # link_object_id = graphene.List(graphene.Int)
+    link_id = LingvodocID()
 
     @fetch_object("link_id")
     def resolve_link_id(self, info):
         return (self.dbObject.link_client_id, self.dbObject.link_object_id)
-
-    # @fetch_object("link_client_id")
-    # def resolve_link_client_id(self, info):
-    #     return self.dbObject.link_client_id
-    #
-    # @fetch_object("link_object_id")
-    # def resolve_link_object_id(self, info):
-    #     return self.dbObject.link_object_id
-
 
 class MarkedForDeletion(graphene.Interface):
     marked_for_deletion = graphene.Boolean()
@@ -374,23 +339,12 @@ class Position(graphene.Interface):
 
 
 class TranslationGistHolder(graphene.Interface):
-    translation_gist_id = graphene.List(graphene.Int)
-    # translation_gist_client_id = graphene.Int()
-    # translation_gist_object_id = graphene.Int()
+    translation_gist_id = LingvodocID()
 
     @fetch_object("translation_gist_id")
     def resolve_translation_gist_id(self, info):
         return (self.dbObject.translation_gist_client_id,
                 self.dbObject.translation_gist_object_id)
-
-    # @fetch_object("translation_gist_client_id")
-    # def resolve_translation_gist_client_id(self, info):
-    #     return self.dbObject.translation_gist_client_id
-    #
-    # @fetch_object("translation_gist_object_id")
-    # def resolve_translation_gist_object_id(self, info):
-    #     return self.dbObject.translation_gist_object_id
-
 
 class UserId(graphene.Interface):
     user_id = graphene.Int()
@@ -401,23 +355,12 @@ class UserId(graphene.Interface):
 
 
 class StateHolder(graphene.Interface):
-    state_translation_gist_id = graphene.List(graphene.Int)
-    # state_translation_gist_client_id = graphene.Int()
-    # state_translation_gist_object_id = graphene.Int()
+    state_translation_gist_id = LingvodocID()
 
     @fetch_object("state_translation_gist_id")
     def resolve_state_translation_gist_id(self, info):
         return (self.dbObject.state_translation_gist_client_id,
                 self.dbObject.state_translation_gist_object_id)
-
-    # @fetch_object("state_translation_gist_client_id")
-    # def resolve_state_translation_gist_client_id(self, info):
-    #     return self.dbObject.state_translation_gist_client_id
-    #
-    # @fetch_object("state_translation_gist_object_id")
-    # def resolve_state_translation_gist_object_id(self, info):
-    #     return self.dbObject.state_translation_gist_object_id
-
 
 class TableName(graphene.Interface):
     table_name = graphene.String()
@@ -534,28 +477,14 @@ class MovedTo(graphene.Interface):
 
 
 class DataTypeTranslationGistId(graphene.Interface):
-    data_type_translation_gist_id = graphene.List(graphene.Int)
-    # data_type = graphene.String()
+    data_type_translation_gist_id = LingvodocID()
 
-    # @fetch_object("data_type")
-    # def resolve_data_type(self, info):
-    #     return self.dbObject.data_type
 
     @fetch_object("data_type_translation_gist_id")
     def resolve_data_type_translation_gist_id(self, info):
         return (self.dbObject.data_type_translation_gist_client_id,
                 self.dbObject.data_type_translation_gist_object_id)
     #
-    # @fetch_object("data_type_translation_gist_client_id")
-    # def resolve_data_type_translation_gist_client_id(self, info):
-    #     return self.dbObject.data_type_translation_gist_client_id
-    #
-    # @fetch_object("data_type_translation_gist_object_id")
-    # def resolve_data_type_translation_gist_object_id(self, info):
-    #     return self.dbObject.data_type_translation_gist_object_id
-
-# Metadata section
-
 
 class IsTranslatable(graphene.Interface):
     is_translatable = graphene.Boolean()

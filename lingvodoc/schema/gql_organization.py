@@ -7,7 +7,8 @@ from lingvodoc.schema.gql_holders import (CreatedAt,
     About,
     del_object,
     acl_check_by_id,
-    ResponseError
+    ResponseError,
+    LingvodocID
 )
 from lingvodoc.models import (
     Organization as dbOrganization,
@@ -132,8 +133,8 @@ class UpdateOrganization(graphene.Mutation):
 
     class Arguments:
         organization_id = graphene.Int()
-        add_users = graphene.List(graphene.Int)
-        delete_users = graphene.List(graphene.Int)
+        add_users = LingvodocID()
+        delete_users = graphene.List(graphene.Int)  # TODO: LingvodocID()?
         name = graphene.String()
         about = graphene.String()
 

@@ -38,6 +38,7 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     Published,
     Accepted,
+    LingvodocID
 
 )
 from sqlalchemy import (
@@ -120,12 +121,12 @@ class CreateEntity(graphene.Mutation):
         """
         input values from request. Look at "LD methods" exel table
         """
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int, required=True)
+        id = LingvodocID()
+        parent_id = LingvodocID(required=True)
         additional_metadata = ObjectVal()
-        field_id = graphene.List(graphene.Int, required=True)
-        self_id = graphene.List(graphene.Int)
-        link_id = graphene.List(graphene.Int)
+        field_id = LingvodocID(required=True)
+        self_id = LingvodocID()
+        link_id = LingvodocID()
         locale_id = graphene.Int()
         filename = graphene.String()
         content = graphene.String()

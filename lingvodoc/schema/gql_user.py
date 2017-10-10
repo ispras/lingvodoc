@@ -116,7 +116,7 @@ class CreateUser(graphene.Mutation):
         login = graphene.String()
         email = graphene.String()
         name = graphene.String()
-        birthday = graphene.List(graphene.Int)
+        birthday = graphene.Int()
         password = graphene.String()
 
     user = graphene.Field(User)
@@ -130,12 +130,8 @@ class CreateUser(graphene.Mutation):
         birthday = args.get('birthday')
         password = args.get('password')
 
-        day = birthday[0]
-        month = birthday[1]
-        year = birthday[2]
-        if day is None or month is None or year is None:
+        if not birthday:
             return ResponseError(message="Error: day, month or year of the birth is missing")
-        birthday = datetime.date(year, month, day)
 
         if DBSession.query(dbUser).filter_by(login=login).first():
             return ResponseError(message="The user with this login is already registered")
