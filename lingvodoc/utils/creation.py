@@ -230,8 +230,9 @@ def create_entity(id=None,
     dbentity.publishingentity.accepted = True
     real_location = None
     url = None
-    blob = request.POST.pop("blob")
+
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+        blob = request.POST.pop("blob")
         filename = blob.filename
         content = blob.file.read()
         # filename=

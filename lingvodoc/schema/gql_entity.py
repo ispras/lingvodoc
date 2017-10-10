@@ -180,7 +180,7 @@ class CreateEntity(graphene.Mutation):
 
         locale_id = 2
         if 'locale_id' in args:
-            locale_id = args["entity_obj"]
+            locale_id = args["locale_id"]
 
         filename = None
         if 'filename' in args:
@@ -193,6 +193,8 @@ class CreateEntity(graphene.Mutation):
         registry = None
         if 'registry' in args:
             registry = args["registry"]
+
+        print(info.context.request)
 
         dbentity = create_entity(id, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
                                  filename, content, registry, info.context.request, True)
@@ -308,7 +310,14 @@ class DeleteEntity(graphene.Mutation):
         raise ResponseError(message="No such entity in the system")
 
 class BulkCreateEntity(graphene.Mutation):
-    class Argumemnts:
+    """
+    mutation {
+            bulk_create_entity(entities: [{id: [1199, 4], parent_id: [66, 69],  field_id:  [66, 6]}]) {
+                   triumph
+        }
+    }
+    """
+    class Arguments:
         entities = graphene.List(ObjectVal)
 
     triumph = graphene.Boolean()
@@ -348,7 +357,7 @@ class BulkCreateEntity(graphene.Mutation):
 
             locale_id = 2
             if 'locale_id' in entity_obj:
-                locale_id = entity_obj["entity_obj"]
+                locale_id = entity_obj["locale_id"]
 
             filename = None
             if 'filename' in entity_obj:
