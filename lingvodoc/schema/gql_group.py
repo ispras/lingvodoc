@@ -5,6 +5,7 @@ from lingvodoc.models import (
 from lingvodoc.schema.gql_holders import (
     IdHolder,
     CreatedAt,
+    LingvodocID
 )
 class Group(graphene.ObjectType):
     """
@@ -20,7 +21,7 @@ class Group(graphene.ObjectType):
     dbObject = None
     old_id = graphene.String() # uuid
     base_group_id = graphene.Int()
-    subject_id = graphene.List(graphene.Int)
+    subject_id = LingvodocID()
     subject_override = graphene.Boolean()
 
     class Meta:

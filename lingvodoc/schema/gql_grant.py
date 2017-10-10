@@ -17,7 +17,8 @@ from lingvodoc.schema.gql_holders import (
     acl_check_by_id,
     ResponseError,
     del_object,
-    ObjectVal
+    ObjectVal,
+    LingvodocID
 )
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -76,8 +77,8 @@ class CreateGrant(graphene.Mutation):
     }
     """
     class Arguments:
-        issuer_translation_gist_id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
+        issuer_translation_gist_id = LingvodocID()
+        translation_gist_id = LingvodocID()
         issuer_url = graphene.String()
         grant_url = graphene.String()
         grant_number = graphene.String()
@@ -164,8 +165,8 @@ class UpdateGrant(graphene.Mutation):
     """
     class Arguments:
         grant_id = graphene.Int()
-        issuer_translation_gist_id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
+        issuer_translation_gist_id = LingvodocID()
+        translation_gist_id = LingvodocID()
         issuer_url = graphene.String()
         grant_url = graphene.String()
         begin = graphene.String()

@@ -58,18 +58,6 @@ def create_perspective(client_id=None,
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         raise ResponseError(message="No such dictionary in the system")
-    coord = {}
-
-    if latitude:
-        coord['latitude'] = latitude
-    if longitude:
-        coord['longitude'] = longitude
-
-    if additional_metadata:
-        additional_metadata.update(coord)
-    else:
-        additional_metadata = coord
-
     resp = translation_service_search("WiP")
     state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
 

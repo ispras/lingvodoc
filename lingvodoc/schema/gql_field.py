@@ -14,8 +14,8 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     del_object,
     client_id_check,
-    FakeIds
-
+    FakeIds,
+    LingvodocID
 )
 
 from lingvodoc.models import (
@@ -81,8 +81,8 @@ class CreateField(graphene.Mutation):
     """
     class Arguments:
         # TODO: id?
-        translation_gist_id = graphene.List(graphene.Int)
-        data_type_translation_gist_id = graphene.List(graphene.Int)
+        translation_gist_id = id = LingvodocID()
+        data_type_translation_gist_id = LingvodocID()
 
 
     marked_for_deletion = graphene.Boolean()
@@ -121,7 +121,7 @@ class CreateField(graphene.Mutation):
 
 class UpdateField(graphene.Mutation):
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
     field = graphene.Field(Field)
     triumph = graphene.Boolean()
 
@@ -151,7 +151,7 @@ class DeleteField(graphene.Mutation):
 }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     marked_for_deletion = graphene.Boolean()
     field = graphene.Field(Field)

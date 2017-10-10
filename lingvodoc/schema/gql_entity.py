@@ -37,7 +37,9 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     client_id_check,
     Published,
-    Accepted
+    Accepted,
+    LingvodocID
+
 )
 from sqlalchemy import (
     and_,
@@ -71,7 +73,7 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
             raise
     with open(str(storage_path), 'wb+') as f:
         if json_input:
-            f.write(base64.urlsafe_b64decode(content))
+            f.write(content)
         else:
             shutil.copyfileobj(content, f)
 
@@ -121,12 +123,12 @@ class CreateEntity(graphene.Mutation):
         """
         input values from request. Look at "LD methods" exel table
         """
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int, required=True)
+        id = LingvodocID()
+        parent_id = LingvodocID(required=True)
         additional_metadata = ObjectVal()
-        field_id = graphene.List(graphene.Int, required=True)
-        self_id = graphene.List(graphene.Int)
-        link_id = graphene.List(graphene.Int)
+        field_id = LingvodocID(required=True)
+        self_id = LingvodocID()
+        link_id = LingvodocID()
         locale_id = graphene.Int()
         filename = graphene.String()
         content = graphene.String()

@@ -18,6 +18,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocID,
     CommonFieldsComposite,
     TranslationHolder,
     StateHolder,
@@ -257,7 +258,7 @@ class DictionaryPerspective(graphene.ObjectType):
         if parent and not parent.marked_for_deletion:
             authors = DBSession.query(dbUser).join(dbUser.clients).join(dbEntity, dbEntity.client_id == Client.id) \
                 .join(dbEntity.parent).join(dbEntity.publishingentity) \
-                .filter(dbLexicalEntry.parent_client_id == parent.client_id,
+                .filter(dbLexicalEntry.parent_client_id == parent.client_id,# TODO: filter by accepted==True
                         dbLexicalEntry.parent_object_id == parent.object_id,
                         dbLexicalEntry.marked_for_deletion == False,
                         dbEntity.marked_for_deletion == False)
@@ -347,11 +348,9 @@ class CreateDictionaryPerspective(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        latitude = graphene.String()
-        longitude = graphene.String()
+        id = LingvodocID()
+        parent_id = LingvodocID(required=True)
+        translation_gist_id = LingvodocID(required=True)
         additional_metadata = ObjectVal()
         import_source = graphene.String()
         import_hash = graphene.String()
@@ -375,17 +374,13 @@ class CreateDictionaryPerspective(graphene.Mutation):
         translation_gist_object_id = translation_gist_id[1]
         import_source = args.get('import_source')
         import_hash = args.get('import_hash')
-        latitude = args.get('latitude')
-        longitude = args.get('longitude')
         additional_metadata = args.get('additional_metadata')
-        dbperspective = create_perspective(client_id=client_id,
+        dbperspective = create_perspective(client_id=client_id, # TODO: refactor like dictionaries
                                 object_id=object_id,
                                 parent_client_id=parent_client_id,
                                 parent_object_id=parent_object_id,
                                 translation_gist_client_id=translation_gist_client_id,
                                 translation_gist_object_id=translation_gist_object_id,
-                                latitude=latitude,
-                                longitude=longitude,
                                 additional_metadata=additional_metadata,
                                 import_source=import_source,
                                 import_hash=import_hash
@@ -423,9 +418,9 @@ class UpdateDictionaryPerspective(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)  #List(graphene.Int) # lingvidicID
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -437,33 +432,25 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         client_id = id[0]
         object_id = id[1]
         parent_id = args.get('parent_id')
-        dictionary_client_id = parent_id[0]
-        dictionary_object_id = parent_id[1]
-
-        dictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id,
-                                                             object_id=dictionary_object_id).first()
-        if not dictionary:
-            raise ResponseError(message="No such dictionary in the system")
-
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="Error: No such perspective in the system")
 
-        if dbperspective.parent != dictionary:
-            raise ResponseError(message="No such pair of dictionary/perspective in the system")
+        # dictionaryperspective_parent_object_id_fkey  (parent_object_id, parent_client_id)=(2491, 449)  in dictionary
         translation_gist_id = args.get("translation_gist_id")
         translation_gist_client_id = translation_gist_id[0] if translation_gist_id else None
         translation_gist_object_id = translation_gist_id[1] if translation_gist_id else None
         if translation_gist_client_id:
             dbperspective.translation_gist_client_id = translation_gist_client_id
         if translation_gist_object_id:
-            dbperspective.translation_gist_object_id = translation_gist_object_id
-        parent_id = args.get("parent_id")
-        parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else None
-        if parent_client_id:
+            dbperspective.translation_gist_object_id = translation_gist_object_id  # TODO: refactor like dictionaries
+        if parent_id:
+            parent_client_id, parent_object_id = parent_id
+            dbparent_dictionary = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id,
+                                                                          object_id=parent_object_id).first()
+            if not dbparent_dictionary:
+                raise ResponseError(message="Error: No such dictionary in the system")
             dbperspective.parent_client_id = parent_client_id
-        if parent_object_id:
             dbperspective.parent_object_id = parent_object_id
 
 
@@ -472,9 +459,20 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         return UpdateDictionaryPerspective(perspective=perspective, triumph=True)
 
 class UpdatePerspectiveStatus(graphene.Mutation):
+    """
+    mutation  {
+    update_perspective_status(id:[66, 5], state_translation_gist_id: [1, 192]) {
+        triumph
+        perspective{
+            id
+        }
+    }
+    }
+
+    """
     class Arguments:
-        id = graphene.List(graphene.Int)
-        state_translation_gist_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        state_translation_gist_id = LingvodocID()
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -484,16 +482,8 @@ class UpdatePerspectiveStatus(graphene.Mutation):
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-        #
-        # parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        # if not parent:
-        #     raise ResponseError(message="No such dictionary in the system")
-
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if dbperspective and not dbperspective.marked_for_deletion:
-            # if dbperspective.parent != parent:
-            #     raise ResponseError(message="No such pair of dictionary/perspective in the system")
-
             dbperspective.state_translation_gist_client_id = state_translation_gist_client_id
             dbperspective.state_translation_gist_object_id = state_translation_gist_object_id
             atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
@@ -506,8 +496,8 @@ class UpdatePerspectiveStatus(graphene.Mutation):
 
 class UpdatePerspectiveRoles(graphene.Mutation):
     class Arguments:
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        parent_id = LingvodocID()
         roles_users = ObjectVal()
         roles_organizations = ObjectVal()
 
@@ -689,7 +679,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -698,19 +688,11 @@ class DeleteDictionaryPerspective(graphene.Mutation):
     @acl_check_by_id('delete', 'perspective')
     def mutate(root, info, **args):
         id = args.get("id")
-        client_id = id[0]
-        object_id = id[1]
-        #
-        # parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        # if not parent:
-        #     raise ResponseError(message="No such dictionary in the system")
-
+        client_id, object_id = id
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbPerspective or not dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
 
-        # if dbperspective.parent != parent:
-        #     raise ResponseError(message="No such pair of dictionary/perspective in the system")
         del_object(dbperspective)
 
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])

@@ -12,6 +12,7 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     acl_check_by_id,
     ResponseError,
+    LingvodocID,
     ObjectVal
 )
 
@@ -91,8 +92,8 @@ class CreateLexicalEntry(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        perspective_id = graphene.List(graphene.Int)
+        id = LingvodocID()
+        perspective_id = LingvodocID(required=True)
 
     lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
@@ -110,7 +111,7 @@ class CreateLexicalEntry(graphene.Mutation):
         """
         perspective_client_id = perspective_id[0]
         perspective_object_id = perspective_id[1]
-        
+
         object_id = None
         client_id_from_args = None
         if len(id) == 1:
@@ -172,18 +173,16 @@ class DeleteLexicalEntry(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('delete', 'lexical_entries_and_entities')
+    @acl_check_by_id('delete', 'lexical_entries_and_entities', id_key= "parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
-
+        client_id, object_id = id
         dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if dblexicalentry and not dblexicalentry.marked_for_deletion:
             del_object(dblexicalentry)

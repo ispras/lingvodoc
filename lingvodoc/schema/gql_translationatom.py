@@ -10,7 +10,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     acl_check_by_id,
     ResponseError,
-    LocaleId
+    LocaleId,
+    LingvodocID
 )
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
@@ -85,8 +86,8 @@ class CreateTranslationAtom(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        parent_id = LingvodocID()
         locale_id = graphene.Int()
         content = graphene.String()
 
@@ -185,8 +186,8 @@ class UpdateTranslationAtom(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        content = graphene.String()
+        id = LingvodocID(required=True)
+        content = graphene.String(required=True)
 
     translationatom = graphene.Field(TranslationAtom)
     triumph = graphene.Boolean()
