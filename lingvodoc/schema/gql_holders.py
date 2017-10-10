@@ -133,7 +133,7 @@ class LingvodocID(Scalar):
             result = list()
             for intvalue in ast.values:
                 if isinstance(intvalue, IntValue):
-                    result.append(intvalue.value)
+                    result.append(int(intvalue.value))
                 else:
                     return None
             return result
