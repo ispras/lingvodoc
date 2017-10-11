@@ -306,7 +306,7 @@ class CreateDictionary(graphene.Mutation):
         ids = args.get("id")
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
-        parent_client_id, parent_object_id = args.get('parent_id')
+        parent_id = args.get('parent_id')
         tr_atoms = args.get("translation_atoms")
         if type(tr_atoms) is not list:  # TODO: look at this
             translation_gist_id = args.get('translation_gist_id')
@@ -361,13 +361,11 @@ class CreateDictionary(graphene.Mutation):
                     raise ResponseError(message="locale_id and content args not found")
         additional_metadata = args.get("additional_metadata")
 
-        dbdictionary_obj = create_dbdictionary(client_id=client_id,
-                                                                object_id=object_id,
-                                                                parent_client_id=parent_client_id,
-                                                                parent_object_id=parent_object_id,
-                                                                translation_gist_client_id=translation_gist_client_id,
-                                                                translation_gist_object_id=translation_gist_object_id,
-                                                                additional_metadata=additional_metadata)
+        id = [client_id, object_id]
+        dbdictionary_obj = create_dbdictionary(id=id,
+                                               parent_id=parent_id,
+                                               translation_gist_id=translation_gist_id,
+                                               additional_metadata=additional_metadata)
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
 
@@ -433,12 +431,12 @@ class CreateDictionary(graphene.Mutation):
                 obj_id = None
                 if "id" in child_persp:
                     obj_id = child_persp["id"][1]
-                new_persp = create_perspective(client_id=client_id,
-                                        object_id=obj_id,
-                                        parent_client_id=dbdictionary_obj.client_id,
-                                        parent_object_id=dbdictionary_obj.object_id,  # use all object attrs
-                                        translation_gist_client_id=persp_translation_gist_id[0],  # TODO: fix it
-                                        translation_gist_object_id=persp_translation_gist_id[1]
+
+                id = [client_id, obj_id]
+                parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
+                new_persp = create_perspective(id=id,
+                                        parent_id=parent_id,  # use all object attrs
+                                        translation_gist_id=persp_translation_gist_id
                                         )
                 created_persps.append(new_persp)
                 if "fake_id" in child_persp:
@@ -459,16 +457,17 @@ class CreateDictionary(graphene.Mutation):
                         if fake_link in persp_fake_ids:
                             persp_to_link = persp_fake_ids[fake_link]
                             counter+=1
-                            create_dictionary_persp_to_field(client_id=client_id,
-                                                                  parent_client_id=persp.client_id,
-                                                                  parent_object_id=persp.object_id,
-                                                                  field_client_id=field_ids[fake_link][0],
-                                                                  field_object_id=field_ids[fake_link][1],
-                                                                  self_client_id=None,
-                                                                  self_object_id=None,
-                                                                  link_client_id=persp_to_link.client_id,
-                                                                  link_object_id=persp_to_link.object_id,
-                                                                  position=counter)
+
+                            id = [client_id, object_id]
+                            parent_id = [persp.client_id, persp.object_id]
+                            field_id = [field_ids[fake_link][0], field_ids[fake_link][1]]
+                            link_id = [persp_to_link.client_id, persp_to_link.object_id]
+                            create_dictionary_persp_to_field(id=id,
+                                                             parent_id=parent_id,
+                                                             field_client_id=field_id,
+                                                             self_id=None,
+                                                             link_id=link_id,
+                                                             position=counter)
                         # TODO: else create persptofield without link
 
         return CreateDictionary(dictionary=dictionary,
