@@ -8,7 +8,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     acl_check_by_id,
     ResponseError,
-    fetch_object
+    fetch_object,
+    LingvodocID
 )
 
 from lingvodoc.models import (
@@ -86,7 +87,7 @@ class CreateTranslationGist(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
         type = graphene.String()
 
     translationgist = graphene.Field(TranslationGist)
@@ -165,7 +166,7 @@ class DeleteTranslationGist(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     translationgist = graphene.Field(TranslationGist)
     triumph = graphene.Boolean()
@@ -174,22 +175,20 @@ class DeleteTranslationGist(graphene.Mutation):
     @acl_check_by_id('delete', 'translations')
     def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
-
+        client_id, object_id= id
         dbtranslationgist = DBSession.query(dbTranslationGist).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbtranslationgist and not dbtranslationgist.marked_for_deletion:
-            dbtranslationgist.marked_for_deletion = True
-            objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dbtranslationgist.client_id,
-                                                             object_id=dbtranslationgist.object_id).one()
+        if not dbtranslationgist or not dbtranslationgist.marked_for_deletion:
+            raise ResponseError(message="No such translationgist in the system")
+        dbtranslationgist.marked_for_deletion = True
+        objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dbtranslationgist.client_id,
+                                                         object_id=dbtranslationgist.object_id).one()
+        objecttoc.marked_for_deletion = True
+        for translationatom in dbtranslationgist.translationatom:
+            translationatom.marked_for_deletion = True
+            objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=translationatom.client_id,
+                                                             object_id=translationatom.object_id).one()
             objecttoc.marked_for_deletion = True
-            for translationatom in dbtranslationgist.translationatom:
-                translationatom.marked_for_deletion = True
-                objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=translationatom.client_id,
-                                                                 object_id=translationatom.object_id).one()
-                objecttoc.marked_for_deletion = True
 
-            translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
-            translationgist.dbObject = dbtranslationgist
-            return DeleteTranslationGist(translationgist=translationgist, triumph=True)
-        raise ResponseError(message="No such translationgist in the system")
+        translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
+        translationgist.dbObject = dbtranslationgist
+        return DeleteTranslationGist(translationgist=translationgist, triumph=True)

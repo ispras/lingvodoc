@@ -28,7 +28,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     ResponseError,
     ObjectVal,
-    acl_check_by_id
+    acl_check_by_id,
+    LingvodocID
 )
 
 from lingvodoc.views.v2.utils import  add_user_to_group
@@ -99,9 +100,14 @@ class Dictionary(graphene.ObjectType):  # tested
     status = graphene.String()
 
     perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
-
+    persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
+
+
+    @property
+    def persp_class(self):
+        return self._meta.fields['persp'].type
 
     @fetch_object('status')
     def resolve_status(self, info):
@@ -137,8 +143,9 @@ class Dictionary(graphene.ObjectType):  # tested
         child_persps = DBSession.query(dbDictionaryPerspective)\
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id).all()
         for persp in child_persps:
-            persp.dbObject = persp
-            perspectives.append(persp)
+            persp_object = self.persp_class(id = [persp.client_id, persp.object_id])
+            persp_object.dbObject = persp
+            perspectives.append(persp_object)
         return perspectives
 
     @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
@@ -279,9 +286,9 @@ class CreateDictionary(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int, required=True)
+        id = LingvodocID()
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID(required=True)
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
         translation_atoms = graphene.List(ObjectVal)
@@ -462,6 +469,7 @@ class CreateDictionary(graphene.Mutation):
                                                                   link_client_id=persp_to_link.client_id,
                                                                   link_object_id=persp_to_link.object_id,
                                                                   position=counter)
+                        # TODO: else create persptofield without link
 
         return CreateDictionary(dictionary=dictionary,
                                 triumph=True)
@@ -507,35 +515,31 @@ class UpdateDictionary(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int, required=True)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
         additional_metadata = ObjectVal()
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
 
     @staticmethod
-    def update_dictionary(client_id=None,
-                          object_id=None,
-                          parent_client_id=None,
-                          parent_object_id=None,
-                          translation_gist_client_id=None,
-                          translation_gist_object_id=None,
+    def update_dictionary(ids,
+                          parent_id=None,
+                          translation_gist_id=None,
                           additional_metadata=None
                           ):
+        if not ids:
+            raise ResponseError(message="dict id not found")
+        client_id, object_id = ids
         db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not db_dictionary or db_dictionary.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
 
-        if parent_client_id:
-            db_dictionary.parent_client_id = parent_client_id
-        if parent_object_id:
-            db_dictionary.parent_object_id = parent_object_id
-        if translation_gist_client_id:
-            db_dictionary.translation_gist_client_id = translation_gist_client_id
-        if translation_gist_object_id:
-            db_dictionary.translation_gist_object_id = translation_gist_object_id
+        if parent_id:
+            db_dictionary.parent_client_id, db_dictionary.parent_object_id = parent_id
+        if translation_gist_id:
+            db_dictionary.translation_gist_client_id, translation_gist_object_id = translation_gist_id
         update_metadata(db_dictionary, additional_metadata)
         return db_dictionary
 
@@ -543,21 +547,14 @@ class UpdateDictionary(graphene.Mutation):
     @acl_check_by_id('edit', 'dictionary')  # tested
     def mutate(root, info, **args):  # tested
         ids = args.get('id')
-        client_id = ids[0] if ids else info.context["client_id"]
-        object_id = ids[1] if ids else None
+        if not ids:
+            ids = (info.context["client_id"], None)
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else None
         translation_gist_id = args.get('translation_gist_id')
-        translation_gist_client_id = translation_gist_id[0] if translation_gist_id else None
-        translation_gist_object_id = translation_gist_id[1] if translation_gist_id else None
         additional_metadata = args.get('additional_metadata')
-        dbdictionary = UpdateDictionary.update_dictionary(client_id=client_id,
-                                                          object_id=object_id,
-                                                          parent_client_id=parent_client_id,
-                                                          parent_object_id=parent_object_id,
-                                                          translation_gist_client_id=translation_gist_client_id,
-                                                          translation_gist_object_id=translation_gist_object_id,
+        dbdictionary = UpdateDictionary.update_dictionary(ids,
+                                                          parent_id=parent_id,
+                                                          translation_gist_id=translation_gist_id,
                                                           additional_metadata=additional_metadata
                                                           )
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
@@ -584,8 +581,8 @@ class UpdateDictionaryStatus(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
-        state_translation_gist_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        state_translation_gist_id = LingvodocID(required=True)
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -609,7 +606,7 @@ class UpdateDictionaryStatus(graphene.Mutation):
 
 class UpdateDictionaryRoles(graphene.Mutation):
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
         roles_users = ObjectVal()
         roles_organizations = ObjectVal()
 
@@ -721,7 +718,7 @@ class DeleteDictionary(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int, required=True)
+        id = LingvodocID(required=True)
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -730,10 +727,7 @@ class DeleteDictionary(graphene.Mutation):
     @acl_check_by_id('delete', 'dictionary')
     def mutate(root, info, **args):
         ids = args.get('id')
-        if not ids:
-            raise ResponseError(message="id not found")
-        client_id = ids[0]
-        object_id = ids[1]
+        client_id, object_id = ids
         dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")

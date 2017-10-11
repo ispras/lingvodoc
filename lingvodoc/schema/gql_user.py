@@ -42,42 +42,46 @@ class User(graphene.ObjectType):
     default_locale_id = graphene.Int()
     birthday = graphene.String() # TODO: DateTime class
     is_active = graphene.Boolean() #boolean
+    email = graphene.String()
 
     dbType = dbUser
     dbObject = None
 
     class Meta:
         interfaces = (IdHolder, CreatedAt, AdditionalMetadata, Name)
+    @fetch_object("email")
+    def resolve_email(self):
+        return self.dbObject.email.email
 
-    @fetch_object()
+    @fetch_object("login")
     def resolve_login(self, info):
         return self.dbObject.login
 
-    @fetch_object()
+    @fetch_object("name")
     def resolve_name(self, info):
         return self.dbObject.name
 
-    @fetch_object()
+    @fetch_object("intl_name")
     def resolve_intl_name(self, info):
         return self.dbObject.intl_name
 
-    @fetch_object()
+    @fetch_object("default_locale_id")
     def resolve_default_locale_id(self, info):
         return self.dbObject.default_locale_id
 
-    @fetch_object()
+    @fetch_object("birthday")
     def resolve_birthday(self, info):
         return self.dbObject.birthday
 
-    @fetch_object()
+    @fetch_object("is_active")
     def resolve_is_active(self, info):
         return self.dbObject.is_active
 
-    @fetch_object()
+    @fetch_object("created_at")
     def resolve_created_at(self, info):
         return self.dbObject.created_at
 
-    @fetch_object()
+    @fetch_object("additional_metadata")
     def resolve_additional_metadata(self, info):
         return self.dbObject.additional_metadata
 
@@ -112,7 +116,7 @@ class CreateUser(graphene.Mutation):
         login = graphene.String()
         email = graphene.String()
         name = graphene.String()
-        birthday = graphene.List(graphene.Int)
+        birthday = graphene.Int()
         password = graphene.String()
 
     user = graphene.Field(User)
@@ -126,12 +130,8 @@ class CreateUser(graphene.Mutation):
         birthday = args.get('birthday')
         password = args.get('password')
 
-        day = birthday[0]
-        month = birthday[1]
-        year = birthday[2]
-        if day is None or month is None or year is None:
+        if not birthday:
             return ResponseError(message="Error: day, month or year of the birth is missing")
-        birthday = datetime.date(year, month, day)
 
         if DBSession.query(dbUser).filter_by(login=login).first():
             return ResponseError(message="The user with this login is already registered")
