@@ -69,6 +69,7 @@ import os
 from lingvodoc.views.v2.translations import translationgist_contents
 from hashlib import sha224
 from base64 import urlsafe_b64decode
+from sqlalchemy.orm.attributes import flag_modified
 
 log = logging.getLogger(__name__)
 
@@ -263,14 +264,35 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    persps = list()
+    simpler_info = lambda x: [i['info']['content'] for i in x]
     persp_to_dict = lambda x: [
-        {'additional_metadata': p.additional_metadata,
-         'client_id': p.client_id,
-         'object_id': p.object_id} for p in x]
-    persps = DBSession.query(DictionaryPerspective).filter(
-        DictionaryPerspective.additional_metadata['location'] is not None).all()
-    return persp_to_dict(persps)
+        p.additional_metadata['location']['content'] for p in x]
+    persps = DBSession.query(DictionaryPerspective).filter().all()
+    dicts = []
+    for persp in persps:
+        if not persp.additional_metadata:
+            continue
+        parent = persp.parent
+        if not parent.additional_metadata:
+            parent.additional_metadata = dict()
+        if not parent.additional_metadata.get('location') and persp.additional_metadata.get('location'):
+            parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
+        if persp.additional_metadata.get('location'):
+            del persp.additional_metadata['location']
+        if not parent.additional_metadata.get('authors') and persp.additional_metadata.get('authors'):
+            parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
+        if persp.additional_metadata.get('authors'):
+            del persp.additional_metadata['authors']
+        if persp.additional_metadata.get('info'):
+            if not parent.additional_metadata.get('blobs'):
+                parent.additional_metadata['blobs'] = list()
+            for item in simpler_info(persp.additional_metadata['info']['content']):
+                if item not in parent.additional_metadata['blobs']:
+                    parent.additional_metadata['blobs'].append(item)
+            del persp.additional_metadata['info']
+        flag_modified(parent, 'additional_metadata')
+        flag_modified(persp, 'additional_metadata')
+    return
 
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
