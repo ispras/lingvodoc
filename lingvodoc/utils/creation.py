@@ -43,18 +43,19 @@ def translation_service_search(searchstring):
     response = translationgist_contents(translationatom.parent)
     return response
 
-def create_perspective(client_id=None,
-                       object_id=None,
-                       parent_client_id=None,
-                       parent_object_id=None,
-                       translation_gist_client_id=None,
-                       translation_gist_object_id=None,
+def create_perspective(id = None,
+                       parent_id=None,
+                       translation_gist_id=None,
                        latitude=None,
                        longitude=None,
                        additional_metadata=None,
                        import_source=None,
                        import_hash=None
                        ):
+    client_id, object_id = id
+    parent_client_id, parent_object_id = parent_id
+    translation_gist_client_id, translation_gist_object_id = translation_gist_id
+
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         raise ResponseError(message="No such dictionary in the system")
@@ -90,13 +91,14 @@ def create_perspective(client_id=None,
     return dbperspective
 
 
-def create_dbdictionary(client_id=None,
-                        object_id=None,
-                        parent_client_id=None,
-                        parent_object_id=None,
-                        translation_gist_client_id=None,
-                        translation_gist_object_id=None,
+def create_dbdictionary(id=None,
+                        parent_id=None,
+                        translation_gist_id=None,
                         additional_metadata=None):
+    client_id, object_id = id
+    parent_client_id, parent_object_id = parent_id
+    translation_gist_client_id, translation_gist_object_id = translation_gist_id
+
     duplicate_check = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).all()
     if duplicate_check:
         raise ResponseError(message="Dictionary with such ID already exists in the system")
@@ -125,17 +127,18 @@ def create_dbdictionary(client_id=None,
         DBSession.flush()
     return dbdictionary_obj
 
-def create_dictionary_persp_to_field(client_id=None,
-                                     object_id=None,
-                                     parent_client_id=None,
-                                     parent_object_id=None,
-                                     field_client_id=None,
-                                     field_object_id=None,
-                                     self_client_id=None,
-                                     self_object_id=None,
-                                     link_client_id=None,
-                                     link_object_id=None,
+def create_dictionary_persp_to_field(id=None,
+                                     parent_id=None,
+                                     field_id=None,
+                                     self_id=None,
+                                     link_id=None,
                                      position=1):
+    client_id, object_id = id
+    parent_client_id, parent_object_id = parent_id
+    field_client_id, field_object_id = field_id
+    self_client_id, self_object_id = self_id
+    link_client_id, link_object_id = link_id
+
     if DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                  object_id=object_id).first():
         raise ResponseError(message="This field already exists")
@@ -267,6 +270,7 @@ def create_entity(id=None,
 def create_lexicalentry(id, perspective_id, save_object=False):
     client_id, object_id = id
     perspective_client_id, perspective_object_id = perspective_id
+
     perspective = DBSession.query(DictionaryPerspective). \
         filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
     if not perspective:

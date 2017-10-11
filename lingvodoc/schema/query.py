@@ -1192,7 +1192,11 @@ class Query(graphene.ObjectType):
     def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
                           vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
                             limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False):
-
+        """
+        query MyQuery {
+           phonology(perspective_id: [671, 15155], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [])
+        }
+        """
         perspective_cid, perspective_oid = perspective_id
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')

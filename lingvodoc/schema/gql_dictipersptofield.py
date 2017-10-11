@@ -26,6 +26,7 @@ from lingvodoc.models import (
     DBSession
 )
 
+from lingvodoc.utils.creation import create_dictionary_persp_to_field
 
 class DictionaryPerspectiveToField(graphene.ObjectType):
     """
@@ -100,7 +101,7 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
     perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
     triumph = graphene.Boolean()
 
-    @staticmethod
+    #@staticmethod
     # def create_dictionary_persp_to_field(client_id=None,
     #                                      object_id=None,
     #                                      parent_client_id=None,
@@ -137,30 +138,17 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
+        id = [client_id, object_id]
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0]
-        parent_object_id = parent_id[1]
         field_id = args.get('field_id')
-        field_client_id = field_id[0]
-        field_object_id = field_id[1]
         self_id = args.get('self_id')
-        self_client_id = self_id[0]
-        self_object_id = self_id[1]
         link_id = args.get('link_id')
-        link_client_id = link_id[0]
-        link_object_id = link_id[1]
         position = args.get('position')
-        field_object = CreateDictionaryPerspectiveToField\
-            .create_dictionary_persp_to_field(client_id=client_id,
-                                              object_id=object_id,
-                                              parent_client_id=parent_client_id,
-                                              parent_object_id=parent_object_id,
-                                              field_client_id=field_client_id,
-                                              field_object_id=field_object_id,
-                                              self_client_id=self_client_id,
-                                              self_object_id=self_object_id,
-                                              link_client_id=link_client_id,
-                                              link_object_id=link_object_id,
+        field_object = create_dictionary_persp_to_field(id=id,
+                                              parent_id=parent_id,
+                                              field_id=field_id,
+                                              self_id=self_id,
+                                              link_id=link_id,
                                               position=position)
         DBSession.add(field_object)
         DBSession.flush()

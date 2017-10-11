@@ -100,13 +100,14 @@ class CreateLanguage(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def create_dblanguage(client_id=None,
-                          object_id=None,
-                          parent_client_id=None,
-                          parent_object_id=None,
-                          translation_gist_client_id=None,
-                          translation_gist_object_id=None):
+    def create_dblanguage(id=None,
+                          parent_id=None,
+                          translation_gist_id=None):
         parent = None
+        parent_client_id, parent_object_id = parent_id
+        client_id, object_id = id
+        translation_gist_client_id, translation_gist_object_id = translation_gist_id
+
         if parent_client_id and parent_object_id:
             parent = DBSession.query(dbLanguage).\
                 filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
@@ -132,10 +133,8 @@ class CreateLanguage(graphene.Mutation):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
+        id = [client_id, object_id]
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else None
-
 
         tr_atoms = args.get("translation_atoms")
         if type(tr_atoms) is not list:  # TODO: look at this
@@ -189,12 +188,10 @@ class CreateLanguage(graphene.Mutation):
                 else:
                     raise ResponseError(message="locale_id and content args not found")
 
-        dblanguage = CreateLanguage.create_dblanguage(client_id=client_id,
-                                                      object_id=object_id,
-                                                      parent_client_id=parent_client_id,
-                                                      parent_object_id=parent_object_id,
-                                                      translation_gist_client_id=translation_gist_client_id,
-                                                      translation_gist_object_id=translation_gist_object_id)
+        translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
+        dblanguage = CreateLanguage.create_dblanguage(id=id,
+                                                      parent_id=parent_id,
+                                                      translation_gist_id=translation_gist_id)
         language = Language(id=[dblanguage.client_id, dblanguage.object_id])
         language.dbObject = dblanguage
         return CreateLanguage(language=language, triumph=True)

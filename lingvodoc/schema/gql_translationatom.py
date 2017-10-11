@@ -95,12 +95,14 @@ class CreateTranslationAtom(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def create_dbtranslationatom(client_id=None,
-                                 object_id=None,
+    def create_dbtranslationatom(id=None,
                                  locale_id=2,
                                  content=None,
-                                 parent_client_id=None,
-                                 parent_object_id=None):
+                                 parent_id=None,):
+
+            client_id, object_id = id
+            parent_client_id, parent_object_id = parent_id
+
             client = DBSession.query(Client).filter_by(id=client_id).first()
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             if not user:
@@ -138,18 +140,16 @@ class CreateTranslationAtom(graphene.Mutation):
         ids = args.get("id")
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
+        id = [client_id, object_id]
+
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0]
-        parent_object_id = parent_id[1]
         locale_id = args.get('locale_id')
         content = args.get('content')
 
-        dbtranslationatom = CreateTranslationAtom.create_dbtranslationatom(client_id=client_id,
-                                                     object_id=object_id,
+        dbtranslationatom = CreateTranslationAtom.create_dbtranslationatom(id=id,
                                                      locale_id=locale_id,
                                                      content=content,
-                                                     parent_client_id=parent_client_id,
-                                                     parent_object_id=parent_object_id)
+                                                     parent_id=parent_id)
         translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
                                           content=dbtranslationatom.content)
         translationatom.dbObject = dbtranslationatom

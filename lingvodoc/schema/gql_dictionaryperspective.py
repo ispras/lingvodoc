@@ -366,21 +366,15 @@ class CreateDictionaryPerspective(graphene.Mutation):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
+        id = [client_id, object_id]
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0]
-        parent_object_id = parent_id[1]
         translation_gist_id = args.get('translation_gist_id')
-        translation_gist_client_id = translation_gist_id[0]
-        translation_gist_object_id = translation_gist_id[1]
         import_source = args.get('import_source')
         import_hash = args.get('import_hash')
         additional_metadata = args.get('additional_metadata')
-        dbperspective = create_perspective(client_id=client_id, # TODO: refactor like dictionaries
-                                object_id=object_id,
-                                parent_client_id=parent_client_id,
-                                parent_object_id=parent_object_id,
-                                translation_gist_client_id=translation_gist_client_id,
-                                translation_gist_object_id=translation_gist_object_id,
+        dbperspective = create_perspective(id=id,
+                                parent_id=parent_id,
+                                translation_gist_id=translation_gist_id,
                                 additional_metadata=additional_metadata,
                                 import_source=import_source,
                                 import_hash=import_hash
@@ -498,8 +492,8 @@ class UpdatePerspectiveRoles(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         parent_id = LingvodocID()
-        roles_users = ObjectVal()
-        roles_organizations = ObjectVal()
+        roles_users = graphene.List(ObjectVal)
+        roles_organizations = graphene.List(ObjectVal)
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
