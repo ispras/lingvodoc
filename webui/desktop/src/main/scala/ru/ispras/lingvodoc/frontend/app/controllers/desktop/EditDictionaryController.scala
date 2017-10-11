@@ -45,6 +45,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
                                userService: UserService,
                                val backend: BackendService,
                                timeout: Timeout,
+                               val rootScope: RootScope,
                                val exceptionHandler: ExceptionHandler)
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
