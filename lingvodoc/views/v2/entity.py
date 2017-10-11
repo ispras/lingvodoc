@@ -92,6 +92,8 @@ def create_entity(request):  # tested
             req = data['entity']
             if type(req) == str:
                 req = json.loads(req)
+            else:
+                req = json.loads(req.file.read().decode())
             # if "content" in data:
             content = data['content']
         elif request.content_type == 'application/json' and type(request.POST) == NoVars:
