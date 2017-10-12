@@ -114,7 +114,7 @@ def phonology(request, group_by_description, only_first_translation, perspective
     task_status = None
 
     try:
-        request_json = request.json
+        #request_json = request.json
 
         # Indicating that we are starting to process phonology request.
 
