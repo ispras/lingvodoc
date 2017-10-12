@@ -299,7 +299,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     formData.append("entity", entityFile)
     formData.append("content", file)
 
-    backend.createEntity(dictionaryId, linkPerspectiveId, entryId, entity) onComplete {
+    backend.createEntity(dictionaryId, linkPerspectiveId, entryId, formData) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, linkPerspectiveId, entryId, entityId) onComplete {
           case Success(newEntity) =>
