@@ -43,9 +43,9 @@ def translation_service_search(searchstring):
     response = translationgist_contents(translationatom.parent)
     return response
 
-def create_perspective(id = None,
+def create_perspective(id = (None, None),
                        parent_id=None,
-                       translation_gist_id=None,
+                       translation_gist_id=(None, None),
                        latitude=None,
                        longitude=None,
                        additional_metadata=None,
@@ -132,17 +132,20 @@ def create_dictionary_persp_to_field(id=None,
                                      field_id=None,
                                      self_id=None,
                                      link_id=None,
+                                     upper_level=None,
                                      position=1):
-    client_id, object_id = id
-    parent_client_id, parent_object_id = parent_id
-    field_client_id, field_object_id = field_id
-    self_client_id, self_object_id = self_id
-    link_client_id, link_object_id = link_id
+
+    client_id, object_id = id if id else (None,None)
+    parent_client_id, parent_object_id = parent_id if parent_id else (None,None)
+    field_client_id, field_object_id = field_id if field_id else  (None,None)
+    self_client_id, self_object_id = self_id if self_id else (None,None)
+    link_client_id, link_object_id = link_id if link_id else (None,None)
 
     if DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                  object_id=object_id).first():
         raise ResponseError(message="This field already exists")
-    field_object = DictionaryPerspectiveToField(client_id=client_id,
+    if upper_level:
+            field_object = DictionaryPerspectiveToField(client_id=client_id,
                                                   object_id=object_id,
                                                   parent_client_id=parent_client_id,
                                                   parent_object_id=parent_object_id,
@@ -154,6 +157,19 @@ def create_dictionary_persp_to_field(id=None,
                                                   link_object_id=link_object_id,
                                                   position=position
                                                   )
+    else:
+        field_object = DictionaryPerspectiveToField(client_id=client_id,
+                                                      object_id=object_id,
+                                                      parent_client_id=parent_client_id,
+                                                      parent_object_id=parent_object_id,
+                                                      field_client_id=field_client_id,
+                                                      field_object_id=field_object_id,
+                                                      self_client_id=self_client_id,
+                                                      self_object_id=self_object_id,
+                                                      link_client_id=link_client_id,
+                                                      link_object_id=link_object_id,
+                                                      position=position
+                                                      )
     DBSession.add(field_object)
     DBSession.flush()
     return field_object
