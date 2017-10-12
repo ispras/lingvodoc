@@ -139,7 +139,7 @@ def update_perspective_fields(req,
         #for field in fields: ## ?
         #    DBSession.delete(field)
         if not int(len(fields)):
-            position = 1
+            position = 1  # TODO: postition fix
             for field in req:
                 create_nested_field(field=field,
                                     perspective=perspective,
