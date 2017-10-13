@@ -408,9 +408,7 @@ def convert_five_tiers(
         DBSession.flush()
 
 
-        origin_metadata= {"origin_client_id": origin_client_id,
-                              "origin_object_id": origin_object_id
-                              }
+        origin_metadata= {"origin_id": (origin_client_id, origin_object_id)}
 
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
                                                        object_id=dictionary_object_id).first()

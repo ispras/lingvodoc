@@ -54,6 +54,7 @@ import hashlib
 
 from lingvodoc.utils.creation import create_entity
 
+
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     filename = sanitize_filename(filename)
     storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
@@ -61,6 +62,7 @@ def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
         os.makedirs(storage_dir, exist_ok=True)
     storage_path = os.path.join(storage_dir, filename)
     return storage_path, filename
+
 
 def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
     import errno
@@ -79,23 +81,25 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 
     real_location = storage_path
     url = "".join((storage["prefix"],
-                  storage["static_route"],
-                  obj.__tablename__,
-                  '/',
-                  folder_name,
-                  '/',
-                  str(obj.client_id), '/',
-                  str(obj.object_id), '/',
-                  filename))
+                   storage["static_route"],
+                   obj.__tablename__,
+                   '/',
+                   folder_name,
+                   '/',
+                   str(obj.client_id), '/',
+                   str(obj.object_id), '/',
+                   filename))
     return real_location, url
+
 
 # Read
 class Entity(graphene.ObjectType):
-     # TODO: Accepted, entity_type
+    # TODO: Accepted, entity_type
     content = graphene.String()
     data_type = graphene.String()
     dbType = dbEntity
     dbObject = None
+
     class Meta:
         interfaces = (CompositeIdHolder,
                       AdditionalMetadata,
@@ -106,16 +110,16 @@ class Entity(graphene.ObjectType):
                       FieldHolder,
                       ParentLink,
                       Content,
-                      #TranslationHolder,
+                      # TranslationHolder,
                       LocaleId,
                       Published,
                       Accepted
                       )
 
-
     @fetch_object('data_type')
     def resolve_data_type(self, info):
         return self.dbObject.field.data_type
+
 
 # Create
 class CreateEntity(graphene.Mutation):
@@ -138,7 +142,6 @@ class CreateEntity(graphene.Mutation):
 
     entity = graphene.Field(Entity)
 
-
     """
     example:
     curl -i -X POST  -H "Cookie: auth_tkt="
@@ -151,12 +154,13 @@ class CreateEntity(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @client_id_check()  # TODO context acl check
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         id = [client_id, object_id]
+
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
@@ -168,46 +172,29 @@ class CreateEntity(graphene.Mutation):
         else:
             raise ResponseError(message="Lexical entry not found")
 
+        lexical_entry = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_id[0], object_id=parent_id[1]).one()
+        info.context.acl_check('create', 'lexical_entries_and_entities',
+                               (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
         additional_metadata = None
         if 'additional_metadata' in args:
             additional_metadata = args["additional_metadata"]
-
-        field_id = None
-        if 'field_id' in args:
-            field_id = args["field_id"]
-
-        self_id = None
-        if 'self_id' in args:
-            self_id = args["self_id"]
-
-        link_id = None
-        if 'link_id' in args:
-            link_id = args["link_id"]
-
-        locale_id = 2
-        if 'locale_id' in args:
-            locale_id = args["locale_id"]
-
-        filename = None
-        if 'filename' in args:
-            filename = args["filename"]
-
-        content = None
-        if 'content' in args:
-            content = args["content"]
-
-        registry = None
-        if 'registry' in args:
-            registry = args["registry"]
+        field_id = args.get('field_id')
+        self_id = args.get("self_id")
+        link_id = args.get("link_id")
+        locale_id = args.get("locale_id", 2)
+        filename = args.get("filename")
+        content = args.get("content")
+        registry = args.get("registry")
 
         dbentity = create_entity(id, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
                                  filename, content, registry, info.context.request, True)
 
-        entity = Entity(id = [dbentity.client_id, dbentity.object_id]) # TODO: more args
+        entity = Entity(id=[dbentity.client_id, dbentity.object_id])  # TODO: more args
         entity.dbObject = dbentity
         return CreateEntity(entity=entity, triumph=True)
 
-        #if not perm_check(client_id, "field"):
+        # if not perm_check(client_id, "field"):
         #    return ResponseError(message = "Permission Denied (Entity)")
 
 
@@ -268,6 +255,7 @@ or
 }
 """
 
+
 class UpdateEntity(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
@@ -280,18 +268,41 @@ class UpdateEntity(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
-        dbpublishingentity = DBSession.query(dbPublishingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        dbpublishingentity = DBSession.query(dbPublishingEntity).filter_by(client_id=client_id,
+                                                                           object_id=object_id).first()
+        # lexical_entry = dbpublishingentity.parent.parent
+        lexical_entry = DBSession.query(dbLexicalEntry).join(dbLexicalEntry.entity).join(
+            dbEntity.publishingentity).filter(dbPublishingEntity.client_id == client_id,
+                                              dbPublishingEntity.object_id == object_id).one()
         if dbpublishingentity:
-            if args.get('published'):
-                dbpublishingentity.published = args.get('published')
-            if args.get('accepted'):
-                dbpublishingentity.accepted = args.get('accepted')
+            published = args.get('published')
+            accepted = args.get('accepted')
+            if published and not dbpublishingentity.published:
+                info.context.acl_check('create', 'approve_entities',
+                                       (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
+            if published is not None and not published and dbpublishingentity.published:
+                info.context.acl_check('delete', 'approve_entities',
+                                       (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
+            if accepted and not dbpublishingentity.accepted:
+                info.context.acl_check('create', 'lexical_entries_and_entities',
+                                       (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
+            if accepted is not None and not accepted and dbpublishingentity.accepted:
+                raise ResponseError(message="not allowed action")
+
+            if published:
+                dbpublishingentity.published = published
+            if accepted:
+                dbpublishingentity.accepted = accepted
 
             dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
             entity = Entity(id=[dbentity.client_id, dbentity.object_id])
             entity.dbObject = dbentity
             return UpdateEntity(entity=entity, triumph=True)
         raise ResponseError(message="No such entity in the system")
+
 
 class DeleteEntity(graphene.Mutation):
     class Arguments:
@@ -303,15 +314,17 @@ class DeleteEntity(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
-
         dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        lexical_entry = dbentity.parent
+        info.context.acl_check('delete', 'lexical_entries_and_entities',
+                               (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
         if dbentity and not dbentity.marked_for_deletion:
-
             del_object(dbentity)
-            entity = Entity(id = id)
-            entity.dbObject=dbentity
+            entity = Entity(id=id)
+            entity.dbObject = dbentity
             return DeleteEntity(entity=entity, triumph=True)
         raise ResponseError(message="No such entity in the system")
+
 
 class BulkCreateEntity(graphene.Mutation):
     """
@@ -321,9 +334,10 @@ class BulkCreateEntity(graphene.Mutation):
         }
     }
     """
+
     class Arguments:
         entities = graphene.List(ObjectVal)
-
+    entities = graphene.List(Entity)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -331,49 +345,33 @@ class BulkCreateEntity(graphene.Mutation):
         entity_objects = args.get('entities')
         dbentities_list = list()
         request = info.context.request
-
+        entities = list()
         for entity_obj in entity_objects:
-            id = None
-            if 'id' in entity_obj:
-                id = entity_obj["id"]
-            else:
-                raise ResponseError(message="Bad entity object")
 
-            parent_id = None
-            if 'parent_id' in entity_obj:
-                parent_id = entity_obj["parent_id"]
+            id = entity_obj.get("id")
+            if id is None:
+                id = (info.context["client_id"], None)
+
+            parent_id = entity_obj.get("parent_id")
+            if not parent_id:
+                raise ResponseError(message="Bad lexical_entry object")
+            lexical_entry = DBSession.query(dbLexicalEntry) \
+                .filter_by(client_id=parent_id[0], object_id=parent_id[1]).one()
+            info.context.acl_check('create', 'lexical_entries_and_entities',
+                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
             additional_metadata = None
             if 'additional_metadata' in entity_obj:
                 additional_metadata = entity_obj["additional_metadata"]
-
-            field_id = None
-            if 'field_id' in entity_obj:
-                field_id = entity_obj["field_id"]
-
-            self_id = None
-            if 'self_id' in entity_obj:
-                self_id = entity_obj["self_id"]
-
-            link_id = None
-            if 'link_id' in entity_obj:
-                link_id = entity_obj["link_id"]
-
-            locale_id = 2
-            if 'locale_id' in entity_obj:
-                locale_id = entity_obj["locale_id"]
-
-            filename = None
-            if 'filename' in entity_obj:
-                filename = entity_obj["filename"]
-
-            content = None
-            if 'content' in entity_obj:
-                content = entity_obj["content"]
-
-            registry = None
-            if 'registry' in entity_obj:
-                registry = entity_obj["registry"]
+            field_id = entity_obj.get('field_id')
+            if not field_id:
+                raise ResponseError('no field_id provided')
+            self_id = entity_obj.get("self_id")
+            link_id = entity_obj.get("link_id")
+            locale_id = entity_obj.get("locale_id", 2)
+            filename = entity_obj.get("filename")
+            content = entity_obj.get("content")
+            registry = entity_obj.get("registry")
 
             dbentity = create_entity(id, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
                                      filename, content, registry, request, False)
@@ -382,4 +380,8 @@ class BulkCreateEntity(graphene.Mutation):
 
         DBSession.bulk_save_objects(dbentities_list)
         DBSession.flush()
-        return BulkCreateEntity(triumph=True)
+        for dbentity in dbentities_list:
+            entity =  Entity(id=[dbentity.client_id, dbentity.object_id])
+            entity.dbObject = dbentity
+            entities.append(entity)
+        return BulkCreateEntity(entities=entities, triumph=True)
