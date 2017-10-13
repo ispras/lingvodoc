@@ -10,6 +10,7 @@ from lingvodoc.schema.gql_holders import (
     DataType,
     IsTranslatable,
     TranslationHolder,
+    ResponseError,
     #TranslationHolder
     fetch_object,
     del_object,
@@ -163,6 +164,8 @@ class DeleteField(graphene.Mutation):
         client_id = info.context["client_id"]
         id = args.get('id')
         fieldobj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
+        if not fieldobj:
+            raise ResponseError(message="No such field in the system")
         del_object(fieldobj)
         field = Field(id = id)
         return DeleteField(field=field, triumph = True)
