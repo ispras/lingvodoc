@@ -467,7 +467,7 @@ class CreateDictionary(graphene.Mutation):
                     if "translation_gist_id" in next_persp:
                         persp_translation_gist_id = next_persp["translation_gist_id"]
                     else:
-                        ResponseError(message="Translation gist not found")
+                        raise ResponseError(message="Translation gist not found")
 
                 parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=(client_id, None),
@@ -659,7 +659,7 @@ class UpdateDictionaryRoles(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    #@client_id_check
+    @acl_check_by_id("dictionary_role", "edit")
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         roles_users = args.get('roles_users')
