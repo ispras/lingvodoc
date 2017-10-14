@@ -53,8 +53,11 @@ def create_perspective(id = (None, None),
                        import_hash=None
                        ):
     client_id, object_id = id
+
+    if not parent_id:
+        raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
-    translation_gist_client_id, translation_gist_object_id = translation_gist_id
+    translation_gist_client_id, translation_gist_object_id = translation_gist_id if translation_gist_id else (None, None)
 
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
@@ -96,13 +99,23 @@ def create_dbdictionary(id=None,
                         translation_gist_id=None,
                         additional_metadata=None):
     client_id, object_id = id
+
+    if not parent_id:
+        raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
-    translation_gist_client_id, translation_gist_object_id = translation_gist_id
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        raise ResponseError(message="No such dictionary in the system")
+
+    translation_gist_client_id, translation_gist_object_id = translation_gist_id if translation_gist_id else (None, None)
 
     duplicate_check = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).all()
     if duplicate_check:
         raise ResponseError(message="Dictionary with such ID already exists in the system")
     parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        raise ResponseError(message="No such language in the system")
+
     resp = translation_service_search("WiP")
     state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
     dbdictionary_obj = Dictionary(client_id=client_id,
@@ -134,12 +147,18 @@ def create_dictionary_persp_to_field(id=None,
                                      link_id=None,
                                      upper_level=None,
                                      position=1):
+    client_id, object_id = id
+    if not parent_id:
+        raise ResponseError(message="Bad parent ids")
+    parent_client_id, parent_object_id = parent_id
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        raise ResponseError(message="No such dictionary in the system")
 
-    client_id, object_id = id if id else (None,None)
-    parent_client_id, parent_object_id = parent_id if parent_id else (None,None)
-    field_client_id, field_object_id = field_id if field_id else  (None,None)
-    self_client_id, self_object_id = self_id if self_id else (None,None)
-    link_client_id, link_object_id = link_id if link_id else (None,None)
+    field_client_id, field_object_id = field_id if field_id else (None, None)
+    self_client_id, self_object_id = self_id if self_id else (None, None)
+    link_client_id, link_object_id = link_id if link_id else (None, None)
+
 
     if DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                  object_id=object_id).first():
@@ -186,6 +205,8 @@ def create_entity(id=None,
         request=None,
         save_object=False):
 
+    if not parent_id:
+        raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
     parent = DBSession.query(LexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
@@ -193,7 +214,7 @@ def create_entity(id=None,
 
     upper_level = None
 
-    field_client_id, field_object_id = field_id
+    field_client_id, field_object_id = field_id if field_id else (None, None)
     tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
         TranslationAtom.locale_id == 2,
         TranslationAtom.parent_client_id == TranslationGist.client_id,
@@ -284,6 +305,9 @@ def create_entity(id=None,
 
 def create_lexicalentry(id, perspective_id, save_object=False):
     client_id, object_id = id
+
+    if not perspective_id:
+        raise ResponseError(message="Bad perspective ids")
     perspective_client_id, perspective_object_id = perspective_id
 
     perspective = DBSession.query(DictionaryPerspective). \

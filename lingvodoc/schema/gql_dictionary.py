@@ -422,6 +422,7 @@ class CreateDictionary(graphene.Mutation):
                     user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
                     atoms_to_create = next_persp["translation_atoms"]
                     dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
+
                     translation_gist_client_id = dbtranslationgist.client_id
                     translation_gist_object_id = dbtranslationgist.object_id
                     persp_translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
@@ -434,6 +435,7 @@ class CreateDictionary(graphene.Mutation):
                         for base in basegroups:
                             group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
                                           parent=base)
+
                             groups += [group]
                         for group in groups:
                             add_user_to_group(user, group)
@@ -447,6 +449,7 @@ class CreateDictionary(graphene.Mutation):
                                                                   parent=dbtranslationgist,
                                                                   locale_id=locale_id,
                                                                   content=content)
+
                             DBSession.add(dbtranslationatom)
                             DBSession.flush()
                             if not object_id:
@@ -674,6 +677,8 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    if not group:
+                        raise ResponseError(message="No such group in the system")
 
                     client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
 
@@ -689,6 +694,9 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     if not permitted:
                         override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                                           subject_override=True).first()
+                        if not override_group:
+                            raise ResponseError(message="No such group in the system")
+
                         if userlogged in override_group.users:
                             permitted = True
 
@@ -710,6 +718,8 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                                subject_object_id=object_id,
                                                                subject_client_id=client_id).first()
+                    if not group:
+                        raise ResponseError(message="No such group in the system")
 
                     client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
 
@@ -725,6 +735,9 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     if not permitted:
                         override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                                           subject_override=True).first()
+                        if not override_group:
+                            raise ResponseError(message="No such group in the system")
+
                         if userlogged in override_group.users:
                             permitted = True
 
