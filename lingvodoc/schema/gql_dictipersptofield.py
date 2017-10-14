@@ -13,7 +13,8 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     TranslationHolder,
     TranslationGistHolder,
-    LingvodocID
+    LingvodocID,
+    acl_check_by_id
 )
 from lingvodoc.models import (
     DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
@@ -134,6 +135,7 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id("perspective", "edit", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
@@ -198,7 +200,7 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @acl_check_by_id("perspective", "edit", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id, object_id = id
@@ -259,7 +261,7 @@ class DeleteDictionaryPerspectiveToField(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @acl_check_by_id("perspective", "edit", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id, object_id = id

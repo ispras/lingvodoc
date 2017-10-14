@@ -189,7 +189,7 @@ def check_direct(client_id, request, action, subject, subject_id):
         if subject == 'approve_entities':
 
             perspective = DBSession.query(DictionaryPerspective).filter_by(
-                client_id=subject_client_id, subject_object_id=subject_object_id).first()
+                client_id=subject_client_id, object_id=subject_object_id).first()
 
             if (perspective and
                 (perspective.state == 'Published' or perspective.state == 'Limited access') and

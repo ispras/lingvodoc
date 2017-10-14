@@ -46,8 +46,8 @@ from lingvodoc.schema.gql_userblobs import (
 from lingvodoc.schema.gql_field import (
     Field,
     CreateField,
-    UpdateField,
-    DeleteField
+    # UpdateField,
+    # DeleteField
 )
 
 from lingvodoc.schema.gql_dictionary import (
@@ -1216,8 +1216,8 @@ class MyMutations(graphene.ObjectType):
     for more beautiful imports
     """
     create_field = CreateField.Field()
-    update_field = UpdateField.Field()
-    delete_field = DeleteField.Field()
+    # update_field = UpdateField.Field()
+    # delete_field = DeleteField.Field()
     create_entity = CreateEntity.Field()
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
