@@ -148,6 +148,17 @@ class CreateEntity(graphene.Mutation):
     -H "Content-Type: multipart/form-data" -F "blob=@белка.wav" -F 'query=mutation {
             create_entity(parent_id: [66, 69],  field_id:  [66,12] ) {entity{id, parent_id} triumph}}' http://localhost:6543/graphql
 
+    or
+    mutation  {
+    create_entity(parent_id: [66, 69], field_id: [66, 6], content: "test") {
+        entity {
+            created_at,
+	content
+        }
+
+    triumph
+    }
+    }
     """
     # Used for convenience
 
@@ -198,62 +209,62 @@ class CreateEntity(graphene.Mutation):
         #    return ResponseError(message = "Permission Denied (Entity)")
 
 
-# Update
-"""
-example #1:
-mutation  {
-    update_entity(id: [ 742, 5494], additional_metadata: {hash:"1234567"} ) {
-        entity {
-            created_at,
-            additional_metadata{
-            hash
+    # Update
+    """
+    example #1:
+    mutation  {
+        update_entity(id: [ 742, 5494], additional_metadata: {hash:"1234567"} ) {
+            entity {
+                created_at,
+                additional_metadata{
+                hash
+                }
             }
-        }
 
-    status
+        status
+        }
     }
-}
-example #2:
-mutation  {
-    update_entity(id: [ 742, 5494], additional_metadata: {hash:"12345"} ){status}
-}
-resolve:
-{
-    "update_entity": {
-        "status": true
+    example #2:
+    mutation  {
+        update_entity(id: [ 742, 5494], additional_metadata: {hash:"12345"} ){status}
     }
-}
-"""
-# Delete
-"""
-query:
-mutation  {
-    delete_entity(id: [879, 8]) {
-    entity{id, content, created_at}
-    status
+    resolve:
+    {
+        "update_entity": {
+            "status": true
+        }
     }
-}
-response:
-{
-    "delete_entity": {
-        "entity": {
-            "id": [
-                879,
-                8
-            ],
-            "content": "123",
-            "created_at": "2017-06-27T09:49:24"
-        },
-        "status": true
+    """
+    # Delete
+    """
+    query:
+    mutation  {
+        delete_entity(id: [879, 8]) {
+        entity{id, content, created_at}
+        status
+        }
     }
-}
-or
-{
-    "errors": [
-        "No such entity in the system"
-    ]
-}
-"""
+    response:
+    {
+        "delete_entity": {
+            "entity": {
+                "id": [
+                    879,
+                    8
+                ],
+                "content": "123",
+                "created_at": "2017-06-27T09:49:24"
+            },
+            "status": true
+        }
+    }
+    or
+    {
+        "errors": [
+            "No such entity in the system"
+        ]
+    }
+    """
 
 
 class UpdateEntity(graphene.Mutation):

@@ -701,7 +701,6 @@ def graphql(request):
                     variable_values = json_req["variables"]
             else:
                 for query in json_req:
-                    
                     if "query" not in query:
                         return {'error': 'query key not nound'}
                     request_string = query["query"]
@@ -715,6 +714,11 @@ def graphql(request):
                                                 'headers': request.headers,
                                                 'cookies': dict(request.cookies)}),
                                             variable_values=variable_values)
+                    if result.invalid:
+                        return {'errors': [str(e) for e in result.errors]}
+                    if result.errors:
+                        sp.rollback()
+                        return {'errors': [str(e) for e in result.errors]}
                     results.append(result.data)
                 # TODO: check errors
                 return {"data": results}
@@ -722,10 +726,6 @@ def graphql(request):
             request.response.status = HTTPBadRequest.code
             return {'error': 'wrong content type'}
         if not batch:
-            published = request.params.get('published')
-            if published is None:
-                published = False  # todo: use this
-
             result = schema.execute(request_string,
                                     context_value=Context({
                                         'client_id': client_id,
@@ -740,15 +740,18 @@ def graphql(request):
                 return {'errors': [str(e) for e in result.errors]}
             return {"data": result.data}
     except KeyError as e:
-        request.response.status = HTTPBadRequest.code
+        #request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
 
     except IntegrityError as e:
-        request.response.status = HTTPInternalServerError.code
+        #request.response.status = HTTPInternalServerError.code
         return {'error': str(e)}
 
     except CommonException as e:
-        request.response.status = HTTPConflict.code
+        #request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+    except ValueError as e:
+        #request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
 
