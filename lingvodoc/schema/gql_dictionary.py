@@ -336,8 +336,9 @@ class CreateDictionary(graphene.Mutation):
 
     @staticmethod
     def get_by_fake_id(fake_to_id, fake_id):
-        if fake_id in fake_to_id:
-            return fake_to_id[fake_id]
+        if not fake_id in fake_to_id:
+            raise  ResponseError(message="Fake ids do not match")
+        return fake_to_id[fake_id]
 
     @staticmethod
     @client_id_check()  # tested
