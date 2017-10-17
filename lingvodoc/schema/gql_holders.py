@@ -240,11 +240,15 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                 if type(cls.id) is int:
                     # example: (id: 1)
                     id = cls.id
-                    cls.dbObject = DBSession.query(cls.dbType).filter_by(id=id).one()
+                    cls.dbObject = DBSession.query(cls.dbType).filter_by(id=id).first()
+                    if cls.dbObject is None:
+                        raise ResponseError(message="%s was not found" % cls.__class__)
                 elif type(cls.id) is list:
                     # example: (id: [2,3])
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
-                                                                         object_id=cls.id[1]).one()
+                                                                         object_id=cls.id[1]).first()
+                    if cls.dbObject is None:
+                        raise ResponseError(message="%s was not found" % cls.__class__)
             if ACLSubject and '_' in ACLKey:
                 context.acl_check('view', ACLSubject,
                                   [getattr(cls.dbObject, ACLKey.replace('_', '_client_')),

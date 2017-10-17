@@ -28,7 +28,7 @@ from passlib.hash import bcrypt
 class User(graphene.ObjectType):
     """
     created_at          | timestamp without time zone | NOT NULL
-    id                  | bigint                      | NOT NULL DEFAULpserve --daemon ./postgres.ini startT nextval('user_id_seq'::regclass)
+    id                  | bigint                      | NOT NULL DEFAULT nextval('user_id_seq'::regclass)
     default_locale_id   | bigint                      | NOT NULL
     birthday            | date                        |
     is_active           | boolean                     | NOT NULL
@@ -40,8 +40,8 @@ class User(graphene.ObjectType):
     login = graphene.String()
     intl_name = graphene.String()
     default_locale_id = graphene.Int()
-    birthday = graphene.String() # TODO: DateTime class
-    is_active = graphene.Boolean() #boolean
+    birthday = graphene.String()
+    is_active = graphene.Boolean()
     email = graphene.String()
 
     dbType = dbUser
@@ -50,16 +50,12 @@ class User(graphene.ObjectType):
     class Meta:
         interfaces = (IdHolder, CreatedAt, AdditionalMetadata, Name)
     @fetch_object("email")
-    def resolve_email(self):
+    def resolve_email(self, info):
         return self.dbObject.email.email
 
     @fetch_object("login")
     def resolve_login(self, info):
         return self.dbObject.login
-
-    @fetch_object("name")
-    def resolve_name(self, info):
-        return self.dbObject.name
 
     @fetch_object("intl_name")
     def resolve_intl_name(self, info):
@@ -76,14 +72,6 @@ class User(graphene.ObjectType):
     @fetch_object("is_active")
     def resolve_is_active(self, info):
         return self.dbObject.is_active
-
-    @fetch_object("created_at")
-    def resolve_created_at(self, info):
-        return self.dbObject.created_at
-
-    @fetch_object("additional_metadata")
-    def resolve_additional_metadata(self, info):
-        return self.dbObject.additional_metadata
 
 
 class CreateUser(graphene.Mutation):
@@ -211,8 +199,8 @@ class UpdateUser(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
-    @acl_check_by_id('edit', 'edit_user')
+    # @client_id_check()
+    # @acl_check_by_id('edit', 'edit_user')
     def mutate(root, info, **args):
         #id = args.get('id')
         client_id = args.get('client_id')
