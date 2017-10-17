@@ -60,6 +60,9 @@ trait PerspectivePhonologyModalScope extends Scope
 
   /** Number of selected markup tiers. */
   var selected_tier_count: Int = js.native
+
+  /** If we should include automatically generated markup. */
+  var use_automatic_markup: Boolean = js.native
 }
 
 
@@ -99,6 +102,9 @@ class PerspectivePhonologyModalController(
 
   scope.selected_tiers = js.Dictionary[String]()
   scope.selected_tier_count = 0
+
+  /* By default we do not use automatic markup. */
+  scope.use_automatic_markup = false
 
   /** Enables or disables tier choice selection. */
   @JSExport
@@ -174,6 +180,7 @@ class PerspectivePhonologyModalController(
     backend.phonology(perspectiveId,
       scope.group_by_description,
       scope.translation_choice == "first",
+      scope.use_automatic_markup,
       scope.source == "selected",
       maybe_tier_list)
     

@@ -2084,6 +2084,7 @@ class BackendService($http: HttpService, val timeout: Timeout, rootScope: RootSc
     perspectiveId: CompositeId,
     group_by_description: Boolean,
     only_first_translation: Boolean,
+    use_automatic_markup: Boolean,
     vowel_selection: Boolean,
     maybe_tier_list: Option[Seq[String]]):
     Future[Unit] =
@@ -2097,6 +2098,7 @@ class BackendService($http: HttpService, val timeout: Timeout, rootScope: RootSc
         "perspective_object_id" -> perspectiveId.objectId,
         "group_by_description" -> group_by_description,
         "only_first_translation" -> only_first_translation,
+        "use_automatic_markup" -> use_automatic_markup,
         "vowel_selection" -> vowel_selection,
 
         "maybe_tier_list" -> (maybe_tier_list
@@ -2778,6 +2780,50 @@ class BackendService($http: HttpService, val timeout: Timeout, rootScope: RootSc
 
       case Failure(e) => p.failure(BackendException(
         "Failed to launch sound/markup archive generation: " + e.getMessage, e))
+    }
+
+    p.future
+  }
+
+  /** Automatic markup recognition request. */
+  def markup_recognition(
+    perspectiveId: CompositeId): Future[Unit] =
+  {
+    val p = Promise[Unit]
+
+    val url = s"""markup_recognition?
+      |perspective_client_id=${perspectiveId.clientId}&
+      |perspective_object_id=${perspectiveId.objectId}
+      |""".stripMargin.replaceAll("\n", "")
+
+    $http.get[js.Dynamic](url) onComplete
+    {
+      case Success(response) =>
+
+        try
+        {
+          if (response.asInstanceOf[js.Object].hasOwnProperty("error"))
+
+            p.failure(new BackendException(
+              "Error while launching automatic markup recognition:\n" + response.error))
+
+          else p.success(())
+        }
+
+        catch
+        {
+          case e: upickle.Invalid.Json => p.failure(
+            BackendException("Malformed json", e))
+
+          case e: upickle.Invalid.Data => p.failure(
+            BackendException("Malformed data. Missing some required fields", e))
+
+          case e: Throwable => p.failure(
+            BackendException("Unknown exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException(
+        "Failed to launch automatic markup recognition: " + e.getMessage, e))
     }
 
     p.future

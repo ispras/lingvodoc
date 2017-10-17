@@ -18,6 +18,8 @@ import scala.util.{Failure, Success}
 
 /* Lingovodoc imports. */
 
+import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
+
 import ru.ispras.lingvodoc.frontend.app.controllers.common.Value
 import ru.ispras.lingvodoc.frontend.app.model.CompositeId
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
@@ -113,8 +115,70 @@ trait Tools extends ErrorModalHandler
 
         modal.open[Unit](options)
     }
-    
+
     .recover { case e: Throwable => Future.failed(e) }
+  }
+
+  /** Launches background task of automatic markup recognition. */
+  @JSExport
+  def markup_recognition(): Unit =
+  {
+    backend.markup_recognition(perspectiveId)
+
+    .map {
+      result =>
+
+        /* Showing a message about successfully launched automatic markup recognition. */
+
+        val options = ModalOptions()
+
+        options.templateUrl = "/static/templates/modal/message.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "MessageController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              "title" -> "",
+              "message" -> "Automatic markup recognition in process. Check tasks menu for details."
+            )
+          }
+        ).asInstanceOf[js.Dictionary[Any]]
+
+        modal.open[Unit](options)
+    }
+
+    .recover {
+      case e: BackendException =>
+
+        /* If we failed to launch automatic markup recognition, we show why. */
+
+        val options = ModalOptions()
+
+        options.templateUrl = "/static/templates/modal/message.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "MessageController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              "title" -> "Failed to launch automatic markup recognition",
+              "message" -> e.message
+            )
+          }
+        ).asInstanceOf[js.Dictionary[Any]]
+
+        modal.open[Unit](options)
+        Future.failed(e)
+
+      case e: Throwable => Future.failed(e)
+    }
   }
 }
 

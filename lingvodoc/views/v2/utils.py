@@ -680,13 +680,15 @@ def unimplemented():
     return '{0}:{1}: {2}: Unimplemented.'.format(filename, line, function)
 
 
-def message(message):
+def message(message = None):
     """
     Formats message with filename, line number and function name info.
     """
 
     filename, line, function, statement = traceback.extract_stack()[-2]
-    return '{0}:{1}: {2}: {3}'.format(filename, line, function, message)
+
+    return ('{0}:{1}: {2}'.format(filename, line, function) if message is None else
+        '{0}:{1}: {2}: {3}'.format(filename, line, function, message))
 
 
 def anonymous_userid(request):
@@ -701,21 +703,42 @@ def anonymous_userid(request):
     return base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
 
 
+storage_url_prefix = 'http://lingvodoc.ispras.ru/objects/'
+
+
+def storage_file_path(storage_config, url):
+    """
+    Given a URL of a file from storage, tries to find it as a file from local storage.
+    """
+
+    the_prefix = None
+
+    if url.startswith(storage_config['prefix']):
+        the_prefix = storage_config['prefix']
+
+    elif url.startswith(storage_url_prefix):
+        the_prefix = storage_url_prefix
+
+    if the_prefix is not None:
+
+        storage_file_path = os.path.join(
+            storage_config['path'], url[len(the_prefix):])
+
+        if os.path.exists(storage_file_path):
+            return storage_file_path
+
+    return None
+
 def storage_file(storage_config, url):
     """
     Given a URL of a file from storage, first tries to open it as a file from local storage, and
     then as a download stream.
     """
 
-    storage_url_prefix = 'http://lingvodoc.ispras.ru/objects/'
+    file_path = storage_file_path(storage_config, url)
 
-    if url.startswith(storage_url_prefix):
-
-        storage_file_path = os.path.join('/root/lingvodoc-extra/backend_storage',
-            url[len(storage_url_prefix):])
-
-        if os.path.exists(storage_file_path):
-            return open(storage_file_path, 'rb')
+    if file_path is not None:
+        return open(file_path, 'rb')
 
     return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
 

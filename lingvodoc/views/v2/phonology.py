@@ -10,12 +10,16 @@ import io
 import itertools
 import logging
 import math
+
+import os
 from os import makedirs, path
+
 import pprint
 import re
 from shutil import copyfileobj
 import sndhdr
 import string
+import sys
 import tempfile
 from time import time
 import traceback
@@ -33,7 +37,7 @@ from celery.utils.log import get_task_logger
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg', warn = False)
 
 import matplotlib.pyplot as pyplot
 from mpl_toolkits.mplot3d import Axes3D
@@ -172,7 +176,7 @@ def get_gaussian_window(window_size):
     middle = float(window_size + 1) / 2
     edge = math.exp(-12)
     edge_one_minus = 1.0 - edge
-    
+
     window_list = [
         (math.exp(-48 * ((i - middle) / (window_size + 1)) ** 2) - edge) / edge_one_minus
             for i in range(1, window_size + 1)]
@@ -222,6 +226,99 @@ def burg(sample_list, coefficient_number):
     return a0, coefficient_list
 
 
+def compute_formants(sample_list, nyquist_frequency):
+    """
+    Computes formants of an audio sample.
+    """
+
+    sample_list = [sample * weight
+        for sample, weight in zip(sample_list,
+            get_gaussian_window(len(sample_list)))]
+
+    # Computing Linear Prediction coefficients via Burg method, number of coefficients is twice the
+    # number of formants we want to detect (hence 2 * 5 = 10).
+    #
+    # These coefficients a[0], a[1], ... a[10] are coefficients of a polynomial 1 - a[1] * x -
+    # a[1] * x^2 - ... - a[10] * x^10 of degree 10 defined on [-1, 1], which is a so-called
+    # characteristic polynomial, see https://en.wikipedia.org/wiki/Autoregressive_model. We then find
+    # the roots of this polynomial.
+
+    a0, coefficient_list = burg(sample_list, 10)
+
+    polynomial = numpy.polynomial.Polynomial([1.0] + [-c for c in coefficient_list])
+    root_list = polynomial.roots()
+
+    # Finding better root approximations via Newton-Raphson iteration (see https://en.wikipedia.org/
+    # wiki/Newton's_method).
+    #
+    # NOTE: profiling shows that instead of using numpy's polynomial evaluation a la 'polynomial(
+    # root_list[0])' it is better to use our own Horner's method implementation.
+
+    polynomial_list = [-c for c in reversed(coefficient_list)] + [1.0]
+    derivative_list = [c * (10 - i) for i, c in enumerate(polynomial_list)]
+
+    def evaluate(c_list, value):
+        result = 0.0
+
+        for c in c_list:
+            result = result * value + c
+
+        return result
+
+    better_root_list = []
+    better_root_index = 0
+
+    # Processing all roots.
+
+    while better_root_index < len(root_list):
+
+        previous = root_list[better_root_index]
+        previous_delta = abs(evaluate(polynomial_list, previous))
+
+        current = previous - evaluate(polynomial_list, previous) / evaluate(derivative_list, previous)
+        current_delta = abs(evaluate(polynomial_list, current))
+
+        while current_delta < previous_delta:
+
+            previous = current
+            previous_delta = current_delta
+
+            current = previous - evaluate(polynomial_list, previous) / evaluate(derivative_list, previous)
+            current_delta = abs(evaluate(polynomial_list, current))
+
+        # If it is a complex root, the next one is just its complex conjugate.
+
+        better_root_list.append(previous)
+        better_root_index += 1
+
+        if abs(previous.imag) > 0:
+
+            better_root_list.append(previous.conjugate())
+            better_root_index += 1
+
+    # Moving all roots into the unit circle. If a root is outside, we replace it with reciprocal of its
+    # conjugate, reflecting it about the real line and projecting it inside the unit circle. Then we
+    # find formants by looking at roots above the real line.
+
+    formant_list = []
+
+    for root in better_root_list:
+
+        if abs(root) > 1.0:
+            root = 1.0 / root.conjugate()
+
+        if root.imag >= 0:
+            frequency = abs(math.atan2(root.imag, root.real)) * nyquist_frequency / math.pi
+
+            if frequency >= 50 and frequency <= nyquist_frequency - 50:
+                formant_list.append(frequency)
+
+    # Returning computed formants, from lowest to highest.
+
+    formant_list.sort()
+    return formant_list
+
+
 class AudioPraatLike(object):
     """
     Allows computations of sound intensity and formants using algorithms mimicking as close as possible
@@ -238,7 +335,7 @@ class AudioPraatLike(object):
         # 16.04 is set to 75 Hz, corresponding to 3.2/75 ≈ 0.04267 s.
         #
         # We set intensity window size to 0.05, corresponding to Praat's minimum pitch of 3.2/0.05 = 64 Hz.
-        # 
+        #
         # Intensity series time step is set to 0.8/minimum_pitch, which with minimum pitch of 64 Hz is
         # 0.8/64 = 0.0125.
         #
@@ -382,7 +479,7 @@ class AudioPraatLike(object):
 
         self.formant_list = [None for i in range(self.formant_step_count)]
 
-    def init_formant_fft(self):
+    def init_formant_fft(self, padding_length = None):
         """
         Initializes formant computation data using FFT-based resampling computed via numpy.
         """
@@ -391,12 +488,18 @@ class AudioPraatLike(object):
         channel_count = self.intensity_sound.channels
         frame_count = int(self.intensity_sound.frame_count())
 
-        padding = min(1000, frame_count // 16)
+        if padding_length is None:
+            padding = min(1000, frame_count // 16)
+
+        else:
+            padding = max(
+                min(1000, frame_count // 16),
+                int(math.floor(padding_length * self.intensity_sound.frame_rate)))
+
         source_count = frame_count + 2 * padding
         factor = float(self.formant_frame_rate) / self.intensity_sound.frame_rate
 
         resample_count = int(math.floor(factor * source_count))
-        resample_padding = int(math.ceil(factor * padding))
 
         # Fourier transform is linear, so we first average over channels and then resample using FFT.
 
@@ -422,7 +525,14 @@ class AudioPraatLike(object):
                     sample_array[i * channel_count + j]
                       for j in range(channel_count)) / channel_count
 
+        # Getting resampled waveform.
+
         sample_list = numpy.fft.irfft(numpy.fft.rfft(source_list), resample_count)
+
+        self.padding = padding
+        self.padding_length = float(padding) / self.intensity_sound.frame_rate
+
+        self.formant_padding = int(math.floor(padding * factor))
 
         # NOTE: we have to manually clear rfft's cache because otherwise it will grow indefinitely while
         # processing many series of different lengths.
@@ -473,95 +583,13 @@ class AudioPraatLike(object):
 
         # No, we haven't, so we are going to compute it.
 
-        window_list = get_gaussian_window(self.formant_window_size)
         sample_from = (step_index - 4) * self.formant_step_size
 
         sample_list = [
-            self.formant_sample_list[sample_from + i] * window_list[i]
+            self.formant_sample_list[sample_from + i]
                 for i in range(self.formant_window_size)]
 
-        # Computing Linear Prediction coefficients via Burg method, number of coefficients is twice the
-        # number of formants we want to detect (hence 2 * 5 = 10).
-        #
-        # These coefficients a[0], a[1], ... a[10] are coefficients of a polynomial 1 - a[1] * x -
-        # a[1] * x^2 - ... - a[10] * x^10 of degree 10 defined on [-1, 1], which is a so-called
-        # characteristic polynomial, see https://en.wikipedia.org/wiki/Autoregressive_model. We then find
-        # the roots of this polynomial.
-
-        a0, coefficient_list = burg(sample_list, 10)
-
-        polynomial = numpy.polynomial.Polynomial([1.0] + [-c for c in coefficient_list])
-        root_list = polynomial.roots()
-
-        # Finding better root approximations via Newton-Raphson iteration (see https://en.wikipedia.org/
-        # wiki/Newton's_method.
-        #
-        # NOTE: profiling shows that instead of using numpy's polynomial evaluation a la 'polynomial(
-        # root_list[0])' it is better to use our own Horner's method implementation.
-
-        polynomial_list = [-c for c in reversed(coefficient_list)] + [1.0]
-        derivative_list = [c * (10 - i) for i, c in enumerate(polynomial_list)]
-
-        def evaluate(c_list, value):
-            result = 0.0
-
-            for c in c_list:
-                result = result * value + c
-
-            return result
-
-        better_root_list = []
-        better_root_index = 0
-
-        # Processing all roots.
-
-        while better_root_index < len(root_list):
-
-            previous = root_list[better_root_index]
-            previous_delta = abs(evaluate(polynomial_list, previous))
-
-            current = previous - evaluate(polynomial_list, previous) / evaluate(derivative_list, previous)
-            current_delta = abs(evaluate(polynomial_list, current))
-
-            while current_delta < previous_delta:
-
-                previous = current
-                previous_delta = current_delta
-
-                current = previous - evaluate(polynomial_list, previous) / evaluate(derivative_list, previous)
-                current_delta = abs(evaluate(polynomial_list, current))
-
-            # If it is a complex root, the next one is just its complex conjugate.
-
-            better_root_list.append(previous)
-            better_root_index += 1
-
-            if abs(previous.imag) > 0:
-
-                better_root_list.append(previous.conjugate())
-                better_root_index += 1
-
-        # Moving all roots into the unit circle. If a root is outside, we replace it with reciprocal of its
-        # conjugate, reflecting it about the real line and projecting it inside the unit circle. Then we
-        # find formants by looking at roots above the real line.
-
-        nyquist_frequency = self.formant_frame_rate * 0.5
-        formant_list = []
-
-        for root in better_root_list:
-
-            if abs(root) > 1.0:
-                root = 1.0 / root.conjugate()
-
-            if root.imag >= 0:
-                frequency = abs(math.atan2(root.imag, root.real)) * nyquist_frequency / math.pi
-
-                if frequency >= 50 and frequency <= nyquist_frequency - 50:
-                    formant_list.append(frequency)
-
-        # Memoizing and returning first three formants.
-
-        formant_list.sort()
+        formant_list = compute_formants(sample_list, self.formant_frame_rate * 0.5)
         self.formant_list[step_index] = formant_list[:3]
 
         return formant_list[:3]
@@ -581,8 +609,12 @@ class AudioPraatLike(object):
 
         factor = self.formant_frame_rate / self.formant_step_size
 
-        begin_step = max(4, int(math.ceil(begin * factor)))
-        end_step = min(self.formant_step_count - 5, int(math.floor(end * factor)))
+        begin_step = max(4,
+            int(math.ceil((begin + self.padding_length) * factor)))
+
+        end_step = min(
+            self.formant_step_count - 5,
+            int(math.floor((end + self.padding_length) * factor)))
 
         # Getting point formant values.
 
@@ -866,7 +898,7 @@ def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
             del raw_interval_seq_list[-1]
 
         # Selecting interval sequences for analysis, checking if we have unusual markup.
-        
+
         interval_seq_list = []
         interval_idx_to_raw_idx = dict()
 
@@ -1069,7 +1101,7 @@ def process_sound(tier_data_list, sound, translation_list = []):
 
             total_interval_length = sum(end - begin
                 for raw_index, (begin, end, text) in raw_interval_list)
-            
+
             mean_interval_length = total_interval_length / len(raw_interval_list)
 
             # Preparing interval data.
@@ -1086,7 +1118,7 @@ def process_sound(tier_data_list, sound, translation_list = []):
                     raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
 
             str_list = [
-                    
+
                 '{0} {1:.3f} {2:.3f} [{3}]'.format(
                     text, end_sec - begin_sec, intensity,
                     len(''.join(text for raw_index, (begin, end, text) in
@@ -1135,7 +1167,7 @@ def format_textgrid_result(group_list, textgrid_result_list):
     return '\n'.join(
         ['groups: {0}'.format(group_list)] +
         ['tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
-            
+
             tier_result_list if not isinstance(tier_result_list, list) else
             tier_result_list[0].format() if len(tier_result_list) <= 1 else
             ''.join('\n{0}'.format(tier_result.format()) for tier_result in tier_result_list))
@@ -1824,7 +1856,7 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
 
                     phi = numpy.linspace(0, 2 * numpy.pi, 100)
                     theta = numpy.linspace(0, numpy.pi, 100)
-                    
+
                     # Getting scaling and rotation matrices from ellipsoid definition matrix Sigma^{-1}
                     # by decomposing it via singular value decomposition.
 
@@ -1970,6 +2002,7 @@ def phonology(request):
         perspective_client_id
         perspective_object_id
         synchronous
+        use_automatic_markup
         vowel_selection
     """
 
@@ -1985,6 +2018,7 @@ def phonology(request):
 
             group_by_description = 'group_by_description' in request.params
             only_first_translation = 'only_first_translation' in request.params
+            use_automatic_markup = 'use_automatic_markup' in request.params
             vowel_selection = 'vowel_selection' in request.params
 
             maybe_tier_list = None
@@ -2000,6 +2034,7 @@ def phonology(request):
 
             group_by_description = request_json.get('group_by_description')
             only_first_translation = request_json.get('only_first_translation')
+            use_automatic_markup = request_json.get('use_automatic_markup')
             vowel_selection = request_json.get('vowel_selection')
 
             maybe_tier_list = request_json.get('maybe_tier_list')
@@ -2007,9 +2042,9 @@ def phonology(request):
 
         # Indicating that we are starting to process phonology request.
 
-        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}'.format(
+        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}'.format(
             perspective_cid, perspective_oid,
-            group_by_description, vowel_selection, only_first_translation,
+            group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
             maybe_tier_list))
 
         # Getting perspective and perspective's dictionary info.
@@ -2067,16 +2102,18 @@ def phonology(request):
         request.response.status = HTTPOk.code
 
         task_key = task_status.key
-        cache_kwargs = request.registry.settings["cache_kwargs"]
-        sqlalchemy_url = request.registry.settings["sqlalchemy.url"]
-        storage = request.registry.settings["storage"]
+
+        cache_kwargs = request.registry.settings['cache_kwargs']
+        sqlalchemy_url = request.registry.settings['sqlalchemy.url']
+        storage = request.registry.settings['storage']
 
         return (std_phonology if 'synchronous' in request.params else async_phonology.delay)(
             task_key,
             perspective_cid, perspective_oid,
             dictionary_name, perspective_name,
             cache_kwargs, storage,
-            group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
+            group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
+            maybe_tier_set,
             limit, limit_exception, limit_no_vowel, limit_result,
             sqlalchemy_url)
 
@@ -2103,7 +2140,8 @@ def std_phonology(
     perspective_cid, perspective_oid,
     dictionary_name, perspective_name,
     cache_kwargs, storage,
-    group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
+    group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
+    maybe_tier_set,
     limit, limit_exception, limit_no_vowel, limit_result,
     sqlalchemy_url):
     """
@@ -2116,7 +2154,8 @@ def std_phonology(
         return perform_phonology(
             perspective_cid, perspective_oid,
             dictionary_name, perspective_name,
-            group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
+            group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
+            maybe_tier_set,
             limit, limit_exception, limit_no_vowel, limit_result,
             task_status, storage)
 
@@ -2142,7 +2181,8 @@ def async_phonology(
     perspective_cid, perspective_oid,
     dictionary_name, perspective_name,
     cache_kwargs, storage,
-    group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
+    group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
+    maybe_tier_set,
     limit, limit_exception, limit_no_vowel, limit_result,
     sqlalchemy_url):
     """
@@ -2168,7 +2208,8 @@ def async_phonology(
             return perform_phonology(
                 perspective_cid, perspective_oid,
                 dictionary_name, perspective_name,
-                group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
+                group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
+                maybe_tier_set,
                 limit, limit_exception, limit_no_vowel, limit_result,
                 task_status, storage)
 
@@ -2191,7 +2232,8 @@ def async_phonology(
 def perform_phonology(
     perspective_cid, perspective_oid,
     dictionary_name, perspective_name,
-    group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
+    group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
+    maybe_tier_set,
     limit, limit_exception, limit_no_vowel, limit_result,
     task_status, storage):
     """
@@ -2200,12 +2242,14 @@ def perform_phonology(
 
     log.debug('phonology {0}/{1}:'
         '\n  dictionary_name: \'{2}\'\n  perspective_name: \'{3}\''
-        '\n  group_by_description: {4}\n  vowel_selection: {5}\n  only_first_translation: {6}'
-        '\n  maybe_tier_set: {7}'
-        '\n  limit: {8}\n  limit_exception: {9}\n  limit_no_vowel: {10}\n  limit_result: {11}'.format(
+        '\n  group_by_description: {4}\n  vowel_selection: {5}'
+        '\n  only_first_translation: {6}\n  use_automatic_markup: {7}'
+        '\n  maybe_tier_set: {8}'
+        '\n  limit: {9}\n  limit_exception: {10}\n  limit_no_vowel: {11}\n  limit_result: {12}'.format(
         perspective_cid, perspective_oid,
         dictionary_name, perspective_name,
-        group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
+        group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
+        maybe_tier_set,
         limit, limit_exception, limit_no_vowel, limit_result))
 
     task_status.set(1, 0, 'Preparing')
@@ -2304,16 +2348,22 @@ def perform_phonology(
     result_list = list()
     result_group_set = set()
 
-    for index, row in enumerate(data_query.yield_per(100)):
+    # Skipping automatic markup, if required.
+
+    for index, row in enumerate(row
+        for row in data_query.yield_per(100)
+        if use_automatic_markup or 'amr' not in row.Markup.additional_metadata):
 
         markup_url = row.Markup.content
         sound_url = row.Sound.content
 
-        row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(
+        row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6}{7})'.format(
             index,
             row.LexicalEntry.client_id, row.LexicalEntry.object_id,
             row.Sound.client_id, row.Sound.object_id,
-            row.Markup.client_id, row.Markup.object_id)
+            row.Markup.client_id, row.Markup.object_id,
+            '' if 'amr' not in row.Markup.additional_metadata else
+                ' [auto/{0}]'.format(row.Markup.additional_metadata['amr']))
 
         cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
             row.Sound.client_id, row.Sound.object_id,
@@ -2493,14 +2543,17 @@ def perform_phonology(
             # Otherwise we retrieve the sound file and analyze each vowel-containing markup.
             # Partially inspired by source code at scripts/convert_five_tiers.py:307.
 
-            sound = None
-            with tempfile.NamedTemporaryFile() as temp_file:
+            extension = path.splitext(
+                urllib.parse.urlparse(sound_url).path)[1]
 
-                with urllib.request.urlopen(urllib.parse.quote(sound_url, safe = '/:')) as sound_stream:
+            sound = None
+            with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
+
+                with storage_file(storage, sound_url) as sound_stream:
                     temp_file.write(sound_stream.read())
                     temp_file.flush()
 
-                sound = AudioPraatLike(pydub.AudioSegment.from_wav(temp_file.name))
+                sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
 
             textgrid_result_list = process_sound(tier_data_list, sound,
                 row[3][:1] if only_first_translation else row[3])
@@ -2636,7 +2689,7 @@ def perform_phonology(
     table_filename = sanitize_filename(result_filename + '.xlsx')
 
     cur_time = time()
-    storage_dir = path.join(storage["path"], "phonology", str(cur_time))
+    storage_dir = path.join(storage['path'], 'phonology', str(cur_time))
     makedirs(storage_dir, exist_ok = True)
 
     # Storing file with the results.
@@ -2696,10 +2749,10 @@ def perform_phonology(
 
     url_list = [
 
-        "".join([
-            storage["prefix"],
-            storage["static_route"],
-            "phonology", '/',
+        ''.join([
+            storage['prefix'],
+            storage['static_route'],
+            'phonology', '/',
             str(cur_time), '/',
             filename])
 
@@ -2857,7 +2910,7 @@ def phonology_tier_list(request):
 @view_config(route_name = 'sound_and_markup', renderer = 'json')
 def sound_and_markup(request):
     """
-    Gets a list of names of phonology markup tiers for a specified perspective.
+    Compiles archive of sound recordings and corresponding markups for a specified perspective.
 
     Perspective is specified by URL parameters 'perspective_client_id' and 'perspective_object_id'.
 
@@ -2916,9 +2969,10 @@ def sound_and_markup(request):
         request.response.status = HTTPOk.code
 
         task_key = task_status.key
-        cache_kwargs = request.registry.settings["cache_kwargs"]
-        sqlalchemy_url = request.registry.settings["sqlalchemy.url"]
-        storage = request.registry.settings["storage"]
+
+        cache_kwargs = request.registry.settings['cache_kwargs']
+        sqlalchemy_url = request.registry.settings['sqlalchemy.url']
+        storage = request.registry.settings['storage']
 
         return (std_sound_and_markup if 'synchronous' in request.params else async_sound_and_markup.delay)(
             task_key,
@@ -3023,6 +3077,61 @@ def async_sound_and_markup(
             return {'error': 'external error'}
 
 
+def entity_filename_date(entity, translation):
+    """
+    Produces archive filename and archive timestamp for a sound or markup file from its entity.
+    """
+
+    url_path = urllib.parse.urlparse(entity.content).path
+
+    filename = path.basename(url_path)
+    extension = path.splitext(url_path)[1]
+
+    name = sanitize_filename('{0}_{1}_{2}'.format(
+        entity.client_id, entity.object_id,
+        '{0}{1}'.format(translation[:32], extension[:32]) if translation else filename))
+
+    date = datetime.datetime.utcfromtimestamp(entity.created_at)
+    return name, (date.year, date.month, date.day, date.hour, date.minute, date.second)
+
+
+def get_sound_markup_bytes(storage, sound_url, markup_url):
+    """
+    Tries to get sound and markup file data, checks if sound and markup files were swapped.
+    """
+
+    with storage_file(storage, sound_url) as sound_stream:
+        sound_bytes = sound_stream.read()
+
+    with storage_file(storage, markup_url) as markup_stream:
+        markup_bytes = markup_stream.read()
+
+    # Checking if we have a valid TextGrid markup.
+
+    try:
+
+        textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+        textgrid.from_file(
+            io.BytesIO(markup_bytes),
+            codec = chardet.detect(markup_bytes)['encoding'])
+
+        return sound_bytes, markup_bytes
+
+    except:
+
+        # If we failed to parse TextGrid markup, we assume that sound and markup files were
+        # accidentally swapped and try again.
+
+        textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+        textgrid.from_file(
+            io.BytesIO(sound_bytes),
+            codec = chardet.detect(sound_bytes)['encoding'])
+
+        return markup_bytes, sound_bytes
+
+
 def perform_sound_and_markup(
     perspective_cid, perspective_oid, published_mode,
     dictionary_name, perspective_name,
@@ -3048,9 +3157,9 @@ def perform_sound_and_markup(
 
     field = data_type_query.filter(
         TranslationAtom.locale_id == 2,
-        TranslationAtom.content == 'Translation').one()
+        TranslationAtom.content == 'Translation').first()
 
-    log.debug('translation field: ' + 
+    log.debug('translation field: ' +
         ('None' if not field else '{0}/{1}'.format(field.client_id, field.object_id)))
 
     # Getting ready to gather list of currently available sound/markup pairs.
@@ -3142,62 +3251,9 @@ def perform_sound_and_markup(
     makedirs(storage_dir, exist_ok = True)
 
     archive_name = sanitize_filename(
-        '{0} - {1}.zip'.format(dictionary_name, perspective_name))
+        '{0} - {1}.zip'.format(dictionary_name[:64], perspective_name[:64]))
 
     archive_path = path.join(storage_dir, archive_name)
-
-    def entity_filename_date(entity, translation):
-        """
-        Produces archive filename and archive timestamp for a sound or markup file from its entity.
-        """
-
-        url_path = urllib.parse.urlparse(entity.content).path
-
-        filename = path.basename(url_path)
-        extension = path.splitext(url_path)[1]
-
-        name = sanitize_filename('{0}_{1}_{2}'.format(
-            entity.client_id, entity.object_id,
-            '{0}{1}'.format(translation, extension) if translation else filename))
-
-        date = datetime.datetime.utcfromtimestamp(entity.created_at)
-        return name, (date.year, date.month, date.day, date.hour, date.minute, date.second)
-
-    def get_sound_markup_bytes(sound_url, markup_url):
-        """
-        Tries to get sound and markup file data, checks if sound and markup files were swapped.
-        """
-
-        with storage_file(storage, sound_url) as sound_stream:
-            sound_bytes = sound_stream.read()
-
-        with storage_file(storage, markup_url) as markup_stream:
-            markup_bytes = markup_stream.read()
-
-        # Checking if we have a valid TextGrid markup.
-
-        try:
-
-            textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-            textgrid.from_file(
-                io.BytesIO(markup_bytes),
-                codec = chardet.detect(markup_bytes)['encoding'])
-
-            return sound_bytes, markup_bytes
-
-        except:
-
-            # If we failed to parse TextGrid markup, we assume that sound and markup files were
-            # accidentally swapped and try again.
-
-            textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-            textgrid.from_file(
-                io.BytesIO(sound_bytes),
-                codec = chardet.detect(sound_bytes)['encoding'])
-
-            return markup_bytes, sound_bytes
 
     if not path.exists(archive_path):
 
@@ -3227,7 +3283,8 @@ def perform_sound_and_markup(
                 # Getting sound and markup data.
 
                 try:
-                    sound_bytes, markup_bytes = get_sound_markup_bytes(sound_url, markup_url)
+                    sound_bytes, markup_bytes = get_sound_markup_bytes(
+                        storage, sound_url, markup_url)
 
                 # If we failed to get sound/markup data, we report why and go on to the next
                 # sound/markup pair.
@@ -3349,7 +3406,8 @@ def perform_sound_and_markup(
                     # Getting sound and markup data.
 
                     try:
-                        sound_bytes, markup_bytes = get_sound_markup_bytes(sound_url, markup_url)
+                        sound_bytes, markup_bytes = get_sound_markup_bytes(
+                            storage, sound_url, markup_url)
 
                     # If we failed to get sound/markup data, we report why and go on to the next
                     # sound/markup pair.
@@ -3418,7 +3476,8 @@ def perform_sound_and_markup(
                     # Getting sound and markup data.
 
                     try:
-                        sound_bytes, markup_bytes = get_sound_markup_bytes(sound_url, markup_url)
+                        sound_bytes, markup_bytes = get_sound_markup_bytes(
+                            storage, sound_url, markup_url)
 
                     # If we failed to get sound/markup data, we report why and go on to the next
                     # sound/markup pair.
@@ -3487,7 +3546,7 @@ def cpu_time(reference_cpu_time = 0.0):
     return sum(os.times()[:4]) - reference_cpu_time
 
 
-def test_alpha():
+def main_test_alpha(args):
     """
     Tests that intensity and formant computation works.
     """
@@ -3558,7 +3617,7 @@ def test_alpha():
     print(sound.get_interval_formants(begin, end))
 
 
-def test_profile():
+def main_test_profile(args):
     """
     Tests large amount of intensity/formant computation for profiling.
     """
@@ -3662,7 +3721,7 @@ def test_profile():
 
             result_string = '\n'.join(
                 'tier {0} \'{1}\': {2}'.format(tier_number, tier_name,
-                    
+
                     tier_result_list if not isinstance(tier_result_list, list) else
                     tier_result_list[0] if len(tier_result_list) <= 1 else
                     ''.join('\n  {0}'.format(tier_result) for tier_result in tier_result_list))
@@ -3734,7 +3793,7 @@ def test_profile():
         total_elapsed_cpu_time / total_pair_count))
 
 
-def main_praat_escape():
+def main_praat_escape(args):
     """
     Extracts data of valid character escape sequences from Praat sources (at the moment source files
     kar/UnicodeData.h, kar/longchar.cpp), constructs regular expression replacer, checks that it works.
@@ -3812,6 +3871,21 @@ def main_praat_escape():
 
 # Some additional local computations.
 
+command_dict = {
+    'praat_escape': main_praat_escape,
+    'test_alpha': main_test_alpha,
+    'test_profile': main_test_profile}
+
 if __name__ == '__main__':
-    main_praat_escape()
+
+    if len(sys.argv) > 1:
+
+        if sys.argv[1] in command_dict:
+            command_dict[sys.argv[1]](sys.argv[2:])
+
+        else:
+            print('Unknown command \'{0}\'.'.format(sys.argv[1]))
+
+    else:
+        print('Please specify command to execute.')
 

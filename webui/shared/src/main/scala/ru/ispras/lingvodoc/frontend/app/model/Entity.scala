@@ -27,7 +27,7 @@ case class Entity(override val clientId: Int,
                  ) extends Object(clientId, objectId) {
 
   var entities: js.Array[Entity] = js.Array()
-  var metadata: js.Array[MetaData] = js.Array()
+  var metadata: js.Dictionary[Any] = js.Dictionary[Any]()
   var link: Option[Link] = None
 }
 
@@ -117,6 +117,11 @@ object Entity {
             case _ => false
           }
 
+          val meta: js.Dictionary[Any] = jsVal.value.find(_._1 == "additional_metadata") match {
+            case Some(metadata) => js.Dictionary[Any](metadata._2.obj.toSeq: _*)
+            case None => js.Dictionary[Any]()
+          }
+
           val e = Entity(clientId, objectId, parentClientId, parentObjectId, level, isPublished, isAccepted, fieldClientId, fieldObjectId, content, localeId, isMarkedForDeletion)
 
           // get array of entities
@@ -133,6 +138,7 @@ object Entity {
           }
           e.entities = subEntities.toJSArray
           e.link = link
+          e.metadata = meta
           e
         }
       })(jsobj)

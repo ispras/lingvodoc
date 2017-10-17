@@ -784,15 +784,25 @@ def configure_routes(config):
     #   'time_end': <YYYY-MM-DDtHH:MM:SS or unix_timestamp_number>}
     #
     config.add_route(name = 'stat_perspective',
-      pattern = '/statistics/perspective/{perspective_client_id}/{perspective_object_id}')
+        pattern = '/statistics/perspective/{perspective_client_id}/{perspective_object_id}')
 
     # Cumulative user participation statistics for all perspectives of a specified dictionary in a given
     # time interval. Time interval is specified in the same way as for 'stat_perspective'.
     config.add_route(name = 'stat_dictionary',
-      pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
+        pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
 
     # Compiles archive of sound recordings and corresponding markups for a specified perspective.
+    #
+    # Perspective is specified by URL parameters 'perspective_client_id' and 'perspective_object_id'.
+    #
     config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
+
+    # Gets transcription/markup recognition training data --- transcriptions and corresponding sounds and
+    # markups --- for a specified perspective.
+    config.add_route(name = "transcription_markup_data", pattern = "/transcription_markup_data")
+
+    # Performs automatic markup recognition of sound recordings of a specified perspective.
+    config.add_route(name = "markup_recognition", pattern = "/markup_recognition")
 
 
 def main(global_config, **settings):
@@ -812,6 +822,10 @@ def main(global_config, **settings):
     settings['storage'] = dict(parser.items(
         'backend:storage' if parser.has_section('backend:storage') else
             'storage'))
+
+    settings['amr'] = dict(parser.items(
+        'backend:amr' if parser.has_section('backend:amr') else
+            'amr'))
 
     if parser.has_section('app:desktop'):
         storage = dict()
