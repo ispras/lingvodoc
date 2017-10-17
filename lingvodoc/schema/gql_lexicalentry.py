@@ -51,8 +51,6 @@ class LexicalEntry(graphene.ObjectType):
 
     class Meta:
         interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)
-        #only_fields = ['id', 'additional_metadata', 'created_at', "marked_for_deletion"]
-
     @fetch_object('entities')
     @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info):
@@ -61,7 +59,7 @@ class LexicalEntry(graphene.ObjectType):
             gr_entity_object = Entity(id=[db_entity.client_id, db_entity.object_id])
             gr_entity_object.dbObject = db_entity
             result.append(gr_entity_object)
-        return result[:2]
+        return result
 
 class CreateLexicalEntry(graphene.Mutation):
     """
@@ -100,7 +98,6 @@ class CreateLexicalEntry(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    #@acl_check_by_id('create', 'lexical_entries_and_entities', 'parent_id')
     def mutate(root, info, **args):
         perspective_id = args.get('perspective_id')
         id = args.get('id')

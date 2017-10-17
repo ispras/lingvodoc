@@ -23,7 +23,7 @@ from lingvodoc.schema.gql_organization import (
     Organization,
     CreateOrganization,
     UpdateOrganization,
-    DeleteOrganization
+    #DeleteOrganization
 )
 # from lingvodoc.schema.gql_publishingentity import (
 #     PublishingEntity
@@ -89,7 +89,7 @@ from lingvodoc.schema.gql_grant import (
     Grant,
     CreateGrant,
     UpdateGrant,
-    DeleteGrant
+    # DeleteGrant
 )
 # from lingvodoc.schema.gql_email import (
 #     Email
@@ -109,11 +109,11 @@ from lingvodoc.schema.gql_userrequest import (
     AdministrateOrg,
     ParticipateOrg,
     AcceptUserRequest,
-    DeleteUserRequest
+    # DeleteUserRequest
 )
 
 import lingvodoc.acl as acl
-
+import time
 from lingvodoc.models import (
     DBSession,
     Dictionary as dbDictionary,
@@ -278,9 +278,8 @@ class Query(graphene.ObjectType):
         response = list()
         for field in fields:
             f = Field(id=[field.client_id, field.object_id],
-                      translation=field.get_translation(info.context.get('locale_id'))
                       )
-            #f.dbObject = field
+            f.dbObject = field
             response.append(f)
 
         return response
@@ -529,10 +528,6 @@ class Query(graphene.ObjectType):
 
     def resolve_dictionaryperspectivetofield(self, info, id):
         return DictionaryPerspectiveToField(id=id)
-
-
-    def resolve_grant(self, info, id):
-        return Grant(id=id)
 
     def resolve_group(self, info, id):
         return Group(id=id)
@@ -1154,19 +1149,12 @@ class Query(graphene.ObjectType):
         return basegroups
 
     def resolve_grant(self, info, id):
-        grant = DBSession.query(dbGrant).filter_by(id=id).first()
-        if not grant:
+        grant_obj = DBSession.query(dbGrant).filter_by(id=id).first()
+        if not grant_obj:
             raise ResponseError(message="No such grant in the system")
-
-        return Grant(id=grant.id,
-                     issuer_translation_gist_id=[grant.issuer_translation_gist_client_id, grant.issuer_translation_gist_object_id],
-                     translation_gist_id=[grant.translation_gist_client_id, grant.translation_gist_object_id],
-                     issuer_url=grant.issuer_url,
-                     grant_number=grant.grant_number,
-                     owners=grant.owners,
-                     begin=grant.begin.strftime("%d.%m.%Y"),
-                     end=grant.end.strftime("%d.%m.%Y"),
-                     created_at=grant.created_at)
+        grant = Grant(id=grant_obj.id)
+        grant.dbObject = grant_obj
+        return grant
 
     def resolve_grants(self, info):
         """
@@ -1177,16 +1165,12 @@ class Query(graphene.ObjectType):
         }
         """
         grants = DBSession.query(dbGrant).order_by(dbGrant.grant_number).all()
+        grants_list = list()
+        for dbgrant in grants:
+            grant =  Grant(id=dbgrant.id)
+            grant.dbObject = dbgrant
+            grants_list.append(grant)
 
-        grants_list = [Grant(id=grant.id,
-                     issuer_translation_gist_id=[grant.issuer_translation_gist_client_id, grant.issuer_translation_gist_object_id],
-                     translation_gist_id=[grant.translation_gist_client_id, grant.translation_gist_object_id],
-                     issuer_url=grant.issuer_url,
-                     grant_number=grant.grant_number,
-                     owners=grant.owners,
-                     begin=grant.begin.strftime("%d.%m.%Y"),
-                     end=grant.end.strftime("%d.%m.%Y"),
-                     created_at=grant.created_at) for grant in grants]
         return grants_list
 
     def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
@@ -1234,7 +1218,7 @@ class MyMutations(graphene.ObjectType):
     delete_dictionary = DeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
     update_organization = UpdateOrganization.Field()
-    delete_organization = DeleteOrganization.Field()
+    #delete_organization = DeleteOrganization.Field()
     create_translationatom = CreateTranslationAtom.Field()
     update_translationatom = UpdateTranslationAtom.Field()
     create_translationgist = CreateTranslationGist.Field()
@@ -1252,7 +1236,7 @@ class MyMutations(graphene.ObjectType):
     delete_perspective_to_field = DeleteDictionaryPerspectiveToField.Field()
     create_grant = CreateGrant.Field()
     update_grant = UpdateGrant.Field()
-    delete_grant = DeleteGrant.Field()
+    # delete_grant = DeleteGrant.Field()
     create_userblob = CreateUserBlob.Field()
     delete_userblob = DeleteUserBlob.Field()
     create_grant_permission = CreateGrantPermission.Field()
@@ -1260,7 +1244,7 @@ class MyMutations(graphene.ObjectType):
     administrate_org = AdministrateOrg.Field()
     participate_org = ParticipateOrg.Field()
     accept_userrequest = AcceptUserRequest.Field()
-    delete_userrequest = DeleteUserRequest.Field()
+    #delete_userrequest = DeleteUserRequest.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

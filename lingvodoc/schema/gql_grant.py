@@ -1,5 +1,7 @@
 import graphene
 import datetime
+import time
+from json import loads
 from lingvodoc.models import (
     Grant as dbGrant,
     User as dbUser,
@@ -18,8 +20,10 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     del_object,
     ObjectVal,
-    LingvodocID
+    LingvodocID,
+    fetch_object
 )
+from lingvodoc.schema.gql_user import User
 from sqlalchemy.orm.attributes import flag_modified
 
 class Grant(graphene.ObjectType):
@@ -40,13 +44,13 @@ class Grant(graphene.ObjectType):
     """
     dbType = dbGrant
     dbObject = None
-    issuer_translation_gist_id = graphene.Int()
-    begin = DateTime()
-    end = DateTime()
+    issuer_translation_gist_id = LingvodocID()
+    begin = graphene.Int()
+    end = graphene.Int()
     issuer_url = graphene.String()
     grant_url = graphene.String()
     grant_number = graphene.String()
-    owners = JSONString()
+    owners = graphene.List(User)
 
     class Meta:
         interfaces = (CreatedAt,
@@ -56,24 +60,68 @@ class Grant(graphene.ObjectType):
                     )
     pass
 
+    @fetch_object("begin")
+    def resolve_begin(self, info):
+        return int(time.mktime(self.dbObject.begin.timetuple()))  # find better option
+
+    @fetch_object("end")
+    def resolve_end(self, info):
+        return int(time.mktime(self.dbObject.end.timetuple()))  # find better option
+
+    @fetch_object("issuer_translation_gist_id")
+    def resolve_issuer_translation_gist_id(self, info):
+        return (self.dbObject.issuer_translation_gist_client_id, self.dbObject.issuer_translation_gist_object_id)
+
+    @fetch_object("grant_number")
+    def resolve_grant_number(self, info):
+        return self.dbObject.grant_number
+
+    @fetch_object("issuer_url")
+    def resolve_issuer_url(self, info):
+        return self.dbObject.issuer_url
+
+    @fetch_object("grant_url")
+    def resolve_grant_url(self, info):
+        return self.dbObject.grant_url
+
+    @fetch_object("owners")
+    def resolve_owners(self, info):
+        owners_list = list()
+        for userid in self.dbObject.owners:
+            user = User(id=userid)
+            owners_list.append(user)
+        return owners_list
+
 class CreateGrant(graphene.Mutation):
     """
     mutation {
-        create_grant(issuer_translation_gist_id:[1,1], translation_gist_id: [949, 101], issuer_url: "abc", grant_url: "def", grant_number: "123", begin: [1,7,2017], end: [2,7,2017]) {
+        update_grant(grant_id: 4,
+					issuer_url: "abc",
+					grant_url: "def",
+				begin:233, end:300) {
            grant {
                id
+               begin
+               end
+               issuer_url
+               grant_url
+               grant_number
+
             }
             triumph
         }
     }
 
+
     {
-      "create_grant": {
-        "grant": {
-          "id": 4
-        },
-        "triumph": true
-      }
+        "data": {
+            "create_grant": {
+                "grant": {
+                    "id": 4
+                },
+                "triumph": true
+            }
+        }
     }
     """
     class Arguments:
@@ -82,14 +130,14 @@ class CreateGrant(graphene.Mutation):
         issuer_url = graphene.String()
         grant_url = graphene.String()
         grant_number = graphene.String()
-        begin = LingvodocID()
-        end = LingvodocID()
+        begin = graphene.Int()
+        end = graphene.Int()
 
     grant = graphene.Field(Grant)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @acl_check_by_id('create', 'grant')
     def mutate(root, info, **args):
         issuer_translation_gist_client_id, issuer_translation_gist_object_id = args.get('issuer_translation_gist_id')
         translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
@@ -97,21 +145,15 @@ class CreateGrant(graphene.Mutation):
         grant_url = args.get('grant_url')
         grant_number = args.get('grant_number')
 
-        begin_tuple = args.get('begin')
-        begin_day = begin_tuple[0]
-        begin_month = begin_tuple[1]
-        begin_year = begin_tuple[2]
-        if begin_day is None or begin_month is None or begin_year is None:
-            return ResponseError(message="Error: day, month or year of the begin date is missing")
-        begin = datetime.date(begin_year, begin_month, begin_day)
+        begin = args.get('begin')
+        begin_time = None
+        if begin:
+            begin_time = datetime.datetime.fromtimestamp(begin)
 
-        end_tuple = args.get('end')
-        end_day = end_tuple[0]
-        end_month = end_tuple[1]
-        end_year = end_tuple[2]
-        if end_day is None or end_month is None or end_year is None:
-            return ResponseError(message="Error: day, month or year of the end date is missing")
-        end = datetime.date(end_year, end_month, end_day)
+        end = args.get('end')
+        end_time = None
+        if end:
+            end_time = datetime.datetime.fromtimestamp(end)
 
         client_id = info.context["client_id"]
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -126,8 +168,8 @@ class CreateGrant(graphene.Mutation):
                       issuer_url=issuer_url,
                       grant_url=grant_url,
                       grant_number=grant_number,
-                      begin=begin,
-                      end=end
+                      begin=begin_time,
+                      end=end_time
                       )
         """ 
         dbgrant.grant_url = grant_url
@@ -148,7 +190,7 @@ class CreateGrant(graphene.Mutation):
 class UpdateGrant(graphene.Mutation):
     """
     mutation {
-        update_grant(grant_id: 14, issuer_url: "abc", grant_url: "def") {
+        update_grant(grant_id: 4, issuer_url: "abc", grant_url: "def") {
            grant {
                id
                begin
@@ -156,8 +198,7 @@ class UpdateGrant(graphene.Mutation):
                issuer_url
                grant_url
                grant_number
-               translation_gist_client_id
-               translation_gist_object_id
+
             }
             triumph
         }
@@ -169,15 +210,16 @@ class UpdateGrant(graphene.Mutation):
         translation_gist_id = LingvodocID()
         issuer_url = graphene.String()
         grant_url = graphene.String()
-        begin = graphene.String()
-        end = graphene.String()
+        begin = graphene.Int()
+        end = graphene.Int()
+        grant_number = graphene.String()
         additional_metadata = ObjectVal()
 
     grant = graphene.Field(Grant)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @acl_check_by_id('create', 'grant')
     def mutate(root, info, **args):
         grant_id = args.get('grant_id')
         issuer_translation_gist_id = args.get('issuer_translation_gist_id')
@@ -201,44 +243,55 @@ class UpdateGrant(graphene.Mutation):
             if grant_url:
                 dbgrant.grant_url = grant_url
             if begin:
-                dbgrant.begin = datetime.datetime.strptime(begin, "%d.%M.%Y").date()
+                dbgrant.begin = datetime.datetime.fromtimestamp(begin)
             if end:
-                dbgrant.end = datetime.datetime.strptime(end, "%d.%M.%Y").date()
+                dbgrant.end = datetime.datetime.fromtimestamp(end)
             if additional_metadata:
                 if additional_metadata.get('participant'):
                     raise ResponseError(message="Protected field")
                 old_meta = dbgrant.additional_metadata
+                if old_meta is None:
+                    old_meta = dict()
                 old_meta.update(additional_metadata)
                 dbgrant.additional_metadata = old_meta
-                flag_modified(dbgrant, 'additional_metadata')
-
+                # flag_modified(dbgrant, 'additional_metadata')
             grant = Grant(id=dbgrant.id)
             grant.dbObject = dbgrant
             return UpdateGrant(grant=grant, triumph=True)
-        raise ResponseError(message="No such grunt in the system")
+        raise ResponseError(message="No such grant in the system")
 
-class DeleteGrant(graphene.Mutation):
-    """
-    mutation {
-        delete_grant(grant_id: 14) {
-            triumph
-        }
-    }
-    """
-    class Arguments:
-        grant_id = graphene.Int()
-
-    grant = graphene.Field(Grant)
-    triumph = graphene.Boolean()
-
-    @staticmethod
-    def mutate(root, info, **args):
-        grant_id = args.get('grant_id')
-        dbgrant = DBSession.query(dbGrant).filter_by(id=grant_id).first()
-        if not dbgrant:
-            raise ResponseError(message="No such grunt in the system")
-
-        DBSession.delete(dbgrant)
-        grant = Grant(id=grant_id)
-        grant.dbObject = dbgrant
-        return DeleteGrant(grant=grant, triumph=True)
+# class DeleteGrant(graphene.Mutation):
+#     """
+#     mutation {
+#         delete_grant(grant_id: 14) {
+#             triumph
+#         }
+#     }
+#     """
+#     class Arguments:
+#         grant_id = graphene.Int()
+#
+#     grant = graphene.Field(Grant)
+#     triumph = graphene.Boolean()
+#
+#     @staticmethod
+#     @acl_check_by_id('create', 'grant')
+#     def mutate(root, info, **args):
+#         grant_id = args.get('grant_id')
+#         dbgrant = DBSession.query(dbGrant).filter_by(id=grant_id).first()
+#         if not dbgrant:
+#             raise ResponseError(message="No such grant in the system")
+#
+#         DBSession.delete(dbgrant)
+#         grant = Grant(id=grant_id)
+#         grant.dbObject = dbgrant
+#         return DeleteGrant(grant=grant, triumph=True)
+#
+# class DeleteGrantOwners(graphene.Mutation):
+#     class Arguments:
+#         grant_id = graphene.Int()
+#
+#     @acl_check_by_id('approve', 'grant')
+#     def mutate(root, info, **args):
+#         grant_id = args.get("grant_id")
+#         owners = args.get("owners")

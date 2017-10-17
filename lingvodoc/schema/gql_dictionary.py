@@ -336,8 +336,8 @@ class CreateDictionary(graphene.Mutation):
 
     @staticmethod
     def get_by_fake_id(fake_to_id, fake_id):
-        if not fake_id in fake_to_id:
-            raise  ResponseError(message="Fake ids do not match")
+        if fake_id not in fake_to_id:
+            raise ResponseError(message="Fake_ids don`t match")
         return fake_to_id[fake_id]
 
     @staticmethod
@@ -500,14 +500,16 @@ class CreateDictionary(graphene.Mutation):
                 for field in fields:
                     counter += 1
                     link_id = field.link_fake_id # TODO: rename field.link_id to fake_link_id
-                    self_fake_id = field.self_fake_id
                     field_id = field.field_id
                     fake_id = field.fake_id
+                    self_fake_id = field.self_fake_id
+                    self_id = None
                     parent_id = (persp.client_id, persp.object_id)
                     if link_id:
                         persp_to_link = CreateDictionary.get_by_fake_id(persp_fake_ids, link_id)
                         link_id=(persp_to_link.client_id, persp_to_link.object_id)
-                    self_id = CreateDictionary.get_by_fake_id(field_fake_ids, self_fake_id)
+                    if self_fake_id:
+                        self_id = CreateDictionary.get_by_fake_id(field_fake_ids, self_fake_id)
                     persp_to_field = create_dictionary_persp_to_field(id=id,
                                                      parent_id=parent_id,
                                                      field_id=field_id,

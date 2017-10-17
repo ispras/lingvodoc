@@ -172,7 +172,6 @@ class DeleteUserBlob(graphene.Mutation):
 
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]

@@ -128,7 +128,6 @@ class CreateLanguage(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    #@acl_check_by_id('create', 'language', id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
@@ -235,8 +234,7 @@ class UpdateLanguage(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
-    #@acl_check_by_id('edit', 'language')
+    @acl_check_by_id('edit', 'language')
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]

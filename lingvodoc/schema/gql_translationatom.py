@@ -40,7 +40,7 @@ class TranslationAtom(graphene.ObjectType):
      #additional_metadata | jsonb                       |
      example:
          query myQuery {
-            translationatom( id: [449, 47]) {
+            translationatom( id: [866, 4]) {
                 id
                 content
             }
@@ -60,7 +60,7 @@ class CreateTranslationAtom(graphene.Mutation):
     """
     example:
     mutation  {
-        create_translationatom(id: [949,11], parent_id: [1, 47], locale_id: 2, content: "some content") {
+        create_translationatom( parent_id: [1, 47], locale_id: 2, content: "some content") {
             translationatom {
                 id
                 content
@@ -71,23 +71,25 @@ class CreateTranslationAtom(graphene.Mutation):
     (this example works)
     returns:
 
-     {
-      "create_translationatom": {
-        "translationatom": {
-          "id": [
-            949,
-            11
-          ],
-          "content": "some content"
-        },
-        "triumph": true
-      }
+    {
+        "data": {
+            "create_translationatom": {
+                "translationatom": {
+                    "id": [
+                        1197,
+                        204
+                    ],
+                    "content": "some content"
+                },
+                "triumph": true
+            }
+        }
     }
     """
 
     class Arguments:
-        id = LingvodocID(required=True)
-        parent_id = LingvodocID()
+        id = LingvodocID()
+        parent_id = LingvodocID(required=True)
         locale_id = graphene.Int()
         content = graphene.String()
 
@@ -113,6 +115,10 @@ class CreateTranslationAtom(graphene.Mutation):
 
             if parent.marked_for_deletion:
                 raise ResponseError(message="Error: no such translationgist in the system.")
+
+            existing_atom = DBSession.query(dbTranslationAtom).filter_by(parent=parent, locale_id=locale_id).first()
+            if existing_atom:
+                raise ResponseError(message="TranslationAtom with this locale already exists")
             dbtranslationatom = dbTranslationAtom(client_id=client_id,
                                                   object_id=object_id,
                                                   parent=parent,
@@ -160,7 +166,7 @@ class UpdateTranslationAtom(graphene.Mutation):
     """
     example:
     mutation {
-        update_translationatom(id: [949,11], content: "new content") {
+        update_translationatom(id: [866,4], content: "new content") {
             translationatom {
                 id
                 content
@@ -187,7 +193,8 @@ class UpdateTranslationAtom(graphene.Mutation):
 
     class Arguments:
         id = LingvodocID(required=True)
-        content = graphene.String(required=True)
+        content = graphene.String()
+        locale_id = graphene.Int()
 
     translationatom = graphene.Field(TranslationAtom)
     triumph = graphene.Boolean()
@@ -200,7 +207,7 @@ class UpdateTranslationAtom(graphene.Mutation):
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]
-        locale = locale = args.get("locale_id")
+        locale_id = args.get("locale_id")
 
         dbtranslationatom = DBSession.query(dbTranslationAtom).\
             filter_by(client_id=client_id, object_id=object_id).first()
@@ -212,11 +219,11 @@ class UpdateTranslationAtom(graphene.Mutation):
             CACHE.rem(key)
             if content:
                 dbtranslationatom.content = content
-            if locale:
-                dbtranslationatom.locale_id = locale
+            if locale_id:
+                dbtranslationatom.locale_id = locale_id
 
             translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
-                                              content=dbtranslationatom.content, locale_id=locale)
+                                              content=dbtranslationatom.content, locale_id=locale_id)
             translationatom.dbObject = dbtranslationatom
             return UpdateTranslationAtom(translationatom=translationatom, triumph=True)
         raise ResponseError(message="Error: no such translationatom in the system")
