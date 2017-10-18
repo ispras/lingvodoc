@@ -16,7 +16,7 @@ from lingvodoc.models import (
     Group as dbGroup,
     Organization as dbOrganization
 )
-
+from lingvodoc.utils.creation import create_gists_with_atoms
 from lingvodoc.views.v2.utils import (
     update_metadata,
     cache_clients)
@@ -354,51 +354,7 @@ class CreateDictionary(graphene.Mutation):
             if not translation_gist_id:
                 raise ResponseError(message="translation_gist_id arg not found")
         else:
-            client = DBSession.query(dbClient).filter_by(id=client_id).first()
-
-            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-            dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
-            DBSession.add(dbtranslationgist)
-            DBSession.flush()
-            translation_gist_client_id = dbtranslationgist.client_id
-            translation_gist_object_id = dbtranslationgist.object_id
-            translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
-            basegroups = list()
-            basegroups.append(DBSession.query(dbBaseGroup).filter_by(name="Can delete translationgist").first())
-            if not object_id:
-                groups = []
-                for base in basegroups:
-                    group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
-                                  parent=base)
-                    groups += [group]
-                for group in groups:
-                    add_user_to_group(user, group)
-
-            for atom_dict in tr_atoms:
-                if "locale_id" in atom_dict and "content" in atom_dict:
-                    locale_id = atom_dict["locale_id"]
-                    content = atom_dict["content"]
-                    dbtranslationatom = dbTranslationAtom(client_id=client_id,
-                                                          object_id=object_id,
-                                                          parent=dbtranslationgist,
-                                                          locale_id=locale_id,
-                                                          content=content)
-                    DBSession.add(dbtranslationatom)
-                    DBSession.flush()
-                    if not object_id:
-                        basegroups = []
-                        basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
-                        if not object_id:
-                            groups = []
-                            for base in basegroups:
-                                group = dbGroup(subject_client_id=dbtranslationatom.client_id,
-                                                subject_object_id=dbtranslationatom.object_id,
-                                                parent=base)
-                                groups += [group]
-                            for group in groups:
-                                add_user_to_group(user, group)
-                else:
-                    raise ResponseError(message="locale_id and content args not found")
+            translation_gist_id = create_gists_with_atoms(tr_atoms, [client_id,object_id])
         additional_metadata = args.get("additional_metadata")
 
         id = [client_id, object_id]

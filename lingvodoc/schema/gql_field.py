@@ -81,7 +81,7 @@ class CreateField(graphene.Mutation):
     """
     class Arguments:
         # TODO: id?
-        translation_gist_id = id = LingvodocID()
+        translation_gist_id = LingvodocID()
         data_type_translation_gist_id = LingvodocID()
         is_translatable = graphene.Boolean()
 
