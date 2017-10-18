@@ -12,7 +12,9 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     ResponseError,
     TranslationHolder,
-    TranslationGistHolder
+    TranslationGistHolder,
+    LingvodocID,
+    acl_check_by_id
 )
 from lingvodoc.models import (
     DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
@@ -25,6 +27,7 @@ from lingvodoc.models import (
     DBSession
 )
 
+from lingvodoc.utils.creation import create_dictionary_persp_to_field
 
 class DictionaryPerspectiveToField(graphene.ObjectType):
     """
@@ -89,77 +92,65 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
-        field_id = graphene.List(graphene.Int)
-        self_id = graphene.List(graphene.Int)
-        link_id = graphene.List(graphene.Int)
+        id = LingvodocID()
+        parent_id = LingvodocID()
+        field_id = LingvodocID()
+        self_id = LingvodocID()
+        link_id = LingvodocID()
         position = graphene.Int()
 
     perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
     triumph = graphene.Boolean()
 
-    @staticmethod
-    def create_dictionary_persp_to_field(client_id=None,
-                                         object_id=None,
-                                         parent_client_id=None,
-                                         parent_object_id=None,
-                                         field_client_id=None,
-                                         field_object_id=None,
-                                         self_client_id=None,
-                                         self_object_id=None,
-                                         link_client_id=None,
-                                         link_object_id=None,
-                                         position=1):
-        if DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
-                                                                     object_id=object_id).first():
-            raise ResponseError(message="This field already exists")
-        field_object = dbDictionaryPerspectiveToField(client_id=client_id,
-                                                      object_id=object_id,
-                                                      parent_client_id=parent_client_id,
-                                                      parent_object_id=parent_object_id,
-                                                      field_client_id=field_client_id,
-                                                      field_object_id=field_object_id,
-                                                      self_client_id=self_client_id,
-                                                      self_object_id=self_object_id,
-                                                      link_client_id=link_client_id,
-                                                      link_object_id=link_object_id,
-                                                      position=position
-                                                      )
-        DBSession.add(field_object)
-        DBSession.flush()
-        return field_object
+    #@staticmethod
+    # def create_dictionary_persp_to_field(client_id=None,
+    #                                      object_id=None,
+    #                                      parent_client_id=None,
+    #                                      parent_object_id=None,
+    #                                      field_client_id=None,
+    #                                      field_object_id=None,
+    #                                      self_client_id=None,
+    #                                      self_object_id=None,
+    #                                      link_client_id=None,
+    #                                      link_object_id=None,
+    #                                      position=1):
+    #     if DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
+    #                                                                  object_id=object_id).first():
+    #         raise ResponseError(message="This field already exists")
+    #     field_object = dbDictionaryPerspectiveToField(client_id=client_id,
+    #                                                   object_id=object_id,
+    #                                                   parent_client_id=parent_client_id,
+    #                                                   parent_object_id=parent_object_id,
+    #                                                   field_client_id=field_client_id,
+    #                                                   field_object_id=field_object_id,
+    #                                                   self_client_id=self_client_id,
+    #                                                   self_object_id=self_object_id,
+    #                                                   link_client_id=link_client_id,
+    #                                                   link_object_id=link_object_id,
+    #                                                   position=position
+    #                                                   )
+    #     DBSession.add(field_object)
+    #     DBSession.flush()
+    #     return field_object
 
     @staticmethod
     @client_id_check()
+    @acl_check_by_id("perspective", "edit", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
+        id = [client_id, object_id]
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0]
-        parent_object_id = parent_id[1]
         field_id = args.get('field_id')
-        field_client_id = field_id[0]
-        field_object_id = field_id[1]
         self_id = args.get('self_id')
-        self_client_id = self_id[0]
-        self_object_id = self_id[1]
         link_id = args.get('link_id')
-        link_client_id = link_id[0]
-        link_object_id = link_id[1]
         position = args.get('position')
-        field_object = CreateDictionaryPerspectiveToField\
-            .create_dictionary_persp_to_field(client_id=client_id,
-                                              object_id=object_id,
-                                              parent_client_id=parent_client_id,
-                                              parent_object_id=parent_object_id,
-                                              field_client_id=field_client_id,
-                                              field_object_id=field_object_id,
-                                              self_client_id=self_client_id,
-                                              self_object_id=self_object_id,
-                                              link_client_id=link_client_id,
-                                              link_object_id=link_object_id,
+        field_object = create_dictionary_persp_to_field(id=id,
+                                              parent_id=parent_id,
+                                              field_id=field_id,
+                                              self_id=self_id,
+                                              link_id=link_id,
                                               position=position)
         DBSession.add(field_object)
         DBSession.flush()
@@ -199,54 +190,41 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
-        field_id = graphene.List(graphene.Int)
-        link_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        parent_id = LingvodocID()
+        field_id = LingvodocID()
+        link_id = LingvodocID()
         position = graphene.Int()
 
     perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @acl_check_by_id("perspective", "edit", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
-        client_id = id[0]
-        object_id = id[1]
-        parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else None
-        field_id = args.get('field_id')
-        field_client_id = field_id[0] if field_id else None
-        field_object_id = field_id[1] if field_id else None
-        link_id = args.get('link_id')
-        link_client_id = link_id[0] if link_id else None
-        link_object_id = link_id[1] if link_id else None
-        position = args.get('position')
-
+        client_id, object_id = id
         field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
-        if field_object and not field_object.marked_for_deletion:
-            if parent_client_id:
-                field_object.parent_client_id = parent_client_id
-            if parent_object_id:
-                field_object.parent_object_id = parent_object_id
-            if field_client_id:
-                field_object.field_client_id = field_client_id
-            if field_object_id:
-                field_object.field_object_id = field_object_id
-            if link_client_id:
-                field_object.link_client_id = link_client_id
-            if link_object_id:
-                field_object.link_object_id = link_object_id
-            if position:
-                field_object.position = position
+        if not field_object or not field_object.marked_for_deletion:
+            raise ResponseError(message="Error: No such field object in the system")
 
-            perspective_to_field = DictionaryPerspectiveToField(id=[field_object.client_id, field_object.object_id])
-            perspective_to_field.dbObject = field_object
-            return UpdateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
-        raise ResponseError(message="Error: No such field object in the system")
+        parent_id = args.get('parent_id')
+        field_id = args.get('field_id')
+        link_id = args.get('link_id')
+        position = args.get('position')
+        if parent_id:
+            field_object.parent_client_id, field_object.parent_object_id = parent_id
+        if field_id:
+            field_object.field_client_id, field_object.field_object_id = field_id
+        if link_id:
+            field_object.link_client_id, field_object.link_object_id = link_id
+        if position:
+            field_object.position = position
+        perspective_to_field = DictionaryPerspectiveToField(id=[field_object.client_id, field_object.object_id])
+        perspective_to_field.dbObject = field_object
+        return UpdateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
+
 
 
 class DeleteDictionaryPerspectiveToField(graphene.Mutation):
@@ -277,18 +255,16 @@ class DeleteDictionaryPerspectiveToField(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @acl_check_by_id("perspective", "edit", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
-
+        client_id, object_id = id
         field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
         if not field_object or field_object.marked_for_deletion:

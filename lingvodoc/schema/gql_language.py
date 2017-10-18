@@ -20,7 +20,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     ResponseError,
     acl_check_by_id,
-    ObjectVal
+    ObjectVal,
+    LingvodocID
 )
 from .gql_dictionary import Dictionary
 from lingvodoc.views.v2.utils import  add_user_to_group
@@ -58,14 +59,6 @@ class Language(graphene.ObjectType):
             result.append(Dictionary(id=[dictionary.client_id, dictionary.object_id]))
         return result
 
-    # @fetch_object('translation')
-    # def resolve_translation(self, args, context, info):
-    #     return self.dbObject.get_translation(context.get('locale_id'))
-
-        # @fetch_object()
-        # def resolve_created_at(self, args, context, info):
-        #    return self.dbObject.created_at
-
 
 class CreateLanguage(graphene.Mutation):
     """
@@ -97,9 +90,9 @@ class CreateLanguage(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID()
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
         locale_exist = graphene.Boolean()
         translation_atoms = graphene.List(ObjectVal)
 
@@ -107,16 +100,19 @@ class CreateLanguage(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def create_dblanguage(client_id=None,
-                          object_id=None,
-                          parent_client_id=None,
-                          parent_object_id=None,
-                          translation_gist_client_id=None,
-                          translation_gist_object_id=None):
+    def create_dblanguage(id=None,
+                          parent_id=None,
+                          translation_gist_id=None):
         parent = None
+        parent_client_id, parent_object_id = parent_id if parent_id else (None, None)
+        client_id, object_id = id
+        translation_gist_client_id, translation_gist_object_id = translation_gist_id if translation_gist_id else (None, None)
+
         if parent_client_id and parent_object_id:
             parent = DBSession.query(dbLanguage).\
                 filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+            if not parent:
+                raise ResponseError(message="No such language in the system")
 
         dblanguage = dbLanguage(
             client_id=client_id,
@@ -134,15 +130,12 @@ class CreateLanguage(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    #@acl_check_by_id('create', 'language', id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
+        id = [client_id, object_id]
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else None
-
 
         tr_atoms = args.get("translation_atoms")
         if type(tr_atoms) is not list:  # TODO: look at this
@@ -196,12 +189,10 @@ class CreateLanguage(graphene.Mutation):
                 else:
                     raise ResponseError(message="locale_id and content args not found")
 
-        dblanguage = CreateLanguage.create_dblanguage(client_id=client_id,
-                                                      object_id=object_id,
-                                                      parent_client_id=parent_client_id,
-                                                      parent_object_id=parent_object_id,
-                                                      translation_gist_client_id=translation_gist_client_id,
-                                                      translation_gist_object_id=translation_gist_object_id)
+        translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
+        dblanguage = CreateLanguage.create_dblanguage(id=id,
+                                                      parent_id=parent_id,
+                                                      translation_gist_id=translation_gist_id)
         language = Language(id=[dblanguage.client_id, dblanguage.object_id])
         language.dbObject = dblanguage
         return CreateLanguage(language=language, triumph=True)
@@ -237,16 +228,15 @@ class UpdateLanguage(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
-    #@acl_check_by_id('edit', 'language')
+    @acl_check_by_id('edit', 'language')
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0]
@@ -295,7 +285,7 @@ class DeleteLanguage(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -304,8 +294,7 @@ class DeleteLanguage(graphene.Mutation):
     @acl_check_by_id('delete', 'language')
     def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
+        client_id, object_id = id
         dblanguageobj = DBSession.query(dbLanguage).filter_by(client_id=client_id, object_id=object_id).first()
 
         if not dblanguageobj or dblanguageobj.marked_for_deletion:

@@ -8,7 +8,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     acl_check_by_id,
     ResponseError,
-    fetch_object
+    fetch_object,
+    LingvodocID
 )
 
 from lingvodoc.models import (
@@ -51,8 +52,10 @@ class TranslationGist(graphene.ObjectType):
         # TODO: content etc
         result = list()
         atoms = DBSession.query(dbTranslationAtom).filter_by(parent=self.dbObject).all()
-        for atom in atoms:
-            result.append(TranslationAtom(id=[atom.client_id, atom.object_id]))
+        for dbatom in atoms:
+            atom =  TranslationAtom(id=[dbatom.client_id, dbatom.object_id])
+            atom.dbObject = dbatom
+            result.append(atom)
         return result
 
 
@@ -70,24 +73,25 @@ class CreateTranslationGist(graphene.Mutation):
     }
     (this example works)
     returns:
-
-     {
-      "create_translationgist": {
-        "translationgist": {
-          "id": [
-            949,
-            22
-          ],
-          "type": "some type"
-        },
-        "triumph": true
-      }
+    {
+        "data": {
+            "create_translationgist": {
+                "translationgist": {
+                    "id": [
+                        1197,
+                        206
+                    ],
+                    "type": "some type"
+                },
+                "triumph": true
+            }
+        }
     }
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        type = graphene.String()
+        id = LingvodocID()
+        type = graphene.String(required=True)
 
     translationgist = graphene.Field(TranslationGist)
     triumph = graphene.Boolean()
@@ -97,28 +101,10 @@ class CreateTranslationGist(graphene.Mutation):
     def mutate(root, info, **args):
         type = args.get('type')
         id = args.get('id')
-
-        object_id = None
-        client_id_from_args = None
-        if len(id) == 1:
-            client_id_from_args = id[0]
-        elif len(id) == 2:
-            client_id_from_args = id[0]
-            object_id = id[1]
-
-        client_id = info.context["client_id"]
+        client_id = id[0] if id else info.context["client_id"]
+        object_id = id[1] if id else None
         client = DBSession.query(Client).filter_by(id=client_id).first()
-
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
-
-        if client_id_from_args:
-            if check_client_id(authenticated=client.id, client_id=client_id_from_args):
-                client_id = client_id_from_args
-            else:
-                raise ResponseError(message="Error: client_id from another user")
-
         dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type=type)
         DBSession.add(dbtranslationgist)
         DBSession.flush()
@@ -133,8 +119,7 @@ class CreateTranslationGist(graphene.Mutation):
             for group in groups:
                 add_user_to_group(user, group)
 
-        translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id],
-                                          type=dbtranslationgist.type)
+        translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
         translationgist.dbObject = dbtranslationgist
         return CreateTranslationGist(translationgist=translationgist, triumph=True)
 
@@ -165,7 +150,7 @@ class DeleteTranslationGist(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     translationgist = graphene.Field(TranslationGist)
     triumph = graphene.Boolean()
@@ -174,22 +159,20 @@ class DeleteTranslationGist(graphene.Mutation):
     @acl_check_by_id('delete', 'translations')
     def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
-
+        client_id, object_id= id
         dbtranslationgist = DBSession.query(dbTranslationGist).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbtranslationgist and not dbtranslationgist.marked_for_deletion:
-            dbtranslationgist.marked_for_deletion = True
-            objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dbtranslationgist.client_id,
-                                                             object_id=dbtranslationgist.object_id).one()
+        if not dbtranslationgist or dbtranslationgist.marked_for_deletion:
+            raise ResponseError(message="No such translationgist in the system")
+        dbtranslationgist.marked_for_deletion = True
+        objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dbtranslationgist.client_id,
+                                                         object_id=dbtranslationgist.object_id).one()
+        objecttoc.marked_for_deletion = True
+        for translationatom in dbtranslationgist.translationatom:
+            translationatom.marked_for_deletion = True
+            objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=translationatom.client_id,
+                                                             object_id=translationatom.object_id).one()
             objecttoc.marked_for_deletion = True
-            for translationatom in dbtranslationgist.translationatom:
-                translationatom.marked_for_deletion = True
-                objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=translationatom.client_id,
-                                                                 object_id=translationatom.object_id).one()
-                objecttoc.marked_for_deletion = True
 
-            translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
-            translationgist.dbObject = dbtranslationgist
-            return DeleteTranslationGist(translationgist=translationgist, triumph=True)
-        raise ResponseError(message="No such translationgist in the system")
+        translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
+        translationgist.dbObject = dbtranslationgist
+        return DeleteTranslationGist(translationgist=translationgist, triumph=True)

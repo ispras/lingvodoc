@@ -12,6 +12,8 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     acl_check_by_id,
     ResponseError,
+    LingvodocID,
+    ObjectVal
 )
 
 from lingvodoc.models import (
@@ -28,6 +30,8 @@ from lingvodoc.models import (
 from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.views.v2.utils import check_client_id
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
+
+from lingvodoc.utils.creation import create_lexicalentry
 
 class LexicalEntry(graphene.ObjectType):
     """
@@ -47,8 +51,6 @@ class LexicalEntry(graphene.ObjectType):
 
     class Meta:
         interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)
-        #only_fields = ['id', 'additional_metadata', 'created_at', "marked_for_deletion"]
-
     @fetch_object('entities')
     @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info):
@@ -57,7 +59,7 @@ class LexicalEntry(graphene.ObjectType):
             gr_entity_object = Entity(id=[db_entity.client_id, db_entity.object_id])
             gr_entity_object.dbObject = db_entity
             result.append(gr_entity_object)
-        return result[:2]
+        return result
 
 class CreateLexicalEntry(graphene.Mutation):
     """
@@ -88,21 +90,25 @@ class CreateLexicalEntry(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        perspective_id = graphene.List(graphene.Int)
+        id = LingvodocID()
+        perspective_id = LingvodocID(required=True)
 
     lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id('create', 'lexical_entries_and_entities', 'parent_id')
     def mutate(root, info, **args):
         perspective_id = args.get('perspective_id')
+        id = args.get('id')
+        client_id = id[0] if id else info.context["client_id"]
+        object_id = id[1] if id else None
+        id = [client_id, object_id]
+        dblexentry = create_lexicalentry(id, perspective_id, True)
+        """
         perspective_client_id = perspective_id[0]
         perspective_object_id = perspective_id[1]
 
-        id = args.get('id')
         object_id = None
         client_id_from_args = None
         if len(id) == 1:
@@ -133,6 +139,7 @@ class CreateLexicalEntry(graphene.Mutation):
                                parent_object_id=perspective_object_id, parent=perspective)
         DBSession.add(dblexentry)
         DBSession.flush()
+        """
         lexicalentry = LexicalEntry(id=[dblexentry.client_id, dblexentry.object_id])
         lexicalentry.dbObject = dblexentry
         return CreateLexicalEntry(lexicalentry=lexicalentry, triumph=True)
@@ -163,18 +170,16 @@ class DeleteLexicalEntry(graphene.Mutation):
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
     lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('delete', 'lexical_entries_and_entities')
+    @acl_check_by_id('delete', 'lexical_entries_and_entities', id_key= "parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
-        client_id = id[0]
-        object_id = id[1]
-
+        client_id, object_id = id
         dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if dblexicalentry and not dblexicalentry.marked_for_deletion:
             del_object(dblexicalentry)
@@ -185,3 +190,26 @@ class DeleteLexicalEntry(graphene.Mutation):
             lexicalentry.dbObject = dblexicalentry
             return DeleteLexicalEntry(lexicalentry=lexicalentry, triumph=True)
         raise ResponseError(message="No such entity in the system")
+
+class BulkCreateLexicalEntry(graphene.Mutation):
+    class Arguments:
+        lexicalentries = graphene.List(ObjectVal)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+        lexicalentries = args.get('lexicalentries')
+        lexentries_list = list()
+
+        for lexentry in lexicalentries:
+            id = lexentry["id"]
+            perspective_id = lexentry["perspective_id"]
+
+            dblexentry = create_lexicalentry(id, perspective_id, False)
+            lexentries_list.append(dblexentry)
+
+
+        DBSession.bulk_save_objects(lexentries_list)
+        DBSession.flush()
+        return BulkCreateLexicalEntry(triumph=True)

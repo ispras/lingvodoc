@@ -32,7 +32,8 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     ResponseError,
     ObjectVal,
-    acl_check_by_id
+    acl_check_by_id,
+    LingvodocID
 )
 
 from uuid import uuid4
@@ -55,6 +56,16 @@ class UserRequest(graphene.ObjectType): # show only
      #message             | character varying(1000)     |
      #subject             | jsonb                       |
      #additional_metadata | jsonb                       |
+
+        query myQuery {
+          userrequest(id: 5) {
+                id
+						created_at
+						type
+						sender_id
+						message recipient_id broadcast_uuid subject
+           }
+        }
     """
     dbType = dbUserRequest
     dbObject = None
@@ -65,8 +76,26 @@ class UserRequest(graphene.ObjectType): # show only
     subject = JSONString()
     class Meta:
         interfaces = (IdHolder, AdditionalMetadata, CreatedAt, TypeHolder)
-    pass
 
+    @fetch_object("sender_id")
+    def resolve_sender_id(self, info):
+        return self.dbObject.sender_id
+
+    @fetch_object("recipient_id")
+    def resolve_recipient_id(self, info):
+        return self.dbObject.recipient_id
+
+    @fetch_object("broadcast_uuid")
+    def resolve_broadcast_uuid(self, info):
+        return self.dbObject.broadcast_uuid
+
+    @fetch_object("message")
+    def resolve_message(self, info):
+        return self.dbObject.message
+
+    @fetch_object("subject")
+    def resolve_subject(self, info):
+        return self.dbObject.subject
     # def data_type(self):
     #     return DBSession.query(TranslationAtom.content).filter_by(
     #     parent_client_id=self.data_type_translation_gist_client_id,
@@ -74,6 +103,13 @@ class UserRequest(graphene.ObjectType): # show only
     #     locale_id=2).scalar()
 
 class AcceptUserRequest(graphene.Mutation):
+    """
+    mutation {
+       accept_userrequest(id: 6, accept: true) {
+          triumph
+        }
+    }
+    """
     class Arguments:
         id = graphene.Int()
         accept = graphene.Boolean()
@@ -81,7 +117,6 @@ class AcceptUserRequest(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         userrequest_id = args.get('id')
         client_id = info.context.get('client_id')
@@ -255,6 +290,13 @@ def create_one_userrequest(req, client_id):
     return userrequest.id
 
 class CreateGrantPermission(graphene.Mutation):
+    """
+    mutation {
+        create_grant_permission(grant_id: 2) {
+            triumph
+        }
+    }
+    """
     class Arguments:
         grant_id = graphene.Int()
 
@@ -262,7 +304,6 @@ class CreateGrantPermission(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -303,35 +344,54 @@ class CreateGrantPermission(graphene.Mutation):
         return CreateGrantPermission(triumph=True)
 
 class AddDictionaryToGrant(graphene.Mutation):
-    class Arguments:
-        request_json = ObjectVal()
+    """
+    mutation  {
+        add_dictionary_to_grant(dictionary_id:[69,4], grant_id:1) {
+            triumph
+        }
+    }
 
+    answer:
+    {
+        "data": {
+            "add_dictionary_to_grant": {
+                "triumph": true
+            }
+        }
+    }
+    """
+    class Arguments:
+        dictionary_id = LingvodocID(required=True)
+        grant_id = graphene.Int()
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
-        client_id = info.context.get('client_id')
-        client = DBSession.query(Client).filter_by(id=client_id).first()
+        dictionary_id = args.get("dictionary_id")
+        grant_id = args.get("grant_id")
+        context_client_id = info.context.get('client_id')
+        client = DBSession.query(Client).filter_by(id=context_client_id).first()
 
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
-
+        client_id, object_id = dictionary_id
         user_id = user.id
-        request_json = args.get('request_json')
+        request_json = {"client_id": client_id, "object_id": object_id, "grant_id": grant_id}
         req = dict()
         req['sender_id'] = user_id
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'add_dict_to_grant'
         req['subject'] = request_json
         req['message'] = ''
+        info.context.acl_check('edit', 'dictionary',
+                               (client_id,object_id))
         if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
             raise ResponseError(message="Request already exists")
 
 
-        grant = DBSession.query(dbGrant).filter_by(id=request_json['grant_id']).first()
+        grant = DBSession.query(dbGrant).filter_by(id=grant_id).first()
         grantadmins = grant.owners
         if not grantadmins:
             raise ResponseError(message="No administrators")
@@ -343,13 +403,19 @@ class AddDictionaryToGrant(graphene.Mutation):
         return AddDictionaryToGrant(triumph=True)
 
 class AdministrateOrg(graphene.Mutation):
+    """
+    mutation  {
+        administrate_org(org_id: 1) {
+            triumph
+        }
+    }
+    """
     class Arguments:
         org_id = graphene.Int()
 
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -387,13 +453,19 @@ class AdministrateOrg(graphene.Mutation):
         return AdministrateOrg(triumph=True)
 
 class ParticipateOrg(graphene.Mutation):
+    """
+    mutation  {
+        participate_org(org_id: 1) {
+            triumph
+        }
+    }
+    """
     class Arguments:
         org_id = graphene.Int()
 
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -430,15 +502,25 @@ class ParticipateOrg(graphene.Mutation):
 
         return ParticipateOrg(triumph=True)
 
-class DeleteUserRequest(graphene.Mutation):
-    class Arguments:
-        id = graphene.Int()
-
-    triumph = graphene.Boolean()
-    def mutate(root, info, **args):
-        userrequest_id = args.get('id')
-        userrequest = DBSession.query(dbUserRequest).filter_by(id=userrequest_id).first()
-        if userrequest:
-            DBSession.delete(userrequest)
-            return DeleteUserRequest(triumph=True)
-        raise ResponseError(message="No such userrequest in the system")
+# class DeleteUserRequest(graphene.Mutation):
+#     """
+#     mutation {
+#         delete_userrequest(id: 7) {
+#             triumph
+#         }
+#     }
+#
+#     """
+#     class Arguments:
+#         id = graphene.Int()
+#
+#     triumph = graphene.Boolean()
+#
+#     @staticmethod
+#     def mutate(root, info, **args):
+#         userrequest_id = args.get('id')
+#         userrequest = DBSession.query(dbUserRequest).filter_by(id=userrequest_id).first()
+#         if userrequest:
+#             DBSession.delete(userrequest)
+#             return DeleteUserRequest(triumph=True)
+#         raise ResponseError(message="No such userrequest in the system")

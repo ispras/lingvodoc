@@ -14,7 +14,8 @@ from lingvodoc.schema.gql_holders import (
     Name,
     RealStoragePath,
     del_object,
-    ResponseError
+    ResponseError,
+    LingvodocID
 )
 from lingvodoc.views.v2.utils import (
     create_object
@@ -89,7 +90,7 @@ class CreateUserBlob(graphene.Mutation):
     }' http://localhost:6543/graphql
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID()
         data_type = graphene.String()  #(required=True)
 
 
@@ -163,7 +164,7 @@ class DeleteUserBlob(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
 
 
     userblob = graphene.Field(UserBlobs)
@@ -171,7 +172,6 @@ class DeleteUserBlob(graphene.Mutation):
 
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]

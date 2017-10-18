@@ -1,4 +1,6 @@
 import datetime
+from collections import defaultdict
+from itertools import chain
 import graphene
 from lingvodoc.models import (
     Dictionary as dbDictionary,
@@ -14,18 +16,11 @@ from lingvodoc.models import (
     Group as dbGroup,
     Organization as dbOrganization
 )
-from sqlalchemy.orm.attributes import flag_modified
-from lingvodoc.schema.gql_user import User
 
 from lingvodoc.views.v2.utils import (
     update_metadata,
     cache_clients)
-from lingvodoc.schema.gql_holders import (
-    ResponseError
-)
-from lingvodoc.views.v2.translations import translationgist_contents
-from lingvodoc.views.v2.utils import cache_clients
-# from lingvodoc.schema.gql_language import Language
+
 from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     StateHolder,
@@ -35,27 +30,15 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     ResponseError,
     ObjectVal,
-    acl_check_by_id
+    acl_check_by_id,
+    LingvodocID
 )
-#from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective
-from lingvodoc.views.v2.delete import real_delete_dictionary
-from lingvodoc.views.v2.utils import (
-    check_client_id
-)
-from graphene.types.generic import GenericScalar
+
 from lingvodoc.views.v2.utils import  add_user_to_group
 from lingvodoc.utils import statistics
-
-def translation_service_search(searchstring):
-    translationatom = DBSession.query(dbTranslationAtom)\
-        .join(dbTranslationGist).\
-        filter(dbTranslationAtom.content == searchstring,
-               dbTranslationAtom.locale_id == 2,
-               dbTranslationGist.type == 'Service')\
-        .order_by(dbTranslationAtom.client_id)\
-        .first()
-    response = translationgist_contents(translationatom.parent)
-    return response
+from lingvodoc.utils.creation import (create_perspective,
+                                      create_dbdictionary,
+                                      create_dictionary_persp_to_field)
 
 class UserAndOrganizationsRoles(graphene.ObjectType):
     roles_users = graphene.List(graphene.String)
@@ -67,7 +50,7 @@ class UserAndOrganizationsRoles(graphene.ObjectType):
     def resolve_roles_organizations(self, info):
         return self.roles_organizations
 
-class Dictionary(graphene.ObjectType):
+class Dictionary(graphene.ObjectType):  # tested
     # TODO: resolve_dataType(?)
     """
      #created_at                       | timestamp without time zone | NOT NULL
@@ -107,7 +90,7 @@ class Dictionary(graphene.ObjectType):
     }
     or
 
-          dictionary(id: [126, 3], starting_time: 0, ending_time: 100) { statistic   ...
+          dictionary(id: [126, 3], starting_time: 0, ending_time: 100) { statistic   ... # todo timestamp
     """
 
     dbType = dbDictionary
@@ -116,38 +99,17 @@ class Dictionary(graphene.ObjectType):
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
-    # parent_object_id
-    # translation_gist_client_id
-    # state_translation_gist_client_id
-    triumph = graphene.Boolean()
     status = graphene.String()
-    persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
-    cr_persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.CreateDictionaryPerspective')
-    perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
-    persptofields = graphene\
-        .Field('lingvodoc.schema.gql_dictipersptofield.DictionaryPerspectiveToField')
-    cr_persptofields = graphene\
-        .Field('lingvodoc.schema.gql_dictipersptofield.CreateDictionaryPerspectiveToField')
 
+    perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
+    persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
-    # @property
 
-    @property  # TODO: delete
+
+    @property
     def persp_class(self):
         return self._meta.fields['persp'].type
-
-    @property
-    def create_persp(self):
-        return self._meta.fields['cr_persp'].type
-
-    @property
-    def persptofield_class(self):
-        return self._meta.fields['persptofields'].type
-
-    @property
-    def create_persptofield(self):  # TODO: to delete
-        return self._meta.fields['cr_persptofields'].type
 
     @fetch_object('status')
     def resolve_status(self, info):
@@ -172,11 +134,8 @@ class Dictionary(graphene.ObjectType):
                                    ending_time,
                                    locale_id=locale_id
                                    )
-
-    def resolve_triumph(self, info):
-        return True
-
     @client_id_check()
+    @fetch_object()
     def resolve_perspectives(self, info):
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
@@ -186,8 +145,9 @@ class Dictionary(graphene.ObjectType):
         child_persps = DBSession.query(dbDictionaryPerspective)\
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id).all()
         for persp in child_persps:
-            persp.dbObject = persp
-            perspectives.append(persp)
+            persp_object = self.persp_class(id = [persp.client_id, persp.object_id])
+            persp_object.dbObject = persp
+            perspectives.append(persp_object)
         return perspectives
 
     @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
@@ -196,7 +156,7 @@ class Dictionary(graphene.ObjectType):
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
         dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not dictionary or dictionary.marked_for_deletion:
-            raise ResponseError(message="Dictionary with such ID already exists in the system")
+            raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
 
 
         bases = DBSession.query(dbBaseGroup).filter_by(dictionary_default=True)
@@ -217,15 +177,13 @@ class Dictionary(graphene.ObjectType):
             roles_organizations[perm] = organizations
         response['roles_users'] = roles_users
         response['roles_organizations'] = roles_organizations
-
-        #request.response.status = HTTPOk.code
-        #return response
         return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
 
 ###
 # CrUd functions
 #
 ###
+
 
 
 class CreateDictionary(graphene.Mutation):
@@ -273,68 +231,103 @@ class CreateDictionary(graphene.Mutation):
       # variables:
     ============================
 
-    {
-       "dictionary_atoms":[
-          {
-             "content":"dictionary_name",
-             "locale_id":2
-          }
-       ],
-       "metadata":{
-          "hash":"1234567"
-       },
-       "persp_tr":[
-          {
-             "translation_atoms":[
-                {
-                   "locale_id":2,
-                   "content":"The first perspective"
-                }
-             ],
-             "fake_id":"0ce97e69-ece9-400b-a625-e7a20110246e3",
-             "fields":[
-                {
-                   "field_id":[
-                      1,
-                      213
-                   ],
-                   "link":{
-                      "fake_id":"2e3684b7-6d81-4d103-a10e10-295517ad2f75"
-                   }
-                }
-             ]
-          },
-          {
-             "translation_atoms":[
-                {
-                   "locale_id":2,
-                   "content":"The second perspective"
-                }
-             ],
-             "fake_id":"2e3684b7-6d81-4d103-a10e10-295517ad2f75",
-             "fields":[
-                {
-                   "field_id":[
-                      1,
-                      213
-                   ],
-                   "link":{
-                      "fake_id":"0ce97e69-ece9-400b-a625-e7a20110246e3"
-                   }
-                }
-             ]
-          }
-       ]
-    }
+{
+
+
+	"dictionary_atoms": [
+		{
+			"content": "dictionary_cool_name3",
+			"locale_id": 2
+		}
+	],
+	"metadata": {
+		"hash": "1234567"
+	},
+	"persp_tr": [
+		{
+			"translation_atoms": [
+				{
+					"locale_id": 2,
+					"content": "The first perspective"
+				}
+			],
+			"fake_id": "0ce97e69-ece9-400b-a625-e7a20110246e3",
+			"fields": [
+				{
+					"field_id": [
+						1,
+						213
+					],
+					"link": {
+						"fake_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75"
+					}
+				},
+				{
+									"field_id": [
+						66,
+						6
+					]
+				},
+				{
+					"field_id": [
+						66,
+						12
+					],
+					"fake_id": "FIELD_LINK_FAKE_ID-ae10aee"
+				},
+				{
+					"field_id": [
+						66,
+						23
+					],
+					"self_fake_id": "FIELD_LINK_FAKE_ID-ae10aee"
+				}
+
+			]
+		},
+		{
+			"translation_atoms": [
+				{
+					"locale_id": 2,
+					"content": "The second perspective"
+				}
+			],
+			"fake_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75",
+			"fields": [
+				{
+					"field_id": [
+						1,
+						213
+					],
+
+					"link": {
+						"fake_id": "0ce97e69-ece9-400b-a625-e7a20110246e3"
+					}
+				}
+			]
+		}
+	]
+}
     """
 
     class Arguments:
-        id = graphene.List(graphene.Int)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int, required=True)
+        id = LingvodocID()
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID(required=True)
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
         translation_atoms = graphene.List(ObjectVal)
+
+    class FieldInfo(object):
+        id = None
+        fake_id = None
+        link_fake_id = None
+        field_id = None
+        field_fake_id = None
+        self_fake_id = None
+        perspective_obj = None
+        def __init__(self, perspective_obj=None):
+            self.perspective_obj = perspective_obj
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -342,65 +335,34 @@ class CreateDictionary(graphene.Mutation):
     translation_atoms = graphene.List(ObjectVal)
 
     @staticmethod
-    #@client_id_check()
-    def create_dbdictionary(client_id=None,
-                            object_id=None,
-                            parent_client_id=None,
-                            parent_object_id=None,
-                            translation_gist_client_id=None,
-                            translation_gist_object_id=None,
-                            additional_metadata=None):
-        duplicate_check = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).all()
-        if duplicate_check:
-            raise ResponseError(message="Dictionary with such ID already exists in the system")
-        parent = DBSession.query(dbLanguage).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-        dbdictionary_obj = dbDictionary(client_id=client_id,
-                                        object_id=object_id,
-                                        state_translation_gist_object_id=state_translation_gist_object_id,
-                                        state_translation_gist_client_id=state_translation_gist_client_id,
-                                        parent=parent,
-                                        translation_gist_client_id=translation_gist_client_id,
-                                        translation_gist_object_id=translation_gist_object_id,
-                                        additional_metadata=additional_metadata
-                                        )
-
-        client = DBSession.query(dbClient).filter_by(id=client_id).first()
-        user = client.user
-        for base in DBSession.query(dbBaseGroup).filter_by(dictionary_default=True):
-            new_group = dbGroup(parent=base,
-                              subject_object_id=dbdictionary_obj.object_id,
-                              subject_client_id=dbdictionary_obj.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            DBSession.add(new_group)
-            DBSession.flush()
-        return dbdictionary_obj
+    def get_by_fake_id(fake_to_id, fake_id):
+        if fake_id not in fake_to_id:
+            raise ResponseError(message="Fake_ids don`t match")
+        return fake_to_id[fake_id]
 
     @staticmethod
-    @client_id_check()
+    @client_id_check()  # tested
     def mutate(root, info, **args):
+        # TODO: complex_create with fields
         ids = args.get("id")
         client_id = ids[0] if ids else info.context["client_id"]
         object_id = ids[1] if ids else None
-        parent_client_id, parent_object_id = args.get('parent_id')
+        parent_id = args.get('parent_id')
         tr_atoms = args.get("translation_atoms")
+        translation_gist_id = args.get('translation_gist_id')
         if type(tr_atoms) is not list:  # TODO: look at this
-            translation_gist_id = args.get('translation_gist_id')
             if not translation_gist_id:
                 raise ResponseError(message="translation_gist_id arg not found")
-            translation_gist_client_id = translation_gist_id[0]
-            translation_gist_object_id = translation_gist_id[1]
         else:
             client = DBSession.query(dbClient).filter_by(id=client_id).first()
 
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
-            translation_gist_client_id = dbtranslationgist.client_id
-            translation_gist_object_id = dbtranslationgist.object_id
             DBSession.add(dbtranslationgist)
             DBSession.flush()
+            translation_gist_client_id = dbtranslationgist.client_id
+            translation_gist_object_id = dbtranslationgist.object_id
+            translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
             basegroups = list()
             basegroups.append(DBSession.query(dbBaseGroup).filter_by(name="Can delete translationgist").first())
             if not object_id:
@@ -439,33 +401,29 @@ class CreateDictionary(graphene.Mutation):
                     raise ResponseError(message="locale_id and content args not found")
         additional_metadata = args.get("additional_metadata")
 
-        dbdictionary_obj = CreateDictionary.create_dbdictionary(client_id=client_id,
-                                                                object_id=object_id,
-                                                                parent_client_id=parent_client_id,
-                                                                parent_object_id=parent_object_id,
-                                                                translation_gist_client_id=translation_gist_client_id,
-                                                                translation_gist_object_id=translation_gist_object_id,
-                                                                additional_metadata=additional_metadata)
+        id = [client_id, object_id]
+        dbdictionary_obj = create_dbdictionary(id=id,
+                                               parent_id=parent_id,
+                                               translation_gist_id=translation_gist_id,
+                                               additional_metadata=additional_metadata)
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
 
-        DictionaryPerspective = dictionary.persp_class
-        CreateDictionaryPerspective = dictionary.create_persp
-        DictionaryPerspectiveToField = dictionary.persptofield_class
-        CreateDictionaryPerspectiveToField = dictionary.create_persptofield
         persp_args = args.get("perspectives")
         created_persps = []
-        # rename it
-        fields_dict = dict()
-        field_ids = dict()
+        # TODO:  rename it
         persp_fake_ids = dict()
+        field_fake_ids = dict()
+        persp_fields_list = defaultdict(list)
         if persp_args:
-            for child_persp in persp_args:
-                if "translation_atoms" in child_persp:
+            for next_persp in persp_args:
+
+                if "translation_atoms" in next_persp:
                     client = DBSession.query(dbClient).filter_by(id=client_id).first()
                     user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-                    atoms_to_create = child_persp["translation_atoms"]
+                    atoms_to_create = next_persp["translation_atoms"]
                     dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
+
                     translation_gist_client_id = dbtranslationgist.client_id
                     translation_gist_object_id = dbtranslationgist.object_id
                     persp_translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
@@ -478,6 +436,7 @@ class CreateDictionary(graphene.Mutation):
                         for base in basegroups:
                             group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
                                           parent=base)
+
                             groups += [group]
                         for group in groups:
                             add_user_to_group(user, group)
@@ -487,10 +446,11 @@ class CreateDictionary(graphene.Mutation):
                             locale_id = atom_dict["locale_id"]
                             content = atom_dict["content"]
                             dbtranslationatom = dbTranslationAtom(client_id=client_id,
-                                                                  object_id=object_id,
+                                                                  object_id=None,
                                                                   parent=dbtranslationgist,
                                                                   locale_id=locale_id,
                                                                   content=content)
+
                             DBSession.add(dbtranslationatom)
                             DBSession.flush()
                             if not object_id:
@@ -508,69 +468,61 @@ class CreateDictionary(graphene.Mutation):
                         else:
                             raise ResponseError(message="locale_id and content args not found")
                 else:
-                    if "translation_gist_id" in child_persp:
-                        persp_translation_gist_id = child_persp["translation_gist_id"]
-                obj_id = None
-                if "id" in child_persp:
-                    obj_id = child_persp["id"][1]
-                new_persp = CreateDictionaryPerspective\
-                    .create_perspective(client_id=client_id,
-                                        object_id=obj_id,
-                                        parent_client_id=dbdictionary_obj.client_id,
-                                        parent_object_id=dbdictionary_obj.object_id,  # use all object attrs
-                                        translation_gist_client_id=persp_translation_gist_id[0],  # TODO: fix it
-                                        translation_gist_object_id=persp_translation_gist_id[1]
+                    if "translation_gist_id" in next_persp:
+                        persp_translation_gist_id = next_persp["translation_gist_id"]
+                    else:
+                        raise ResponseError(message="Translation gist not found")
+
+                parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
+                new_persp = create_perspective(id=(client_id, None),
+                                        parent_id=parent_id,  # use all object attrs
+                                        translation_gist_id=persp_translation_gist_id
                                         )
-                created_persps.append(new_persp)
-                if "fake_id" in child_persp:
-                    child_id = child_persp['fake_id']
-                    persp_fake_ids[child_id] = new_persp
 
-                if "fields" in child_persp:
-                    new_fields = child_persp["fields"]
+                if "fake_id" in next_persp:
+                    perspective_fake_id = next_persp['fake_id']
+                    persp_fake_ids[perspective_fake_id] = new_persp
+
+                if "fields" in next_persp:
+                    new_fields = next_persp["fields"]
                     for new_ptofield in new_fields:
+                        field_info = CreateDictionary.FieldInfo(perspective_obj=new_persp)
+                        if not "field_id" in new_ptofield:
+                            raise ResponseError(message="One of fields in list has not field_id")
+                        field_info.field_id = new_ptofield["field_id"]
+                        if "self_fake_id" in new_ptofield:
+                            field_info.self_fake_id = new_ptofield["self_fake_id"]
+                        if 'fake_id' in new_ptofield:
+                            field_info.fake_id = new_ptofield['fake_id']
                         if new_ptofield.get('link') and new_ptofield['link'].get('fake_id'):
-                            field_ids[new_ptofield['link'].get('fake_id')] = (new_ptofield['field_id'][0],
-                                                                              new_ptofield['field_id'][1])
-                            if new_persp not in fields_dict:
-                                fields_dict[new_persp] = []
-                            fields_dict[new_persp].append(new_ptofield['link'].get('fake_id'))  # put field id
-                for persp in fields_dict:
-                    for fake_link in fields_dict[persp]:
-                        if fake_link in persp_fake_ids:
-                            persp_to_link = persp_fake_ids[fake_link]
-                            CreateDictionaryPerspectiveToField\
-                                .create_dictionary_persp_to_field(client_id=client_id,
-                                                                  parent_client_id=persp.client_id,
-                                                                  parent_object_id=persp.object_id,
-                                                                  field_client_id=field_ids[fake_link][0],
-                                                                  field_object_id=field_ids[fake_link][1],
-                                                                  self_client_id=None,
-                                                                  self_object_id=None,
-                                                                  link_client_id=persp_to_link.client_id,
-                                                                  link_object_id=persp_to_link.object_id,
-                                                                  position=1)
+                            field_info.link_fake_id = new_ptofield['link'].get('fake_id')
+                        persp_fields_list[new_persp].append(field_info)
+            for persp in persp_fields_list:
+                counter = 0
+                fields = persp_fields_list[persp]
+                for field in fields:
+                    counter += 1
+                    link_id = field.link_fake_id # TODO: rename field.link_id to fake_link_id
+                    field_id = field.field_id
+                    fake_id = field.fake_id
+                    self_fake_id = field.self_fake_id
+                    self_id = None
+                    parent_id = (persp.client_id, persp.object_id)
+                    if link_id:
+                        persp_to_link = CreateDictionary.get_by_fake_id(persp_fake_ids, link_id)
+                        link_id=(persp_to_link.client_id, persp_to_link.object_id)
+                    if self_fake_id:
+                        self_id = CreateDictionary.get_by_fake_id(field_fake_ids, self_fake_id)
+                    persp_to_field = create_dictionary_persp_to_field(id=id,
+                                                     parent_id=parent_id,
+                                                     field_id=field_id,
+                                                     upper_level=self_id,
+                                                     link_id=link_id,
+                                                     position=counter)
+                    if fake_id:
+                        field_fake_ids[fake_id] = persp_to_field
 
-                    #if field.get('link') and field['link'].get('fake_id'):
-                    #    #field['link'] = fake_ids[field['link']['fake_id']]
-
-
-                dictionary.perspectives = [DictionaryPerspective(id=[persp.client_id, persp.object_id],
-                                                                 translation_gist_id=[persp.translation_gist_client_id,
-                                                                                      persp.translation_gist_object_id],
-                                                                 # fields=[DictionaryPerspectiveToField(id=[persp.client_id,
-                                                                 #                                          persp.object_id],
-                                                                 #                                      parent_id=[persp.client_id,
-                                                                 #                                                 persp.object_id],
-                                                                 #                                      field_id=[f.client_id, f.object_id]
-                                                                 #                                      ) for f in fields_dict[persp]]
-
-                                                                 ) for persp in created_persps]
         return CreateDictionary(dictionary=dictionary,
-                                # perspectives=[PERSPECTIVE(id=[persp.client_id, persp.object_id],
-                                #                           translation_gist_id=[persp.translation_gist_client_id,
-                                #                                                persp.translation_gist_object_id]
-                                #                           ) for persp in created_persps],
                                 triumph=True)
 
 
@@ -614,110 +566,98 @@ class UpdateDictionary(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int, required=True)
-        translation_gist_id = graphene.List(graphene.Int)
-        parent_id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
+        translation_gist_id = LingvodocID()
+        parent_id = LingvodocID()
         additional_metadata = ObjectVal()
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
 
     @staticmethod
-    def update_dictionary(client_id=None,
-                          object_id=None,
-                          parent_client_id=None,
-                          parent_object_id=None,
-                          translation_gist_client_id=None,
-                          translation_gist_object_id=None,
+    def update_dictionary(ids,
+                          parent_id=None,
+                          translation_gist_id=None,
                           additional_metadata=None
                           ):
+        if not ids:
+            raise ResponseError(message="dict id not found")
+        client_id, object_id = ids
         db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not db_dictionary or db_dictionary.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
 
-        if parent_client_id:
-            db_dictionary.parent_client_id = parent_client_id
-        if parent_object_id:
-            db_dictionary.parent_object_id = parent_object_id
-        if translation_gist_client_id:
-            db_dictionary.translation_gist_client_id = translation_gist_client_id
-        if translation_gist_object_id:
-            db_dictionary.translation_gist_object_id = translation_gist_object_id
+        if parent_id:
+            db_dictionary.parent_client_id, db_dictionary.parent_object_id = parent_id
+        if translation_gist_id:
+            db_dictionary.translation_gist_client_id, translation_gist_object_id = translation_gist_id
         update_metadata(db_dictionary, additional_metadata)
         return db_dictionary
 
     @staticmethod
-    @client_id_check()
-    @acl_check_by_id('edit', 'dictionary')
-    def mutate(root, info, **args):
+    @acl_check_by_id('edit', 'dictionary')  # tested
+    def mutate(root, info, **args):  # tested
         ids = args.get('id')
-        client_id = ids[0] if ids else info.context["client_id"]
-        object_id = ids[1] if ids else None
+        if not ids:
+            ids = (info.context["client_id"], None)
         parent_id = args.get('parent_id')
-        parent_client_id = parent_id[0] if parent_id else None
-        parent_object_id = parent_id[1] if parent_id else None
         translation_gist_id = args.get('translation_gist_id')
-        translation_gist_client_id = translation_gist_id[0] if translation_gist_id else None
-        translation_gist_object_id = translation_gist_id[1] if translation_gist_id else None
         additional_metadata = args.get('additional_metadata')
-        dbdictionary = UpdateDictionary.update_dictionary(client_id=client_id,
-                                                          object_id=object_id,
-                                                          parent_client_id=parent_client_id,
-                                                          parent_object_id=parent_object_id,
-                                                          translation_gist_client_id=translation_gist_client_id,
-                                                          translation_gist_object_id=translation_gist_object_id,
+        dbdictionary = UpdateDictionary.update_dictionary(ids,
+                                                          parent_id=parent_id,
+                                                          translation_gist_id=translation_gist_id,
                                                           additional_metadata=additional_metadata
                                                           )
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
         return UpdateDictionary(dictionary=dictionary, triumph=True)
 
-# class UpdateDictionaryStatus(graphene.Mutation):
-#     """
-#     mutation  {
-#         update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
-#             triumph
-#             dictionary{
-#                 id
-#                 translation
-#                 marked_for_deletion
-#                 created_at
-#                 status
-#                 translation
-#                             additional_metadata{
-#              hash
-#             }
-#             }
-#         }
-#     }
-#     """
-#     class Arguments:
-#         id = graphene.List(graphene.Int)
-#         state_translation_gist_id = graphene.List(graphene.Int)
-#
-#     dictionary = graphene.Field(Dictionary)
-#     triumph = graphene.Boolean()
-#
-#     @staticmethod
-#     @client_id_check()
-#     def mutate(root, info, **args):
-#         client_id, object_id = args.get('id')
-#         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-#         dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-#         if dbdictionary and not dbdictionary.marked_for_deletion:
-#             dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
-#             dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
-#             atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
-#                                                               parent_object_id=state_translation_gist_object_id,
-#                                                               locale_id=info.context.get('locale_id')).first()
-#             dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
-#             dictionary.dbObject = dbdictionary
-#             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
-#         raise ResponseError(message="No such dictionary in the system")
+class UpdateDictionaryStatus(graphene.Mutation):
+    """
+    mutation  {
+        update_dictionary_status(id:[475, 2], state_translation_gist_id: [1, 123]) {
+            triumph
+            dictionary{
+                id
+                translation
+                marked_for_deletion
+                created_at
+                status
+                translation
+                            additional_metadata{
+             hash
+            }
+            }
+        }
+    }
+    """
+    class Arguments:
+        id = LingvodocID(required=True)
+        state_translation_gist_id = LingvodocID(required=True)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id("edit", "dictionary_status")
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
+            dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
+            dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
+            atom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=state_translation_gist_client_id,
+                                                              parent_object_id=state_translation_gist_object_id,
+                                                              locale_id=info.context.get('locale_id')).first()
+            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
+            dictionary.dbObject = dbdictionary
+            return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="No such dictionary in the system")
 
 class UpdateDictionaryRoles(graphene.Mutation):
     class Arguments:
-        id = graphene.List(graphene.Int)
+        id = LingvodocID(required=True)
         roles_users = ObjectVal()
         roles_organizations = ObjectVal()
 
@@ -725,7 +665,7 @@ class UpdateDictionaryRoles(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    #@client_id_check
+    @acl_check_by_id("dictionary_role", "edit")
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         roles_users = args.get('roles_users')
@@ -740,6 +680,8 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    if not group:
+                        raise ResponseError(message="No such group in the system")
 
                     client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
 
@@ -755,6 +697,9 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     if not permitted:
                         override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                                           subject_override=True).first()
+                        if not override_group:
+                            raise ResponseError(message="No such group in the system")
+
                         if userlogged in override_group.users:
                             permitted = True
 
@@ -776,6 +721,8 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                                subject_object_id=object_id,
                                                                subject_client_id=client_id).first()
+                    if not group:
+                        raise ResponseError(message="No such group in the system")
 
                     client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
 
@@ -791,6 +738,9 @@ class UpdateDictionaryRoles(graphene.Mutation):
                     if not permitted:
                         override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                                           subject_override=True).first()
+                        if not override_group:
+                            raise ResponseError(message="No such group in the system")
+
                         if userlogged in override_group.users:
                             permitted = True
 
@@ -829,20 +779,16 @@ class DeleteDictionary(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.List(graphene.Int, required=True)
+        id = LingvodocID(required=True)
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     @acl_check_by_id('delete', 'dictionary')
     def mutate(root, info, **args):
         ids = args.get('id')
-        if not ids:
-            raise ResponseError(message="id not found")
-        client_id = ids[0]
-        object_id = ids[1]
+        client_id, object_id = ids
         dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")

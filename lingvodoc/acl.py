@@ -189,7 +189,7 @@ def check_direct(client_id, request, action, subject, subject_id):
         if subject == 'approve_entities':
 
             perspective = DBSession.query(DictionaryPerspective).filter_by(
-                client_id=subject_client_id, subject_object_id=subject_object_id).first()
+                client_id=subject_client_id, object_id=subject_object_id).first()
 
             if (perspective and
                 (perspective.state == 'Published' or perspective.state == 'Limited access') and
@@ -270,7 +270,24 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         return False
 
-    # Ok, we have a subject we do not know hot to process, so we terminate with error.
+    else:
+        # There could be subjects with no id, because they don't exist yet.
+        # In that case we only need to check if user is authorized to create this type of objects.
 
+        user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
+        BaseGroup.subject == subject,
+        BaseGroup.action == action,
+        Group.base_group_id == BaseGroup.id,Group.subject_override,
+        user_to_group_association.c.user_id == user_id,
+        user_to_group_association.c.group_id == Group.id)).limit(1).count()
+
+        if user_count > 0:
+            return True
+
+        # There probably shouldn't be organizations with admin permissions
+        return False
+
+    # Ok, we have a subject we do not know hot to process, so we terminate with error.
+    # this is unreachable code. this is bad
     raise NotImplementedError
 

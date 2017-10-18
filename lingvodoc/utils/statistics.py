@@ -35,12 +35,26 @@ from lingvodoc.models import (
     TranslationAtom,
     TranslationGist,
     User,
+    Group,
+    BaseGroup,
+    DictionaryPerspective
 )
 
 from lingvodoc.views.v2.utils import message, unimplemented
-
+from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.schema.gql_holders import ResponseError
 
 log = logging.getLogger(__name__)
+def translation_service_search(searchstring):
+    translationatom = DBSession.query(TranslationAtom)\
+        .join(TranslationGist).\
+        filter(TranslationAtom.content == searchstring,
+               TranslationAtom.locale_id == 2,
+               TranslationGist.type == 'Service')\
+        .order_by(TranslationAtom.client_id)\
+        .first()
+    response = translationgist_contents(translationatom.parent)
+    return response
 
 
 #: Set of statistically simple field types, statistics of entities belonging to fields with these types are
