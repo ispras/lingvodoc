@@ -1,9 +1,9 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.desktop
 
 import com.greencatsoft.angularjs.core._
-import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
+import com.greencatsoft.angularjs.extensions.ModalService
 import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.raw.HTMLInputElement
+import org.scalajs.dom.raw.{HTMLButtonElement, HTMLInputElement}
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseController
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits._
@@ -14,11 +14,11 @@ import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
 import scala.scalajs.js
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
+import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
-import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.UndefOr
 
 
 
@@ -45,6 +45,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
                                userService: UserService,
                                val backend: BackendService,
                                timeout: Timeout,
+                               val rootScope: RootScope,
                                val exceptionHandler: ExceptionHandler)
   extends BaseController(scope, modal, timeout)
     with AngularExecutionContextProvider
@@ -162,32 +163,59 @@ class EditDictionaryController(scope: EditDictionaryScope,
     }
   }
 
-  @JSExport
-  def updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, event: Event): Unit = {
-    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
-    val newTextValue = e.target.asInstanceOf[HTMLInputElement].value
-    val oldTextValue = entity.content
 
-    if (newTextValue != oldTextValue) {
+  private[this] def updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, newTextValue: String): Unit = {
+    backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), CompositeId.fromObject(entity)) map { _ =>
+      entity.markedForDeletion = true
 
-      backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), CompositeId.fromObject(entity)) map { _ =>
-        entity.markedForDeletion = true
+      val newEntity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
+      newEntity.content = Some(Left(newTextValue))
 
-        val newEntity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-        newEntity.content = Some(Left(newTextValue))
-
-        backend.createEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), newEntity) onComplete {
-          case Success(entityId) =>
-            backend.getEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), entityId) onComplete {
-              case Success(updatedEntity) =>
-                scope.dictionaryTable.updateEntity(entry, entity, updatedEntity)
-              case Failure(ex) => error(ControllerException("Probably you don't have permissions to edit entities", ex))
-            }
-          case Failure(ex) => error(ControllerException("Probably you don't have permissions to edit entities", ex))
-        }
+      backend.createEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), newEntity) onComplete {
+        case Success(entityId) =>
+          backend.getEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry), entityId) onComplete {
+            case Success(updatedEntity) =>
+              scope.dictionaryTable.updateEntity(entry, entity, updatedEntity)
+            case Failure(ex) => error(ControllerException("Probably you don't have permissions to edit entities", ex))
+          }
+        case Failure(ex) => error(ControllerException("Probably you don't have permissions to edit entities", ex))
       }
     }
     editInputs = editInputs.filterNot(_ == entity.getId)
+  }
+
+
+  @JSExport
+  def updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, event: Event): Unit = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
+    val target = e.target.asInstanceOf[HTMLButtonElement]
+    val p = target.parentElement.parentElement
+
+    val result = (0 until p.childNodes.length).toList.find(index => {
+      p.childNodes.item(index).isInstanceOf[HTMLInputElement]
+    }).map(i => p.childNodes.item(i).asInstanceOf[HTMLInputElement])
+
+    result.foreach(node => {
+      val newTextValue = node.value
+      val oldTextValue = entity.content
+
+      if (oldTextValue != newTextValue) {
+        updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, newTextValue)
+      }
+    })
+  }
+
+  @JSExport
+  def updateTextEntityKeydown(entry: LexicalEntry, entity: Entity, field: Field, event: Event): Unit = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
+    val newTextValue = e.target.asInstanceOf[HTMLInputElement].value
+    val oldTextValue = entity.content
+
+    if (e.keyCode == 13) {
+      if (newTextValue != oldTextValue) {
+        updateTextEntity(entry: LexicalEntry, entity: Entity, field: Field, newTextValue)
+      }
+    }
   }
 
 

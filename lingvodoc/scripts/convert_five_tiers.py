@@ -346,8 +346,10 @@ def convert_five_tiers(
             no_sound = True
     if not no_sound:
         sound_format = "wav"
-        if ".mp3" in sound_url:
+        if sound_url.endswith(".mp3"):
             sound_format = "mp3"
+        if sound_url.endswith(".flac"):
+            sound_format = "flac"
         with tempfile.NamedTemporaryFile() as temp:
             try:
                sound_file = request.urlopen(sound_url)
@@ -359,6 +361,8 @@ def convert_five_tiers(
                 full_audio = AudioSegment.from_wav(temp.name)
             elif sound_format == "mp3":
                 full_audio = AudioSegment.from_mp3(temp.name)
+            elif sound_format == "flac":
+                full_audio = AudioSegment.from_file(temp.name, "flac")
             temp.flush()
 
     field_ids = {}

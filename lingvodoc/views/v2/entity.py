@@ -37,6 +37,7 @@ import base64
 import hashlib
 import json
 import os
+from webob.multidict import MultiDict, NoVars
 
 @view_config(route_name='get_entity_indict', renderer='json', request_method='GET')
 @view_config(route_name='get_entity', renderer='json', request_method='GET', permission='view')
@@ -78,11 +79,32 @@ def delete_entity(request):
 @view_config(route_name='create_entity', renderer='json', request_method='POST')
 def create_entity(request):  # tested
     try:
+        # req = None
+        content = None
+        if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] and type(request.POST) == MultiDict:
+            data = request.POST
+            if not data:
+                return {'error': 'empty request'}
+            elif not "entity" in data:
+                return {'error': 'entity key not nound'}
+            elif not "content" in data:
+                return {'error': 'content key not nound'}
+            req = data['entity']
+            if type(req) == str:
+                req = json.loads(req)
+            else:
+                req = json.loads(req.file.read().decode())
+            # if "content" in data:
+            content = data['content']
+        elif request.content_type == 'application/json' and type(request.POST) == NoVars:
+            req = request.json_body
+
         variables = {'auth': authenticated_userid(request)}
         response = dict()
         parent_client_id = request.matchdict.get('lexical_entry_client_id')
         parent_object_id = request.matchdict.get('lexical_entry_object_id')
-        req = request.json_body
+        # if not req:
+        #     req = request.json_body
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         object_id = req.get('object_id', None)
         if not client:
@@ -154,7 +176,11 @@ def create_entity(request):  # tested
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-            real_location, url = create_object(request, req['content'], entity, data_type, filename)
+            if content is not None:
+                real_location, url = create_object(request, content.file, entity, data_type, filename, json_input=False)
+            else:
+                real_location, url = create_object(request, req['content'], entity, data_type, filename)
+
             entity.content = url
             old_meta = entity.additional_metadata
             need_hash = True
@@ -162,7 +188,10 @@ def create_entity(request):  # tested
                 if old_meta.get('hash'):
                     need_hash = False
             if need_hash:
-                hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+                if content is not None:
+                    hash = hashlib.sha224(content.file.read()).hexdigest()
+                else:
+                    hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
                 hash_dict = {'hash': hash}
                 if old_meta:
                     old_meta.update(hash_dict)

@@ -58,7 +58,7 @@
                                 <span ng-hide="controller.isEditActive(value.entity)">{{ value.getContent() }} <span class="badge" ng-if="column.field.isTranslatable"> {{ controller.getTranslationLanguage(value.entity, column.field) }} </span></span>
 
                                 <span ng-show="controller.isEditActive(value.entity)">
-                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, value.entity, column.field, $event)">
+                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, value.entity, column.field, $event)">
                                 </span>
 
                                 <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, value.entity)" ng-hide="controller.isEditActive(value.entity)">
@@ -78,7 +78,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                                    <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(cell.internalId, row.entry, column.field, $event)">
+                                    <input type="text" value="" placeholder="" ng-keydown="controller.saveTextEntityKeydown(cell.internalId, row.entry, column.field, $event)">
                                 </div>
 
                             </li>
@@ -92,7 +92,7 @@
                                 <span ng-hide="controller.isEditActive(value.entity)">{{ value.getContent() }}</span>
 
                                 <span ng-show="controller.isEditActive(value.entity)">
-                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, value.entity, column.field, $event)">
+                                    <input type="text" value="{{ value.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, value.entity, column.field, $event)">
                                 </span>
 
                                 <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, value.entity)" ng-hide="controller.isEditActive(value.entity)">
@@ -110,7 +110,7 @@
                                             <span ng-hide="controller.isEditActive(value.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.entity, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.entity, column.field, $event)">
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(value.entity)">
@@ -153,7 +153,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextEntityKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
                                             </div>
                                         </div>
 
@@ -165,7 +165,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $fileName, $fileType, $fileContent, value)"></span>
+                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $file, value)"></span>
                                             </div>
                                         </div>
 
@@ -182,7 +182,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                                    <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(cell.internalId, row.entry, column.field, $event)">
+                                    <input type="text" value="" placeholder="" ng-keydown="controller.saveTextEntityKeydown(cell.internalId, row.entry, column.field, $event)">
                                 </div>
 
                             </li>
@@ -218,7 +218,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $fileName, $fileType, $fileContent)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $file)">
                         </span>
                                 </div>
                             </li>
@@ -251,7 +251,7 @@
                                             <span ng-hide="controller.isEditActive(linkedValue.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.linkedValue, column.field, $event)">
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(linkedValue.entity)">
@@ -306,7 +306,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextEntityKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
                                             </div>
                                         </div>
 
@@ -318,7 +318,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $fileName, $fileType, $fileContent, value)"></span>
+                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $file, value)"></span>
                                             </div>
                                         </div>
                                     </li>
@@ -333,7 +333,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $fileName, $fileType, $fileContent)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $file)">
                         </span>
                                 </div>
                             </li>
@@ -359,7 +359,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $fileName, $fileType, $fileContent)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $file)">
                         </span>
                                 </div>
                             </li>
@@ -385,7 +385,7 @@
                                             <span ng-hide="controller.isEditActive(linkedValue.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.linkedValue, column.field, $event)">
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(linkedValue.entity)">
@@ -428,7 +428,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextEntityKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
                                             </div>
                                         </div>
 
@@ -441,7 +441,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $fileName, $fileType, $fileContent, value)"></span>
+                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $file, value)"></span>
                                             </div>
                                         </div>
                                     </li>
@@ -456,7 +456,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $fileName, $fileType, $fileContent)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $file)">
                         </span>
                                 </div>
                             </li>
@@ -483,7 +483,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $fileName, $fileType, $fileContent)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $file)">
                         </span>
                                 </div>
                             </li>
@@ -508,7 +508,7 @@
                                             <span ng-hide="controller.isEditActive(linkedValue.entity)">{{ linkedValue.getContent() }}</span>
 
                                             <span ng-show="controller.isEditActive(linkedValue.entity)">
-                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-blur="controller.updateTextEntity(row.entry, linkedValue.linkedValue, column.field, $event)">
+                                                <input type="text" value="{{ linkedValue.getContent() }}" placeholder="" ng-keydown="controller.updateTextEntityKeydown(row.entry, linkedValue.linkedValue, column.field, $event)">
                                             </span>
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.editEntity(cell.internalId, linkedValue.entity)" ng-hide="controller.isEditActive(linkedValue.entity)">
@@ -558,7 +558,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
+                                                <input type="text" value="" placeholder="" ng-keydown="controller.saveTextEntityKeydown(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
                                             </div>
                                         </div>
 
@@ -571,7 +571,7 @@
                                             </button>
 
                                             <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
-                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $fileName, $fileType, $fileContent, value)"></span>
+                                                <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $file, value)"></span>
                                             </div>
                                         </div>
                                     </li>
@@ -586,7 +586,7 @@
                                 </button>
 
                                 <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $fileName, $fileType, $fileContent)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $file)">
                         </span>
                                 </div>
                             </li>

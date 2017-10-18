@@ -1,10 +1,10 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.traits
 
 import com.greencatsoft.angularjs.Controller
-import com.greencatsoft.angularjs.core.Event
+import com.greencatsoft.angularjs.core.{Event, RootScope, Scope}
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
-import org.scalajs.dom.console
-import org.scalajs.dom.raw.HTMLInputElement
+import org.scalajs.dom.{FormData, console}
+import org.scalajs.dom.raw.{BlobPropertyBag, HTMLButtonElement, HTMLInputElement}
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
@@ -17,15 +17,14 @@ import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
-
 trait Edit {
   this: Controller[_] =>
-
 
   implicit val executionContext: ExecutionContext
 
   protected[this] def backend: BackendService
   protected[this] def modal: ModalService
+  protected[this] def rootScope: RootScope
 
   protected[this] def dictionaryId: CompositeId
   protected[this] def perspectiveId: CompositeId
@@ -88,15 +87,9 @@ trait Edit {
     editInputs.contains(entity.getId)
   }
 
-  @JSExport
-  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]): Unit = {
-
-    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
-    val textValue = e.target.asInstanceOf[HTMLInputElement].value
+  private[this] def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, textValue: String, parent: UndefOr[Value]): Unit = {
 
     val entryId = CompositeId.fromObject(entry)
-
-
     val entity = EntityData(field.clientId, field.objectId, getCurrentLocale)
     entity.content = Some(Left(textValue))
 
@@ -125,13 +118,40 @@ trait Edit {
     }
   }
 
+
   @JSExport
-  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]): Unit = {
+  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]): Unit = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
+    val target = e.target.asInstanceOf[HTMLButtonElement]
+    val p = target.parentElement.parentElement
+
+    val result = (0 until p.childNodes.length).toList.find(index => {
+      p.childNodes.item(index).isInstanceOf[HTMLInputElement]
+    }).map(i => p.childNodes.item(i).asInstanceOf[HTMLInputElement])
+
+    result.foreach(node =>
+      saveTextValue(inputId, entry, field, node.value, parent)
+    )
+  }
+
+
+  @JSExport
+  def saveTextValueKeydown(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]): Unit = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
+    val textValue = e.target.asInstanceOf[HTMLInputElement].value
+
+    if (e.keyCode == 13) {
+      saveTextValue(inputId, entry, field, textValue, parent)
+    }
+  }
+
+  @JSExport
+  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, file: org.scalajs.dom.raw.File, parent: UndefOr[Value]): Unit = {
 
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
+    entity.content = Some(Right(FileContent(file.name, file.`type`, "")))
 
     // self
     parent map {
@@ -140,23 +160,33 @@ trait Edit {
         entity.selfObjectId = Some(parentValue.getEntity.objectId)
     }
 
-    backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
+    import scala.scalajs.js.JSConverters._
+    import upickle.default._
+    import ru.ispras.lingvodoc.frontend.extras.facades.File
+
+    val entityString = write(entity)
+    val entityBlob = new org.scalajs.dom.raw.Blob((entityString::Nil).toJSArray.asInstanceOf[js.Array[js.Any]])
+    val entityFile = new File((entityBlob::Nil).toJSArray, "entity.json")
+
+    val formData = new FormData()
+    formData.append("entity", entityFile)
+    formData.append("content", file)
+
+    backend.createEntity(dictionaryId, perspectiveId, entryId, formData) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
           case Success(newEntity) =>
-
-            parent.toOption match {
-              case Some(x) => dictionaryTable.addEntity(x, newEntity)
-              case None => dictionaryTable.addEntity(entry, newEntity)
-            }
-
-            disableInput(inputId)
-
+            rootScope.$apply(() => {
+              parent.toOption match {
+                case Some(x) => dictionaryTable.addEntity(x, newEntity)
+                case None => dictionaryTable.addEntity(entry, newEntity)
+              }
+              disableInput(inputId)
+            })
           case Failure(ex) => console.log(ex.getMessage)
         }
       case Failure(ex) => console.log(ex.getMessage)
     }
-
   }
 
   @JSExport
