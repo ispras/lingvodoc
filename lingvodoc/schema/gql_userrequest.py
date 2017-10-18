@@ -111,8 +111,8 @@ class AcceptUserRequest(graphene.Mutation):
     }
     """
     class Arguments:
-        id = graphene.Int()
-        accept = graphene.Boolean()
+        id = graphene.Int(required=True)
+        accept = graphene.Boolean(required=True)
 
     triumph = graphene.Boolean()
 
@@ -298,7 +298,7 @@ class CreateGrantPermission(graphene.Mutation):
     }
     """
     class Arguments:
-        grant_id = graphene.Int()
+        grant_id = graphene.Int(required=True)
 
     #userrequest = graphene.Field(UserRequest)
     triumph = graphene.Boolean()
@@ -362,7 +362,7 @@ class AddDictionaryToGrant(graphene.Mutation):
     """
     class Arguments:
         dictionary_id = LingvodocID(required=True)
-        grant_id = graphene.Int()
+        grant_id = graphene.Int(required=True)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -411,7 +411,7 @@ class AdministrateOrg(graphene.Mutation):
     }
     """
     class Arguments:
-        org_id = graphene.Int()
+        org_id = graphene.Int(required=True)
 
     triumph = graphene.Boolean()
 
@@ -461,7 +461,7 @@ class ParticipateOrg(graphene.Mutation):
     }
     """
     class Arguments:
-        org_id = graphene.Int()
+        org_id = graphene.Int(required=True)
 
     triumph = graphene.Boolean()
 

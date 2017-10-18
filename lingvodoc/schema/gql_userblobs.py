@@ -91,7 +91,7 @@ class CreateUserBlob(graphene.Mutation):
     """
     class Arguments:
         id = LingvodocID()
-        data_type = graphene.String()  #(required=True)
+        data_type = graphene.String(required=True)  #(required=True)
 
 
     userblob = graphene.Field(UserBlobs)
