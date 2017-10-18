@@ -93,11 +93,11 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
 
     class Arguments:
         id = LingvodocID()
-        parent_id = LingvodocID()
-        field_id = LingvodocID()
+        parent_id = LingvodocID(required=True)
+        field_id = LingvodocID(required=True)
         self_id = LingvodocID()
         link_id = LingvodocID()
-        position = graphene.Int()
+        position = graphene.Int(required=True)
 
     perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
     triumph = graphene.Boolean()

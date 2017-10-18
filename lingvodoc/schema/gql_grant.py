@@ -125,13 +125,13 @@ class CreateGrant(graphene.Mutation):
     }
     """
     class Arguments:
-        issuer_translation_gist_id = LingvodocID()
-        translation_gist_id = LingvodocID()
-        issuer_url = graphene.String()
-        grant_url = graphene.String()
-        grant_number = graphene.String()
-        begin = graphene.Int()
-        end = graphene.Int()
+        issuer_translation_gist_id = LingvodocID(required=True)  # not required if atoms are given instead of gist_id
+        translation_gist_id = LingvodocID(required=True)
+        issuer_url = graphene.String(required=True)
+        grant_url = graphene.String(required=True)
+        grant_number = graphene.String(required=True)
+        begin = graphene.Int(required=True)
+        end = graphene.Int(required=True)
 
     grant = graphene.Field(Grant)
     triumph = graphene.Boolean()
@@ -205,7 +205,7 @@ class UpdateGrant(graphene.Mutation):
     }
     """
     class Arguments:
-        grant_id = graphene.Int()
+        grant_id = graphene.Int(required=True)  # this should be just id
         issuer_translation_gist_id = LingvodocID()
         translation_gist_id = LingvodocID()
         issuer_url = graphene.String()
