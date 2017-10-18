@@ -101,11 +101,11 @@ class CreateUser(graphene.Mutation):
     }
     """
     class Arguments:
-        login = graphene.String()
-        email = graphene.String()
-        name = graphene.String()
-        birthday = graphene.Int()
-        password = graphene.String()
+        login = graphene.String(required=True)
+        email = graphene.String(required=True)
+        name = graphene.String(required=True)
+        birthday = graphene.Int(required=True)
+        password = graphene.String(required=True)
 
     user = graphene.Field(User)
     triumph = graphene.Boolean()

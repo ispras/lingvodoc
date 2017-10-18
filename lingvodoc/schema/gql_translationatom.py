@@ -90,8 +90,8 @@ class CreateTranslationAtom(graphene.Mutation):
     class Arguments:
         id = LingvodocID()
         parent_id = LingvodocID(required=True)
-        locale_id = graphene.Int()
-        content = graphene.String()
+        locale_id = graphene.Int(required=True)
+        content = graphene.String(required=True)
 
     translationatom = graphene.Field(TranslationAtom)
     triumph = graphene.Boolean()

@@ -350,7 +350,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
     class Arguments:
         id = LingvodocID()
         parent_id = LingvodocID(required=True)
-        translation_gist_id = LingvodocID(required=True)
+        translation_gist_id = LingvodocID()
         additional_metadata = ObjectVal()
         import_source = graphene.String()
         import_hash = graphene.String()
@@ -466,7 +466,7 @@ class UpdatePerspectiveStatus(graphene.Mutation):
     """
     class Arguments:
         id = LingvodocID(required=True)
-        state_translation_gist_id = LingvodocID()
+        state_translation_gist_id = LingvodocID(required=True)
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()

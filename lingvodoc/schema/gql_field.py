@@ -10,6 +10,7 @@ from lingvodoc.schema.gql_holders import (
     DataType,
     IsTranslatable,
     TranslationHolder,
+    ResponseError,
     #TranslationHolder
     fetch_object,
     del_object,
@@ -115,14 +116,17 @@ class CreateField(graphene.Mutation):
             field.dbObject = dbfield
             return CreateField(field=field, triumph = True)
 
+            #if not perm_check(client_id, "field"):
+            #    return ResponseError(message = "Permission Denied (Field)")
 
-#
+
+
 # class UpdateField(graphene.Mutation):
 #     class Arguments:
 #         id = LingvodocID(required=True)
 #     field = graphene.Field(Field)
 #     triumph = graphene.Boolean()
-#
+
 #     @staticmethod
 #     def mutate(root, info, **args):
 #         #print(args.get('locale_id'))
@@ -131,11 +135,11 @@ class CreateField(graphene.Mutation):
 #         #print(args)
 #         id = args.get('id')
 #         dbfield_obj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
-#         field = Field(id=[dbfield_obj.client_id, dbfield_obj.object_id])
+#         field = Field( **args)
 #         field.dbObject = dbfield_obj  # TODO: fix Update
 #         return UpdateField(field=field, triumph = True)
-#
-#
+
+
 # class DeleteField(graphene.Mutation):
 #     """
 #     mutation  {
@@ -144,24 +148,26 @@ class CreateField(graphene.Mutation):
 #             created_at,
 #             translation
 #         }
-#
+
 #     }
 # }
 #     """
 #     class Arguments:
 #         id = LingvodocID(required=True)
-#
+
 #     marked_for_deletion = graphene.Boolean()
 #     field = graphene.Field(Field)
 #     triumph = graphene.Boolean()
-#
+
 #     @staticmethod
 #     def mutate(root, info, **args):
 #         #client_id = context.authenticated_userid
 #         client_id = info.context["client_id"]
 #         id = args.get('id')
 #         fieldobj = DBSession.query(dbField).filter(and_(dbField.client_id == id[0], dbField.object_id == id[1])).one()
+#         if not fieldobj:
+#             raise ResponseError(message="No such field in the system")
 #         del_object(fieldobj)
 #         field = Field(id = id)
 #         return DeleteField(field=field, triumph = True)
-#
+

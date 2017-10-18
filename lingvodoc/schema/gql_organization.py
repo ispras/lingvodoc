@@ -68,8 +68,8 @@ class CreateOrganization(graphene.Mutation):
     """
 
     class Arguments:
-        name = graphene.String()
-        about = graphene.String()
+        name = graphene.String(required=True)
+        about = graphene.String(required=True)
 
     organization = graphene.Field(Organization)
     triumph = graphene.Boolean()
@@ -136,8 +136,8 @@ class UpdateOrganization(graphene.Mutation):
     """
 
     class Arguments:
-        organization_id = graphene.Int()
-        add_users = LingvodocID()
+        organization_id = graphene.Int(required=True)
+        add_users = graphene.List(graphene.Int)
         delete_users = graphene.List(graphene.Int)  # TODO: LingvodocID()? (no)
         name = graphene.String()
         about = graphene.String()
