@@ -290,6 +290,10 @@ def testing(request):
                 if item not in parent.additional_metadata['blobs']:
                     parent.additional_metadata['blobs'].append(item)
             del persp.additional_metadata['info']
+        if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
+            persp.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
+            del persp.additional_metadata['origin_client_id']
+            del persp.additional_metadata['origin_object_id']
         flag_modified(parent, 'additional_metadata')
         flag_modified(persp, 'additional_metadata')
     return
