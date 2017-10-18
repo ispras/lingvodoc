@@ -369,13 +369,11 @@ class Query(graphene.ObjectType):
         else:
             dbdicts = DBSession.query(dbDictionary).filter(dbPerspective.marked_for_deletion == False).all()
 
-        dictionaries_list = [Dictionary(id=[dbdict.client_id, dbdict.object_id],
-                                        parent_id=[dbdict.parent_client_id, dbdict.parent_object_id],
-                                        translation_gist_id=[dbdict.translation_gist_client_id, dbdict.translation_gist_object_id],
-                                        state_translation_gist_id=[dbdict.state_translation_gist_client_id, dbdict.state_translation_gist_object_id],
-                                        category=dbdict.category,
-                                        domain=dbdict.domain,
-                                        translation=dbdict.get_translation(context.get('locale_id'))) for dbdict in dbdicts]
+        dictionaries_list = list()
+        for dbdict in dbdicts:
+            gql_dict = Dictionary()
+            gql_dict.dbObject = dbdict
+            dictionaries_list.append(gql_dict)
         return dictionaries_list
 
     def resolve_dictionary(self, info, id):
@@ -568,7 +566,7 @@ class Query(graphene.ObjectType):
         }
         """
 
-        gists = DBSession.query(dbTranslationGist).order_by(dbTranslationGist.type).all()
+        gists = DBSession.query(dbTranslationGist).filter_by(marked_for_deletion=False).order_by(dbTranslationGist.type).all()
         gists_list = [TranslationGist(id=[gist.client_id, gist.object_id],
                                       type=gist.type) for gist in gists]
         return gists_list
@@ -712,7 +710,6 @@ class Query(graphene.ObjectType):
         return UserBlobs(id=id)
 
     def resolve_field(self, info, id):
-        client_id = info.context.get("client_id")
         return Field(id=id)
 
     def resolve_lexicalentry(self, info, id):
@@ -1076,7 +1073,7 @@ class Query(graphene.ObjectType):
             lexical_entries_list.append(gr_lexicalentry_object)
         return lexical_entries_list
 
-    @client_id_check()
+    # @client_id_check()
     def resolve_user_blobs(self, info, data_type=None, is_global=None):
         allowed_global_types = ["sociolinguistics"]
         client_id = info.context.get('client_id')
@@ -1149,12 +1146,7 @@ class Query(graphene.ObjectType):
         return basegroups
 
     def resolve_grant(self, info, id):
-        grant_obj = DBSession.query(dbGrant).filter_by(id=id).first()
-        if not grant_obj:
-            raise ResponseError(message="No such grant in the system")
-        grant = Grant(id=grant_obj.id)
-        grant.dbObject = grant_obj
-        return grant
+        return Grant(id=id)
 
     def resolve_grants(self, info):
         """

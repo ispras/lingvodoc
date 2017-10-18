@@ -42,7 +42,10 @@ from lingvodoc.views.v2.utils import add_user_to_group
 from lingvodoc.views.v2.translations import translationgist_contents
 from lingvodoc.utils import statistics
 from pyramid.request import Request
-from lingvodoc.utils.creation import create_perspective
+from lingvodoc.utils.creation import (
+    create_perspective,
+    create_gists_with_atoms
+)
 
 from sqlalchemy import (
     func,
@@ -330,7 +333,6 @@ class CreateDictionaryPerspective(graphene.Mutation):
                 }
             }
     }
-
     (this example works)
     returns:
 
@@ -345,15 +347,28 @@ class CreateDictionaryPerspective(graphene.Mutation):
         }
       }
     }
+    with atoms:
+    mutation {
+      create_perspective(parent_id: [1198, 16], translation_atoms: [{locale_id: 2, content: "123"}], additional_metadata: {hash: "1234567"}, import_source: "source", import_hash: "hash") {
+        triumph
+        perspective {
+          id
+          translation
+        }
+      }
+    }
+
     """
 
     class Arguments:
         id = LingvodocID()
         parent_id = LingvodocID(required=True)
         translation_gist_id = LingvodocID()
+        translation_atoms = graphene.List(ObjectVal)
         additional_metadata = ObjectVal()
         import_source = graphene.String()
         import_hash = graphene.String()
+
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -369,6 +384,12 @@ class CreateDictionaryPerspective(graphene.Mutation):
         id = [client_id, object_id]
         parent_id = args.get('parent_id')
         translation_gist_id = args.get('translation_gist_id')
+        translation_atoms = args.get("translation_atoms")
+        if type(translation_atoms) is not list:  # TODO: look at this
+            if not translation_gist_id:
+                raise ResponseError(message="translation_gist_id arg not found")
+        else:
+            translation_gist_id = create_gists_with_atoms(translation_atoms, [client_id,object_id])
         import_source = args.get('import_source')
         import_hash = args.get('import_hash')
         additional_metadata = args.get('additional_metadata')

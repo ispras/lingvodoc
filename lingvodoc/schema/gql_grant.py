@@ -21,10 +21,12 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     ObjectVal,
     LingvodocID,
-    fetch_object
+    fetch_object,
+    TranslationHolder
 )
 from lingvodoc.schema.gql_user import User
 from sqlalchemy.orm.attributes import flag_modified
+from lingvodoc.utils.creation import create_gists_with_atoms
 
 class Grant(graphene.ObjectType):
     """
@@ -52,13 +54,21 @@ class Grant(graphene.ObjectType):
     grant_number = graphene.String()
     owners = graphene.List(User)
 
+    issuer = graphene.String()
+
     class Meta:
         interfaces = (CreatedAt,
                       TranslationGistHolder,
                       IdHolder,
-                      AdditionalMetadata
+                      AdditionalMetadata,
+                      TranslationHolder
                     )
     pass
+
+    @fetch_object("issuer")
+    def resolve_issuer(self, info):
+        context = info.context
+        return str(self.dbObject.get_issuer_translation(context.get('locale_id')))
 
     @fetch_object("begin")
     def resolve_begin(self, info):
@@ -125,22 +135,40 @@ class CreateGrant(graphene.Mutation):
     }
     """
     class Arguments:
-        issuer_translation_gist_id = LingvodocID(required=True)  # not required if atoms are given instead of gist_id
-        translation_gist_id = LingvodocID(required=True)
+        issuer_translation_gist_id = LingvodocID()  # not required if atoms are given instead of gist_id
+        translation_gist_id = LingvodocID()
         issuer_url = graphene.String(required=True)
         grant_url = graphene.String(required=True)
         grant_number = graphene.String(required=True)
         begin = graphene.Int(required=True)
         end = graphene.Int(required=True)
-
+        translation_atoms = graphene.List(ObjectVal)
+        issuer_translation_atoms = graphene.List(ObjectVal)
     grant = graphene.Field(Grant)
     triumph = graphene.Boolean()
 
     @staticmethod
     @acl_check_by_id('create', 'grant')
     def mutate(root, info, **args):
-        issuer_translation_gist_client_id, issuer_translation_gist_object_id = args.get('issuer_translation_gist_id')
-        translation_gist_client_id, translation_gist_object_id = args.get('translation_gist_id')
+        ids = args.get("id")
+        client_id = ids[0] if ids else info.context["client_id"]
+        object_id = ids[1] if ids else None
+        issuer_translation_gist_id = args.get('issuer_translation_gist_id')
+        issuer_translation_atoms = args.get("issuer_translation_atoms")
+        if type(issuer_translation_atoms) is not list:  # TODO: look at this
+            if not issuer_translation_gist_id:
+                raise ResponseError(message="issuer_translation_gist_id arg not found")
+        else:
+            issuer_translation_gist_id = create_gists_with_atoms(issuer_translation_atoms, [client_id,object_id])
+        issuer_translation_gist_client_id, issuer_translation_gist_object_id = issuer_translation_gist_id
+        translation_gist_id = args.get("translation_gist_id")
+        translation_atoms = args.get("translation_atoms")
+        if type(translation_atoms) is not list:  # TODO: look at this
+            if not translation_gist_id:
+                raise ResponseError(message="translation_gist_id arg not found")
+        else:
+            translation_gist_id = create_gists_with_atoms(translation_atoms, [client_id,object_id])
+        translation_gist_client_id, translation_gist_object_id = translation_gist_id
         issuer_url = args.get('issuer_url')
         grant_url = args.get('grant_url')
         grant_number = args.get('grant_number')

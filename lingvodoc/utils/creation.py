@@ -192,6 +192,34 @@ def create_dictionary_persp_to_field(id=None,
     DBSession.flush()
     return field_object
 
+def create_dblanguage(id=None,
+                      parent_id=None,
+                      translation_gist_id=None):
+    parent = None
+    parent_client_id, parent_object_id = parent_id if parent_id else (None, None)
+    client_id, object_id = id
+    translation_gist_client_id, translation_gist_object_id = translation_gist_id if translation_gist_id else (None, None)
+
+    if parent_client_id and parent_object_id:
+        parent = DBSession.query(Language).\
+            filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            raise ResponseError(message="No such language in the system")
+
+    dblanguage = Language(
+        client_id=client_id,
+        object_id=object_id,
+        translation_gist_client_id=translation_gist_client_id,
+        translation_gist_object_id=translation_gist_object_id
+    )
+    DBSession.add(dblanguage)
+
+    if parent:
+        dblanguage.parent = parent
+
+    DBSession.flush()
+    return dblanguage
+
 def create_entity(id=None,
         parent_id=None,
         additional_metadata=None,
