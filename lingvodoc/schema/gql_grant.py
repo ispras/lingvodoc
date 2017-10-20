@@ -155,19 +155,15 @@ class CreateGrant(graphene.Mutation):
         object_id = ids[1] if ids else None
         issuer_translation_gist_id = args.get('issuer_translation_gist_id')
         issuer_translation_atoms = args.get("issuer_translation_atoms")
-        if type(issuer_translation_atoms) is not list:  # TODO: look at this
-            if not issuer_translation_gist_id:
-                raise ResponseError(message="issuer_translation_gist_id arg not found")
-        else:
-            issuer_translation_gist_id = create_gists_with_atoms(issuer_translation_atoms, [client_id,object_id])
+        issuer_translation_gist_id = create_gists_with_atoms(issuer_translation_atoms,
+                                                             issuer_translation_gist_id,
+                                                             [client_id,object_id])
         issuer_translation_gist_client_id, issuer_translation_gist_object_id = issuer_translation_gist_id
         translation_gist_id = args.get("translation_gist_id")
         translation_atoms = args.get("translation_atoms")
-        if type(translation_atoms) is not list:  # TODO: look at this
-            if not translation_gist_id:
-                raise ResponseError(message="translation_gist_id arg not found")
-        else:
-            translation_gist_id = create_gists_with_atoms(translation_atoms, [client_id,object_id])
+        translation_gist_id = create_gists_with_atoms(translation_atoms,
+                                                      translation_gist_id,
+                                                      [client_id,object_id])
         translation_gist_client_id, translation_gist_object_id = translation_gist_id
         issuer_url = args.get('issuer_url')
         grant_url = args.get('grant_url')
