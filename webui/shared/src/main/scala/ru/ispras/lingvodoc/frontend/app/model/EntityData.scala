@@ -35,7 +35,9 @@ object EntityData {
           case Right(obj) =>
             values = values :+ (("filename", Js.Str(obj.fileName)))
             values = values :+ (("filetype", Js.Str(obj.fileType)))
-            values = values :+ (("content", Js.Str(obj.content)))
+            if (obj.content.nonEmpty) {
+              values = values :+ (("content", Js.Str(obj.content)))
+            }
         }
 
       if (entity.linkClientId.nonEmpty)

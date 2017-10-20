@@ -16,7 +16,8 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     client_id_check,
     FakeIds,
-    LingvodocID
+    LingvodocID,
+    ObjectVal
 )
 
 from lingvodoc.models import (
@@ -26,6 +27,7 @@ from lingvodoc.models import (
 from sqlalchemy import (
     and_
 )
+from lingvodoc.utils.creation import create_gists_with_atoms
 
 class Field(graphene.ObjectType):
     """
@@ -71,21 +73,22 @@ class Field(graphene.ObjectType):
 
 class CreateField(graphene.Mutation):
     """
-    mutation  {
-    create_field( translation_gist_id: [662, 2], data_type_translation_gist_id: [1, 47]) {
-        field {
-            id
-        }
+            mutation  {
+        create_field( translation_atoms: [{content: "12345", locale_id:2} ], data_type_translation_gist_id: [1, 47]) {
+            field {
+                id
+                        translation
+            }
 
+        }
     }
-}
     """
     class Arguments:
         # TODO: id?
-        translation_gist_id = id = LingvodocID()
+        translation_gist_id = LingvodocID()
         data_type_translation_gist_id = LingvodocID()
         is_translatable = graphene.Boolean()
-
+        translation_atoms = graphene.List(ObjectVal)
 
     marked_for_deletion = graphene.Boolean()
     field = graphene.Field(Field)
@@ -96,12 +99,20 @@ class CreateField(graphene.Mutation):
     @client_id_check()
     def mutate(root, info, **args):
         #subject = 'language'
-        client_id = info.context["client_id"]
+        ids = args.get("id")
+        client_id = ids[0] if ids else info.context["client_id"]
+        object_id = ids[1] if ids else None
         if client_id:
             data_type_translation_gist_id = args.get('data_type_translation_gist_id')
             translation_gist_id = args.get('translation_gist_id')
+            translation_atoms = args.get("translation_atoms")
+            if type(translation_atoms) is not list:  # TODO: look at this
+                if not translation_gist_id:
+                    raise ResponseError(message="translation_gist_id arg not found")
+            else:
+                translation_gist_id = create_gists_with_atoms(translation_atoms, [client_id,object_id])
             dbfield = dbField(client_id=client_id,
-                          object_id=None,
+                          object_id=object_id,
                           data_type_translation_gist_client_id=data_type_translation_gist_id[0],
                           data_type_translation_gist_object_id=data_type_translation_gist_id[1],
                           translation_gist_client_id=translation_gist_id[0],

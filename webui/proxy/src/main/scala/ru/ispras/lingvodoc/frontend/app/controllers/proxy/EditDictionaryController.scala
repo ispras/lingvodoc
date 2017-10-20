@@ -43,6 +43,7 @@ class EditDictionaryController(scope: EditDictionaryScope,
                                val modal: ModalService,
                                userService: UserService,
                                val backend: BackendService,
+                               val rootScope: RootScope,
                                timeout: Timeout,
                                val exceptionHandler: ExceptionHandler)
   extends BaseController(scope, modal, timeout)

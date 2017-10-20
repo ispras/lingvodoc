@@ -140,6 +140,7 @@ class LingvodocID(Scalar):
         else:
             return None
 
+
 class ObjectVal(Scalar):
     """
     ObjectVal is GraphQL scalar value must be Object
@@ -230,12 +231,12 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
         def wrapper(*args, **kwargs):
             cls = args[0]
             context = args[1].context
-            if attrib_name:
-                if hasattr(cls, attrib_name) and not hasattr(getattr(cls, attrib_name), '_meta'):
-                    return getattr(cls, attrib_name)
-            if ACLSubject and ACLKey == 'id':
-                context.acl_check('view', ACLSubject, cls.id)
-
+            if attrib_name != 'id':
+                if attrib_name:
+                    if hasattr(cls, attrib_name) and not hasattr(getattr(cls, attrib_name), '_meta'):
+                        return getattr(cls, attrib_name)
+                if ACLSubject and ACLKey == 'id':
+                    context.acl_check('view', ACLSubject, cls.id)
             if not cls.dbObject:
                 if type(cls.id) is int:
                     # example: (id: 1)
@@ -577,6 +578,7 @@ def get_value_by_key(db_object, additional_metadata_string, metadata_key):
         if meta:
             if metadata_key in meta:
                 return meta[metadata_key]
+
 
 
 class AdditionalMetadata(graphene.Interface):

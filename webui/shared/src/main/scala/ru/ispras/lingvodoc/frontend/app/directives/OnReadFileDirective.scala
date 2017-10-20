@@ -19,19 +19,22 @@ class OnReadFileDirective(parse: Parse) extends AttributeDirective {
     // this handler is invoked every time user selects a new file
     val onchangeHandler = (event: Event) => {
       val file = input.files(0)
-      val reader = new FileReader()
+      //      val reader = new FileReader()
+      //
+      //      reader.onload = (e: UIEvent) => {
+      //        val encodingName = "base64"
+      //        val dataUrl = reader.result.asInstanceOf[String]
+      //        val  encodingNameIndex = dataUrl.indexOf(encodingName)
+      //        val base64content = dataUrl.substring(encodingNameIndex + encodingName.length + 1)
+      //
+      //        val fn = parse(expr)
+      //        fn(scope, js.Dynamic.literal("$fileName" -> file.name, "$fileType" -> file.`type`, "$fileContent" -> base64content))
+      //      }
 
-      reader.onload = (e: UIEvent) => {
-        val encodingName = "base64"
-        val dataUrl = reader.result.asInstanceOf[String]
-        val  encodingNameIndex = dataUrl.indexOf(encodingName)
-        val base64content = dataUrl.substring(encodingNameIndex + encodingName.length + 1)
+      //      reader.readAsDataURL(file)
 
-        val fn = parse(expr)
-        fn(scope, js.Dynamic.literal("$fileName" -> file.name, "$fileType" -> file.`type`, "$fileContent" -> base64content))
-      }
-
-      reader.readAsDataURL(file)
+      val fn = parse(expr)
+      fn(scope, js.Dynamic.literal("$file" -> file))
     }
 
     input.onchange = onchangeHandler
