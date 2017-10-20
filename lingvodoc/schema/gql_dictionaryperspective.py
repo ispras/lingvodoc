@@ -99,7 +99,7 @@ class DictionaryPerspective(graphene.ObjectType):
     # stats = graphene.String() # ?
     roles = graphene.List(ObjectVal)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
-
+    is_template = graphene.Boolean()
 
     dbType = dbPerspective
     dbObject = None
@@ -114,6 +114,10 @@ class DictionaryPerspective(graphene.ObjectType):
     # @fetch_object('translation')
     # def resolve_translation(self, args, context, info):
     #     return self.dbObject.get_translation(context.get('locale_id'))
+
+    @fetch_object('is_template')
+    def resolve_is_template(self, info):
+        return self.dbObject.is_template
 
     @fetch_object('status') # tested
     def resolve_status(self, info):

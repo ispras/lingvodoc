@@ -39,6 +39,7 @@ class TranslationGist(graphene.ObjectType):
     dbType = dbTranslationGist
     dbObject = None
     translationatoms = graphene.List(TranslationAtom)
+
     class Meta:
         interfaces = (CompositeIdHolder,
                       CreatedAt,
@@ -47,12 +48,10 @@ class TranslationGist(graphene.ObjectType):
 
                       )
 
-    @fetch_object()
+    @fetch_object() # TODO: fix that
     def resolve_translationatoms(self, info):
-        # TODO: content etc
         result = list()
-        atoms = DBSession.query(dbTranslationAtom).filter_by(parent=self.dbObject).all()
-        for dbatom in atoms:
+        for dbatom in self.dbObject.translationatom:
             atom =  TranslationAtom(id=[dbatom.client_id, dbatom.object_id])
             atom.dbObject = dbatom
             result.append(atom)

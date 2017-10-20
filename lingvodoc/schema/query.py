@@ -154,7 +154,7 @@ from sqlalchemy.sql.functions import coalesce
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import phonology as utils_phonology
-
+from lingvodoc.utils.search import translation_gist_search
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -262,15 +262,10 @@ class Query(graphene.ObjectType):
         request = info.context.request
         response = list()
         for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': status}
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            jn = resp.json
-            response.append(TranslationGist(id=[jn["client_id"], jn["object_id"] ]))
+            db_tr_gist = translation_gist_search(status)
+            gql_tr_gist = TranslationGist(id=[db_tr_gist.client_id, db_tr_gist.object_id ])
+            gql_tr_gist.dbObject = db_tr_gist
+            response.append(gql_tr_gist)
         return response
 
     def resolve_all_fields(self, info):
@@ -289,17 +284,10 @@ class Query(graphene.ObjectType):
         request = info.context.request
         response = list()
         for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link', 'Grouping Tag']:
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': data_type}
-            # headers = {'Cookie': request.headers['Cookie']}
-            # subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            jn = resp.json
-            #if "contains" in jn:
-            #    del jn["contains"]
-            response.append(TranslationGist(id=[jn["client_id"], jn["object_id"] ]))
+            db_tr_gist = translation_gist_search(data_type)
+            gql_tr_gist = TranslationGist(id=[db_tr_gist.client_id, db_tr_gist.object_id ])
+            gql_tr_gist.dbObject = db_tr_gist
+            response.append(gql_tr_gist)
         return response
 
     def resolve_dictionaries(self, info, published):
@@ -318,41 +306,15 @@ class Query(graphene.ObjectType):
             }
         }
         """
-        context = info.context
-        dbdicts = list()
-        request = context.get('request')
+
         if published:
 
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Published'}
-            headers = dict()
-            if request.headers.get('Cookie'):
-                headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+            db_published_gist = translation_gist_search('Published')
+            state_translation_gist_client_id = db_published_gist.client_id
+            state_translation_gist_object_id = db_published_gist.object_id
+            db_la_gist = translation_gist_search('Limited access')
+            limited_object_id, limited_client_id = db_la_gist.client_id, db_la_gist.object_id
 
-            if 'error' not in resp.json:
-                state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
-                    'client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
-
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Limited access'}  # todo: fix
-            headers = dict()
-            if request.headers.get('Cookie'):
-                headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-
-            if 'error' not in resp.json:
-                limited_object_id, limited_client_id = resp.json['object_id'], resp.json['client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
 
             dbdicts = DBSession.query(dbDictionary).filter(
                 or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
@@ -371,7 +333,7 @@ class Query(graphene.ObjectType):
 
         dictionaries_list = list()
         for dbdict in dbdicts:
-            gql_dict = Dictionary()
+            gql_dict = Dictionary(id=[dbdict.client_id, dbdict.object_id])
             gql_dict.dbObject = dbdict
             dictionaries_list.append(gql_dict)
         return dictionaries_list
@@ -399,31 +361,11 @@ class Query(graphene.ObjectType):
         request = context.get('request')
         cookies = info.context.get('cookies')
         if published:
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Published'}
-            headers = {'Cookie': cookies}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            if 'error' not in resp.json:
-                state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
-                    'client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
-
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Limited access'}
-            headers = {'Cookie': cookies}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            if 'error' not in resp.json:
-                limited_object_id, limited_client_id = resp.json['object_id'], resp.json[
-                    'client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
+            db_published_gist = translation_gist_search('Published')
+            state_translation_gist_client_id = db_published_gist.client_id
+            state_translation_gist_object_id = db_published_gist.object_id
+            db_la_gist = translation_gist_search('Limited access')
+            limited_object_id, limited_client_id = db_la_gist.object_id, db_la_gist.client_id
 
             """
             atom_perspective_name_alias = aliased(dbTranslationAtom, name="PerspectiveName")
@@ -444,12 +386,13 @@ class Query(graphene.ObjectType):
         else:
             persps = DBSession.query(dbPerspective).filter(dbPerspective.marked_for_deletion == False).all()
 
-        perspectives_list = [DictionaryPerspective(id=[persp.client_id, persp.object_id],
-                                                   parent_id=[persp.parent_client_id, persp.parent_object_id],
-                                                   translation_gist_id=[persp.translation_gist_client_id, persp.translation_gist_object_id],
-                                                   state_translation_gist_id=[persp.state_translation_gist_client_id, persp.state_translation_gist_object_id],
-                                                   import_source=persp.import_source, import_hash=persp.import_hash,
-                                                   translation=persp.get_translation(context.get('locale_id'))) for persp in persps]
+
+        perspectives_list = []
+
+        for db_persp in persps:
+            gql_persp =  DictionaryPerspective(id=[db_persp.client_id, db_persp.object_id])
+            gql_persp.dbObject = db_persp
+            perspectives_list.append(gql_persp)
         return perspectives_list
 
 
@@ -630,31 +573,18 @@ class Query(graphene.ObjectType):
             }
         }
         """
-        translationatom = DBSession.query(dbTranslationAtom) \
-            .join(dbTranslationGist). \
-            filter(dbTranslationAtom.content == searchstring,
-                   dbTranslationAtom.locale_id == 2,
-                   dbTranslationGist.type == 'Service') \
-            .one()
-        if translationatom and translationatom.parent:
-            translationgist = translationatom.parent
+        db_translationgist = translation_gist_search(searchstring)
+        if not db_translationgist:
+            raise ResponseError(message="Error: no result")
+        # translationatoms_list = list()
+        # for db_translationatom in db_translationgist.translationatom:
+        #     translationatom_object = TranslationAtom(id=[db_translationatom.client_id, db_translationatom.object_id])
+        #     translationatom_object.dbObject = db_translationatom
+        #     translationatoms_list.append(translationatom_object)
+        gql_translationgist = TranslationGist(id=[db_translationgist.client_id, db_translationgist.object_id])
+        gql_translationgist.dbObject = db_translationgist
+        return gql_translationgist
 
-            translationatoms_list = list()
-            for translationatom in translationgist.translationatom:
-                translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
-                                                         parent_id=[translationatom.parent_client_id,
-                                                                    translationatom.parent_object_id],
-                                                         content=translationatom.content,
-                                                         locale_id=translationatom.locale_id,
-                                                         created_at=translationatom.created_at
-                                                         )
-                translationatoms_list.append(translationatom_object)
-            translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
-                                                     type=translationgist.type,
-                                                     created_at=translationgist.created_at,
-                                                     translationatoms=translationatoms_list)
-            return translationgist_object
-        raise ResponseError(message="Error: no result")
 
     def resolve_advanced_translation_search(self, info, searchstrings):
         """
@@ -669,7 +599,7 @@ class Query(graphene.ObjectType):
             }
         }
         """
-        if not searchstrings[0]:
+        if not searchstrings:
             raise ResponseError(message="Error: no search strings")
 
         translationatoms = DBSession.query(dbTranslationAtom) \
@@ -698,11 +628,10 @@ class Query(graphene.ObjectType):
                                                              created_at=translationatom.created_at
                                                              )
                     translationatoms_list.append(translationatom_object)
-                translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
-                                                         type=translationgist.type,
-                                                         created_at=translationgist.created_at,
-                                                         translationatoms=translationatoms_list)
-                translationgists_list.append(translationgist_object)
+                gql_translationgist = TranslationGist(id=[translationgist.client_id, translationgist.object_id])
+                                                         #translationatoms=translationatoms_list)
+                gql_translationgist.dbObject = translationgist
+                translationgists_list.append(gql_translationgist)
             return translationgists_list
         raise ResponseError(message="Error: no result")
 

@@ -179,6 +179,13 @@ class Dictionary(graphene.ObjectType):  # tested
         response['roles_organizations'] = roles_organizations
         return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
 
+    @fetch_object('category')
+    def resolve_category(self, info):
+        return self.dbObject.category
+
+    @fetch_object('domain')
+    def resolve_domain(self, info):
+        return self.dbObject.domain
 ###
 # CrUd functions
 #
