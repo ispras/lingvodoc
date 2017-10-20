@@ -48,7 +48,7 @@ class TranslationGist(graphene.ObjectType):
 
                       )
 
-    @fetch_object() # TODO: fix that
+    @fetch_object("translationatoms") # TODO: fix that
     def resolve_translationatoms(self, info):
         result = list()
         for dbatom in self.dbObject.translationatom:

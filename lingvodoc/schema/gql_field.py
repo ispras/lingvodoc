@@ -106,11 +106,7 @@ class CreateField(graphene.Mutation):
             data_type_translation_gist_id = args.get('data_type_translation_gist_id')
             translation_gist_id = args.get('translation_gist_id')
             translation_atoms = args.get("translation_atoms")
-            if type(translation_atoms) is not list:  # TODO: look at this
-                if not translation_gist_id:
-                    raise ResponseError(message="translation_gist_id arg not found")
-            else:
-                translation_gist_id = create_gists_with_atoms(translation_atoms, [client_id,object_id])
+            translation_gist_id = create_gists_with_atoms(translation_atoms, translation_gist_id, [client_id,object_id])
             dbfield = dbField(client_id=client_id,
                           object_id=object_id,
                           data_type_translation_gist_client_id=data_type_translation_gist_id[0],

@@ -357,11 +357,7 @@ class CreateDictionary(graphene.Mutation):
         parent_id = args.get('parent_id')
         tr_atoms = args.get("translation_atoms")
         translation_gist_id = args.get('translation_gist_id')
-        if type(tr_atoms) is not list:  # TODO: look at this
-            if not translation_gist_id:
-                raise ResponseError(message="translation_gist_id arg not found")
-        else:
-            translation_gist_id = create_gists_with_atoms(tr_atoms, [client_id,object_id])
+        translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id,object_id])
         additional_metadata = args.get("additional_metadata")
 
         id = [client_id, object_id]

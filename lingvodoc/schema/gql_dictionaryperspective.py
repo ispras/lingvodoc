@@ -389,11 +389,8 @@ class CreateDictionaryPerspective(graphene.Mutation):
         parent_id = args.get('parent_id')
         translation_gist_id = args.get('translation_gist_id')
         translation_atoms = args.get("translation_atoms")
-        if type(translation_atoms) is not list:  # TODO: look at this
-            if not translation_gist_id:
-                raise ResponseError(message="translation_gist_id arg not found")
-        else:
-            translation_gist_id = create_gists_with_atoms(translation_atoms, [client_id,object_id])
+
+        translation_gist_id = create_gists_with_atoms(translation_atoms, translation_gist_id, [client_id,object_id])
         import_source = args.get('import_source')
         import_hash = args.get('import_hash')
         additional_metadata = args.get('additional_metadata')
