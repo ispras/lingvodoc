@@ -260,28 +260,25 @@ class Query(graphene.ObjectType):
             raise ResponseError(message='no such mode')
     def resolve_all_statuses(self, info):
         request = info.context.request
-        response = list()
+        gql_statuses = list()
         for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
             db_tr_gist = translation_gist_search(status)
             gql_tr_gist = TranslationGist(id=[db_tr_gist.client_id, db_tr_gist.object_id ])
             gql_tr_gist.dbObject = db_tr_gist
-            response.append(gql_tr_gist)
-        return response
+            gql_statuses.append(gql_tr_gist)
+        return gql_statuses
 
     def resolve_all_fields(self, info):
         fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
-        response = list()
-        for field in fields:
-            f = Field(id=[field.client_id, field.object_id],
-                      )
-            f.dbObject = field
-            response.append(f)
+        gql_fields = list()
+        for db_field in fields:
+            gql_field = Field(id=[db_field.client_id, db_field.object_id])
+            gql_field.dbObject = gql_field
+            gql_fields.append(gql_field)
 
-        return response
+        return gql_fields
 
     def resolve_all_data_types(self, info):
-        import json
-        request = info.context.request
         response = list()
         for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link', 'Grouping Tag']:
             db_tr_gist = translation_gist_search(data_type)
@@ -313,7 +310,7 @@ class Query(graphene.ObjectType):
             state_translation_gist_client_id = db_published_gist.client_id
             state_translation_gist_object_id = db_published_gist.object_id
             db_la_gist = translation_gist_search('Limited access')
-            limited_object_id, limited_client_id = db_la_gist.client_id, db_la_gist.object_id
+            limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
 
             dbdicts = DBSession.query(dbDictionary).filter(
@@ -358,14 +355,12 @@ class Query(graphene.ObjectType):
         }
         """
         context = info.context
-        request = context.get('request')
-        cookies = info.context.get('cookies')
         if published:
             db_published_gist = translation_gist_search('Published')
             state_translation_gist_client_id = db_published_gist.client_id
             state_translation_gist_object_id = db_published_gist.object_id
             db_la_gist = translation_gist_search('Limited access')
-            limited_object_id, limited_client_id = db_la_gist.object_id, db_la_gist.client_id
+            limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
             """
             atom_perspective_name_alias = aliased(dbTranslationAtom, name="PerspectiveName")
@@ -417,11 +412,13 @@ class Query(graphene.ObjectType):
         """
         context = info.context
 
+
         languages = DBSession.query(dbLanguage).filter(dbLanguage.marked_for_deletion == False).all()
-        languages_list = [Language(id=[lang.client_id, lang.object_id],
-                                   parent_id=[lang.parent_client_id, lang.parent_object_id],
-                                   translation_gist_id=[lang.translation_gist_client_id, lang.translation_gist_object_id],
-                                   translation=lang.get_translation(context.get('locale_id'))) for lang in languages]
+        languages_list = list()
+        for db_lang in languages:
+            gql_lang = Language(id=[db_lang.client_id, db_lang.object_id])
+            gql_lang.dbObject = db_lang
+
         return languages_list
 
     def resolve_entity(self, info, id):
@@ -451,8 +448,12 @@ class Query(graphene.ObjectType):
                 dbUser.intl_name.startswith(name),
                 dbEmail.email.startswith(name)
             ))
-        users_list = [User(name=user.name,
-                           intl_name=user.intl_name, login=user.login) for user in users]
+        users_list = list()
+        for db_user in users:
+            gql_user = User(name=db_user.name)
+            gql_user.dbObject = db_user
+            users_list.append(gql_user)
+
         return users_list
 
 
@@ -478,9 +479,10 @@ class Query(graphene.ObjectType):
 
     def resolve_organizations(self, info):
         organizations = DBSession.query(dbOrganization).filter_by(marked_for_deletion=False).all()
-        organizations_list = [Organization(id=organization.id,
-                                           name=organization.name,
-                                           about=organization.about) for organization in organizations]
+        organizations_list = list()
+        for db_organisation in organizations:
+            gql_organisation = Organization(id=db_organisation.id)
+            gql_organisation.dbObject = db_organisation
         return organizations_list
 
     # def resolve_passhash(self, args, context, info):
@@ -510,8 +512,12 @@ class Query(graphene.ObjectType):
         """
 
         gists = DBSession.query(dbTranslationGist).filter_by(marked_for_deletion=False).order_by(dbTranslationGist.type).all()
-        gists_list = [TranslationGist(id=[gist.client_id, gist.object_id],
-                                      type=gist.type) for gist in gists]
+        gists_list = list()
+        for db_gist in gists:
+            gql_gist = TranslationGist(id=[db_gist.client_id, db_gist.object_id])
+            gql_gist.dbObject = db_gist
+            gists_list.append(gql_gist)
+
         return gists_list
 
     def resolve_translation_search(self, info, searchstring, translation_type=None):
@@ -542,20 +548,20 @@ class Query(graphene.ObjectType):
         if translationgists:
             translationgists_list = list()
             for translationgist in translationgists:
-                translationatoms_list = list()
-                for translationatom in translationgist.translationatom:
-                    translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
-                                                             parent_id=[translationatom.parent_client_id,
-                                                                        translationatom.parent_object_id],
-                                                             content=translationatom.content,
-                                                             locale_id=translationatom.locale_id,
-                                                             created_at=translationatom.created_at
-                                                             )
-                    translationatoms_list.append(translationatom_object)
-                translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
-                                                         type=translationgist.type,
-                                                         created_at=translationgist.created_at,
-                                                         translationatoms=translationatoms_list)
+                # translationatoms_list = list()
+                # for translationatom in translationgist.translationatom:
+                #     translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
+                #                                              parent_id=[translationatom.parent_client_id,
+                #                                                         translationatom.parent_object_id],
+                #                                              content=translationatom.content,
+                #                                              locale_id=translationatom.locale_id,
+                #                                              created_at=translationatom.created_at
+                #                                              )
+                #     translationatoms_list.append(translationatom_object)
+                translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id])
+                                                         # type=translationgist.type,
+                                                         # created_at=translationgist.created_at,
+                                                         # translationatoms=translationatoms_list)
                 translationgists_list.append(translationgist_object)
             return translationgists_list
         raise ResponseError(message="Error: no result")
@@ -618,16 +624,16 @@ class Query(graphene.ObjectType):
         if translationgists:
             translationgists_list = list()
             for translationgist in translationgists:
-                translationatoms_list = list()
-                for translationatom in translationgist.translationatom:
-                    translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
-                                                             parent_id=[translationatom.parent_client_id,
-                                                                        translationatom.parent_object_id],
-                                                             content=translationatom.content,
-                                                             locale_id=translationatom.locale_id,
-                                                             created_at=translationatom.created_at
-                                                             )
-                    translationatoms_list.append(translationatom_object)
+                # translationatoms_list = list()
+                # for translationatom in translationgist.translationatom:
+                #     translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
+                #                                              parent_id=[translationatom.parent_client_id,
+                #                                                         translationatom.parent_object_id],
+                #                                              content=translationatom.content,
+                #                                              locale_id=translationatom.locale_id,
+                #                                              created_at=translationatom.created_at
+                #                                              )
+                #     translationatoms_list.append(translationatom_object)
                 gql_translationgist = TranslationGist(id=[translationgist.client_id, translationgist.object_id])
                                                          #translationatoms=translationatoms_list)
                 gql_translationgist.dbObject = translationgist
@@ -703,22 +709,9 @@ class Query(graphene.ObjectType):
                         published_cursor = results_cursor
 
                     ignore_groups = False
-                    request = info.context.get('request')
-                    subreq = Request.blank('/translation_service_search')
-                    subreq.method = 'POST'
-                    subreq.headers = request.headers
-                    subreq.json = {'searchstring': 'Published'}
-                    headers = dict()
-                    if request.headers.get('Cookie'):
-                        headers = {'Cookie': request.headers['Cookie']}
-                    subreq.headers = headers
-                    resp = request.invoke_subrequest(subreq)
-
-                    if 'error' not in resp.json:
-                        state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], \
-                                                                                             resp.json['client_id']
-                    else:
-                        raise KeyError("Something wrong with the base", resp.json['error'])
+                    db_published_gist = translation_gist_search('Published')
+                    state_translation_gist_client_id = db_published_gist.client_id
+                    state_translation_gist_object_id = db_published_gist.object_id
 
                     if perspective_id:
                         perspective_client_id, perspective_object_id = perspective_id
@@ -847,45 +840,20 @@ class Query(graphene.ObjectType):
 
         """
         request = info.context.get('request')
-        cookies = info.context.get('cookies')
-        headers = info.context.get('headers')
 
         if not perspectives:
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Published'}
-            headers = {'Cookie': cookies}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            if 'error' not in resp.json:
-                state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], \
-                                                                                     resp.json[
-                                                                                         'client_id']
-                published_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Limited access'}
-            headers = {'Cookie': cookies}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            if 'error' not in resp.json:
-                state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], \
-                                                                                     resp.json[
-                                                                                         'client_id']
-                limited_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
+            db_published_gist = translation_gist_search('Published')
+            state_translation_gist_client_id = db_published_gist.client_id
+            state_translation_gist_object_id = db_published_gist.object_id
+            db_la_gist = translation_gist_search('Limited access')
+            limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
             perspectives = [(persp.client_id, persp.object_id) for persp in DBSession.query(dbPerspective).filter(
                 dbPerspective.marked_for_deletion == False,
-                or_(and_(dbPerspective.state_translation_gist_client_id == published_gist[0],
-                         dbPerspective.state_translation_gist_object_id == published_gist[1]),
-                    and_(dbPerspective.state_translation_gist_client_id == limited_gist[0],
-                         dbPerspective.state_translation_gist_object_id == limited_gist[1]))).all()]
+                or_(and_(dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
+                         dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id),
+                    and_(dbPerspective.state_translation_gist_client_id == limited_client_id,
+                         dbPerspective.state_translation_gist_object_id == limited_object_id))).all()]
 
         def make_query(searchstring, perspectives):
             results_cursor = DBSession.query(dbLexicalEntry).join(dbEntity.parent) \
@@ -1017,11 +985,11 @@ class Query(graphene.ObjectType):
                     raise ResponseError(message="Error: you can not list that data type globally.")
         else:
             user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id).all()
-        user_blobs_list = [UserBlobs(id=[blob.client_id, blob.object_id],
-                                     name=blob.name,
-                                     content=blob.content,
-                                     data_type=blob.data_type,
-                                     created_at=blob.created_at) for blob in user_blobs]
+        user_blobs_list = list()
+        for db_blob in user_blobs:
+            gql_blob = UserBlobs(id=[db_blob.client_id, db_blob.object_id])
+            gql_blob.dbObject = db_blob
+            user_blobs_list.append(gql_blob)
         return user_blobs_list
 
     def resolve_userrequest(self, info, id):
@@ -1054,16 +1022,10 @@ class Query(graphene.ObjectType):
 
         userrequests = DBSession.query(dbUserRequest).filter(dbUserRequest.recipient_id == user.id).order_by(
             dbUserRequest.created_at).all()
-
-        userrequests_list = [UserRequest(id=userrequest.id,
-                                         sender_id=userrequest.sender_id,
-                                         recipient_id=userrequest.recipient_id,
-                                         broadcast_uuid=userrequest.broadcast_uuid,
-                                         type=userrequest.type,
-                                         subject=userrequest.subject,
-                                         message=userrequest.message,
-                                         created_at=userrequest.message) for userrequest in userrequests]
-
+        userrequests_list = list()
+        for db_userrequest in userrequests:
+            gql_userrequest = UserRequest(id=db_userrequest.id)
+            userrequests_list.append(gql_userrequest)
         return userrequests_list
 
     def resolve_all_basegroups(self, info):  # tested

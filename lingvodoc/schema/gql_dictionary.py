@@ -376,62 +376,9 @@ class CreateDictionary(graphene.Mutation):
         persp_fields_list = defaultdict(list)
         if persp_args:
             for next_persp in persp_args:
-
-                if "translation_atoms" in next_persp:
-                    client = DBSession.query(dbClient).filter_by(id=client_id).first()
-                    user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-                    atoms_to_create = next_persp["translation_atoms"]
-                    dbtranslationgist = dbTranslationGist(client_id=client_id, object_id=object_id, type="Language")
-
-                    translation_gist_client_id = dbtranslationgist.client_id
-                    translation_gist_object_id = dbtranslationgist.object_id
-                    persp_translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
-                    DBSession.add(dbtranslationgist)
-                    DBSession.flush()
-                    basegroups = list()
-                    basegroups.append(DBSession.query(dbBaseGroup).filter_by(name="Can delete translationgist").first())
-                    if not object_id:
-                        groups = []
-                        for base in basegroups:
-                            group = dbGroup(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
-                                          parent=base)
-
-                            groups += [group]
-                        for group in groups:
-                            add_user_to_group(user, group)
-
-                    for atom_dict in atoms_to_create:
-                        if "locale_id" in atom_dict and "content" in atom_dict:
-                            locale_id = atom_dict["locale_id"]
-                            content = atom_dict["content"]
-                            dbtranslationatom = dbTranslationAtom(client_id=client_id,
-                                                                  object_id=None,
-                                                                  parent=dbtranslationgist,
-                                                                  locale_id=locale_id,
-                                                                  content=content)
-
-                            DBSession.add(dbtranslationatom)
-                            DBSession.flush()
-                            if not object_id:
-                                basegroups = []
-                                basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
-                                if not object_id:
-                                    groups = []
-                                    for base in basegroups:
-                                        group = dbGroup(subject_client_id=dbtranslationatom.client_id,
-                                                        subject_object_id=dbtranslationatom.object_id,
-                                                        parent=base)
-                                        groups += [group]
-                                    for group in groups:
-                                        add_user_to_group(user, group)
-                        else:
-                            raise ResponseError(message="locale_id and content args not found")
-                else:
-                    if "translation_gist_id" in next_persp:
-                        persp_translation_gist_id = next_persp["translation_gist_id"]
-                    else:
-                        raise ResponseError(message="Translation gist not found")
-
+                atoms_to_create = next_persp.get("translation_atoms")
+                persp_translation_gist_id = next_persp.get("translation_gist_id")
+                persp_translation_gist_id = create_gists_with_atoms(atoms_to_create, persp_translation_gist_id, [client_id,object_id])
                 parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=(client_id, None),
                                         parent_id=parent_id,  # use all object attrs

@@ -103,10 +103,6 @@ def create_dbdictionary(id=None,
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    if not parent:
-        raise ResponseError(message="No such dictionary in the system")
-
     translation_gist_client_id, translation_gist_object_id = translation_gist_id if translation_gist_id else (None, None)
 
     duplicate_check = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).all()
@@ -151,9 +147,9 @@ def create_dictionary_persp_to_field(id=None,
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
-        raise ResponseError(message="No such dictionary in the system")
+        raise ResponseError(message="No such perspective in the system")
 
     field_client_id, field_object_id = field_id if field_id else (None, None)
     self_client_id, self_object_id = self_id if self_id else (None, None)
