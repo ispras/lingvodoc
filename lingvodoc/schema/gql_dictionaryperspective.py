@@ -329,27 +329,30 @@ class CreateDictionaryPerspective(graphene.Mutation):
     """
     example:
     mutation  {
-            create_perspective(id:[949,2491], parent_id:[449,2491], translation_gist_id: [714, 3],,
+            create_perspective( parent_id:[66,4], translation_gist_id: [714, 3],is_template: true
              additional_metadata: {hash:"1234567"}, import_source: "source", import_hash: "hash") {
                 triumph
+
                 perspective{
+					is_template
                     id
                 }
             }
     }
     (this example works)
     returns:
-
     {
-      "create_perspective": {
-        "triumph": true,
-        "perspective": {
-          "id": [
-            949,
-            2491
-          ],
+        "data": {
+            "create_perspective": {
+                "triumph": true,
+                "perspective": {
+                    "id": [
+                        1197,
+                        320
+                    ]
+                }
+            }
         }
-      }
     }
     with atoms:
     mutation {
@@ -372,7 +375,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
         additional_metadata = ObjectVal()
         import_source = graphene.String()
         import_hash = graphene.String()
-
+        is_template = graphene.Boolean()
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -394,12 +397,14 @@ class CreateDictionaryPerspective(graphene.Mutation):
         import_source = args.get('import_source')
         import_hash = args.get('import_hash')
         additional_metadata = args.get('additional_metadata')
+        is_template = args.get("is_template")
         dbperspective = create_perspective(id=id,
                                 parent_id=parent_id,
                                 translation_gist_id=translation_gist_id,
                                 additional_metadata=additional_metadata,
                                 import_source=import_source,
-                                import_hash=import_hash
+                                import_hash=import_hash,
+                                is_template=is_template
                                 )
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective

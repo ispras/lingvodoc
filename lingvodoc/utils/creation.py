@@ -50,7 +50,8 @@ def create_perspective(id = (None, None),
                        longitude=None,
                        additional_metadata=None,
                        import_source=None,
-                       import_hash=None
+                       import_hash=None,
+                       is_template=0
                        ):
     client_id, object_id = id
 
@@ -74,7 +75,8 @@ def create_perspective(id = (None, None),
                                   import_hash=import_hash,
                                   additional_metadata=additional_metadata,
                                   translation_gist_client_id=translation_gist_client_id,
-                                  translation_gist_object_id=translation_gist_object_id
+                                  translation_gist_object_id=translation_gist_object_id,
+                                  is_template=is_template
                                   )
     DBSession.add(dbperspective)
     DBSession.flush()
@@ -97,7 +99,9 @@ def create_perspective(id = (None, None),
 def create_dbdictionary(id=None,
                         parent_id=None,
                         translation_gist_id=None,
-                        additional_metadata=None):
+                        additional_metadata=None,
+                        domain=0,
+                        category=0):
     client_id, object_id = id
 
     if not parent_id:
@@ -121,7 +125,9 @@ def create_dbdictionary(id=None,
                                     parent=parent,
                                     translation_gist_client_id=translation_gist_client_id,
                                     translation_gist_object_id=translation_gist_object_id,
-                                    additional_metadata=additional_metadata
+                                    additional_metadata=additional_metadata,
+                                    domain=domain,
+                                    category=category
                                     )
 
     client = DBSession.query(Client).filter_by(id=client_id).first()

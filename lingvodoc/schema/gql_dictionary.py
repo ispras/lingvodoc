@@ -324,6 +324,8 @@ class CreateDictionary(graphene.Mutation):
         additional_metadata = ObjectVal()
         perspectives = graphene.List(ObjectVal)
         translation_atoms = graphene.List(ObjectVal)
+        category = graphene.Int()
+        domain = graphene.Int()
 
     class FieldInfo(object):
         id = None
@@ -359,17 +361,19 @@ class CreateDictionary(graphene.Mutation):
         translation_gist_id = args.get('translation_gist_id')
         translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id,object_id])
         additional_metadata = args.get("additional_metadata")
-
+        category = args.get("category")
+        domain = args.get("domain")
         id = [client_id, object_id]
         dbdictionary_obj = create_dbdictionary(id=id,
                                                parent_id=parent_id,
                                                translation_gist_id=translation_gist_id,
-                                               additional_metadata=additional_metadata)
+                                               additional_metadata=additional_metadata,
+                                               category=category,
+                                               domain=domain)
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
 
         persp_args = args.get("perspectives")
-        created_persps = []
         # TODO:  rename it
         persp_fake_ids = dict()
         field_fake_ids = dict()
@@ -381,7 +385,7 @@ class CreateDictionary(graphene.Mutation):
                 persp_translation_gist_id = create_gists_with_atoms(atoms_to_create, persp_translation_gist_id, [client_id,object_id])
                 parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=(client_id, None),
-                                        parent_id=parent_id,  # use all object attrs
+                                        parent_id=parent_id,  # TODO: use all object attrs
                                         translation_gist_id=persp_translation_gist_id
                                         )
 
@@ -476,6 +480,8 @@ class UpdateDictionary(graphene.Mutation):
         translation_gist_id = LingvodocID()
         parent_id = LingvodocID()
         additional_metadata = ObjectVal()
+        category = graphene.Int()
+        domain = graphene.Int()
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -484,7 +490,9 @@ class UpdateDictionary(graphene.Mutation):
     def update_dictionary(ids,
                           parent_id=None,
                           translation_gist_id=None,
-                          additional_metadata=None
+                          additional_metadata=None,
+                          category=None,
+                          domain=None
                           ):
         if not ids:
             raise ResponseError(message="dict id not found")
@@ -497,6 +505,10 @@ class UpdateDictionary(graphene.Mutation):
             db_dictionary.parent_client_id, db_dictionary.parent_object_id = parent_id
         if translation_gist_id:
             db_dictionary.translation_gist_client_id, translation_gist_object_id = translation_gist_id
+        if category:
+            db_dictionary.category = category
+        if domain:
+            db_dictionary.domain = domain
         update_metadata(db_dictionary, additional_metadata)
         return db_dictionary
 
@@ -509,10 +521,14 @@ class UpdateDictionary(graphene.Mutation):
         parent_id = args.get('parent_id')
         translation_gist_id = args.get('translation_gist_id')
         additional_metadata = args.get('additional_metadata')
+        category = args.get("category")
+        domain = args.get("domain")
         dbdictionary = UpdateDictionary.update_dictionary(ids,
                                                           parent_id=parent_id,
                                                           translation_gist_id=translation_gist_id,
-                                                          additional_metadata=additional_metadata
+                                                          additional_metadata=additional_metadata,
+                                                          category=category,
+                                                          domain=domain
                                                           )
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
