@@ -231,12 +231,13 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
         def wrapper(*args, **kwargs):
             cls = args[0]
             context = args[1].context
+
             if attrib_name != 'id':
-                if attrib_name:
-                    if hasattr(cls, attrib_name) and not hasattr(getattr(cls, attrib_name), '_meta'):
+                if attrib_name and hasattr(cls, attrib_name) and not hasattr(getattr(cls, attrib_name), '_meta') and not hasattr(getattr(cls, attrib_name), 'of_type'):
                         return getattr(cls, attrib_name)
-                if ACLSubject and ACLKey == 'id':
-                    context.acl_check('view', ACLSubject, cls.id)
+
+            if ACLSubject and ACLKey == 'id':
+                context.acl_check('view', ACLSubject, cls.id)
             if not cls.dbObject:
                 if type(cls.id) is int:
                     # example: (id: 1)

@@ -103,10 +103,6 @@ def create_dbdictionary(id=None,
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    if not parent:
-        raise ResponseError(message="No such dictionary in the system")
-
     translation_gist_client_id, translation_gist_object_id = translation_gist_id if translation_gist_id else (None, None)
 
     duplicate_check = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).all()
@@ -151,9 +147,9 @@ def create_dictionary_persp_to_field(id=None,
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
-        raise ResponseError(message="No such dictionary in the system")
+        raise ResponseError(message="No such perspective in the system")
 
     field_client_id, field_object_id = field_id if field_id else (None, None)
     self_client_id, self_object_id = self_id if self_id else (None, None)
@@ -351,51 +347,55 @@ def create_lexicalentry(id, perspective_id, save_object=False):
     return dblexentry
 
 
-def create_gists_with_atoms(translation_atoms, ids):
-        client_id, object_id = ids
-        client = DBSession.query(Client).filter_by(id=client_id).first()
+def create_gists_with_atoms(translation_atoms, translation_gist_id, ids):
+        if translation_atoms is None:  # TODO: look at this
+            if not translation_gist_id:
+                raise ResponseError(message="translation_gist_id arg not found")
+        else:
+            client_id, object_id = ids
+            client = DBSession.query(Client).filter_by(id=client_id).first()
 
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
-        dbtranslationgist = TranslationGist(client_id=client_id, object_id=object_id, type="Language")
-        DBSession.add(dbtranslationgist)
-        DBSession.flush()
-        translation_gist_client_id = dbtranslationgist.client_id
-        translation_gist_object_id = dbtranslationgist.object_id
-        translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
-        basegroups = list()
-        basegroups.append(DBSession.query(BaseGroup).filter_by(name="Can delete translationgist").first())
-        if not object_id:
-            groups = []
-            for base in basegroups:
-                group = Group(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
-                              parent=base)
-                groups += [group]
-            for group in groups:
-                add_user_to_group(user, group)
+            user = DBSession.query(User).filter_by(id=client.user_id).first()
+            dbtranslationgist = TranslationGist(client_id=client_id, object_id=object_id, type="Language")
+            DBSession.add(dbtranslationgist)
+            DBSession.flush()
+            translation_gist_client_id = dbtranslationgist.client_id
+            translation_gist_object_id = dbtranslationgist.object_id
+            translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
+            basegroups = list()
+            basegroups.append(DBSession.query(BaseGroup).filter_by(name="Can delete translationgist").first())
+            if not object_id:
+                groups = []
+                for base in basegroups:
+                    group = Group(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
+                                  parent=base)
+                    groups += [group]
+                for group in groups:
+                    add_user_to_group(user, group)
 
-        for atom_dict in translation_atoms:
-            if "locale_id" in atom_dict and "content" in atom_dict:
-                locale_id = atom_dict["locale_id"]
-                content = atom_dict["content"]
-                dbtranslationatom = TranslationAtom(client_id=client_id,
-                                                      object_id=object_id,
-                                                      parent=dbtranslationgist,
-                                                      locale_id=locale_id,
-                                                      content=content)
-                DBSession.add(dbtranslationatom)
-                DBSession.flush()
-                if not object_id:
-                    basegroups = []
-                    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit translationatom").first()]
+            for atom_dict in translation_atoms:
+                if "locale_id" in atom_dict and "content" in atom_dict:
+                    locale_id = atom_dict["locale_id"]
+                    content = atom_dict["content"]
+                    dbtranslationatom = TranslationAtom(client_id=client_id,
+                                                          object_id=object_id,
+                                                          parent=dbtranslationgist,
+                                                          locale_id=locale_id,
+                                                          content=content)
+                    DBSession.add(dbtranslationatom)
+                    DBSession.flush()
                     if not object_id:
-                        groups = []
-                        for base in basegroups:
-                            group = Group(subject_client_id=dbtranslationatom.client_id,
-                                            subject_object_id=dbtranslationatom.object_id,
-                                            parent=base)
-                            groups += [group]
-                        for group in groups:
-                            add_user_to_group(user, group)
-            else:
-                raise ResponseError(message="locale_id and content args not found")
+                        basegroups = []
+                        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit translationatom").first()]
+                        if not object_id:
+                            groups = []
+                            for base in basegroups:
+                                group = Group(subject_client_id=dbtranslationatom.client_id,
+                                                subject_object_id=dbtranslationatom.object_id,
+                                                parent=base)
+                                groups += [group]
+                            for group in groups:
+                                add_user_to_group(user, group)
+                else:
+                    raise ResponseError(message="locale_id and content args not found")
         return translation_gist_id
