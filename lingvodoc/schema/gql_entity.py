@@ -301,7 +301,7 @@ class UpdateEntity(graphene.Mutation):
                                        (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
             if accepted is not None and not accepted and dbpublishingentity.accepted:
-                raise ResponseError(message="not allowed action")
+                raise ResponseError(message="Not allowed action")
 
             if published:
                 dbpublishingentity.published = published

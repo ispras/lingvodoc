@@ -127,7 +127,7 @@ class Dictionary(graphene.ObjectType):  # tested
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
         #print(starting_time)
         if starting_time is None or ending_time is None:
-            raise ResponseError(message="Time error")
+            raise ResponseError(message="Time period is not chosen")
         locale_id = info.context.get('locale_id')
         return statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
                                    starting_time,
@@ -359,7 +359,7 @@ class CreateDictionary(graphene.Mutation):
         translation_gist_id = args.get('translation_gist_id')
         if type(tr_atoms) is not list:  # TODO: look at this
             if not translation_gist_id:
-                raise ResponseError(message="translation_gist_id arg not found")
+                raise ResponseError(message="translation_gist_id arg not found") # use function from utils
         else:
             translation_gist_id = create_gists_with_atoms(tr_atoms, [client_id,object_id])
         additional_metadata = args.get("additional_metadata")

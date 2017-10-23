@@ -283,9 +283,9 @@ class DictionaryPerspective(graphene.ObjectType):
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
         parent_client_id, parent_object_id = self.dbObject.parent_client_id, self.dbObject.parent_object_id
 
-        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            raise ResponseError(message="No such dictionary in the system")
+        # parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        # if not parent:
+        #     raise ResponseError(message="No such dictionary in the system")
 
         perspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if perspective and not perspective.marked_for_deletion:
@@ -316,7 +316,7 @@ class DictionaryPerspective(graphene.ObjectType):
     @fetch_object()
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
         if starting_time is None or ending_time is None:
-            raise ResponseError(message="Time error")
+            raise ResponseError(message="Bad time period")
         locale_id = info.context.get('locale_id')
         return statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
                                    starting_time,
