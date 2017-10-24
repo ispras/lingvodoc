@@ -353,12 +353,15 @@ class BulkCreateEntity(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, **args):
+        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           info.context["client_id"])
         entity_objects = args.get('entities')
         dbentities_list = list()
         request = info.context.request
         entities = list()
         for entity_obj in entity_objects:
-
             id = entity_obj.get("id")
             if id is None:
                 id = (info.context["client_id"], None)
