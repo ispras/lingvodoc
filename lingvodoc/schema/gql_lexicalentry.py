@@ -201,9 +201,13 @@ class BulkCreateLexicalEntry(graphene.Mutation):
     def mutate(root, info, **args):
         lexicalentries = args.get('lexicalentries')
         lexentries_list = list()
-
+        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           info.context["client_id"])
         for lexentry in lexicalentries:
             id = lexentry["id"]
+
             perspective_id = lexentry["perspective_id"]
 
             dblexentry = create_lexicalentry(id, perspective_id, False)
