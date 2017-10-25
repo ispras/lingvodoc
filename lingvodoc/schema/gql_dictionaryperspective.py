@@ -14,8 +14,7 @@ from lingvodoc.models import (
     Entity as dbEntity,
     Organization as dbOrganization,
     ObjectTOC,
-    DBSession,
-    Field as dbField
+    DBSession
 )
 
 from lingvodoc.schema.gql_holders import (
@@ -93,7 +92,7 @@ class DictionaryPerspective(graphene.ObjectType):
     import_hash = graphene.String()
 
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
-    fields = graphene.List(DictionaryPerspectiveToField)
+    columns = graphene.List(DictionaryPerspectiveToField)
     entities = graphene.List(Entity, mode=graphene.String())
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
     authors = graphene.List('lingvodoc.schema.gql_user.User')
@@ -151,13 +150,11 @@ class DictionaryPerspective(graphene.ObjectType):
         return result
 
     @fetch_object() # tested
-    def resolve_fields(self, info):
+    def resolve_columns(self, info):
         dbfields = self.dbObject.dictionaryperspectivetofield
         result = list()
-        for dbpfield in dbfields:
-            dbfield = DBSession.query(dbField).filter_by(client_id=dbpfield.field_client_id,
-                                                         object_id=dbpfield.field_object_id).first()
-            gr_field_obj = DictionaryPerspectiveToField(id=[dbpfield.field_client_id, dbpfield.field_object_id])
+        for dbfield in dbfields:
+            gr_field_obj = DictionaryPerspectiveToField(id=[dbfield.client_id, dbfield.object_id])
             gr_field_obj.dbObject = dbfield
             result.append(gr_field_obj)
         return result
