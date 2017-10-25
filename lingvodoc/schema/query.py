@@ -273,7 +273,7 @@ class Query(graphene.ObjectType):
         gql_fields = list()
         for db_field in fields:
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
-            gql_field.dbObject = gql_field
+            gql_field.dbObject = db_field
             gql_fields.append(gql_field)
 
         return gql_fields
@@ -418,6 +418,7 @@ class Query(graphene.ObjectType):
         for db_lang in languages:
             gql_lang = Language(id=[db_lang.client_id, db_lang.object_id])
             gql_lang.dbObject = db_lang
+            languages_list.append(gql_lang)
 
         return languages_list
 

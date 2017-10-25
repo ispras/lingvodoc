@@ -152,8 +152,8 @@ class AcceptUserRequest(graphene.Mutation):
                     if grant.additional_metadata.get('participant') is None:
                         grant.additional_metadata['participant'] = list()
 
-                    dict_ids = {'client_id': userrequest.subject['client_id'],
-                                'object_id': userrequest.subject['object_id']}
+                    dict_ids = {'client_id': userrequest.subject['dictionary_id'][0],
+                                'object_id': userrequest.subject['dictionary_id'][1]}
 
                     no_grants = True
                     for tmp_grant in DBSession.query(dbGrant).all():
@@ -377,7 +377,7 @@ class AddDictionaryToGrant(graphene.Mutation):
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
         client_id, object_id = dictionary_id
         user_id = user.id
-        request_json = {"client_id": client_id, "object_id": object_id, "grant_id": grant_id}
+        request_json = {"dictionary_id": [client_id, object_id], "grant_id": grant_id}
         req = dict()
         req['sender_id'] = user_id
         req['broadcast_uuid'] = str(uuid4())
