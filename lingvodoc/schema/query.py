@@ -413,7 +413,7 @@ class Query(graphene.ObjectType):
         context = info.context
 
 
-        languages = DBSession.query(dbLanguage).filter(dbLanguage.marked_for_deletion == False).all()
+        languages = DBSession.query(dbLanguage).filter_by(marked_for_deletion = False).all()
         languages_list = list()
         for db_lang in languages:
             gql_lang = Language(id=[db_lang.client_id, db_lang.object_id])
