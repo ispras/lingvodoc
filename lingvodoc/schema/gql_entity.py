@@ -53,7 +53,10 @@ import base64
 import hashlib
 
 from lingvodoc.utils.creation import create_entity
-
+from lingvodoc.views.v2.utils import (
+    check_client_id
+)
+from lingvodoc.utils.verification import check_lingvodoc_id
 
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     filename = sanitize_filename(filename)
@@ -362,13 +365,22 @@ class BulkCreateEntity(graphene.Mutation):
         request = info.context.request
         entities = list()
         for entity_obj in entity_objects:
-            id = entity_obj.get("id")
-            if id is None:
-                id = (info.context["client_id"], None)
+            ids = entity_obj.get("id")  # TODO: id check
 
+            if ids is None:
+                ids = (info.context["client_id"], None)
+            else:
+                if not check_lingvodoc_id(ids):
+                    raise KeyError("Wrong id")
+                if not check_client_id(info.context["client_id"], ids[0]):
+                    raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                                   ids[0])
             parent_id = entity_obj.get("parent_id")
+
             if not parent_id:
                 raise ResponseError(message="Bad lexical_entry object")
+            if not check_lingvodoc_id(parent_id):
+                raise KeyError("Wrong parent_id")
             lexical_entry = DBSession.query(dbLexicalEntry) \
                 .filter_by(client_id=parent_id[0], object_id=parent_id[1]).one()
             info.context.acl_check('create', 'lexical_entries_and_entities',
@@ -378,16 +390,22 @@ class BulkCreateEntity(graphene.Mutation):
             if 'additional_metadata' in entity_obj:
                 additional_metadata = entity_obj["additional_metadata"]
             field_id = entity_obj.get('field_id')
-            if not field_id:
+            if not check_lingvodoc_id(field_id):
                 raise ResponseError('no field_id provided')
             self_id = entity_obj.get("self_id")
+            if self_id:
+                if not check_lingvodoc_id(self_id):
+                    raise KeyError("Wrong self_id")
             link_id = entity_obj.get("link_id")
+            if link_id:
+                if not check_lingvodoc_id(link_id):
+                    raise KeyError("Wrong link_id")
             locale_id = entity_obj.get("locale_id", 2)
             filename = entity_obj.get("filename")
             content = entity_obj.get("content")
             registry = entity_obj.get("registry")
 
-            dbentity = create_entity(id, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
+            dbentity = create_entity(ids, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
                                      filename, content, registry, request, False)
 
             dbentities_list.append(dbentity)

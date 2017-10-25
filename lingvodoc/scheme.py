@@ -9,7 +9,6 @@ from lingvodoc.models import (
     Entity as dbEntity,
     LexicalEntry as dbLexicalEntry
 )
-from pyramid.request import Request
 
 from sqlalchemy import (
     func,
@@ -19,6 +18,7 @@ from sqlalchemy import (
 )
 
 from graphene.types.json import JSONString
+from lingvodoc.utils.search import translation_gist_search
 
 class Holder(graphene.Interface):
     id = graphene.List(graphene.Int)
@@ -239,39 +239,13 @@ class Query(graphene.ObjectType):
 
     def resolve_dictionaries(self, args, context, info):
         dbdicts = list()
-        request = context.get('request')
         if args.get('published'):
 
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Published'}
-            headers = dict()
-            if request.headers.get('Cookie'):
-                headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-
-            if 'error' not in resp.json:
-                state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
-                    'client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
-
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'Limited access'}  # todo: fix
-            headers = dict()
-            if request.headers.get('Cookie'):
-                headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-
-            if 'error' not in resp.json:
-                limited_object_id, limited_client_id = resp.json['object_id'], resp.json['client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
+            db_published_gist = translation_gist_search('Published')
+            state_translation_gist_client_id = db_published_gist.client_id
+            state_translation_gist_object_id = db_published_gist.object_id
+            db_la_gist = translation_gist_search('Limited access')
+            limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
             dbdicts = DBSession.query(dbDictionary).filter(or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
                                                                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
