@@ -31,7 +31,7 @@ from lingvodoc.schema.gql_holders import (
 )
 
 from lingvodoc.schema.gql_dictionary import Dictionary
-from lingvodoc.schema.gql_dictipersptofield import DictionaryPerspectiveToField
+from lingvodoc.schema.gql_dictipersptofield import Column
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
@@ -75,15 +75,26 @@ class DictionaryPerspective(graphene.ObjectType):
      + status
      + tree
 
-         query myQuery {
+    query myQuery {
       perspective(id: [78, 4]) {
         id
         statistic(starting_time: 0, ending_time: 1506812557)
-        entities(mode: "all"){id parent_id published accepted}
-        lexical_entries(ids: [[78,6], [78,8]]){id}
-
+        entities(mode: "all") {
+          id
+          parent_id
+          published
+          accepted
+        }
+        lexical_entries(ids: [[78, 6], [78, 8]]) {
+          id
+        }
+            columns{
+                id
+                field_id
+            }
       }
     }
+
     """
     data_type = graphene.String()
 
@@ -92,7 +103,7 @@ class DictionaryPerspective(graphene.ObjectType):
     import_hash = graphene.String()
 
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
-    columns = graphene.List(DictionaryPerspectiveToField)
+    columns = graphene.List(Column)
     entities = graphene.List(Entity, mode=graphene.String())
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
     authors = graphene.List('lingvodoc.schema.gql_user.User')
@@ -154,7 +165,7 @@ class DictionaryPerspective(graphene.ObjectType):
         dbfields = self.dbObject.dictionaryperspectivetofield
         result = list()
         for dbfield in dbfields:
-            gr_field_obj = DictionaryPerspectiveToField(id=[dbfield.client_id, dbfield.object_id])
+            gr_field_obj = Column(id=[dbfield.client_id, dbfield.object_id])
             gr_field_obj.dbObject = dbfield
             result.append(gr_field_obj)
         return result
@@ -172,7 +183,7 @@ class DictionaryPerspective(graphene.ObjectType):
 
 
     #@acl_check_by_id('view', 'approve_entities')
-    @fetch_object()  # TODO: two lists
+    @fetch_object("entities")  # TODO: two lists
     def resolve_entities(self, info, mode=None):
         result = list()
         request = info.context.get('request')
@@ -250,7 +261,7 @@ class DictionaryPerspective(graphene.ObjectType):
                 del ent["parent_object_id"]
                 gr_entity_object = Entity(id=tmp_id,
                                        # link_id = (ent["link_client_id"], ent["link_object_id"]),
-                                       parent_id = (parent_client_id, parent_object),
+                                       parent_id = [parent_client_id, parent_object],
                                        **ent  # all other args from sub_result
                                           )
                 #print(ent)

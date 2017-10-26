@@ -8,10 +8,10 @@ from lingvodoc.schema.gql_entity import (
     BulkCreateEntity
 )
 from lingvodoc.schema.gql_dictipersptofield import (
-    DictionaryPerspectiveToField,
-    CreateDictionaryPerspectiveToField,
-    UpdateDictionaryPerspectiveToField,
-    DeleteDictionaryPerspectiveToField
+    Column,
+    CreateColumn,
+    UpdateColumn,
+    DeleteColumn
 )
 from lingvodoc.schema.gql_basegroup import (
     BaseGroup,
@@ -469,8 +469,8 @@ class Query(graphene.ObjectType):
         context = info.context
         return context.get('client')
 
-    def resolve_dictionaryperspectivetofield(self, info, id):
-        return DictionaryPerspectiveToField(id=id)
+    def resolve_column(self, info, id):
+        return Column(id=id)
 
     def resolve_group(self, info, id):
         return Group(id=id)
@@ -1115,9 +1115,9 @@ class MyMutations(graphene.ObjectType):
     update_perspective_status = UpdatePerspectiveStatus.Field()
     update_perspective_roles = UpdatePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
-    create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()
-    update_perspective_to_field = UpdateDictionaryPerspectiveToField.Field()
-    delete_perspective_to_field = DeleteDictionaryPerspectiveToField.Field()
+    create_perspective_to_field = CreateColumn.Field()
+    update_perspective_to_field = UpdateColumn.Field()
+    delete_perspective_to_field = DeleteColumn.Field()
     create_grant = CreateGrant.Field()
     update_grant = UpdateGrant.Field()
     # delete_grant = DeleteGrant.Field()
