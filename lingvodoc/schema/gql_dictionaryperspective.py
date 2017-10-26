@@ -31,7 +31,7 @@ from lingvodoc.schema.gql_holders import (
 )
 
 from lingvodoc.schema.gql_dictionary import Dictionary
-from lingvodoc.schema.gql_dictipersptofield import Column
+from lingvodoc.schema.gql_column import Column
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity

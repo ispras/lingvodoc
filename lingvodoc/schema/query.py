@@ -7,7 +7,7 @@ from lingvodoc.schema.gql_entity import (
     DeleteEntity,
     BulkCreateEntity
 )
-from lingvodoc.schema.gql_dictipersptofield import (
+from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
     UpdateColumn,
@@ -1115,9 +1115,9 @@ class MyMutations(graphene.ObjectType):
     update_perspective_status = UpdatePerspectiveStatus.Field()
     update_perspective_roles = UpdatePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
-    create_perspective_to_field = CreateColumn.Field()
-    update_perspective_to_field = UpdateColumn.Field()
-    delete_perspective_to_field = DeleteColumn.Field()
+    create_column = CreateColumn.Field()
+    update_column = UpdateColumn.Field()
+    delete_column = DeleteColumn.Field()
     create_grant = CreateGrant.Field()
     update_grant = UpdateGrant.Field()
     # delete_grant = DeleteGrant.Field()

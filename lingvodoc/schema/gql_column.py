@@ -64,7 +64,7 @@ class CreateColumn(graphene.Mutation):
     """
     example:
     mutation  {
-        create_perspective_to_field(id: [949, 2493], parent_id: [949, 2491], field_id: [949, 5], self_id: [949, 2493],
+        create_column(id: [949, 2493], parent_id: [949, 2491], field_id: [949, 5], self_id: [949, 2493],
          link_id: [5, 6], position: 1) {
             triumph
             perspective_to_field{
