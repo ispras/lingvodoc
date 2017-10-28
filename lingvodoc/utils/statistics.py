@@ -41,7 +41,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.views.v2.utils import message, unimplemented
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.schema.gql_holders import ResponseError
 
 log = logging.getLogger(__name__)

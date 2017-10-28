@@ -16,11 +16,7 @@ from lingvodoc.models import (
     Group as dbGroup,
     Organization as dbOrganization
 )
-from lingvodoc.utils.creation import create_gists_with_atoms
-from lingvodoc.views.v2.utils import (
-    update_metadata,
-    cache_clients)
-
+from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     StateHolder,
@@ -34,7 +30,6 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID
 )
 
-from lingvodoc.views.v2.utils import  add_user_to_group
 from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,

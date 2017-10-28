@@ -1,12 +1,10 @@
-from lingvodoc.schema.gql_translationgist import (
-    TranslationGist
-)
-
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
-    DBSession
-)
+    DBSession)
+#from lingvodoc.views.v2.translations import translationgist_contents
+
+
 def translation_gist_search(searchstring):
         translationatom = DBSession.query(dbTranslationAtom) \
             .join(dbTranslationGist). \
@@ -26,3 +24,5 @@ def translation_gist_search(searchstring):
             #                                          created_at=translationgist.created_at,
             #                                          translationatoms=translationatoms_list)
             return translationgist
+
+

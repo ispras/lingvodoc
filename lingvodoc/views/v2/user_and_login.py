@@ -38,7 +38,7 @@ from sqlalchemy import (
 )
 import logging
 import json
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.utils.creation import add_user_to_group
 from pyramid.request import Request
 import datetime
 from time import sleep

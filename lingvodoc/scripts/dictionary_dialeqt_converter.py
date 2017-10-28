@@ -16,7 +16,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.cache.caching import TaskStatus
-from lingvodoc.views.v2.utils import update_metadata
+from lingvodoc.utils.creation import update_metadata
 from lingvodoc.models import (
     Client,
     DBSession,

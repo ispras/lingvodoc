@@ -28,7 +28,7 @@ from lingvodoc.models import (
     ObjectTOC as dbObjectTOC
 )
 from lingvodoc.schema.gql_entity import Entity
-from lingvodoc.views.v2.utils import check_client_id
+from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 from lingvodoc.utils.creation import create_lexicalentry

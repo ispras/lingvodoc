@@ -24,11 +24,10 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID
 )
 from .gql_dictionary import Dictionary
-from lingvodoc.views.v2.utils import  add_user_to_group
 from lingvodoc.utils.creation import (
     create_dblanguage,
-    create_gists_with_atoms
-)
+    create_gists_with_atoms,
+    add_user_to_group)
 # from lingvodoc.schema.gql_dictionary import Dictionary
 
 
