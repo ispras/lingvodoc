@@ -11,9 +11,8 @@ from lingvodoc.models import (
     DBSession,
     Client
 )
-from lingvodoc.views.v2.utils import (
-    check_client_id
-)
+from lingvodoc.utils.verification import check_client_id
+
 
 # Object types
 # TODO: delete comment lines

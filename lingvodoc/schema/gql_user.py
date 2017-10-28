@@ -9,7 +9,7 @@ from lingvodoc.models import (
     Passhash,
     DBSession
 )
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.utils.creation import add_user_to_group
 
 from lingvodoc.schema.gql_holders import (
     IdHolder,

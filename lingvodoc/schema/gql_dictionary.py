@@ -16,11 +16,7 @@ from lingvodoc.models import (
     Group as dbGroup,
     Organization as dbOrganization
 )
-from lingvodoc.utils.creation import create_gists_with_atoms
-from lingvodoc.views.v2.utils import (
-    update_metadata,
-    cache_clients)
-
+from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
     CommonFieldsComposite,
     StateHolder,
@@ -34,7 +30,6 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID
 )
 
-from lingvodoc.views.v2.utils import  add_user_to_group
 from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
@@ -480,8 +475,7 @@ class UpdateDictionary(graphene.Mutation):
         translation_gist_id = LingvodocID()
         parent_id = LingvodocID()
         additional_metadata = ObjectVal()
-        category = graphene.Int()
-        domain = graphene.Int()
+
 
     dictionary = graphene.Field(Dictionary)
     triumph = graphene.Boolean()
@@ -491,8 +485,6 @@ class UpdateDictionary(graphene.Mutation):
                           parent_id=None,
                           translation_gist_id=None,
                           additional_metadata=None,
-                          category=None,
-                          domain=None
                           ):
         if not ids:
             raise ResponseError(message="dict id not found")
@@ -505,10 +497,7 @@ class UpdateDictionary(graphene.Mutation):
             db_dictionary.parent_client_id, db_dictionary.parent_object_id = parent_id
         if translation_gist_id:
             db_dictionary.translation_gist_client_id, translation_gist_object_id = translation_gist_id
-        if category:
-            db_dictionary.category = category
-        if domain:
-            db_dictionary.domain = domain
+
         update_metadata(db_dictionary, additional_metadata)
         return db_dictionary
 
@@ -521,14 +510,10 @@ class UpdateDictionary(graphene.Mutation):
         parent_id = args.get('parent_id')
         translation_gist_id = args.get('translation_gist_id')
         additional_metadata = args.get('additional_metadata')
-        category = args.get("category")
-        domain = args.get("domain")
         dbdictionary = UpdateDictionary.update_dictionary(ids,
                                                           parent_id=parent_id,
                                                           translation_gist_id=translation_gist_id,
-                                                          additional_metadata=additional_metadata,
-                                                          category=category,
-                                                          domain=domain
+                                                          additional_metadata=additional_metadata
                                                           )
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary

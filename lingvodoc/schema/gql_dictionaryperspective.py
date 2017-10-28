@@ -31,21 +31,19 @@ from lingvodoc.schema.gql_holders import (
 )
 
 from lingvodoc.schema.gql_dictionary import Dictionary
-from lingvodoc.schema.gql_dictipersptofield import Column
+from lingvodoc.schema.gql_column import Column
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
 from  lingvodoc.schema.gql_user import User
-
-from lingvodoc.views.v2.utils import add_user_to_group
 
 from lingvodoc.views.v2.translations import translationgist_contents
 from lingvodoc.utils import statistics
 from pyramid.request import Request
 from lingvodoc.utils.creation import (
     create_perspective,
-    create_gists_with_atoms
-)
+    create_gists_with_atoms,
+    add_user_to_group)
 
 from sqlalchemy import (
     func,

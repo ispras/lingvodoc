@@ -1,10 +1,8 @@
 __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
-from lingvodoc.views.v2.utils import (
-    create_object,
-    check_client_id
-)
+from lingvodoc.utils.creation import create_object
+from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.delete import real_delete_entity
 from lingvodoc.models import (
     Client,

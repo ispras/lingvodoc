@@ -64,10 +64,10 @@ class CreateColumn(graphene.Mutation):
     """
     example:
     mutation  {
-        create_perspective_to_field(id: [949, 2493], parent_id: [949, 2491], field_id: [949, 5], self_id: [949, 2493],
-         link_id: [5, 6], position: 1) {
+        create_column(parent_id: [1204,19664], field_id: [66, 6],
+  position: 1) {
             triumph
-            perspective_to_field{
+            column{
                 id
                 position
             }
@@ -135,7 +135,7 @@ class CreateColumn(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id("perspective", "edit", id_key="parent_id")
+    @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
@@ -200,7 +200,7 @@ class UpdateColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("perspective", "edit", id_key="parent_id")
+    @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id, object_id = id

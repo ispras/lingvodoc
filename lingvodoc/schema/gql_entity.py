@@ -53,10 +53,9 @@ import base64
 import hashlib
 
 from lingvodoc.utils.creation import create_entity
-from lingvodoc.views.v2.utils import (
-    check_client_id
-)
-from lingvodoc.utils.verification import check_lingvodoc_id
+
+from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
+
 
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     filename = sanitize_filename(filename)

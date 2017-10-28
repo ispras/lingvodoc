@@ -23,7 +23,8 @@ from lingvodoc.models import (
     DBSession
 )
 
-from lingvodoc.views.v2.utils import check_client_id, add_user_to_group
+from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.utils.verification import check_client_id
 from lingvodoc.cache.caching import CACHE
 
 
