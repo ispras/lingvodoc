@@ -36,6 +36,12 @@ trait PerspectivePhonologyModalScope extends Scope
   /** If we should group phonology data by markup descriptions. */
   var group_by_description: Boolean = js.native
 
+  /** Fields which can be selected as a translation field. */
+  var text_field_list: js.Array[Field] = js.native
+
+  /** Identifier of the field selected as a translation field. */
+  var translation_field_id: String = js.native
+
   /** If we should show only first translation ('first') or all available translations ('all') of each
    *  word. */
   var translation_choice: String = js.native
@@ -77,7 +83,9 @@ class PerspectivePhonologyModalController(
     with AngularExecutionContextProvider {
 
   private[this] val __debug__ = false
+
   private[this] val perspectiveId = params("perspectiveId").asInstanceOf[CompositeId]
+  private[this] val text_field_list = params("text_field_list").asInstanceOf[Seq[Field]]
 
   private[this] var tier_loading = false
 
@@ -86,6 +94,23 @@ class PerspectivePhonologyModalController(
 
   /* By default we do not group phonology data by markup descriptions. */
   scope.group_by_description = false
+
+  scope.text_field_list = js.Array[Field](text_field_list: _*)
+  scope.translation_field_id = ""
+
+  /* Setting up default translation field. */
+
+  if (text_field_list.length > 0)
+  {
+    val id_list =
+
+      text_field_list flatMap { field =>
+        "(?i)translation".r.findFirstMatchIn(field.translation) match {
+          case Some(_) => Some(field.getId)
+          case None => None }}
+
+    scope.translation_field_id = id_list(0)
+  }
 
   /* By default we show all available translations. */
   scope.translation_choice = "all"
@@ -157,10 +182,33 @@ class PerspectivePhonologyModalController(
     console.log(scope.selected_tiers)
   }
 
+  /** Processes selection of a translation field. */
+  @JSExport
+  def select_field(field_id: String): Unit =
+  {
+    scope.translation_field_id = field_id
+  }
+
   /** Launches phonology generation. */
   @JSExport
   def generate(): Unit =
   {
+    /* Getting translation field identifier, if we have one. */
+
+    val maybe_translation_field: Option[CompositeId] =
+    
+      if (text_field_list.length > 0)
+      {
+        val id_list = 
+
+          text_field_list flatMap { field =>
+            if (field.getId == scope.translation_field_id)
+              Some(CompositeId.fromObject(field)) else None }
+
+        Some(id_list(0))
+      }
+      else None
+
     /* Getting list of markup tiers to look at, if required. */
 
     val maybe_tier_list =
@@ -171,8 +219,11 @@ class PerspectivePhonologyModalController(
         None
     }
 
+    /* Trying to launch phonology compilation. */
+
     backend.phonology(perspectiveId,
       scope.group_by_description,
+      maybe_translation_field,
       scope.translation_choice == "first",
       scope.source == "selected",
       maybe_tier_list)
