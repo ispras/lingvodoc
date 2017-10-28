@@ -150,37 +150,53 @@ def transcription_markup_data(request):
 
         # Finding transcription field.
 
-        data_type_query = DBSession.query(Field) \
-            .join(TranslationGist,
-                  and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                       Field.translation_gist_client_id == TranslationGist.client_id)) \
-            .join(TranslationGist.translationatom)
+        field_data = DBSession.query(
+            DictionaryPerspectiveToField, Field, TranslationAtom).filter(
+                DictionaryPerspectiveToField.parent_client_id == perspective_cid,
+                DictionaryPerspectiveToField.parent_object_id == perspective_oid,
+                DictionaryPerspectiveToField.marked_for_deletion == False,
+                Field.client_id == DictionaryPerspectiveToField.field_client_id,
+                Field.object_id == DictionaryPerspectiveToField.field_object_id,
+                Field.marked_for_deletion == False,
+                TranslationAtom.parent_client_id == Field.translation_gist_client_id,
+                TranslationAtom.parent_object_id == Field.translation_gist_object_id,
+                TranslationAtom.locale_id == 2,
+                TranslationAtom.content.op('~*')('.*transcription.*'),
+                translationatom.marked_for_deletion == False).order_by(
+                    Field.client_id, Field.object_id).first()
 
-        transcription_field = data_type_query.filter(
-            TranslationAtom.locale_id == 2,
-            TranslationAtom.content == 'Transcription').first()
+        if not field_data:
+            raise Exception('Missing transcription field.')
 
-        if not transcription_field:
-            raise Exception('Missing \'Transcription\' field.')
+        transcription_field = field_data.Field
 
-        log.debug('transcription field: {0}/{1}'.format(
-            transcription_field.client_id, transcription_field.object_id))
+        log.debug('transcription field: {0}/{1} \'{2}\''.format(
+            transcription_field.client_id, transcription_field.object_id,
+            field._data.TranslationAtom.content))
 
         # Checking if we can find translation field.
 
-        data_type_query = DBSession.query(Field) \
-            .join(TranslationGist,
-                  and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                       Field.translation_gist_client_id == TranslationGist.client_id)) \
-            .join(TranslationGist.translationatom)
+        field_data = DBSession.query(
+            DictionaryPerspectiveToField, Field, TranslationAtom).filter(
+                DictionaryPerspectiveToField.parent_client_id == perspective_cid,
+                DictionaryPerspectiveToField.parent_object_id == perspective_oid,
+                DictionaryPerspectiveToField.marked_for_deletion == False,
+                Field.client_id == DictionaryPerspectiveToField.field_client_id,
+                Field.object_id == DictionaryPerspectiveToField.field_object_id,
+                Field.marked_for_deletion == False,
+                TranslationAtom.parent_client_id == Field.translation_gist_client_id,
+                TranslationAtom.parent_object_id == Field.translation_gist_object_id,
+                TranslationAtom.locale_id == 2,
+                TranslationAtom.content.op('~*')('.*translation.*'),
+                translationatom.marked_for_deletion == False).order_by(
+                    Field.client_id, Field.object_id).first()
 
-        translation_field = data_type_query.filter(
-            TranslationAtom.locale_id == 2,
-            TranslationAtom.content == 'Translation').first()
+        translation_field = field_data.Field if field_data else None
 
-        log.debug('translation field: ' + 
-            ('None' if not translation_field else '{0}/{1}'.format(
-                translation_field.client_id, translation_field.object_id)))
+        log.debug('translation field: ' +
+            ('None' if not field_data else '{0}/{1} \'{2}\''.format(
+                translation_field.client_id, translation_field.object_id,
+                field_data.TranslationAtom.content)))
 
         # Getting number of available sound/transcription/markup triples.
 
@@ -194,82 +210,76 @@ def transcription_markup_data(request):
         PublishingMarkup = aliased(PublishingEntity, name = 'PublishingMarkup')
         PublishingTranslation = aliased(PublishingEntity, name = 'PublishingTranslation')
 
-        if not translation_field:
+        data_query = DBSession.query(
+            LexicalEntry, Markup, Sound).filter(
+                LexicalEntry.parent_client_id == perspective_cid,
+                LexicalEntry.parent_object_id == perspective_oid,
+                LexicalEntry.marked_for_deletion == False,
+                Markup.parent_client_id == LexicalEntry.client_id,
+                Markup.parent_object_id == LexicalEntry.object_id,
+                Markup.marked_for_deletion == False,
+                Markup.additional_metadata.contains({'data_type': 'praat markup'}),
+                PublishingMarkup.client_id == Markup.client_id,
+                PublishingMarkup.object_id == Markup.object_id,
+                PublishingMarkup.published == True,
+                PublishingMarkup.accepted == True,
+                Sound.client_id == Markup.self_client_id,
+                Sound.object_id == Markup.self_object_id,
+                Sound.marked_for_deletion == False,
+                PublishingSound.client_id == Sound.client_id,
+                PublishingSound.object_id == Sound.object_id,
+                PublishingSound.published == True,
+                PublishingSound.accepted == True)
 
-            data_query = DBSession.query(
-                LexicalEntry, Sound, Transcription, Markup).filter(
-                    LexicalEntry.parent_client_id == perspective_cid,
-                    LexicalEntry.parent_object_id == perspective_oid,
-                    LexicalEntry.marked_for_deletion == False,
-                    Sound.client_id == Markup.self_client_id,
-                    Sound.object_id == Markup.self_object_id,
-                    Sound.marked_for_deletion == False,
-                    PublishingSound.client_id == Sound.client_id,
-                    PublishingSound.object_id == Sound.object_id,
-                    PublishingSound.published == True,
-                    PublishingSound.accepted == True,
+        # Getting transcription data, if required.
+
+        if transcription_field:
+
+            data_query = (data_query
+                
+                .outerjoin(Transcription, and_(
                     Transcription.parent_client_id == LexicalEntry.client_id,
                     Transcription.parent_object_id == LexicalEntry.object_id,
-                    Transcription.marked_for_deletion == False,
                     Transcription.field_client_id == transcription_field.client_id,
                     Transcription.field_object_id == transcription_field.object_id,
+                    Transcription.marked_for_deletion == False))
+
+                .outerjoin(PublishingTranscription, and_(
                     PublishingTranscription.client_id == Transcription.client_id,
                     PublishingTranscription.object_id == Transcription.object_id,
                     PublishingTranscription.published == True,
-                    PublishingTranscription.accepted == True,
-                    Markup.parent_client_id == LexicalEntry.client_id,
-                    Markup.parent_object_id == LexicalEntry.object_id,
-                    Markup.marked_for_deletion == False,
-                    Markup.additional_metadata.contains({'data_type': 'praat markup'}),
-                    PublishingMarkup.client_id == Markup.client_id,
-                    PublishingMarkup.object_id == Markup.object_id,
-                    PublishingMarkup.published == True,
-                    PublishingMarkup.accepted == True)
+                    PublishingTranscription.accepted == True))
+                
+                .add_columns(Transcription))
 
-        # Also gathering translations, if we have translation field.
+        # Getting translation data, if required.
 
-        else:
-            data_query = DBSession.query(
-                LexicalEntry, Sound, Transcription, Markup, func.array_agg(Translation.content)).filter(
-                    LexicalEntry.parent_client_id == perspective_cid,
-                    LexicalEntry.parent_object_id == perspective_oid,
-                    LexicalEntry.marked_for_deletion == False,
-                    Sound.client_id == Markup.self_client_id,
-                    Sound.object_id == Markup.self_object_id,
-                    Sound.marked_for_deletion == False,
-                    PublishingSound.client_id == Sound.client_id,
-                    PublishingSound.object_id == Sound.object_id,
-                    PublishingSound.published == True,
-                    PublishingSound.accepted == True,
-                    Transcription.parent_client_id == LexicalEntry.client_id,
-                    Transcription.parent_object_id == LexicalEntry.object_id,
-                    Transcription.marked_for_deletion == False,
-                    Transcription.field_client_id == transcription_field.client_id,
-                    Transcription.field_object_id == transcription_field.object_id,
-                    PublishingTranscription.client_id == Transcription.client_id,
-                    PublishingTranscription.object_id == Transcription.object_id,
-                    PublishingTranscription.published == True,
-                    PublishingTranscription.accepted == True,
-                    Markup.parent_client_id == LexicalEntry.client_id,
-                    Markup.parent_object_id == LexicalEntry.object_id,
-                    Markup.marked_for_deletion == False,
-                    Markup.additional_metadata.contains({'data_type': 'praat markup'}),
-                    PublishingMarkup.client_id == Markup.client_id,
-                    PublishingMarkup.object_id == Markup.object_id,
-                    PublishingMarkup.published == True,
-                    PublishingMarkup.accepted == True,
+        if translation_field:
+
+            data_query = (data_query
+                
+                .outerjoin(Translation, and_(
                     Translation.parent_client_id == LexicalEntry.client_id,
                     Translation.parent_object_id == LexicalEntry.object_id,
-                    Translation.marked_for_deletion == False,
                     Translation.field_client_id == translation_field.client_id,
                     Translation.field_object_id == translation_field.object_id,
+                    Translation.marked_for_deletion == False))
+
+                .outerjoin(PublishingTranslation, and_(
                     PublishingTranslation.client_id == Translation.client_id,
                     PublishingTranslation.object_id == Translation.object_id,
-                    PublishingTranslation.accepted == True).group_by(
-                        LexicalEntry.client_id, LexicalEntry.object_id,
-                        Sound.client_id, Sound.object_id,
-                        Transcription.client_id, Transcription.object_id,
-                        Markup.client_id, Markup.object_id)
+                    PublishingTranslation.published == True,
+                    PublishingTranslation.accepted == True))
+                
+                .add_columns(
+                    func.array_agg(Translation.content))
+                
+                .group_by(LexicalEntry, Markup, Sound, Transcription))
+
+        # NOTE: somewhat changed data retrieval queries and did not test it, we should do it later, if we
+        # will need transcription/sound/markup data again.
+
+        return {'error': unimplemented()}
 
         total_count = data_query.count()
         log.debug('data triple count: {0}'.format(total_count))
