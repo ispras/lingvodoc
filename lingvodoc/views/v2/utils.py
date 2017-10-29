@@ -44,8 +44,8 @@ from pyramid.httpexceptions import (
 )
 from lingvodoc.exceptions import CommonException
 from sqlalchemy.exc import IntegrityError
-from lingvodoc.views.v2.translations import translationgist_contents
-
+#from lingvodoc.views.v2.translations import translationgist_contents
+from lingvodoc.utils.creation import translationgist_contents
 
 def cache_clients():
     clients_to_users_dict = dict()
@@ -76,13 +76,13 @@ def check_for_client(obj, clients):
     return False
 
 
+
+
 def all_languages(lang):
     langs = [{'object_id': lang.object_id, 'client_id': lang.client_id}]
     for la in lang.language:
         langs += all_languages(la)
     return langs
-
-
 
 
 
