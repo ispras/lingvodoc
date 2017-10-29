@@ -484,3 +484,26 @@ def update_metadata(dbobject, new_metadata=None):
         flag_modified(dbobject, 'additional_metadata')
 
 
+def translationgist_contents(translationgist):
+    result = dict()
+    result['client_id'] = translationgist.client_id
+    result['object_id'] = translationgist.object_id
+    result['type'] = translationgist.type
+    result['created_at'] = translationgist.created_at
+    contains = []
+    for translationatom in translationgist.translationatom:
+        contains.append(translationatom_contents(translationatom))
+    result['contains'] = contains
+    return result
+
+
+def translationatom_contents(translationatom):
+    result = dict()
+    result['content'] = translationatom.content
+    result['locale_id'] = translationatom.locale_id
+    result['client_id'] = translationatom.client_id
+    result['object_id'] = translationatom.object_id
+    result['parent_client_id'] = translationatom.parent_client_id
+    result['parent_object_id'] = translationatom.parent_object_id
+    result['created_at'] = translationatom.created_at
+    return result

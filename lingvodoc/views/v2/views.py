@@ -66,7 +66,7 @@ from copy import deepcopy
 if sys.platform == 'darwin':
     multiprocessing.set_start_method('spawn')
 import os
-from lingvodoc.views.v2.translations import translationgist_contents
+from lingvodoc.utils.creation import translationgist_contents
 from hashlib import sha224
 from base64 import urlsafe_b64decode
 from sqlalchemy.orm.attributes import flag_modified

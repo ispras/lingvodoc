@@ -43,7 +43,7 @@ from pyramid.request import Request
 from lingvodoc.utils.creation import (
     create_perspective,
     create_gists_with_atoms,
-    add_user_to_group)
+    add_user_to_group, translationgist_contents)
 
 from sqlalchemy import (
     func,
