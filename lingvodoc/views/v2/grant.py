@@ -46,7 +46,9 @@ from sqlalchemy.exc import IntegrityError
 import datetime
 import json
 from sqlalchemy.orm.exc import NoResultFound
-from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator, add_user_to_group, check_client_id
+from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator
+from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.delete import real_delete_translation_gist
 from sqlalchemy.orm.attributes import flag_modified
 # search (filter by input, type and (?) locale)

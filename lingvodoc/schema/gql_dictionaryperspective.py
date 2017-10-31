@@ -34,7 +34,7 @@ from lingvodoc.schema.gql_holders import (
 )
 
 from lingvodoc.schema.gql_dictionary import Dictionary
-from lingvodoc.schema.gql_dictipersptofield import DictionaryPerspectiveToField
+from lingvodoc.schema.gql_column import Column
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
@@ -48,8 +48,8 @@ from lingvodoc.utils import statistics
 from pyramid.request import Request
 from lingvodoc.utils.creation import (
     create_perspective,
-    create_gists_with_atoms
-)
+    create_gists_with_atoms,
+    add_user_to_group, translationgist_contents)
 
 from sqlalchemy import (
     func,
@@ -79,15 +79,26 @@ class DictionaryPerspective(graphene.ObjectType):
      + status
      + tree
 
-         query myQuery {
+    query myQuery {
       perspective(id: [78, 4]) {
         id
         statistic(starting_time: 0, ending_time: 1506812557)
-        entities(mode: "all"){id parent_id published accepted}
-        lexical_entries(ids: [[78,6], [78,8]]){id}
-
+        entities(mode: "all") {
+          id
+          parent_id
+          published
+          accepted
+        }
+        lexical_entries(ids: [[78, 6], [78, 8]]) {
+          id
+        }
+            columns{
+                id
+                field_id
+            }
       }
     }
+
     """
     data_type = graphene.String()
 
@@ -96,7 +107,7 @@ class DictionaryPerspective(graphene.ObjectType):
     import_hash = graphene.String()
 
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
-    fields = graphene.List(DictionaryPerspectiveToField)
+    columns = graphene.List(Column)
     entities = graphene.List(Entity, mode=graphene.String())
     entities_new = graphene.List(Entity, mode=graphene.String())
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
@@ -155,11 +166,11 @@ class DictionaryPerspective(graphene.ObjectType):
         return result
 
     @fetch_object() # tested
-    def resolve_fields(self, info):
+    def resolve_columns(self, info):
         dbfields = self.dbObject.dictionaryperspectivetofield
         result = list()
         for dbfield in dbfields:
-            gr_field_obj = DictionaryPerspectiveToField(id=[dbfield.client_id, dbfield.object_id])
+            gr_field_obj = Column(id=[dbfield.client_id, dbfield.object_id])
             gr_field_obj.dbObject = dbfield
             result.append(gr_field_obj)
         return result
@@ -255,7 +266,7 @@ class DictionaryPerspective(graphene.ObjectType):
                 del ent["parent_object_id"]
                 gr_entity_object = Entity(id=tmp_id,
                                        # link_id = (ent["link_client_id"], ent["link_object_id"]),
-                                       parent_id = (parent_client_id, parent_object),
+                                       parent_id = [parent_client_id, parent_object],
                                        **ent  # all other args from sub_result
                                           )
                 #print(ent)
@@ -407,27 +418,30 @@ class CreateDictionaryPerspective(graphene.Mutation):
     """
     example:
     mutation  {
-            create_perspective(id:[949,2491], parent_id:[449,2491], translation_gist_id: [714, 3],,
+            create_perspective( parent_id:[66,4], translation_gist_id: [714, 3],is_template: true
              additional_metadata: {hash:"1234567"}, import_source: "source", import_hash: "hash") {
                 triumph
+
                 perspective{
+					is_template
                     id
                 }
             }
     }
     (this example works)
     returns:
-
     {
-      "create_perspective": {
-        "triumph": true,
-        "perspective": {
-          "id": [
-            949,
-            2491
-          ],
+        "data": {
+            "create_perspective": {
+                "triumph": true,
+                "perspective": {
+                    "id": [
+                        1197,
+                        320
+                    ]
+                }
+            }
         }
-      }
     }
     with atoms:
     mutation {
@@ -450,7 +464,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
         additional_metadata = ObjectVal()
         import_source = graphene.String()
         import_hash = graphene.String()
-
+        is_template = graphene.Boolean()
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -472,12 +486,14 @@ class CreateDictionaryPerspective(graphene.Mutation):
         import_source = args.get('import_source')
         import_hash = args.get('import_hash')
         additional_metadata = args.get('additional_metadata')
+        is_template = args.get("is_template")
         dbperspective = create_perspective(id=id,
                                 parent_id=parent_id,
                                 translation_gist_id=translation_gist_id,
                                 additional_metadata=additional_metadata,
                                 import_source=import_source,
-                                import_hash=import_hash
+                                import_hash=import_hash,
+                                is_template=is_template
                                 )
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective

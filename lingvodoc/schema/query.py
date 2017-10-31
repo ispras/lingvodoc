@@ -7,11 +7,11 @@ from lingvodoc.schema.gql_entity import (
     DeleteEntity,
     BulkCreateEntity
 )
-from lingvodoc.schema.gql_dictipersptofield import (
-    DictionaryPerspectiveToField,
-    CreateDictionaryPerspectiveToField,
-    UpdateDictionaryPerspectiveToField,
-    DeleteDictionaryPerspectiveToField
+from lingvodoc.schema.gql_column import (
+    Column,
+    CreateColumn,
+    UpdateColumn,
+    DeleteColumn
 )
 from lingvodoc.schema.gql_basegroup import (
     BaseGroup,
@@ -273,7 +273,7 @@ class Query(graphene.ObjectType):
         gql_fields = list()
         for db_field in fields:
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
-            gql_field.dbObject = gql_field
+            gql_field.dbObject = db_field
             gql_fields.append(gql_field)
 
         return gql_fields
@@ -413,11 +413,12 @@ class Query(graphene.ObjectType):
         context = info.context
 
 
-        languages = DBSession.query(dbLanguage).filter(dbLanguage.marked_for_deletion == False).all()
+        languages = DBSession.query(dbLanguage).filter_by(marked_for_deletion = False).all()
         languages_list = list()
         for db_lang in languages:
             gql_lang = Language(id=[db_lang.client_id, db_lang.object_id])
             gql_lang.dbObject = db_lang
+            languages_list.append(gql_lang)
 
         return languages_list
 
@@ -468,8 +469,8 @@ class Query(graphene.ObjectType):
         context = info.context
         return context.get('client')
 
-    def resolve_dictionaryperspectivetofield(self, info, id):
-        return DictionaryPerspectiveToField(id=id)
+    def resolve_column(self, info, id):
+        return Column(id=id)
 
     def resolve_group(self, info, id):
         return Group(id=id)
@@ -1114,9 +1115,9 @@ class MyMutations(graphene.ObjectType):
     update_perspective_status = UpdatePerspectiveStatus.Field()
     update_perspective_roles = UpdatePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
-    create_perspective_to_field = CreateDictionaryPerspectiveToField.Field()
-    update_perspective_to_field = UpdateDictionaryPerspectiveToField.Field()
-    delete_perspective_to_field = DeleteDictionaryPerspectiveToField.Field()
+    create_column = CreateColumn.Field()
+    update_column = UpdateColumn.Field()
+    delete_column = DeleteColumn.Field()
     create_grant = CreateGrant.Field()
     update_grant = UpdateGrant.Field()
     # delete_grant = DeleteGrant.Field()

@@ -1,9 +1,9 @@
 from passlib.hash import bcrypt
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
-    view_field_from_object,
-    check_client_id
+    view_field_from_object
 )
+from lingvodoc.utils.verification import check_client_id
 from sqlalchemy.exc import IntegrityError
 
 from pyramid.response import Response
@@ -66,7 +66,7 @@ from copy import deepcopy
 if sys.platform == 'darwin':
     multiprocessing.set_start_method('spawn')
 import os
-from lingvodoc.views.v2.translations import translationgist_contents
+from lingvodoc.utils.creation import translationgist_contents
 from hashlib import sha224
 from base64 import urlsafe_b64decode
 from sqlalchemy.orm.attributes import flag_modified
@@ -259,44 +259,24 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
     DBSession.flush()
     return base_group
 
-
+from lingvodoc.models import UserRequest as dbUserRequest
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    simpler_info = lambda x: [i['info']['content'] for i in x]
-    persp_to_dict = lambda x: [
-        p.additional_metadata['location']['content'] for p in x]
-    persps = DBSession.query(DictionaryPerspective).filter().all()
-    dicts = []
-    for persp in persps:
-        if not persp.additional_metadata:
-            continue
-        parent = persp.parent
-        if not parent.additional_metadata:
-            parent.additional_metadata = dict()
-        if not parent.additional_metadata.get('location') and persp.additional_metadata.get('location'):
-            parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
-        if persp.additional_metadata.get('location'):
-            del persp.additional_metadata['location']
-        if not parent.additional_metadata.get('authors') and persp.additional_metadata.get('authors'):
-            parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
-        if persp.additional_metadata.get('authors'):
-            del persp.additional_metadata['authors']
-        if persp.additional_metadata.get('info'):
-            if not parent.additional_metadata.get('blobs'):
-                parent.additional_metadata['blobs'] = list()
-            for item in simpler_info(persp.additional_metadata['info']['content']):
-                if item not in parent.additional_metadata['blobs']:
-                    parent.additional_metadata['blobs'].append(item)
-            del persp.additional_metadata['info']
-        if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
-            persp.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
-            del persp.additional_metadata['origin_client_id']
-            del persp.additional_metadata['origin_object_id']
-        flag_modified(parent, 'additional_metadata')
-        flag_modified(persp, 'additional_metadata')
-    return
+    add_dict_to_grant = DBSession.query(dbUserRequest).filter_by(type="add_dict_to_grant").all()
+    for req in add_dict_to_grant:
+        subject = req.subject
+        grant_id = subject["grant_id"]
+        if "client_id" in subject and "object_id" in subject:
+            client_id = subject["client_id"]
+            object_id = subject["object_id"]
+            dictionary_id = [client_id, object_id]
+            req.subject = {
+                "grant_id": grant_id,
+                "dictionary_id": dictionary_id
+               }
+    return "Success"
 
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')

@@ -17,9 +17,7 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     LingvodocID
 )
-from lingvodoc.views.v2.utils import (
-    create_object
-)
+from lingvodoc.utils.creation import create_object
 
 from lingvodoc.models import (
     Client as dbClient,

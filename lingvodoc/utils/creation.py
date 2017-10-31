@@ -1,3 +1,14 @@
+import base64
+import hashlib
+import os
+import shutil
+
+from pathvalidate import sanitize_filename
+from sqlalchemy import (
+    and_,
+)
+from sqlalchemy.orm.attributes import flag_modified
+
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -14,34 +25,14 @@ from lingvodoc.models import (
     Entity,
     Field
 )
-
-from lingvodoc.views.v2.utils import add_user_to_group
 from lingvodoc.schema.gql_holders import ResponseError
-from lingvodoc.views.v2.translations import translationgist_contents
-
-from sqlalchemy import (
-    and_,
-)
-
-from lingvodoc.views.v2.utils import (
-     create_object
-)
-
-import base64
-import hashlib
+from lingvodoc.utils.search import translation_gist_search
 
 
+def add_user_to_group(user, group):
+    if user not in group.users:
+        group.users.append(user)
 
-def translation_service_search(searchstring):
-    translationatom = DBSession.query(TranslationAtom)\
-        .join(TranslationGist).\
-        filter(TranslationAtom.content == searchstring,
-               TranslationAtom.locale_id == 2,
-               TranslationGist.type == 'Service')\
-        .order_by(TranslationAtom.client_id)\
-        .first()
-    response = translationgist_contents(translationatom.parent)
-    return response
 
 def create_perspective(id = (None, None),
                        parent_id=None,
@@ -50,7 +41,8 @@ def create_perspective(id = (None, None),
                        longitude=None,
                        additional_metadata=None,
                        import_source=None,
-                       import_hash=None
+                       import_hash=None,
+                       is_template=0
                        ):
     client_id, object_id = id
 
@@ -62,8 +54,8 @@ def create_perspective(id = (None, None),
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         raise ResponseError(message="No such dictionary in the system")
-    resp = translation_service_search("WiP")
-    state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+    resp = translation_gist_search("WiP")
+    state_translation_gist_object_id, state_translation_gist_client_id = resp.object_id, resp.client_id
 
     dbperspective = DictionaryPerspective(client_id=client_id,
                                   object_id=object_id,
@@ -74,7 +66,8 @@ def create_perspective(id = (None, None),
                                   import_hash=import_hash,
                                   additional_metadata=additional_metadata,
                                   translation_gist_client_id=translation_gist_client_id,
-                                  translation_gist_object_id=translation_gist_object_id
+                                  translation_gist_object_id=translation_gist_object_id,
+                                  is_template=is_template
                                   )
     DBSession.add(dbperspective)
     DBSession.flush()
@@ -97,7 +90,9 @@ def create_perspective(id = (None, None),
 def create_dbdictionary(id=None,
                         parent_id=None,
                         translation_gist_id=None,
-                        additional_metadata=None):
+                        additional_metadata=None,
+                        domain=0,
+                        category=0):
     client_id, object_id = id
 
     if not parent_id:
@@ -112,8 +107,8 @@ def create_dbdictionary(id=None,
     if not parent:
         raise ResponseError(message="No such language in the system")
 
-    resp = translation_service_search("WiP")
-    state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+    resp = translation_gist_search("WiP")
+    state_translation_gist_object_id, state_translation_gist_client_id = resp.object_id, resp.client_id
     dbdictionary_obj = Dictionary(client_id=client_id,
                                     object_id=object_id,
                                     state_translation_gist_object_id=state_translation_gist_object_id,
@@ -121,7 +116,9 @@ def create_dbdictionary(id=None,
                                     parent=parent,
                                     translation_gist_client_id=translation_gist_client_id,
                                     translation_gist_object_id=translation_gist_object_id,
-                                    additional_metadata=additional_metadata
+                                    additional_metadata=additional_metadata,
+                                    domain=domain,
+                                    category=category
                                     )
 
     client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -346,6 +343,47 @@ def create_lexicalentry(id, perspective_id, save_object=False):
         DBSession.flush()
     return dblexentry
 
+# Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
+# it's uploaded via multipart form, it's just saved as-is.
+def create_object(request, content, obj, data_type, filename, json_input=True):
+    import errno
+    # here will be object storage write as an option. Fallback (default) is filesystem write
+    settings = request.registry.settings
+    storage = settings['storage']
+    if storage['type'] == 'openstack':
+        if json_input:
+            content = base64.urlsafe_b64decode(content)
+        # TODO: openstack objects correct naming
+        filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
+        real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
+    else:
+        filename = filename or 'noname.noext'
+        storage_path, filename = object_file_path(obj, settings, data_type, filename, True)
+        directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
+        try:
+            os.makedirs(directory)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+        with open(storage_path, 'wb+') as f:
+            # set_trace()
+            if json_input:
+                f.write(base64.urlsafe_b64decode(content))
+            else:
+                shutil.copyfileobj(content, f)
+
+        real_location = storage_path
+
+    url = "".join((settings['storage']['prefix'],
+                  settings['storage']['static_route'],
+                  obj.__tablename__,
+                  '/',
+                  data_type,
+                  '/',
+                  str(obj.client_id), '/',
+                  str(obj.object_id), '/',
+                  filename))
+    return real_location, url
 
 def create_gists_with_atoms(translation_atoms, translation_gist_id, ids):
         if translation_atoms is None:  # TODO: look at this
@@ -399,3 +437,73 @@ def create_gists_with_atoms(translation_atoms, translation_gist_id, ids):
                 else:
                     raise ResponseError(message="locale_id and content args not found")
         return translation_gist_id
+
+
+
+
+
+def object_file_path(obj, settings, data_type, filename, create_dir=False):
+    filename = sanitize_filename(filename)
+    base_path = settings['storage']['path']
+    storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
+    if create_dir:
+        # pdb.set_trace()
+        storage_dir = os.path.normpath(storage_dir)
+        os.makedirs(storage_dir, exist_ok=True)
+    storage_path = os.path.join(storage_dir, filename)
+
+    return storage_path, filename
+
+
+def openstack_upload(settings, file, file_name, content_type,  container_name):
+    storage = settings['storage']
+    authurl = storage['authurl']
+    user = storage['user']
+    key = storage['key']
+    auth_version = storage['auth_version']
+    tenant_name = storage['tenant_name']
+    conn = swiftclient.Connection(authurl=authurl, user=user, key=key,  auth_version=auth_version,
+                                  tenant_name=tenant_name)
+    #storageurl = conn.get_auth()[0]
+    conn.put_container(container_name)
+    obje = conn.put_object(container_name, file_name,
+                    contents = file,
+                    content_type = content_type)
+    #obje = conn.get_object(container_name, file_name)
+    return str(obje)
+
+
+def update_metadata(dbobject, new_metadata=None):
+    if new_metadata:
+        old_meta = dbobject.additional_metadata
+        if old_meta is None:
+            dbobject.additional_metadata = new_metadata
+        else:
+            old_meta.update(new_metadata)
+            dbobject.additional_metadata = old_meta
+        flag_modified(dbobject, 'additional_metadata')
+
+
+def translationgist_contents(translationgist):
+    result = dict()
+    result['client_id'] = translationgist.client_id
+    result['object_id'] = translationgist.object_id
+    result['type'] = translationgist.type
+    result['created_at'] = translationgist.created_at
+    contains = []
+    for translationatom in translationgist.translationatom:
+        contains.append(translationatom_contents(translationatom))
+    result['contains'] = contains
+    return result
+
+
+def translationatom_contents(translationatom):
+    result = dict()
+    result['content'] = translationatom.content
+    result['locale_id'] = translationatom.locale_id
+    result['client_id'] = translationatom.client_id
+    result['object_id'] = translationatom.object_id
+    result['parent_client_id'] = translationatom.parent_client_id
+    result['parent_object_id'] = translationatom.parent_object_id
+    result['created_at'] = translationatom.created_at
+    return result

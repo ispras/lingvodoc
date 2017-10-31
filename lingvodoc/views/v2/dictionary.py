@@ -27,9 +27,9 @@ from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
     group_by_languages,
     group_by_organizations,
-    user_counter,
-    check_client_id
+    user_counter
 )
+from lingvodoc.utils.verification import check_client_id
 
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -57,7 +57,7 @@ from sqlalchemy.exc import IntegrityError
 
 import datetime
 import json
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.views.v2.delete import real_delete_dictionary
 from pdb import set_trace
 

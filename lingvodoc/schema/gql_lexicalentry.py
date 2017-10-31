@@ -28,7 +28,7 @@ from lingvodoc.models import (
     ObjectTOC as dbObjectTOC
 )
 from lingvodoc.schema.gql_entity import Entity
-from lingvodoc.views.v2.utils import check_client_id
+from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 from lingvodoc.utils.creation import create_lexicalentry
@@ -201,9 +201,13 @@ class BulkCreateLexicalEntry(graphene.Mutation):
     def mutate(root, info, **args):
         lexicalentries = args.get('lexicalentries')
         lexentries_list = list()
-
+        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           info.context["client_id"])
         for lexentry in lexicalentries:
             id = lexentry["id"]
+
             perspective_id = lexentry["perspective_id"]
 
             dblexentry = create_lexicalentry(id, perspective_id, False)

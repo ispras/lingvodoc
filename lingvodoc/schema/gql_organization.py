@@ -18,7 +18,8 @@ from lingvodoc.models import (
     Group as dbGroup,
     DBSession
 )
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.utils.creation import add_user_to_group
+
 
 class Organization(graphene.ObjectType):
     """

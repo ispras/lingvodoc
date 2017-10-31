@@ -29,7 +29,7 @@ from lingvodoc.models import (
 
 from lingvodoc.utils.creation import create_dictionary_persp_to_field
 
-class DictionaryPerspectiveToField(graphene.ObjectType):
+class Column(graphene.ObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
      #object_id           | bigint                      | NOT NULL
@@ -60,14 +60,14 @@ class DictionaryPerspectiveToField(graphene.ObjectType):
     pass
 
 
-class CreateDictionaryPerspectiveToField(graphene.Mutation):
+class CreateColumn(graphene.Mutation):
     """
     example:
     mutation  {
-        create_perspective_to_field(id: [949, 2493], parent_id: [949, 2491], field_id: [949, 5], self_id: [949, 2493],
-         link_id: [5, 6], position: 1) {
+        create_column(parent_id: [1204,19664], field_id: [66, 6],
+  position: 1) {
             triumph
-            perspective_to_field{
+            column{
                 id
                 position
             }
@@ -99,7 +99,7 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
         link_id = LingvodocID()
         position = graphene.Int(required=True)
 
-    perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
+    column = graphene.Field(Column)
     triumph = graphene.Boolean()
 
     #@staticmethod
@@ -135,7 +135,7 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id("perspective", "edit", id_key="parent_id")
+    @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
@@ -154,12 +154,12 @@ class CreateDictionaryPerspectiveToField(graphene.Mutation):
                                               position=position)
         DBSession.add(field_object)
         DBSession.flush()
-        perspective_to_field = DictionaryPerspectiveToField(id=[field_object.client_id, field_object.object_id])
-        perspective_to_field.dbObject = field_object
-        return CreateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
+        column = Column(id=[field_object.client_id, field_object.object_id])
+        column.dbObject = field_object
+        return CreateColumn(column=column, triumph=True)
 
 
-class UpdateDictionaryPerspectiveToField(graphene.Mutation):
+class UpdateColumn(graphene.Mutation):
     """
     example:
       mutation  {
@@ -196,11 +196,11 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
         link_id = LingvodocID()
         position = graphene.Int()
 
-    perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
+    column = graphene.Field(Column)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("perspective", "edit", id_key="parent_id")
+    @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id, object_id = id
@@ -221,13 +221,13 @@ class UpdateDictionaryPerspectiveToField(graphene.Mutation):
             field_object.link_client_id, field_object.link_object_id = link_id
         if position:
             field_object.position = position
-        perspective_to_field = DictionaryPerspectiveToField(id=[field_object.client_id, field_object.object_id])
-        perspective_to_field.dbObject = field_object
-        return UpdateDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
+        column = Column(id=[field_object.client_id, field_object.object_id])
+        column.dbObject = field_object
+        return UpdateColumn(column=column, triumph=True)
 
 
 
-class DeleteDictionaryPerspectiveToField(graphene.Mutation):
+class DeleteColumn(graphene.Mutation):
     """
     example:
       mutation  {
@@ -257,7 +257,7 @@ class DeleteDictionaryPerspectiveToField(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
 
-    perspective_to_field = graphene.Field(DictionaryPerspectiveToField)
+    column = graphene.Field(Column)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -270,7 +270,7 @@ class DeleteDictionaryPerspectiveToField(graphene.Mutation):
         if not field_object or field_object.marked_for_deletion:
             raise ResponseError(message="No such field object in the system")
         del_object(field_object)
-        perspective_to_field = DictionaryPerspectiveToField(id=id)
-        perspective_to_field.dbObject = field_object
-        return DeleteDictionaryPerspectiveToField(perspective_to_field=perspective_to_field, triumph=True)
+        column = Column(id=id)
+        column.dbObject = field_object
+        return DeleteColumn(column=column, triumph=True)
 

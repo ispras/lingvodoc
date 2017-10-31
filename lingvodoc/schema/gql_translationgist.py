@@ -22,7 +22,8 @@ from lingvodoc.models import (
     DBSession,
     TranslationAtom as dbTranslationAtom
 )
-from lingvodoc.views.v2.utils import check_client_id, add_user_to_group
+from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.utils.verification import check_client_id
 from lingvodoc.schema.gql_translationatom import TranslationAtom
 
 class TranslationGist(graphene.ObjectType):
