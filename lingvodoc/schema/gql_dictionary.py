@@ -122,7 +122,7 @@ class Dictionary(graphene.ObjectType):  # tested
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
         #print(starting_time)
         if starting_time is None or ending_time is None:
-            raise ResponseError(message="Time error")
+            raise ResponseError(message="Time period is not chosen")
         locale_id = info.context.get('locale_id')
         return statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
                                    starting_time,
