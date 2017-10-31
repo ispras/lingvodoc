@@ -201,6 +201,7 @@ class Query(graphene.ObjectType):
     template_modes = graphene.List(graphene.String)
     grant = graphene.Field(Grant, id=graphene.Int())
     grants = graphene.List(Grant)
+    column = graphene.Field(Column, id=LingvodocID())
     phonology = graphene.Field(graphene.Boolean, perspective_id=LingvodocID(),
         limit=graphene.Int(),
         limit_exception=graphene.Int(),
