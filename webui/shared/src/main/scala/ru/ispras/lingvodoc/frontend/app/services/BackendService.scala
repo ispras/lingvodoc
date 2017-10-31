@@ -2083,6 +2083,7 @@ class BackendService($http: HttpService, val timeout: Timeout, rootScope: RootSc
   def phonology(
     perspectiveId: CompositeId,
     group_by_description: Boolean,
+    maybe_translation_field: Option[CompositeId],
     only_first_translation: Boolean,
     vowel_selection: Boolean,
     maybe_tier_list: Option[Seq[String]]):
@@ -2091,11 +2092,16 @@ class BackendService($http: HttpService, val timeout: Timeout, rootScope: RootSc
     val p = Promise[Unit]
 
     val request =
-
       JSON.stringify(js.Dynamic.literal(
+
         "perspective_client_id" -> perspectiveId.clientId,
         "perspective_object_id" -> perspectiveId.objectId,
         "group_by_description" -> group_by_description,
+
+        "maybe_translation_field" -> (maybe_translation_field
+          map { field_id => js.Array(field_id.clientId, field_id.objectId) }
+          getOrElse(null)),
+
         "only_first_translation" -> only_first_translation,
         "vowel_selection" -> vowel_selection,
 
