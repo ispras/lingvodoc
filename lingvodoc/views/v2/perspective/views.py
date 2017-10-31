@@ -1672,7 +1672,7 @@ def lexical_entries_all(request):
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
                                 for lex in lexes.all()]
 
-        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=None, accept=True)
+        result = LexicalEntry.graphene_track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=None, accept=True)
 
         response = list(result)
 

@@ -444,7 +444,9 @@ class Published(graphene.Interface):
 
     @fetch_object("published")
     def resolve_published(self, info):
-        return self.dbObject.publishingentity.published
+        if not self.publishingentity:
+            self.publishingentity = self.dbObject.publishingentity
+        return self.publishingentity.published
 
 
 class Accepted(graphene.Interface):
@@ -452,6 +454,8 @@ class Accepted(graphene.Interface):
 
     @fetch_object("accepted")
     def resolve_accepted(self, info):
+        if not self.publishingentity:
+            self.publishingentity = self.dbObject.publishingentity
         return self.dbObject.publishingentity.accepted
 
 # userBlobs interface

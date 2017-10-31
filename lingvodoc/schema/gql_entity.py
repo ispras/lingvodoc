@@ -99,6 +99,7 @@ class Entity(graphene.ObjectType):
     data_type = graphene.String()
     dbType = dbEntity
     dbObject = None
+    publishingentity = None
 
     class Meta:
         interfaces = (CompositeIdHolder,
