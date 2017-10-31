@@ -79,8 +79,8 @@ class EditDictionaryController(scope: EditDictionaryScope,
 
   private[this] var user_has_permissions: Boolean = false
 
-  private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
-  private[this] var fields: Seq[Field] = Seq[Field]()
+  protected[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
+  protected[this] var fields: Seq[Field] = Seq[Field]()
   private[this] var perspectiveRoles: Option[PerspectiveRoles] = Option.empty[PerspectiveRoles]
   private[this] var selectedEntries = Seq[String]()
 

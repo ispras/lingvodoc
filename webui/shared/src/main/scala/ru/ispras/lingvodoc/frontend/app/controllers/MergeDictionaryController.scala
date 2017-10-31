@@ -123,8 +123,8 @@ class MergeDictionaryController(
   protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
-  private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
-  private[this] var fields: Seq[Field] = Seq[Field]()
+  protected[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
+  protected[this] var fields: Seq[Field] = Seq[Field]()
 
   private[this] var adjacency_map: mutable.Map[CompositeId, mutable.Set[CompositeId]] = mutable.Map()
   private[this] var weight_map: mutable.Map[CompositeId, Double] = mutable.Map()
