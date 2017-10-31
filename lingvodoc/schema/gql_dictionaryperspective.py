@@ -40,7 +40,6 @@ from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
 from  lingvodoc.schema.gql_user import User
 
-from lingvodoc.views.v2.utils import add_user_to_group
 from sqlalchemy.sql.expression import case, true, false
 
 from lingvodoc.views.v2.translations import translationgist_contents
