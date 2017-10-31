@@ -6,7 +6,7 @@ from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
-    Client,
+    Client as dbClient,
     User as dbUser,
     TranslationGist as dbTranslationGist,
     BaseGroup as dbBaseGroup,
@@ -14,7 +14,10 @@ from lingvodoc.models import (
     Entity as dbEntity,
     Organization as dbOrganization,
     ObjectTOC,
-    DBSession
+    DBSession,
+    DictionaryPerspectiveToField as dbColumn,
+    PublishingEntity as dbPublishingEntity,
+
 )
 
 from lingvodoc.schema.gql_holders import (
@@ -36,6 +39,9 @@ from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
 from  lingvodoc.schema.gql_user import User
+
+from lingvodoc.views.v2.utils import add_user_to_group
+from sqlalchemy.sql.expression import case, true, false
 
 from lingvodoc.views.v2.translations import translationgist_contents
 from lingvodoc.utils import statistics
@@ -103,6 +109,7 @@ class DictionaryPerspective(graphene.ObjectType):
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     columns = graphene.List(Column)
     entities = graphene.List(Entity, mode=graphene.String())
+    entities_new = graphene.List(Entity, mode=graphene.String())
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     # stats = graphene.String() # ?
@@ -169,7 +176,7 @@ class DictionaryPerspective(graphene.ObjectType):
         return result
 
     #@acl_check_by_id('view', 'approve_entities')
-    @fetch_object()  # TODO: two lists
+    @fetch_object()
     def resolve_lexical_entries(self, info, ids):
         lex_list = list()
         for lex in DBSession.query(dbLexicalEntry).filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids), dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False).all():
@@ -181,7 +188,7 @@ class DictionaryPerspective(graphene.ObjectType):
 
 
     #@acl_check_by_id('view', 'approve_entities')
-    @fetch_object("entities")  # TODO: two lists
+    @fetch_object()
     def resolve_entities(self, info, mode=None):
         result = list()
         request = info.context.get('request')
@@ -267,12 +274,85 @@ class DictionaryPerspective(graphene.ObjectType):
         return entities
 
     @fetch_object()
+    def resolve_entities_new(self, info, mode=None, authors=None, clients=None, start_date=None, end_date=None,
+                             position=1):
+        result = list()
+        request = info.context.get('request')
+        if mode == 'all':
+            publish = None
+            accept = True
+            delete = False
+        elif mode == 'published':
+            publish = True
+            accept = True
+            delete = False
+        elif mode == 'not_accepted':
+            publish = None
+            accept = False
+            delete = False
+        elif mode == 'deleted':
+            publish = None
+            accept = None
+            delete = True
+        elif mode == 'all_with_deleted':
+            publish = None
+            accept = None
+            delete = None
+        else:
+            raise ResponseError(message="mode: <all|published|not_accepted|deleted|all_with_deleted>")
+
+        dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, position=position, self_client_id=None,
+                                                       self_object_id=None).first()
+
+        lexes = DBSession.query(dbLexicalEntry).join(dbLexicalEntry.entity).join(dbEntity.publishingentity) \
+            .filter(dbLexicalEntry.parent == self.dbObject)
+        if publish is not None:
+            lexes = lexes.filter(dbPublishingEntity.published == publish)
+        if accept is not None:
+            lexes = lexes.filter(dbPublishingEntity.accepted == accept)
+        if delete is not None:
+            lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
+        if authors or clients:
+            lexes = lexes.join(dbClient, dbEntity.client_id == dbClient.id)
+        if authors:
+            lexes = lexes.join(dbClient.user).filter(dbUser.id.in_(authors))
+        if clients:
+            lexes = lexes.filter(dbClient.id.in_(clients))
+        if start_date:
+            lexes = lexes.filter(dbEntity.created_at >= start_date)
+        if end_date:
+            lexes = lexes.filter(dbEntity.created_at <= end_date)  # todo: check if field=field ever works
+        lexes = lexes \
+            .order_by(func.min(case(
+            [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
+                  dbEntity.field_object_id != dbcolumn.field_object_id),
+              'яяяяяя')],
+            else_=dbEntity.content))) \
+            .group_by(dbLexicalEntry)
+
+        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
+                                for lex in lexes.yield_per(100)]
+        entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
+                                                   int(request.cookies.get('locale_id') or 2),
+                                                   publish=publish, accept=accept, delete=delete)
+
+        def graphene_entity(entity, publishing):
+            ent = Entity(id = (entity.client_id, entity.object_id))
+            ent.dbObject = entity
+            ent.publishingentity = publishing
+            return ent
+
+        entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
+
+        return entities
+
+    @fetch_object()
     def resolve_authors(self, info):
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
 
         parent = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if parent and not parent.marked_for_deletion:
-            authors = DBSession.query(dbUser).join(dbUser.clients).join(dbEntity, dbEntity.client_id == Client.id) \
+            authors = DBSession.query(dbUser).join(dbUser.clients).join(dbEntity, dbEntity.client_id == dbClient.id) \
                 .join(dbEntity.parent).join(dbEntity.publishingentity) \
                 .filter(dbLexicalEntry.parent_client_id == parent.client_id,# TODO: filter by accepted==True
                         dbLexicalEntry.parent_object_id == parent.object_id,
@@ -292,9 +372,9 @@ class DictionaryPerspective(graphene.ObjectType):
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
         parent_client_id, parent_object_id = self.dbObject.parent_client_id, self.dbObject.parent_object_id
 
-        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            raise ResponseError(message="No such dictionary in the system")
+        # parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        # if not parent:
+        #     raise ResponseError(message="No such dictionary in the system")
 
         perspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if perspective and not perspective.marked_for_deletion:
@@ -325,7 +405,7 @@ class DictionaryPerspective(graphene.ObjectType):
     @fetch_object()
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
         if starting_time is None or ending_time is None:
-            raise ResponseError(message="Time error")
+            raise ResponseError(message="Bad time period")
         locale_id = info.context.get('locale_id')
         return statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
                                    starting_time,
@@ -611,7 +691,7 @@ class UpdatePerspectiveRoles(graphene.Mutation):
                     group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
-                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                    client = DBSession.query(dbClient).filter_by(id=request.authenticated_userid).first()
                     userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
                     permitted = False
@@ -648,7 +728,7 @@ class UpdatePerspectiveRoles(graphene.Mutation):
                     group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                                subject_object_id=object_id,
                                                                subject_client_id=client_id).first()
-                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                    client = DBSession.query(dbClient).filter_by(id=request.authenticated_userid).first()
                     userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
                     permitted = False
