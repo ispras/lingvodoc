@@ -108,7 +108,7 @@ class DictionaryPerspective(graphene.ObjectType):
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     columns = graphene.List(Column)
     entities = graphene.List(Entity, mode=graphene.String())
-    entities_new = graphene.List(Entity, mode=graphene.String())
+    entities_old = graphene.List(Entity, mode=graphene.String())
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     # stats = graphene.String() # ?
@@ -188,7 +188,7 @@ class DictionaryPerspective(graphene.ObjectType):
 
     #@acl_check_by_id('view', 'approve_entities')
     @fetch_object()
-    def resolve_entities(self, info, mode=None):
+    def resolve_entities_old(self, info, mode=None):
         result = list()
         request = info.context.get('request')
         if mode == 'all':
@@ -273,7 +273,7 @@ class DictionaryPerspective(graphene.ObjectType):
         return entities
 
     @fetch_object()
-    def resolve_entities_new(self, info, mode=None, authors=None, start_date=None, end_date=None,
+    def resolve_entities(self, info, mode=None, authors=None, clients=None, start_date=None, end_date=None,
                              position=1):
         result = list()
         request = info.context.get('request')

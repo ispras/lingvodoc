@@ -311,7 +311,9 @@ class SelfHolder(graphene.Interface):
 
     @fetch_object("self_id")
     def resolve_self_id(self, info):
-        return (self.dbObject.self_client_id, self.dbObject.self_object_id)
+        if self.dbObject.self_client_id and self.dbObject.self_object_id:
+            return (self.dbObject.self_client_id, self.dbObject.self_object_id)
+        return None
 
 class FieldHolder(graphene.Interface):
     field_id = LingvodocID()

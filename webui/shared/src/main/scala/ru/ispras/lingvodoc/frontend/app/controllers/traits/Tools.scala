@@ -19,7 +19,7 @@ import scala.util.{Failure, Success}
 /* Lingovodoc imports. */
 
 import ru.ispras.lingvodoc.frontend.app.controllers.common.Value
-import ru.ispras.lingvodoc.frontend.app.model.CompositeId
+import ru.ispras.lingvodoc.frontend.app.model.{CompositeId, Field, TranslationGist}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 
@@ -32,13 +32,36 @@ trait Tools extends ErrorModalHandler
   protected[this] def backend: BackendService
 
   protected[this] def dictionaryId: CompositeId
-
   protected[this] def perspectiveId: CompositeId
+
+  protected[this] def dataTypes: Seq[TranslationGist]
+  protected[this] def fields: Seq[Field]
 
   /** Opens perspective phonology page. */
   @JSExport
   def phonology(): Unit =
   {
+    /* Getting fields which can be used as a translation field. */
+
+    val text_fields: Seq[Field] = fields flatMap { field =>
+
+      if (dataTypes.find(dataType =>
+        dataType.clientId == field.dataTypeTranslationGistClientId &&
+        dataType.objectId == field.dataTypeTranslationGistObjectId) match {
+
+        case Some(dataType) =>
+          dataType.atoms.find(a => a.localeId == 2) match {
+            case Some(atom) => atom.content.equals("Text")
+            case None => false }
+
+        case None => false })
+
+        Some(field)
+
+      else None }
+
+    /* Launching phonology option selection dialog. */
+
     val options = ModalOptions()
 
     options.templateUrl = "/static/templates/modal/perspectivePhonology.html"
@@ -50,7 +73,8 @@ trait Tools extends ErrorModalHandler
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(
-          perspectiveId = perspectiveId.asInstanceOf[js.Object]
+          perspectiveId = perspectiveId.asInstanceOf[js.Object],
+          text_field_list = text_fields.asInstanceOf[js.Object]
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]

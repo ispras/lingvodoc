@@ -50,21 +50,42 @@
             </div>
         </div>
 
-        <div style="margin-top: 0.5em; margin-bottom: 0.5em;">Translation showing:</div>
+        <!-- Translation field selection. -->
 
-        <label style="font-weight: normal">
-            <input type="radio" name="translation_all" ng-model="translation_choice" value="all">
-            Show all translations of each word.
-        </label>
+        <div style="margin-top: 0.5em; margin-bottom: 0.5em;"
+            ng-if="text_field_list.length > 0">
+            Translation field:
 
-        <br>
+            <select ng-model="translation_field_id"
+                ng-change="controller.select_field(translation_field_id)"
+                class="form-control"
+                style="width: auto">
+                <option ng-repeat="field in text_field_list" value="{{field.getId}}">
+                    {{ field.translation }}
+                </option>
+            </select>
 
-        <label style="font-weight: normal">
-            <input type="radio" name="translation_first" ng-model="translation_choice" value="first">
-            Show only the first translation of each word.
-        </label>
+            <br>
 
-        <br>
+            <label style="font-weight: normal">
+                <input type="radio" name="translation_all" ng-model="translation_choice" value="all">
+                Show all translations of each word.
+            </label>
+
+            <br>
+
+            <label style="font-weight: normal">
+                <input type="radio" name="translation_first" ng-model="translation_choice" value="first">
+                Show only the first translation of each word.
+            </label>
+        </div>
+
+        <!-- Notification if we have no fields to select translation field from. -->
+
+        <div style="margin-top: 0.5em; margin-bottom: 0.5em;"
+            ng-if="text_field_list.length <= 0">
+            No translation fields available. 
+        </div>
 
         <div style="margin-top: 0.5em; margin-bottom: 0.5em;">
             <label style="font-weight: normal">
