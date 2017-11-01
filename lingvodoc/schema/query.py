@@ -221,9 +221,9 @@ class Query(graphene.ObjectType):
                                      category=graphene.Int(),
                                      adopted=graphene.Boolean(),
                                      etymology=graphene.Boolean(),
-                                     search_strings=graphene.List(ObjectVal))
+                                     search_strings=graphene.List(graphene.List(ObjectVal)))
 
-    def resolve_advanced_search(self, info, languages, tag_list, category, adopted, etymology, search_strings):
+    def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None):
         return AdvancedSearch().constructor(languages, tag_list, category, adopted, etymology, search_strings)
 
     def resolve_template_modes(self, info):

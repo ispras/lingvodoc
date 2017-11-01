@@ -18,6 +18,7 @@ from lingvodoc.models import (
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
     Entity as dbEntity,
+    PublishingEntity as dbPublishingEntity,
     User as dbUser,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
@@ -34,10 +35,14 @@ from sqlalchemy import (
 
 
 class AdvancedSearch(graphene.ObjectType):
-    entities = graphene.Field(Entity)
+    entities = graphene.List(Entity)
+
+
+
+
     @classmethod
     def constructor(cls, languages, tag_list, category, adopted, etymology, search_strings):
-        dictionaries = DBSession.query(dbDictionary)
+        dictionaries = DBSession.query(dbDictionary).filter_by(marked_for_deletion=False)
         if languages:
             dictionaries = dictionaries.join(dbDictionary.parent).filter(
                 tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
@@ -47,8 +52,13 @@ class AdvancedSearch(graphene.ObjectType):
         if category is not None:
             dictionaries = dictionaries.filter(dbDictionary.category == category)
 
-        basic_search = DBSession.query(dbEntity).join(dbEntity.parent)\
-            .join(dbLexicalEntry.parent).join(dbDictionaryPerspective.parent)
+        basic_search = DBSession.query(dbEntity, dbPublishingEntity).join(dbEntity.parent).join(
+            dbEntity.publishingentity) \
+            .join(dbLexicalEntry.parent).join(dbDictionaryPerspective.parent).filter(
+            dbPublishingEntity.client_id == dbEntity.client_id,
+            dbPublishingEntity.object_id == dbEntity.object_id
+        )
+
         and_block = list()
         for search_block in search_strings:
             or_block = list()
@@ -65,12 +75,22 @@ class AdvancedSearch(graphene.ObjectType):
                 elif matching_type == 'regexp':
                     inner_and_block.append(dbEntity.content.op('~*')(search_string["search_string"]))
 
-                or_block.append(and_(inner_and_block))
+                or_block.append(and_(*inner_and_block))
 
-            and_block.append(or_(or_block))
-        and_block = and_(and_block)
+            and_block.append(or_(*or_block))
+        and_block = and_(*and_block)
 
-        search = basic_search.filter(and_block, dbDictionary.in_(dictionaries))
+        search = basic_search.filter(and_block).yield_per(100)
+        # , dbDictionary.in_(dictionaries))
 
-    def resolve_entities(self, info):
-        pass
+        def graphene_entity(entity, publishing):
+            ent = Entity(id = (entity.client_id, entity.object_id))
+            ent.dbObject = entity
+            ent.publishingentity = publishing
+            return ent
+
+        entities = [graphene_entity(entity[0], entity[1]) for entity in search]
+        return cls(entities=entities)
+
+    # def resolve_entities(self, info):
+    #     return self.entities
