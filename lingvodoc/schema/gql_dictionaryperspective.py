@@ -166,9 +166,9 @@ class DictionaryPerspective(graphene.ObjectType):
 
     @fetch_object() # tested
     def resolve_columns(self, info):
-        dbfields = self.dbObject.dictionaryperspectivetofield
+        columns = DBSession.query(dbColumn).filter_by(parent=self.dbObject, marked_for_deletion=False).all()
         result = list()
-        for dbfield in dbfields:
+        for dbfield in columns:
             gr_field_obj = Column(id=[dbfield.client_id, dbfield.object_id])
             gr_field_obj.dbObject = dbfield
             result.append(gr_field_obj)
@@ -273,7 +273,7 @@ class DictionaryPerspective(graphene.ObjectType):
         return entities
 
     @fetch_object()
-    def resolve_entities_new(self, info, mode=None, authors=None, clients=None, start_date=None, end_date=None,
+    def resolve_entities_new(self, info, mode=None, authors=None, start_date=None, end_date=None,
                              position=1):
         result = list()
         request = info.context.get('request')
@@ -311,16 +311,13 @@ class DictionaryPerspective(graphene.ObjectType):
             lexes = lexes.filter(dbPublishingEntity.accepted == accept)
         if delete is not None:
             lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
-        if authors or clients:
-            lexes = lexes.join(dbClient, dbEntity.client_id == dbClient.id)
+
         if authors:
-            lexes = lexes.join(dbClient.user).filter(dbUser.id.in_(authors))
-        if clients:
-            lexes = lexes.filter(dbClient.id.in_(clients))
+            lexes = lexes.join(dbClient, dbEntity.client_id == dbClient.id).join(dbClient.user).filter(dbUser.id.in_(authors))
         if start_date:
             lexes = lexes.filter(dbEntity.created_at >= start_date)
         if end_date:
-            lexes = lexes.filter(dbEntity.created_at <= end_date)  # todo: check if field=field ever works
+            lexes = lexes.filter(dbEntity.created_at <= end_date)
         lexes = lexes \
             .order_by(func.min(case(
             [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,

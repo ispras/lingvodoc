@@ -17,11 +17,13 @@ from lingvodoc.models import (
     DictionaryPerspective as dbDictionaryPerspective,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
+    Entity as dbEntity,
     User as dbUser,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
     DBSession
 )
+from lingvodoc.schema.gql_entity import Entity
 
 from sqlalchemy import (
     func,
@@ -29,13 +31,12 @@ from sqlalchemy import (
     or_,
     tuple_
 )
-from lingvodoc.views.v2.utils import add_user_to_group
-
 
 
 class AdvancedSearch(graphene.ObjectType):
-
-    def constructor(self, languages, tag_list, category, adopted, etymology, search_strings):
+    entities = graphene.Field(Entity)
+    @classmethod
+    def constructor(cls, languages, tag_list, category, adopted, etymology, search_strings):
         dictionaries = DBSession.query(dbDictionary)
         if languages:
             dictionaries = dictionaries.join(dbDictionary.parent).filter(
@@ -46,14 +47,30 @@ class AdvancedSearch(graphene.ObjectType):
         if category is not None:
             dictionaries = dictionaries.filter(dbDictionary.category == category)
 
-        basic_search = DBSession.query(dbLexicalEntry)\
+        basic_search = DBSession.query(dbEntity).join(dbEntity.parent)\
             .join(dbLexicalEntry.parent).join(dbDictionaryPerspective.parent)
-        or_block = list()
+        and_block = list()
         for search_block in search_strings:
-            and_block = list()
+            or_block = list()
             for search_string in search_block:
-                and_block.append(content = search_string)
-            or_block.append(and_(and_block))
-        or_block = or_(or_block)
+                inner_and_block = list()
+                if 'field_id' in search_string:
+                    inner_and_block.append(dbEntity.field_client_id == search_string["field_id"][0])
+                    inner_and_block.append(dbEntity.field_object_id == search_string["field_id"][1])
+                matching_type = search_string.get('matching_type')
+                if matching_type == "full_string":
+                    inner_and_block.append(dbEntity.content == search_string["search_string"])
+                elif matching_type == 'substring':
+                    inner_and_block.append(dbEntity.content.like("".join(['%', search_string["search_string"], '%'])))
+                elif matching_type == 'regexp':
+                    inner_and_block.append(dbEntity.content.op('~*')(search_string["search_string"]))
 
-        search = basic_search.filter(or_block, dbDictionary.in_(dictionaries))
+                or_block.append(and_(inner_and_block))
+
+            and_block.append(or_(or_block))
+        and_block = and_(and_block)
+
+        search = basic_search.filter(and_block, dbDictionary.in_(dictionaries))
+
+    def resolve_entities(self, info):
+        pass

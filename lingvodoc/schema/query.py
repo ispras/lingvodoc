@@ -59,6 +59,8 @@ from lingvodoc.schema.gql_dictionary import (
     DeleteDictionary
 )
 
+from lingvodoc.schema.gql_search import AdvancedSearch
+
 from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
     CreateLexicalEntry,
@@ -212,6 +214,16 @@ class Query(graphene.ObjectType):
         maybe_tier_list=graphene.List(graphene.String),
         maybe_tier_set=graphene.List(graphene.String),
         synchronous=graphene.Boolean())
+    advanced_search = graphene.Field(AdvancedSearch,
+                                     languages=LingvodocID(),
+                                     tag_list=LingvodocID(),
+                                     category=graphene.Int(),
+                                     adopted=graphene.Boolean(),
+                                     etymology=graphene.Boolean(),
+                                     search_strings=graphene.List(ObjectVal))
+
+    def resolve_advanced_search(self, info, languages, tag_list, category, adopted, etymology, search_strings):
+        return AdvancedSearch().constructor(languages, tag_list, category, adopted, etymology, search_strings)
 
     def resolve_template_modes(self, info):
         return ['corpora']
