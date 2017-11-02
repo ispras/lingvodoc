@@ -306,21 +306,66 @@ def dictionary_copy(request):
 
             return {'error': 'Dictionary is deleted.'}
 
-        # Getting a new client id for the specified user, creating a new dictionary.
+        # Getting a new client id for the specified user.
 
         client = Client(user_id = user_id, is_browser_client = False)
 
         DBSession.add(client)
         DBSession.flush()
 
+        def copy_translation(translation_gist_cid, translation_gist_oid):
+            """
+            Copies translation, returns identifier of the copy.
+            """
+
+            translation_gist = DBSession.query(TranslationGist).filter_by(
+                client_id = translation_gist_cid,
+                object_id = translation_gist_oid).first()
+
+            translation_gist_copy = TranslationGist(
+                client_id = client.id,
+                type = translation_gist.type)
+
+            DBSession.add(translation_gist_copy)
+            DBSession.flush()
+
+            # Copying translation atoms.
+
+            for translation_atom in DBSession.query(TranslationAtom).filter_by(
+                parent_client_id = translation_gist_cid,
+                parent_object_id = translation_gist_oid,
+                marked_for_deletion = False):
+
+                translation_atom_copy = TranslationAtom(
+                    client_id = client.id,
+                    parent_client_id = translation_gist_copy.client_id,
+                    parent_object_id = translation_gist_copy.object_id,
+                    locale_id = translation_atom.locale_id,
+                    content = translation_atom.content,
+                    additional_metadata = copy.deepcopy(translation_atom.additional_metadata))
+
+                DBSession.add(translation_atom_copy)
+
+            DBSession.flush()
+
+            # Returning identifier of a translation.
+
+            return (translation_gist_copy.client_id, translation_gist_copy.object_id)
+
+        # Creating a new dictionary.
+
         id_id_map = {}
+
+        translation_gist_cid, translation_gist_oid = copy_translation(
+            dictionary.translation_gist_client_id,
+            dictionary.translation_gist_object_id)
 
         dictionary_copy = Dictionary(
             client_id = client.id,
             parent_client_id = dictionary.parent_client_id,
             parent_object_id = dictionary.parent_object_id,
-            translation_gist_client_id = dictionary.translation_gist_client_id,
-            translation_gist_object_id = dictionary.translation_gist_object_id,
+            translation_gist_client_id = translation_gist_cid,
+            translation_gist_object_id = translation_gist_oid,
             state_translation_gist_client_id = dictionary.state_translation_gist_client_id,
             state_translation_gist_object_id = dictionary.state_translation_gist_object_id,
             marked_for_deletion = dictionary.marked_for_deletion,
@@ -359,12 +404,16 @@ def dictionary_copy(request):
 
         for perspective in perspective_query.all():
 
+            translation_gist_cid, translation_gist_oid = copy_translation(
+                perspective.translation_gist_client_id,
+                perspective.translation_gist_object_id)
+
             perspective_copy = DictionaryPerspective(
                 client_id = client.id,
                 parent_client_id = dictionary_copy.client_id,
                 parent_object_id = dictionary_copy.object_id,
-                translation_gist_client_id = perspective.translation_gist_client_id,
-                translation_gist_object_id = perspective.translation_gist_object_id,
+                translation_gist_client_id = translation_gist_cid,
+                translation_gist_object_id = translation_gist_oid,
                 state_translation_gist_client_id = perspective.state_translation_gist_client_id,
                 state_translation_gist_object_id = perspective.state_translation_gist_object_id,
                 is_template = perspective.is_template,
