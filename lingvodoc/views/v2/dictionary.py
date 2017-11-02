@@ -273,20 +273,16 @@ def dictionary_copy(request):
         log.debug('dictionary_copy {0}/{1} {2}: {3}'.format(
             dictionary_cid, dictionary_oid, user_id, check_deletion))
 
-        # __DEBUG__
+        # Checking if we are being invoked by an administrator.
 
-#       # Checking if we are being invoked by an administrator.
+        user = Client.get_user_by_client_id(request.authenticated_userid)
 
-#       user = Client.get_user_by_client_id(request.authenticated_userid)
+        if user is None or user.id != 1:
 
-#       if user is None or user.id != 1:
+            log.debug('dictionary_copy {0}/{1} {2}: not an administrator'.format(
+                dictionary_cid, dictionary_oid, user_id))
 
-#           log.debug('dictionary_copy {0}/{1} {2}: not an administrator'.format(
-#               dictionary_cid, dictionary_oid, user_id))
-
-#           return {'error': 'Not an administrator.'}
-
-        # __
+            return {'error': 'Not an administrator.'}
 
         # Getting dictionary and user info, checking if the dictionary is deleted if required.
 
