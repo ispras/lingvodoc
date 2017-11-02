@@ -379,13 +379,21 @@ def dictionary_copy(request):
 
             return (translation_gist_copy.client_id, translation_gist_copy.object_id)
 
-        # Creating a new dictionary.
+        # Copying the dictionary.
 
         id_id_map = {}
 
         translation_gist_cid, translation_gist_oid = copy_translation(
             dictionary.translation_gist_client_id,
             dictionary.translation_gist_object_id)
+
+        metadata = copy.deepcopy(dictionary.additional_metadata)
+
+        if not metadata:
+            metadata = {'clone_origin': [dictionary_cid, dictionary_oid]}
+
+        else:
+            metadata['clone_origin'] = [dictionary_cid, dictionary_oid]
 
         dictionary_copy = Dictionary(
             client_id = client.id,
@@ -398,7 +406,7 @@ def dictionary_copy(request):
             marked_for_deletion = dictionary.marked_for_deletion,
             category = dictionary.category,
             domain = dictionary.domain,
-            additional_metadata = copy.deepcopy(dictionary.additional_metadata))
+            additional_metadata = metadata)
 
         DBSession.add(dictionary_copy)
         DBSession.flush()
