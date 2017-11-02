@@ -273,16 +273,20 @@ def dictionary_copy(request):
         log.debug('dictionary_copy {0}/{1} {2}: {3}'.format(
             dictionary_cid, dictionary_oid, user_id, check_deletion))
 
-        # Checking if we are being invoked by an administrator.
+        # __DEBUG__
 
-        user = Client.get_user_by_client_id(request.authenticated_userid)
+#       # Checking if we are being invoked by an administrator.
 
-        if user is None or user.id != 1:
+#       user = Client.get_user_by_client_id(request.authenticated_userid)
 
-            log.debug('dictionary_copy {0}/{1} {2}: not an administrator'.format(
-                dictionary_cid, dictionary_oid, user_id))
+#       if user is None or user.id != 1:
 
-            return {'error': 'Not an administrator.'}
+#           log.debug('dictionary_copy {0}/{1} {2}: not an administrator'.format(
+#               dictionary_cid, dictionary_oid, user_id))
+
+#           return {'error': 'Not an administrator.'}
+
+        # __
 
         # Getting dictionary and user info, checking if the dictionary is deleted if required.
 
@@ -313,6 +317,12 @@ def dictionary_copy(request):
         DBSession.add(client)
         DBSession.flush()
 
+        translation_gist_base_group = DBSession.query(BaseGroup).filter_by(
+            name = 'Can delete translationgist').first()
+
+        translation_atom_base_group = DBSession.query(BaseGroup).filter_by(
+            name = 'Can edit translationatom').first()
+
         def copy_translation(translation_gist_cid, translation_gist_oid):
             """
             Copies translation, returns identifier of the copy.
@@ -327,6 +337,17 @@ def dictionary_copy(request):
                 type = translation_gist.type)
 
             DBSession.add(translation_gist_copy)
+
+            # Setting up translation permissions.
+
+            new_group = Group(
+                parent = translation_gist_base_group,
+                subject_client_id = translation_gist_copy.client_id,
+                subject_object_id = translation_gist_copy.object_id)
+
+            add_user_to_group(user, new_group)
+            DBSession.add(new_group)
+
             DBSession.flush()
 
             # Copying translation atoms.
@@ -345,6 +366,16 @@ def dictionary_copy(request):
                     additional_metadata = copy.deepcopy(translation_atom.additional_metadata))
 
                 DBSession.add(translation_atom_copy)
+
+                # Setting up translation atom editing permissions.
+
+                new_group = Group(
+                    parent = translation_atom_base_group,
+                    subject_client_id = translation_atom_copy.client_id,
+                    subject_object_id = translation_atom_copy.object_id)
+
+                add_user_to_group(user, new_group)
+                DBSession.add(new_group)
 
             DBSession.flush()
 
