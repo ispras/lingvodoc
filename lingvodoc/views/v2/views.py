@@ -674,12 +674,24 @@ def graphql(request):
             data = request.POST
             if not data:
                 return {'error': 'empty request'}
-            elif not "query" in data:
-                return {'error': 'query key not nound'}
-            elif not "blob" in data:
-                return {'error': 'blob key not nound'}
-            request_string = request.POST.pop("query") # TODO: change to query?
+            elif not "operations" in data:
+                return {'error': 'operations key not nound'}
+            elif not "query" in data["operations"]:
+                return {'error': 'query key not nound in operations'}
+            elif not "variables.content" in data:
+                return {'error': 'variables.content key not nound'}
+
+            request_string = request.POST.pop("operations")
             request_string= request_string.rstrip()
+            #body = request_string.decode('utf-8')
+            json_req = json.loads(request_string)
+            if "query" not in json_req:
+                return {'error': 'query key not nound'}
+            request_string = json_req["query"]
+            request_string= request_string.rstrip()
+            if "variables" in json_req:
+                variable_values = json_req["variables"]
+
             '''
             if data and "file" in data and "graphene" in data:
                 # We can get next file from the list inside file upload mutation resolve

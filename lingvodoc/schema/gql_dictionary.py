@@ -35,12 +35,18 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field)
 
+class UserToRoles(graphene.ObjectType):
+    id_user = graphene.Int()
+    roles = graphene.List(graphene.Int)
+
+
+
 class UserAndOrganizationsRoles(graphene.ObjectType):
-    roles_users = graphene.List(graphene.String)
-    roles_organizations = graphene.List(graphene.String)
+    roles_users = graphene.List(ObjectVal)
+    roles_organizations = graphene.List(ObjectVal)
 
     def resolve_roles_users(self, info):
-        return self.roles_users
+        return [self.roles_users]
 
     def resolve_roles_organizations(self, info):
         return self.roles_organizations
@@ -170,6 +176,8 @@ class Dictionary(graphene.ObjectType):  # tested
                 organizations += [org.id]
             roles_users[perm] = users
             roles_organizations[perm] = organizations
+
+
         response['roles_users'] = roles_users
         response['roles_organizations'] = roles_organizations
         return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
@@ -531,7 +539,7 @@ class UpdateDictionaryStatus(graphene.Mutation):
                 created_at
                 status
                 translation
-                            additional_metadata{
+            additional_metadata{
              hash
             }
             }
@@ -562,7 +570,113 @@ class UpdateDictionaryStatus(graphene.Mutation):
             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
         raise ResponseError(message="No such dictionary in the system")
 
-class UpdateDictionaryRoles(graphene.Mutation):
+class AddDictionaryRoles(graphene.Mutation):
+    class Arguments:
+        id = LingvodocID(required=True)
+        user_id = graphene.Int(required=True)
+        roles_users = graphene.List(graphene.Int)
+        roles_organizations = graphene.List(graphene.Int)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id("dictionary_role", "edit")
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        roles_users = args.get('roles_users')
+        roles_organizations = args.get('roles_organizations')
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dbdictionary and not dbdictionary.marked_for_deletion:
+            if roles_users:
+                for role_id in roles_users:
+
+                    base = DBSession.query(dbBaseGroup).filter_by(id=role_id, dictionary_default=True).first()
+                    if not base:
+                        raise ResponseError(message="No such role in the system")
+                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
+                    if not group:
+                        raise ResponseError(message="No such group in the system")
+
+                    client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
+
+                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+                    if not permitted:
+                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                                          subject_override=True).first()
+                        if not override_group:
+                            raise ResponseError(message="No such group in the system")
+
+                        if userlogged in override_group.users:
+                            permitted = True
+
+                    if permitted:
+                        users = roles_users[role_id]
+                        for userid in users:
+                            user = DBSession.query(dbUser).filter_by(id=userid).first()
+                            if user:
+                                if user not in group.users:
+                                    group.users.append(user)
+                    else:
+                        raise ResponseError(message="Not enough permission")
+            if roles_organizations:
+                for role_id in roles_organizations:
+                    base = DBSession.query(dbBaseGroup).filter_by(name=role_id, dictionary_default=True).first()
+                    if not base:
+                        raise ResponseError(message="No such role in the system")
+
+                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                               subject_object_id=object_id,
+                                                               subject_client_id=client_id).first()
+                    if not group:
+                        raise ResponseError(message="No such group in the system")
+
+                    client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
+
+                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+                    if not permitted:
+                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                                          subject_override=True).first()
+                        if not override_group:
+                            raise ResponseError(message="No such group in the system")
+
+                        if userlogged in override_group.users:
+                            permitted = True
+
+                    if permitted:
+                        orgs = roles_organizations[role_id]
+                        for orgid in orgs:
+                            org = DBSession.query(dbOrganization).filter_by(id=orgid).first()
+                            if org:
+                                if org not in group.organizations:
+                                    group.organizations.append(org)
+                    else:
+                        raise ResponseError(message="Not enough permission")
+
+            dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
+            dictionary.dbObject = dbdictionary
+            return AddDictionaryRoles(dictionary=dictionary, triumph=True)
+        raise ResponseError(message="No such dictionary in the system")
+
+class DeleteDictionaryRoles(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         roles_users = ObjectVal()
@@ -663,7 +777,7 @@ class UpdateDictionaryRoles(graphene.Mutation):
 
             dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
             dictionary.dbObject = dbdictionary
-            return UpdateDictionaryRoles(dictionary=dictionary, triumph=True)
+            return DeleteDictionaryRoles(dictionary=dictionary, triumph=True)
         raise ResponseError(message="No such dictionary in the system")
 
 

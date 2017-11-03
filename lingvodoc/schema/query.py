@@ -55,7 +55,8 @@ from lingvodoc.schema.gql_dictionary import (
     CreateDictionary,
     UpdateDictionary,
     UpdateDictionaryStatus,
-    UpdateDictionaryRoles,
+    AddDictionaryRoles,
+    DeleteDictionaryRoles,
     DeleteDictionary
 )
 
@@ -1111,7 +1112,9 @@ class MyMutations(graphene.ObjectType):
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
     update_dictionary_status = UpdateDictionaryStatus.Field()
-    update_dictionary_roles = UpdateDictionaryRoles.Field()
+    #update_dictionary_roles = UpdateDictionaryRoles.Field()
+    add_dictionary_roles = AddDictionaryRoles.Field()
+    delete_dictionary_roles = DeleteDictionaryRoles.Field()
     delete_dictionary = DeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
     update_organization = UpdateOrganization.Field()
