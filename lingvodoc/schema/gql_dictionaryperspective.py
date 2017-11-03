@@ -176,9 +176,14 @@ class DictionaryPerspective(graphene.ObjectType):
 
     #@acl_check_by_id('view', 'approve_entities')
     @fetch_object()
-    def resolve_lexical_entries(self, info, ids):
+    def resolve_lexical_entries(self, info, ids=None):
         lex_list = list()
-        for lex in DBSession.query(dbLexicalEntry).filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids), dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False).all():
+        query = DBSession.query(dbLexicalEntry)
+        if ids is None:
+            query = query.filter(dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
+        else:
+            query = query.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids), dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
+        for lex in query.all():
             lex_object = LexicalEntry(id=[lex.client_id, lex.object_id])
             lex_object.dbObject = lex
             lex_list.append(lex_object)
