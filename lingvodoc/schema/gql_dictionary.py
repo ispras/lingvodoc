@@ -39,6 +39,11 @@ class UserToRoles(graphene.ObjectType):
     id_user = graphene.Int()
     roles = graphene.List(graphene.Int)
 
+    def resolve_roles(self, info):
+        return self.user_id
+
+    def resolve_id_user(self, info):
+        return self.roles
 
 
 class UserAndOrganizationsRoles(graphene.ObjectType):
@@ -46,7 +51,7 @@ class UserAndOrganizationsRoles(graphene.ObjectType):
     roles_organizations = graphene.List(ObjectVal)
 
     def resolve_roles_users(self, info):
-        return [self.roles_users]
+        return self.roles_users
 
     def resolve_roles_organizations(self, info):
         return self.roles_organizations
@@ -167,20 +172,30 @@ class Dictionary(graphene.ObjectType):  # tested
             group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                      subject_object_id=object_id,
                                                      subject_client_id=client_id).first()
-            perm = base.name
+            #perm = base.name
+            #perm = base.id
             users = []
             for user in group.users:
                 users += [user.id]
             organizations = []
             for org in group.organizations:
                 organizations += [org.id]
-            roles_users[perm] = users
-            roles_organizations[perm] = organizations
+            roles_users[base.id] = users
+            roles_organizations[base.id] = organizations
+        user_to_role = {}
+        for role_id, userid_list in roles_users.items():
+            for user_id in userid_list:
+                if not user_id in user_to_role:
+                    user_to_role[user_id] = []
+                user_to_role[user_id].append(role_id)
+        org_to_role = {}
+        for role_id, organiszations_list in roles_organizations.items():
+            for user_id in organiszations_list:
+                if not user_id in org_to_role:
+                    org_to_role[user_id] = []
+                org_to_role[user_id].append(role_id)
 
-
-        response['roles_users'] = roles_users
-        response['roles_organizations'] = roles_organizations
-        return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
+        return UserAndOrganizationsRoles(roles_users=[user_to_role], roles_organizations=[org_to_role])
 
     @fetch_object('category')
     def resolve_category(self, info):
