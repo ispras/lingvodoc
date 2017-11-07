@@ -352,7 +352,7 @@ class Query(graphene.ObjectType):
             clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
             cli = [o.id for o in clients]
             #response['clients'] = cli
-            dicts = dbdicts.filter(dbDictionary.client_id.in_(cli))
+            dbdicts = dbdicts.filter(dbDictionary.client_id.in_(cli))
         #  my_dictionaries
         dbdicts = dbdicts.all()
         if my_dictionaries:
