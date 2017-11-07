@@ -242,7 +242,7 @@ class CreateEntity(graphene.Mutation):
             filename=blob.filename
             content = blob.file.read()
             #filename=
-            real_location, url = create_object(base64.urlsafe_b64encode(content).decode(), dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
+            real_location, url = create_object(content, dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
             dbentity.content = url
             old_meta = dbentity.additional_metadata
             need_hash = True
@@ -250,7 +250,7 @@ class CreateEntity(graphene.Mutation):
                 if old_meta.get('hash'):
                     need_hash = False
             if need_hash:
-                hash = hashlib.sha224(base64.urlsafe_b64decode(base64.urlsafe_b64encode(content).decode())).hexdigest()
+                hash = hashlib.sha224(content).hexdigest()
                 hash_dict = {'hash': hash}
                 if old_meta:
                     old_meta.update(hash_dict)
