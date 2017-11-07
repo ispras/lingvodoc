@@ -162,6 +162,8 @@ class Dictionary(graphene.ObjectType):  # tested
             group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                      subject_object_id=object_id,
                                                      subject_client_id=client_id).first()
+            if not group:
+                continue
             for user in group.users:
                 roles_users[user.id].append(base.id)
             for org in group.organizations:
@@ -569,7 +571,7 @@ class AddDictionaryRoles(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("dictionary_role", "edit")
+    @acl_check_by_id("create", "dictionary_role")
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         roles_users = args.get('roles_users')
@@ -674,7 +676,7 @@ class DeleteDictionaryRoles(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("dictionary_role", "edit")
+    @acl_check_by_id("delete", "dictionary_role")
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         roles_users = args.get('roles_users')
