@@ -236,7 +236,7 @@ class CreateEntity(graphene.Mutation):
         filename = args.get('filename')
         real_location = None
         url = None
-        blob = info.context.request.POST.pop("operations")
+        blob = info.context.request.POST.pop("variables.content")
         content= args.get("content")
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
             filename=blob.filename

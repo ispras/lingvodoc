@@ -377,7 +377,7 @@ class DictionaryPerspective(graphene.ObjectType):
             raise ResponseError(message="Perspective with such ID doesn`t exists in the system")
 
 
-        bases = DBSession.query(dbBaseGroup).filter_by(dictionary_default=True)
+        bases = DBSession.query(dbBaseGroup).filter_by(perspective_default=True)
         roles_users = defaultdict(list)
         roles_organizations = defaultdict(list)
         for base in bases:
