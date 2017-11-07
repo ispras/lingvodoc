@@ -81,7 +81,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     UpdateDictionaryPerspective,
     UpdatePerspectiveStatus,
     UpdatePerspectiveRoles,
-    DeleteDictionaryPerspective
+    DeleteDictionaryPerspective,
 )
 from lingvodoc.schema.gql_user import (
     User,
@@ -137,6 +137,7 @@ from lingvodoc.models import (
     UserBlobs as dbUserBlobs,
     UserRequest as dbUserRequest,
     Grant as dbGrant,
+    DictionaryPerspective as dbDictionaryPerspective,
     Client
 )
 from pyramid.request import Request
@@ -164,7 +165,9 @@ ENGLISH_LOCALE = 2
 
 class Query(graphene.ObjectType):
     client = graphene.String()
-    dictionaries = graphene.List(Dictionary, published=graphene.Boolean())
+    dictionaries = graphene.List(Dictionary, published=graphene.Boolean(),
+                                 available=graphene.Boolean(),
+                                 my_dictionaries=graphene.Boolean())
     dictionary = graphene.Field(Dictionary, id=LingvodocID())
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
@@ -301,7 +304,7 @@ class Query(graphene.ObjectType):
             response.append(gql_tr_gist)
         return response
 
-    def resolve_dictionaries(self, info, published):
+    def resolve_dictionaries(self, info, published, available=None, my_dictionaries=None):
         """
         example:
 
@@ -317,7 +320,9 @@ class Query(graphene.ObjectType):
             }
         }
         """
-
+        client_id = info.context.get('client_id')
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if published:
 
             db_published_gist = translation_gist_search('Published')
@@ -337,11 +342,54 @@ class Query(graphene.ObjectType):
                                  dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
                             and_(dbPerspective.state_translation_gist_object_id == limited_object_id,
                                  dbPerspective.state_translation_gist_client_id == limited_client_id))). \
-                filter(dbPerspective.marked_for_deletion == False).all()
+                filter(dbPerspective.marked_for_deletion == False)
 
         else:
-            dbdicts = DBSession.query(dbDictionary).filter(dbPerspective.marked_for_deletion == False).all()
+            dbdicts = DBSession.query(dbDictionary).filter(dbPerspective.marked_for_deletion == False)
 
+        # available
+        if available:
+            clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
+            cli = [o.id for o in clients]
+            #response['clients'] = cli
+            dicts = dbdicts.filter(dbDictionary.client_id.in_(cli))
+        #  my_dictionaries
+        dbdicts = dbdicts.all()
+        if my_dictionaries:
+
+            dictstemp = []
+            group_tuples = []
+            isadmin = False
+            for group in user.groups: # todo: LOOK AT ME this is really bad. rewrite me from group point of view
+                if group.parent.dictionary_default:
+                    if group.subject_override:
+                        isadmin = True
+                        break
+                    dcttmp = (group.subject_client_id, group.subject_object_id)
+                    if dcttmp not in dictstemp:
+                        dictstemp += [dcttmp]
+                if group.parent.perspective_default:
+                    if group.subject_override:
+                        isadmin = True
+                        break
+                group_tuples.append((group.subject_client_id, group.subject_object_id))
+
+            list_remainder = group_tuples[:1000]
+            group_tuples = group_tuples[1000:]
+            dicti = list()
+            while list_remainder:
+                dicti+= DBSession.query(dbDictionary) \
+                    .join(dbDictionaryPerspective) \
+                    .filter(tuple_(dbDictionaryPerspective.client_id, dbDictionaryPerspective.object_id).in_(list_remainder)) \
+                    .all()
+                list_remainder = group_tuples[:1000]
+                group_tuples = group_tuples[1000:]
+            for d in dicti:
+                dcttmp = (d.client_id, d.object_id)
+                if dcttmp not in dictstemp:
+                    dictstemp += [dcttmp]
+            if not isadmin:
+                dbdicts = [o for o in dbdicts if (o.client_id, o.object_id) in dictstemp]
         dictionaries_list = list()
         for dbdict in dbdicts:
             gql_dict = Dictionary(id=[dbdict.client_id, dbdict.object_id])
