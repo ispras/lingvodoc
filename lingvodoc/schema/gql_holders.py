@@ -646,3 +646,14 @@ class CommonFieldsComposite(MarkedForDeletion, AdditionalMetadata, CreatedAt, Co
     tree = graphene.List(CommonFieldsComposite, ) does not support listing
     """
     pass#fieldType = graphene.String()  # depricated? -> data_typeString()
+
+
+class UserAndOrganizationsRoles(graphene.ObjectType):
+    roles_users = graphene.List(ObjectVal)
+    roles_organizations = graphene.List(ObjectVal)
+
+    def resolve_roles_users(self, info):
+        return self.roles_users
+
+    def resolve_roles_organizations(self, info):
+        return self.roles_organizations

@@ -1,4 +1,5 @@
 import graphene
+from collections import  defaultdict
 from sqlalchemy import and_
 from lingvodoc.models import (
     DictionaryPerspective as dbPerspective,
@@ -57,6 +58,7 @@ from sqlalchemy import (
     tuple_
 )
 
+from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
 class DictionaryPerspective(graphene.ObjectType):
     """
@@ -112,7 +114,7 @@ class DictionaryPerspective(graphene.ObjectType):
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     # stats = graphene.String() # ?
-    roles = graphene.List(ObjectVal)
+    roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     is_template = graphene.Boolean()
 
@@ -367,41 +369,30 @@ class DictionaryPerspective(graphene.ObjectType):
             return authors_list
         raise ResponseError(message="Error: no such perspective in the system.")
 
-    @fetch_object()
+    @fetch_object(ACLSubject='perspective_role', ACLKey='id')
     def resolve_roles(self, info):
-        response = dict()
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
-        parent_client_id, parent_object_id = self.dbObject.parent_client_id, self.dbObject.parent_object_id
-
-        # parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        # if not parent:
-        #     raise ResponseError(message="No such dictionary in the system")
-
         perspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if perspective and not perspective.marked_for_deletion:
-                bases = DBSession.query(dbBaseGroup).filter_by(perspective_default=True)
-                roles_users = dict()
-                roles_organizations = dict()
-                for base in bases:
-                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                             subject_object_id=object_id,
-                                                             subject_client_id=client_id).first()
-                    if not group:
-                        print(base.name)
-                        continue
-                    perm = base.name
-                    users = []
-                    for user in group.users:
-                        users += [user.id]
-                    organizations = []
-                    for org in group.organizations:
-                        organizations += [org.id]
-                    roles_users[perm] = users
-                    roles_organizations[perm] = organizations
-                response['roles_users'] = roles_users
-                response['roles_organizations'] = roles_organizations
-                return response
-        raise ResponseError(message="No such perspective in the system")
+        if not perspective or perspective.marked_for_deletion:
+            raise ResponseError(message="Perspective with such ID doesn`t exists in the system")
+
+
+        bases = DBSession.query(dbBaseGroup).filter_by(dictionary_default=True)
+        roles_users = defaultdict(list)
+        roles_organizations = defaultdict(list)
+        for base in bases:
+            group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                     subject_object_id=object_id,
+                                                     subject_client_id=client_id).first()
+            if not group:
+                continue
+            for user in group.users:
+                roles_users[user.id].append(base.id)
+            for org in group.organizations:
+                roles_organizations[org.id].append(base.id)
+        roles_users = [{"user_id": x, "roles_ids": roles_users[x]} for x in roles_users]
+        roles_organizations = [{"user_id": x, "roles_ids": roles_organizations[x]} for x in roles_organizations]
+        return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
 
     @fetch_object()
     def resolve_statistic(self, info, starting_time=None, ending_time=None):

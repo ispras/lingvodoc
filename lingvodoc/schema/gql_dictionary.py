@@ -27,7 +27,8 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     ObjectVal,
     acl_check_by_id,
-    LingvodocID
+    LingvodocID,
+    UserAndOrganizationsRoles
 )
 
 from lingvodoc.utils import statistics
@@ -45,16 +46,6 @@ class UserToRoles(graphene.ObjectType):
     def resolve_id_user(self, info):
         return self.roles
 
-
-class UserAndOrganizationsRoles(graphene.ObjectType):
-    roles_users = graphene.List(ObjectVal)
-    roles_organizations = graphene.List(ObjectVal)
-
-    def resolve_roles_users(self, info):
-        return self.roles_users
-
-    def resolve_roles_organizations(self, info):
-        return self.roles_organizations
 
 class Dictionary(graphene.ObjectType):  # tested
     # TODO: resolve_dataType(?)
@@ -158,7 +149,6 @@ class Dictionary(graphene.ObjectType):  # tested
 
     @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
     def resolve_roles(self, info):
-        response = dict()
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
         dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not dictionary or dictionary.marked_for_deletion:
@@ -166,36 +156,19 @@ class Dictionary(graphene.ObjectType):  # tested
 
 
         bases = DBSession.query(dbBaseGroup).filter_by(dictionary_default=True)
-        roles_users = dict()
-        roles_organizations = dict()
+        roles_users = defaultdict(list)
+        roles_organizations = defaultdict(list)
         for base in bases:
             group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
                                                      subject_object_id=object_id,
                                                      subject_client_id=client_id).first()
-            #perm = base.name
-            #perm = base.id
-            users = []
             for user in group.users:
-                users += [user.id]
-            organizations = []
+                roles_users[user.id].append(base.id)
             for org in group.organizations:
-                organizations += [org.id]
-            roles_users[base.id] = users
-            roles_organizations[base.id] = organizations
-        user_to_role = {}
-        for role_id, userid_list in roles_users.items():
-            for user_id in userid_list:
-                if not user_id in user_to_role:
-                    user_to_role[user_id] = []
-                user_to_role[user_id].append(role_id)
-        org_to_role = {}
-        for role_id, organiszations_list in roles_organizations.items():
-            for user_id in organiszations_list:
-                if not user_id in org_to_role:
-                    org_to_role[user_id] = []
-                org_to_role[user_id].append(role_id)
-
-        return UserAndOrganizationsRoles(roles_users=[user_to_role], roles_organizations=[org_to_role])
+                roles_organizations[org.id].append(base.id)
+        roles_users = [{"user_id": x, "roles_ids": roles_users[x]} for x in roles_users]
+        roles_organizations = [{"user_id": x, "roles_ids": roles_organizations[x]} for x in roles_organizations]
+        return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
 
     @fetch_object('category')
     def resolve_category(self, info):
