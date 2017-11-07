@@ -304,7 +304,7 @@ class Query(graphene.ObjectType):
             response.append(gql_tr_gist)
         return response
 
-    def resolve_dictionaries(self, info, published, available=None, my_dictionaries=None):
+    def resolve_dictionaries(self, info, published=None, available=None, my_dictionaries=None):
         """
         example:
 
