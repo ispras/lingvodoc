@@ -162,7 +162,7 @@ def transcription_markup_data(request):
                 TranslationAtom.parent_object_id == Field.translation_gist_object_id,
                 TranslationAtom.locale_id == 2,
                 TranslationAtom.content.op('~*')('.*transcription.*'),
-                translationatom.marked_for_deletion == False).order_by(
+                TranslationAtom.marked_for_deletion == False).order_by(
                     Field.client_id, Field.object_id).first()
 
         if not field_data:
@@ -188,7 +188,7 @@ def transcription_markup_data(request):
                 TranslationAtom.parent_object_id == Field.translation_gist_object_id,
                 TranslationAtom.locale_id == 2,
                 TranslationAtom.content.op('~*')('.*translation.*'),
-                translationatom.marked_for_deletion == False).order_by(
+                TranslationAtom.marked_for_deletion == False).order_by(
                     Field.client_id, Field.object_id).first()
 
         translation_field = field_data.Field if field_data else None
