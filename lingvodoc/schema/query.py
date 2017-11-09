@@ -333,7 +333,7 @@ class Query(graphene.ObjectType):
             limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
 
-            dbdicts = DBSession.query(dbDictionary).filter(
+            dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False).filter(
                 or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
                          dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
                     and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
