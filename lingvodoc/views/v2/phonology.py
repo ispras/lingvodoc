@@ -59,7 +59,7 @@ from pyramid.view import view_config
 
 import scipy.linalg
 
-from sqlalchemy import and_, create_engine, func
+from sqlalchemy import and_, create_engine, func, tuple_
 from sqlalchemy.orm import aliased
 
 from transaction import manager
@@ -2304,7 +2304,7 @@ def perform_phonology(
                 TranslationAtom.parent_object_id == Field.translation_gist_object_id,
                 TranslationAtom.locale_id == 2,
                 TranslationAtom.content.op('~*')('.*translation.*'),
-                translationatom.marked_for_deletion == False).order_by(
+                TranslationAtom.marked_for_deletion == False).order_by(
                     Field.client_id, Field.object_id).first()
 
     # Otherwise we get info of the specified field.
@@ -3006,6 +3006,10 @@ def sound_and_markup(request):
         perspective = DBSession.query(DictionaryPerspective).filter_by(
             client_id = perspective_cid, object_id = perspective_oid).first()
 
+        if not perspective:
+            return {'error': 'Unknown perspective {0}/{1}.'.format(
+                perspective_cid, perspective_oid)}
+
         perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
             client_id = perspective.translation_gist_client_id,
             object_id = perspective.translation_gist_object_id).first()
@@ -3013,6 +3017,10 @@ def sound_and_markup(request):
         dictionary = DBSession.query(Dictionary).filter_by(
             client_id = perspective.parent_client_id,
             object_id = perspective.parent_object_id).first()
+
+        if not dictionary:
+            return {'error': 'Unknown dictionary {0}/{1}.'.format(
+                perspective.parent_client_id, perspective.parent_object_id)}
 
         dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
             client_id = dictionary.translation_gist_client_id,
@@ -3032,7 +3040,8 @@ def sound_and_markup(request):
                 if client_id else anonymous_userid(request))
 
         task_status = TaskStatus(user_id,
-            'Sound/markup archive compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 3)
+            'Sound/markup archive compilation',
+            '{0}: {1}'.format(dictionary_name, perspective_name), 4)
 
         # Performing either synchronous or asynchronous sound/markup archive compilation.
 
@@ -3061,7 +3070,7 @@ def sound_and_markup(request):
         log.debug(traceback_string)
 
         if task_status is not None:
-            task_status.set(3, 100, 'Finished (ERROR), external error')
+            task_status.set(4, 100, 'Finished (ERROR), external error')
 
         request.response.status = HTTPInternalServerError.code
         return {'error': 'external error'}
@@ -3095,7 +3104,7 @@ def std_sound_and_markup(
         log.debug(traceback_string)
 
         if task_status is not None:
-            task_status.set(3, 100, 'Finished (ERROR), external error')
+            task_status.set(4, 100, 'Finished (ERROR), external error')
 
         return {'error': 'external error'}
 
@@ -3142,7 +3151,7 @@ def async_sound_and_markup(
             log.debug(traceback_string)
 
             if task_status is not None:
-                task_status.set(3, 100, 'Finished (ERROR), external error')
+                task_status.set(4, 100, 'Finished (ERROR), external error')
 
             return {'error': 'external error'}
 
@@ -3220,7 +3229,7 @@ def perform_sound_and_markup(
     # Checking if we can find translation field.
 
     field_data = DBSession.query(
-        DictionaryPerspectiveToField, Field, TranslationAtom).filter(
+        Field, TranslationAtom).filter(
             DictionaryPerspectiveToField.parent_client_id == perspective_cid,
             DictionaryPerspectiveToField.parent_object_id == perspective_oid,
             DictionaryPerspectiveToField.marked_for_deletion == False,
@@ -3231,7 +3240,7 @@ def perform_sound_and_markup(
             TranslationAtom.parent_object_id == Field.translation_gist_object_id,
             TranslationAtom.locale_id == 2,
             TranslationAtom.content.op('~*')('.*translation.*'),
-                TranslationAtom.marked_for_deletion == False).order_by(
+            TranslationAtom.marked_for_deletion == False).order_by(
                 Field.client_id, Field.object_id).first()
 
     translation_field = field_data.Field if field_data else None
@@ -3240,6 +3249,56 @@ def perform_sound_and_markup(
         ('None' if not field_data else '{0}/{1} \'{2}\''.format(
             translation_field.client_id, translation_field.object_id,
             field_data.TranslationAtom.content)))
+
+    # Looking up sound fields.
+
+    FieldTranslationAtom = aliased(TranslationAtom, name = 'FieldTranslationAtom')
+
+    field_data_list = DBSession.query(
+        Field, TranslationAtom, FieldTranslationAtom).filter(
+            DictionaryPerspectiveToField.parent_client_id == perspective_cid,
+            DictionaryPerspectiveToField.parent_object_id == perspective_oid,
+            DictionaryPerspectiveToField.marked_for_deletion == False,
+            Field.client_id == DictionaryPerspectiveToField.field_client_id,
+            Field.object_id == DictionaryPerspectiveToField.field_object_id,
+            Field.marked_for_deletion == False,
+            TranslationAtom.parent_client_id == Field.data_type_translation_gist_client_id,
+            TranslationAtom.parent_object_id == Field.data_type_translation_gist_object_id,
+            TranslationAtom.locale_id == 2,
+            TranslationAtom.content.op('~*')('.*sound.*'),
+            TranslationAtom.marked_for_deletion == False,
+            FieldTranslationAtom.parent_client_id == Field.translation_gist_client_id,
+            FieldTranslationAtom.parent_object_id == Field.translation_gist_object_id,
+            FieldTranslationAtom.locale_id == 2,
+            FieldTranslationAtom.marked_for_deletion == False).all()
+
+    sound_field_list = [field_data.Field
+        for field_data in field_data_list]
+
+    sound_field_id_list = [(field.client_id, field.object_id)
+        for field in sound_field_list]
+
+    # Logging sound fields we've found.
+
+    if len(field_data_list) <= 0:
+        sound_field_str = ' []'
+
+    elif len(field_data_list) == 1:
+
+        sound_field_str = ' {0}/{1} \'{2}\''.format(
+            sound_field_list[0].client_id, sound_field_list[0].object_id,
+            field_data_list[0].FieldTranslationAtom.content)
+
+    else:
+        sound_field_str = '\n' + ''.join(
+                
+            '  {0}/{1} \'{2}\'\n'.format(
+                field_data.Field.client_id, field_data.Field.object_id,
+                field_data.FieldTranslationAtom.content)
+
+            for field_data in field_data_list)
+
+    log.debug('sound fields ({0}):'.format(len(sound_field_list)) + sound_field_str)
 
     # Getting ready to gather list of currently available sound/markup pairs.
 
@@ -3270,6 +3329,21 @@ def perform_sound_and_markup(
             PublishingSound.object_id == Sound.object_id,
             PublishingSound.accepted == True)
 
+    # And we also prepare to gather sounds unpaired with markup.
+
+    sound_query = DBSession.query(
+        LexicalEntry, Sound).filter(
+            LexicalEntry.parent_client_id == perspective_cid,
+            LexicalEntry.parent_object_id == perspective_oid,
+            LexicalEntry.marked_for_deletion == False,
+            Sound.parent_client_id == LexicalEntry.client_id,
+            Sound.parent_object_id == LexicalEntry.object_id,
+            Sound.marked_for_deletion == False,
+            tuple_(Sound.field_client_id, Sound.field_object_id).in_(sound_field_id_list),
+            PublishingSound.client_id == Sound.client_id,
+            PublishingSound.object_id == Sound.object_id,
+            PublishingSound.accepted == True)
+
     # Filtering by publishing status, if required.
 
     translation_condition = and_(
@@ -3281,6 +3355,9 @@ def perform_sound_and_markup(
 
         data_query = data_query.filter(
             PublishingMarkup.published == True,
+            PublishingSound.published == True)
+
+        sound_query = sound_query.filter(
             PublishingSound.published == True)
 
         translation_condition = and_(
@@ -3307,6 +3384,24 @@ def perform_sound_and_markup(
             
             .group_by(LexicalEntry, Markup, Sound))
 
+        # Unpaired sounds we also try to match with translations.
+
+        sound_query = (sound_query
+                
+            .outerjoin(Translation, and_(
+                Translation.parent_client_id == LexicalEntry.client_id,
+                Translation.parent_object_id == LexicalEntry.object_id,
+                Translation.field_client_id == translation_field.client_id,
+                Translation.field_object_id == translation_field.object_id,
+                Translation.marked_for_deletion == False))
+
+            .outerjoin(PublishingTranslation, translation_condition)
+            
+            .add_columns(
+                func.array_agg(Translation.content))
+            
+            .group_by(LexicalEntry, Sound))
+
     # Preparing for writing out sound/markup archive.
 
     storage_dir = path.join(storage['path'], 'sound_and_markup')
@@ -3316,17 +3411,26 @@ def perform_sound_and_markup(
         '{0} - {1}.zip'.format(dictionary_name[:64], perspective_name[:64]))
 
     archive_path = path.join(storage_dir, archive_name)
+    log.debug('archive path: {0}'.format(archive_path))
 
     if not path.exists(archive_path):
 
         # Ok, we are to simply generate new archive.
 
         total_count = data_query.count()
-        task_status.set(2, 1, 'Processing sound and markup files')
+        sound_count = sound_query.count()
 
         sound_name_set = set()
+        markup_count = 0
+
+        no_markup_count = 0
 
         with zipfile.ZipFile(archive_path, 'w') as archive_file:
+
+            # Starting with sound/markup pairs.
+
+            task_status.set(2, 1, 'Processing sound and markup files')
+
             for index, row in enumerate(data_query.yield_per(100)):
 
                 sound_url = row.Sound.content
@@ -3376,6 +3480,7 @@ def perform_sound_and_markup(
                     sound_name_set.add(sound_name)
 
                     zip_info = zipfile.ZipInfo(sound_name, sound_date)
+
                     if sndhdr.test_wav(sound_bytes, io.BytesIO(sound_bytes)):
                         zip_info.compress_type = zipfile.ZIP_DEFLATED
 
@@ -3391,6 +3496,8 @@ def perform_sound_and_markup(
                 archive_file.writestr(zipfile.ZipInfo(markup_name, markup_date), markup_bytes,
                     zipfile.ZIP_DEFLATED)
 
+                markup_count += 1
+
                 # Another sound/markup pair is processed successfully.
 
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
@@ -3399,7 +3506,67 @@ def perform_sound_and_markup(
                 if limit and index + 1 >= limit:
                     break
 
+            # Also processing sounds without markup.
+
+            task_status.set(3, 1, 'Processing sounds without markup')
+
+            for index, row in enumerate(sound_query.yield_per(100)):
+
+                sound_url = row.Sound.content
+                translation = row[2][0] if translation_field and len(row[2]) > 0 else None
+
+                sound_name, sound_date = entity_filename_date(row.Sound, translation)
+
+                if sound_name in sound_name_set:
+                    continue
+
+                row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4})'.format(index,
+                    row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                    row.Sound.client_id, row.Sound.object_id)
+
+                log.debug('{0}: \'{1}\'\n{2}'.format(
+                    row_str, translation, sound_url))
+
+                # Getting sound data.
+
+                try:
+
+                    with storage_file(storage, sound_url) as sound_stream:
+                        sound_bytes = sound_stream.read()
+
+                except Exception as exception:
+
+                    log.debug('{0}: exception\n{1}'.format(
+                        row_str, sound_url))
+
+                    traceback_string = ''.join(traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1]
+
+                    log.debug(traceback_string)
+
+                    task_status.set(3, 1 + int(math.floor((index + 1) * 99 / sound_count)),
+                        'Archiving sounds without markup')
+
+                    continue
+
+                # Archiving sound data.
+
+                zip_info = zipfile.ZipInfo('no_markup_sounds/' + sound_name, sound_date)
+
+                if sndhdr.test_wav(sound_bytes, io.BytesIO(sound_bytes)):
+                    zip_info.compress_type = zipfile.ZIP_DEFLATED
+
+                archive_file.writestr(zip_info, sound_bytes)
+                no_markup_count += 1
+
+                task_status.set(3, 1 + int(math.floor((index + 1) * 99 / sound_count)),
+                    'Archiving sounds without markup')
+
+                if limit and index + 1 >= limit:
+                    break
+
     else:
+
         # Updating existing archive, we start with gathering info of sound and markup files which should end
         # up in the archive.
 
@@ -3431,26 +3598,83 @@ def perform_sound_and_markup(
             if limit and index + 1 >= limit:
                 break
 
+        # The same for unpaired sound files.
+
+        sound_update_list = []
+        sound_update_set = set()
+
+        for index, row in enumerate(sound_query.yield_per(100)):
+
+            translation = row[2][0] if translation_field and len(row[2]) > 0 else None
+            sound_name, sound_date = entity_filename_date(row.Sound, translation)
+
+            if sound_name in update_set:
+                continue
+
+            sound_update_list.append((index,
+                row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                row.Sound.client_id, row.Sound.object_id,
+                row.Sound.content, translation,
+                sound_name, sound_date))
+
+            sound_update_set.add(sound_name)
+
+            if limit and index + 1 >= limit:
+                break
+
         # Checking what files are already in the archive, which archive entries should be deleted and which
         # files should be added to the archive.
 
         with zipfile.ZipFile(archive_path, 'r') as archive_file:
             zip_info_list = archive_file.infolist()
 
-        already_set = set(zip_info.filename
-            for zip_info in zip_info_list)
+        already_set = set()
+        sound_already_set = set()
+
+        no_markup_str = 'no_markup_sounds/'
+        no_markup_len = len(no_markup_str)
+        
+        for zip_info in zip_info_list:
+
+            if zip_info.filename.startswith(no_markup_str):
+                sound_already_set.add(zip_info.filename[no_markup_len:])
+
+            else:
+                already_set.add(zip_info.filename)
 
         delete_set = already_set - update_set
         add_set = update_set - already_set
 
-        # If none of the files in the archive should be deleted and we have some new files, we just add them
-        # to the archive.
+        sound_delete_set = sound_already_set - sound_update_set
+        sound_add_set = sound_update_set - sound_already_set
 
-        if len(delete_set) <= 0 and len(add_set) > 0:
-            with zipfile.ZipFile(archive_path, 'a') as archive_file:
+        # Doing something only if we need to delete or add some files.
+
+        if (len(delete_set) + len(sound_delete_set) > 0 or
+            len(add_set) + len(sound_add_set) > 0):
+
+            if len(delete_set) + len(sound_delete_set) > 0:
+
+                archive_mode = 'w'
+
+                add_set = update_set
+                sound_add_set = sound_update_set
+
+            else:
+
+                archive_mode = 'a'
+
+            # Either appending to the archive, or overwriting it, depending on whether we need to delete
+            # files from the archive.
+
+            with zipfile.ZipFile(archive_path, archive_mode) as archive_file:
 
                 sound_name_set = set()
-                add_count = 0
+                markup_count = 0
+
+                no_markup_count = 0
+
+                task_status.set(2, 1, 'Processing sound and markup files')
 
                 for (index,
                     lexicalentry_cid, lexicalentry_oid,
@@ -3503,6 +3727,7 @@ def perform_sound_and_markup(
                         sound_name_set.add(sound_name)
 
                         zip_info = zipfile.ZipInfo(sound_name, sound_date)
+
                         if sndhdr.test_wav(sound_bytes, io.BytesIO(sound_bytes)):
                             zip_info.compress_type = zipfile.ZIP_DEFLATED
 
@@ -3515,6 +3740,8 @@ def perform_sound_and_markup(
                         archive_file.writestr(zipfile.ZipInfo(markup_name, markup_date), markup_bytes,
                             zipfile.ZIP_DEFLATED)
 
+                        markup_count += 1
+
                     # Another sound/markup pair is processed successfully.
 
                     task_status.set(2, 1 + int(math.floor((index + 1) * 99 / len(update_list))),
@@ -3523,73 +3750,59 @@ def perform_sound_and_markup(
                     if limit and index + 1 >= limit:
                         break
 
-        # If we have to delete some files from the archive, we just overwrite it completely.
+                # And now unpaired sound files.
 
-        elif len(delete_set) > 0:
-            with zipfile.ZipFile(archive_path, 'w') as archive_file:
-
-                sound_name_set = set()
+                task_status.set(3, 1, 'Processing sounds without markup')
 
                 for (index,
                     lexicalentry_cid, lexicalentry_oid,
                     sound_cid, sound_oid,
-                    markup_cid, markup_oid,
-                    sound_url, markup_url, translation,
-                    sound_name, sound_date, markup_name, markup_date) in update_list:
+                    sound_url, translation,
+                    sound_name, sound_date) in sound_update_list:
 
-                    row_str = ('{0} (LexicalEntry {1}/{2}, '
-                        'sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(index,
-                        lexicalentry_cid, lexicalentry_oid, sound_cid, sound_oid, markup_cid, markup_oid))
+                    if sound_name not in sound_add_set:
+                        continue
 
-                    log.debug('{0}: \'{1}\'\n{2}\n{3}'.format(
-                        row_str, translation, sound_url, markup_url))
+                    row_str = ('{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4})'.format(index,
+                        lexicalentry_cid, lexicalentry_oid, sound_cid, sound_oid))
 
-                    # Getting sound and markup data.
+                    log.debug('{0}: \'{1}\'\n{2}'.format(
+                        row_str, translation, sound_url))
+
+                    # Getting sound data.
 
                     try:
-                        sound_bytes, markup_bytes = get_sound_markup_bytes(
-                            storage, sound_url, markup_url)
 
-                    # If we failed to get sound/markup data, we report why and go on to the next
-                    # sound/markup pair.
+                        with storage_file(storage, sound_url) as sound_stream:
+                            sound_bytes = sound_stream.read()
 
                     except Exception as exception:
 
-                        log.debug(
-                            '{0}: exception\n{1}\n{2}'.format(
-                            row_str, markup_url, sound_url))
+                        log.debug('{0}: exception\n{1}'.format(
+                            row_str, sound_url))
 
                         traceback_string = ''.join(traceback.format_exception(
                             exception, exception, exception.__traceback__))[:-1]
 
                         log.debug(traceback_string)
 
-                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / len(update_list))),
-                            'Archiving sound and markup')
+                        task_status.set(3, 1 + int(math.floor((index + 1) * 99 / len(sound_update_list))),
+                            'Archiving sounds without markup')
 
                         continue
 
-                    # Archiving sound data, unless we already processed this sound entity, which can happen
-                    # if it has multiple markup entities.
+                    # Archiving sound data.
 
-                    if sound_name not in sound_name_set:
-                        sound_name_set.add(sound_name)
+                    zip_info = zipfile.ZipInfo('no_markup_sounds/' + sound_name, sound_date)
 
-                        zip_info = zipfile.ZipInfo(sound_name, sound_date)
-                        if sndhdr.test_wav(sound_bytes, io.BytesIO(sound_bytes)):
-                            zip_info.compress_type = zipfile.ZIP_DEFLATED
+                    if sndhdr.test_wav(sound_bytes, io.BytesIO(sound_bytes)):
+                        zip_info.compress_type = zipfile.ZIP_DEFLATED
 
-                        archive_file.writestr(zip_info, sound_bytes)
+                    archive_file.writestr(zip_info, sound_bytes)
+                    no_markup_count += 1
 
-                    # Archiving markup data.
-
-                    archive_file.writestr(zipfile.ZipInfo(markup_name, markup_date), markup_bytes,
-                        zipfile.ZIP_DEFLATED)
-
-                    # Another sound/markup pair is processed successfully.
-
-                    task_status.set(2, 1 + int(math.floor((index + 1) * 99 / len(update_list))),
-                        'Archiving sound and markup')
+                    task_status.set(3, 1 + int(math.floor((index + 1) * 99 / len(sound_update_list))),
+                        'Archiving sounds without markup')
 
                     if limit and index + 1 >= limit:
                         break
@@ -3598,6 +3811,12 @@ def perform_sound_and_markup(
         # unchanged and indicate that it is fully ready.
 
         else:
+
+            sound_name_set = set()
+            markup_count = 0
+
+            no_markup_count = 0
+
             task_status.set(2, 100, 'Archiving sound and markup')
 
     # Successfully compiled sound/markup archive, finishing and returning link to the archive.
@@ -3607,7 +3826,12 @@ def perform_sound_and_markup(
         storage['static_route'],
         'sound_and_markup', '/', archive_name])
 
-    task_status.set(3, 100, 'Finished', result_link = archive_url)
+    task_status.set(4, 100, 'Finished', result_link = archive_url)
+
+    return {
+        'sound_count': len(sound_name_set),
+        'markup_count': markup_count,
+        'no_markup_count': no_markup_count}
 
 
 def cpu_time(reference_cpu_time = 0.0):
