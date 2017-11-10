@@ -114,6 +114,8 @@ class AdvancedSearch(graphene.ObjectType):
                     inner_and_block.append(dbEntity.content.like("".join(['%', search_string["search_string"], '%'])))
                 elif matching_type == 'regexp':
                     inner_and_block.append(dbEntity.content.op('~*')(search_string["search_string"]))
+                else:
+                    raise ResponseError(message='wrong matching_type')
                 or_block.append(and_(*inner_and_block))
 
             and_block.append(or_(*or_block))
@@ -144,8 +146,11 @@ class AdvancedSearch(graphene.ObjectType):
             return obj
 
         entities = [graphene_entity(entity[0], entity[1]) for entity in search]
-        lexical_entries = [graphene_obj(entity[2], LexicalEntry) for entity in search]
-        perspectives = [graphene_obj(entity[3], DictionaryPerspective) for entity in search]
-        dictionaries = [graphene_obj(entity[4], Dictionary) for entity in search]
+        lexical_entries = {entity[2] for entity in search}
+        lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in lexical_entries]
+        perspectives = {entity[3] for entity in search}
+        perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in perspectives]
+        dictionaries = {entity[4] for entity in search}
+        dictionaries = [graphene_obj(ent, Dictionary) for ent in dictionaries]
         return cls(entities=entities, lexical_entries=lexical_entries, perspectives=perspectives, dictionaries=dictionaries)
 

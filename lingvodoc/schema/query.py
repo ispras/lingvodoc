@@ -220,7 +220,7 @@ class Query(graphene.ObjectType):
         maybe_tier_set=graphene.List(graphene.String),
         synchronous=graphene.Boolean())
     advanced_search = graphene.Field(AdvancedSearch,
-                                     languages=LingvodocID(),
+                                     languages=graphene.List(LingvodocID),
                                      tag_list=LingvodocID(),
                                      category=graphene.Int(),
                                      adopted=graphene.Boolean(),
