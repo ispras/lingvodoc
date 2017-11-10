@@ -347,7 +347,7 @@ class Query(graphene.ObjectType):
 
         else:
             if not dbdicts:
-                dbdicts = DBSession.query(dbDictionary).filter(dbPerspective.marked_for_deletion == False)
+                dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
 
         # available
         if available:
