@@ -12,6 +12,7 @@ from lingvodoc.models import (
 from lingvodoc.utils.creation import add_user_to_group
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     IdHolder,
     CreatedAt,
     AdditionalMetadata,
@@ -25,7 +26,7 @@ from lingvodoc.schema.gql_holders import (
 import datetime
 from passlib.hash import bcrypt
 
-class User(graphene.ObjectType):
+class User(LingvodocObjectType):
     """
     created_at          | timestamp without time zone | NOT NULL
     id                  | bigint                      | NOT NULL DEFAULT nextval('user_id_seq'::regclass)
@@ -45,7 +46,6 @@ class User(graphene.ObjectType):
     email = graphene.String()
 
     dbType = dbUser
-    dbObject = None
 
     class Meta:
         interfaces = (IdHolder, CreatedAt, AdditionalMetadata, Name)

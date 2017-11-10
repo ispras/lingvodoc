@@ -22,6 +22,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     LingvodocID,
     CommonFieldsComposite,
     TranslationHolder,
@@ -60,7 +61,7 @@ from sqlalchemy import (
 
 from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
-class DictionaryPerspective(graphene.ObjectType):
+class DictionaryPerspective(LingvodocObjectType):
     """
      #created_at                       | timestamp without time zone | NOT NULL
      #object_id                        | bigint                      | NOT NULL
@@ -119,7 +120,6 @@ class DictionaryPerspective(graphene.ObjectType):
     is_template = graphene.Boolean()
 
     dbType = dbPerspective
-    dbObject = None
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)

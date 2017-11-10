@@ -9,6 +9,7 @@ from lingvodoc.models import (
     DBSession
 )
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     DateTime,
     JSONString,
     IdHolder,
@@ -28,7 +29,7 @@ from lingvodoc.schema.gql_user import User
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.utils.creation import create_gists_with_atoms
 
-class Grant(graphene.ObjectType):
+class Grant(LingvodocObjectType):
     """
      #id                                | bigint                      | NOT NULL DEFAULT nextval('grant_id_seq'::regclass)
      #translation_gist_client_id        | bigint                      | NOT NULL
@@ -45,7 +46,6 @@ class Grant(graphene.ObjectType):
      #additional_metadata               | jsonb                       |
     """
     dbType = dbGrant
-    dbObject = None
     issuer_translation_gist_id = LingvodocID()
     begin = graphene.Int()
     end = graphene.Int()

@@ -1,5 +1,7 @@
 import graphene
-from lingvodoc.schema.gql_holders import (CreatedAt,
+from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
+    CreatedAt,
     IdHolder,
     MarkedForDeletion,
     AdditionalMetadata,
@@ -34,7 +36,7 @@ from sqlalchemy import (
 )
 
 
-class AdvancedSearch(graphene.ObjectType):
+class AdvancedSearch(LingvodocObjectType):
     entities = graphene.List(Entity)
 
 

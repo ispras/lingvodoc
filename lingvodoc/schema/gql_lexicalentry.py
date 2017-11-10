@@ -1,6 +1,7 @@
 import graphene
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CompositeIdHolder,
     AdditionalMetadata,
     CreatedAt,
@@ -33,7 +34,7 @@ from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 from lingvodoc.utils.creation import create_lexicalentry
 
-class LexicalEntry(graphene.ObjectType):
+class LexicalEntry(LingvodocObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
      #object_id           | bigint                      | NOT NULL
@@ -47,7 +48,6 @@ class LexicalEntry(graphene.ObjectType):
     entities = graphene.List(Entity)
 
     dbType = dbLexicalEntry
-    dbObject = None
 
     class Meta:
         interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)

@@ -13,6 +13,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CommonFieldsComposite,
     TranslationHolder,
     fetch_object,
@@ -31,7 +32,7 @@ from lingvodoc.utils.creation import (
 # from lingvodoc.schema.gql_dictionary import Dictionary
 
 
-class Language(graphene.ObjectType):
+class Language(LingvodocObjectType):
     """
      #created_at                 | timestamp without time zone | NOT NULL
      #object_id                  | bigint                      | NOT NULL
@@ -45,7 +46,6 @@ class Language(graphene.ObjectType):
      + translation
     """
     dbType = dbLanguage
-    dbObject = None
     dictionaries = graphene.List(Dictionary)
 
     dataType = graphene.String()

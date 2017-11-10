@@ -18,6 +18,7 @@ from lingvodoc.models import (
 )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CommonFieldsComposite,
     StateHolder,
     TranslationHolder,
@@ -47,7 +48,7 @@ class UserToRoles(graphene.ObjectType):
         return self.roles
 
 
-class Dictionary(graphene.ObjectType):  # tested
+class Dictionary(LingvodocObjectType):  # tested
     # TODO: resolve_dataType(?)
     """
      #created_at                       | timestamp without time zone | NOT NULL
@@ -91,7 +92,6 @@ class Dictionary(graphene.ObjectType):  # tested
     """
 
     dbType = dbDictionary
-    dbObject = None
     category = graphene.Int()
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
