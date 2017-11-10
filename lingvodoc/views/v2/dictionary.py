@@ -1,5 +1,9 @@
 __author__ = 'alexander'
 
+import copy
+import logging
+import traceback
+
 from lingvodoc.exceptions import CommonException
 from lingvodoc.models import (
     BaseGroup,
@@ -7,6 +11,7 @@ from lingvodoc.models import (
     DBSession,
     Dictionary,
     DictionaryPerspective,
+    DictionaryPerspectiveToField,
     Group,
     Language,
     LexicalEntry,
@@ -58,8 +63,13 @@ from sqlalchemy.exc import IntegrityError
 import datetime
 import json
 from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.views.v2.utils import unimplemented
 from lingvodoc.views.v2.delete import real_delete_dictionary
 from pdb import set_trace
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 
 @view_config(route_name='create_dictionary', renderer='json', request_method='POST')
@@ -241,265 +251,444 @@ def delete_dictionary(request):  # tested & in docs
     return {'error': str("No such dictionary in the system")}
 
 
-# TODO: completely broken! (and unnecessary)
-@view_config(route_name='dictionary_copy', renderer='json', request_method='POST', permission='edit')
-def copy_dictionary(request):
+@view_config(route_name='dictionary_copy', renderer='json')
+def dictionary_copy(request):
+    """
+    Creates copy of a specified dictionary for a specified user.
 
-    response = dict()
-    parent_client_id = request.matchdict.get('client_id')
-    parent_object_id = request.matchdict.get('object_id')
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    if parent:
-        path = request.route_url('create_dictionary')
-        subreq = Request.blank(path)
-        subreq.method = 'POST'
-        subreq.json = {'translation_gist_client_id': parent.translation_gist_client_id,
-                                  'translation_gist_object_id': parent.translation_gist_object_id,
-                                  'parent_client_id': parent.parent_client_id,
-                                  'parent_object_id': parent.parent_object_id}
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        new_dict = DBSession.query(Dictionary) \
-            .filter_by(client_id=resp.json['client_id'], object_id=resp.json['object_id']) \
-            .first()
-        if parent.marked_for_deletion:
-            new_dict.marked_for_deletion = True
+    Dictionary is specified by URL parameters 'dictionary_client_id' and 'dictionary_object_id', user is
+    specified by URL parameter 'user_id'.
+    """
 
-        path = request.route_url('dictionary_roles',
-                                 client_id=parent.client_id,
-                                 object_id=parent.object_id)
-        subreq = Request.blank(path)
-        subreq.method = 'GET'
-        headers = {'Cookie': request.headers['Cookie']}
+    try:
 
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        path = request.route_url('dictionary_roles',
-                                 client_id=new_dict.client_id,
-                                 object_id=new_dict.object_id)
-        subreq = Request.blank(path)
-        subreq.method = 'POST'
-        subreq.json = resp.json
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        path = request.route_url('dictionary_status',
-                                 client_id=parent.client_id,
-                                 object_id=parent.object_id)
-        subreq = Request.blank(path)
-        subreq.method = 'GET'
-        headers = {'Cookie': request.headers['Cookie']}
+        # Getting dictionary and user identifiers.
 
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        path = request.route_url('dictionary_status',
-                                 client_id=new_dict.client_id,
-                                 object_id=new_dict.object_id)
-        subreq = Request.blank(path)
-        subreq.method = 'PUT'
-        subreq.json = resp.json
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
+        dictionary_cid = int(request.params.get('dictionary_client_id'))
+        dictionary_oid = int(request.params.get('dictionary_object_id'))
 
-        perspectives = DBSession.query(DictionaryPerspective).filter_by(parent=parent)
-        for perspective in perspectives:
-            path = request.route_url('create_perspective',
-                                     dictionary_client_id=new_dict.client_id,
-                                     dictionary_object_id=new_dict.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.json = {'translation_gist_client_id': parent.translation_gist_client_id,
-                                  'translation_gist_object_id': parent.translation_gist_object_id}
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            new_persp = DBSession.query(DictionaryPerspective) \
-                .filter_by(client_id=resp.json['client_id'], object_id=resp.json['object_id']) \
-                .first()
+        user_id = int(request.params.get('user_id'))
 
-            if perspective.marked_for_deletion:
-                new_persp.marked_for_deletion = True
+        check_deletion = 'check_deletion' in request.params
 
-            path = request.route_url('perspective_fields',
-                                     dictionary_client_id=parent.client_id,
-                                     dictionary_object_id=parent.object_id,
-                                     perspective_client_id=perspective.client_id,
-                                     perspective_object_id=perspective.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'GET'
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+        log.debug('dictionary_copy {0}/{1} {2}: {3}'.format(
+            dictionary_cid, dictionary_oid, user_id, check_deletion))
 
-            path = request.route_url('perspective_fields',
-                                     dictionary_client_id=new_dict.client_id,
-                                     dictionary_object_id=new_dict.object_id,
-                                     perspective_client_id=new_persp.client_id,
-                                     perspective_object_id=new_persp.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.json = resp.json
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+        # Checking if we are being invoked by an administrator.
 
-            path = request.route_url('perspective_status',
-                                     dictionary_client_id=parent.client_id,
-                                     dictionary_object_id=parent.object_id,
-                                     perspective_client_id=perspective.client_id,
-                                     perspective_object_id=perspective.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'GET'
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+        user = Client.get_user_by_client_id(request.authenticated_userid)
 
-            path = request.route_url('perspective_status',
-                                     dictionary_client_id=new_dict.client_id,
-                                     dictionary_object_id=new_dict.object_id,
-                                     perspective_client_id=new_persp.client_id,
-                                     perspective_object_id=new_persp.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'PUT'
-            subreq.json = resp.json
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+        if user is None or user.id != 1:
 
-            path = request.route_url('perspective_roles',
-                                     client_id=parent.client_id,
-                                     object_id=parent.object_id,
-                                     perspective_client_id=perspective.client_id,
-                                     perspective_object_id=perspective.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'GET'
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+            log.debug('dictionary_copy {0}/{1} {2}: not an administrator'.format(
+                dictionary_cid, dictionary_oid, user_id))
 
-            path = request.route_url('perspective_roles',
-                                     client_id=new_dict.client_id,
-                                     object_id=new_dict.object_id,
-                                     perspective_client_id=new_persp.client_id,
-                                     perspective_object_id=new_persp.object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.json = resp.json
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+            return {'error': 'Not an administrator.'}
 
-            lexes = DBSession.query(LexicalEntry).filter_by(parent=perspective)
-            for lex in lexes:
-                new_lex = LexicalEntry(
-                    object_id=DBSession.query(LexicalEntry).filter_by(client_id=lex.client_id).count() + 1,
-                    client_id=lex.client_id,
-                    parent=new_persp,
-                    marked_for_deletion=lex.marked_for_deletion,
-                    additional_metadata=lex.additional_metadata,
-                    moved_to=lex.moved_to)  # if moved_to in this dict, should it be moved to in new dict?
-                DBSession.add(new_lex)
-                DBSession.flush()
+        # Getting dictionary and user info, checking if the dictionary is deleted if required.
 
-                # l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
-                l1es = None
-                for l1e in l1es:
-                    # new_l1e = LevelOneEntity(client_id=l1e.client_id,
-                    #                          object_id=DBSession.query(LevelOneEntity).filter_by(
-                    #                              client_id=l1e.client_id).count() + 1,
-                    #                          content=l1e.content,
-                    #                          entity_type=l1e.entity_type,
-                    #                          locale_id=l1e.locale_id,
-                    #                          additional_metadata=l1e.additional_metadata,
-                    #                          parent=new_lex,
-                    #                          marked_for_deletion=l1e.marked_for_deletion,
-                    #                          is_translatable=l1e.is_translatable,
-                    #                          created_at=l1e.created_at)
-                    new_l1e = None
-                    DBSession.add(new_l1e)
-                    DBSession.add(new_l1e)
-                    DBSession.flush()
-                    for pl1e in l1e.publishleveloneentity:
-                        # new_pl1e = PublishLevelOneEntity(client_id=pl1e.client_id,
-                        #                                  object_id=DBSession.query(PublishLevelOneEntity).filter_by(
-                        #                                      client_id=pl1e.client_id).count() + 1,
-                        #                                  content=pl1e.content,
-                        #                                  entity_type=pl1e.entity_type,
-                        #                                  parent=new_lex,
-                        #                                  entity=new_l1e,
-                        #                                  marked_for_deletion=pl1e.marked_for_deletion,
-                        #                                  created_at=pl1e.created_at)
-                        new_pl1e = None
-                        DBSession.add(new_pl1e)
-                        DBSession.flush()
+        dictionary = DBSession.query(Dictionary).filter_by(
+            client_id = dictionary_cid, object_id = dictionary_oid).first()
 
-                    # l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
-                    l2es = list()
-                    for l2e in l2es:
-                        # new_l2e = LevelTwoEntity(client_id=l2e.client_id,
-                        #                          object_id=DBSession.query(LevelTwoEntity).filter_by(
-                        #                              client_id=l2e.client_id).count() + 1,
-                        #                          content=l2e.content,
-                        #                          entity_type=l2e.entity_type,
-                        #                          locale_id=l2e.locale_id,
-                        #                          additional_metadata=l2e.additional_metadata,
-                        #                          parent=new_l1e,
-                        #                          marked_for_deletion=l2e.marked_for_deletion,
-                        #                          is_translatable=l2e.is_translatable,
-                        #                          created_at=l2e.created_at)
-                        new_l2e = None
-                        DBSession.add(new_l2e)
-                        DBSession.flush()
-                        for pl2e in l2e.publishleveltwoentity:
-                            # new_pl2e = PublishLevelTwoEntity(client_id=pl2e.client_id,
-                            #                                  object_id=DBSession.query(PublishLevelTwoEntity).filter_by(
-                            #                                      client_id=pl2e.client_id).count() + 1,
-                            #                                  content=pl2e.content,
-                            #                                  entity_type=pl2e.entity_type,
-                            #                                  parent=new_lex,
-                            #                                  entity=new_l2e,
-                            #                                  marked_for_deletion=pl2e.marked_for_deletion,
-                            #                                  created_at=pl2e.created_at)
-                            new_pl2e = None
-                            DBSession.add(new_pl2e)
-                            DBSession.flush()
-                # ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
-                ges = list()
-                for ge in ges:
-                    # new_ge = GroupingEntity(client_id=ge.client_id,
-                    #                         object_id=DBSession.query(GroupingEntity).filter_by(
-                    #                             client_id=ge.client_id).count() + 1,
-                    #                         content=ge.content,  # same tag?
-                    #                         entity_type=ge.entity_type,
-                    #                         locale_id=ge.locale_id,
-                    #                         additional_metadata=ge.additional_metadata,
-                    #                         parent=new_lex,
-                    #                         marked_for_deletion=ge.marked_for_deletion,
-                    #                         is_translatable=ge.is_translatable,
-                    #                         created_at=ge.created_at)
-                    new_ge = None
-                    DBSession.add(new_ge)
-                    DBSession.flush()
-                    for pge in ge.publishgroupingentity:
-                        # new_pge = PublishGroupingEntity(client_id=pge.client_id,
-                        #                                 object_id=DBSession.query(PublishGroupingEntity).filter_by(
-                        #                                     client_id=pge.client_id).count() + 1,
-                        #                                 content=pge.content,
-                        #                                 entity_type=pge.entity_type,
-                        #                                 parent=new_lex,
-                        #                                 entity=new_ge,
-                        #                                 marked_for_deletion=pge.marked_for_deletion,
-                        #                                 created_at=pge.created_at)
-                        new_pge = None
-                        DBSession.add(new_pge)
-                        DBSession.flush()
-        request.response.status = HTTPOk.code
-        return {'client_id': new_dict.client_id,
-                'object_id': new_dict.object_id}
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such dictionary in the system")}
+        user = DBSession.query(User).filter_by(id = user_id).first()
+
+        locale_id = int(request.cookies.get('locale_id') or 2)
+
+        log.debug('dictionary_copy {0}/{1} {2}:'
+            '\n  dictionary \'{3}\'\n  user \'{4}\', \'{5}\''.format(
+            dictionary_cid, dictionary_oid, user_id,
+            dictionary.get_translation(locale_id),
+            user.login, user.name))
+
+        if check_deletion and dictionary.marked_for_deletion:
+
+            log.debug('dictionary_copy {0}/{1} {2}: dictionary is deleted'.format(
+                dictionary_cid, dictionary_oid, user_id))
+
+            return {'error': 'Dictionary is deleted.'}
+
+        # Getting a new client id for the specified user.
+
+        client = Client(user_id = user_id, is_browser_client = False)
+
+        DBSession.add(client)
+        DBSession.flush()
+
+        translation_gist_base_group = DBSession.query(BaseGroup).filter_by(
+            name = 'Can delete translationgist').first()
+
+        translation_atom_base_group = DBSession.query(BaseGroup).filter_by(
+            name = 'Can edit translationatom').first()
+
+        def copy_translation(translation_gist_cid, translation_gist_oid):
+            """
+            Copies translation, returns identifier of the copy.
+            """
+
+            translation_gist = DBSession.query(TranslationGist).filter_by(
+                client_id = translation_gist_cid,
+                object_id = translation_gist_oid).first()
+
+            translation_gist_copy = TranslationGist(
+                client_id = client.id,
+                type = translation_gist.type)
+
+            DBSession.add(translation_gist_copy)
+
+            # Setting up translation permissions.
+
+            new_group = Group(
+                parent = translation_gist_base_group,
+                subject_client_id = translation_gist_copy.client_id,
+                subject_object_id = translation_gist_copy.object_id)
+
+            add_user_to_group(user, new_group)
+            DBSession.add(new_group)
+
+            DBSession.flush()
+
+            # Copying translation atoms.
+
+            for translation_atom in DBSession.query(TranslationAtom).filter_by(
+                parent_client_id = translation_gist_cid,
+                parent_object_id = translation_gist_oid,
+                marked_for_deletion = False):
+
+                translation_atom_copy = TranslationAtom(
+                    client_id = client.id,
+                    parent_client_id = translation_gist_copy.client_id,
+                    parent_object_id = translation_gist_copy.object_id,
+                    locale_id = translation_atom.locale_id,
+                    content = translation_atom.content,
+                    additional_metadata = copy.deepcopy(translation_atom.additional_metadata))
+
+                DBSession.add(translation_atom_copy)
+
+                # Setting up translation atom editing permissions.
+
+                new_group = Group(
+                    parent = translation_atom_base_group,
+                    subject_client_id = translation_atom_copy.client_id,
+                    subject_object_id = translation_atom_copy.object_id)
+
+                add_user_to_group(user, new_group)
+                DBSession.add(new_group)
+
+            DBSession.flush()
+
+            # Returning identifier of a translation.
+
+            return (translation_gist_copy.client_id, translation_gist_copy.object_id)
+
+        # Copying the dictionary.
+
+        id_id_map = {}
+
+        translation_gist_cid, translation_gist_oid = copy_translation(
+            dictionary.translation_gist_client_id,
+            dictionary.translation_gist_object_id)
+
+        metadata = copy.deepcopy(dictionary.additional_metadata)
+
+        if not metadata:
+            metadata = {'clone_origin': [dictionary_cid, dictionary_oid]}
+
+        else:
+            metadata['clone_origin'] = [dictionary_cid, dictionary_oid]
+
+        dictionary_copy = Dictionary(
+            client_id = client.id,
+            parent_client_id = dictionary.parent_client_id,
+            parent_object_id = dictionary.parent_object_id,
+            translation_gist_client_id = translation_gist_cid,
+            translation_gist_object_id = translation_gist_oid,
+            state_translation_gist_client_id = dictionary.state_translation_gist_client_id,
+            state_translation_gist_object_id = dictionary.state_translation_gist_object_id,
+            marked_for_deletion = dictionary.marked_for_deletion,
+            category = dictionary.category,
+            domain = dictionary.domain,
+            additional_metadata = metadata)
+
+        DBSession.add(dictionary_copy)
+        DBSession.flush()
+
+        id_id_map[(dictionary_cid, dictionary_oid)] = \
+            (dictionary_copy.client_id, dictionary_copy.object_id)
+
+        # Adding user to default dictionary groups, copied from 'create_dictionary' API method.
+
+        for base_group in DBSession.query(BaseGroup).filter_by(dictionary_default = True):
+
+            new_group = Group(
+                parent = base_group,
+                subject_client_id = dictionary_copy.client_id,
+                subject_object_id = dictionary_copy.object_id)
+
+            add_user_to_group(user, new_group)
+            DBSession.add(new_group)
+
+        DBSession.flush()
+
+        # And now dictionary's perspectives.
+
+        perspective_query = DBSession.query(DictionaryPerspective).filter_by(
+            parent_client_id = dictionary_cid,
+            parent_object_id = dictionary_oid,
+            marked_for_deletion = False)
+
+        perspective_count = 0
+
+        for perspective in perspective_query.all():
+
+            translation_gist_cid, translation_gist_oid = copy_translation(
+                perspective.translation_gist_client_id,
+                perspective.translation_gist_object_id)
+
+            perspective_copy = DictionaryPerspective(
+                client_id = client.id,
+                parent_client_id = dictionary_copy.client_id,
+                parent_object_id = dictionary_copy.object_id,
+                translation_gist_client_id = translation_gist_cid,
+                translation_gist_object_id = translation_gist_oid,
+                state_translation_gist_client_id = perspective.state_translation_gist_client_id,
+                state_translation_gist_object_id = perspective.state_translation_gist_object_id,
+                is_template = perspective.is_template,
+                import_source = perspective.import_source,
+                import_hash = perspective.import_hash,
+                additional_metadata = copy.deepcopy(perspective.additional_metadata))
+
+            DBSession.add(perspective_copy)
+            DBSession.flush()
+
+            id_id_map[(perspective.client_id, perspective.object_id)] = \
+                (perspective_copy.client_id, perspective_copy.object_id)
+
+            # Adding user to default perspective groups, copied from 'create_perspective' API method.
+
+            for base_group in DBSession.query(BaseGroup).filter_by(perspective_default = True):
+
+                new_group = Group(
+                    parent = base_group,
+                    subject_client_id = perspective_copy.client_id,
+                    subject_object_id = perspective_copy.object_id)
+
+                add_user_to_group(user, new_group)
+                DBSession.add(new_group)
+
+            DBSession.flush()
+
+            perspective_count += 1
+
+        log.debug('dictionary_copy {0}/{1} {2}: {3} perspectives'.format(
+            dictionary_cid, dictionary_oid, user_id,
+            perspective_count))
+
+        def copy_to_field(id_id):
+            """
+            Copies perspective-field association, recursively copying, if required, associations it
+            refers to.
+            """
+
+            if id_id not in to_field_dict:
+                return id_id
+
+            if id_id in id_id_map:
+                return id_id_map[id_id]
+
+            to_field = to_field_dict[id_id]
+
+            parent_cid, parent_oid = id_id_map[
+                (to_field.parent_client_id, to_field.parent_object_id)]
+
+            self_cid, self_oid = copy_to_field(
+                (to_field.self_client_id, to_field.self_object_id))
+
+            link_id_id = (to_field.link_client_id, to_field.link_object_id)
+            link_cid, link_oid = id_id_map.get(link_id_id, link_id_id)
+
+            # Copying perspective-field association.
+
+            to_field_copy = DictionaryPerspectiveToField(
+                client_id = client.id,
+                parent_client_id = parent_cid,
+                parent_object_id = parent_oid,
+                self_client_id = self_cid,
+                self_object_id = self_oid,
+                field_client_id = to_field.field_client_id,
+                field_object_id = to_field.field_object_id,
+                link_client_id = link_cid,
+                link_object_id = link_oid,
+                position = to_field.position)
+
+            DBSession.add(to_field_copy)
+            DBSession.flush()
+
+            id_id_copy = (to_field_copy.client_id, to_field_copy.object_id)
+            id_id_map[id_id] = id_id_copy
+
+            return id_id_copy
+
+        # Copying perspective-field associations, taking care to properly process inter-association
+        # references.
+
+        to_field_query = DBSession.query(DictionaryPerspectiveToField).filter(
+            DictionaryPerspective.parent_client_id == dictionary_cid,
+            DictionaryPerspective.parent_object_id == dictionary_oid,
+            DictionaryPerspective.marked_for_deletion == False,
+            DictionaryPerspectiveToField.parent_client_id == DictionaryPerspective.client_id,
+            DictionaryPerspectiveToField.parent_object_id == DictionaryPerspective.object_id,
+            DictionaryPerspectiveToField.marked_for_deletion == False)
+
+        to_field_dict = {
+            (to_field.client_id, to_field.object_id): to_field
+                for to_field in to_field_query.all()}
+
+        for id_id in to_field_dict.keys():
+            copy_to_field(id_id)
+
+        log.debug('dictionary_copy {0}/{1} {2}: {3} perspective-field associations'.format(
+            dictionary_cid, dictionary_oid, user_id,
+            len(to_field_dict)))
+
+        # Copying lexical entries.
+
+        entry_query = DBSession.query(LexicalEntry).filter(
+            DictionaryPerspective.parent_client_id == dictionary_cid,
+            DictionaryPerspective.parent_object_id == dictionary_oid,
+            DictionaryPerspective.marked_for_deletion == False,
+            LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+            LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
+            LexicalEntry.marked_for_deletion == False)
+
+        entry_count = 0
+
+        for entry in entry_query.all():
+
+            parent_cid, parent_oid = id_id_map[
+                (entry.parent_client_id, entry.parent_object_id)]
+
+            # Copying with proper perspective references.
+
+            entry_copy = LexicalEntry(
+                client_id = client.id,
+                parent_client_id = parent_cid,
+                parent_object_id = parent_oid,
+                moved_to = entry.moved_to,
+                additional_metadata = copy.deepcopy(entry.additional_metadata))
+
+            DBSession.add(entry_copy)
+            DBSession.flush()
+
+            id_id_map[(entry.client_id, entry.object_id)] = \
+                (entry_copy.client_id, entry_copy.object_id)
+
+            entry_count += 1
+
+        log.debug('dictionary_copy {0}/{1} {2}: {3} lexical entries'.format(
+            dictionary_cid, dictionary_oid, user_id,
+            entry_count))
+
+        def copy_entity(id_id):
+            """
+            Copies entity, recursively copying, if required, entities it refers to.
+            """
+
+            if id_id not in entity_dict:
+                return id_id
+
+            if id_id in id_id_map:
+                return id_id_map[id_id]
+
+            entity = entity_dict[id_id]
+
+            parent_cid, parent_oid = id_id_map[
+                (entity.parent_client_id, entity.parent_object_id)]
+
+            self_cid, self_oid = copy_entity(
+                (entity.self_client_id, entity.self_object_id))
+
+            link_id_id = (entity.link_client_id, entity.link_object_id)
+            link_cid, link_oid = id_id_map.get(link_id_id, link_id_id)
+
+            # Copying entity with its publishing info.
+
+            entity_copy = Entity(
+                client_id = client.id,
+                parent_client_id = parent_cid,
+                parent_object_id = parent_oid,
+                self_client_id = self_cid,
+                self_object_id = self_oid,
+                field_client_id = entity.field_client_id,
+                field_object_id = entity.field_object_id,
+                link_client_id = link_cid,
+                link_object_id = link_oid,
+                locale_id = entity.locale_id,
+                content = entity.content,
+                additional_metadata = copy.deepcopy(entity.additional_metadata))
+
+            entity_copy.publishingentity.published = entity.publishingentity.published
+            entity_copy.publishingentity.accepted = entity.publishingentity.accepted
+
+            DBSession.add(entity_copy)
+            DBSession.flush()
+
+            id_id_copy = (entity_copy.client_id, entity_copy.object_id)
+            id_id_map[id_id] = id_id_copy
+
+            return id_id_copy
+
+        # Copying entity associations, taking care to properly process inter-entity references.
+
+        entity_query = DBSession.query(Entity).filter(
+            DictionaryPerspective.parent_client_id == dictionary_cid,
+            DictionaryPerspective.parent_object_id == dictionary_oid,
+            DictionaryPerspective.marked_for_deletion == False,
+            LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+            LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
+            LexicalEntry.marked_for_deletion == False,
+            Entity.parent_client_id == LexicalEntry.client_id,
+            Entity.parent_object_id == LexicalEntry.object_id,
+            Entity.marked_for_deletion == False)
+
+        entity_dict = {
+            (entity.client_id, entity.object_id): entity
+                for entity in entity_query.all()}
+
+        for id_id in entity_dict.keys():
+            copy_entity(id_id)
+
+        log.debug('dictionary_copy {0}/{1} {2}: {3} entities'.format(
+            dictionary_cid, dictionary_oid, user_id,
+            len(entity_dict)))
+
+        # Successfully copied the dictionary, returning copy counts.
+
+        log.debug('dictionary_copy {0}/{1} {2}: {3} objects total'.format(
+            dictionary_cid, dictionary_oid, user_id,
+            len(id_id_map)))
+
+        return {
+            'entity_count': len(entity_dict),
+            'lexical_entry_count': entry_count,
+            'perspective_count': perspective_count,
+            'to_field_count': len(to_field_dict),
+            'total': len(id_id_map)}
+
+    # Some unknown exception.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('dictionary_copy: exception')
+        log.debug(traceback_string)
+
+        request.response.status = HTTPInternalServerError.code
+
+        return {
+            'error': 'unknown exception',
+            'traceback': traceback_string}
 
 
 @view_config(route_name='dictionary_info', renderer='json', request_method='GET')
