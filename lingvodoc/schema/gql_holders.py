@@ -505,67 +505,30 @@ class IsTranslatable(graphene.Interface):
         return self.dbObject.is_translatable
 
 
+class MergeMetadata(graphene.ObjectType):
+    min_created_at = graphene.Int()
+    original_client_id = graphene.Int()
+    merge_tree = graphene.List(LingvodocID)
+
+
 class Metadata(graphene.ObjectType):
     """
     graphene object that have all metadata attributes
     if new attributes of metadata are added, then this class has to be updated
     """
-    hash = GenericScalar()
-    origin_client_id = GenericScalar()
-    origin_object_id = GenericScalar()
-    blobs = GenericScalar()
-    merged_by = GenericScalar()
-    data_type = GenericScalar()
-    blob_description = GenericScalar()
-    merge = GenericScalar()
-    original_filename = GenericScalar()
-    location = GenericScalar()
-    client_id = GenericScalar()
-    authors = GenericScalar()
-    row_id = GenericScalar()
-    merged_to = GenericScalar()
-
-    def resolve_hash(self, info):
-        return self.hash
-
-    def resolve_origin_client_id(self, info):
-        return self.origin_client_id
-
-    def resolve_origin_object_id(self, info):
-        return self.origin_object_id
-
-    def resolve_blobs(self, info):
-        return self.blobs
-
-    def resolve_merged_by(self, info):
-        return self.merged_by
-
-    def resolve_data_type(self, info):
-        return self.data_type
-
-    def resolve_blob_description(self, info):
-        return self.blob_description
-
-    def resolve_merge(self, info):
-        return self.merge
-
-    def resolve_original_filename(self, info):
-        return self.original_filename
-
-    def resolve_location(self, info):
-        return self.location
-
-    def resolve_client_id(self, info):
-        return self.client_id
-
-    def resolve_authors(self, info):
-        return self.authors
-
-    def resolve_row_id(self, info):
-        return self.row_id
-
-    def resolve_merged_to(self, info):
-        return self.merged_to
+    hash = graphene.String()
+    origin_id = LingvodocID()
+    blobs = graphene.List(LingvodocID)
+    merged_by = LingvodocID()
+    data_type = graphene.String()
+    blob_description = graphene.String()
+    merge =  graphene.Field(MergeMetadata)  # TODO: MergeMetadata
+    original_filename = graphene.String()
+    location = graphene.String()
+    client_id = graphene.Int()
+    authors = graphene.String()
+    row_id = graphene.Int()
+    merged_to = LingvodocID()
 
 
 def get_value_by_key(db_object, additional_metadata_string, metadata_key):
@@ -616,10 +579,8 @@ class AdditionalMetadata(graphene.Interface):
         # returns an object with the fields to which we can get access in the request
 
         metadata_object = Metadata(hash=get_value_by_key(db_object, additional_metadata_string, "hash"),
-                                   origin_client_id=get_value_by_key(db_object, additional_metadata_string,
-                                                                     "origin_client_id"),
-                                   origin_object_id=get_value_by_key(db_object, additional_metadata_string,
-                                                                     "origin_object_id"),
+                                   origin_id=get_value_by_key(db_object, additional_metadata_string,
+                                                                     "origin_id"),
                                    blobs=get_value_by_key(db_object, additional_metadata_string, "blobs"),
                                    merged_by=get_value_by_key(db_object, additional_metadata_string, "merged_by"),
                                    data_type=get_value_by_key(db_object, additional_metadata_string, "data_type"),
