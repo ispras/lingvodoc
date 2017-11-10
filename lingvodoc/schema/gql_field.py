@@ -1,6 +1,7 @@
 import graphene
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CompositeIdHolder,
     TranslationGistHolder,
     AdditionalMetadata,
@@ -29,7 +30,7 @@ from sqlalchemy import (
 )
 from lingvodoc.utils.creation import create_gists_with_atoms
 
-class Field(graphene.ObjectType):
+class Field(LingvodocObjectType):
     """
      #created_at                           | timestamp without time zone | NOT NULL
      #object_id                            | bigint                      | NOT NULL
@@ -46,7 +47,6 @@ class Field(graphene.ObjectType):
 
     #data_type = graphene.String()
     dbType = dbField
-    dbObject = None
     class Meta:
         interfaces = (CompositeIdHolder,
                       TranslationGistHolder,

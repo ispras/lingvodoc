@@ -2,6 +2,7 @@ from os import unlink
 import graphene
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     client_id_check,
     fetch_object,
     CompositeIdHolder,
@@ -31,7 +32,7 @@ from lingvodoc.views.v2.sociolinguistics import check_socio  # TODO: replace it
 
 #from lingvodoc.schema.gql_entity import create_object
 
-class UserBlobs(graphene.ObjectType):
+class UserBlobs(LingvodocObjectType):
     """
     #created_at          | timestamp without time zone | NOT NULL
     #object_id           | bigint                      | NOT NULL
@@ -57,7 +58,6 @@ class UserBlobs(graphene.ObjectType):
 
     """
     dbType = dbUserBlobs
-    dbObject = None
     triumph = graphene.Boolean()
 
 

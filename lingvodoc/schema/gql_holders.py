@@ -24,11 +24,13 @@ class ResponseError(Exception):
     if not perm_check(client_id, "field"):
         return ResponseError(message = "Permission Denied")
     """
-    def __init__(self, message, code=None, params=None):
+    def __init__(self, message, code=None, params=None, self_object=None):
         super().__init__(message)
         self.message = str(message)
         self.code = code
         self.params = params
+        if self_object:
+            self_object.ErrorHappened = True
         #DBSession.rollback()
 
 
@@ -110,6 +112,9 @@ def client_id_check():
 
     return decorator
 
+class LingvodocObjectType(graphene.ObjectType):
+    dbObject = None
+    ErrorHappened = None
 
 class LingvodocID(Scalar):
     """
@@ -220,7 +225,6 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
     class must have dbType and dbObject attributes
     example:
     dbType = dbLanguage
-    dbObject = None
 
     @fetch_object("marked_for_deletion")
     def resolve_marked_for_deletion(self, args, context, info):
@@ -237,19 +241,23 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
 
             if ACLSubject and ACLKey == 'id':
                 context.acl_check('view', ACLSubject, cls.id)
+            if cls.ErrorHappened:
+                return None
             if not cls.dbObject:
                 if type(cls.id) is int:
                     # example: (id: 1)
                     id = cls.id
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(id=id).first()
                     if cls.dbObject is None:
-                        raise ResponseError(message="%s was not found" % cls.__class__)
+                        #cls.ErrorHappened = True
+                        raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
                 elif type(cls.id) is list:
                     # example: (id: [2,3])
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
                                                                          object_id=cls.id[1]).first()
                     if cls.dbObject is None:
-                        raise ResponseError(message="%s was not found" % cls.__class__)
+                        #cls.ErrorHappened = True
+                        raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
             if ACLSubject and '_' in ACLKey:
                 context.acl_check('view', ACLSubject,
                                   [getattr(cls.dbObject, ACLKey.replace('_', '_client_')),

@@ -3,11 +3,12 @@ from lingvodoc.models import (
     Grant as dbGroup,
 )
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     IdHolder,
     CreatedAt,
     LingvodocID
 )
-class Group(graphene.ObjectType):
+class Group(LingvodocObjectType):
     """
      #created_at        | timestamp without time zone | NOT NULL
      #id                | uuid                        | NOT NULL
@@ -18,7 +19,6 @@ class Group(graphene.ObjectType):
      #subject_override  | boolean                     |
     """
     dbType = dbGroup
-    dbObject = None
     old_id = graphene.String() # uuid
     base_group_id = graphene.Int()
     subject_id = LingvodocID()

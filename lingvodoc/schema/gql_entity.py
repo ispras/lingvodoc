@@ -23,6 +23,7 @@ from lingvodoc.models import (
 
 )
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CompositeIdHolder,
     CreatedAt,
     Relationship,
@@ -95,12 +96,11 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 
 
 # Read
-class Entity(graphene.ObjectType):
+class Entity(LingvodocObjectType):
     # TODO: Accepted, entity_type
     content = graphene.String()
     data_type = graphene.String()
     dbType = dbEntity
-    dbObject = None
     publishingentity = None
 
     class Meta:

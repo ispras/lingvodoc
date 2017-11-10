@@ -1,6 +1,7 @@
 import graphene
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CompositeIdHolder,
     CreatedAt,
     MarkedForDeletion,
@@ -27,7 +28,7 @@ from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.utils.verification import check_client_id
 from lingvodoc.schema.gql_translationatom import TranslationAtom
 
-class TranslationGist(graphene.ObjectType):
+class TranslationGist(LingvodocObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
      #object_id           | bigint                      | NOT NULL
@@ -39,7 +40,6 @@ class TranslationGist(graphene.ObjectType):
 
     """
     dbType = dbTranslationGist
-    dbObject = None
     translationatoms = graphene.List(TranslationAtom)
 
     class Meta:

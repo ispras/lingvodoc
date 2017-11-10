@@ -12,6 +12,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     IdHolder,
     AdditionalMetadata,
     CreatedAt,
@@ -45,7 +46,7 @@ from sqlalchemy import (
     case
 )
 
-class UserRequest(graphene.ObjectType): # show only
+class UserRequest(LingvodocObjectType): # show only
     """
      #id                  | bigint                      | NOT NULL DEFAULT nextval('userrequest_id_seq'::regclass)
      #sender_id           | bigint                      | NOT NULL
@@ -68,7 +69,6 @@ class UserRequest(graphene.ObjectType): # show only
         }
     """
     dbType = dbUserRequest
-    dbObject = None
     sender_id = graphene.Int()
     recipient_id = graphene.Int()
     broadcast_uuid = graphene.String()

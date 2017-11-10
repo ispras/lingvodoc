@@ -1,5 +1,6 @@
 import graphene
 from lingvodoc.schema.gql_holders import (CreatedAt,
+    LingvodocObjectType,
     IdHolder,
     MarkedForDeletion,
     AdditionalMetadata,
@@ -21,7 +22,7 @@ from lingvodoc.models import (
 from lingvodoc.utils.creation import add_user_to_group
 
 
-class Organization(graphene.ObjectType):
+class Organization(LingvodocObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
      #id                  | bigint                      | NOT NULL DEFAULT nextval('organization_id_seq'::regclass)
@@ -31,7 +32,6 @@ class Organization(graphene.ObjectType):
      #additional_metadata | jsonb                       |
     """
     dbType = dbOrganization
-    dbObject = None
     class Meta:
         interfaces = (CreatedAt,
                       IdHolder,

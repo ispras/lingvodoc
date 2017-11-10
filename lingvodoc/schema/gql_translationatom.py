@@ -1,6 +1,7 @@
 import graphene
 
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CompositeIdHolder,
     Relationship,
     AdditionalMetadata,
@@ -28,7 +29,7 @@ from lingvodoc.utils.verification import check_client_id
 from lingvodoc.cache.caching import CACHE
 
 
-class TranslationAtom(graphene.ObjectType):
+class TranslationAtom(LingvodocObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
      #object_id           | bigint                      | NOT NULL
@@ -49,7 +50,6 @@ class TranslationAtom(graphene.ObjectType):
 
     """
     dbType = dbTranslationAtom
-    dbObject = None
 
     class Meta:
         interfaces = (CompositeIdHolder, Relationship, AdditionalMetadata, CreatedAt, MarkedForDeletion,  Content,

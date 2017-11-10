@@ -1,5 +1,6 @@
 import graphene
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CompositeIdHolder,
     CreatedAt,
     Relationship,
@@ -29,7 +30,7 @@ from lingvodoc.models import (
 
 from lingvodoc.utils.creation import create_dictionary_persp_to_field
 
-class Column(graphene.ObjectType):
+class Column(LingvodocObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
      #object_id           | bigint                      | NOT NULL
@@ -45,7 +46,6 @@ class Column(graphene.ObjectType):
      #marked_for_deletion | boolean                     | NOT NULL
      #position            | integer                     | NOT NULL
     """
-    dbObject = None
     dbType = dbDictionaryPerspectiveToField
 
     class Meta:

@@ -8,9 +8,10 @@ from lingvodoc.models import (
     Entity as dbBaseGroup,
 )
 from lingvodoc.schema.gql_holders import (
+    LingvodocObjectType,
     CreatedAt,
 )
-class BaseGroup(graphene.ObjectType):  # tested
+class BaseGroup(LingvodocObjectType):  # tested
     """
      #created_at          | timestamp without time zone | NOT NULL
      #id                  | bigint                      | NOT NULL
@@ -34,7 +35,6 @@ class BaseGroup(graphene.ObjectType):  # tested
 
     """
     dbType = dbBaseGroup
-    dbObject = None
 
     perspective_default = graphene.Boolean()
     dictionary_default = graphene.Boolean()
