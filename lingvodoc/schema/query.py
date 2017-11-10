@@ -325,6 +325,7 @@ class Query(graphene.ObjectType):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        dbdicts = None
         if published:
 
             db_published_gist = translation_gist_search('Published')
@@ -334,7 +335,7 @@ class Query(graphene.ObjectType):
             limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
 
-            dbdicts = DBSession.query(dbDictionary).filter(
+            dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False).filter(
                 or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
                          dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
                     and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
@@ -347,7 +348,8 @@ class Query(graphene.ObjectType):
                 filter(dbPerspective.marked_for_deletion == False)
 
         else:
-            dbdicts = DBSession.query(dbDictionary).filter(dbPerspective.marked_for_deletion == False)
+            if not dbdicts:
+                dbdicts = DBSession.query(dbDictionary).filter(dbPerspective.marked_for_deletion == False)
 
         # available
         if available:
