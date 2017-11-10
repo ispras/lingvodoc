@@ -537,6 +537,8 @@ class Metadata(graphene.ObjectType):
     authors = graphene.String()
     row_id = graphene.Int()
     merged_to = LingvodocID()
+    is_protected = graphene.Boolean()
+    previous_objects = graphene.List(LingvodocID)
 
 
 def get_value_by_key(db_object, additional_metadata_string, metadata_key):
@@ -568,41 +570,20 @@ class AdditionalMetadata(graphene.Interface):
      }
     """
 
-    #  additional_metadata_string is attribute which needs to be set №
-    # to have an opportunity to receive metadata without appeal to a DB
-
-    additional_metadata_string = JSONString()
-
-    # additional_metadata_string is necessary for obtaining result
-
     additional_metadata = graphene.Field(Metadata)
 
     @fetch_object()
     def resolve_additional_metadata(self, info):
         db_object = self.dbObject
-        additional_metadata_string = None
-        if hasattr(self, "additional_metadata_string"):
-            additional_metadata_string = self.additional_metadata_string
 
-        # returns an object with the fields to which we can get access in the request
+        # initializes dict with None, for keys nonexistent in dbObject.additional_metadata
+        # list of keys is taken from Metadata attributes
+        metadata_dict = {i: None for i in Metadata().__class__.__dict__ if not i.startswith("_")}
 
-        metadata_object = Metadata(hash=get_value_by_key(db_object, additional_metadata_string, "hash"),
-                                   origin_id=get_value_by_key(db_object, additional_metadata_string,
-                                                                     "origin_id"),
-                                   blobs=get_value_by_key(db_object, additional_metadata_string, "blobs"),
-                                   merged_by=get_value_by_key(db_object, additional_metadata_string, "merged_by"),
-                                   data_type=get_value_by_key(db_object, additional_metadata_string, "data_type"),
-                                   blob_description=get_value_by_key(db_object, additional_metadata_string,
-                                                                     "blob_description"),
-                                   merge=get_value_by_key(db_object, additional_metadata_string, "merge"),
-                                   original_filename=get_value_by_key(db_object, additional_metadata_string,
-                                                                      "original_filename"),
-                                   location=get_value_by_key(db_object, additional_metadata_string, "location"),
-                                   client_id=get_value_by_key(db_object, additional_metadata_string, "client_id"),
-                                   authors=get_value_by_key(db_object, additional_metadata_string, "authors"),
-                                   row_id=get_value_by_key(db_object, additional_metadata_string, "row_id"),
-                                   merged_to=get_value_by_key(db_object, additional_metadata_string, "merged_to")
-                                   )
+        if db_object.additional_metadata:
+            metadata_dict.update(db_object.additional_metadata)
+
+        metadata_object = Metadata(**metadata_dict)
         return metadata_object
 
 #  end of metadata section
