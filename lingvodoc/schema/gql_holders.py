@@ -505,10 +505,10 @@ class IsTranslatable(graphene.Interface):
         return self.dbObject.is_translatable
 
 
-# class MergeMetadata(graphene.ObjectType):
-#     min_created_at = graphene.Int()
-#     original_client_id = graphene.Int()
-#     merge_tree = graphene.List(LingvodocID)
+class MergeMetadata(graphene.ObjectType):
+    min_created_at = graphene.Int()
+    original_client_id = graphene.Int()
+    merge_tree = graphene.List(LingvodocID)
 
 
 class Metadata(graphene.ObjectType):
@@ -522,7 +522,7 @@ class Metadata(graphene.ObjectType):
     merged_by = LingvodocID()
     data_type = graphene.String()
     blob_description = graphene.String()
-    merge =  ObjectVal()  # TODO: MergeMetadata
+    merge =  graphene.Field(MergeMetadata)  # TODO: MergeMetadata
     original_filename = graphene.String()
     location = graphene.String()
     client_id = graphene.Int()
