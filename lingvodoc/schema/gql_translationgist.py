@@ -9,7 +9,8 @@ from lingvodoc.schema.gql_holders import (
     acl_check_by_id,
     ResponseError,
     fetch_object,
-    LingvodocID
+    LingvodocID,
+    TranslationHolder
 )
 
 from lingvodoc.models import (
@@ -20,7 +21,7 @@ from lingvodoc.models import (
     Group as dbGroup,
     ObjectTOC as dbObjectTOC,
     DBSession,
-    TranslationAtom as dbTranslationAtom
+    TranslationAtom as dbTranslationAtom,
 )
 from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.utils.verification import check_client_id
@@ -45,8 +46,8 @@ class TranslationGist(graphene.ObjectType):
         interfaces = (CompositeIdHolder,
                       CreatedAt,
                       MarkedForDeletion,
-                      TypeHolder
-
+                      TypeHolder,
+                        TranslationHolder
                       )
 
     @fetch_object("translationatoms") # TODO: fix that
@@ -57,6 +58,7 @@ class TranslationGist(graphene.ObjectType):
             atom.dbObject = dbatom
             result.append(atom)
         return result
+
 
 
 class CreateTranslationGist(graphene.Mutation):
