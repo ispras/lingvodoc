@@ -336,7 +336,6 @@ class DictionaryPerspective(LingvodocObjectType):
         lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
                                 for lex in lexes.yield_per(100)]
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                   int(request.cookies.get('locale_id') or 2),
                                                    publish=publish, accept=accept, delete=delete)
 
         def graphene_entity(entity, publishing):
