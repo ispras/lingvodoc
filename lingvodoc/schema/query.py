@@ -228,6 +228,9 @@ class Query(graphene.ObjectType):
                                      search_strings=graphene.List(graphene.List(ObjectVal)),
                                      publish=graphene.Boolean(),
                                      accept=graphene.Boolean())
+    search_strings=graphene.List(graphene.List(ObjectVal))
+    convert_markup = graphene.Field(
+        graphene.String, id=LingvodocID(required=True))
 
     def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, publish=None, accept=True):
         return AdvancedSearch().constructor(languages, tag_list, category, adopted, etymology, search_strings, publish, accept)
@@ -1140,6 +1143,85 @@ class Query(graphene.ObjectType):
                   limit_exception, limit_no_vowel, limit_result, locale_id)
 
         return True
+
+    def resolve_convert_markup(self, info, id):
+        # TODO: delete
+
+        import sys
+        import os
+        import random
+        import string
+        from sqlalchemy.exc import IntegrityError
+        from lingvodoc.exceptions import CommonException
+        from lingvodoc.scripts.convert_rules import praat_to_elan
+
+        # TODO: permission check
+
+        client_id = info.context.get('client_id')
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
+        try:
+            # out_type = req['out_type']
+            client_id, object_id = id
+
+            entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+            if not entity:
+                raise KeyError("No such file")
+            content = entity.content
+            if not content:
+                raise ResponseError(message="Cannot access file")
+            try:
+                n = 10
+                filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                                  for c in range(n))
+                # extension = os.path.splitext(blob.content)[1]
+                f = open(filename, 'wb')
+            except Exception as e:
+                return ResponseError(message=str(e))
+            try:
+                f.write(content)
+                f.close()
+                if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
+                    if 'data_type' in entity.additional_metadata :
+                        if 'praat' in entity.additional_metadata['data_type']:
+                            content = praat_to_elan(filename)
+                            if sys.getsizeof(content) / (10 * 1024 * 1024.0) < 1:
+                                # filename2 = 'abc.xml'
+                                # f2 = open(filename2, 'w')
+                                # try:
+                                #     f2.write(content)
+                                #     f2.close()
+                                #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
+                                #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
+                                # except:
+                                #     print('fail with xmllint')
+                                # finally:
+                                #     pass
+                                #     os.remove(filename2)
+                                return content
+                        elif 'elan' in entity.additional_metadata['data_type']:
+                            with open(filename, 'r') as f:
+                                return f.read()
+                        else:
+                            raise KeyError("Not allowed convert option")
+                        raise KeyError('File too big')
+                    raise KeyError("Not allowed convert option")
+                raise KeyError('File too big')
+            except Exception as e:
+                raise ResponseError(message=str(e))
+            finally:
+                os.remove(filename)
+                pass
+        except KeyError as e:
+            raise ResponseError(message=str(e))
+
+        except IntegrityError as e:
+            raise ResponseError(message=str(e))
+
+        except CommonException as e:
+            raise ResponseError(message=str(e))
+
 
 
 class MyMutations(graphene.ObjectType):
