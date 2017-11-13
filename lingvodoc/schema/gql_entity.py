@@ -387,7 +387,7 @@ class UpdateEntity(graphene.Mutation):
             raise ResponseError(message="No such lexical_entry in the system")
         published = args.get('published')
         accepted = args.get('accepted')
-        if published and not dbpublishingentity.published:
+        if published is not None and not dbpublishingentity.published:
             info.context.acl_check('create', 'approve_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
@@ -395,16 +395,16 @@ class UpdateEntity(graphene.Mutation):
             info.context.acl_check('delete', 'approve_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
-        if accepted and not dbpublishingentity.accepted:
+        if accepted is not None and not dbpublishingentity.accepted:
             info.context.acl_check('create', 'lexical_entries_and_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
         if accepted is not None and not accepted and dbpublishingentity.accepted:
             raise ResponseError(message="Not allowed action")
 
-        if published:
+        if published is not None:
             dbpublishingentity.published = published
-        if accepted:
+        if accepted is not None:
             dbpublishingentity.accepted = accepted
 
         dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
