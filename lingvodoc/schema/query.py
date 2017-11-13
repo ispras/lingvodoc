@@ -1151,6 +1151,7 @@ class Query(graphene.ObjectType):
         import os
         import random
         import string
+        import requests
         from sqlalchemy.exc import IntegrityError
         from lingvodoc.exceptions import CommonException
         from lingvodoc.scripts.convert_rules import praat_to_elan
@@ -1172,9 +1173,10 @@ class Query(graphene.ObjectType):
             entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
             if not entity:
                 raise KeyError("No such file")
-            content = entity.content
-            if not content:
-                raise ResponseError(message="Cannot access file")
+            resp = requests.get(entity.content)
+            if not resp:
+                raise ResponseError("Cannot access file")
+            content = resp.content
             try:
                 n = 10
                 filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
@@ -1189,8 +1191,8 @@ class Query(graphene.ObjectType):
                 if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
                     if 'data_type' in entity.additional_metadata :
                         if 'praat' in entity.additional_metadata['data_type']:
-                            content = praat_to_elan(filename)
-                            if sys.getsizeof(content) / (10 * 1024 * 1024.0) < 1:
+                            elan_content = praat_to_elan(filename)
+                            if sys.getsizeof(elan_content) / (10 * 1024 * 1024.0) < 1:
                                 # filename2 = 'abc.xml'
                                 # f2 = open(filename2, 'w')
                                 # try:
@@ -1203,7 +1205,7 @@ class Query(graphene.ObjectType):
                                 # finally:
                                 #     pass
                                 #     os.remove(filename2)
-                                return content
+                                return elan_content
                         elif 'elan' in entity.additional_metadata['data_type']:
                             with open(filename, 'r') as f:
                                 return f.read()
@@ -1213,7 +1215,7 @@ class Query(graphene.ObjectType):
                     raise KeyError("Not allowed convert option")
                 raise KeyError('File too big')
             except Exception as e:
-                raise ResponseError(message=str(e))
+                raise ResponseError(message=e)
             finally:
                 os.remove(filename)
                 pass
