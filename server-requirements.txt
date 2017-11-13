@@ -46,3 +46,5 @@ pydub==0.16.5
 xlsxwriter==0.9.6
 xlrd==1.0.0
 xlwt==1.1.2
+graphene==2.0.dev20170802065539
+iso8601==0.1.11
