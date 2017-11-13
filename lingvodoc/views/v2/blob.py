@@ -9,11 +9,10 @@ from lingvodoc.models import (
     UserBlobs,
     ObjectTOC
 )
-from lingvodoc.utils.creation import create_object
-from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.utils import (
+    create_object,
     get_user_by_client_id,
-
+    check_client_id
 )
 from lingvodoc.scripts.convert_rules import rules
 

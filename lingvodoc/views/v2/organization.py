@@ -32,7 +32,7 @@ from sqlalchemy.exc import IntegrityError
 import logging
 
 log = logging.getLogger(__name__)
-from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.views.v2.utils import add_user_to_group
 
 
 @view_config(route_name='organizations', renderer='templates/organizations.pt', request_method='GET')

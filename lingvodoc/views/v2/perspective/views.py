@@ -63,14 +63,15 @@ from lingvodoc.models import (
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
+    create_object,
     get_user_by_client_id,
     user_counter,
     view_perspective_from_object,
-    view_field_from_object
+    view_field_from_object,
+    check_client_id
 )
-from lingvodoc.utils.creation import create_object, add_user_to_group
-from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.utils import (
+    add_user_to_group,
     fulfill_permissions_on_perspectives,
     FakeObject
 )
