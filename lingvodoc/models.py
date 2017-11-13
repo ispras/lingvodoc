@@ -932,35 +932,34 @@ class LexicalEntry(CompositeIdMixin,
                entity.parent_client_id = {0}.client_id
                AND entity.parent_object_id = {0}.object_id
         )
-
         SELECT
-          cte_expr.*,
-          publishingentity.*,
-          lexicalentry.*,
-          dictionaryperspective.*,
-          dictionary.*
+          cte_expr.client_id,
+          cte_expr.object_id,
+          cte_expr.parent_client_id,
+          cte_expr.parent_object_id,
+          cte_expr.self_client_id,
+          cte_expr.self_object_id,
+          cte_expr.link_client_id,
+          cte_expr.link_object_id,
+          cte_expr.field_client_id,
+          cte_expr.field_object_id,
+          cte_expr.locale_id,
+          cte_expr.marked_for_deletion,
+          cte_expr.content,
+          cte_expr.additional_metadata,
+          cte_expr.created_at,
+          publishingentity.*
         FROM cte_expr
           LEFT JOIN publishingentity
             ON publishingentity.client_id = cte_expr.client_id AND publishingentity.object_id = cte_expr.object_id
-          LEFT JOIN lexicalentry
-            ON lexicalentry.client_id = cte_expr.parent_client_id AND lexicalentry.object_id = cte_expr.parent_object_id
-          LEFT JOIN dictionaryperspective
-            ON dictionaryperspective.client_id = lexicalentry.parent_client_id AND dictionaryperspective.object_id = lexicalentry.parent_object_id
-          LEFT JOIN dictionary
-            ON dictionary.client_id = dictionaryperspective.parent_client_id AND dictionary.object_id = dictionaryperspective.parent_object_id
           {1}
         ORDER BY cte_expr.traversal_lexical_order;
         '''.format(temp_table_name, pub_filter))
 
-        entries = DBSession.query(Entity, PublishingEntity, LexicalEntry, DictionaryPerspective, Dictionary)\
-            .from_statement(statement).options(joinedload('publishingentity'))
-
-        # if and_clause is not None:
-        #     entries = entries.filter(and_clause)
-
-        entries = entries.yield_per(100)
+        entries = DBSession.query(Entity, PublishingEntity).from_statement(statement) .options(joinedload('publishingentity')).yield_per(100)
 
         return entries
+
 
 
 class Entity(CompositeIdMixin,
