@@ -878,7 +878,7 @@ class LexicalEntry(CompositeIdMixin,
         return lexical_list
 
     @classmethod
-    def graphene_track_multiple(cls, lexs, publish=None, accept=None, delete=False, and_clause=None):
+    def graphene_track_multiple(cls, lexs, publish=None, accept=None, delete=False):
         filtered_lexes = []
 
         deleted_persps = DictionaryPerspective.get_deleted()
@@ -952,7 +952,7 @@ class LexicalEntry(CompositeIdMixin,
         ORDER BY cte_expr.traversal_lexical_order;
         '''.format(temp_table_name, pub_filter))
 
-        entries = DBSession.query(Entity, PublishingEntity, LexicalEntry, DictionaryPerspective, Dictionary).filter(and_clause)\
+        entries = DBSession.query(Entity, PublishingEntity, LexicalEntry, DictionaryPerspective, Dictionary)\
             .from_statement(statement).options(joinedload('publishingentity'))
 
         # if and_clause is not None:
