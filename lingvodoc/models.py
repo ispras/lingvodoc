@@ -65,7 +65,6 @@ import logging
 import uuid
 
 from time import sleep
-from sqlalchemy.orm import joinedload
 
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
@@ -877,91 +876,6 @@ class LexicalEntry(CompositeIdMixin,
 
         return lexical_list
 
-    @classmethod
-    def graphene_track_multiple(cls, lexs, publish=None, accept=None, delete=False, and_clause=None):
-        filtered_lexes = []
-
-        deleted_persps = DictionaryPerspective.get_deleted()
-        for i in lexs:
-            if (i[2], i[3]) not in deleted_persps:
-                filtered_lexes.append(i)
-        ls = []
-
-        for i, x in enumerate(filtered_lexes):
-            ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
-
-        if not ls:
-            return []
-
-        pub_filter = ""
-
-        if publish is not None or accept is not None or delete is not None:
-            where_cond = list()
-            if accept:
-                where_cond.append("publishingentity.accepted = True")
-            if accept is False:
-                where_cond.append("publishingentity.accepted = False")
-            if publish:
-                where_cond.append("publishingentity.published = True")
-            if publish is False:
-                where_cond.append("publishingentity.published = False")
-            if delete:
-                where_cond.append("cte_expr.marked_for_deletion = True")
-            if delete is False:
-                where_cond.append("cte_expr.marked_for_deletion = False")
-            where_cond = ["WHERE", " AND ".join(where_cond)]
-            pub_filter = " ".join(where_cond)
-
-        temp_table_name = 'lexical_entries_temp_table'
-
-        DBSession.execute(
-            '''create TEMPORARY TABLE %s (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
-
-        DBSession.execute(
-            '''insert into %s (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''' % temp_table_name,
-            ls)
-
-        statement = text('''
-        WITH cte_expr AS
-        (SELECT
-           entity.*,
-           {0}.traversal_lexical_order AS traversal_lexical_order
-         FROM entity
-           INNER JOIN {0}
-             ON
-               entity.parent_client_id = {0}.client_id
-               AND entity.parent_object_id = {0}.object_id
-        )
-
-        SELECT
-          cte_expr.*,
-          publishingentity.*,
-          lexicalentry.*,
-          dictionaryperspective.*,
-          dictionary.*
-        FROM cte_expr
-          LEFT JOIN publishingentity
-            ON publishingentity.client_id = cte_expr.client_id AND publishingentity.object_id = cte_expr.object_id
-          LEFT JOIN lexicalentry
-            ON lexicalentry.client_id = cte_expr.parent_client_id AND lexicalentry.object_id = cte_expr.parent_object_id
-          LEFT JOIN dictionaryperspective
-            ON dictionaryperspective.client_id = lexicalentry.parent_client_id AND dictionaryperspective.object_id = lexicalentry.parent_object_id
-          LEFT JOIN dictionary
-            ON dictionary.client_id = dictionaryperspective.parent_client_id AND dictionary.object_id = dictionaryperspective.parent_object_id
-          {1}
-        ORDER BY cte_expr.traversal_lexical_order;
-        '''.format(temp_table_name, pub_filter))
-
-        entries = DBSession.query(Entity, PublishingEntity, LexicalEntry, DictionaryPerspective, Dictionary).filter(and_clause)\
-            .from_statement(statement).options(joinedload('publishingentity'))
-
-        # if and_clause is not None:
-        #     entries = entries.filter(and_clause)
-
-        entries = entries.yield_per(100)
-
-        return entries
-
 
 class Entity(CompositeIdMixin,
              Base,
@@ -986,10 +900,6 @@ class Entity(CompositeIdMixin,
 
     def track(self, publish):
         return entity_content(self, publish, False)
-
-    @classmethod
-    def from_row(cls, **attr_dict):
-        return cls(**attr_dict)
 
 
 class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):

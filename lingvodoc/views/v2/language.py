@@ -29,8 +29,7 @@ from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 
 from sqlalchemy.exc import IntegrityError
-from lingvodoc.utils.creation import add_user_to_group
-from lingvodoc.utils.verification import check_client_id
+from lingvodoc.views.v2.utils import add_user_to_group, check_client_id
 from lingvodoc.views.v2.delete import real_delete_language
 
 

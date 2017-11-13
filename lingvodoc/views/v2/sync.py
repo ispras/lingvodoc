@@ -57,7 +57,7 @@ import json
 import base64
 import os
 from lingvodoc.models import categories
-from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.views.v2.utils import add_user_to_group
 import datetime
 import requests
 from sqlalchemy.dialects.postgresql import insert
