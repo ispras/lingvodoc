@@ -1156,7 +1156,11 @@ class Query(graphene.ObjectType):
         from lingvodoc.scripts.convert_rules import praat_to_elan
 
         # TODO: permission check
-
+        """
+        query myQuery {
+            convert_markup(id: [742, 5494] )
+        }
+        """
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
