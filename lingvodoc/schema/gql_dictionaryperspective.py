@@ -260,7 +260,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
                     # used in AdditionalMetadata interface (gql_holders.py) and sets metadata dictionary
 
-                    ent["additional_metadata_string"] = ent["additional_metadata"]
+                    #ent["additional_metadata_string"] = ent["additional_metadata"]
                     del ent["additional_metadata"]
                 tmp_id = [ent['client_id'], ent['object_id']]
                 del ent["client_id"]
