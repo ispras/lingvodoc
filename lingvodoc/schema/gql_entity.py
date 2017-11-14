@@ -245,9 +245,8 @@ class CreateEntity(graphene.Mutation):
         filename = args.get('filename')
         real_location = None
         url = None
-        blob = info.context.request.POST.pop("variables.content")
-        content= args.get("content")
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+            blob = info.context.request.POST.pop("variables.content")
             filename=blob.filename
             content = blob.file.read()
             #filename=
@@ -282,6 +281,7 @@ class CreateEntity(graphene.Mutation):
             else:
                 raise ResponseError(message="The field is of link type. You should provide client_id and object id in the content")
         else:
+            content = args.get("content")
             dbentity.content = content
 
             # if args.get('is_translatable', None): # TODO: fix it
