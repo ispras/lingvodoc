@@ -162,12 +162,14 @@ from lingvodoc.utils.search import translation_gist_search
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
+#Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
 
 class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean(),
                                  available=graphene.Boolean(),
-                                 my_dictionaries=graphene.Boolean())
+                                 my_dictionaries=graphene.Boolean(),
+                                 category=graphene.Int())
     dictionary = graphene.Field(Dictionary, id=LingvodocID())
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
@@ -309,7 +311,7 @@ class Query(graphene.ObjectType):
             response.append(gql_tr_gist)
         return response
 
-    def resolve_dictionaries(self, info, published=None, available=None, my_dictionaries=None):
+    def resolve_dictionaries(self, info, published=None, available=None, my_dictionaries=None, category=None):
         """
         example:
 
@@ -354,6 +356,11 @@ class Query(graphene.ObjectType):
             if not dbdicts:
                 dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
 
+        if category is not None:
+            if category:
+                dbdicts = dbdicts.filter(Dictionary.category == 1)
+            else:
+                dbdicts = dbdicts.filter(Dictionary.category == 0)
         # available
         if available:
             clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
