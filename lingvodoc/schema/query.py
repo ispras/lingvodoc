@@ -356,10 +356,10 @@ class Query(graphene.ObjectType):
                 dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
 
         if category is not None:
-            if category:
-                dbdicts = dbdicts.filter(Dictionary.category == 1)
-            else:
-                dbdicts = dbdicts.filter(Dictionary.category == 0)
+            if category == 1:
+                dbdicts = dbdicts.filter(dbDictionary.category == 1)
+            elif category == 0:
+                dbdicts = dbdicts.filter(dbDictionary.category == 0)
         if mode is not None:
             if mode:
                 # available
@@ -404,7 +404,7 @@ class Query(graphene.ObjectType):
                     dbdicts = [o for o in dbdicts if (o.client_id, o.object_id) in dictstemp]
 
         dictionaries_list = list()
-        for dbdict in dbdicts:
+        for dbdict in dbdicts.all():
             gql_dict = Dictionary(id=[dbdict.client_id, dbdict.object_id])
             gql_dict.dbObject = dbdict
             dictionaries_list.append(gql_dict)
