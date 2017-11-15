@@ -331,7 +331,6 @@ class Query(graphene.ObjectType):
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         dbdicts = None
         if published:
-
             db_published_gist = translation_gist_search('Published')
             state_translation_gist_client_id = db_published_gist.client_id
             state_translation_gist_object_id = db_published_gist.object_id
@@ -356,9 +355,9 @@ class Query(graphene.ObjectType):
                 dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
 
         if category is not None:
-            if category == 1:
+            if category:
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
-            elif category == 0:
+            else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
         if mode is not None:
             if mode:
@@ -404,7 +403,7 @@ class Query(graphene.ObjectType):
                     dbdicts = [o for o in dbdicts if (o.client_id, o.object_id) in dictstemp]
 
         dictionaries_list = list()
-        for dbdict in dbdicts.all():
+        for dbdict in dbdicts:
             gql_dict = Dictionary(id=[dbdict.client_id, dbdict.object_id])
             gql_dict.dbObject = dbdict
             dictionaries_list.append(gql_dict)
@@ -503,7 +502,7 @@ class Query(graphene.ObjectType):
     def resolve_user(self, info, id):
         return User(id=id)
 
-    def resolve_users(self, info, search):
+    def resolve_users(self, info, search=None):
         """
         example:
 
