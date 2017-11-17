@@ -144,8 +144,8 @@ def move_language(language, parent_id, previous_sibling):
             raise ResponseError(message='no such previous sibling')
         if [previous.parent_client_id, previous.parent_object_id] != parent_id:
             raise ResponseError(message='no such pair of this parent/previous_sibling')
-    ids = [language.client_id, language.object_id]
-    ids = str(ids)
+    lang_ids = [language.client_id, language.object_id]
+    ids = str(lang_ids)
     older_siblings = DBSession.query(dbLanguage).filter(dbLanguage.parent_client_id == language.parent_client_id,
                                        dbLanguage.parent_object_id == language.parent_object_id,
                                        dbLanguage.additional_metadata['younger_siblings'].contains(
@@ -153,6 +153,13 @@ def move_language(language, parent_id, previous_sibling):
     for lang in older_siblings:
         lang.additional_metadata['younger_siblings'].remove([dbLanguage.client_id, dbLanguage.object_id])
         flag_modified(lang, 'additional_metadata')
+
+    parent = DBSession.query(dbLanguage).filter(dbLanguage.client_id==parent_id[0], dbLanguage.client_id==parent_id[0]).first()
+    while parent is not None:
+        tmp_ids = [parent.client_id, parent.object_id]
+        if tmp_ids == lang_ids:
+            raise ResponseError(message='cannot cycle parent-child in tree')
+        parent = parent.parent
     language.parent_client_id = parent_id[0]
     language.parent_object_id = parent_id[1]
     older_siblings = DBSession.query(dbLanguage).filter(dbLanguage.parent_client_id == language.parent_client_id,
@@ -163,7 +170,6 @@ def move_language(language, parent_id, previous_sibling):
         older_siblings = older_siblings.filter(dbLanguage.additional_metadata['younger_siblings'].contains(
                                                [ids]))
     older_siblings = older_siblings.all()
-    flag_modified(language, 'additional_metadata')
     if previous:
         new_meta = list(previous.additional_metadata['younger_siblings'])
     else:
@@ -173,6 +179,8 @@ def move_language(language, parent_id, previous_sibling):
         index = siblings.index(previous_sibling)
         lang.additional_metadata['younger_siblings'].insert(index, [dbLanguage.client_id, dbLanguage.object_id])
         flag_modified(lang, 'additional_metadata')
+    language.additional_metadata = new_meta
+    flag_modified(language, 'additional_metadata')
 
 
 
