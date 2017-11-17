@@ -1,9 +1,9 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
-import com.greencatsoft.angularjs.core.{Event, ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.injectable
-import org.scalajs.dom._
+import org.scalajs.dom.{console, FormData}
 import org.scalajs.dom.raw.{HTMLButtonElement, HTMLInputElement}
 import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Row, Value}
@@ -42,6 +42,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
                                     instance: ModalInstance[Seq[Entity]],
                                     val backend: BackendService,
                                     timeout: Timeout,
+                                    val rootScope: RootScope,
                                     val exceptionHandler: ExceptionHandler,
                                     params: js.Dictionary[js.Function0[js.Any]])
   extends BaseModalController(scope, modal, instance, timeout, params)
@@ -272,13 +273,12 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
 
   @JSExport
-  override def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]): Unit = {
-
+  override def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, file: org.scalajs.dom.raw.File, parent: UndefOr[Value]): Unit = {
 
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
+    entity.content = Some(Right(FileContent(file.name, file.`type`, "")))
 
     // self
     parent map {
@@ -287,15 +287,29 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
         entity.selfObjectId = Some(parentValue.getEntity.objectId)
     }
 
-    backend.createEntity(dictionaryId, linkPerspectiveId, entryId, entity) onComplete {
+    import scala.scalajs.js.JSConverters._
+    import upickle.default._
+    import ru.ispras.lingvodoc.frontend.extras.facades.File
+
+    val entityString = write(entity)
+    val entityBlob = new org.scalajs.dom.raw.Blob((entityString::Nil).toJSArray.asInstanceOf[js.Array[js.Any]])
+    val entityFile = new File((entityBlob::Nil).toJSArray, "entity.json")
+
+    val formData = new FormData()
+    formData.append("entity", entityFile)
+    formData.append("content", file)
+
+    backend.createEntity(dictionaryId, linkPerspectiveId, entryId, formData) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, linkPerspectiveId, entryId, entityId) onComplete {
           case Success(newEntity) =>
 
-            parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
-              case None => scope.dictionaryTable.addEntity(entry, newEntity)
-            }
+            rootScope.$apply(() => {
+              parent.toOption match {
+                case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
+                case None => scope.dictionaryTable.addEntity(entry, newEntity)
+              }
+            })
 
             disableInput(inputId)
 

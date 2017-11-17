@@ -33,7 +33,7 @@ object LexicalEntriesType extends Enumeration {
 
 
 @injectable("BackendService")
-class BackendService($http: HttpService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Service with AngularExecutionContextProvider {
+class BackendService($http: HttpService, val timeout: Timeout, rootScope: RootScope, val exceptionHandler: ExceptionHandler) extends Service with AngularExecutionContextProvider {
 
   // TODO: allow user to specify different baseUrl
   private val baseUrl = ""
@@ -1036,6 +1036,26 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     $http.post[js.Dynamic](getMethodUrl(url), write(entity)) onComplete {
       case Success(response) => p.success(read[CompositeId](js.JSON.stringify(response)))
       case Failure(e) => p.failure(BackendException("Failed to create entity", e))
+    }
+    p.future
+  }
+
+  def createEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, formData: FormData): Future[CompositeId] = {
+
+    val p = Promise[CompositeId]()
+    val inputData = InputData.formdata2ajax(formData)
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) +
+      "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) + "/entity"
+
+    dom.ext.Ajax.post(getMethodUrl(url), inputData) onComplete {
+      case Success(response) =>
+        p.success(read[CompositeId](response.responseText))
+      case Failure(e) =>
+        p.failure(BackendException("Failed to create entity", e))
     }
     p.future
   }
@@ -2063,6 +2083,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   def phonology(
     perspectiveId: CompositeId,
     group_by_description: Boolean,
+    maybe_translation_field: Option[CompositeId],
     only_first_translation: Boolean,
     vowel_selection: Boolean,
     maybe_tier_list: Option[Seq[String]]):
@@ -2071,11 +2092,16 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     val p = Promise[Unit]
 
     val request =
-
       JSON.stringify(js.Dynamic.literal(
+
         "perspective_client_id" -> perspectiveId.clientId,
         "perspective_object_id" -> perspectiveId.objectId,
         "group_by_description" -> group_by_description,
+
+        "maybe_translation_field" -> (maybe_translation_field
+          map { field_id => js.Array(field_id.clientId, field_id.objectId) }
+          getOrElse(null)),
+
         "only_first_translation" -> only_first_translation,
         "vowel_selection" -> vowel_selection,
 
@@ -2766,7 +2792,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
 
 @injectable("BackendService")
-class BackendServiceFactory($http: HttpService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Factory[BackendService] {
-  override def apply(): BackendService = new BackendService($http, timeout, exceptionHandler)
+class BackendServiceFactory($http: HttpService, val timeout: Timeout, rootScope: RootScope, val exceptionHandler: ExceptionHandler) extends Factory[BackendService] {
+  override def apply(): BackendService = new BackendService($http, timeout, rootScope, exceptionHandler)
 }
 

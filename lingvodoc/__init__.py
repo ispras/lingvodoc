@@ -199,8 +199,6 @@ def configure_routes(config):
     # Gets/puts info about dictionary (name/additional authors/etc)
     config.add_route(name='dictionary', pattern='/dictionary/{client_id}/{object_id}',
                      factory='lingvodoc.models.DictionaryAcl')  # tested
-    config.add_route(name='dictionary_copy', pattern='/dictionary/{client_id}/{object_id}/copy',
-                     factory='lingvodoc.models.DictionaryAcl')  # not done yet
 
     config.add_route(name='dictionary_info',
                      pattern='/dictionary/{client_id}/{object_id}/info',
@@ -793,6 +791,9 @@ def configure_routes(config):
 
     # Compiles archive of sound recordings and corresponding markups for a specified perspective.
     config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
+
+    # Creates copy of a specified dictionary for a specified user.
+    config.add_route(name = 'dictionary_copy', pattern = '/dictionary_copy')
 
 
 def main(global_config, **settings):

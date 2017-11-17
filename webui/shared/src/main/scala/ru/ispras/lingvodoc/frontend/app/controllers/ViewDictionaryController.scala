@@ -58,8 +58,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope,
   protected[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   protected[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
-  private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
-  private[this] var fields: Seq[Field] = Seq[Field]()
+  protected[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
+  protected[this] var fields: Seq[Field] = Seq[Field]()
   private[this] var perspectiveRoles: Option[PerspectiveRoles] = Option.empty[PerspectiveRoles]
 
 
