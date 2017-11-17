@@ -262,54 +262,128 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
 from lingvodoc.models import UserRequest as dbUserRequest
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
-    # Hello, testing, my old friend
-    # I've come to use you once again
-    simpler_info = lambda x: [i['info']['content'] for i in x]
-    persp_to_dict = lambda x: [
-        p.additional_metadata['location']['content'] for p in x]
-    persps = DBSession.query(DictionaryPerspective).filter().all()
-    dicts = []
-    for persp in persps:
-        if not persp.additional_metadata:
-            continue
-        parent = persp.parent
-        if not parent.additional_metadata:
-            parent.additional_metadata = dict()
-        if not parent.additional_metadata.get('location') and persp.additional_metadata.get('location'):
-            parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
-        if persp.additional_metadata.get('location'):
-            del persp.additional_metadata['location']
-        if not parent.additional_metadata.get('authors') and persp.additional_metadata.get('authors'):
-            parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
-        if persp.additional_metadata.get('authors'):
-            del persp.additional_metadata['authors']
-        if persp.additional_metadata.get('info'):
-            if not parent.additional_metadata.get('blobs'):
-                parent.additional_metadata['blobs'] = list()
-            for item in simpler_info(persp.additional_metadata['info']['content']):
-                if item not in parent.additional_metadata['blobs']:
-                    parent.additional_metadata['blobs'].append(item)
-            del persp.additional_metadata['info']
-        if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
-            persp.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
-            del persp.additional_metadata['origin_client_id']
-            del persp.additional_metadata['origin_object_id']
-        flag_modified(parent, 'additional_metadata')
-        flag_modified(persp, 'additional_metadata')
-    # and again
-    add_dict_to_grant = DBSession.query(dbUserRequest).filter_by(type="add_dict_to_grant").all()
-    for req in add_dict_to_grant:
-        subject = req.subject
-        grant_id = subject["grant_id"]
-        if "client_id" in subject and "object_id" in subject:
-            client_id = subject["client_id"]
-            object_id = subject["object_id"]
-            dictionary_id = [client_id, object_id]
-            req.subject = {
-                "grant_id": grant_id,
-                "dictionary_id": dictionary_id
-               }
+    # # Hello, testing, my old friend
+    # # I've come to use you once again
+    # simpler_info = lambda x: [i['info']['content'] for i in x]
+    # persp_to_dict = lambda x: [
+    #     p.additional_metadata['location']['content'] for p in x]
+    # persps = DBSession.query(DictionaryPerspective).filter().all()
+    # dicts = []
+    # for persp in persps:
+    #     if not persp.additional_metadata:
+    #         continue
+    #     parent = persp.parent
+    #     if not parent.additional_metadata:
+    #         parent.additional_metadata = dict()
+    #     if not parent.additional_metadata.get('location') and persp.additional_metadata.get('location'):
+    #         parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
+    #     if persp.additional_metadata.get('location'):
+    #         del persp.additional_metadata['location']
+    #     if not parent.additional_metadata.get('authors') and persp.additional_metadata.get('authors'):
+    #         parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
+    #     if persp.additional_metadata.get('authors'):
+    #         del persp.additional_metadata['authors']
+    #     if persp.additional_metadata.get('info'):
+    #         if not parent.additional_metadata.get('blobs'):
+    #             parent.additional_metadata['blobs'] = list()
+    #         for item in simpler_info(persp.additional_metadata['info']['content']):
+    #             if item not in parent.additional_metadata['blobs']:
+    #                 parent.additional_metadata['blobs'].append(item)
+    #         del persp.additional_metadata['info']
+    #     if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
+    #         persp.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
+    #         del persp.additional_metadata['origin_client_id']
+    #         del persp.additional_metadata['origin_object_id']
+    #     flag_modified(parent, 'additional_metadata')
+    #     flag_modified(persp, 'additional_metadata')
+    # # and again
+    # add_dict_to_grant = DBSession.query(dbUserRequest).filter_by(type="add_dict_to_grant").all()
+    # for req in add_dict_to_grant:
+    #     subject = req.subject
+    #     grant_id = subject["grant_id"]
+    #     if "client_id" in subject and "object_id" in subject:
+    #         client_id = subject["client_id"]
+    #         object_id = subject["object_id"]
+    #         dictionary_id = [client_id, object_id]
+    #         req.subject = {
+    #             "grant_id": grant_id,
+    #             "dictionary_id": dictionary_id
+    #            }
+
+    # create tree from langs
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False).order_by(Language.parent_client_id, Language.parent_object_id).all()
+    prev_langs = list()
+    prev_parent = (None, None)
+    for lang in langs:
+        parent = (lang.parent_client_id, lang.parent_object_id)
+        if parent != prev_parent:
+            prev_parent = parent
+            prev_langs = list()
+        if not lang.additional_metadata:
+            lang.additional_metadata = dict()
+        lang.additional_metadata['younger_siblings'] = list(prev_langs)
+        if 'yonger_siblings' in lang.additional_metadata:
+            del lang.additional_metadata['yonger_siblings']
+        prev_langs.append((lang.client_id, lang.object_id))
+        flag_modified(lang, 'additional_metadata')
     return "Success"
+
+
+def recursive_sort(langs, visited, stack, result):
+    for lang in langs:
+        parent = (lang.parent_client_id, lang.parent_object_id)
+        if parent == (None, None):
+            parent = None
+        previous = None
+        siblings = None
+        if 'younger_siblings' in lang.additional_metadata:
+            siblings = lang.additional_metadata['younger_siblings']
+        if siblings:
+            previous = siblings[len(siblings) - 1]
+            previous = tuple(previous)
+        ids = (lang.client_id, lang.object_id)
+        if (not parent or parent in visited) and (not previous or previous in visited) and ids not in visited:
+            level = 0
+            if previous:
+                subres = [(res[1], res[2]) for res in result]
+                index = subres.index(previous)
+                level = result[index][0]
+                limit = len(result)
+                while index < limit:
+                    if result[index][0] < level:
+                        index = index - 1
+                        break
+                    index += 1
+
+                result.insert(index+1, [level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+
+            elif parent and previous is None:
+                subres = [(res[1], res[2]) for res in result]
+                index = subres.index(parent)
+                level = result[index][0] + 1
+                result.insert(index+1, [level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+            else:
+                result.append([level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+
+            visited.add(ids)
+
+            if lang in stack:
+                stack.remove(lang)
+
+            recursive_sort(list(stack), visited, stack, result)
+        else:
+            stack.add(lang)
+    return
+
+
+@view_config(route_name='testing_langs', renderer='json', permission='admin')
+def testing_langs(request):
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False).order_by(Language.parent_client_id, Language.parent_object_id, Language.additional_metadata['younger_siblings']).all()
+    visited = set()
+    stack = set()
+    result = list()
+    recursive_sort(langs, visited, stack, result)
+    return result
 
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')

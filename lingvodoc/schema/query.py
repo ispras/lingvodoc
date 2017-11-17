@@ -102,7 +102,8 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     ObjectVal,
     client_id_check,
-    LingvodocID
+    LingvodocID,
+    LevelAndId
 )
 
 from lingvodoc.schema.gql_userrequest import (
@@ -158,7 +159,7 @@ from sqlalchemy.sql.functions import coalesce
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import phonology as utils_phonology
-from lingvodoc.utils.search import translation_gist_search
+from lingvodoc.utils.search import translation_gist_search, recursive_sort
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -231,6 +232,19 @@ class Query(graphene.ObjectType):
     search_strings=graphene.List(graphene.List(ObjectVal))
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
+    language_tree = graphene.List(LevelAndId)
+
+    def resolve_language_tree(self, info):
+        langs = DBSession.query(dbLanguage).filter_by(marked_for_deletion=False).order_by(dbLanguage.parent_client_id,
+                                                                                        dbLanguage.parent_object_id,
+                                                                                        dbLanguage.additional_metadata[
+                                                                                            'younger_siblings']).all()
+        visited = set()
+        stack = set()
+        result = list()
+        recursive_sort(langs, visited, stack, result)
+        result = [LevelAndId(level=i[0], language_id=[i[1], i[2]]) for i in result]
+        return result
 
     def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, publish=None, accept=True):
         return AdvancedSearch().constructor(languages, tag_list, category, adopted, etymology, search_strings, publish, accept)
