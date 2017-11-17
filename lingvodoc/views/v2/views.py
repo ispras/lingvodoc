@@ -309,7 +309,81 @@ def testing(request):
                 "grant_id": grant_id,
                 "dictionary_id": dictionary_id
                }
+
+    # create tree from langs
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False).order_by(Language.parent_client_id, Language.parent_object_id).all()
+    prev_langs = list()
+    prev_parent = (None, None)
+    for lang in langs:
+        parent = (lang.parent_client_id, lang.parent_object_id)
+        if parent != prev_parent:
+            prev_parent = parent
+            prev_langs = list()
+        if not lang.additional_metadata:
+            lang.additional_metadata = dict()
+        lang.additional_metadata['younger_siblings'] = list(prev_langs)
+        if 'yonger_siblings' in lang.additional_metadata:
+            del lang.additional_metadata['yonger_siblings']
+        prev_langs.append((lang.client_id, lang.object_id))
+        flag_modified(lang, 'additional_metadata')
     return "Success"
+
+
+def recursive_sort(langs, visited, stack, result):
+    for lang in langs:
+        parent = (lang.parent_client_id, lang.parent_object_id)
+        if parent == (None, None):
+            parent = None
+        previous = None
+        siblings = None
+        if 'younger_siblings' in lang.additional_metadata:
+            siblings = lang.additional_metadata['younger_siblings']
+        if siblings:
+            previous = siblings[len(siblings) - 1]
+            previous = tuple(previous)
+        ids = (lang.client_id, lang.object_id)
+        if (not parent or parent in visited) and (not previous or previous in visited) and ids not in visited:
+            level = 0
+            if previous:
+                subres = [(res[1], res[2]) for res in result]
+                index = subres.index(previous)
+                level = result[index][0]
+                limit = len(result)
+                while index < limit:
+                    if result[index][0] < level:
+                        index = index - 1
+                        break
+                    index += 1
+
+                result.insert(index+1, [level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+
+            elif parent and previous is None:
+                subres = [(res[1], res[2]) for res in result]
+                index = subres.index(parent)
+                level = result[index][0] + 1
+                result.insert(index+1, [level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+            else:
+                result.append([level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+
+            visited.add(ids)
+
+            if lang in stack:
+                stack.remove(lang)
+
+            recursive_sort(list(stack), visited, stack, result)
+        else:
+            stack.add(lang)
+    return
+
+
+@view_config(route_name='testing_langs', renderer='json', permission='admin')
+def testing_langs(request):
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False).order_by(Language.parent_client_id, Language.parent_object_id, Language.additional_metadata['younger_siblings']).all()
+    visited = set()
+    stack = set()
+    result = list()
+    recursive_sort(langs, visited, stack, result)
+    return result
 
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
