@@ -52,15 +52,17 @@ def recursive_sort(langs, visited, stack, result):
                         break
                     index += 1
 
-                result.insert(index+1, [level, lang.client_id, lang.object_id])
+                result.insert(index + 1,
+                              [level, lang.client_id, lang.object_id, lang])
 
             elif parent and previous is None:
                 subres = [(res[1], res[2]) for res in result]
                 index = subres.index(parent)
                 level = result[index][0] + 1
-                result.insert(index+1, [level, lang.client_id, lang.object_id])
+                result.insert(index + 1,
+                              [level, lang.client_id, lang.object_id, lang])
             else:
-                result.append([level, lang.client_id, lang.object_id])
+                result.append([level, lang.client_id, lang.object_id, lang])
 
             visited.add(ids)
 
@@ -71,6 +73,3 @@ def recursive_sort(langs, visited, stack, result):
         else:
             stack.add(lang)
     return
-
-
-

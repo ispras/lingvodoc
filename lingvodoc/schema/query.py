@@ -103,7 +103,7 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     client_id_check,
     LingvodocID,
-    LevelAndId
+    # LevelAndId
 )
 
 from lingvodoc.schema.gql_userrequest import (
@@ -233,7 +233,7 @@ class Query(graphene.ObjectType):
     search_strings=graphene.List(graphene.List(ObjectVal))
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
-    language_tree = graphene.List(LevelAndId)
+    language_tree = graphene.List(Language)
 
     def resolve_language_tree(self, info):
         langs = DBSession.query(dbLanguage).filter_by(marked_for_deletion=False).order_by(dbLanguage.parent_client_id,
@@ -244,7 +244,13 @@ class Query(graphene.ObjectType):
         stack = set()
         result = list()
         recursive_sort(langs, visited, stack, result)
-        result = [LevelAndId(level=i[0], language_id=[i[1], i[2]]) for i in result]
+
+        def create_levelandid(item):
+            obj = Language(id=[item[1], item[2]])
+            obj.dbObject = item[3]
+            return obj
+
+        result = [create_levelandid(i) for i in result]
         return result
 
     def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, publish=None, accept=True):
