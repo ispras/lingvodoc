@@ -340,6 +340,8 @@ class Relationship(graphene.Interface):
 
     @fetch_object("parent_id")
     def resolve_parent_id(self, info):
+        if self.dbObject.parent_client_id is None or self.dbObject.parent_object_id is None:
+            return None
         return (self.dbObject.parent_client_id, self.dbObject.parent_object_id)
 
 class SelfHolder(graphene.Interface):
@@ -570,13 +572,13 @@ class Metadata(graphene.ObjectType):
     younger_siblings = graphene.List(LingvodocID)
 
 
-class LevelAndId(graphene.ObjectType):
-    """
-    graphene object that have all metadata attributes
-    if new attributes of metadata are added, then this class has to be updated
-    """
-    level = graphene.Int()
-    language_id = LingvodocID()
+# class LevelAndId(graphene.ObjectType):
+#     """
+#     graphene object that have all metadata attributes
+#     if new attributes of metadata are added, then this class has to be updated
+#     """
+#     parent_id = LingvodocID()
+#     language_id = LingvodocID()
 
 
 def get_value_by_key(db_object, additional_metadata_string, metadata_key):
