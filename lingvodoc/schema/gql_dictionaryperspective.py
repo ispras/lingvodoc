@@ -260,7 +260,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
                     # used in AdditionalMetadata interface (gql_holders.py) and sets metadata dictionary
 
-                    ent["additional_metadata_string"] = ent["additional_metadata"]
+                    #ent["additional_metadata_string"] = ent["additional_metadata"]
                     del ent["additional_metadata"]
                 tmp_id = [ent['client_id'], ent['object_id']]
                 del ent["client_id"]
@@ -338,10 +338,10 @@ class DictionaryPerspective(LingvodocObjectType):
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                    publish=publish, accept=accept, delete=delete)
 
-        def graphene_entity(entity, publishing):
-            ent = Entity(id = (entity.client_id, entity.object_id))
-            ent.dbObject = entity
-            ent.publishingentity = publishing
+        def graphene_entity(cur_entity, cur_publishing):
+            ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
+            ent.dbObject = cur_entity
+            ent.publishingentity = cur_publishing
             return ent
 
         entities = [graphene_entity(entity[0], entity[1]) for entity in entities]

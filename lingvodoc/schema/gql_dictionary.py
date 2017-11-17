@@ -492,7 +492,12 @@ class UpdateDictionary(graphene.Mutation):
             raise ResponseError(message="Error: No such dictionary in the system")
 
         if parent_id:
-            db_dictionary.parent_client_id, db_dictionary.parent_object_id = parent_id
+            language_client_id, language_object_id = parent_id
+            parent = DBSession.query(dbLanguage).filter_by(client_id=language_client_id, object_id = language_object_id)
+            if not parent:
+                raise ResponseError(message="Error: No such language in the system")
+            db_dictionary.parent_client_id = language_client_id
+            db_dictionary.parent_object_id = language_object_id
         if translation_gist_id:
             db_dictionary.translation_gist_client_id, translation_gist_object_id = translation_gist_id
 

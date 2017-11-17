@@ -245,9 +245,8 @@ class CreateEntity(graphene.Mutation):
         filename = args.get('filename')
         real_location = None
         url = None
-        blob = info.context.request.POST.pop("variables.content")
-        content= args.get("content")
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+            blob = info.context.request.POST.pop("variables.content")
             filename=blob.filename
             content = blob.file.read()
             #filename=
@@ -282,6 +281,7 @@ class CreateEntity(graphene.Mutation):
             else:
                 raise ResponseError(message="The field is of link type. You should provide client_id and object id in the content")
         else:
+            content = args.get("content")
             dbentity.content = content
 
             # if args.get('is_translatable', None): # TODO: fix it
@@ -387,7 +387,7 @@ class UpdateEntity(graphene.Mutation):
             raise ResponseError(message="No such lexical_entry in the system")
         published = args.get('published')
         accepted = args.get('accepted')
-        if published and not dbpublishingentity.published:
+        if published is not None and not dbpublishingentity.published:
             info.context.acl_check('create', 'approve_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
@@ -395,16 +395,16 @@ class UpdateEntity(graphene.Mutation):
             info.context.acl_check('delete', 'approve_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
-        if accepted and not dbpublishingentity.accepted:
+        if accepted is not None and not dbpublishingentity.accepted:
             info.context.acl_check('create', 'lexical_entries_and_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
         if accepted is not None and not accepted and dbpublishingentity.accepted:
             raise ResponseError(message="Not allowed action")
 
-        if published:
+        if published is not None:
             dbpublishingentity.published = published
-        if accepted:
+        if accepted is not None:
             dbpublishingentity.accepted = accepted
 
         dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()

@@ -163,12 +163,13 @@ from lingvodoc.utils.search import translation_gist_search, recursive_sort
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
+#Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
 
 class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean(),
-                                 available=graphene.Boolean(),
-                                 my_dictionaries=graphene.Boolean())
+                                 mode=graphene.Int(),
+                                 category=graphene.Int())
     dictionary = graphene.Field(Dictionary, id=LingvodocID())
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
@@ -323,7 +324,7 @@ class Query(graphene.ObjectType):
             response.append(gql_tr_gist)
         return response
 
-    def resolve_dictionaries(self, info, published=None, available=None, my_dictionaries=None):
+    def resolve_dictionaries(self, info, published=None, mode=None, category=None):
         """
         example:
 
@@ -344,7 +345,6 @@ class Query(graphene.ObjectType):
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         dbdicts = None
         if published:
-
             db_published_gist = translation_gist_search('Published')
             state_translation_gist_client_id = db_published_gist.client_id
             state_translation_gist_object_id = db_published_gist.object_id
@@ -368,49 +368,54 @@ class Query(graphene.ObjectType):
             if not dbdicts:
                 dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
 
-        # available
-        if available:
-            clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
-            cli = [o.id for o in clients]
-            #response['clients'] = cli
-            dbdicts = dbdicts.filter(dbDictionary.client_id.in_(cli))
-        #  my_dictionaries
-        dbdicts = dbdicts.all()
-        if my_dictionaries:
+        if category is not None:
+            if category:
+                dbdicts = dbdicts.filter(dbDictionary.category == 1)
+            else:
+                dbdicts = dbdicts.filter(dbDictionary.category == 0)
+        if mode is not None:
+            if mode:
+                # available
+                clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
+                cli = [o.id for o in clients]
+                #response['clients'] = cli
+                dbdicts = dbdicts.filter(dbDictionary.client_id.in_(cli))
+            else:
+                #  my_dictionaries
+                dictstemp = []
+                group_tuples = []
+                isadmin = False
+                for group in user.groups: # todo: LOOK AT ME this is really bad. rewrite me from group point of view
+                    if group.parent.dictionary_default:
+                        if group.subject_override:
+                            isadmin = True
+                            break
+                        dcttmp = (group.subject_client_id, group.subject_object_id)
+                        if dcttmp not in dictstemp:
+                            dictstemp += [dcttmp]
+                    if group.parent.perspective_default:
+                        if group.subject_override:
+                            isadmin = True
+                            break
+                    group_tuples.append((group.subject_client_id, group.subject_object_id))
 
-            dictstemp = []
-            group_tuples = []
-            isadmin = False
-            for group in user.groups: # todo: LOOK AT ME this is really bad. rewrite me from group point of view
-                if group.parent.dictionary_default:
-                    if group.subject_override:
-                        isadmin = True
-                        break
-                    dcttmp = (group.subject_client_id, group.subject_object_id)
-                    if dcttmp not in dictstemp:
-                        dictstemp += [dcttmp]
-                if group.parent.perspective_default:
-                    if group.subject_override:
-                        isadmin = True
-                        break
-                group_tuples.append((group.subject_client_id, group.subject_object_id))
-
-            list_remainder = group_tuples[:1000]
-            group_tuples = group_tuples[1000:]
-            dicti = list()
-            while list_remainder:
-                dicti+= DBSession.query(dbDictionary) \
-                    .join(dbDictionaryPerspective) \
-                    .filter(tuple_(dbDictionaryPerspective.client_id, dbDictionaryPerspective.object_id).in_(list_remainder)) \
-                    .all()
                 list_remainder = group_tuples[:1000]
                 group_tuples = group_tuples[1000:]
-            for d in dicti:
-                dcttmp = (d.client_id, d.object_id)
-                if dcttmp not in dictstemp:
-                    dictstemp += [dcttmp]
-            if not isadmin:
-                dbdicts = [o for o in dbdicts if (o.client_id, o.object_id) in dictstemp]
+                dicti = list()
+                while list_remainder:
+                    dicti+= DBSession.query(dbDictionary) \
+                        .join(dbDictionaryPerspective) \
+                        .filter(tuple_(dbDictionaryPerspective.client_id, dbDictionaryPerspective.object_id).in_(list_remainder)) \
+                        .all()
+                    list_remainder = group_tuples[:1000]
+                    group_tuples = group_tuples[1000:]
+                for d in dicti:
+                    dcttmp = (d.client_id, d.object_id)
+                    if dcttmp not in dictstemp:
+                        dictstemp += [dcttmp]
+                if not isadmin:
+                    dbdicts = [o for o in dbdicts if (o.client_id, o.object_id) in dictstemp]
+
         dictionaries_list = list()
         for dbdict in dbdicts:
             gql_dict = Dictionary(id=[dbdict.client_id, dbdict.object_id])
@@ -511,7 +516,7 @@ class Query(graphene.ObjectType):
     def resolve_user(self, info, id):
         return User(id=id)
 
-    def resolve_users(self, info, search):
+    def resolve_users(self, info, search=None):
         """
         example:
 
