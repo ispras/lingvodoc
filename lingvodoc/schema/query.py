@@ -80,7 +80,8 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     CreateDictionaryPerspective,
     UpdateDictionaryPerspective,
     UpdatePerspectiveStatus,
-    UpdatePerspectiveRoles,
+    AddPerspectiveRoles,
+    DeletePerspectiveRoles,
     DeleteDictionaryPerspective,
 )
 from lingvodoc.schema.gql_user import (
@@ -1274,7 +1275,8 @@ class MyMutations(graphene.ObjectType):
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
     update_perspective_status = UpdatePerspectiveStatus.Field()
-    update_perspective_roles = UpdatePerspectiveRoles.Field()
+    add_perspective_roles = AddPerspectiveRoles.Field()
+    delete_perspective_roles = DeletePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
     create_column = CreateColumn.Field()
     update_column = UpdateColumn.Field()

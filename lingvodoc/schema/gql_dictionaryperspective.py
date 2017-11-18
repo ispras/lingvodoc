@@ -50,7 +50,10 @@ from pyramid.request import Request
 from lingvodoc.utils.creation import (
     create_perspective,
     create_gists_with_atoms,
-    add_user_to_group, translationgist_contents)
+    add_user_to_group,
+    translationgist_contents,
+    add_role
+)
 
 from sqlalchemy import (
     func,
@@ -595,162 +598,145 @@ class UpdatePerspectiveStatus(graphene.Mutation):
             perspective.dbObject = dbperspective
             return UpdatePerspectiveStatus(perspective=perspective, triumph=True)
 
-class UpdatePerspectiveRoles(graphene.Mutation):
+class AddPerspectiveRoles(graphene.Mutation):
+    """
+        mutation myQuery {
+            add_perspective_roles(id: [1279,7], user_id:2 , roles_users:[8,12,13,15,20,21,22,23,24,26,16,34]){
+						triumph
+
+					}
+        }
+    """
     class Arguments:
         id = LingvodocID(required=True)
-        parent_id = LingvodocID()
-        roles_users = graphene.List(ObjectVal)
-        roles_organizations = graphene.List(ObjectVal)
+        user_id = graphene.Int(required=True)
+        roles_users = graphene.List(graphene.Int)
+        roles_organizations = graphene.List(graphene.Int)
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
 
     @staticmethod
+    @acl_check_by_id("create", "perspective_role")
     def mutate(root, info, **args):
-        DBSession.execute("LOCK TABLE user_to_group_association IN EXCLUSIVE MODE;")
-        DBSession.execute("LOCK TABLE organization_to_group_association IN EXCLUSIVE MODE;")
-
         client_id, object_id = args.get('id')
-        parent_client_id, parent_object_id = args.get('parent_id')
-
-        request = info.context.get('request')
-        cookies = info.context.get('cookies')
-        url = request.route_url('perspective_roles',
-                                client_id=parent_client_id,
-                                object_id=parent_object_id,
-                                perspective_client_id=client_id,
-                                perspective_object_id=object_id)
-        subreq = Request.blank(url)
-        subreq.method = 'GET'
-        headers = {'Cookie': cookies}
-        subreq.headers = headers
-        previous = request.invoke_subrequest(subreq).json_body
-
+        user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-
-        for role_name in roles_users:
-            remove_list = list()
-            for user in roles_users[role_name]:
-                if user in previous['roles_users'][role_name]:
-                    previous['roles_users'][role_name].remove(user)
-                    remove_list.append(user)
-            for user in remove_list:
-                roles_users[role_name].remove(user)
-
-        for role_name in roles_organizations:
-            remove_list = list()
-            for user in roles_organizations[role_name]:
-                if user in previous['roles_organizations'][role_name]:
-                    previous['roles_organizations'][role_name].remove(user)
-                    roles_organizations[role_name].remove(user)
-            for user in remove_list:
-                roles_users[role_name].remove(user)
-
-        delete_flag = False
-
-        for role_name in previous['roles_users']:
-            if previous['roles_users'][role_name]:
-                delete_flag = True
-                break
-
-        for role_name in previous['roles_organizations']:
-            if previous['roles_organizations'][role_name]:
-                delete_flag = True
-                break
-
-        if delete_flag:
-            subreq = Request.blank(url)
-            subreq.json = previous
-            subreq.method = 'PATCH'
-            headers = {'Cookie': cookies}
-            subreq.headers = headers
-            request.invoke_subrequest(subreq)
-
-        parent = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            raise ResponseError(message="No such dictionary in the system")
-
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if dbperspective and not dbperspective.marked_for_deletion:
-            if roles_users:
-                for role_name in roles_users:
-                    base = DBSession.query(dbBaseGroup).filter_by(name=role_name, perspective_default=True).first()
-                    if not base:
-                        raise ResponseError(message="No such role in the system")
+        if not dbperspective or dbperspective.marked_for_deletion:
+            raise ResponseError(message="No such perspective in the system")
+        if roles_users:
+            for role_id in roles_users:
+                add_role(dbperspective, user_id, role_id, client_id, perspective_default=True)
+        if roles_organizations:
+            for role_id in roles_organizations:
+                add_role(dbperspective, user_id, role_id, client_id, perspective_default=True, organization=True)
+        perspective = Dictionary(id=[dbperspective.client_id, dbperspective.object_id])
+        perspective.dbObject = dbperspective
+        return AddPerspectiveRoles(perspective=perspective, triumph=True)
 
-                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                             subject_object_id=object_id,
-                                                             subject_client_id=client_id).first()
-                    client = DBSession.query(dbClient).filter_by(id=request.authenticated_userid).first()
-                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
-                    permitted = False
-                    if userlogged in group.users:
-                        permitted = True
-                    if not permitted:
-                        for org in userlogged.organizations:
-                            if org in group.organizations:
-                                permitted = True
-                                break
-                    if not permitted:
-                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                                            subject_override=True).first()
-                        if userlogged in override_group.users:
+class DeletePerspectiveRoles(graphene.Mutation):
+    class Arguments:
+        id = LingvodocID(required=True)
+        user_id = graphene.Int(required=True)
+        roles_users = graphene.List(graphene.Int)
+        roles_organizations = graphene.List(graphene.Int)
+
+    perspective = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id("delete", "perspective_role")
+    def mutate(root, info, **args):
+        client_id, object_id = args.get('id')
+        user_id = args.get("user_id")
+        user = DBSession.query(dbUser).filter_by(id=user_id).first()
+        roles_users = args.get('roles_users')
+        roles_organizations = args.get('roles_organizations')
+        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+
+        client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
+        userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
+        if not dbperspective or dbperspective.marked_for_deletion:
+            raise ResponseError(message="No such perspective in the system")
+        if roles_users:
+            for role_id in roles_users:
+                base = DBSession.query(dbBaseGroup).filter_by(id=role_id,
+                                                            perspective_default=True).first()
+                if not base:
+                    raise ResponseError(message="No such role in the system")
+
+                group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
+
+                permitted = False
+                if userlogged in group.users:
+                    permitted = True
+                if not permitted:
+                    for org in userlogged.organizations:
+                        if org in group.organizations:
                             permitted = True
-
-                    if permitted:
-                        users = roles_users[role_name]
-                        for userid in users:
-                            user = DBSession.query(dbUser).filter_by(id=userid).first()
-                            if user:
-                                if user not in group.users:
-                                    group.users.append(user)
-                    else:
-                        if roles_users[role_name]:
-                            raise ResponseError(message="Not enough permission")
-
-            if roles_organizations:
-                for role_name in roles_organizations:
-                    base = DBSession.query(dbBaseGroup).filter_by(name=role_name, perspective_default=True).first()
-                    if not base:
-                        raise ResponseError(message="No such role in the system")
-
-                    group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                               subject_object_id=object_id,
-                                                               subject_client_id=client_id).first()
-                    client = DBSession.query(dbClient).filter_by(id=request.authenticated_userid).first()
-                    userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-
-                    permitted = False
-                    if userlogged in group.users:
+                            break
+                if not permitted:
+                    override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id, subject_override=True).first()
+                    if userlogged in override_group.users:
                         permitted = True
-                    if not permitted:
-                        for org in userlogged.organizations:
-                            if org in group.organizations:
-                                permitted = True
-                                break
-                    if not permitted:
-                        override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                                            subject_override=True).first()
-                        if userlogged in override_group.users:
-                            permitted = True
 
-                    if permitted:
-                        orgs = roles_organizations[role_name]
-                        for orgid in orgs:
-                            org = DBSession.query(dbOrganization).filter_by(id=orgid).first()
-                            if org:
-                                if org not in group.organizations:
-                                    group.organizations.append(org)
-
-                    else:
+                if permitted:
+                    if user:
+                        if user.id == userlogged.id:
+                            raise ResponseError(message="Cannot delete roles from self")
+                        if user in group.users:
+                            group.users.remove(user)
+                else:
+                    if roles_users[role_id]:
                         raise ResponseError(message="Not enough permission")
 
-            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
-            perspective.dbObject = dbperspective
-            return UpdatePerspectiveRoles(perspective=perspective, triumph=True)
-        raise ResponseError(message="No such perspective in the system")
+        if roles_organizations:
+            for role_name in roles_organizations:
+                base = DBSession.query(dbBaseGroup).filter_by(name=role_name,
+                                                            dictionary_default=True).first()
+                if not base:
+                    raise ResponseError(message="No such role in the system")
+
+                group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
+
+
+
+                permitted = False
+                if userlogged in group.users:
+                    permitted = True
+                if not permitted:
+                    for org in userlogged.organizations:
+                        if org in group.organizations:
+                            permitted = True
+                            break
+                if not permitted:
+                    override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id, subject_override=True).first()
+                    if userlogged in override_group.users:
+                        permitted = True
+
+                if permitted:
+                    orgs = roles_organizations[role_name]
+                    for orgid in orgs:
+                        org = DBSession.query(dbOrganization).filter_by(id=orgid).first()
+                        if org:
+                            if org in group.organizations:
+                                group.organizations.remove(org)
+                else:
+                    if roles_organizations[role_name]:
+                        raise ResponseError(message="Not enough permission")
+
+
+        perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+        perspective.dbObject = dbperspective
+        return DeletePerspectiveRoles(perspective=perspective, triumph=True)
 
 class DeleteDictionaryPerspective(graphene.Mutation):
     """

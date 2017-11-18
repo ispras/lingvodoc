@@ -23,7 +23,8 @@ from lingvodoc.models import (
     DictionaryPerspectiveToField,
     LexicalEntry,
     Entity,
-    Field
+    Field,
+    Organization as dbOrganization
 )
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils.search import translation_gist_search
@@ -507,3 +508,55 @@ def translationatom_contents(translationatom):
     result['parent_object_id'] = translationatom.parent_object_id
     result['created_at'] = translationatom.created_at
     return result
+
+
+def add_role(dict_or_persp, user_id, role_id, client_id, organization=False, dictionary_default=False, perspective_default=False):
+    ###
+    ###
+    if role_id:
+        user = DBSession.query(User).filter_by(id=user_id).first()
+        org = DBSession.query(dbOrganization).filter_by(id=user_id).first()
+        base = DBSession.query(BaseGroup).filter_by(id=role_id,
+                                                    dictionary_default=dictionary_default,
+                                                    perspective_default=perspective_default
+                                          ).first()
+        if not base:
+            raise ResponseError(message="No such role in the system")
+        group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                 subject_object_id=dict_or_persp.object_id,
+                                                 subject_client_id=dict_or_persp.client_id
+                                          ).first()
+        if not group:
+            raise ResponseError(message="No such group in the system")
+
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+
+        userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+        permitted = False
+        if userlogged in group.users:
+            permitted = True
+        if not permitted:
+            for org in userlogged.organizations:
+                if org in group.organizations:
+                    permitted = True
+                    break
+        if not permitted:
+            override_group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                              subject_override=True).first()
+            if not override_group:
+                raise ResponseError(message="No such group in the system")
+
+            if userlogged in override_group.users:
+                permitted = True  #TODO: refactor
+
+        if not permitted:
+            raise ResponseError(message="Not enough permission")
+        ###
+        if user:
+            if organization:
+                if org:
+                    if org not in group.organizations:
+                        group.organizations.append(org)
+            else:
+                if user not in group.organizations:
+                    group.users.append(user)
