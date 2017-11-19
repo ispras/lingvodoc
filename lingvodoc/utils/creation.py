@@ -510,9 +510,8 @@ def translationatom_contents(translationatom):
     return result
 
 
-def add_role(dict_or_persp, user_id, role_id, client_id, organization=False, dictionary_default=False, perspective_default=False):
-    ###
-    ###
+def edit_role(dict_or_persp, user_id, role_id, client_id, organization=False, dictionary_default=False, perspective_default=False, action="add"):
+    # TODO: refactor
     if role_id:
         user = DBSession.query(User).filter_by(id=user_id).first()
         org = DBSession.query(dbOrganization).filter_by(id=user_id).first()
@@ -552,11 +551,23 @@ def add_role(dict_or_persp, user_id, role_id, client_id, organization=False, dic
         if not permitted:
             raise ResponseError(message="Not enough permission")
         ###
+
+
         if user:
             if organization:
                 if org:
-                    if org not in group.organizations:
-                        group.organizations.append(org)
+                    if action == "delete":
+                            if org in group.organizations:
+                                group.organizations.remove(org)
+                    else:
+                            if org not in group.organizations:
+                                group.organizations.append(org)
             else:
-                if user not in group.organizations:
-                    group.users.append(user)
+                if action == "delete":
+                    if user.id == userlogged.id:
+                        raise ResponseError(message="Cannot delete roles from self")
+                    if user in group.users:
+                        group.users.remove(user)
+                else:
+                    if user not in group.organizations:
+                        group.users.append(user)

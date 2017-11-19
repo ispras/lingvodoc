@@ -52,7 +52,7 @@ from lingvodoc.utils.creation import (
     create_gists_with_atoms,
     add_user_to_group,
     translationgist_contents,
-    add_role
+    edit_role
 )
 
 from sqlalchemy import (
@@ -628,10 +628,10 @@ class AddPerspectiveRoles(graphene.Mutation):
             raise ResponseError(message="No such perspective in the system")
         if roles_users:
             for role_id in roles_users:
-                add_role(dbperspective, user_id, role_id, client_id, perspective_default=True)
+                edit_role(dbperspective, user_id, role_id, client_id, perspective_default=True)
         if roles_organizations:
             for role_id in roles_organizations:
-                add_role(dbperspective, user_id, role_id, client_id, perspective_default=True, organization=True)
+                edit_role(dbperspective, user_id, role_id, client_id, perspective_default=True, organization=True)
         perspective = Dictionary(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return AddPerspectiveRoles(perspective=perspective, triumph=True)
@@ -652,88 +652,19 @@ class DeletePerspectiveRoles(graphene.Mutation):
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         user_id = args.get("user_id")
-        user = DBSession.query(dbUser).filter_by(id=user_id).first()
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-
-        client = DBSession.query(dbClient).filter_by(id=info.context.get('client_id')).first()
-        userlogged = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
         if roles_users:
             for role_id in roles_users:
-                base = DBSession.query(dbBaseGroup).filter_by(id=role_id,
-                                                            perspective_default=True).first()
-                if not base:
-                    raise ResponseError(message="No such role in the system")
-
-                group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                         subject_object_id=object_id,
-                                                         subject_client_id=client_id).first()
-
-                permitted = False
-                if userlogged in group.users:
-                    permitted = True
-                if not permitted:
-                    for org in userlogged.organizations:
-                        if org in group.organizations:
-                            permitted = True
-                            break
-                if not permitted:
-                    override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id, subject_override=True).first()
-                    if userlogged in override_group.users:
-                        permitted = True
-
-                if permitted:
-                    if user:
-                        if user.id == userlogged.id:
-                            raise ResponseError(message="Cannot delete roles from self")
-                        if user in group.users:
-                            group.users.remove(user)
-                else:
-                    if roles_users[role_id]:
-                        raise ResponseError(message="Not enough permission")
+                edit_role(dbperspective, user_id, role_id, client_id, perspective_default=True, action="delete")
 
         if roles_organizations:
-            for role_name in roles_organizations:
-                base = DBSession.query(dbBaseGroup).filter_by(name=role_name,
-                                                            dictionary_default=True).first()
-                if not base:
-                    raise ResponseError(message="No such role in the system")
-
-                group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                         subject_object_id=object_id,
-                                                         subject_client_id=client_id).first()
-
-
-
-                permitted = False
-                if userlogged in group.users:
-                    permitted = True
-                if not permitted:
-                    for org in userlogged.organizations:
-                        if org in group.organizations:
-                            permitted = True
-                            break
-                if not permitted:
-                    override_group = DBSession.query(dbGroup).filter_by(base_group_id=base.id, subject_override=True).first()
-                    if userlogged in override_group.users:
-                        permitted = True
-
-                if permitted:
-                    orgs = roles_organizations[role_name]
-                    for orgid in orgs:
-                        org = DBSession.query(dbOrganization).filter_by(id=orgid).first()
-                        if org:
-                            if org in group.organizations:
-                                group.organizations.remove(org)
-                else:
-                    if roles_organizations[role_name]:
-                        raise ResponseError(message="Not enough permission")
-
-
+            for role_id in roles_organizations:
+                edit_role(dbperspective, user_id, role_id, client_id, perspective_default=True, organization=True,
+                          action="delete")
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return DeletePerspectiveRoles(perspective=perspective, triumph=True)
