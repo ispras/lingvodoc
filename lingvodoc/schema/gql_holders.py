@@ -145,6 +145,34 @@ class LingvodocID(Scalar):
             return None
 
 
+# class LevelID(Scalar):
+#     """
+#     made specifically for returning language tree
+#     """
+#
+#     @staticmethod
+#     def identity(value):
+#         return value
+#
+#     serialize = identity
+#     parse_value = identity
+#
+#     @staticmethod
+#     def parse_literal(ast):
+#         if isinstance(ast, ListValue):
+#             if len(ast.values) != 3:
+#                 return None
+#             result = list()
+#             for intvalue in ast.values:
+#                 if isinstance(intvalue, IntValue):
+#                     result.append(int(intvalue.value))
+#                 else:
+#                     return None
+#             return result
+#         else:
+#             return None
+
+
 class ObjectVal(Scalar):
     """
     ObjectVal is GraphQL scalar value must be Object
@@ -312,6 +340,8 @@ class Relationship(graphene.Interface):
 
     @fetch_object("parent_id")
     def resolve_parent_id(self, info):
+        if self.dbObject.parent_client_id is None or self.dbObject.parent_object_id is None:
+            return None
         return (self.dbObject.parent_client_id, self.dbObject.parent_object_id)
 
 class SelfHolder(graphene.Interface):
@@ -539,6 +569,16 @@ class Metadata(graphene.ObjectType):
     merged_to = LingvodocID()
     is_protected = graphene.Boolean()
     previous_objects = graphene.List(LingvodocID)
+    younger_siblings = graphene.List(LingvodocID)
+
+
+# class LevelAndId(graphene.ObjectType):
+#     """
+#     graphene object that have all metadata attributes
+#     if new attributes of metadata are added, then this class has to be updated
+#     """
+#     parent_id = LingvodocID()
+#     language_id = LingvodocID()
 
 
 def get_value_by_key(db_object, additional_metadata_string, metadata_key):
