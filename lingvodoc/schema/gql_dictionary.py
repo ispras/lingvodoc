@@ -587,11 +587,12 @@ class AddDictionaryRoles(graphene.Mutation):
     @staticmethod
     @acl_check_by_id("create", "dictionary_role")
     def mutate(root, info, **args):
-        client_id, object_id = args.get('id')
+        dictionary_client_id, dictionary_object_id = args.get('id')
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        client_id = info.context.get('locale_id')
         if not dbdictionary or dbdictionary.marked_for_deletion:
             raise ResponseError(message="No such dictionary in the system")
         if roles_users:
@@ -625,12 +626,12 @@ class DeleteDictionaryRoles(graphene.Mutation):
     @staticmethod
     @acl_check_by_id("delete", "dictionary_role")
     def mutate(root, info, **args):
-        client_id, object_id = args.get('id')
+        dictionary_client_id, dictionary_object_id = args.get('id')
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        client_id = info.context.get('locale_id')
 
         if not dbdictionary or dbdictionary.marked_for_deletion:
             raise ResponseError(message="No such dictionary in the system")
