@@ -562,7 +562,7 @@ class Metadata(graphene.ObjectType):
     blob_description = graphene.String()
     merge =  graphene.Field(MergeMetadata)  # TODO: MergeMetadata
     original_filename = graphene.String()
-    location = graphene.String()
+    location = ObjectVal()
     client_id = graphene.Int()
     authors = graphene.String()
     row_id = graphene.Int()
