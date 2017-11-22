@@ -165,6 +165,17 @@ RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
 #Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
+class StarlingField(graphene.InputObjectType):
+    starling_name = graphene.String(required=True)
+    starling_type = graphene.Int()
+
+class StarlingDictionary(graphene.InputObjectType):
+    blob_id = LingvodocID(),
+    parent_id = LingvodocID(required=True)
+    translation_gist_id = LingvodocID()
+    translation_atoms = graphene.List(ObjectVal)
+    field_map = graphene.List(StarlingField, required=True)
+    add_etymology = graphene.Boolean()
 
 class Query(graphene.ObjectType):
     client = graphene.String()
@@ -222,6 +233,7 @@ class Query(graphene.ObjectType):
         maybe_tier_list=graphene.List(graphene.String),
         maybe_tier_set=graphene.List(graphene.String),
         synchronous=graphene.Boolean())
+
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
                                      tag_list=LingvodocID(),
@@ -238,6 +250,21 @@ class Query(graphene.ObjectType):
     eaf_wordlist = graphene.Field(
         graphene.List(graphene.String), id=LingvodocID(required=True))
     language_tree = graphene.List(Language)
+    # convert_starling = graphene.Field(graphene.Boolean, blob_id=LingvodocID(),
+    #     parent_id=LingvodocID(required=True),
+    #     translation_gist_id=LingvodocID(),
+    #     translation_atoms=graphene.List(ObjectVal),
+    #     field_map=graphene.List(StarlingField, required=True),
+    #     add_etymology=graphene.Boolean()
+    # )
+    # convert_starling = graphene.Field(graphene.Boolean, blob_id=LingvodocID(),
+    #     parent_id=LingvodocID(required=True),
+    #     translation_gist_id=LingvodocID(),
+    #     translation_atoms=graphene.List(ObjectVal),
+    #     field_map=graphene.List(StarlingField, required=True),
+    #     add_etymology=graphene.Boolean()
+    # )
+    convert_starling = graphene.Field(graphene.Boolean,starling_dictionaries=graphene.List(StarlingDictionary))
 
     def resolve_language_tree(self, info):
         langs = DBSession.query(dbLanguage).filter_by(marked_for_deletion=False).order_by(dbLanguage.parent_client_id,
@@ -1173,6 +1200,21 @@ class Query(graphene.ObjectType):
 
         return True
 
+    def resolve_convert_starling(self, info, starling_dictionaries):
+        """
+        query myQuery {
+            convert_starling(parent_id:[1,1] blob_id:[1,1] translation_atoms:[], add_etymology:true , field_map:{min_created_at:1})
+        }
+        """
+        #perspective_cid, perspective_oid = perspective_id
+        locale_id = info.context.get('locale_id')
+        request = info.context.get('request')
+
+        # utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
+        #           synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
+        #           limit_exception, limit_no_vowel, limit_result, locale_id)
+
+        return True
 
     def resolve_eaf_wordlist(self, info, id):
         # TODO: delete

@@ -570,6 +570,7 @@ class Metadata(graphene.ObjectType):
     is_protected = graphene.Boolean()
     previous_objects = graphene.List(LingvodocID)
     younger_siblings = graphene.List(LingvodocID)
+    starling_fields = graphene.List(graphene.String)
 
 
 # class LevelAndId(graphene.ObjectType):
