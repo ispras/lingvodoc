@@ -160,7 +160,7 @@ from sqlalchemy.sql.functions import coalesce
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import phonology as utils_phonology
-from lingvodoc.utils.search import translation_gist_search, recursive_sort
+from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -234,6 +234,9 @@ class Query(graphene.ObjectType):
     search_strings=graphene.List(graphene.List(ObjectVal))
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
+
+    eaf_wordlist = graphene.Field(
+        graphene.List(graphene.String), id=LingvodocID(required=True))
     language_tree = graphene.List(Language)
 
     def resolve_language_tree(self, info):
@@ -1169,6 +1172,87 @@ class Query(graphene.ObjectType):
                   limit_exception, limit_no_vowel, limit_result, locale_id)
 
         return True
+
+
+    def resolve_eaf_wordlist(self, info, id):
+        # TODO: delete
+        import tempfile
+        import pympi
+        import sys
+        import os
+        import random
+        import string
+        import requests
+        from sqlalchemy.exc import IntegrityError
+        from lingvodoc.exceptions import CommonException
+        from lingvodoc.scripts.convert_rules import praat_to_elan
+
+        # TODO: permission check
+        """
+        query myQuery {
+            convert_markup(id: [742, 5494] )
+        }
+        """
+        client_id = info.context.get('client_id')
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
+        try:
+            # out_type = req['out_type']
+            client_id, object_id = id
+
+            entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+            if not entity:
+                raise KeyError("No such file")
+            resp = requests.get(entity.content)
+            if not resp:
+                raise ResponseError("Cannot access file")
+            content = resp.content
+            try:
+                n = 10
+                filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                                  for c in range(n))
+                # extension = os.path.splitext(blob.content)[1]
+                f = open(filename, 'wb')
+            except Exception as e:
+                return ResponseError(message=str(e))
+            try:
+                f.write(content)
+                f.close()
+                if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
+                    if 'data_type' in entity.additional_metadata :
+                        if 'praat' in entity.additional_metadata['data_type']:
+                            textgrid_obj = pympi.TextGrid(file_path=filename)
+                            eaf_obj = textgrid_obj.to_eaf()
+                            word_list = eaf_words(eaf_obj)
+                            return word_list
+                            #elan = to_eaf("-",eafobj)
+
+                        elif 'elan' in entity.additional_metadata['data_type']:
+                            #with open(filename, 'r') as f:
+                            #    return f.read()
+                            eaf_obj = pympi.Eaf(file_path=filename)
+                            word_list = eaf_words(eaf_obj)
+                            return word_list
+                        else:
+                            raise KeyError("Not allowed convert option")
+                        raise KeyError('File too big')
+                    raise KeyError("Not allowed convert option")
+                raise KeyError('File too big')
+            except Exception as e:
+                raise ResponseError(message=e)
+            finally:
+                os.remove(filename)
+                pass
+        except KeyError as e:
+            raise ResponseError(message=str(e))
+
+        except IntegrityError as e:
+            raise ResponseError(message=str(e))
+
+        except CommonException as e:
+            raise ResponseError(message=str(e))
+
 
     def resolve_convert_markup(self, info, id):
         # TODO: delete
