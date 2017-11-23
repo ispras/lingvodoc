@@ -31,7 +31,7 @@ import base64
 from lingvodoc.views.v2.sociolinguistics import check_socio  # TODO: replace it
 
 #from lingvodoc.schema.gql_entity import create_object
-
+import csv
 class UserBlobs(LingvodocObjectType):
     """
     #created_at          | timestamp without time zone | NOT NULL
@@ -102,9 +102,10 @@ class CreateUserBlob(graphene.Mutation):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
-        if not "blob" in info.context.request.POST:
+        if not "variables.content" in info.context.request.POST:
             raise ResponseError(message="file not found")
-        multiparted = info.context.request.POST.pop("blob")
+        multiparted = info.context.request.POST.pop("variables.content")
+        # multiparted = info.context.request.POST.pop("opearations")
         filename = multiparted.filename
         input_file = multiparted.file#multiparted.file
 
@@ -139,6 +140,20 @@ class CreateUserBlob(graphene.Mutation):
         if blob.data_type == "sociolinguistics":
             try:
                 check_socio(blob_object.real_storage_path)
+            except Exception as e:
+                raise ResponseError(message=str(e))
+
+        if blob.data_type == "starling/csv":
+            try:
+                input_file.seek(0)
+
+                with input_file  as csvfile:
+                    starling_fields = csvfile.readline().decode('utf-8').rstrip().split('|')
+                    # starling_fields = csv.reader(csvfile, delimiter = '|')
+
+                    if not blob_object.additional_metadata:
+                        blob_object.additional_metadata = {}
+                    blob_object.additional_metadata['starling_fields'] = starling_fields
             except Exception as e:
                 raise ResponseError(message=str(e))
         current_user.userblobs.append(blob_object)

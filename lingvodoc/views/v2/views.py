@@ -260,6 +260,7 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
     return base_group
 
 from lingvodoc.models import UserRequest as dbUserRequest
+from lingvodoc.utils.search import translation_gist_search
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     # Hello, testing, my old friend
@@ -326,6 +327,31 @@ def testing(request):
             del lang.additional_metadata['yonger_siblings']
         prev_langs.append((lang.client_id, lang.object_id))
         flag_modified(lang, 'additional_metadata')
+
+    # Service translation "Directed Link"
+    if translation_gist_search("Relation") or translation_gist_search("Directed Link"):
+        return "Already patched"
+    dl_link_gist = TranslationGist(client_id=1, type="Service")
+    DBSession.add(dl_link_gist)
+    DBSession.flush()
+    atom = TranslationAtom(client_id=1, content="Directed Link", locale_id=2, parent=dl_link_gist)
+    DBSession.add(atom)
+    DBSession.flush()
+    #
+    relation_gist = TranslationGist(client_id=1, type="Field")
+    DBSession.add(relation_gist)
+    DBSession.flush()
+    #
+    atom = TranslationAtom(client_id=1, content="Relation", locale_id=2, parent=relation_gist)
+    DBSession.add(atom)
+    DBSession.flush()
+    word_field = Field(client_id=1,
+                       translation_gist_client_id=relation_gist.client_id,
+                       translation_gist_object_id=relation_gist.object_id,
+                       data_type_translation_gist_client_id=dl_link_gist.client_id,
+                       data_type_translation_gist_object_id=dl_link_gist.object_id)
+    DBSession.add(word_field)
+    DBSession.flush()
     return "Success"
 
 
@@ -779,6 +805,7 @@ def graphql(request):
         if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
                 and type(request.POST) == MultiDict:
             data = request.POST
+
             if not data:
                 return {'error': 'empty request'}
             elif not "operations" in data:

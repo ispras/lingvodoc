@@ -1,7 +1,9 @@
+import pympi
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     DBSession)
+
 #from lingvodoc.views.v2.translations import translationgist_contents
 
 
@@ -73,3 +75,15 @@ def recursive_sort(langs, visited, stack, result):
         else:
             stack.add(lang)
     return
+
+def eaf_words(eaf_obj):
+    annotations = list()
+    for tier in eaf_obj.tiers:
+        ann_list = [x[2] for x in eaf_obj.get_annotation_data_for_tier(tier)]
+        ref_ann_list = [x[2] for x in eaf_obj.get_ref_annotation_data_for_tier(tier)]
+        annotations += ann_list
+        annotations += ref_ann_list
+        #for ann in ann_list + ref_ann_list:
+        #    annotations.add(ann)
+    annotations = set(annotations)
+    return annotations
