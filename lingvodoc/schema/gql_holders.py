@@ -571,6 +571,8 @@ class Metadata(graphene.ObjectType):
     previous_objects = graphene.List(LingvodocID)
     younger_siblings = graphene.List(LingvodocID)
     starling_fields = graphene.List(graphene.String)
+    participant = graphene.List(LingvodocID)
+
 
 
 # class LevelAndId(graphene.ObjectType):
@@ -582,22 +584,22 @@ class Metadata(graphene.ObjectType):
 #     language_id = LingvodocID()
 
 
-def get_value_by_key(db_object, additional_metadata_string, metadata_key):
-    """
-
-    :param db_object: self.dbObject with metadata or None
-    :param additional_metadata_string: self.additional_metadata_string dictionary or None
-    :param metadata_key: metadata first-level key
-    :return: value by metadata_key or None if params are not set
-    """
-    if additional_metadata_string:
-        if metadata_key in additional_metadata_string:
-            return additional_metadata_string[metadata_key]
-    if db_object:
-        meta = db_object.additional_metadata
-        if meta:
-            if metadata_key in meta:
-                return meta[metadata_key]
+# def get_value_by_key(db_object, additional_metadata_string, metadata_key):
+#     """
+#
+#     :param db_object: self.dbObject with metadata or None
+#     :param additional_metadata_string: self.additional_metadata_string dictionary or None
+#     :param metadata_key: metadata first-level key
+#     :return: value by metadata_key or None if params are not set
+#     """
+#     if additional_metadata_string:
+#         if metadata_key in additional_metadata_string:
+#             return additional_metadata_string[metadata_key]
+#     if db_object:
+#         meta = db_object.additional_metadata
+#         if meta:
+#             if metadata_key in meta:
+#                 return meta[metadata_key]
 
 
 
@@ -623,7 +625,9 @@ class AdditionalMetadata(graphene.Interface):
 
         if db_object.additional_metadata:
             metadata_dict.update(db_object.additional_metadata)
-
+        if "participant" in metadata_dict:
+            old_id_meta = metadata_dict["participant"]
+            metadata_dict["participant"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
         metadata_object = Metadata(**metadata_dict)
         return metadata_object
 

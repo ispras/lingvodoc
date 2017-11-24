@@ -54,11 +54,15 @@ class Language(LingvodocObjectType):
     """
     dbType = dbLanguage
     dictionaries = graphene.List(Dictionary)
-
+    locale_exist = graphene.Boolean()
     dataType = graphene.String()
 
     class Meta:
         interfaces = (CommonFieldsComposite, TranslationHolder)
+
+    fetch_object()
+    def resolve_locale_exists(self):
+        return self.dbObject.locale
 
     @fetch_object()
     def resolve_dictionaries(self, info):
@@ -103,7 +107,6 @@ class CreateLanguage(graphene.Mutation):
         id = LingvodocID()
         translation_gist_id = LingvodocID()
         parent_id = LingvodocID()
-        locale_exist = graphene.Boolean()
         translation_atoms = graphene.List(ObjectVal)
 
     language = graphene.Field(Language)

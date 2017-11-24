@@ -160,6 +160,7 @@ from sqlalchemy.sql.functions import coalesce
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import phonology as utils_phonology
+from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
@@ -167,10 +168,13 @@ ENGLISH_LOCALE = 2
 #Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
 class StarlingField(graphene.InputObjectType):
     starling_name = graphene.String(required=True)
-    starling_type = graphene.Int()
+    starling_type = graphene.Int(required=True)
+    field_id = LingvodocID(required=True)
+    fake_id = graphene.String()
+    link_fake_id = graphene.String()
 
 class StarlingDictionary(graphene.InputObjectType):
-    blob_id = LingvodocID(),
+    blob_id = LingvodocID()
     parent_id = LingvodocID(required=True)
     translation_gist_id = LingvodocID()
     translation_atoms = graphene.List(ObjectVal)
@@ -240,7 +244,7 @@ class Query(graphene.ObjectType):
                                      category=graphene.Int(),
                                      adopted=graphene.Boolean(),
                                      etymology=graphene.Boolean(),
-                                     search_strings=graphene.List(graphene.List(ObjectVal)),
+                                     search_strings=graphene.List(graphene.List(ObjectVal), required=True),
                                      publish=graphene.Boolean(),
                                      accept=graphene.Boolean())
     search_strings=graphene.List(graphene.List(ObjectVal))
@@ -285,6 +289,8 @@ class Query(graphene.ObjectType):
         return result
 
     def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, publish=None, accept=True):
+        if not search_strings:
+            raise ResponseError(message="search_strings is empty")
         return AdvancedSearch().constructor(languages, tag_list, category, adopted, etymology, search_strings, publish, accept)
 
     def resolve_template_modes(self, info):
@@ -1209,7 +1215,7 @@ class Query(graphene.ObjectType):
         #perspective_cid, perspective_oid = perspective_id
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')
-
+        starling_converter.convert(info, starling_dictionaries)
         # utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
         #           synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
         #           limit_exception, limit_no_vowel, limit_result, locale_id)
