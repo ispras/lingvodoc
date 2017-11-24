@@ -626,8 +626,9 @@ class AdditionalMetadata(graphene.Interface):
         if db_object.additional_metadata:
             metadata_dict.update(db_object.additional_metadata)
         if "participant" in metadata_dict:
-            old_id_meta = metadata_dict["participant"]
-            metadata_dict["participant"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
+            if metadata_dict["participant"]:
+                old_id_meta = metadata_dict["participant"]
+                metadata_dict["participant"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
         metadata_object = Metadata(**metadata_dict)
         return metadata_object
 
