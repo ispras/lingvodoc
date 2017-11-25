@@ -176,10 +176,12 @@ class StarlingField(graphene.InputObjectType):
 class StarlingDictionary(graphene.InputObjectType):
     blob_id = LingvodocID()
     parent_id = LingvodocID(required=True)
+    perspective_gist_id = LingvodocID()
+    perspective_atoms = graphene.List(ObjectVal)
     translation_gist_id = LingvodocID()
     translation_atoms = graphene.List(ObjectVal)
     field_map = graphene.List(StarlingField, required=True)
-    add_etymology = graphene.Boolean()
+    add_etymology = graphene.Boolean(required=True)
 
 class Query(graphene.ObjectType):
     client = graphene.String()
@@ -1212,14 +1214,8 @@ class Query(graphene.ObjectType):
             convert_starling(parent_id:[1,1] blob_id:[1,1] translation_atoms:[], add_etymology:true , field_map:{min_created_at:1})
         }
         """
-        #perspective_cid, perspective_oid = perspective_id
-        locale_id = info.context.get('locale_id')
-        request = info.context.get('request')
-        starling_converter.convert(info, starling_dictionaries)
-        # utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
-        #           synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
-        #           limit_exception, limit_no_vowel, limit_result, locale_id)
 
+        starling_converter.convert(info, starling_dictionaries)
         return True
 
     def resolve_eaf_wordlist(self, info, id):
