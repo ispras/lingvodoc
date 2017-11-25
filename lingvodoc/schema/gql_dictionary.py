@@ -357,8 +357,8 @@ class CreateDictionary(graphene.Mutation):
         additional_metadata = args.get("additional_metadata")
         category = args.get("category")
         domain = args.get("domain")
-        id = [client_id, object_id]
-        dbdictionary_obj = create_dbdictionary(id=id,
+        ids = [client_id, object_id]
+        dbdictionary_obj = create_dbdictionary(id=ids,
                                                parent_id=parent_id,
                                                translation_gist_id=translation_gist_id,
                                                additional_metadata=additional_metadata,

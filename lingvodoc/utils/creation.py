@@ -43,7 +43,7 @@ def create_perspective(id = (None, None),
                        additional_metadata=None,
                        import_source=None,
                        import_hash=None,
-                       is_template=0
+                       is_template=False
                        ):
     client_id, object_id = id
 
@@ -68,7 +68,7 @@ def create_perspective(id = (None, None),
                                   additional_metadata=additional_metadata,
                                   translation_gist_client_id=translation_gist_client_id,
                                   translation_gist_object_id=translation_gist_object_id,
-                                  is_template=is_template
+                                  is_template=False
                                   )
     DBSession.add(dbperspective)
     DBSession.flush()
