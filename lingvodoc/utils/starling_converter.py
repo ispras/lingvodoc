@@ -84,12 +84,33 @@ def csv_to_columns(path):
             i += 1
     return column_dict
 
-#create_gists_with_atoms
+from lingvodoc.scripts.convert_five_tiers import convert_all
+from lingvodoc.queue.celery import celery
+
+
+def graphene_to_dicts(starling_dictionaries):
+    result = []
+    for dictionary in starling_dictionaries:
+        dictionary = dict(dictionary)
+        fmap = [dict(x) for x in dictionary.get("field_map")]
+        dictionary["field_map"] = fmap
+        result.append(dictionary)
+
+    return result
+
 def convert(info, starling_dictionaries):
-    with transaction.manager:
+    ids = [info.context["client_id"], None]
+    locale_id = info.context.get('locale_id')
+    #convert_start.delay(ids, graphene_to_dicts(starling_dictionaries))
+    convert_start(ids, graphene_to_dicts(starling_dictionaries))
+    return True
+
+@celery.task
+def convert_start(ids, starling_dictionaries):
+    if True:
+    #with transaction.manager:
         #starling_dictionaries=fake_starling
-        ids = [info.context["client_id"], None]
-        locale_id = info.context.get('locale_id')
+
 
         persp_fake_ids = dict()
         etymology_field_id = get_field_id_by_name("Etymology", "Field")
@@ -366,13 +387,13 @@ def convert(info, starling_dictionaries):
         c = 0
         for lex in all_le:
             DBSession.add(lex)
-            if not c % 10:
+            if not c % 100:
                 DBSession.flush()
             c+=1
         c = 0
         for ent in all_entities:
             DBSession.add(ent)
-            if not c % 10:
+            if not c % 100:
                 DBSession.flush()
 
         # # lexical entry creation
