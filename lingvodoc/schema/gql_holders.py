@@ -365,7 +365,9 @@ class ParentLink(graphene.Interface):
 
     @fetch_object("link_id")
     def resolve_link_id(self, info):
-        return (self.dbObject.link_client_id, self.dbObject.link_object_id)
+        if self.dbObject.link_client_id and self.dbObject.link_object_id:
+            return (self.dbObject.link_client_id, self.dbObject.link_object_id)
+        return None
 
 class MarkedForDeletion(graphene.Interface):
     marked_for_deletion = graphene.Boolean()
@@ -629,6 +631,8 @@ class AdditionalMetadata(graphene.Interface):
             if metadata_dict["participant"]:
                 old_id_meta = metadata_dict["participant"]
                 metadata_dict["participant"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
+        if 'roles' in metadata_dict:
+            del metadata_dict["roles"]
         metadata_object = Metadata(**metadata_dict)
         return metadata_object
 

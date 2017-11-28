@@ -171,7 +171,7 @@ class StarlingField(graphene.InputObjectType):
     starling_type = graphene.Int(required=True)
     field_id = LingvodocID(required=True)
     fake_id = graphene.String()
-    link_fake_id = graphene.String()
+    link_fake_id = LingvodocID() #graphene.String()
 
 class StarlingDictionary(graphene.InputObjectType):
     blob_id = LingvodocID()
