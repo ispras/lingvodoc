@@ -626,13 +626,13 @@ class AdditionalMetadata(graphene.Interface):
         metadata_dict = {i: None for i in Metadata().__class__.__dict__ if not i.startswith("_")}
 
         if db_object.additional_metadata:
-            metadata_dict.update(db_object.additional_metadata)
+            new_meta = {key: db_object.additional_metadata[key] for key in db_object.additional_metadata if key in metadata_dict}
+            metadata_dict.update(new_meta)
+
         if "participant" in metadata_dict:
             if metadata_dict["participant"]:
                 old_id_meta = metadata_dict["participant"]
                 metadata_dict["participant"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
-        if 'roles' in metadata_dict:
-            del metadata_dict["roles"]
         metadata_object = Metadata(**metadata_dict)
         return metadata_object
 
