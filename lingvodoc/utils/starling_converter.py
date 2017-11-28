@@ -105,7 +105,7 @@ def convert(info, starling_dictionaries):
     convert_start(ids, graphene_to_dicts(starling_dictionaries))
     return True
 
-@celery.task
+#@celery.task
 def convert_start(ids, starling_dictionaries):
     if True:
     #with transaction.manager:
@@ -144,11 +144,11 @@ def convert_start(ids, starling_dictionaries):
                     fake_field = old_field.copy()
                     #del fake_field["link_fake_id"]
                     fake_field["starling_type"] = 4
-                    if fake_field["field_id"] in [x.field_id for x in fields]:
+                    if fake_field["field_id"] in [x.get("field_id") for x in fields]:
                         continue
                     fields.append(fake_field)
                     #fake_blob_to_fields[blob_id] = fields
-                    starling_dictionary.field_map = fields
+                    starling_dictionary["field_map"] = fields
         #
 
         blob_to_perspective = dict()
