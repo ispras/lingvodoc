@@ -138,15 +138,15 @@ def convert(info, starling_dictionaries):
     #perspective_to_collist = {}
     perspective_column_dict = {}
     # getting all values
-    persp_to_starcolumns = dict()
+    #persp_to_starcolumns = dict()
 
     all_le = []
     all_entities = []
     persp_to_lexentry = collections.defaultdict(dict)
-    copy_field_dict = collections.OrderedDict(dict)
+    copy_field_dict = collections.defaultdict(dict)
 
     for starling_dictionary in starling_dictionaries:
-        blob_id = starling_dictionary.get("blob_id")
+        blob_id = tuple(starling_dictionary.get("blob_id"))
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
         column_dict = csv_to_columns(blob.real_storage_path)
 
@@ -171,8 +171,8 @@ def convert(info, starling_dictionaries):
                                 parent_id=dictionary_id,  # TODO: use all object attrs
                                 translation_gist_id=persp_translation_gist_id
                                 )
-        perspective_column_dict[new_persp] = column_dict
-        blob_to_perspective[tuple(blob_id)] = new_persp
+        perspective_column_dict[blob_id] = column_dict
+        blob_to_perspective[blob_id] = new_persp
         perspective_id = [new_persp.client_id, new_persp.object_id]
         fields = starling_dictionary.get("field_map")
         starlingname_to_column = collections.OrderedDict()
@@ -236,18 +236,18 @@ def convert(info, starling_dictionaries):
             column = starlingname_to_column[starling_column]
         #for field in fields_marked_as_links:  #
         #    perspective_to_collist[new_persp] = fields_marked_as_links #
-        persp_to_starcolumns[new_persp] = starlingname_to_column
+        #persp_to_starcolumns[new_persp] = starlingname_to_column
 
         # blob_link -> perspective_link
-        csv_data = perspective_column_dict[new_persp]
-        collist = list(persp_to_starcolumns[new_persp])
+        csv_data = column_dict# perspective_column_dict[tuple(blob_id)]
+        collist = list(starlingname_to_column)
         for numb in csv_data["NUMBER"]:
             numb = int(numb)
             lexentr = dbLexicalEntry(client_id=ids[0],
                                    parent=new_persp)
             all_le.append(lexentr)
 
-            persp_to_lexentry[new_persp][numb] = lexentr
+            persp_to_lexentry[blob_id][numb] = lexentr
             for starling_column_name in starlingname_to_column:
                 field_id = starlingname_to_column[starling_column_name]
                 col_data = csv_data[starling_column_name][numb-1]
@@ -266,9 +266,22 @@ def convert(info, starling_dictionaries):
                 all_entities.append(new_ent)
 
     for starling_dictionary in starling_dictionaries:
-        blob_id = starling_dictionary.get("blob_id")
-        persp = blob_to_perspective[tuple(blob_id)]
-        copy_field_dict[persp]
+        blob_id = tuple(starling_dictionary.get("blob_id"))
+        if blob_id not in dictionary_id_links:
+            continue
+        persp = blob_to_perspective[blob_id]
+        field_to_starlig = copy_field_dict[persp]
+        #
+        persps_to_link = list()
+        for blob_link in dictionary_id_links[blob_id]:
+            persp_to_link = blob_to_perspective[blob_link]
+            persps_to_link.append(persp_to_link)
+
+
+        for field_id in field_to_starlig:
+            starling_field = field_to_starlig[field_id]
+
+
     # for persp in copy_field_dict:
     #     # fields
     #     field_to_starlig = copy_field_dict[persp]
