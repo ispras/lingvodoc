@@ -83,31 +83,6 @@ def csv_to_columns(path):
             i += 1
     return column_dict
 
-def starling_field_to_column(field, perspective_id, position_counter, ids):
-    starling_type = field.get("starling_type")
-    field_id = field.get("field_id")
-    if starling_type == 1:
-        persp_to_field = create_dictionary_persp_to_field(id=ids,
-                         parent_id=perspective_id,
-                         field_id=field_id,
-                         upper_level=None,
-                         link_id=None,
-                         position=position_counter
-                         )
-        return persp_to_field
-    elif starling_type == 2:
-        # copy
-        fake_id = field.get("fake_id")
-        link_fake_id = field.get("link_fake_id")
-        persp_to_field = create_dictionary_persp_to_field(id=ids,
-                         parent_id=perspective_id,
-                         field_id=field_id,
-                         upper_level=None,
-                         link_id=None,
-                         position=position_counter
-                         )
-        return persp_to_field
-
 #create_gists_with_atoms
 def convert(info, starling_dictionaries):
 
@@ -124,7 +99,7 @@ def convert(info, starling_dictionaries):
     dictionary_id_links = collections.defaultdict(list)
 
     fake_id_dict = {}
-    fake_link_dict = {}
+    fake_link_to_field= {}#collections.defaultdict(list)
     for starling_dictionary in starling_dictionaries:
         fields = starling_dictionary.get("field_map")
         blob_id_as_fake_id = starling_dictionary.get("blob_id")
@@ -133,6 +108,26 @@ def convert(info, starling_dictionaries):
             if not link_fake_id:
                 continue
             dictionary_id_links[tuple(blob_id_as_fake_id)].append(tuple(link_fake_id))
+            #
+            fake_link_to_field[tuple(link_fake_id)] = [x for x in fields if x["starling_type"] == 2]
+
+    # crutch
+    #fake_blob_to_fields = {}
+    for starling_dictionary in starling_dictionaries:
+        fields = starling_dictionary.get("field_map")
+        blob_id = tuple(starling_dictionary.get("blob_id"))
+        if blob_id in fake_link_to_field:
+            old_fields = fake_link_to_field[blob_id]
+            for old_field in old_fields:
+                fake_field = old_field.copy()
+                #del fake_field["link_fake_id"]
+                fake_field["starling_type"] = 4
+                if fake_field["field_id"] in [x.field_id for x in fields]:
+                    continue
+                fields.append(fake_field)
+                #fake_blob_to_fields[blob_id] = fields
+                starling_dictionary.field_map.append(fields)
+    #
 
     blob_to_perspective = dict()
     #perspective_to_collist = {}
@@ -144,13 +139,13 @@ def convert(info, starling_dictionaries):
     all_entities = []
     persp_to_lexentry = collections.defaultdict(dict)
     copy_field_dict = collections.defaultdict(dict)
-
+    keep_field_dict = collections.defaultdict(dict)
+    link_field_dict = collections.defaultdict(dict)
     for starling_dictionary in starling_dictionaries:
         blob_id = tuple(starling_dictionary.get("blob_id"))
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
         column_dict = csv_to_columns(blob.real_storage_path)
 
-        field_map = starling_dictionary.get("field_map")
 
 
 
@@ -184,7 +179,7 @@ def convert(info, starling_dictionaries):
 
         for field in fields:
             starling_type = field.get("starling_type")
-            field_id = field.get("field_id")
+            field_id = tuple(field.get("field_id"))
             starling_name = field.get("starling_name")
             if starling_type == 1:
                 persp_to_field = create_dictionary_persp_to_field(id=ids,
@@ -196,6 +191,7 @@ def convert(info, starling_dictionaries):
                                  )
                 position_counter += 1
                 starlingname_to_column[starling_name] = field_id
+                keep_field_dict[blob_id][field_id] = starling_name
             elif starling_type == 2:
                 # copy
                 persp_to_field = create_dictionary_persp_to_field(id=ids,
@@ -207,8 +203,18 @@ def convert(info, starling_dictionaries):
                                  )
                 position_counter += 1
                 starlingname_to_column[starling_name] = field_id
-                copy_field_dict[new_persp][field_id] = starling_name
-
+                copy_field_dict[blob_id][field_id] = starling_name
+            elif starling_type == 4:
+                persp_to_field = create_dictionary_persp_to_field(id=ids,
+                                 parent_id=perspective_id,
+                                 field_id=field_id,
+                                 upper_level=None,
+                                 link_id=None,
+                                 position=position_counter
+                                 )
+                position_counter += 1
+                #starlingname_to_column[starling_name] = field_id
+                #copy_field_dict[blob_id][field_id] = starling_name
 
 
         add_etymology = starling_dictionary.get("add_etymology")
@@ -230,10 +236,11 @@ def convert(info, starling_dictionaries):
                  position=position_counter
                  )
         #starlingname_to_column["DIRECT_LINK_PERSPECTIVE_TO_FIELD"] = relation_field_id
-        fields_marked_as_links = [x for x in fields if x.get("starling_type") == 3]
-        for starling_column in starlingname_to_column:
-            #if starling_column
-            column = starlingname_to_column[starling_column]
+        fields_marked_as_links = [x.get("starling_name") for x in fields if x.get("starling_type") == 3]
+        link_field_dict[blob_id] = fields_marked_as_links
+        #for starling_column in starlingname_to_column:
+        #    #if starling_column
+        #    column = starlingname_to_column[starling_column]
         #for field in fields_marked_as_links:  #
         #    perspective_to_collist[new_persp] = fields_marked_as_links #
         #persp_to_starcolumns[new_persp] = starlingname_to_column
@@ -270,17 +277,81 @@ def convert(info, starling_dictionaries):
         if blob_id not in dictionary_id_links:
             continue
         persp = blob_to_perspective[blob_id]
-        field_to_starlig = copy_field_dict[persp]
+        field_to_starlig = copy_field_dict[blob_id]
         #
         persps_to_link = list()
-        for blob_link in dictionary_id_links[blob_id]:
-            persp_to_link = blob_to_perspective[blob_link]
-            persps_to_link.append(persp_to_link)
+        #for blob_link in dictionary_id_links[blob_id]:
+        #    persp_to_link = blob_to_perspective[blob_link]
+        #    persps_to_link.append(persp_to_link)
 
 
         for field_id in field_to_starlig:
             starling_field = field_to_starlig[field_id]
+            for blob_link in dictionary_id_links:
+                #links creation
+                link_numbers = [int(x) for x in link_field_dict[blob_id]]
+                for link_n in link_numbers:
+                    link_lexical_entry = persp_to_lexentry[blob_link][link_n]
+                    lexical_entry = persp_to_lexentry[blob_id][link_n]
+                    new_ent = create_entity(id=ids,
+                        parent_id=[lexical_entry.client_id, lexical_entry.object_id],
+                        additional_metadata={"link_perspective_id": blob_to_perspective[blob_link]},
+                        field_id=relation_field_id,
+                        self_id=None,
+                        link_id=[link_lexical_entry.client_id, link_lexical_entry.object_id], #
+                        locale_id=2,
+                        filename=None,
+                        content=None,
+                        registry=None,
+                        request=None,
+                        save_object=False)
+                    all_entities.append(new_ent)
 
+
+                # if field doesn`t exist raise error
+                for link_field in keep_field_dict[blob_id]:
+                    if not link_field in field_to_starlig:
+                        raise ResponseError(message="%s not found in %s dict" % (str(link_field), blob_id)  )
+
+                    # links creation
+                    # link_numbers = [int(x) for x in link_field_dict[blob_id]]
+                    # for link_n in link_numbers:
+                    #     link_lexical_entry = persp_to_lexentry[blob_link][link_n]
+                    #     lexical_entry = persp_to_lexentry[blob_id][link_n]
+                    #     new_ent = create_entity(id=ids,
+                    #         parent_id=[lexical_entry.client_id, lexical_entry.object_id],
+                    #         additional_metadata={"link_perspective_id": blob_to_perspective[blob_link]},
+                    #         field_id=relation_field_id,
+                    #         self_id=None,
+                    #         link_id=[link_lexical_entry.client_id, link_lexical_entry.object_id], #
+                    #         locale_id=2,
+                    #         filename=None,
+                    #         content=None,
+                    #         registry=None,
+                    #         request=None,
+                    #         save_object=False)
+                    #     all_entities.append(new_ent)
+                    # get field_id entities from csv
+                    word_list = perspective_column_dict[blob_id][starling_field]
+
+                    i = 1
+                    for word in word_list:
+                        link_lexical_entry = persp_to_lexentry[blob_link][i+1]
+                        new_ent = create_entity(id=ids,
+                            parent_id=[link_lexical_entry.client_id, link_lexical_entry.object_id],
+                            additional_metadata=None,
+                            field_id=link_field,
+                            self_id=None,
+                            link_id=None, #
+                            locale_id=2,
+                            filename=None,
+                            content=word,
+                            registry=None,
+                            request=None,
+                            save_object=False)
+                        all_entities.append(new_ent)
+                        i+=1
+                    # upload into link_field
 
     # for persp in copy_field_dict:
     #     # fields
@@ -306,6 +377,6 @@ def convert(info, starling_dictionaries):
     #     persp = blob_to_perspective[blob_id]
     #     persp = blob_to_perspective[blob_id]
     #     #new_links = [blob_to_perspective[x] for x in links if x in blob_to_perspective]
-    four = 2+2
+
     #result = starlingname_to_column
 

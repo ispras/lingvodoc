@@ -60,7 +60,7 @@ class Language(LingvodocObjectType):
     class Meta:
         interfaces = (CommonFieldsComposite, TranslationHolder)
 
-    fetch_object()
+    @fetch_object()
     def resolve_locale_exists(self):
         return self.dbObject.locale
 
