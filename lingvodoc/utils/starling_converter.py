@@ -42,7 +42,7 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dictionary_persp_to_field,
                                       edit_role)
 from lingvodoc.utils.search import translation_gist_search
-from lingvodoc.utils.creation import create_entity
+from lingvodoc.utils.creation import create_entity, create_lexicalentry
 
 
 def translation_gist_search_all(searchstring, gist_type):
@@ -68,7 +68,7 @@ def csv_to_columns(path):
     import csv
     csv_file = open(path, "rb").read().decode("utf-8", "ignore")
     lines = [x.rstrip().split('|') for x in csv_file.split("\n")]
-    column_dict = collections.OrderedDict()
+    column_dict = dict() #collections.OrderedDict()
     columns = lines[0]
     lines.pop()
     j = 0
@@ -157,7 +157,7 @@ def convert_start(ids, starling_dictionaries):
         # getting all values
         #persp_to_starcolumns = dict()
 
-        all_le = []
+        # all_le = []
         all_entities = []
         persp_to_lexentry = collections.defaultdict(dict)
         copy_field_dict = collections.defaultdict(dict)
@@ -260,26 +260,33 @@ def convert_start(ids, starling_dictionaries):
             #starlingname_to_column["DIRECT_LINK_PERSPECTIVE_TO_FIELD"] = relation_field_id
             fields_marked_as_links = [x.get("starling_name") for x in fields if x.get("starling_type") == 3]
             link_field_dict[blob_id] = fields_marked_as_links
-            #for starling_column in starlingname_to_column:
-            #    #if starling_column
-            #    column = starlingname_to_column[starling_column]
-            #for field in fields_marked_as_links:  #
-            #    perspective_to_collist[new_persp] = fields_marked_as_links #
-            #persp_to_starcolumns[new_persp] = starlingname_to_column
+
 
             # blob_link -> perspective_link
             csv_data = column_dict# perspective_column_dict[tuple(blob_id)]
             collist = list(starlingname_to_column)
-            for numb in csv_data["NUMBER"]:
-                numb = int(numb)
-                lexentr = dbLexicalEntry(client_id=ids[0],
-                                       parent=new_persp)
-                all_le.append(lexentr)
+            le_list = []
 
+            for numb in csv_data["NUMBER"]:#range(0, int(csv_data["NUMBER"][-1])):#csv_data["NUMBER"]:
+                numb = int(numb)
+                #lexentr = create_lexicalentry(ids, perspective_id, save_object=False)
+                lexentr = dbLexicalEntry(object_id=ids[1], client_id=ids[0], parent_client_id=perspective_id[0],
+                            parent_object_id=perspective_id[1])
+                le_list.append(lexentr)
                 persp_to_lexentry[blob_id][numb] = lexentr
+            #DBSession.bulk_save_objects(le_list)
+            for le in le_list:
+                DBSession.add(le)
+            DBSession.flush()
+
+            i = 0
+            entities_list = []
+            for lexentr in le_list:
+
+                #########
                 for starling_column_name in starlingname_to_column:
                     field_id = starlingname_to_column[starling_column_name]
-                    col_data = csv_data[starling_column_name][numb-1]
+                    col_data = csv_data[starling_column_name][i]
                     new_ent = create_entity(id=ids,
                         parent_id=[lexentr.client_id, lexentr.object_id],
                         additional_metadata=None,
@@ -292,7 +299,13 @@ def convert_start(ids, starling_dictionaries):
                         registry=None,
                         request=None,
                         save_object=False)
-                    all_entities.append(new_ent)
+                    entities_list.append(new_ent)
+                i+=1
+            #DBSession.bulk_save_objects(entities_list)
+            for ent in entities_list:
+                DBSession.add(ent)
+            DBSession.flush()
+            ##########
 
         for starling_dictionary in starling_dictionaries:
             blob_id = tuple(starling_dictionary.get("blob_id"))
@@ -302,24 +315,27 @@ def convert_start(ids, starling_dictionaries):
             field_to_starlig = copy_field_dict[blob_id]
             #
             persps_to_link = list()
-            #for blob_link in dictionary_id_links[blob_id]:
-            #    persp_to_link = blob_to_perspective[blob_link]
-            #    persps_to_link.append(persp_to_link)
-
-
             for field_id in field_to_starlig:
                 starling_field = field_to_starlig[field_id]
-                for blob_link in dictionary_id_links:
+                for blob_link in dictionary_id_links[blob_id]:
                     #links creation
                     for num_col in link_field_dict[blob_id]:
+                        #if not num_col:
+                        #    continue
                         link_numbers = [int(x) for x in perspective_column_dict[blob_id][num_col]]
                         #link_numbers = [int(x) for x in link_field_dict[blob_id]]
                         for link_n in link_numbers:
-                            link_lexical_entry = persp_to_lexentry[blob_link][link_n]
-                            lexical_entry = persp_to_lexentry[blob_id][link_n]
+                            #if not link_n:
+                            #    continue
+                            # TODO: fix
+                            if link_n+1 not in link_n+1:
+                                continue
+                            link_lexical_entry = persp_to_lexentry[blob_link][link_n+1]
+                            lexical_entry = persp_to_lexentry[blob_id][link_n+1]
+                            perspective = blob_to_perspective[blob_link]
                             new_ent = create_entity(id=ids,
                                 parent_id=[lexical_entry.client_id, lexical_entry.object_id],
-                                additional_metadata={"link_perspective_id": blob_to_perspective[blob_link]},
+                                additional_metadata={"link_perspective_id":[perspective.client_id, perspective.object_id]},
                                 field_id=relation_field_id,
                                 self_id=None,
                                 link_id=[link_lexical_entry.client_id, link_lexical_entry.object_id], #
@@ -328,43 +344,24 @@ def convert_start(ids, starling_dictionaries):
                                 content=None,
                                 registry=None,
                                 request=None,
-                                save_object=False)
-                            all_entities.append(new_ent)
+                                save_object=True)
+                            #all_entities.append(new_ent)
 
 
                     # if field doesn`t exist raise error
-                    for link_field in keep_field_dict[blob_id]:
-                        if not link_field in field_to_starlig:
-                            raise ResponseError(message="%s not found in %s dict" % (str(link_field), blob_id)  )
-
-                        # links creation
-                        # link_numbers = [int(x) for x in link_field_dict[blob_id]]
-                        # for link_n in link_numbers:
-                        #     link_lexical_entry = persp_to_lexentry[blob_link][link_n]
-                        #     lexical_entry = persp_to_lexentry[blob_id][link_n]
-                        #     new_ent = create_entity(id=ids,
-                        #         parent_id=[lexical_entry.client_id, lexical_entry.object_id],
-                        #         additional_metadata={"link_perspective_id": blob_to_perspective[blob_link]},
-                        #         field_id=relation_field_id,
-                        #         self_id=None,
-                        #         link_id=[link_lexical_entry.client_id, link_lexical_entry.object_id], #
-                        #         locale_id=2,
-                        #         filename=None,
-                        #         content=None,
-                        #         registry=None,
-                        #         request=None,
-                        #         save_object=False)
-                        #     all_entities.append(new_ent)
+                    for copy_field in copy_field_dict[blob_id]:
+                        if not copy_field in copy_field_dict[blob_link]:
+                            raise ResponseError(message="%s not found in %s dict" % (str(copy_field), blob_id)  )
                         # get field_id entities from csv
                         word_list = perspective_column_dict[blob_id][starling_field]
 
-                        i = 1
+                        i = 0
                         for word in word_list:
                             link_lexical_entry = persp_to_lexentry[blob_link][i+1]
                             new_ent = create_entity(id=ids,
                                 parent_id=[link_lexical_entry.client_id, link_lexical_entry.object_id],
                                 additional_metadata=None,
-                                field_id=link_field,
+                                field_id=copy_field,
                                 self_id=None,
                                 link_id=None, #
                                 locale_id=2,
@@ -372,35 +369,6 @@ def convert_start(ids, starling_dictionaries):
                                 content=word,
                                 registry=None,
                                 request=None,
-                                save_object=False)
-                            all_entities.append(new_ent)
+                                save_object=True)
+                            #all_entities.append(new_ent)
                             i+=1
-                        # upload into link_field
-
-        # for persp in copy_field_dict:
-        #     # fields
-        #     field_to_starlig = copy_field_dict[persp]
-        #     for field_id in field_to_starlig:
-        #         starling_field = field_to_starlig[field_id]
-        #     # target
-        #     dictionary_id_links
-        c = 0
-        for lex in all_le:
-            DBSession.add(lex)
-            if not c % 100:
-                DBSession.flush()
-            c+=1
-        c = 0
-        for ent in all_entities:
-            DBSession.add(ent)
-            if not c % 100:
-                DBSession.flush()
-
-        # # lexical entry creation
-        # for blob_id, links in dictionary_id_links.items():
-        #     persp = blob_to_perspective[blob_id]
-        #     persp = blob_to_perspective[blob_id]
-        #     #new_links = [blob_to_perspective[x] for x in links if x in blob_to_perspective]
-
-        #result = starlingname_to_column
-
