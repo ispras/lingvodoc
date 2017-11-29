@@ -4,6 +4,8 @@ import datetime
 from collections import defaultdict
 from itertools import chain
 import graphene
+from sqlalchemy import create_engine
+from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.models import (
     Dictionary as dbDictionary,
     TranslationAtom as dbTranslationAtom,
@@ -98,18 +100,35 @@ def graphene_to_dicts(starling_dictionaries):
 
     return result
 
-def convert(info, starling_dictionaries):
+def convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key=None):
     ids = [info.context["client_id"], None]
     locale_id = info.context.get('locale_id')
-    #convert_start.delay(ids, graphene_to_dicts(starling_dictionaries))
-    convert_start(ids, graphene_to_dicts(starling_dictionaries))
+    #convert_start.delay(ids, graphene_to_dicts(starling_dictionaries), cache_kwargs, sqlalchemy_url, task_key=task_key)
+    convert_start(ids,
+              graphene_to_dicts(starling_dictionaries),
+              cache_kwargs,
+              sqlalchemy_url,
+              task_key=task_key
+              )
+
     return True
 
 #@celery.task
-def convert_start(ids, starling_dictionaries):
+def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key=None):
+    from lingvodoc.cache.caching import initialize_cache
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
+    task_status.set(1, 1, "Preparing")
+    engine = create_engine(sqlalchemy_url, use_batch_mode=True)
+    DBSession.configure(bind=engine)
+    #try:
     if True:
-    #with transaction.manager:
-        #starling_dictionaries=fake_starling
+        client_id = ids[0]
+        client = DBSession.query(dbClient).filter_by(id=client_id).first()
+        user_id = client.user_id
+
+        #with transaction.manager:
+            #starling_dictionaries=fake_starling
 
 
         persp_fake_ids = dict()
@@ -119,7 +138,7 @@ def convert_start(ids, starling_dictionaries):
 
 
         dictionary_id_links = collections.defaultdict(list)
-
+        task_status.set(2, 5, "Checking links")
         fake_id_dict = {}
         fake_link_to_field= {}#collections.defaultdict(list)
         for starling_dictionary in starling_dictionaries:
@@ -151,6 +170,7 @@ def convert_start(ids, starling_dictionaries):
                     starling_dictionary["field_map"] = fields
         #
 
+        task_status.set(4, 50, "uploading...")
         blob_to_perspective = dict()
         #perspective_to_collist = {}
         perspective_column_dict = {}
@@ -381,3 +401,7 @@ def convert_start(ids, starling_dictionaries):
                             save_object=True)
                         #all_entities.append(new_ent)
                         i+=1
+    # except:
+    #     task_status.set(None, -1, "Conversion failed")
+    # else:
+    #     task_status.set(10, 100, "Finished", "")

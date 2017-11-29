@@ -162,6 +162,7 @@ from pyramid.security import authenticated_userid
 from lingvodoc.utils.phonology import phonology as utils_phonology
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words
+from lingvodoc.cache.caching import TaskStatus
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -1214,8 +1215,17 @@ class Query(graphene.ObjectType):
             convert_starling(parent_id:[1,1] blob_id:[1,1] translation_atoms:[], add_etymology:true , field_map:{min_created_at:1})
         }
         """
-
-        starling_converter.convert(info, starling_dictionaries)
+        cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
+        sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
+        task_names = []
+        for st_dict in starling_dictionaries:
+            # TODO: fix
+            task_names.append(st_dict.get("translation_atoms")[0].get("content"))
+        name = ",".join(task_names)
+        user_id = Client.get_user_by_client_id(info.context["client_id"]).id
+        task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
+        #starling_converter.convert(info, starling_dictionaries, cache_kwargs, task.key)
+        starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
         return True
 
     def resolve_eaf_wordlist(self, info, id):
