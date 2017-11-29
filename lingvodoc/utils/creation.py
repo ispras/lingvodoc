@@ -263,15 +263,16 @@ def create_entity(id=None,
                         locale_id=locale_id,
                         additional_metadata=additional_metadata,
                         parent=parent)
-    group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'lexical_entries_and_entities',
-                                                              Group.subject_client_id == dbentity.parent.parent.client_id,
-                                                              Group.subject_object_id == dbentity.parent.parent.object_id,
-                                                              BaseGroup.action == 'create').one()
-
-    override_group = DBSession.query(Group).join(BaseGroup).filter(
-        BaseGroup.subject == 'lexical_entries_and_entities',
-        Group.subject_override == True,
-        BaseGroup.action == 'create').one()
+    # TODO: check permissions if object_id != None
+    # group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'lexical_entries_and_entities',
+    #                                                           Group.subject_client_id == dbentity.parent.parent.client_id,
+    #                                                           Group.subject_object_id == dbentity.parent.parent.object_id,
+    #                                                           BaseGroup.action == 'create').one()
+    #
+    # override_group = DBSession.query(Group).join(BaseGroup).filter(
+    #     BaseGroup.subject == 'lexical_entries_and_entities',
+    #     Group.subject_override == True,
+    #     BaseGroup.action == 'create').one()
     # if user in group.users or user in override_group.users:
     #    dbentity.publishingentity.accepted = True
     if upper_level:
@@ -337,7 +338,7 @@ def create_lexicalentry(id, perspective_id, save_object=False):
     if not perspective:
         raise ResponseError(message="No such perspective in the system")
 
-    dblexentry = LexicalEntry(object_id=object_id, client_id=client_id,
+    dblexentry = LexicalEntry(object_id=object_id, client_id=client_id, parent_client_id=perspective_client_id,
                                 parent_object_id=perspective_object_id, parent=perspective)
     if save_object:
         DBSession.add(dblexentry)
