@@ -70,7 +70,7 @@ def csv_to_columns(path):
     lines = [x.rstrip().split('|') for x in csv_file.split("\n")]
     column_dict = dict() #collections.OrderedDict()
     columns = lines[0]
-    lines.pop()
+    #lines.pop()
     j = 0
     for line in lines:
         i = 0
@@ -306,69 +306,78 @@ def convert_start(ids, starling_dictionaries):
                 DBSession.add(ent)
             DBSession.flush()
             ##########
-
         for starling_dictionary in starling_dictionaries:
             blob_id = tuple(starling_dictionary.get("blob_id"))
             if blob_id not in dictionary_id_links:
                 continue
             persp = blob_to_perspective[blob_id]
-            field_to_starlig = copy_field_dict[blob_id]
-            #
-            persps_to_link = list()
-            for field_id in field_to_starlig:
-                starling_field = field_to_starlig[field_id]
-                for blob_link in dictionary_id_links[blob_id]:
-                    #links creation
-                    for num_col in link_field_dict[blob_id]:
-                        #if not num_col:
+            copy_field_to_starlig = copy_field_dict[blob_id]
+            for blob_link in dictionary_id_links[blob_id]:
+                #links creation
+                le_links = {}
+                for num_col in link_field_dict[blob_id]:
+                    #if not num_col:
+                    #    continue
+                    link_numbers = [int(x) for x in perspective_column_dict[blob_id][num_col]]
+                    #link_numbers = [int(x) for x in link_field_dict[blob_id]]
+                    for link_n in link_numbers:
+                        #if not link_n:
                         #    continue
-                        link_numbers = [int(x) for x in perspective_column_dict[blob_id][num_col]]
-                        #link_numbers = [int(x) for x in link_field_dict[blob_id]]
-                        for link_n in link_numbers:
-                            #if not link_n:
-                            #    continue
-                            # TODO: fix
-                            if link_n+1 not in link_n+1:
-                                continue
-                            link_lexical_entry = persp_to_lexentry[blob_link][link_n+1]
-                            lexical_entry = persp_to_lexentry[blob_id][link_n+1]
-                            perspective = blob_to_perspective[blob_link]
-                            new_ent = create_entity(id=ids,
-                                parent_id=[lexical_entry.client_id, lexical_entry.object_id],
-                                additional_metadata={"link_perspective_id":[perspective.client_id, perspective.object_id]},
-                                field_id=relation_field_id,
-                                self_id=None,
-                                link_id=[link_lexical_entry.client_id, link_lexical_entry.object_id], #
-                                locale_id=2,
-                                filename=None,
-                                content=None,
-                                registry=None,
-                                request=None,
-                                save_object=True)
-                            #all_entities.append(new_ent)
+                        # TODO: fix
+                        if not link_n:# link_n+1 not in persp_to_lexentry[blob_link]:
+                            continue
+                        link_lexical_entry = persp_to_lexentry[blob_link][link_n]
+                        lexical_entry = persp_to_lexentry[blob_id][link_n]
+                        perspective = blob_to_perspective[blob_link]
+                        new_ent = create_entity(id=ids,
+                            parent_id=[lexical_entry.client_id, lexical_entry.object_id],
+                            additional_metadata={"link_perspective_id":[perspective.client_id, perspective.object_id]},
+                            field_id=relation_field_id,
+                            self_id=None,
+                            link_id=[link_lexical_entry.client_id, link_lexical_entry.object_id], #
+                            locale_id=2,
+                            filename=None,
+                            content=None,
+                            registry=None,
+                            request=None,
+                            save_object=True)
+                        #all_entities.append(new_ent)
+                        le_links[(lexical_entry.client_id, lexical_entry.object_id)] = (link_lexical_entry.client_id, link_lexical_entry.object_id)
 
+
+                #
+
+                for field_id in copy_field_to_starlig: # copy_field_dict[blob_id]
+                    starling_field = copy_field_to_starlig[field_id]
 
                     # if field doesn`t exist raise error
-                    for copy_field in copy_field_dict[blob_id]:
-                        if not copy_field in copy_field_dict[blob_link]:
-                            raise ResponseError(message="%s not found in %s dict" % (str(copy_field), blob_id)  )
+                    #for copy_field in copy_field_dict[blob_id]:
+                        #if not copy_field in copy_field_dict[blob_link]:
+                        #    raise ResponseError(message="%s not found in %s dict" % (str(copy_field), blob_link)  )
                         # get field_id entities from csv
-                        word_list = perspective_column_dict[blob_id][starling_field]
+                    word_list = perspective_column_dict[blob_id][starling_field]
 
-                        i = 0
-                        for word in word_list:
-                            link_lexical_entry = persp_to_lexentry[blob_link][i+1]
-                            new_ent = create_entity(id=ids,
-                                parent_id=[link_lexical_entry.client_id, link_lexical_entry.object_id],
-                                additional_metadata=None,
-                                field_id=copy_field,
-                                self_id=None,
-                                link_id=None, #
-                                locale_id=2,
-                                filename=None,
-                                content=word,
-                                registry=None,
-                                request=None,
-                                save_object=True)
-                            #all_entities.append(new_ent)
+                    i = 1
+                    for word in word_list:
+                        # TODO: fix
+                        if not i in  persp_to_lexentry[blob_link]:
+                            continue
+                        lexical_entry = persp_to_lexentry[blob_id][i]
+                        if not (lexical_entry.client_id, lexical_entry.object_id) in le_links:
                             i+=1
+                            continue
+                        link_lexical_entry = le_links[(lexical_entry.client_id, lexical_entry.object_id)]#persp_to_lexentry[blob_link][i+1]
+                        new_ent = create_entity(id=ids,
+                            parent_id=link_lexical_entry,
+                            additional_metadata=None,
+                            field_id=field_id,
+                            self_id=None,
+                            link_id=None, #
+                            locale_id=2,
+                            filename=None,
+                            content=word,
+                            registry=None,
+                            request=None,
+                            save_object=True)
+                        #all_entities.append(new_ent)
+                        i+=1
