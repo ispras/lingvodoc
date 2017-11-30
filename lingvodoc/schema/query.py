@@ -1224,7 +1224,6 @@ class Query(graphene.ObjectType):
         name = ",".join(task_names)
         user_id = Client.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
-        #starling_converter.convert(info, starling_dictionaries, cache_kwargs, task.key)
         starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
         return True
 
