@@ -310,7 +310,7 @@ def create_entity(id=None,
             elif ext.lower() == 'eaf':
                 data_type = 'elan markup'
         dbentity.additional_metadata['data_type'] = data_type
-    elif data_type == 'link':
+    elif data_type in ('link', "directed link"):
         if link_id:
             link_client_id, link_object_id = link_id
             dbentity.link_client_id = link_client_id
