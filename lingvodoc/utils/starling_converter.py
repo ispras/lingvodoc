@@ -66,10 +66,7 @@ def get_field_id_by_name(field_name, gist_type="Service"):
         field = DBSession.query(dbField).filter_by(translation_gist_client_id=gist.client_id, translation_gist_object_id=gist.object_id).first()
         return (field.client_id, field.object_id)
 
-def csv_to_columns(path):
-    import csv
-    csv_file = open(path, "rb").read().decode("utf-8", "ignore")
-    lines = [x.rstrip().split('|') for x in csv_file.split("\n")]
+"""
     column_dict = dict() #collections.OrderedDict()
     columns = lines[0]
     #lines.pop()
@@ -85,7 +82,32 @@ def csv_to_columns(path):
             column_dict[column].append(line[i])
             i += 1
     return column_dict
+"""
 
+
+def csv_to_columns(path):
+    import csv
+    csv_file = open(path, "rb").read().decode("utf-8", "ignore")
+    lines = list()
+    for x in csv_file.split("\n"):
+        if not x:
+            continue
+        lines.append(x.rstrip().split('|'))
+        n = len(x.rstrip().split('|'))
+    #lines = [x.rstrip().split('|') for x in csv_file.split("\n") if x.rstrip().split('|')]
+    column_dict = dict()
+    columns = lines[0]
+
+    for line in lines[1:]:
+        if len(line) != len(columns):
+            continue
+        col_num = 0
+        for column in columns:
+            if not column in column_dict:
+                column_dict[column] = []
+            column_dict[column].append(line[col_num])
+            col_num += 1
+    return column_dict
 from lingvodoc.scripts.convert_five_tiers import convert_all
 from lingvodoc.queue.celery import celery
 
@@ -103,17 +125,18 @@ def graphene_to_dicts(starling_dictionaries):
 def convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key=None):
     ids = [info.context["client_id"], None]
     locale_id = info.context.get('locale_id')
-    #convert_start.delay(ids, graphene_to_dicts(starling_dictionaries), cache_kwargs, sqlalchemy_url, task_key=task_key)
+    convert_start.delay(ids, graphene_to_dicts(starling_dictionaries), cache_kwargs, sqlalchemy_url, task_key=task_key)
+    """
     convert_start(ids,
               graphene_to_dicts(starling_dictionaries),
               cache_kwargs,
               sqlalchemy_url,
               task_key=task_key
               )
-
+    """
     return True
 
-#@celery.task
+@celery.task
 def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key=None):
     from lingvodoc.cache.caching import initialize_cache
     initialize_cache(cache_kwargs)
@@ -121,8 +144,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
     task_status.set(1, 1, "Preparing")
     engine = create_engine(sqlalchemy_url, use_batch_mode=True)
     DBSession.configure(bind=engine)
-    #try:
-    if True:
+    try:
+    #if True:
         client_id = ids[0]
         client = DBSession.query(dbClient).filter_by(id=client_id).first()
         user_id = client.user_id
@@ -401,7 +424,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             save_object=True)
                         #all_entities.append(new_ent)
                         i+=1
-    # except:
-    #     task_status.set(None, -1, "Conversion failed")
-    # else:
-    #     task_status.set(10, 100, "Finished", "")
+    except:
+        task_status.set(None, -1, "Conversion failed")
+    else:
+        task_status.set(10, 100, "Finished", "")
