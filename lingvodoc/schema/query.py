@@ -388,7 +388,7 @@ class Query(graphene.ObjectType):
         """
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
         dbdicts = None
         if published:
             db_published_gist = translation_gist_search('Published')
@@ -413,7 +413,7 @@ class Query(graphene.ObjectType):
         else:
             if not dbdicts:
                 dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
-
+            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if category is not None:
             if category:
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
@@ -1224,7 +1224,6 @@ class Query(graphene.ObjectType):
         name = ",".join(task_names)
         user_id = Client.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
-        #starling_converter.convert(info, starling_dictionaries, cache_kwargs, task.key)
         starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
         return True
 
