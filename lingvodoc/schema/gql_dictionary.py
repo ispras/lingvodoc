@@ -132,7 +132,6 @@ class Dictionary(LingvodocObjectType):  # tested
                                    ending_time,
                                    locale_id=locale_id
                                    )
-    @client_id_check()
     @fetch_object()
     def resolve_perspectives(self, info):
         if not self.id:

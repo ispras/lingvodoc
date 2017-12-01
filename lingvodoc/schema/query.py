@@ -388,7 +388,7 @@ class Query(graphene.ObjectType):
         """
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
         dbdicts = None
         if published:
             db_published_gist = translation_gist_search('Published')
@@ -413,7 +413,7 @@ class Query(graphene.ObjectType):
         else:
             if not dbdicts:
                 dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
-
+            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if category is not None:
             if category:
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)

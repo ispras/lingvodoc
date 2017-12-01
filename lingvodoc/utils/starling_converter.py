@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.models import (
     Dictionary as dbDictionary,
+    Entity as dbEntity,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     DBSession,
@@ -44,7 +45,7 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dictionary_persp_to_field,
                                       edit_role)
 from lingvodoc.utils.search import translation_gist_search
-from lingvodoc.utils.creation import create_entity, create_lexicalentry
+#from lingvodoc.utils.creation import create_entity, create_lexicalentry
 
 
 def translation_gist_search_all(searchstring, gist_type):
@@ -112,6 +113,81 @@ from lingvodoc.scripts.convert_five_tiers import convert_all
 from lingvodoc.queue.celery import celery
 
 
+def create_entity(id=None,
+        parent_id=None,
+        additional_metadata=None,
+        field_id=None,
+        self_id=None,
+        link_id=None,
+        locale_id=2,
+        filename=None,
+        content=None,
+        registry=None,
+        request=None,
+        save_object=False):
+
+    if not parent_id:
+        raise ResponseError(message="Bad parent ids")
+    parent_client_id, parent_object_id = parent_id
+    # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    # if not parent:
+    #     raise ResponseError(message="No such lexical entry in the system")
+
+    upper_level = None
+
+    field_client_id, field_object_id = field_id if field_id else (None, None)
+
+
+    if self_id:
+        self_client_id, self_object_id = self_id
+        upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
+                                                          object_id=self_object_id).first()
+        if not upper_level:
+            raise ResponseError(message="No such upper level in the system")
+
+    client_id, object_id = id
+
+    # TODO: check permissions if object_id != None
+
+
+    real_location = None
+    url = None
+
+    if link_id:
+        link_client_id, link_object_id = link_id
+        dbentity = dbEntity(client_id=client_id,
+                            object_id=object_id,
+                            field_client_id=field_client_id,
+                            field_object_id=field_object_id,
+                            locale_id=locale_id,
+                            additional_metadata=additional_metadata,
+                            parent_client_id=parent_client_id,
+                            parent_object_id=parent_object_id,
+                            link_client_id = link_client_id,
+                            link_object_id = link_object_id
+                            )
+        # else:
+        #     raise ResponseError(
+        #         message="The field is of link type. You should provide client_id and object id in the content")
+    else:
+        dbentity = dbEntity(client_id=client_id,
+                            object_id=object_id,
+                            field_client_id=field_client_id,
+                            field_object_id=field_object_id,
+                            locale_id=locale_id,
+                            additional_metadata=additional_metadata,
+                            parent_client_id=parent_client_id,
+                            parent_object_id=parent_object_id,
+                            content = content,
+                            )
+    if upper_level:
+        dbentity.upper_level = upper_level
+    dbentity.publishingentity.accepted = True
+    if save_object:
+        DBSession.add(dbentity)
+        DBSession.flush()
+    return dbentity
+
 def graphene_to_dicts(starling_dictionaries):
     result = []
     for dictionary in starling_dictionaries:
@@ -145,16 +221,25 @@ def convert_start_async(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url
 def convert_start_sync(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
     convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
 
+#
+# import cProfile
+# from io import StringIO
+# import pstats
+# import contextlib
+
+#@contextlib.contextmanager
 def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
+    # pr = cProfile.Profile()
+    # pr.enable()
     import time
     from lingvodoc.cache.caching import initialize_cache
     initialize_cache(cache_kwargs)
     task_status = TaskStatus.get_from_cache(task_key)
     task_status.set(1, 1, "Preparing")
-    engine = create_engine(sqlalchemy_url)
-    DBSession.configure(bind=engine)
+    engine = create_engine(sqlalchemy_url,  use_batch_mode=True)
+    DBSession.configure(bind=engine, autoflush=False)
     try:
-    # if True:
+    #if True:
         with transaction.manager:
             client_id = ids[0]
             client = DBSession.query(dbClient).filter_by(id=client_id).first()
@@ -325,23 +410,24 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                     #lexentr = create_lexicalentry(ids, perspective_id, save_object=False)
                     lexentr = dbLexicalEntry(object_id=ids[1], client_id=ids[0], parent_client_id=perspective_id[0],
                                 parent_object_id=perspective_id[1])
-                    le_list.append(lexentr)
-                    persp_to_lexentry[blob_id][numb] = lexentr
+                    DBSession.add(lexentr)
+                    le_list.append((lexentr.client_id, lexentr.object_id))
+                    persp_to_lexentry[blob_id][numb] = (lexentr.client_id, lexentr.object_id)
                 #DBSession.bulk_save_objects(le_list)
-                for le in le_list:
-                    DBSession.add(le)
-                DBSession.flush()
+                #for le in le_list:
+                #    DBSession.add(le)
+                #DBSession.flush()
 
                 i = 0
-                entities_list = []
-                for lexentr in le_list:
+                #entities_list = []
+                for lexentr_tuple in le_list:
 
                     #########
                     for starling_column_name in starlingname_to_column:
                         field_id = starlingname_to_column[starling_column_name]
                         col_data = csv_data[starling_column_name][i]
                         new_ent = create_entity(id=ids,
-                            parent_id=[lexentr.client_id, lexentr.object_id],
+                            parent_id=lexentr_tuple,
                             additional_metadata=None,
                             field_id=field_id,
                             self_id=None,
@@ -352,12 +438,10 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             registry=None,
                             request=None,
                             save_object=False)
-                        entities_list.append(new_ent)
+                        #new_ent
+                        DBSession.add(new_ent)
                     i+=1
-                #DBSession.bulk_save_objects(entities_list)
-                for ent in entities_list:
-                    DBSession.add(ent)
-                DBSession.flush()
+                #DBSession.flush()
                 ##########
             for starling_dictionary in starling_dictionaries:
                 blob_id = tuple(starling_dictionary.get("blob_id"))
@@ -373,31 +457,28 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         #if not num_col:
                         #    continue
                         link_numbers = [int(x) for x in perspective_column_dict[blob_id][num_col]]
-                        #link_numbers = [int(x) for x in link_field_dict[blob_id]]
                         for link_n in link_numbers:
-                            #if not link_n:
-                            #    continue
                             # TODO: fix
-                            if not link_n:# link_n+1 not in persp_to_lexentry[blob_link]:
+                            if not link_n:
                                 continue
                             link_lexical_entry = persp_to_lexentry[blob_link][link_n]
-                            lexical_entry = persp_to_lexentry[blob_id][link_n]
+                            lexical_entry_ids = persp_to_lexentry[blob_id][link_n]
                             perspective = blob_to_perspective[blob_link]
                             new_ent = create_entity(id=ids,
-                                parent_id=[lexical_entry.client_id, lexical_entry.object_id],
+                                parent_id=lexical_entry_ids,
                                 additional_metadata={"link_perspective_id":[perspective.client_id, perspective.object_id]},
                                 field_id=relation_field_id,
                                 self_id=None,
-                                link_id=[link_lexical_entry.client_id, link_lexical_entry.object_id], #
+                                link_id=link_lexical_entry, #
                                 locale_id=2,
                                 filename=None,
                                 content=None,
                                 registry=None,
                                 request=None,
                                 save_object=False)
-                            link_entities.append(new_ent)
-                            le_links[(lexical_entry.client_id, lexical_entry.object_id)] = (link_lexical_entry.client_id, link_lexical_entry.object_id)
-
+                            DBSession.add(new_ent)
+                            le_links[lexical_entry_ids] = link_lexical_entry
+                    #DBSession.flush()
 
                     #
 
@@ -416,11 +497,11 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             # TODO: fix
                             if not i in  persp_to_lexentry[blob_link]:
                                 continue
-                            lexical_entry = persp_to_lexentry[blob_id][i]
-                            if not (lexical_entry.client_id, lexical_entry.object_id) in le_links:
+                            lexical_entry_ids = persp_to_lexentry[blob_id][i]
+                            if not lexical_entry_ids in le_links:
                                 i+=1
                                 continue
-                            link_lexical_entry = le_links[(lexical_entry.client_id, lexical_entry.object_id)]#persp_to_lexentry[blob_link][i+1]
+                            link_lexical_entry = le_links[lexical_entry_ids]
                             new_ent = create_entity(id=ids,
                                 parent_id=link_lexical_entry,
                                 additional_metadata=None,
@@ -433,15 +514,20 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                 registry=None,
                                 request=None,
                                 save_object=False)
-                            link_entities.append(new_ent)
+                            DBSession.add(new_ent)
                             i+=1
-                    for i in link_entities:
-                        DBSession.add(i)
-                    DBSession.flush()
+                    #DBSession.flush()
 
-
+        DBSession.flush()
 
     except:
         task_status.set(None, -1, "Conversion failed")
     else:
         task_status.set(10, 100, "Finished", "")
+    # pr.disable()
+    # s = StringIO()
+    # ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
+    # ps.print_stats()
+    # uncomment this to see who's calling what
+    # ps.print_callers()
+    #print(s.getvalue())
