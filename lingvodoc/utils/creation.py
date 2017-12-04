@@ -43,7 +43,8 @@ def create_perspective(id = (None, None),
                        additional_metadata=None,
                        import_source=None,
                        import_hash=None,
-                       is_template=False
+                       is_template=False,
+                       add_group=False
                        ):
     client_id, object_id = id
 
@@ -74,7 +75,7 @@ def create_perspective(id = (None, None),
     DBSession.flush()
     owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
     owner = owner_client.user
-    if not object_id:
+    if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
             client = DBSession.query(Client).filter_by(id=client_id).first()
             user = DBSession.query(User).filter_by(id=client.user_id).first()
@@ -93,7 +94,8 @@ def create_dbdictionary(id=None,
                         translation_gist_id=None,
                         additional_metadata=None,
                         domain=0,
-                        category=0):
+                        category=0,
+                        add_group=False):
     client_id, object_id = id
 
     if not parent_id:
@@ -124,14 +126,15 @@ def create_dbdictionary(id=None,
 
     client = DBSession.query(Client).filter_by(id=client_id).first()
     user = client.user
-    for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-        new_group = Group(parent=base,
-                          subject_object_id=dbdictionary_obj.object_id,
-                          subject_client_id=dbdictionary_obj.client_id)
-        if user not in new_group.users:
-            new_group.users.append(user)
-        DBSession.add(new_group)
-        DBSession.flush()
+    if not object_id or add_group:
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+            new_group = Group(parent=base,
+                              subject_object_id=dbdictionary_obj.object_id,
+                              subject_client_id=dbdictionary_obj.client_id)
+            if user not in new_group.users:
+                new_group.users.append(user)
+            DBSession.add(new_group)
+            DBSession.flush()
     return dbdictionary_obj
 
 def create_dictionary_persp_to_field(id=None,
