@@ -463,19 +463,20 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                     for starling_column_name in starlingname_to_column:
                         field_id = starlingname_to_column[starling_column_name]
                         col_data = csv_data[starling_column_name][i]
-                        new_ent = create_entity(id=obj_id.id_pair(client_id),
-                            parent_id=lexentr_tuple,
-                            additional_metadata=None,
-                            field_id=field_id,
-                            self_id=None,
-                            link_id=None, #
-                            locale_id=2,
-                            filename=None,
-                            content=col_data,
-                            registry=None,
-                            request=None,
-                            save_object=False)
-                        DBSession.add(new_ent)
+                        if col_data:
+                            new_ent = create_entity(id=obj_id.id_pair(client_id),
+                                parent_id=lexentr_tuple,
+                                additional_metadata=None,
+                                field_id=field_id,
+                                self_id=None,
+                                link_id=None, #
+                                locale_id=2,
+                                filename=None,
+                                content=col_data,
+                                registry=None,
+                                request=None,
+                                save_object=False)
+                            DBSession.add(new_ent)
                     i+=1
 
             for starling_dictionary in starling_dictionaries:
@@ -524,19 +525,20 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             lexical_entry_ids = persp_to_lexentry[blob_id][i]
                             if lexical_entry_ids in le_links:
                                 link_lexical_entry = le_links[lexical_entry_ids]
-                                new_ent = create_entity(id=obj_id.id_pair(client_id),
-                                    parent_id=link_lexical_entry,
-                                    additional_metadata=None,
-                                    field_id=field_id,
-                                    self_id=None,
-                                    link_id=None, #
-                                    locale_id=2,
-                                    filename=None,
-                                    content=word,
-                                    registry=None,
-                                    request=None,
-                                    save_object=False)
-                                DBSession.add(new_ent)
+                                if word:
+                                    new_ent = create_entity(id=obj_id.id_pair(client_id),
+                                        parent_id=link_lexical_entry,
+                                        additional_metadata=None,
+                                        field_id=field_id,
+                                        self_id=None,
+                                        link_id=None, #
+                                        locale_id=2,
+                                        filename=None,
+                                        content=word,
+                                        registry=None,
+                                        request=None,
+                                        save_object=False)
+                                    DBSession.add(new_ent)
                             i+=1
             DBSession.flush()
 
