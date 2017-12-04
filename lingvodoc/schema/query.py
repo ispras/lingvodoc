@@ -1105,11 +1105,13 @@ class Query(graphene.ObjectType):
             lexical_entries_list.append(gr_lexicalentry_object)
         return lexical_entries_list
 
-    # @client_id_check()
+    @client_id_check()
     def resolve_user_blobs(self, info, data_type=None, is_global=None):
         allowed_global_types = ["sociolinguistics"]
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
+        if not client:
+            raise ResponseError('not authenticated')
         if data_type:
             if not is_global:
                 user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id, data_type=data_type).all()
