@@ -371,6 +371,68 @@ def get_grant_permission(request):
         return {'error': str(e)}
 
 
+@view_config(route_name='add_dictionary_to_grant_admin', renderer='json', request_method='POST', permission='admin')
+def add_dictionary_to_grant_admin(request):
+    try:
+
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        request_json = request.json_body
+        for entry in request_json:
+                grant = DBSession.query(Grant).filter_by(id=entry['grant_id']).first()
+                if grant.additional_metadata is None:
+                    grant.additional_metadata = dict()
+                if grant.additional_metadata.get('participant') is None:
+                    grant.additional_metadata['participant'] = list()
+
+                dict_ids = {'client_id': entry['client_id'],
+                            'object_id': entry['object_id']}
+
+                if dict_ids not in grant.additional_metadata['participant']:
+                    grant.additional_metadata['participant'].append(dict_ids)
+
+                grant_admins = DBSession.query(User).filter(User.id.in_(grant.owners))
+                if grant.additional_metadata is None:
+                    grant.additional_metadata = dict()
+                if grant.additional_metadata.get('roles', None) is None:
+                    grant.additional_metadata['roles'] = list()
+
+                cur_dict = DBSession.query(Dictionary).filter_by(client_id=dict_ids['client_id'], object_id=dict_ids['object_id']).first()
+                persp_ids = list()
+                for admin in grant_admins:
+                    perm_groups = DBSession.query(Group).filter_by(subject_client_id=cur_dict.client_id, subject_object_id=cur_dict.object_id).all()
+                    for group in perm_groups:
+                        if group.id not in grant.additional_metadata['roles']:
+                            grant.additional_metadata['roles'].append(group.id)
+                        if group not in admin.groups:
+                            admin.groups.append(group)
+                    perm_groups = DBSession.query(Group).filter(tuple_(Group.subject_client_id, Group.subject_object_id).in_(persp_ids)).all()
+                    for group in perm_groups:
+                        if group.id not in grant.additional_metadata['roles']:
+                            grant.additional_metadata['roles'].append(group.id)
+                        if group not in admin.groups:
+                            admin.groups.append(group)
+                flag_modified(grant, 'additional_metadata')
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='add_dictionary_to_grant', renderer='json', request_method='POST')
 def add_dictionary_to_grant(request):
     try:

@@ -92,6 +92,8 @@ def configure_routes(config):
     config.add_route(name='participate_org', pattern='/participate_org/{id}')
     config.add_route(name='administrate_org', pattern='/administrate_org/{id}')
     config.add_route(name='add_dictionary_to_grant', pattern='add_dictionary_to_grant')
+    config.add_route(name='add_dictionary_to_grant_admin', pattern='add_dictionary_to_grant_admin',
+                     factory='lingvodoc.models.AdminAcl')
 
     # config.add_route(name='create_grant', pattern='/grant')
 
