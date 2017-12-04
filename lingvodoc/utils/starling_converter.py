@@ -213,13 +213,51 @@ def convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
     return True
 
 
+class StarlingField(graphene.InputObjectType):
+    starling_name = graphene.String(required=True)
+    starling_type = graphene.Int(required=True)
+    field_id = LingvodocID(required=True)
+    fake_id = graphene.String()
+    link_fake_id = LingvodocID() #graphene.String()
 
-@celery.task
-def convert_start_async(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
-    convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
+class StarlingDictionary(graphene.InputObjectType):
+    blob_id = LingvodocID()
+    parent_id = LingvodocID(required=True)
+    perspective_gist_id = LingvodocID()
+    perspective_atoms = graphene.List(ObjectVal)
+    translation_gist_id = LingvodocID()
+    translation_atoms = graphene.List(ObjectVal)
+    field_map = graphene.List(StarlingField, required=True)
+    add_etymology = graphene.Boolean(required=True)
 
-def convert_start_sync(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
-    convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
+
+class GqlStarling(graphene.Mutation):
+    triumph = graphene.Boolean()
+    #convert_starling
+
+    class Arguments:
+        starling_dictionaries=graphene.List(StarlingDictionary)
+
+    def mutate(root, info, **args):
+        starling_dictionaries = args.get("starling_dictionaries")
+        if not starling_dictionaries:
+            raise ResponseError(message="The starling_dictionaries variable is not set")
+        cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
+        sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
+        task_names = []
+        for st_dict in starling_dictionaries:
+            # TODO: fix
+            task_names.append(st_dict.get("translation_atoms")[0].get("content"))
+        name = ",".join(task_names)
+        user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
+        task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
+        convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
+        return GqlStarling(triumph=True)
+
+
+
+
+
 
 
 import cProfile
@@ -239,6 +277,9 @@ class ObjectId:
 
     def id_pair(self, client_id):
         return [client_id, self.next]
+
+
+
 
 
 #@contextlib.contextmanager
@@ -477,9 +518,9 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
                         i = 1
                         for word in word_list:
-                            # if not i in persp_to_lexentry[blob_id]:
-                            #     i+=1
-                            #     continue
+                            if not i in persp_to_lexentry[blob_id]:
+                                i+=1
+                                continue
                             lexical_entry_ids = persp_to_lexentry[blob_id][i]
                             if lexical_entry_ids in le_links:
                                 link_lexical_entry = le_links[lexical_entry_ids]
@@ -500,7 +541,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
             DBSession.flush()
 
     except  Exception as err:
-        task_status.set(None, -1, "Conversion failed: %s" % err)
+        task_status.set(None, -1, "Conversion failed: %s" % str(err))
     else:
         task_status.set(10, 100, "Finished", "")
     # pr.disable()
@@ -510,3 +551,10 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
     # uncomment this to see who's calling what
     # ps.print_callers()
     # print(s.getvalue())
+
+@celery.task
+def convert_start_async(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
+    convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
+
+def convert_start_sync(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
+    convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)

@@ -271,7 +271,7 @@ class Query(graphene.ObjectType):
     #     field_map=graphene.List(StarlingField, required=True),
     #     add_etymology=graphene.Boolean()
     # )
-    convert_starling = graphene.Field(graphene.Boolean,starling_dictionaries=graphene.List(StarlingDictionary))
+
 
     def resolve_language_tree(self, info):
         langs = DBSession.query(dbLanguage).filter_by(marked_for_deletion=False).order_by(dbLanguage.parent_client_id,
@@ -1211,23 +1211,23 @@ class Query(graphene.ObjectType):
 
         return True
 
-    def resolve_convert_starling(self, info, starling_dictionaries):
-        """
-        query myQuery {
-            convert_starling(parent_id:[1,1] blob_id:[1,1] translation_atoms:[], add_etymology:true , field_map:{min_created_at:1})
-        }
-        """
-        cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
-        sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
-        task_names = []
-        for st_dict in starling_dictionaries:
-            # TODO: fix
-            task_names.append(st_dict.get("translation_atoms")[0].get("content"))
-        name = ",".join(task_names)
-        user_id = Client.get_user_by_client_id(info.context["client_id"]).id
-        task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
-        starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
-        return True
+    # def resolve_convert_starling(self, info, starling_dictionaries):
+    #     """
+    #     query myQuery {
+    #         convert_starling(parent_id:[1,1] blob_id:[1,1] translation_atoms:[], add_etymology:true , field_map:{min_created_at:1})
+    #     }
+    #     """
+    #     cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
+    #     sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
+    #     task_names = []
+    #     for st_dict in starling_dictionaries:
+    #         # TODO: fix
+    #         task_names.append(st_dict.get("translation_atoms")[0].get("content"))
+    #     name = ",".join(task_names)
+    #     user_id = Client.get_user_by_client_id(info.context["client_id"]).id
+    #     task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
+    #     starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
+    #     return True
 
     def resolve_eaf_wordlist(self, info, id):
         # TODO: delete
@@ -1395,6 +1395,8 @@ class Query(graphene.ObjectType):
 
 
 
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -1402,6 +1404,8 @@ class MyMutations(graphene.ObjectType):
     create_field = gql_field.CreateField.Field()
     for more beautiful imports
     """
+    convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
+
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
