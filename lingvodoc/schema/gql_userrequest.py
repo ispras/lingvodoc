@@ -46,6 +46,18 @@ from sqlalchemy import (
     case
 )
 
+
+class Subject(graphene.ObjectType):
+    """
+    graphene object that have all metadata attributes
+    if new attributes of metadata are added, then this class has to be updated
+    """
+    grant_id = graphene.Int()
+    user_id = graphene.Int()
+    org_id = graphene.Int()
+    dictionary_id = LingvodocID()
+
+
 class UserRequest(LingvodocObjectType): # show only
     """
      #id                  | bigint                      | NOT NULL DEFAULT nextval('userrequest_id_seq'::regclass)
@@ -73,7 +85,8 @@ class UserRequest(LingvodocObjectType): # show only
     recipient_id = graphene.Int()
     broadcast_uuid = graphene.String()
     message = graphene.String()
-    subject = JSONString()
+    # subject = JSONString()
+    subject = graphene.Field(Subject)
     class Meta:
         interfaces = (IdHolder, AdditionalMetadata, CreatedAt, TypeHolder)
 
@@ -93,9 +106,28 @@ class UserRequest(LingvodocObjectType): # show only
     def resolve_message(self, info):
         return self.dbObject.message
 
-    @fetch_object("subject")
+
+
+    @fetch_object()
     def resolve_subject(self, info):
-        return self.dbObject.subject
+        db_object = self.dbObject
+
+        # initializes dict with None, for keys nonexistent in dbObject.additional_metadata
+        # list of keys is taken from Metadata attributes
+        subject_dict = {i: None for i in Subject().__class__.__dict__ if not i.startswith("_")}
+
+        if db_object.subject:
+            new_meta = {key: db_object.subject[key] for key in db_object.subject if key in subject_dict}
+            subject_dict.update(new_meta)
+        if 'client_id' in db_object.subject and 'object_id' in db_object.subject:
+            subject_dict['dictionary_id'] = [db_object.subject['client_id'], db_object.subject['object_id']]
+
+        subject_object = Subject(**subject_dict)
+        return subject_object
+
+    # @fetch_object("subject")
+    # def resolve_subject(self, info):
+    #     return self.dbObject.subject
     # def data_type(self):
     #     return DBSession.query(TranslationAtom.content).filter_by(
     #     parent_client_id=self.data_type_translation_gist_client_id,
