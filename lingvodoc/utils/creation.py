@@ -8,6 +8,7 @@ from sqlalchemy import (
     and_,
 )
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import or_
 
 from lingvodoc.models import (
     Client,
@@ -213,6 +214,20 @@ def create_dblanguage(id=None,
 
     if parent:
         dblanguage.parent = parent
+
+    prev_sibling = DBSession.query(Language).filter(Language.parent_client_id == parent_client_id,
+                                                        Language.parent_object_id == parent_object_id,
+                                                        Language.marked_for_deletion == False,
+                                                    or_(Language.client_id != dblanguage.client_id,
+                                                        Language.object_id != dblanguage.object_id)).order_by(Language.parent_client_id,
+                                                                                        Language.parent_object_id,
+                                                                                        Language.additional_metadata[
+                                                                                            'younger_siblings'].desc()).first()
+    dblanguage.additional_metadata = dict()
+    dblanguage.additional_metadata['younger_siblings'] = list()
+    if prev_sibling:
+        dblanguage.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
+        dblanguage.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
 
     DBSession.flush()
     return dblanguage

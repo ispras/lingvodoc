@@ -323,8 +323,6 @@ def testing(request):
         if not lang.additional_metadata:
             lang.additional_metadata = dict()
         lang.additional_metadata['younger_siblings'] = list(prev_langs)
-        if 'yonger_siblings' in lang.additional_metadata:
-            del lang.additional_metadata['yonger_siblings']
         prev_langs.append((lang.client_id, lang.object_id))
         flag_modified(lang, 'additional_metadata')
 
