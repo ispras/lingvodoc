@@ -151,14 +151,14 @@ def move_language(language, parent_id, previous_sibling):
         if [previous.parent_client_id, previous.parent_object_id] != parent_id:
             raise ResponseError(message='no such pair of this parent/previous_sibling')
     lang_ids = [language.client_id, language.object_id]
-    ids = str(lang_ids)
+    ids = lang_ids
     older_siblings = DBSession.query(dbLanguage).filter(dbLanguage.parent_client_id == language.parent_client_id,
                                                         dbLanguage.parent_object_id == language.parent_object_id,
                                                         dbLanguage.marked_for_deletion == False,
                                                         dbLanguage.additional_metadata['younger_siblings'].contains(
                                                             [ids])).all()
     for lang in older_siblings:
-        lang.additional_metadata['younger_siblings'].remove([dbLanguage.client_id, dbLanguage.object_id])
+        lang.additional_metadata['younger_siblings'].remove(lang_ids)
         flag_modified(lang, 'additional_metadata')
 
     parent = DBSession.query(dbLanguage).filter(dbLanguage.client_id==parent_id[0], dbLanguage.client_id==parent_id[0]).first()
@@ -175,7 +175,7 @@ def move_language(language, parent_id, previous_sibling):
                                                         dbLanguage.marked_for_deletion == False,
                                                         or_(dbLanguage.client_id != language.client_id, dbLanguage.object_id != language.object_id))
     if previous:
-        ids = str(previous_sibling)
+        ids = previous_sibling
         older_siblings = older_siblings.filter(dbLanguage.additional_metadata['younger_siblings'].contains(
                                                [ids]))
     older_siblings = older_siblings.all()
@@ -195,6 +195,8 @@ def move_language(language, parent_id, previous_sibling):
         lang.additional_metadata['younger_siblings'].insert(index + 1, [language.client_id, language.object_id])
         flag_modified(lang, 'additional_metadata')
     language.additional_metadata['younger_siblings'] = new_meta
+    if previous_sibling:
+        language.additional_metadata['younger_siblings'].append(previous_sibling)
     flag_modified(language, 'additional_metadata')
 
 
