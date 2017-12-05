@@ -140,9 +140,12 @@ class CreateLanguage(graphene.Mutation):
 
 def move_language(language, parent_id, previous_sibling):
     previous = None
+    if not parent_id:
+        parent_id = [None, None]
     if previous_sibling:
         previous = DBSession.query(dbLanguage).filter(dbLanguage.client_id == previous_sibling[0],
-                                           dbLanguage.object_id == previous_sibling[1]).first()
+                                           dbLanguage.object_id == previous_sibling[1],
+                                                        dbLanguage.marked_for_deletion == False).first()
         if not previous:
             raise ResponseError(message='no such previous sibling')
         if [previous.parent_client_id, previous.parent_object_id] != parent_id:
@@ -150,23 +153,26 @@ def move_language(language, parent_id, previous_sibling):
     lang_ids = [language.client_id, language.object_id]
     ids = str(lang_ids)
     older_siblings = DBSession.query(dbLanguage).filter(dbLanguage.parent_client_id == language.parent_client_id,
-                                       dbLanguage.parent_object_id == language.parent_object_id,
-                                       dbLanguage.additional_metadata['younger_siblings'].contains(
-                                           [ids])).all()
+                                                        dbLanguage.parent_object_id == language.parent_object_id,
+                                                        dbLanguage.marked_for_deletion == False,
+                                                        dbLanguage.additional_metadata['younger_siblings'].contains(
+                                                            [ids])).all()
     for lang in older_siblings:
         lang.additional_metadata['younger_siblings'].remove([dbLanguage.client_id, dbLanguage.object_id])
         flag_modified(lang, 'additional_metadata')
 
     parent = DBSession.query(dbLanguage).filter(dbLanguage.client_id==parent_id[0], dbLanguage.client_id==parent_id[0]).first()
-    while parent is not None:
-        tmp_ids = [parent.client_id, parent.object_id]
-        if tmp_ids == lang_ids:
-            raise ResponseError(message='cannot cycle parent-child in tree')
-        parent = parent.parent
+    if parent:
+        while parent is not None:
+            tmp_ids = [parent.client_id, parent.object_id]
+            if tmp_ids == lang_ids:
+                raise ResponseError(message='cannot cycle parent-child in tree')
+            parent = parent.parent
     language.parent_client_id = parent_id[0]
     language.parent_object_id = parent_id[1]
-    older_siblings = DBSession.query(dbLanguage).filter(dbLanguage.parent_client_id == language.parent_client_id,
-                                                        dbLanguage.parent_object_id == language.parent_object_id,
+    older_siblings = DBSession.query(dbLanguage).filter(dbLanguage.parent_client_id == parent_id[0],
+                                                        dbLanguage.parent_object_id == parent_id[1],
+                                                        dbLanguage.marked_for_deletion == False,
                                                         or_(dbLanguage.client_id != language.client_id, dbLanguage.object_id != language.object_id))
     if previous:
         ids = str(previous_sibling)
@@ -178,11 +184,17 @@ def move_language(language, parent_id, previous_sibling):
     else:
         new_meta = []
     for lang in older_siblings:
-        siblings = lang.additional_metadata['younger_siblings']
-        index = siblings.index(previous_sibling)
-        lang.additional_metadata['younger_siblings'].insert(index, [dbLanguage.client_id, dbLanguage.object_id])
+        siblings = lang.additional_metadata.get('younger_siblings')
+        if not siblings:
+            lang.additional_metadata['younger_siblings'] = list()
+            siblings = lang.additional_metadata['younger_siblings']
+        if previous_sibling:
+            index = siblings.index(previous_sibling)
+        else:
+            index = -1
+        lang.additional_metadata['younger_siblings'].insert(index + 1, [language.client_id, language.object_id])
         flag_modified(lang, 'additional_metadata')
-    language.additional_metadata = new_meta
+    language.additional_metadata['younger_siblings'] = new_meta
     flag_modified(language, 'additional_metadata')
 
 
@@ -218,8 +230,8 @@ class MoveLanguage(graphene.Mutation):
     """
     class Arguments:
         id = LingvodocID(required=True)
-        parent_id = LingvodocID(required=True)
-        previous_sibling = LingvodocID(required=True)
+        parent_id = LingvodocID()
+        previous_sibling = LingvodocID()
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -275,7 +287,7 @@ class UpdateLanguage(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         translation_gist_id = LingvodocID()
-        
+
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
 
