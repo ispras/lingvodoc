@@ -73,7 +73,8 @@ from lingvodoc.schema.gql_language import (
     Language,
     CreateLanguage,
     UpdateLanguage,
-    DeleteLanguage
+    DeleteLanguage,
+    MoveLanguage
 )
 from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
@@ -1413,6 +1414,7 @@ class MyMutations(graphene.ObjectType):
     update_user = UpdateUser.Field()
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
+    move_language = UpdateLanguage.Field()
     delete_language = DeleteLanguage.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()

@@ -187,6 +187,60 @@ def move_language(language, parent_id, previous_sibling):
 
 
 
+class MoveLanguage(graphene.Mutation):
+    """
+    example:
+       mutation  {
+        update_language(id: [949,18], translation_gist_id: [660, 4]) {
+            language {
+                id
+                translation_gist_id
+            }
+        }
+    }
+
+    (this example works)
+    returns:
+   {
+      "update_language": {
+        "language": {
+          "id": [
+            949,
+            18
+          ],
+          "translation_gist_id": [
+            660,
+            4
+          ]
+        }
+      }
+    }
+    """
+    class Arguments:
+        id = LingvodocID(required=True)
+        parent_id = LingvodocID(required=True)
+        previous_sibling = LingvodocID(required=True)
+
+    language = graphene.Field(Language)
+    triumph = graphene.Boolean()
+
+
+    @staticmethod
+    @acl_check_by_id('edit', 'language')
+    def mutate(root, info, **args):
+        id = args.get('id')
+        client_id = id[0]
+        object_id = id[1]
+        dblanguage = DBSession.query(dbLanguage).filter_by(client_id=client_id, object_id=object_id).first()
+
+        if not dblanguage or dblanguage.marked_for_deletion:
+            raise ResponseError(message="Error: No such language in the system")
+        parent_id = args.get('parent_id')
+        previous_sibling = args.get('previous_sibling')
+        move_language(dblanguage, parent_id, previous_sibling)
+        language = Language(id=[dblanguage.client_id, dblanguage.object_id])
+        language.dbObject = dblanguage
+        return UpdateLanguage(language=language, triumph=True)
 
 
 class UpdateLanguage(graphene.Mutation):
