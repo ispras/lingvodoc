@@ -94,7 +94,7 @@ def csv_to_columns(path):
         if not x:
             continue
         lines.append(x.rstrip().split('|'))
-        n = len(x.rstrip().split('|'))
+        #n = len(x.rstrip().split('|'))
     #lines = [x.rstrip().split('|') for x in csv_file.split("\n") if x.rstrip().split('|')]
     column_dict = dict()
     columns = lines[0]
@@ -108,6 +108,9 @@ def csv_to_columns(path):
                 column_dict[column] = []
             column_dict[column].append(line[col_num])
             col_num += 1
+    # hack #1
+
+    column_dict["NUMBER"] = list(range(1, len(column_dict["NUMBER"]) + 1))
     return column_dict
 from lingvodoc.scripts.convert_five_tiers import convert_all
 from lingvodoc.queue.celery import celery
@@ -204,12 +207,14 @@ def convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
 
 
     convert_start_async.delay(ids, graphene_to_dicts(starling_dictionaries), cache_kwargs, sqlalchemy_url, task_key)
-    # convert_start_sync(ids,
-    #           graphene_to_dicts(starling_dictionaries),
-    #           cache_kwargs,
-    #           sqlalchemy_url,
-    #           task_key
-    #           )
+    """
+    convert_start_sync(ids,
+              graphene_to_dicts(starling_dictionaries),
+              cache_kwargs,
+              sqlalchemy_url,
+              task_key
+              )
+    """
     return True
 
 
@@ -448,14 +453,14 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 csv_data = column_dict
                 collist = list(starlingname_to_column)
                 le_list = []
-
-                for numb in csv_data["NUMBER"]:
-                    numb = int(numb)
-                    lexentr = dbLexicalEntry(object_id=obj_id.next, client_id=client_id, parent_client_id=perspective_id[0],
+                for number in csv_data["NUMBER"]:  # range()
+                    le_client_id, le_object_id = client_id, obj_id.next
+                    lexentr = dbLexicalEntry(object_id=le_object_id, client_id=le_client_id, parent_client_id=perspective_id[0],
                                 parent_object_id=perspective_id[1])
                     DBSession.add(lexentr)
-                    le_list.append((lexentr.client_id, lexentr.object_id))
-                    persp_to_lexentry[blob_id][numb] = (lexentr.client_id, lexentr.object_id)
+                    le_list.append((le_client_id, le_object_id))
+                    persp_to_lexentry[blob_id][number] = (le_client_id, le_object_id)
+                    number += 1
                 #DBSession.bulk_save_objects(le_list)
 
                 i = 0
@@ -489,13 +494,13 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                     # links creation
                     le_links = {}
                     for num_col in link_field_dict[blob_id]:
-                        link_numbers = [int(x) for x in perspective_column_dict[blob_id][num_col]]
-                        for link_n in link_numbers:
+                        link_numbers = [(i+1, int(x)) for i, x in enumerate(perspective_column_dict[blob_id][num_col])] ###
+                        for link_pair in link_numbers:
                             # TODO: fix
-                            if not link_n:
+                            if not link_pair[1]:
                                 continue
-                            link_lexical_entry = persp_to_lexentry[blob_link][link_n]
-                            lexical_entry_ids = persp_to_lexentry[blob_id][link_n]
+                            link_lexical_entry = persp_to_lexentry[blob_link][link_pair[1]]
+                            lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
                             perspective = blob_to_perspective[blob_link]
                             new_ent = create_entity(id=obj_id.id_pair(client_id),
                                                     parent_id=lexical_entry_ids,
@@ -519,9 +524,10 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
                         i = 1
                         for word in word_list:
-                            if not i in persp_to_lexentry[blob_id]:
-                                i+=1
-                                continue
+                            word = word_list[i-1]
+                            # if not i in persp_to_lexentry[blob_id]:
+                            #     i+=1
+                            #     continue
                             lexical_entry_ids = persp_to_lexentry[blob_id][i]
                             if lexical_entry_ids in le_links:
                                 link_lexical_entry = le_links[lexical_entry_ids]
