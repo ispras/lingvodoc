@@ -275,9 +275,7 @@ class UpdateLanguage(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         translation_gist_id = LingvodocID()
-        parent_id = LingvodocID()
-        previous_sibling = LingvodocID()
-
+        
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
 
@@ -292,13 +290,6 @@ class UpdateLanguage(graphene.Mutation):
 
         if not dblanguage or dblanguage.marked_for_deletion:
             raise ResponseError(message="Error: No such language in the system")
-        parent_id = args.get('parent_id')
-        previous_sibling = args.get('previous_sibling')
-
-        if parent_id or previous_sibling:
-            move_language(dblanguage, parent_id, previous_sibling)
-            # dblanguage.parent_client_id = parent_id[0]
-            # dblanguage.parent_object_id = parent_id[1]
 
         translation_gist_id = args.get('translation_gist_id')
         if translation_gist_id:
