@@ -292,16 +292,26 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
     # pr = cProfile.Profile()
     # pr.enable()
     import time
+    # from lingvodoc.cache.caching import initialize_cache
+    # initialize_cache(cache_kwargs)
+    # task_status = TaskStatus.get_from_cache(task_key)
+    # task_status.set(1, 1, "Preparing")
+    # engine = create_engine(sqlalchemy_url)
+    # #DBSession.remove()
+    # DBSession.configure(bind=engine, autoflush=False)
+    # obj_id = ObjectId()
     from lingvodoc.cache.caching import initialize_cache
-    initialize_cache(cache_kwargs)
-    task_status = TaskStatus.get_from_cache(task_key)
-    task_status.set(1, 1, "Preparing")
-    engine = create_engine(sqlalchemy_url)
-    #DBSession.remove()
-    DBSession.configure(bind=engine, autoflush=False)
-    obj_id = ObjectId()
     try:
         with transaction.manager:
+
+            initialize_cache(cache_kwargs)
+            task_status = TaskStatus.get_from_cache(task_key)
+            task_status.set(1, 1, "Preparing")
+            engine = create_engine(sqlalchemy_url)
+            #DBSession.remove()
+            DBSession.configure(bind=engine, autoflush=False)
+            obj_id = ObjectId()
+
             old_client_id = ids[0]
             old_client = DBSession.query(dbClient).filter_by(id=old_client_id).first()
             #user_id = old_client.user_id
