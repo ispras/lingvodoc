@@ -337,7 +337,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                     link_fake_id = field.get("link_fake_id")
                     if not link_fake_id:
                         continue
-                    dictionary_id_links[tuple(blob_id_as_fake_id)].append(tuple(link_fake_id))
+                    # dictionary_id_links[tuple(blob_id_as_fake_id)].append(tuple(link_fake_id))
 
                     fake_link_to_field[tuple(link_fake_id)] = [x for x in fields if x["starling_type"] == 2]
                     link_col_to_blob[tuple(blob_id_as_fake_id)][field.get("starling_name")] = tuple(link_fake_id)
@@ -364,7 +364,9 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
             copy_field_dict = collections.defaultdict(dict)
             keep_field_dict = collections.defaultdict(dict)
             link_field_dict = collections.defaultdict(dict)
+            task_status_counter = 0
             for starling_dictionary in starling_dictionaries:
+                task_status_counter += 1
                 blob_id = tuple(starling_dictionary.get("blob_id"))
                 blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
                 column_dict = csv_to_columns(blob.real_storage_path)
@@ -374,6 +376,9 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
 
                 atoms_to_create = starling_dictionary.get("translation_atoms")
+                if atoms_to_create:
+                    content = atoms_to_create[0].get("content")
+                    task_status.set(4, 60, "%s (%s/%s)" % (content, task_status_counter, len(starling_dictionaries)))
                 dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create, None, (old_client_id, None))
                 parent_id = starling_dictionary.get("parent_id")
                 dbdictionary_obj = create_dbdictionary(id=obj_id.id_pair(client_id),
@@ -381,7 +386,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                        translation_gist_id=dictionary_translation_gist_id,
                                                        add_group=True)
 
-                atoms_to_create = [{"locale_id": 2, "content": "PERSPECTIVE_NAME"}]
+                atoms_to_create = [{"locale_id": 2, "content": "starling_source"}]
                 persp_translation_gist_id = create_gists_with_atoms(atoms_to_create, None, (old_client_id, None))
                 dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=obj_id.id_pair(client_id),
@@ -494,11 +499,11 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                 save_object=False)
                             DBSession.add(new_ent)
                     i+=1
-
+            task_status.set(5, 70, "link, spread" )
             for starling_dictionary in starling_dictionaries:
                 blob_id = tuple(starling_dictionary.get("blob_id"))
-                if blob_id not in dictionary_id_links:
-                    continue
+                # if blob_id not in dictionary_id_links:
+                #     continue
                 if blob_id not in link_col_to_blob:
                     continue
                 #persp = blob_to_perspective[blob_id]
@@ -511,9 +516,12 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         link_numbers = [(i+1, int(x)) for i, x in enumerate(perspective_column_dict[blob_id][num_col])] ###
                         for link_pair in link_numbers:
                             # TODO: fix
-                            if not link_pair[1]:
+                            le_numb = link_pair[1]
+                            if not le_numb:
                                 continue
-                            link_lexical_entry = persp_to_lexentry[new_blob_link][link_pair[1]]
+                            if not le_numb in persp_to_lexentry[new_blob_link]:
+                                raise ResponseError(message="%s line not (blob_id = %s)" % (le_numb, str(new_blob_link)))
+                            link_lexical_entry = persp_to_lexentry[new_blob_link][le_numb]
                             lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
                             perspective = blob_to_perspective[new_blob_link]
                             new_ent = create_entity(id=obj_id.id_pair(client_id),
@@ -530,48 +538,13 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                     save_object=False)
                             DBSession.add(new_ent)
                             le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
-                # for blob_link in dictionary_id_links[blob_id]:
-                #     # links creation
-                #     le_links = {}
-                #     if blob_link not in link_col_to_blob[blob_id].values():
-                #          continue
-                #     for num_col in link_field_dict[blob_id]:
-                #         if num_col in link_col_to_blob[blob_id].keys():
-                #             new_blob_link = link_col_to_blob[blob_id][num_col]
-                #             link_numbers = [(i+1, int(x)) for i, x in enumerate(perspective_column_dict[blob_id][num_col])] ###
-                #             for link_pair in link_numbers:
-                #                 # TODO: fix
-                #                 if not link_pair[1]:
-                #                     continue
-                #                 link_lexical_entry = persp_to_lexentry[new_blob_link][link_pair[1]]
-                #                 lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
-                #                 perspective = blob_to_perspective[new_blob_link]
-                #                 new_ent = create_entity(id=obj_id.id_pair(client_id),
-                #                                         parent_id=lexical_entry_ids,
-                #                                         additional_metadata={"link_perspective_id":[perspective.client_id, perspective.object_id]},
-                #                                         field_id=relation_field_id,
-                #                                         self_id=None,
-                #                                         link_id=link_lexical_entry, #
-                #                                         locale_id=2,
-                #                                         filename=None,
-                #                                         content=None,
-                #                                         registry=None,
-                #                                         request=None,
-                #                                         save_object=False)
-                #                 DBSession.add(new_ent)
-                #                 le_links[lexical_entry_ids] = link_lexical_entry
 
-                #for blob_link in dictionary_id_links[blob_id]:
                 for field_id in copy_field_to_starlig:
                     starling_field = copy_field_to_starlig[field_id]
                     word_list = perspective_column_dict[blob_id][starling_field]
-
                     i = 1
                     for word in word_list:
                         word = word_list[i-1]
-                        # if not i in persp_to_lexentry[blob_id]:
-                        #     i+=1
-                        #     continue
                         lexical_entry_ids = persp_to_lexentry[blob_id][i]
                         if lexical_entry_ids in le_links:
                             for other_blob in le_links[lexical_entry_ids]:
