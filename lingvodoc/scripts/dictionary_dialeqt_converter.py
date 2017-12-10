@@ -16,7 +16,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.cache.caching import TaskStatus
-
+from lingvodoc.utils.creation import update_metadata
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -683,7 +683,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     new_group.users.append(user)
                 DBSession.add(new_group)
                 DBSession.flush()
-        perspective_metadata = {"authors": {"type": "authors", "content": ""}}
+        perspective_metadata = {"authors": ""}
         authors = sqconn.cursor()
         authors.execute("select dict_author, dict_coauthors from dict_attributes  where id=1;")
         author, coauthors = authors.fetchone()
@@ -698,11 +698,32 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     authors_set.add(word.strip())
         authors_string = ", ".join(authors_set)
         if authors_string:
-            perspective_metadata = {"authors": {"type": "authors", "content": authors_string}}
+            perspective_metadata = {"authors": authors_string}
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
                                                        object_id=dictionary_object_id).first()
+
         if not parent:
             return {'error': str("No such dictionary in the system")}
+        if parent.additional_metadata:
+            old_meta = parent.additional_metadata
+            if authors_set:
+                if "authors" in old_meta:
+                        old_authors_str = old_meta["authors"]
+                        new_authors_set = set()
+                        for old_word in old_authors_str.split(","):
+                            if old_word:
+                                new_authors_set.add(old_word.strip())
+                        old_authors_set = new_authors_set.copy()
+                        for author in authors_set:
+                            if not author in new_authors_set:
+                                if author:
+                                    new_authors_set.add(author.strip())
+                        if new_authors_set != old_authors_set:
+                            new_authors_string = ", ".join(new_authors_set)
+                            parent.additional_metadata["authors"] = new_authors_string
+        else:
+            parent.additional_metadata = perspective_metadata
+        flag_modified(parent, 'additional_metadata')
         if not update_flag:
             """
             # FIRST PERSPECTIVE
@@ -717,7 +738,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                 parent=parent,
                                                 import_source="Lingvodoc-0.98",
                                                 import_hash=dict_attributes['dialeqt_id'],
-                                                additional_metadata=perspective_metadata,
+                                                #additional_metadata=perspective_metadata,
                                                 translation_gist_client_id=persp_translation_gist_client_id,
                                                 translation_gist_object_id=persp_translation_gist_object_id
                                                 )
@@ -750,7 +771,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                                 parent=parent,
                                                 import_source="Lingvodoc-0.98",
                                                 import_hash=dict_attributes['dialeqt_id'],
-                                                additional_metadata=perspective_metadata,
+                                                #additional_metadata=perspective_metadata,
                                                 translation_gist_client_id=persp_translation_gist_client_id,
                                                 translation_gist_object_id=persp_translation_gist_object_id
                                                 )
@@ -837,48 +858,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                      for x in lexes if x[2].field.data_type == "Link"]
             links = links[:] + [((x[2].link.client_id, x[2].link.object_id), (x[1].client_id, x[1].object_id))
                      for x in p_lexes if x[2].field.data_type == "Link"]
-            if first_perspective.additional_metadata:
-                old_meta = first_perspective.additional_metadata
-                if authors_set:
-                    if "authors" in old_meta:
-                        if "content" in old_meta["authors"]:
-                            old_authors_str = old_meta["authors"]["content"]
-                            new_authors_set = set()
-                            for old_word in old_authors_str.split(","):
-                                if old_word:
-                                    new_authors_set.add(old_word.strip())
-                            old_authors_set = new_authors_set.copy()
-                            for author in authors_set:
-                                if not author in new_authors_set:
-                                    if author:
-                                        new_authors_set.add(author.strip())
-                            if new_authors_set != old_authors_set:
-                                new_authors_string = ", ".join(new_authors_set)
-                                first_perspective.additional_metadata["authors"]["content"] = new_authors_string
-            else:
-                first_perspective.additional_metadata = perspective_metadata
-            flag_modified(first_perspective, 'additional_metadata')
-            if second_perspective.additional_metadata:
-                old_meta = second_perspective.additional_metadata
-                if authors_set:
-                    if "authors" in old_meta:
-                        if "content" in old_meta["authors"]:
-                            old_authors_str = old_meta["authors"]["content"]
-                            new_authors_set = set()
-                            for old_word in old_authors_str.split(","):
-                                if old_word:
-                                    new_authors_set.add(old_word.strip())
-                            old_authors_set = new_authors_set.copy()
-                            for author in authors_set:
-                                if not author in new_authors_set:
-                                    if author:
-                                        new_authors_set.add(author.strip())
-                            if new_authors_set != old_authors_set:
-                                new_authors_string = ", ".join(new_authors_set)
-                                second_perspective.additional_metadata["authors"]["content"] = new_authors_string
-            else:
-                second_perspective.additional_metadata = perspective_metadata
-            flag_modified(second_perspective, 'additional_metadata')
+
         """
         # FIRST PERSPECTIVE FIELDS CREATION
         """

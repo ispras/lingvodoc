@@ -139,7 +139,7 @@ def update_perspective_fields(req,
         #for field in fields: ## ?
         #    DBSession.delete(field)
         if not int(len(fields)):
-            position = 1
+            position = 1  # TODO: postition fix
             for field in req:
                 create_nested_field(field=field,
                                     perspective=perspective,
@@ -412,9 +412,7 @@ def convert_five_tiers(
         DBSession.flush()
 
 
-        origin_metadata= {"origin_client_id": origin_client_id,
-                              "origin_object_id": origin_object_id
-                              }
+        origin_metadata= {"origin_id": (origin_client_id, origin_object_id)}
 
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
                                                        object_id=dictionary_object_id).first()
