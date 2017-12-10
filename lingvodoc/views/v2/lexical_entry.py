@@ -36,7 +36,7 @@ from pyramid.view import view_config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
-from lingvodoc.views.v2.utils import check_client_id
+from lingvodoc.utils.verification import check_client_id
 
 import logging
 import random

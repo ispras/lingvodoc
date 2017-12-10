@@ -1,9 +1,9 @@
 from passlib.hash import bcrypt
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
-    view_field_from_object,
-    check_client_id
+    view_field_from_object
 )
+from lingvodoc.utils.verification import check_client_id
 from sqlalchemy.exc import IntegrityError
 
 from pyramid.response import Response
@@ -59,13 +59,17 @@ import json
 import requests
 from pyramid.request import Request
 from time import time
+from webob.multidict import MultiDict, NoVars
+from lingvodoc.schema.query import schema, Context
+
 from copy import deepcopy
 if sys.platform == 'darwin':
     multiprocessing.set_start_method('spawn')
 import os
-from lingvodoc.views.v2.translations import translationgist_contents
+from lingvodoc.utils.creation import translationgist_contents
 from hashlib import sha224
 from base64 import urlsafe_b64decode
+from sqlalchemy.orm.attributes import flag_modified
 
 log = logging.getLogger(__name__)
 
@@ -230,6 +234,16 @@ def fix_groups(request):
 
     return {}
 
+def translation_service_search(searchstring):
+    translationatom = DBSession.query(TranslationAtom)\
+        .join(TranslationGist).\
+        filter(TranslationAtom.content == searchstring,
+               TranslationAtom.locale_id == 2,
+               TranslationGist.type == 'Service')\
+        .order_by(TranslationAtom.client_id)\
+        .first()
+    response = translationgist_contents(translationatom.parent)
+    return response
 
 def add_role(name, subject, action, admin, perspective_default=False, dictionary_default=False):
     base_group = BaseGroup(name=name,
@@ -245,17 +259,156 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
     DBSession.flush()
     return base_group
 
-
+from lingvodoc.models import UserRequest as dbUserRequest
+from lingvodoc.utils.search import translation_gist_search
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
-    import requests
-    from sqlalchemy.orm.attributes import flag_modified
-    dmgd_persp = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=1139, object_id=2549).one()
-    dmgd_persp.marked_for_deletion = True
-    dmgd_persp = DBSession.query(ObjectTOC).filter_by(client_id=dmgd_persp.client_id,
-                                                         object_id=dmgd_persp.object_id).one()
-    dmgd_persp.marked_for_deletion = True
-    return {"success": True}
+    # Hello, testing, my old friend
+    # I've come to use you once again
+    simpler_info = lambda x: [i['info']['content'] for i in x]
+    persp_to_dict = lambda x: [
+        p.additional_metadata['location']['content'] for p in x]
+    persps = DBSession.query(DictionaryPerspective).filter().all()
+    dicts = []
+    for persp in persps:
+        if not persp.additional_metadata:
+            continue
+        parent = persp.parent
+        if not parent.additional_metadata:
+            parent.additional_metadata = dict()
+        if not parent.additional_metadata.get('location') and persp.additional_metadata.get('location'):
+            parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
+        # if persp.additional_metadata.get('location'):
+        #     del persp.additional_metadata['location']
+        if not parent.additional_metadata.get('authors') and persp.additional_metadata.get('authors'):
+            parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
+        # if persp.additional_metadata.get('authors'):
+        #     del persp.additional_metadata['authors']
+        if persp.additional_metadata.get('info'):
+            if not parent.additional_metadata.get('blobs'):
+                parent.additional_metadata['blobs'] = list()
+            for item in simpler_info(persp.additional_metadata['info']['content']):
+                if item not in parent.additional_metadata['blobs']:
+                    parent.additional_metadata['blobs'].append(item)
+            # del persp.additional_metadata['info']
+        #if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
+        #    parent.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
+            #del persp.additional_metadata['origin_client_id']
+            #del persp.additional_metadata['origin_object_id']
+        flag_modified(parent, 'additional_metadata')
+        flag_modified(persp, 'additional_metadata')
+    # and again
+    # add_dict_to_grant = DBSession.query(dbUserRequest).filter_by(type="add_dict_to_grant").all()
+    # for req in add_dict_to_grant:
+    #     subject = req.subject
+    #     grant_id = subject["grant_id"]
+    #     if "client_id" in subject and "object_id" in subject:
+    #         client_id = subject["client_id"]
+    #         object_id = subject["object_id"]
+    #         dictionary_id = [client_id, object_id]
+    #         req.subject = {
+    #             "grant_id": grant_id,
+    #             "dictionary_id": dictionary_id
+    #            }
+
+    # create tree from langs
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False).order_by(Language.parent_client_id, Language.parent_object_id).all()
+    prev_langs = list()
+    prev_parent = (None, None)
+    for lang in langs:
+        parent = (lang.parent_client_id, lang.parent_object_id)
+        if parent != prev_parent:
+            prev_parent = parent
+            prev_langs = list()
+        if not lang.additional_metadata:
+            lang.additional_metadata = dict()
+        lang.additional_metadata['younger_siblings'] = list(prev_langs)
+        prev_langs.append((lang.client_id, lang.object_id))
+        flag_modified(lang, 'additional_metadata')
+
+    # Service translation "Directed Link"
+    if translation_gist_search("Relation") or translation_gist_search("Directed Link"):
+        return "Already patched"
+    dl_link_gist = TranslationGist(client_id=1, type="Service")
+    DBSession.add(dl_link_gist)
+    DBSession.flush()
+    atom = TranslationAtom(client_id=1, content="Directed Link", locale_id=2, parent=dl_link_gist)
+    DBSession.add(atom)
+    DBSession.flush()
+    #
+    relation_gist = TranslationGist(client_id=1, type="Field")
+    DBSession.add(relation_gist)
+    DBSession.flush()
+    #
+    atom = TranslationAtom(client_id=1, content="Relation", locale_id=2, parent=relation_gist)
+    DBSession.add(atom)
+    DBSession.flush()
+    word_field = Field(client_id=1,
+                       translation_gist_client_id=relation_gist.client_id,
+                       translation_gist_object_id=relation_gist.object_id,
+                       data_type_translation_gist_client_id=dl_link_gist.client_id,
+                       data_type_translation_gist_object_id=dl_link_gist.object_id)
+    DBSession.add(word_field)
+    DBSession.flush()
+    return "Success"
+
+
+
+def recursive_sort(langs, visited, stack, result):
+    for lang in langs:
+        parent = (lang.parent_client_id, lang.parent_object_id)
+        if parent == (None, None):
+            parent = None
+        previous = None
+        siblings = None
+        if 'younger_siblings' in lang.additional_metadata:
+            siblings = lang.additional_metadata['younger_siblings']
+        if siblings:
+            previous = siblings[len(siblings) - 1]
+            previous = tuple(previous)
+        ids = (lang.client_id, lang.object_id)
+        if (not parent or parent in visited) and (not previous or previous in visited) and ids not in visited:
+            level = 0
+            if previous:
+                subres = [(res[1], res[2]) for res in result]
+                index = subres.index(previous)
+                level = result[index][0]
+                limit = len(result)
+                while index < limit:
+                    if result[index][0] < level:
+                        index = index - 1
+                        break
+                    index += 1
+
+                result.insert(index+1, [level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+
+            elif parent and previous is None:
+                subres = [(res[1], res[2]) for res in result]
+                index = subres.index(parent)
+                level = result[index][0] + 1
+                result.insert(index+1, [level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+            else:
+                result.append([level, lang.client_id, lang.object_id, "__".join(["__" for i in range(level)]) + lang.get_translation(2)])
+
+            visited.add(ids)
+
+            if lang in stack:
+                stack.remove(lang)
+
+            recursive_sort(list(stack), visited, stack, result)
+        else:
+            stack.add(lang)
+    return
+
+
+@view_config(route_name='testing_langs', renderer='json', permission='admin')
+def testing_langs(request):
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False).order_by(Language.parent_client_id, Language.parent_object_id, Language.additional_metadata['younger_siblings']).all()
+    visited = set()
+    stack = set()
+    result = list()
+    recursive_sort(langs, visited, stack, result)
+    return result
 
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
@@ -264,6 +417,17 @@ def main_get(request):
     user = get_user_by_client_id(client_id)
     variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/main.pt', variables, request=request)
+
+
+@view_config(route_name='new_interface', renderer='templates/new_interface.pt', request_method='GET')
+def new_interface(request):
+    """
+    Temporary view for the new React-based interface.
+    """
+
+    # Patterned after the 'main' view, see function 'main_get' in lingvodoc.views.v2.
+
+    return render_to_response('templates/new_interface.pt', {}, request = request)
 
 
 @view_config(route_name='all_statuses', renderer='json', request_method='GET')
@@ -600,6 +764,158 @@ def change_user_password(request):
     old_hash.hash = bcrypt.encrypt(new_password)
     request.response.status = HTTPOk.code
     return {"success": True}
+
+
+#TODO: Remove it
+@view_config(route_name='graphql', renderer='json')
+def graphql(request):
+    """
+    #####################
+    ### application/json
+    #####################
+    
+    {"variables": {}, "query": "query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"}
+    
+    or a batch of queries:
+    
+    [
+        {"variables": {}, "query": "query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"},
+        {"variables": {}, "query": "query myQuery{ entity(id:[ 742, 5494, ] ) { id}}"}
+    ]
+    
+    #####################
+    ### application/graphql
+    #####################
+    
+    query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"
+    
+    #####################
+    ### application/multipart/form-data
+    #####################
+    
+    MultiDict([
+    ('graphql', "mutation create_entity..."),
+     ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+     ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
+     ])
+    
+    """
+    # TODO: rewrite this footwrap
+    sp = request.tm.savepoint()
+    try:
+        batch = False
+        variable_values={}
+        variables = {'auth': request.authenticated_userid}
+        client_id = variables["auth"]
+        results = list()
+        if not client_id:
+            client_id = None
+        locale_id = int(request.cookies.get('locale_id') or 2)
+
+        if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \
+                and type(request.POST) == MultiDict:
+            data = request.POST
+
+            if not data:
+                return {'error': 'empty request'}
+            elif not "operations" in data:
+                return {'error': 'operations key not nound'}
+            elif not "query" in data["operations"]:
+                return {'error': 'query key not nound in operations'}
+            elif not "variables.content" in data:
+                return {'error': 'variables.content key not nound'}
+
+            request_string = request.POST.pop("operations")
+            request_string= request_string.rstrip()
+            #body = request_string.decode('utf-8')
+            json_req = json.loads(request_string)
+            if "query" not in json_req:
+                return {'error': 'query key not nound'}
+            request_string = json_req["query"]
+            request_string= request_string.rstrip()
+            if "variables" in json_req:
+                variable_values = json_req["variables"]
+
+            '''
+            if data and "file" in data and "graphene" in data:
+                # We can get next file from the list inside file upload mutation resolve
+                # use request.POST.popitem()
+                request_string = request.POST.popitem()  # data["graphene"]
+                # todo: file usage
+                # files = data.getall("file")
+            else:
+                request.response.status = HTTPBadRequest.code
+                return {'error': 'wrong data'}
+
+            '''
+        elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
+            request_string = request.body.decode("utf-8") 
+        elif request.content_type == "application/json" and type(request.POST) == NoVars:
+            body = request.body.decode('utf-8')
+            json_req = json.loads(body)
+            if type(json_req) is list:
+                batch = True
+            if not batch:   
+                if "query" not in json_req:
+                    return {'error': 'query key not nound'}
+                request_string = json_req["query"]
+                if "variables" in json_req:
+                    variable_values = json_req["variables"]
+            else:
+                for query in json_req:
+                    if "query" not in query:
+                        return {'error': 'query key not nound'}
+                    request_string = query["query"]
+                    if "variables" in query:
+                        variable_values = query["variables"]
+                    result = schema.execute(request_string,
+                                            context_value=Context({
+                                                'client_id': client_id,
+                                                'locale_id': locale_id,
+                                                'request': request,
+                                                'headers': request.headers,
+                                                'cookies': dict(request.cookies)}),
+                                            variable_values=variable_values)
+                    if result.invalid:
+                        return {'errors': [str(e) for e in result.errors]}
+                    if result.errors:
+                        sp.rollback()
+                        return {'errors': [str(e) for e in result.errors]}
+                    results.append(result.data)
+                # TODO: check errors
+                return {"data": results}
+        else:
+            request.response.status = HTTPBadRequest.code
+            return {'error': 'wrong content type'}
+        if not batch:
+            result = schema.execute(request_string,
+                                    context_value=Context({
+                                        'client_id': client_id,
+                                        'locale_id': locale_id,
+                                        'request': request}),
+                                    variable_values=variable_values)
+
+            if result.invalid:
+                return {'errors': [str(e) for e in result.errors]}
+            if result.errors:
+                sp.rollback()
+                return {'errors': [str(e) for e in result.errors]}
+            return {"data": result.data}
+    except KeyError as e:
+        #request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        #request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        #request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+    except ValueError as e:
+        #request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
 
 
 conn_err_msg = """\
