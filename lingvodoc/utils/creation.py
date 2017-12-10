@@ -2,6 +2,9 @@ import base64
 import hashlib
 import os
 import shutil
+import time
+import random
+import string
 
 from pathvalidate import sanitize_filename
 from sqlalchemy import (
@@ -25,6 +28,7 @@ from lingvodoc.models import (
     LexicalEntry,
     Entity,
     Field,
+    PublishingEntity,
     Organization as dbOrganization
 )
 from lingvodoc.schema.gql_holders import ResponseError
@@ -590,3 +594,98 @@ def edit_role(dict_or_persp, user_id, role_id, client_id, organization=False, di
                 else:
                     if user not in group.organizations:
                         group.users.append(user)
+
+
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
+    return DBSession.query(LexicalEntry) \
+        .join(LexicalEntry.entity) \
+        .join(Entity.publishingentity) \
+        .join(Entity.field) \
+        .filter(Entity.content.in_(tags),
+                PublishingEntity.accepted == True,
+                Field.client_id == field_client_id,
+                Field.object_id == field_object_id).all()
+
+def find_all_tags(lexical_entry, field_client_id, field_object_id):
+    tag = None
+    for entity in lexical_entry.entity:
+        if entity.field.data_type == 'Grouping Tag':
+            tag = entity.content
+            break
+    if not tag:
+        return []
+    else:
+        tags = [tag]
+        new_tags = [tag]
+        while new_tags:
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id)
+            new_tags = list()
+            for lex in lexical_entries:
+                entities = DBSession.query(Entity) \
+                    .join(Entity.field) \
+                    .join(Entity.publishingentity) \
+                    .filter(Entity.parent == lex,
+                            PublishingEntity.accepted == True,
+                            Field.client_id == field_client_id,
+                            Field.object_id == field_object_id).all()
+                for entity in entities:
+                    if entity.content not in tags:
+                        tags.append(entity.content)
+                        new_tags.append(entity.content)
+        return tags
+
+
+def create_group_entity(request, client, user):  # tested
+        response = dict()
+        req = request
+        tags = list()
+        if 'tag' in req:
+            tags.append(req['tag'])
+        field_client_id=req['field_client_id']
+        field_object_id=req['field_object_id']
+        field = DBSession.query(Field).\
+            filter_by(client_id=field_client_id, object_id=field_object_id).first()
+
+        if not field:
+            return {'error': str("No such field in the system")}
+
+        for par in req['connections']:
+            parent = DBSession.query(LexicalEntry).\
+                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+            if not parent:
+                return {'error': str("No such lexical entry in the system")}
+            par_tags = find_all_tags(parent, field_client_id, field_object_id)
+            for tag in par_tags:
+                if tag not in tags:
+                    tags.append(tag)
+        if not tags:
+            n = 10  # better read from settings
+            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                         for c in range(n))
+            tags.append(tag)
+        lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+        for par in req['connections']:
+            parent = DBSession.query(LexicalEntry).\
+                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+            if parent not in lexical_entries:
+                lexical_entries.append(parent)
+
+        for lex in lexical_entries:
+            for tag in tags:
+                tag_entity = DBSession.query(Entity) \
+                    .join(Entity.field) \
+                    .filter(Entity.parent == lex,
+                            Field.client_id == field_client_id,
+                            Field.object_id == field_object_id,
+                            Entity.content == tag).first()
+                if not tag_entity:
+                    tag_entity = Entity(client_id=client.id,
+                                        field=field, content=tag, parent=lex)
+
+                    group = DBSession.query(Group).join(BaseGroup).filter(
+                        BaseGroup.subject == 'lexical_entries_and_entities',
+                        Group.subject_client_id == tag_entity.parent.parent.client_id,
+                        Group.subject_object_id == tag_entity.parent.parent.object_id,
+                        BaseGroup.action == 'create').one()
+                    if user in group.users:
+                        tag_entity.publishingentity.accepted = True

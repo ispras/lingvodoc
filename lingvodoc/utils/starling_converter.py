@@ -43,7 +43,8 @@ from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field,
-                                      edit_role)
+                                      edit_role,
+                                      create_group_entity)
 from lingvodoc.utils.search import translation_gist_search
 #from lingvodoc.utils.creation import create_entity, create_lexicalentry
 
@@ -563,6 +564,15 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         request=None,
                                         save_object=False)
                                     DBSession.add(new_ent)
+
+                                    client_id = new_ent.client_id
+                                    object_id = new_ent.object_id
+                                    item = {"entity_type": "Etymology", "tag": word,
+                                            "field_client_id": etymology_field_id[0],
+                                            "field_object_id": etymology_field_id[1],
+                                            "connections": [{"client_id": client_id, "object_id": object_id}]}
+                                    create_group_entity(item, client, user)
+
                         i+=1
             DBSession.flush()
 
