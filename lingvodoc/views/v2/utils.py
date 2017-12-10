@@ -1,4 +1,11 @@
+from lingvodoc import DBSession
+
 __author__ = 'alexander'
+
+from pyramid.request import Request
+from sqlalchemy import and_
+from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import joinedload
 
 from lingvodoc.models import (
     Client,
@@ -17,25 +24,14 @@ from lingvodoc.models import (
     TranslationGist,
     categories
 )
-
-from sqlalchemy import and_
-
-from pyramid.request import Request
-
-from sqlalchemy.inspection import inspect
-from sqlalchemy.orm import joinedload
-
 #import swiftclient.client as swiftclient
 
 from collections import deque
 import base64
 import datetime
 from hashlib import md5
-import json
 import os
 import os.path
-from pathvalidate import sanitize_filename
-import shutil
 import traceback
 import urllib
 
@@ -48,14 +44,8 @@ from pyramid.httpexceptions import (
 )
 from lingvodoc.exceptions import CommonException
 from sqlalchemy.exc import IntegrityError
-import pdb
-from pdb import set_trace
-import binascii
-
-def add_user_to_group(user, group):
-    if user not in group.users:
-        group.users.append(user)
-
+#from lingvodoc.views.v2.translations import translationgist_contents
+from lingvodoc.utils.creation import translationgist_contents
 
 def cache_clients():
     clients_to_users_dict = dict()
@@ -86,54 +76,14 @@ def check_for_client(obj, clients):
     return False
 
 
+
+
 def all_languages(lang):
     langs = [{'object_id': lang.object_id, 'client_id': lang.client_id}]
     for la in lang.language:
         langs += all_languages(la)
     return langs
 
-
-# Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
-# it's uploaded via multipart form, it's just saved as-is.
-def create_object(request, content, obj, data_type, filename, json_input=True):
-    import errno
-    # here will be object storage write as an option. Fallback (default) is filesystem write
-    settings = request.registry.settings
-    storage = settings['storage']
-    if storage['type'] == 'openstack':
-        if json_input:
-            content = base64.urlsafe_b64decode(content)
-        # TODO: openstack objects correct naming
-        filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
-        real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
-    else:
-        filename = filename or 'noname.noext'
-        storage_path, filename = object_file_path(obj, settings, data_type, filename, True)
-        directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
-        try:
-            os.makedirs(directory)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
-        with open(storage_path, 'wb+') as f:
-            # set_trace()
-            if json_input:
-                f.write(base64.urlsafe_b64decode(content))
-            else:
-                shutil.copyfileobj(content, f)
-
-        real_location = storage_path
-
-    url = "".join((settings['storage']['prefix'],
-                  settings['storage']['static_route'],
-                  obj.__tablename__,
-                  '/',
-                  data_type,
-                  '/',
-                  str(obj.client_id), '/',
-                  str(obj.object_id), '/',
-                  filename))
-    return real_location, url
 
 
 def get_user_by_client_id(client_id):
@@ -142,17 +92,6 @@ def get_user_by_client_id(client_id):
     if client is not None:
         user = DBSession.query(User).filter_by(id=client.user_id).first()
     return user
-
-
-def check_client_id(authenticated, client_id):
-    client = DBSession.query(Client).filter_by(id=authenticated).first()
-    if not client:
-        return False
-    user_id = client.user_id
-    req_client = DBSession.query(Client).filter_by(id=client_id).first()
-    if not req_client or req_client.user_id != user_id:
-        return False
-    return True
 
 
 def group_by_languages(dicts, request):
@@ -375,38 +314,6 @@ def language_with_dicts(lang, dicts, request):
     if not result['contains']:
         del result['contains']
     return result
-
-
-
-def object_file_path(obj, settings, data_type, filename, create_dir=False):
-    filename = sanitize_filename(filename)
-    base_path = settings['storage']['path']
-    storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
-    if create_dir:
-        # pdb.set_trace()
-        storage_dir = os.path.normpath(storage_dir)
-        os.makedirs(storage_dir, exist_ok=True)
-    storage_path = os.path.join(storage_dir, filename)
-
-    return storage_path, filename
-
-
-def openstack_upload(settings, file, file_name, content_type,  container_name):
-    storage = settings['storage']
-    authurl = storage['authurl']
-    user = storage['user']
-    key = storage['key']
-    auth_version = storage['auth_version']
-    tenant_name = storage['tenant_name']
-    conn = swiftclient.Connection(authurl=authurl, user=user, key=key,  auth_version=auth_version,
-                                  tenant_name=tenant_name)
-    #storageurl = conn.get_auth()[0]
-    conn.put_container(container_name)
-    obje = conn.put_object(container_name, file_name,
-                    contents = file,
-                    content_type = content_type)
-    #obje = conn.get_object(container_name, file_name)
-    return str(obje)
 
 
 def participated_clients_list(dictionary, request):
@@ -700,7 +607,6 @@ def anonymous_userid(request):
     unique_string = "unauthenticated_%s_%s" % (ip, useragent)
     return base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
 
-
 def storage_file(storage_config, url):
     """
     Given a URL of a file from storage, first tries to open it as a file from local storage, and
@@ -719,3 +625,14 @@ def storage_file(storage_config, url):
 
     return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
 
+
+def translation_service_search(searchstring):
+    translationatom = DBSession.query(TranslationAtom)\
+        .join(TranslationGist).\
+        filter(TranslationAtom.content == searchstring,
+               TranslationAtom.locale_id == 2,
+               TranslationGist.type == 'Service')\
+        .order_by(TranslationAtom.client_id)\
+        .first()
+    response = translationgist_contents(translationatom.parent)
+    return response

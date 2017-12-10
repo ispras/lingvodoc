@@ -4,13 +4,12 @@ from lingvodoc.models import (
     Client,
     DBSession,
     Group,
-    Language,
     User,
     TranslationAtom,
     TranslationGist,
     ObjectTOC
 )
-
+"""
 from lingvodoc.views.v2.utils import (
     all_languages,
     cache_clients,
@@ -20,62 +19,24 @@ from lingvodoc.views.v2.utils import (
     group_by_organizations,
     user_counter
 )
-
+"""
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
-    HTTPForbidden,
-    HTTPFound,
     HTTPInternalServerError,
     HTTPNotFound,
     HTTPOk
 )
-from pyramid.renderers import render_to_response
-from pyramid.request import Request
-from pyramid.response import Response
-from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 
-import sqlalchemy
-from sqlalchemy import (
-    func,
-    tuple_,
-    case
-)
 from sqlalchemy.exc import IntegrityError
 
-import datetime
-import json
 from sqlalchemy.orm.exc import NoResultFound
-from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator, add_user_to_group, check_client_id
-from lingvodoc.views.v2.delete import real_delete_translation_gist
+from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator#, add_user_to_group, check_client_id
+from lingvodoc.utils.creation import add_user_to_group, translationgist_contents, translationatom_contents
+from lingvodoc.utils.verification import check_client_id
 # search (filter by input, type and (?) locale)
 from lingvodoc.cache.caching import CACHE
-
-
-def translationgist_contents(translationgist):
-    result = dict()
-    result['client_id'] = translationgist.client_id
-    result['object_id'] = translationgist.object_id
-    result['type'] = translationgist.type
-    result['created_at'] = translationgist.created_at
-    contains = []
-    for translationatom in translationgist.translationatom:
-        contains.append(translationatom_contents(translationatom))
-    result['contains'] = contains
-    return result
-
-
-def translationatom_contents(translationatom):
-    result = dict()
-    result['content'] = translationatom.content
-    result['locale_id'] = translationatom.locale_id
-    result['client_id'] = translationatom.client_id
-    result['object_id'] = translationatom.object_id
-    result['parent_client_id'] = translationatom.parent_client_id
-    result['parent_object_id'] = translationatom.parent_object_id
-    result['created_at'] = translationatom.created_at
-    return result
 
 
 @view_config(route_name='all_translationgists', renderer='json', request_method='GET', permission='view')

@@ -92,6 +92,8 @@ def configure_routes(config):
     config.add_route(name='participate_org', pattern='/participate_org/{id}')
     config.add_route(name='administrate_org', pattern='/administrate_org/{id}')
     config.add_route(name='add_dictionary_to_grant', pattern='add_dictionary_to_grant')
+    config.add_route(name='add_dictionary_to_grant_admin', pattern='add_dictionary_to_grant_admin',
+                     factory='lingvodoc.models.AdminAcl')
 
     # config.add_route(name='create_grant', pattern='/grant')
 
@@ -791,6 +793,7 @@ def configure_routes(config):
 
     # Compiles archive of sound recordings and corresponding markups for a specified perspective.
     config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
+    config.add_route(name = "graphql", pattern = "/graphql")
 
     # Creates copy of a specified dictionary for a specified user.
     config.add_route(name = 'dictionary_copy', pattern = '/dictionary_copy')
@@ -855,9 +858,12 @@ def main(global_config, **settings):
     config.set_authorization_policy(authorization_policy)
     config.include('pyramid_chameleon')
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
+    config.add_static_view('assets', path='lingvodoc:assets', cache_max_age=3600)
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
     config.add_route('testing', '/testing',
+                     factory='lingvodoc.models.AdminAcl')
+    config.add_route('testing_langs', '/testing_langs',
                      factory='lingvodoc.models.AdminAcl')
     config.add_route('testing_translations', '/testing_translations')
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
