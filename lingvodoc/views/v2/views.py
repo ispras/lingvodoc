@@ -419,6 +419,17 @@ def main_get(request):
     return render_to_response('templates/main.pt', variables, request=request)
 
 
+@view_config(route_name='new_interface', renderer='templates/new_interface.pt', request_method='GET')
+def new_interface(request):
+    """
+    Temporary view for the new React-based interface.
+    """
+
+    # Patterned after the 'main' view, see function 'main_get' in lingvodoc.views.v2.
+
+    return render_to_response('templates/new_interface.pt', {}, request = request)
+
+
 @view_config(route_name='all_statuses', renderer='json', request_method='GET')
 def all_statuses(request):
     from pyramid.request import Request

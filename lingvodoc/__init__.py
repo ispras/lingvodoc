@@ -65,6 +65,9 @@ def configure_routes(config):
     # web-view #GET
     config.add_route(name='main', pattern='/')
 
+    # Temporary view for the new React-based interface.
+    config.add_route(name = 'new_interface', pattern = '/new_interface')
+
     # web-view #GET && POST
     # registration page
     config.add_route(name='signup', pattern='/signup')
@@ -866,6 +869,7 @@ def main(global_config, **settings):
     config.add_route('testing_langs', '/testing_langs',
                      factory='lingvodoc.models.AdminAcl')
     config.add_route('testing_translations', '/testing_translations')
+
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
     #    config.add_route('home', '/')
     #    config.add_route('login', 'login')
