@@ -1,3 +1,5 @@
+import random
+import string
 import collections
 import transaction
 import datetime
@@ -538,6 +540,25 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                     request=None,
                                                     save_object=False)
                             DBSession.add(new_ent)
+
+                            # etymology tag
+
+                            client_id = link_lexical_entry[0]
+                            object_id = link_lexical_entry[1]
+                            # item = {"entity_type": "Etymology", "tag": word,
+                            #         "field_client_id": etymology_field_id[0],
+                            #         "field_object_id": etymology_field_id[1],
+                            #         "connections": [{"client_id": client_id, "object_id": object_id}]}
+                            #create_group_entity(item, client, user)
+                            #DBSession.add(tag_entity)
+                            n=10
+                            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                                         for c in range(n))
+                            tag_entity = dbEntity(client_id=client.id,
+                                field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=client_id, parent_object_id=object_id, content=tag)
+
+                            tag_entity.publishingentity.accepted = True
+                            DBSession.add(tag_entity)
                             le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
 
                 for field_id in copy_field_to_starlig:
@@ -564,15 +585,6 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         request=None,
                                         save_object=False)
                                     DBSession.add(new_ent)
-
-                                    client_id = new_ent.client_id
-                                    object_id = new_ent.object_id
-                                    item = {"entity_type": "Etymology", "tag": word,
-                                            "field_client_id": etymology_field_id[0],
-                                            "field_object_id": etymology_field_id[1],
-                                            "connections": [{"client_id": client_id, "object_id": object_id}]}
-                                    create_group_entity(item, client, user)
-
                         i+=1
             DBSession.flush()
 
