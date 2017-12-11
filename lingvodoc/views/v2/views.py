@@ -70,6 +70,7 @@ from lingvodoc.utils.creation import translationgist_contents
 from hashlib import sha224
 from base64 import urlsafe_b64decode
 from sqlalchemy.orm.attributes import flag_modified
+from lingvodoc.utils.proxy import ProxyPass
 
 log = logging.getLogger(__name__)
 
@@ -894,13 +895,20 @@ def graphql(request):
                                         'locale_id': locale_id,
                                         'request': request}),
                                     variable_values=variable_values)
-
+            if result.errors:
+                for error in result.errors:
+                    if type(error.original_error) == ProxyPass:
+                        return json.loads(error.original_error.response_body.decode("utf-8") )
             if result.invalid:
                 return {'errors': [str(e) for e in result.errors]}
             if result.errors:
                 sp.rollback()
                 return {'errors': [str(e) for e in result.errors]}
             return {"data": result.data}
+
+    except ProxyPass as e:
+        return e.response_body
+
     except KeyError as e:
         #request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
