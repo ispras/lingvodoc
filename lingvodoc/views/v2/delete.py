@@ -59,7 +59,7 @@ def real_delete_language(language, settings):
 
 
 def real_delete_dictionary(dictionary, settings):
-    for perspective in dictionary.perspectives:
+    for perspective in dictionary.perspective:
         real_delete_perspective(perspective, settings)
     real_delete_object(dictionary)
 

@@ -560,23 +560,6 @@ def create_errors(view_callable):
     return inner
 
 
-# auxiliary function for filling simplified permissions. Gets python dictionary, Perspective object and a list of pairs
-# [("permission": boolean), ]
-def fulfill_permissions_on_perspectives(intermediate, perspective, pairs):
-    cl_id = str(perspective.client_id)
-    obj_id = str(perspective.object_id)
-    if cl_id not in intermediate:
-        intermediate[cl_id] = dict()
-    if obj_id not in intermediate[cl_id]:
-        intermediate[cl_id][obj_id] = dict()
-    for permission in pairs:
-        intermediate[cl_id][obj_id][permission[0]] = permission[1]
-    return
-
-
-class FakeObject(object):
-    pass
-
 
 def unimplemented():
     """
