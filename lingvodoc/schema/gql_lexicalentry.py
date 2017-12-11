@@ -19,6 +19,8 @@ from lingvodoc.schema.gql_holders import (
 
 from lingvodoc.models import (
     Entity as dbEntity,
+    Field as dbField,
+    PublishingEntity as dbPublishingEntity,
     LexicalEntry as dbLexicalEntry,
     Client,
     DBSession,
@@ -33,6 +35,62 @@ from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 from lingvodoc.utils.creation import create_lexicalentry
+
+
+
+def have_tag(lex, tags, field_client_id, field_object_id):
+    return bool([x for x in lex['contains'] if x['field_client_id'] == field_client_id and x['field_object_id'] == field_object_id and x['content'] in tags and x['published'] and x['accepted']])
+
+
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted):
+    result = DBSession.query(LexicalEntry) \
+        .join(LexicalEntry.entity) \
+        .join(Entity.publishingentity) \
+        .join(Entity.field) \
+        .filter(dbEntity.content.in_(tags),
+                dbEntity.marked_for_deletion == False,
+                dbField.client_id == field_client_id,
+                dbField.object_id == field_object_id)
+    if accepted:
+        result = result.filter(dbPublishingEntity.accepted == True)
+    result = result.all()
+    return result
+
+
+def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
+    tag = None
+    for entity in lexical_entry.entity:
+        if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id:
+            if accepted:
+                if not entity.publishingentity.accepted:
+                    continue
+            tag = entity.content
+            break
+    if not tag:
+        return set()
+    else:
+        tags = {tag}
+        new_tags =  {tag}
+        while new_tags:
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
+            new_tags = set()
+            for lex in lexical_entries:
+                entities = DBSession.query(Entity) \
+                    .join(Entity.field) \
+                    .join(Entity.publishingentity) \
+                    .filter(Entity.parent == lex,
+                            dbField.client_id == field_client_id,
+                            dbField.object_id == field_object_id,
+                            Entity.marked_for_deletion==False)
+                if accepted:
+                    entities = entities.filter(dbPublishingEntity.accepted == True)
+
+                entities = entities.all()
+                for entity in entities:
+                    if entity.content not in tags:
+                        tags.add(entity.content)
+                        new_tags.add(entity.content)
+        return tags
 
 class LexicalEntry(LingvodocObjectType):
     """
@@ -60,6 +118,53 @@ class LexicalEntry(LingvodocObjectType):
             gr_entity_object.dbObject = db_entity
             result.append(gr_entity_object)
         return result
+
+
+    @fetch_object('connected_words')
+    def resoleve_connected_words(self, info):
+        response = list()
+        client_id = info.get('client_id')
+        object_id = info.get('object_id')
+        accepted = info.get('accepted', False)
+        if type(accepted) == str and 'false' in accepted.lower():
+            accepted = False
+        if accepted:
+            accepted = True
+        published = info.get('published', False)
+        if type(published) == str and 'false' in published.lower():
+            published = False
+        if published:
+            published = True
+        field_client_id = int(info.get('field_client_id'))
+        field_object_id = int(info.get('field_object_id'))
+        lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+        if not lexical_entry or lexical_entry.marked_for_deletion:
+            raise ResponseError(message="No such lexical entry in the system")
+        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accepted)
+        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
+        lexes_composite_list = [(lex.created_at,
+                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                                 lex.marked_for_deletion, lex.additional_metadata,
+                                 lex.additional_metadata.get('came_from')
+                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                                for lex in lexes]
+
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(info.context["locale_id"] or 2),
+                                             publish=published, accept=accepted)
+        if published:
+            result = [lex for lex in result if have_tag(lex, tags, field_client_id, field_object_id)]
+
+        response = list(result)
+        result = list()
+        for le in response:
+            le_obj = LexicalEntry(id=[le.client_id, le.object_id])
+            le_obj.dbObject = le
+            result.append(le_obj)
+
+        return result
+
+
+
 
 class CreateLexicalEntry(graphene.Mutation):
     """

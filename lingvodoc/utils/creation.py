@@ -635,7 +635,7 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id):
         return tags
 
 
-def create_group_entity(request, client, user):  # tested
+def create_group_entity(request, client, user, obj_id):  # tested
         response = dict()
         req = request
         tags = list()
@@ -643,11 +643,11 @@ def create_group_entity(request, client, user):  # tested
             tags.append(req['tag'])
         field_client_id=req['field_client_id']
         field_object_id=req['field_object_id']
-        field = DBSession.query(Field).\
-            filter_by(client_id=field_client_id, object_id=field_object_id).first()
-
-        if not field:
-            return {'error': str("No such field in the system")}
+        # field = DBSession.query(Field).\
+        #     filter_by(client_id=field_client_id, object_id=field_object_id).first()
+        #
+        # if not field:
+        #     return {'error': str("No such field in the system")}
 
         for par in req['connections']:
             parent = DBSession.query(LexicalEntry).\
@@ -679,13 +679,14 @@ def create_group_entity(request, client, user):  # tested
                             Field.object_id == field_object_id,
                             Entity.content == tag).first()
                 if not tag_entity:
-                    tag_entity = Entity(client_id=client.id,
-                                        field=field, content=tag, parent=lex)
+                    tag_entity = Entity(client_id=client.id, object_id=obj_id.next,
+                                        field_client_id=field_client_id, field_object_id=field_object_id, content=tag, parent=lex)
 
-                    group = DBSession.query(Group).join(BaseGroup).filter(
-                        BaseGroup.subject == 'lexical_entries_and_entities',
-                        Group.subject_client_id == tag_entity.parent.parent.client_id,
-                        Group.subject_object_id == tag_entity.parent.parent.object_id,
-                        BaseGroup.action == 'create').one()
-                    if user in group.users:
-                        tag_entity.publishingentity.accepted = True
+                    # group = DBSession.query(Group).join(BaseGroup).filter(
+                    #     BaseGroup.subject == 'lexical_entries_and_entities',
+                    #     Group.subject_client_id == tag_entity.parent.parent.client_id,
+                    #     Group.subject_object_id == tag_entity.parent.parent.object_id,
+                    #     BaseGroup.action == 'create').one()
+                    # if user in group.users:
+                    tag_entity.publishingentity.accepted = True
+                    DBSession.add(tag_entity)

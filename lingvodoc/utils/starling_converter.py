@@ -503,6 +503,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             DBSession.add(new_ent)
                     i+=1
             task_status.set(5, 70, "link, spread" )
+            tag_list = list()
+            d = dict()
             for starling_dictionary in starling_dictionaries:
                 blob_id = tuple(starling_dictionary.get("blob_id"))
                 # if blob_id not in dictionary_id_links:
@@ -540,26 +542,39 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                     request=None,
                                                     save_object=False)
                             DBSession.add(new_ent)
-
-                            # etymology tag
-
-                            client_id = link_lexical_entry[0]
-                            object_id = link_lexical_entry[1]
-                            # item = {"entity_type": "Etymology", "tag": word,
-                            #         "field_client_id": etymology_field_id[0],
-                            #         "field_object_id": etymology_field_id[1],
-                            #         "connections": [{"client_id": client_id, "object_id": object_id}]}
-                            #create_group_entity(item, client, user)
-                            #DBSession.add(tag_entity)
-                            n=10
-                            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                                         for c in range(n))
-                            tag_entity = dbEntity(client_id=client.id,
-                                field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=client_id, parent_object_id=object_id, content=tag)
-
-                            tag_entity.publishingentity.accepted = True
-                            DBSession.add(tag_entity)
                             le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
+                            # etymology tag
+                            #"""
+                            if starling_dictionary.get("add_etymology"):
+                                pass
+                                """
+                                if not blob_id in d:
+                                    d[blob_id] = {}
+                                if not num_col in d[blob_id]
+                                    d[blob_id][]
+                                #client_id = link_lexical_entry[0]
+                                #object_id = link_lexical_entry[1]
+                                # item = {"entity_type": "Etymology", "tag": "",
+                                #         "field_client_id": etymology_field_id[0],
+                                #         "field_object_id": etymology_field_id[1],
+                                #         "connections": [{"client_id": client_id, "object_id": object_id}, {"client_id": lexical_entry_ids[0], "object_id": lexical_entry_ids[1]}]}
+                                # create_group_entity(item, client, user, obj_id)
+                                #DBSession.add(tag_entity)
+                                n=10
+                                timestamp = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                                             for c in range(n))
+                                tag = "%s_%s_%s_%s" % (num_col, str(new_blob_link), str(link_lexical_entry), timestamp)
+                                tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
+                                    field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=link_lexical_entry[0], parent_object_id=link_lexical_entry[1], content=tag)
+                                # additional_metadata num_col
+                                tag_entity.publishingentity.accepted = True
+                                DBSession.add(tag_entity)
+                                tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
+                                    field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=lexical_entry_ids[0], parent_object_id=lexical_entry_ids[1], content=tag)
+                                tag_entity.publishingentity.accepted = True
+                                DBSession.add(tag_entity)
+                                """
+
 
                 for field_id in copy_field_to_starlig:
                     starling_field = copy_field_to_starlig[field_id]

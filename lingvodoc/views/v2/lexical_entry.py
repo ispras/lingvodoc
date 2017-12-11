@@ -117,13 +117,13 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
             tag = entity.content
             break
     if not tag:
-        return []
+        return set()
     else:
-        tags = [tag]
-        new_tags = [tag]
+        tags = {tag}
+        new_tags =  {tag}
         while new_tags:
             lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
-            new_tags = list()
+            new_tags = set()
             for lex in lexical_entries:
                 entities = DBSession.query(Entity) \
                     .join(Entity.field) \
@@ -138,8 +138,8 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
                 entities = entities.all()
                 for entity in entities:
                     if entity.content not in tags:
-                        tags.append(entity.content)
-                        new_tags.append(entity.content)
+                        tags.add(entity.content)
+                        new_tags.add(entity.content)
         return tags
 
 
