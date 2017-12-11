@@ -146,6 +146,7 @@ from lingvodoc.models import (
 )
 from pyramid.request import Request
 
+from lingvodoc.utils.proxy import try_proxy, ProxyPass
 from sqlalchemy import (
     func,
     and_,
@@ -163,10 +164,11 @@ from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import phonology as utils_phonology
 from lingvodoc.utils import starling_converter
-from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words
+from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, fulfill_permissions_on_perspectives, FakeObject
 from lingvodoc.cache.caching import TaskStatus
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
+
 
 
 
@@ -227,12 +229,23 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
 
 
 #Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
+
+
+
+class Permissions(graphene.ObjectType):
+    edit = graphene.List(DictionaryPerspective)
+    view = graphene.List(DictionaryPerspective)
+    publish = graphene.List(DictionaryPerspective)
+    limited = graphene.List(DictionaryPerspective)
+
+
 class StarlingField(graphene.InputObjectType):
     starling_name = graphene.String(required=True)
     starling_type = graphene.Int(required=True)
     field_id = LingvodocID(required=True)
     fake_id = graphene.String()
     link_fake_id = LingvodocID() #graphene.String()
+
 
 class StarlingDictionary(graphene.InputObjectType):
     blob_id = LingvodocID()
@@ -243,6 +256,7 @@ class StarlingDictionary(graphene.InputObjectType):
     translation_atoms = graphene.List(ObjectVal)
     field_map = graphene.List(StarlingField, required=True)
     add_etymology = graphene.Boolean(required=True)
+
 
 class Query(graphene.ObjectType):
     client = graphene.String()
@@ -317,6 +331,7 @@ class Query(graphene.ObjectType):
     eaf_wordlist = graphene.Field(
         graphene.List(graphene.String), id=LingvodocID(required=True))
     language_tree = graphene.List(Language)
+    permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     # convert_starling = graphene.Field(graphene.Boolean, blob_id=LingvodocID(),
     #     parent_id=LingvodocID(required=True),
     #     translation_gist_id=LingvodocID(),
@@ -331,6 +346,118 @@ class Query(graphene.ObjectType):
     #     field_map=graphene.List(StarlingField, required=True),
     #     add_etymology=graphene.Boolean()
     # )
+
+    def resolve_permission_lists(self, info, proxy):
+        request = info.context.request
+        if proxy:
+            try_proxy(request)
+        client_id = authenticated_userid(request)
+
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Published'}
+        headers = dict()
+        if request.headers.get('Cookie'):
+            headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+
+        if 'error' not in resp.json:
+            published_gist_object_id, published_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Limited access'}  # todo: fix
+        headers = dict()
+        if request.headers.get('Cookie'):
+            headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+
+        if 'error' not in resp.json:
+            limited_gist_object_id, limited_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
+
+        dblimited = DBSession.query(dbDictionaryPerspective).filter(
+            and_(dbDictionaryPerspective.state_translation_gist_client_id == limited_gist_client_id,
+                 dbDictionaryPerspective.state_translation_gist_object_id == limited_gist_object_id)
+        )
+
+        # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
+        limited = list()
+        for dbperspective in dblimited.all():
+            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+            perspective.dbObject = dbperspective
+            perspective.list_name='limited'
+            limited.append(perspective)
+            # fulfill_permissions_on_perspectives(intermediate, pers, limited_perms)
+
+
+        dbpublished = DBSession.query(dbDictionaryPerspective).filter(
+            and_(dbDictionaryPerspective.state_translation_gist_client_id == published_gist_client_id,
+                 dbDictionaryPerspective.state_translation_gist_object_id == published_gist_object_id)
+        )
+        existing = list()
+        view = list()
+        for dbperspective in dbpublished.all():
+            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+            perspective.dbObject = dbperspective
+            perspective.list_name='view'
+            view.append(perspective)
+            existing.append([dbperspective.client_id, dbperspective.object_id])
+
+        if not client_id:
+            return Permissions(limited=limited, view=view, edit=list(), publish=list())
+
+        user_id = DBSession.query(Client).filter(client_id == Client.id).first().user_id
+        editor_basegroup = DBSession.query(dbBaseGroup).filter(
+            and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
+        editable_perspectives = DBSession.query(dbDictionaryPerspective).join(dbGroup, and_(
+            dbDictionaryPerspective.client_id == dbGroup.subject_client_id,
+            dbDictionaryPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+            and_(dbUser.id == user_id, dbGroup.base_group_id == editor_basegroup.id)).all()
+        edit = list()
+        for dbperspective in editable_perspectives:
+            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+            perspective.dbObject = dbperspective
+            perspective.list_name='edit'
+            edit.append(perspective)
+
+        reader_basegroup = DBSession.query(dbBaseGroup).filter(
+            and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
+        readable_perspectives = DBSession.query(dbDictionaryPerspective).join(dbGroup, and_(
+            dbDictionaryPerspective.client_id == dbGroup.subject_client_id,
+            dbDictionaryPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+            and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
+
+        view = list()
+        for dbperspective in readable_perspectives:
+            if [dbperspective.client_id, dbperspective.object_id] not in existing:
+                perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+                perspective.dbObject = dbperspective
+                perspective.list_name='view'
+                view.append(perspective)
+
+        publisher_basegroup = DBSession.query(dbBaseGroup).filter(
+            and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
+
+        approvable_perspectives = DBSession.query(dbDictionaryPerspective).join(dbGroup, and_(
+            dbDictionaryPerspective.client_id == dbGroup.subject_client_id,
+            dbDictionaryPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+            and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
+        publish = list()
+        for dbperspective in approvable_perspectives:
+            perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+            perspective.dbObject = dbperspective
+            perspective.list_name='publish'
+            publish.append(perspective)
+        return Permissions(limited=limited, view=view, edit=edit, publish=publish)
 
 
     def resolve_language_tree(self, info):

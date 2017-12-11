@@ -70,10 +70,7 @@ from lingvodoc.views.v2.utils import (
 )
 from lingvodoc.utils.creation import create_object, add_user_to_group
 from lingvodoc.utils.verification import check_client_id
-from lingvodoc.views.v2.utils import (
-    fulfill_permissions_on_perspectives,
-    FakeObject
-)
+from lingvodoc.utils.search import fulfill_permissions_on_perspectives, FakeObject
 from lingvodoc.views.v2.delete import real_delete_perspective
 from pdb import set_trace
 
