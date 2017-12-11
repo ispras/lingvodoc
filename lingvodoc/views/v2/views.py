@@ -897,8 +897,9 @@ def graphql(request):
                                     variable_values=variable_values)
             if result.errors:
                 for error in result.errors:
-                    if type(error.original_error) == ProxyPass:
-                        return json.loads(error.original_error.response_body.decode("utf-8") )
+                    if hasattr(error, 'original_error'):
+                        if type(error.original_error) == ProxyPass:
+                            return json.loads(error.original_error.response_body.decode("utf-8") )
             if result.invalid:
                 return {'errors': [str(e) for e in result.errors]}
             if result.errors:

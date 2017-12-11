@@ -230,7 +230,9 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
 
 #Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
 
-
+class LexicalEntriesAndEntities(graphene.ObjectType):
+    entities = graphene.List(Entity)
+    lexical_entries = graphene.List(LexicalEntry)
 
 class Permissions(graphene.ObjectType):
     edit = graphene.List(DictionaryPerspective)
@@ -314,7 +316,7 @@ class Query(graphene.ObjectType):
         maybe_tier_list=graphene.List(graphene.String),
         maybe_tier_set=graphene.List(graphene.String),
         synchronous=graphene.Boolean())
-    connected_words = graphene.List(LexicalEntry, id=LingvodocID(required=True), field_id = LingvodocID(required=True), accepted=graphene.Boolean(), published=graphene.Boolean())
+    connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True), field_id = LingvodocID(required=True), accepted=graphene.Boolean(), published=graphene.Boolean())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
                                      tag_list=LingvodocID(),
@@ -1416,7 +1418,7 @@ class Query(graphene.ObjectType):
     #     starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
     #     return True
 
-    def resolve_connected_words(self, info, id, field_id, accepted=None, published=None):
+    def resolve_connected_words(self, info, id, field_id, accepted=True, published=None):
         response = list()
         client_id = id[0]
         object_id = id[1]
@@ -1427,27 +1429,25 @@ class Query(graphene.ObjectType):
             raise ResponseError(message="No such lexical entry in the system")
         tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accepted)
         lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
-        lexes_composite_list = [(lex.created_at,
-                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
-                                 lex.marked_for_deletion, lex.additional_metadata,
-                                 lex.additional_metadata.get('came_from')
-                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
                                 for lex in lexes]
-        result = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
+        entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                    publish=published, accept=accepted)
-        # result = LexicalEntry.gra(lexes_composite_list, int(info.context["locale_id"] or 2),
-        #                                      publish=published, accept=accepted)
-        if published:
-            result = [lex for lex in result] #if have_tag(lex, tags, field_client_id, field_object_id)]
 
-        response = list(result)
-        result = list()
-        for le in response:
-            le_obj = LexicalEntry(id=[le.client_id, le.object_id])
-            le_obj.dbObject = le
-            result.append(le_obj)
+        def graphene_entity(cur_entity, cur_publishing):
+            ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
+            ent.dbObject = cur_entity
+            ent.publishingentity = cur_publishing
+            return ent
 
-        return result
+        def graphene_obj(dbobj, cur_cls):
+            obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
+            obj.dbObject = dbobj
+            return obj
+
+        entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
+        lexical_entries = [graphene_obj(lex, LexicalEntry) for lex in lexes]
+        return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
 
 
 
