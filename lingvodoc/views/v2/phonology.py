@@ -1690,11 +1690,7 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                         group_name_string, f2_column, shift + 9, shift + len(x2_ellipse_list) + 8),
                     'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
                         group_name_string, f1_column, shift + 9, shift + len(x1_ellipse_list) + 8),
-                    'marker': {
-                        'type': 'none',
-                        'size': 1,
-                        'border': {'color': color},
-                        'fill': {'color': color}},
+                    'marker': {'type': 'none'},
                     'line': {'color': color, 'width': 0.5},
                     'smooth': True})
 
@@ -2770,8 +2766,6 @@ def perform_phonology(
     except OSError as exception:
         if exception.errno != EEXIST:
             raise
-
-    workbook_stream.seek(0)
 
     # If the name of the result file is too long, we try again with a shorter name.
 
