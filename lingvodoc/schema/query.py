@@ -141,7 +141,8 @@ from lingvodoc.models import (
     UserRequest as dbUserRequest,
     Grant as dbGrant,
     DictionaryPerspective as dbDictionaryPerspective,
-    Client
+    Client,
+    PublishingEntity as dbPublishingEntity
 )
 from pyramid.request import Request
 
@@ -167,6 +168,64 @@ from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_
 from lingvodoc.cache.caching import TaskStatus
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
+
+
+
+
+
+def have_tag(lex, tags, field_client_id, field_object_id):
+    return bool([x for x in lex if x.field_client_id == field_client_id and x.field_object_id == field_object_id and x.content in tags and x.published and x.accepted])
+
+
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted):
+    result = DBSession.query(dbLexicalEntry) \
+        .join(dbLexicalEntry.entity) \
+        .join(dbEntity.publishingentity) \
+        .join(dbEntity.field) \
+        .filter(dbEntity.content.in_(tags),
+                dbEntity.marked_for_deletion == False,
+                dbField.client_id == field_client_id,
+                dbField.object_id == field_object_id)
+    if accepted:
+        result = result.filter(dbPublishingEntity.accepted == True)
+    result = result.all()
+    return result
+
+
+def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
+    tag = None
+    for entity in lexical_entry.entity:
+        if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id:
+            if accepted:
+                if not entity.publishingentity.accepted:
+                    continue
+            tag = entity.content
+            break
+    if not tag:
+        return set()
+    else:
+        tags = {tag}
+        new_tags =  {tag}
+        while new_tags:
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
+            new_tags = set()
+            for lex in lexical_entries:
+                entities = DBSession.query(dbEntity) \
+                    .join(dbEntity.field) \
+                    .join(dbEntity.publishingentity) \
+                    .filter(dbEntity.parent == lex,
+                            dbField.client_id == field_client_id,
+                            dbField.object_id == field_object_id,
+                            dbEntity.marked_for_deletion==False)
+                if accepted:
+                    entities = entities.filter(dbPublishingEntity.accepted == True)
+
+                entities = entities.all()
+                for entity in entities:
+                    if entity.content not in tags:
+                        tags.add(entity.content)
+                        new_tags.add(entity.content)
+        return tags
 
 
 #Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
@@ -255,7 +314,7 @@ class Query(graphene.ObjectType):
         maybe_tier_list=graphene.List(graphene.String),
         maybe_tier_set=graphene.List(graphene.String),
         synchronous=graphene.Boolean())
-
+    connected_words = graphene.List(LexicalEntry, id=LingvodocID(required=True), field_id = LingvodocID(required=True), accepted=graphene.Boolean(), published=graphene.Boolean())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
                                      tag_list=LingvodocID(),
@@ -1356,6 +1415,41 @@ class Query(graphene.ObjectType):
     #     task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
     #     starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
     #     return True
+
+    def resolve_connected_words(self, info, id, field_id, accepted=None, published=None):
+        response = list()
+        client_id = id[0]
+        object_id = id[1]
+        field_client_id = field_id[0]
+        field_object_id = field_id[1]
+        lexical_entry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+        if not lexical_entry or lexical_entry.marked_for_deletion:
+            raise ResponseError(message="No such lexical entry in the system")
+        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accepted)
+        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
+        lexes_composite_list = [(lex.created_at,
+                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                                 lex.marked_for_deletion, lex.additional_metadata,
+                                 lex.additional_metadata.get('came_from')
+                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                                for lex in lexes]
+        result = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
+                                                   publish=published, accept=accepted)
+        # result = LexicalEntry.gra(lexes_composite_list, int(info.context["locale_id"] or 2),
+        #                                      publish=published, accept=accepted)
+        if published:
+            result = [lex for lex in result] #if have_tag(lex, tags, field_client_id, field_object_id)]
+
+        response = list(result)
+        result = list()
+        for le in response:
+            le_obj = LexicalEntry(id=[le.client_id, le.object_id])
+            le_obj.dbObject = le
+            result.append(le_obj)
+
+        return result
+
+
 
     def resolve_eaf_wordlist(self, info, id):
         # TODO: delete

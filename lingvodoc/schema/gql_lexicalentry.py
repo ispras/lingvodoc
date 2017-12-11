@@ -19,6 +19,8 @@ from lingvodoc.schema.gql_holders import (
 
 from lingvodoc.models import (
     Entity as dbEntity,
+    Field as dbField,
+    PublishingEntity as dbPublishingEntity,
     LexicalEntry as dbLexicalEntry,
     Client,
     DBSession,
@@ -34,6 +36,8 @@ from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 from lingvodoc.utils.creation import create_lexicalentry
 
+
+
 class LexicalEntry(LingvodocObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
@@ -46,7 +50,6 @@ class LexicalEntry(LingvodocObjectType):
      #additional_metadata | jsonb                       |
     """
     entities = graphene.List(Entity)
-
     dbType = dbLexicalEntry
 
     class Meta:
@@ -60,6 +63,11 @@ class LexicalEntry(LingvodocObjectType):
             gr_entity_object.dbObject = db_entity
             result.append(gr_entity_object)
         return result
+
+
+
+
+
 
 class CreateLexicalEntry(graphene.Mutation):
     """
