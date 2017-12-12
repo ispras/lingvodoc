@@ -292,6 +292,13 @@ class ObjectId:
 
 #@contextlib.contextmanager
 def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
+    """
+        mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
+      convert_starling(starling_dictionaries: $starling_dictionaries){
+            triumph
+        }
+    }
+    """
     # pr = cProfile.Profile()
     # pr.enable()
     import time
@@ -306,7 +313,9 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
     from lingvodoc.cache.caching import initialize_cache
     try:
         with transaction.manager:
-
+            n = 10
+            timestamp = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                    for c in range(n))
             initialize_cache(cache_kwargs)
             task_status = TaskStatus.get_from_cache(task_key)
             task_status.set(1, 1, "Preparing")
@@ -368,6 +377,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
             keep_field_dict = collections.defaultdict(dict)
             link_field_dict = collections.defaultdict(dict)
             task_status_counter = 0
+            etymology_set = set()
             for starling_dictionary in starling_dictionaries:
                 task_status_counter += 1
                 blob_id = tuple(starling_dictionary.get("blob_id"))
@@ -525,7 +535,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             if not le_numb:
                                 continue
                             if not le_numb in persp_to_lexentry[new_blob_link]:
-                                raise ResponseError(message="%s line not (blob_id = %s)" % (le_numb, str(new_blob_link)))
+                                continue #raise ResponseError(message="%s line not (blob_id = %s)" % (le_numb, str(new_blob_link)))
                             link_lexical_entry = persp_to_lexentry[new_blob_link][le_numb]
                             lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
                             perspective = blob_to_perspective[new_blob_link]
@@ -547,11 +557,11 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             #"""
                             if starling_dictionary.get("add_etymology"):
                                 pass
-                                """
-                                if not blob_id in d:
-                                    d[blob_id] = {}
-                                if not num_col in d[blob_id]
-                                    d[blob_id][]
+
+                                # if not blob_id in d:
+                                #     d[blob_id] = {}
+                                # if not num_col in d[blob_id]
+                                #     d[blob_id][]
                                 #client_id = link_lexical_entry[0]
                                 #object_id = link_lexical_entry[1]
                                 # item = {"entity_type": "Etymology", "tag": "",
@@ -560,20 +570,20 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                 #         "connections": [{"client_id": client_id, "object_id": object_id}, {"client_id": lexical_entry_ids[0], "object_id": lexical_entry_ids[1]}]}
                                 # create_group_entity(item, client, user, obj_id)
                                 #DBSession.add(tag_entity)
-                                n=10
-                                timestamp = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                                             for c in range(n))
                                 tag = "%s_%s_%s_%s" % (num_col, str(new_blob_link), str(link_lexical_entry), timestamp)
-                                tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
-                                    field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=link_lexical_entry[0], parent_object_id=link_lexical_entry[1], content=tag)
-                                # additional_metadata num_col
-                                tag_entity.publishingentity.accepted = True
-                                DBSession.add(tag_entity)
+                                if not (num_col, str(new_blob_link), str(link_lexical_entry)) in etymology_set:
+
+                                    etymology_set.add((num_col, str(new_blob_link), str(link_lexical_entry)))
+                                    tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
+                                        field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=link_lexical_entry[0], parent_object_id=link_lexical_entry[1], content=tag)
+                                    # additional_metadata num_col
+                                    tag_entity.publishingentity.accepted = True
+                                    DBSession.add(tag_entity)
                                 tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
                                     field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=lexical_entry_ids[0], parent_object_id=lexical_entry_ids[1], content=tag)
                                 tag_entity.publishingentity.accepted = True
                                 DBSession.add(tag_entity)
-                                """
+
 
 
                 for field_id in copy_field_to_starlig:
