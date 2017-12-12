@@ -619,7 +619,7 @@ class Query(graphene.ObjectType):
     def resolve_dictionary(self, info, id):
         return Dictionary(id=id)
 
-    def resolve_perspectives(self,info, published):
+    def resolve_perspectives(self,info, published=None):
         """
         example:
 
