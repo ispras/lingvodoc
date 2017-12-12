@@ -2,6 +2,10 @@ import pympi
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
+    LexicalEntry as dbLexicalEntry,
+    Entity as dbEntity,
+    PublishingEntity as dbPublishingEntity,
+    Field as dbField,
     DBSession)
 
 #from lingvodoc.views.v2.translations import translationgist_contents
@@ -107,3 +111,54 @@ def fulfill_permissions_on_perspectives(intermediate, perspective, pairs):
 class FakeObject(object):
     pass
 
+
+
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted):
+    result = DBSession.query(dbLexicalEntry) \
+        .join(dbLexicalEntry.entity) \
+        .join(dbEntity.publishingentity) \
+        .join(dbEntity.field) \
+        .filter(dbEntity.content.in_(tags),
+                dbEntity.marked_for_deletion == False,
+                dbField.client_id == field_client_id,
+                dbField.object_id == field_object_id)
+    if accepted:
+        result = result.filter(dbPublishingEntity.accepted == True)
+    result = result.all()
+    return result
+
+
+def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
+    tag = None
+    for entity in lexical_entry.entity:
+        if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id:
+            if accepted:
+                if not entity.publishingentity.accepted:
+                    continue
+            tag = entity.content
+            break
+    if not tag:
+        return set()
+    else:
+        tags = {tag}
+        new_tags =  {tag}
+        while new_tags:
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
+            new_tags = set()
+            for lex in lexical_entries:
+                entities = DBSession.query(dbEntity) \
+                    .join(dbEntity.field) \
+                    .join(dbEntity.publishingentity) \
+                    .filter(dbEntity.parent == lex,
+                            dbField.client_id == field_client_id,
+                            dbField.object_id == field_object_id,
+                            dbEntity.marked_for_deletion==False)
+                if accepted:
+                    entities = entities.filter(dbPublishingEntity.accepted == True)
+
+                entities = entities.all()
+                for entity in entities:
+                    if entity.content not in tags:
+                        tags.add(entity.content)
+                        new_tags.add(entity.content)
+        return tags
