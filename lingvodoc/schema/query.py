@@ -270,7 +270,7 @@ class Query(graphene.ObjectType):
         maybe_tier_list=graphene.List(graphene.String),
         maybe_tier_set=graphene.List(graphene.String),
         synchronous=graphene.Boolean())
-    connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True), field_id = LingvodocID(required=True), accepted=graphene.Boolean(), published=graphene.Boolean())
+    connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True), field_id = LingvodocID(required=True), mode=graphene.String())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
                                      tag_list=LingvodocID(),
@@ -1372,21 +1372,38 @@ class Query(graphene.ObjectType):
     #     starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
     #     return True
 
-    def resolve_connected_words(self, info, id, field_id, accepted=True, published=None):
+    def resolve_connected_words(self, info, id, field_id, mode=None):
         response = list()
         client_id = id[0]
         object_id = id[1]
         field_client_id = field_id[0]
         field_object_id = field_id[1]
+        if mode == 'all':
+            publish = None
+            accept = True
+        elif mode == 'published':
+            publish = True
+            accept = True
+        elif mode == 'not_accepted':
+            publish = None
+            accept = False
+        elif mode == 'deleted':
+            publish = None
+            accept = None
+        elif mode == 'all_with_deleted':
+            publish = None
+            accept = None
+        else:
+            raise ResponseError(message="mode: <all|published|not_accepted>")
         lexical_entry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if not lexical_entry or lexical_entry.marked_for_deletion:
             raise ResponseError(message="No such lexical entry in the system")
-        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accepted)
-        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted)
+        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accept)
+        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accept)
         lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
                                 for lex in lexes]
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                   publish=published, accept=accepted)
+                                                   publish=publish, accept=accept)
 
         def graphene_entity(cur_entity, cur_publishing):
             ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
