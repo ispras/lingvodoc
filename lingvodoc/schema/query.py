@@ -560,13 +560,14 @@ class Query(graphene.ObjectType):
         else:
             if not dbdicts:
                 dbdicts = DBSession.query(dbDictionary).filter(dbDictionary.marked_for_deletion == False)
-            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
         if category is not None:
             if category:
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
             else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
         if mode is not None:
+            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             if mode:
                 # available
                 clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
