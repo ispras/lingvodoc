@@ -66,7 +66,8 @@ from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
     CreateLexicalEntry,
     DeleteLexicalEntry,
-    BulkCreateLexicalEntry
+    BulkCreateLexicalEntry,
+    ConnectLexicalEntries
 )
 
 from lingvodoc.schema.gql_language import (
@@ -164,7 +165,7 @@ from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import phonology as utils_phonology
 from lingvodoc.utils import starling_converter
-from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, fulfill_permissions_on_perspectives, FakeObject
+from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
@@ -173,59 +174,12 @@ ENGLISH_LOCALE = 2
 
 
 
-def have_tag(lex, tags, field_client_id, field_object_id):
-    return bool([x for x in lex if x.field_client_id == field_client_id and x.field_object_id == field_object_id and x.content in tags and x.published and x.accepted])
+
+# def have_tag(lex, tags, field_client_id, field_object_id):
+#     return bool([x for x in lex if x.field_client_id == field_client_id and x.field_object_id == field_object_id and x.content in tags and x.published and x.accepted])
 
 
-def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted):
-    result = DBSession.query(dbLexicalEntry) \
-        .join(dbLexicalEntry.entity) \
-        .join(dbEntity.publishingentity) \
-        .join(dbEntity.field) \
-        .filter(dbEntity.content.in_(tags),
-                dbEntity.marked_for_deletion == False,
-                dbField.client_id == field_client_id,
-                dbField.object_id == field_object_id)
-    if accepted:
-        result = result.filter(dbPublishingEntity.accepted == True)
-    result = result.all()
-    return result
 
-
-def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
-    tag = None
-    for entity in lexical_entry.entity:
-        if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id:
-            if accepted:
-                if not entity.publishingentity.accepted:
-                    continue
-            tag = entity.content
-            break
-    if not tag:
-        return set()
-    else:
-        tags = {tag}
-        new_tags =  {tag}
-        while new_tags:
-            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
-            new_tags = set()
-            for lex in lexical_entries:
-                entities = DBSession.query(dbEntity) \
-                    .join(dbEntity.field) \
-                    .join(dbEntity.publishingentity) \
-                    .filter(dbEntity.parent == lex,
-                            dbField.client_id == field_client_id,
-                            dbField.object_id == field_object_id,
-                            dbEntity.marked_for_deletion==False)
-                if accepted:
-                    entities = entities.filter(dbPublishingEntity.accepted == True)
-
-                entities = entities.all()
-                for entity in entities:
-                    if entity.content not in tags:
-                        tags.add(entity.content)
-                        new_tags.add(entity.content)
-        return tags
 
 
 #Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
@@ -1658,6 +1612,7 @@ class MyMutations(graphene.ObjectType):
     create_lexicalentry = CreateLexicalEntry.Field()
     delete_lexicalentry = DeleteLexicalEntry.Field()
     bulk_create_lexicalentry = BulkCreateLexicalEntry.Field()
+    connect_lexical_entries = ConnectLexicalEntries.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
     update_perspective_status = UpdatePerspectiveStatus.Field()
