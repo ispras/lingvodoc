@@ -317,6 +317,15 @@ class DeleteGroupingTags(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, info, **args):
+        """
+                    mutation DeleteTag{
+                delete_grouping_tags(field_id: [66,25]
+        id:[1523, 9499]
+             ) {
+                    triumph
+                }
+            }
+        """
         request = info.context.request
         variables = {'auth': authenticated_userid(request)}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -328,8 +337,8 @@ class DeleteGroupingTags(graphene.Mutation):
 
 
 
-            client_id, object_id = info.get("id")
-            field_client_id, field_object_id = info.get("field_id")
+            client_id, object_id = args.get("id")
+            field_client_id, field_object_id = args.get("field_id")
             field = DBSession.query(dbField).filter_by(client_id=field_client_id,
                                                      object_id=field_object_id).first()
             if not field:
@@ -337,7 +346,7 @@ class DeleteGroupingTags(graphene.Mutation):
             elif field.data_type != 'Grouping Tag':
                 return {'error': str("Wrong type of field")}
 
-            entities = DBSession.query(Entity).filter_by(field_client_id=field_client_id,
+            entities = DBSession.query(dbEntity).filter_by(field_client_id=field_client_id,
                                                          field_object_id=field_object_id,
                                                          parent_client_id=client_id,
                                                          parent_object_id=object_id, marked_for_deletion=False).all()
@@ -352,4 +361,4 @@ class DeleteGroupingTags(graphene.Mutation):
                     #                                                  object_id=entity.object_id).one()
                     # objecttoc.marked_for_deletion = True
                 return DeleteGroupingTags(triumph=True)
-            return DeleteGroupingTags(triumph=True)
+            return DeleteGroupingTags(triumph=False)
