@@ -453,166 +453,165 @@ def download(
         cache_kwargs
 ):  # :(
 
-    # with transaction.manager as tm:
-        initialize_cache(cache_kwargs)
-        task_status = TaskStatus.get_from_cache(task_key)
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
 
-        engine = create_engine(sqlalchemy_url)
-        register_after_fork(engine, engine.dispose)
-        log = logging.getLogger(__name__)
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        # SyncDBSession.configure(bind=engine)
-        # session = SyncDBSession
-        log.setLevel(logging.DEBUG)
-        # with transaction.manager:
-        new_jsons = dict()
-        for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField,
-                      LexicalEntry, Entity, PublishingEntity]:
-            new_jsons[table.__tablename__] = list()
-        # new_entity_jsons = list()
-        dictionary_json = make_request(central_server + 'dictionary/%s/%s' % (client_id, object_id), cookies)
-        if dictionary_json.status_code != 200:
-            log.error('dict fail', dictionary_json.status_code)
+    engine = create_engine(sqlalchemy_url)
+    register_after_fork(engine, engine.dispose)
+    log = logging.getLogger(__name__)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    # SyncDBSession.configure(bind=engine)
+    # session = SyncDBSession
+    log.setLevel(logging.DEBUG)
+    # with transaction.manager:
+    new_jsons = dict()
+    for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField,
+                  LexicalEntry, Entity, PublishingEntity]:
+        new_jsons[table.__tablename__] = list()
+    # new_entity_jsons = list()
+    dictionary_json = make_request(central_server + 'dictionary/%s/%s' % (client_id, object_id), cookies)
+    if dictionary_json.status_code != 200:
+        log.error('dict fail', dictionary_json.status_code)
+        session.rollback()
+        return
+    dictionary_json = dictionary_json.json()
+    if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
+        dictionary_json['category'] = 1
+    else:
+        dictionary_json['category'] = 0
+    new_jsons['dictionary'].append(dict2strippeddict(dictionary_json, Dictionary))
+    perspectives_json = make_request(central_server + 'dictionary/%s/%s/perspectives' % (client_id, object_id), cookies)
+    if perspectives_json.status_code != 200:
+        log.error('pesrps fail', perspectives_json.status_code)
+        session.rollback()
+        return
+    perspectives_json = perspectives_json.json()
+    for perspective_json in perspectives_json:
+        # if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
+        #     dictionary_json['category'] = 1
+        # else:
+        #     dictionary_json['category'] = 0
+        meta_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/meta' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id']), cookies, 'post',
+                                 json_data=perspective_json.get('additional_metadata', dict()))
+        if meta_json.status_code != 200:
+            log.error('meta fail', meta_json.status_code)
             session.rollback()
             return
-        dictionary_json = dictionary_json.json()
-        if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
-            dictionary_json['category'] = 1
-        else:
-            dictionary_json['category'] = 0
-        new_jsons['dictionary'].append(dict2strippeddict(dictionary_json, Dictionary))
-        perspectives_json = make_request(central_server + 'dictionary/%s/%s/perspectives' % (client_id, object_id), cookies)
-        if perspectives_json.status_code != 200:
-            log.error('pesrps fail', perspectives_json.status_code)
+        perspective_json['additional_metadata'] = meta_json.json()
+
+        fields_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/fields' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id']), cookies, 'get')
+        if fields_json.status_code != 200:
+            log.error('fields fail', fields_json.status_code)
             session.rollback()
             return
-        perspectives_json = perspectives_json.json()
-        for perspective_json in perspectives_json:
-            # if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
-            #     dictionary_json['category'] = 1
-            # else:
-            #     dictionary_json['category'] = 0
-            meta_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/meta' % (
-                client_id,
-                object_id,
-                perspective_json['client_id'],
-                perspective_json['object_id']), cookies, 'post',
-                                     json_data=perspective_json.get('additional_metadata', dict()))
-            if meta_json.status_code != 200:
-                log.error('meta fail', meta_json.status_code)
-                session.rollback()
-                return
-            perspective_json['additional_metadata'] = meta_json.json()
+        for field_json in fields_json.json():
+            new_jsons['dictionaryperspectivetofield'].append(
+                dict2strippeddict(field_json, DictionaryPerspectiveToField))  # todo: think about it
 
-            fields_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/fields' % (
-                client_id,
-                object_id,
-                perspective_json['client_id'],
-                perspective_json['object_id']), cookies, 'get')
-            if fields_json.status_code != 200:
-                log.error('fields fail', fields_json.status_code)
-                session.rollback()
-                return
-            for field_json in fields_json.json():
-                new_jsons['dictionaryperspectivetofield'].append(
-                    dict2strippeddict(field_json, DictionaryPerspectiveToField))  # todo: think about it
+        new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
+        count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id']), cookies)
+        if count_json.status_code != 200:
+            log.error('count fail', count_json.status_code)
+            session.rollback()
+            return
+        count_json = count_json.json()
+        all_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all?start_from=0&count=%s' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id'],
+            count_json['count']), cookies)
+        published_json = None
 
-            new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
-            count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
-                client_id,
-                object_id,
-                perspective_json['client_id'],
-                perspective_json['object_id']), cookies)
-            if count_json.status_code != 200:
-                log.error('count fail', count_json.status_code)
-                session.rollback()
-                return
-            count_json = count_json.json()
-            all_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all?start_from=0&count=%s' % (
-                client_id,
-                object_id,
-                perspective_json['client_id'],
-                perspective_json['object_id'],
-                count_json['count']), cookies)
-            published_json = None
-
-            if all_json.status_code != 200:
-                if all_json.status_code == 403:
-                    count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/published_count' % (
+        if all_json.status_code != 200:
+            if all_json.status_code == 403:
+                count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/published_count' % (
+                    client_id,
+                    object_id,
+                    perspective_json['client_id'],
+                    perspective_json['object_id']), cookies)
+                if count_json.status_code != 200:
+                    log.error('count fail', count_json.status_code)
+                    session.rollback()
+                    return
+                count_json = count_json.json()
+                published_json = make_request(
+                    central_server + 'dictionary/%s/%s/perspective/%s/%s/published?start_from=0&count=%s' % (
                         client_id,
                         object_id,
                         perspective_json['client_id'],
-                        perspective_json['object_id']), cookies)
-                    if count_json.status_code != 200:
-                        log.error('count fail', count_json.status_code)
-                        session.rollback()
-                        return
-                    count_json = count_json.json()
-                    published_json = make_request(
-                        central_server + 'dictionary/%s/%s/perspective/%s/%s/published?start_from=0&count=%s' % (
-                            client_id,
-                            object_id,
-                            perspective_json['client_id'],
-                            perspective_json['object_id'],
-                            count_json['count']), cookies)
-                    if published_json.status_code != 200:
-                        log.error('published fail', all_json.status_code)
-                        session.rollback()
-                        return
-                    else:
-                        publ_json = published_json.json()
-                        if len(publ_json) > 0 and publ_json[0].get('contains') and len(publ_json[0]['contains']) > 0 and \
-                                published_json.json()[0]['contains'][0].get('content') and 'entity hidden: you' in \
-                                published_json.json()[0]['contains'][0]['content'].lower():
-                            published_json = make_request(
-                                central_server + 'dictionary/%s/%s/perspective/%s/%s/published?start_from=0&count=%s' % (
-                                    client_id,
-                                    object_id,
-                                    perspective_json['client_id'],
-                                    perspective_json['object_id'],
-                                    20), cookies)
-                            if published_json.status_code != 200:
-                                # tm.rollback()
-                                session.rollback()
-                                return
-
-                else:
-                    log.error('get all fail', all_json.status_code)
+                        perspective_json['object_id'],
+                        count_json['count']), cookies)
+                if published_json.status_code != 200:
+                    log.error('published fail', all_json.status_code)
                     session.rollback()
                     return
-            if published_json:
-                all_json = published_json
-            all_json = all_json.json()
-            for lexical_entry_json in all_json:
-                new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))
-                for entity_json in lexical_entry_json['contains']:
-                    if not entity_json.get('self_client_id'):
-                        # if entity.json.get('link_client_id') and entity.json.get('link_object_id'):s
+                else:
+                    publ_json = published_json.json()
+                    if len(publ_json) > 0 and publ_json[0].get('contains') and len(publ_json[0]['contains']) > 0 and \
+                            published_json.json()[0]['contains'][0].get('content') and 'entity hidden: you' in \
+                            published_json.json()[0]['contains'][0]['content'].lower():
+                        published_json = make_request(
+                            central_server + 'dictionary/%s/%s/perspective/%s/%s/published?start_from=0&count=%s' % (
+                                client_id,
+                                object_id,
+                                perspective_json['client_id'],
+                                perspective_json['object_id'],
+                                20), cookies)
+                        if published_json.status_code != 200:
+                            # tm.rollback()
+                            session.rollback()
+                            return
 
-                        new_jsons['entity'].append(entity_json)
+            else:
+                log.error('get all fail', all_json.status_code)
+                session.rollback()
+                return
+        if published_json:
+            all_json = published_json
+        all_json = all_json.json()
+        for lexical_entry_json in all_json:
+            new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))
+            for entity_json in lexical_entry_json['contains']:
+                if not entity_json.get('self_client_id'):
+                    # if entity.json.get('link_client_id') and entity.json.get('link_object_id'):s
 
-                        new_jsons['publishingentity'].append(dict2strippeddict(entity_json, PublishingEntity))
-                        for inner_entity in entity_json['contains']:  # TODO: infinite nesting
-                            new_jsons['entity'].append(inner_entity)
-                            new_jsons['publishingentity'].append(dict2strippeddict(inner_entity, PublishingEntity))
-        response = basic_tables_content(client_id, object_id, session)
-        for key in new_jsons:
-            tmp = create_nested_content(new_jsons[key])
-            new_jsons[key] = tmp
+                    new_jsons['entity'].append(entity_json)
 
-        new_objects, new_entities, publ_entities = create_objects(new_jsons, response, session)
-        task_status.set(2, 30, "Got objects from server", "")
-        session.bulk_save_objects(new_objects)
-        task_status.set(3, 40, "Created objects until entities", "")
-        session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session, cookies=cookies))
-        task_status.set(4, 90, "Created entities", "")
-        session.bulk_save_objects(publ_entities)
-        log.error('dictionary %s %s downloaded' % (client_id, object_id))
-        task_status.set(5, 100, "Finished", "")
-        # session.commit()
-        engine.dispose()
-        return
+                    new_jsons['publishingentity'].append(dict2strippeddict(entity_json, PublishingEntity))
+                    for inner_entity in entity_json['contains']:  # TODO: infinite nesting
+                        new_jsons['entity'].append(inner_entity)
+                        new_jsons['publishingentity'].append(dict2strippeddict(inner_entity, PublishingEntity))
+    response = basic_tables_content(client_id, object_id, session)
+    for key in new_jsons:
+        tmp = create_nested_content(new_jsons[key])
+        new_jsons[key] = tmp
+
+    new_objects, new_entities, publ_entities = create_objects(new_jsons, response, session)
+    task_status.set(2, 30, "Got objects from server", "")
+    session.bulk_save_objects(new_objects)
+    task_status.set(3, 40, "Created objects until entities", "")
+    session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session, cookies=cookies))
+    task_status.set(4, 90, "Created entities", "")
+    session.bulk_save_objects(publ_entities)
+    log.error('dictionary %s %s downloaded' % (client_id, object_id))
+    task_status.set(5, 100, "Finished", "")
+    session.commit()
+    engine.dispose()
+    return
 
 
 def download_dictionary(
