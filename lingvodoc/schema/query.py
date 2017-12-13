@@ -67,7 +67,8 @@ from lingvodoc.schema.gql_lexicalentry import (
     CreateLexicalEntry,
     DeleteLexicalEntry,
     BulkCreateLexicalEntry,
-    ConnectLexicalEntries
+    ConnectLexicalEntries,
+    DeleteGroupingTags
 )
 
 from lingvodoc.schema.gql_language import (
@@ -1078,6 +1079,8 @@ class Query(graphene.ObjectType):
                             else:
                                 ent["link_id"] = None
                             ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
+                            del ent["field_client_id"]
+                            del ent["field_object_id"]
                             if "self_client_id" in ent and "self_object_id" in ent:
                                 ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
                             else:
@@ -1636,6 +1639,7 @@ class MyMutations(graphene.ObjectType):
     delete_lexicalentry = DeleteLexicalEntry.Field()
     bulk_create_lexicalentry = BulkCreateLexicalEntry.Field()
     connect_lexical_entries = ConnectLexicalEntries.Field()
+    delete_grouping_tags =  DeleteGroupingTags.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
     update_perspective_status = UpdatePerspectiveStatus.Field()

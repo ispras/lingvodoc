@@ -195,9 +195,9 @@ class DeleteLexicalEntry(graphene.Mutation):
         dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if dblexicalentry and not dblexicalentry.marked_for_deletion:
             del_object(dblexicalentry)
-            objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dblexicalentry.client_id,
-                                                             object_id=dblexicalentry.object_id).one()
-            del_object(objecttoc)
+            # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dblexicalentry.client_id,
+            #                                                  object_id=dblexicalentry.object_id).one()
+            # del_object(objecttoc)
             lexicalentry = LexicalEntry(id=[dblexicalentry.client_id, dblexicalentry.object_id])
             lexicalentry.dbObject = dblexicalentry
             return DeleteLexicalEntry(lexicalentry=lexicalentry, triumph=True)
@@ -304,3 +304,52 @@ class ConnectLexicalEntries(graphene.Mutation):
                     if user in group.users:
                         tag_entity.publishingentity.accepted = True
         return ConnectLexicalEntries(triumph=True)
+
+
+
+class DeleteGroupingTags(graphene.Mutation):
+    class Arguments:
+        id = LingvodocID(required=True)
+        field_id = LingvodocID(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        tags = list()
+        tag = args.get('id')
+        if tag is not None:
+            tags.append(tag)
+
+
+
+            client_id, object_id = info.get("id")
+            field_client_id, field_object_id = info.get("field_id")
+            field = DBSession.query(dbField).filter_by(client_id=field_client_id,
+                                                     object_id=field_object_id).first()
+            if not field:
+                return {'error': str("No such field in the system")}
+            elif field.data_type != 'Grouping Tag':
+                return {'error': str("Wrong type of field")}
+
+            entities = DBSession.query(Entity).filter_by(field_client_id=field_client_id,
+                                                         field_object_id=field_object_id,
+                                                         parent_client_id=client_id,
+                                                         parent_object_id=object_id, marked_for_deletion=False).all()
+            if entities:
+                for entity in entities:
+                    del_object(entity)
+                    # if 'desktop' in request.registry.settings:
+                    #     real_delete_entity(entity, request.registry.settings)
+                    # else:
+                    # entity.marked_for_deletion = True
+                    # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=entity.client_id,
+                    #                                                  object_id=entity.object_id).one()
+                    # objecttoc.marked_for_deletion = True
+                return DeleteGroupingTags(triumph=True)
+            return DeleteGroupingTags(triumph=True)
