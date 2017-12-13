@@ -21,7 +21,8 @@ from lingvodoc.models import (
     TranslationGist,
     categories,
     Entity,
-    ObjectTOC
+    ObjectTOC,
+    Grant
 )
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -238,6 +239,12 @@ def delete_dictionary(request):  # tested & in docs
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
+            dict_id = {'client_id': client_id, 'object_id': object_id}
+            for grant in DBSession.query(Grant).all():
+                if grant.additional_metadata and grant.additional_metadata.get('participant') and dict_id in grant.additional_metadata['participant']:
+                    grant.additional_metadata['participant'].remove(dict_id)
+                    flag_modified(grant, 'additional_metadata')
+
             if 'desktop' in request.registry.settings:
                 real_delete_dictionary(dictionary, request.registry.settings)
             else:

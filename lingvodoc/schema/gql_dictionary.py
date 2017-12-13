@@ -14,7 +14,8 @@ from lingvodoc.models import (
     DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
-    Organization as dbOrganization
+    Organization as dbOrganization,
+    Grant as dbGrant
 )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
@@ -31,7 +32,7 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID,
     UserAndOrganizationsRoles
 )
-
+from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
@@ -682,6 +683,11 @@ class DeleteDictionary(graphene.Mutation):
         dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
+        for grant in DBSession.query(dbGrant).all():
+            dict_id = {'client_id': client_id, 'object_id': object_id}
+            if grant.additional_metadata  and grant.additional_metadata.get('participant') and dict_id in grant.additional_metadata['participants']:
+                grant.additional_metadata['participants'].remove(dict_id)
+                flag_modified(grant, 'additional_metadata')
         del_object(dbdictionary_obj)
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
