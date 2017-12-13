@@ -190,6 +190,12 @@ class AcceptUserRequest(graphene.Mutation):
                     dict_ids = {'client_id': userrequest.subject['client_id'],
                                 'object_id': userrequest.subject['object_id']}
 
+                    cur_dict = DBSession.query(dbDictionary).filter_by(client_id=dict_ids['client_id'],
+                                                                     object_id=dict_ids['object_id'],
+                                                                       marked_for_deletion=False).first()
+                    if not cur_dict:
+                        raise ResponseError('such dictionary doesn\'t exist')
+
                     no_grants = True
                     for tmp_grant in DBSession.query(dbGrant).all():
                         if tmp_grant.additional_metadata and tmp_grant.additional_metadata.get(
@@ -422,6 +428,11 @@ class AddDictionaryToGrant(graphene.Mutation):
         req['message'] = ''
         info.context.acl_check('edit', 'dictionary',
                                (client_id,object_id))
+        cur_dict = DBSession.query(dbDictionary).filter_by(client_id=client_id,
+                                                         object_id=object_id,
+                                                           marked_for_deletion=False).first()
+        if not cur_dict:
+            raise ResponseError('such dictionary doesn\'t exist')
         if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
             raise ResponseError(message="Request already exists")
