@@ -977,7 +977,7 @@ class Query(graphene.ObjectType):
 
                 published_cursor = None
 
-                if group:
+                if not group:
                     results_cursor = DBSession.query(dbEntity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
                     if perspective_id:
                         perspective_client_id, perspective_object_id = perspective_id
