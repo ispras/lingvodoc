@@ -44,6 +44,8 @@ from pyramid.httpexceptions import (
 from lingvodoc.views.v2.desktop_sync.core import async_download_dictionary
 import json
 import requests
+from pyramid.request import Request
+from pyramid.response import Response
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +103,7 @@ class DownloadDictionary(graphene.Mutation):
     @client_id_check()
     def mutate(root, info, **args):
         request = info.context.request
-        args = dict()
+        my_args = dict()
         locale_id = int(request.cookies.get('locale_id') or 2)
         dict_id = args['id']
         variables = {'auth': authenticated_userid(request)}
@@ -109,19 +111,19 @@ class DownloadDictionary(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
 
-        args["client_id"] = dict_id[0]
-        args["object_id"] = dict_id[1]
-        args["central_server"] = request.registry.settings["desktop"]['central_server']
-        args["storage"] = request.registry.settings["storage"]
-        args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
-        args["cookies"] = json.loads(request.cookies.get('server_cookies'))
+        my_args["client_id"] = dict_id[0]
+        my_args["object_id"] = dict_id[1]
+        my_args["central_server"] = request.registry.settings["desktop"]['central_server']
+        my_args["storage"] = request.registry.settings["storage"]
+        my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
+        my_args["cookies"] = json.loads(request.cookies.get('server_cookies'))
         try:
             dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
                                                                    object_id=dict_id[1]).first()
             if not dictionary_obj:
-                dict_json = make_request(args["central_server"] + 'dictionary/%s/%s' % (
+                dict_json = make_request(my_args["central_server"] + 'dictionary/%s/%s' % (
                     dict_id[0],
-                    dict_id[1]), args["cookies"])
+                    dict_id[1]), my_args["cookies"])
                 if dict_json.status_code != 200 or not dict_json.json():
                     task = TaskStatus(user_id, "Dictionary sync with server", "dictionary name placeholder", 5)
                 else:
@@ -138,9 +140,92 @@ class DownloadDictionary(graphene.Mutation):
                 task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
         except:
             raise ResponseError('this should be impossible in graphql')
-        args["task_key"] = task.key
-        args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-        res = async_download_dictionary.delay(**args)
+        my_args["task_key"] = task.key
+        my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+        res = async_download_dictionary.delay(**my_args)
         # async_convert_dictionary_new(user_id, req['blob_client_id'], req['blob_object_id'], req["language_client_id"], req["language_object_id"], req["gist_client_id"], req["gist_object_id"], request.registry.settings["sqlalchemy.url"], request.registry.settings["storage"])
         log.debug("Conversion started")
         return DownloadDictionary(triumph=True)
+
+
+
+class Synchronize(graphene.Mutation):
+
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, info, **args):
+        print('locking client')
+        log.error('locking client')
+
+        request = info.context.request
+        DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise ResponseError('try to login again')
+
+        client_id = request.authenticated_userid
+        user_id = Client.get_user_by_client_id(client_id).id
+
+        task = TaskStatus(user_id, "Synchronisation with server", '', 16)
+        task.set(1, 10, "Started", "")
+        path = request.route_url('check_version')
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if resp.status_code != 200:
+            raise ResponseError('network error 1')
+
+        path = request.route_url('basic_sync')
+        subreq = Request.blank(path)
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if resp.status_code != 200:
+            raise ResponseError('network error 2')
+        task.set(2, 15, "Basic synchronisation completed", "")
+
+        path = request.route_url('diff_desk')
+        subreq = Request.blank(path)
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'task_key': task.key}
+        log.error('before diff_desk')
+        resp = request.invoke_subrequest(subreq)
+        log.error('after diff_desk')
+        if resp.status_code != 200:
+            raise ResponseError('network error 3')
+        task.set(15, 95, "All data uploaded to server", "")
+
+        for dict_obj in DBSession.query(dbDictionary).all():
+            path = request.route_url('download_dictionary')
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = {"client_id": dict_obj.client_id,
+                           "object_id": dict_obj.object_id}
+            resp = request.invoke_subrequest(subreq)
+            if resp.status_code != 200:
+                raise ResponseError('network error 4')
+
+        path = request.route_url('new_client')
+        subreq = Request.blank(path)
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if resp.status_code != 200:
+            raise ResponseError('network error 5')
+        else:
+            path = request.route_url('basic_sync')
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            resp = request.invoke_subrequest(subreq)
+            if resp.status_code != 200:
+                raise ResponseError('network error 2')
+            task.set(16, 100, "Synchronisation complete (New data still can be downloading from server, look a other tasks)", "")
+            return Synchronize(triumph=True)

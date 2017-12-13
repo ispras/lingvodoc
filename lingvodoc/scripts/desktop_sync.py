@@ -237,7 +237,8 @@ def create_entity(session, le_client_id, le_object_id, field_client_id, field_ob
                     locale_id=locale_id,
                     additional_metadata=additional_metadata,
                     parent_client_id=le_client_id,
-                    parent_object_id=le_object_id)
+                    parent_object_id=le_object_id,
+                    session=session)
     if upper_level:
         entity.upper_level = upper_level
 
@@ -303,9 +304,11 @@ def create_objects(server, existing, session):
                     if object_id in curr_existing[client_id]:
                         if curr_server[client_id][object_id] != curr_existing[client_id][object_id]:
                             kwargs = curr_server[client_id][object_id]
+                            kwargs['session'] = session
                             curr_old.append(kwargs)
                     else:
                         kwargs = curr_server[client_id][object_id]
+                        kwargs['session'] = session
                         if table == Entity:
                             new_entities.append(kwargs)
                         elif table == PublishingEntity:
@@ -317,6 +320,7 @@ def create_objects(server, existing, session):
             else:
                 for object_id in curr_server[client_id]:
                     kwargs = curr_server[client_id][object_id]
+                    kwargs['session'] = session
                     if table == Entity:
                         new_entities.append(kwargs)
                     elif table == PublishingEntity:
@@ -430,7 +434,7 @@ def create_new_entities(new_entities, storage, session, cookies):  # add queue
                                              locale_id=entity.get('locale_id'),
                                              storage=storage,
                                              published=entity.get('published'),
-                                             accepted=entity.get('accepted'),
+                                             accepted=entity.get('accepted')
                                              )
 
         entities_objects.append(entity_obj)
@@ -457,6 +461,8 @@ def download(
     log = logging.getLogger(__name__)
     Session = sessionmaker(bind=engine)
     session = Session()
+    # SyncDBSession.configure(bind=engine)
+    # session = SyncDBSession
     log.setLevel(logging.DEBUG)
     # with transaction.manager:
     new_jsons = dict()
@@ -566,6 +572,7 @@ def download(
                                 perspective_json['object_id'],
                                 20), cookies)
                         if published_json.status_code != 200:
+                            # tm.rollback()
                             session.rollback()
                             return
 
@@ -594,7 +601,6 @@ def download(
         new_jsons[key] = tmp
 
     new_objects, new_entities, publ_entities = create_objects(new_jsons, response, session)
-
     task_status.set(2, 30, "Got objects from server", "")
     session.bulk_save_objects(new_objects)
     task_status.set(3, 40, "Created objects until entities", "")

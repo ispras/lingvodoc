@@ -98,7 +98,8 @@ from lingvodoc.schema.gql_grant import (
     # DeleteGrant
 )
 from lingvodoc.schema.gql_sync import (
-    DownloadDictionary
+    DownloadDictionary,
+    Synchronize
 )
 
 # from lingvodoc.schema.gql_email import (
@@ -1656,6 +1657,7 @@ class MyMutations(graphene.ObjectType):
     accept_userrequest = AcceptUserRequest.Field()
     #delete_userrequest = DeleteUserRequest.Field()
     download_dictionary = DownloadDictionary.Field()
+    synchronize = Synchronize.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
