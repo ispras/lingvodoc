@@ -66,6 +66,44 @@ def make_request(path, cookies, req_type='get', json_data=None):
         return None
     return status
 
+def download_dictionary(dict_id, request, user_id, locale_id):
+    my_args = dict()
+    my_args["client_id"] = dict_id[0]
+    my_args["object_id"] = dict_id[1]
+    my_args["central_server"] = request.registry.settings["desktop"]['central_server']
+    my_args["storage"] = request.registry.settings["storage"]
+    my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
+    my_args["cookies"] = json.loads(request.cookies.get('server_cookies'))
+    try:
+        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
+                                                               object_id=dict_id[1]).first()
+        if not dictionary_obj:
+            dict_json = make_request(my_args["central_server"] + 'dictionary/%s/%s' % (
+                dict_id[0],
+                dict_id[1]), my_args["cookies"])
+            if dict_json.status_code != 200 or not dict_json.json():
+                task = TaskStatus(user_id, "Dictionary sync with server", "dictionary name placeholder", 5)
+            else:
+                dict_json = dict_json.json()
+                gist = DBSession.query(dbTranslationGist). \
+                    filter_by(client_id=dict_json['translation_gist_client_id'],
+                              object_id=dict_json['translation_gist_object_id']).first()
+                task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
+
+        else:
+            gist = DBSession.query(dbTranslationGist). \
+                filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                          object_id=dictionary_obj.translation_gist_object_id).first()
+            task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
+    except:
+        raise ResponseError('this should be impossible in graphql')
+    my_args["task_key"] = task.key
+    my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+    res = async_download_dictionary.delay(**my_args)
+    # async_convert_dictionary_new(user_id, req['blob_client_id'], req['blob_object_id'], req["language_client_id"], req["language_object_id"], req["gist_client_id"], req["gist_object_id"], request.registry.settings["sqlalchemy.url"], request.registry.settings["storage"])
+    log.debug("Conversion started")
+
+
 class DownloadDictionary(graphene.Mutation):
     """
     example:
@@ -103,48 +141,63 @@ class DownloadDictionary(graphene.Mutation):
     @client_id_check()
     def mutate(root, info, **args):
         request = info.context.request
-        my_args = dict()
         locale_id = int(request.cookies.get('locale_id') or 2)
         dict_id = args['id']
         variables = {'auth': authenticated_userid(request)}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
+        download_dictionary(dict_id, request, user_id, locale_id)
 
-        my_args["client_id"] = dict_id[0]
-        my_args["object_id"] = dict_id[1]
-        my_args["central_server"] = request.registry.settings["desktop"]['central_server']
-        my_args["storage"] = request.registry.settings["storage"]
-        my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
-        my_args["cookies"] = json.loads(request.cookies.get('server_cookies'))
-        try:
-            dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
-                                                                   object_id=dict_id[1]).first()
-            if not dictionary_obj:
-                dict_json = make_request(my_args["central_server"] + 'dictionary/%s/%s' % (
-                    dict_id[0],
-                    dict_id[1]), my_args["cookies"])
-                if dict_json.status_code != 200 or not dict_json.json():
-                    task = TaskStatus(user_id, "Dictionary sync with server", "dictionary name placeholder", 5)
-                else:
-                    dict_json = dict_json.json()
-                    gist = DBSession.query(dbTranslationGist). \
-                        filter_by(client_id=dict_json['translation_gist_client_id'],
-                                  object_id=dict_json['translation_gist_object_id']).first()
-                    task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
+        return DownloadDictionary(triumph=True)
 
-            else:
-                gist = DBSession.query(dbTranslationGist). \
-                    filter_by(client_id=dictionary_obj.translation_gist_client_id,
-                              object_id=dictionary_obj.translation_gist_object_id).first()
-                task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
-        except:
-            raise ResponseError('this should be impossible in graphql')
-        my_args["task_key"] = task.key
-        my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-        res = async_download_dictionary.delay(**my_args)
-        # async_convert_dictionary_new(user_id, req['blob_client_id'], req['blob_object_id'], req["language_client_id"], req["language_object_id"], req["gist_client_id"], req["gist_object_id"], request.registry.settings["sqlalchemy.url"], request.registry.settings["storage"])
-        log.debug("Conversion started")
+class DownloadDictionaries(graphene.Mutation):
+    """
+    example:
+    mutation {
+        create_lexicalentry(id: [949,21], perspective_id: [71,5]) {
+            field {
+                id
+            }
+            triumph
+        }
+    }
+
+    (this example works)
+    returns:
+
+    {
+      "create_lexicalentry": {
+        "field": {
+          "id": [
+            949,
+            21
+          ]
+        },
+        "triumph": true
+      }
+    }
+    """
+
+    class Arguments:
+        ids = graphene.List(LingvodocID, required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        ids = args['ids']
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        user_id = user.id
+
+        for dict_id in ids:
+            download_dictionary(dict_id, request, user_id, locale_id)
+
         return DownloadDictionary(triumph=True)
 
 
