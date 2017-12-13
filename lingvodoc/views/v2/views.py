@@ -26,7 +26,8 @@ from lingvodoc.models import (
     LexicalEntry,
     Dictionary,
     Entity,
-    Passhash
+    Passhash,
+    Grant
 )
 
 from sqlalchemy import (
@@ -328,6 +329,13 @@ def testing(request):
         flag_modified(lang, 'additional_metadata')
 
     # Service translation "Directed Link"
+    for grant in DBSession.query(Grant).all():
+        if grant.additional_metadata and grant.additional_metadata.get('participant'):
+            for ids in grant.additional_metadata['participant']:
+                if DBSession.query(Dictionary).filter_by(client_id=ids['client_id'], object_id=ids['object_id'], marked_for_deletion=False).first() is None:
+                    grant.additional_metadata['participant'].remove(ids)
+                    flag_modified(grant, 'additional_metadata')
+
     if translation_gist_search("Relation") or translation_gist_search("Directed Link"):
         return "Already patched"
     dl_link_gist = TranslationGist(client_id=1, type="Service")
