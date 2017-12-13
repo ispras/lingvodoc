@@ -12,6 +12,7 @@ webui/node_modules/
 webui/bower_components/
 webui/.sass-cache/
 
+
 # build stuff
 dist/
 build/
@@ -24,3 +25,4 @@ Session.vim
 pytest.output
 sphinx/source/apidoc-*/
 sphinx/pyramid_autodoc
+alembic.ini
