@@ -370,6 +370,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
             link_field_dict = collections.defaultdict(dict)
             task_status_counter = 0
             etymology_set = set()
+            etymology_blobs = set()
             for starling_dictionary in starling_dictionaries:
                 task_status_counter += 1
                 blob_id = tuple(starling_dictionary.get("blob_id"))
@@ -458,6 +459,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                      position=position_counter
                                      )
                     position_counter += 1
+                    etymology_blobs.add(blob_id)
 
                 persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
                          parent_id=perspective_id,
@@ -554,6 +556,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             # etymology tag
                             #"""
                             if starling_dictionary.get("add_etymology"):
+                                if not new_blob_link in etymology_blobs:
+                                    continue
                                 tag = "%s_%s_%s_%s" % (num_col, str(new_blob_link), str(link_lexical_entry), timestamp)
                                 if not tag in etymology_set:
                                     etymology_set.add(tag)
