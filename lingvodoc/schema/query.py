@@ -240,7 +240,7 @@ class Query(graphene.ObjectType):
     organization = graphene.Field(Organization, id=LingvodocID())
     organizations = graphene.List(Organization)
     lexicalentry = graphene.Field(LexicalEntry, id=LingvodocID())
-    lexicalentries = graphene.List(LexicalEntry, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
+    lexicalentries = graphene.Field(LexicalEntriesAndEntities, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
                                    perspective_id=LingvodocID(), field_id=LingvodocID(),
                                    search_in_published=graphene.Boolean())
     advanced_lexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
@@ -977,7 +977,7 @@ class Query(graphene.ObjectType):
 
                 published_cursor = None
 
-                if not group:
+                if group:
                     results_cursor = DBSession.query(dbEntity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
                     if perspective_id:
                         perspective_client_id, perspective_object_id = perspective_id
@@ -1030,87 +1030,109 @@ class Query(graphene.ObjectType):
                             dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
                             dbEntity.content.like('%' + searchstring + '%'))
 
-                    if can_add_tags:
-                        results_cursor = results_cursor \
-                            .filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                    or_(dbBaseGroup.action == 'create', dbBaseGroup.action == 'view')) \
-                            .group_by(dbEntity).having(func.count('*') == 2)
-                    else:
-                        results_cursor = results_cursor.filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                                       dbBaseGroup.action == 'view')
+                if can_add_tags and not group:
+                    results_cursor = results_cursor \
+                        .filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+                                or_(dbBaseGroup.action == 'create', dbBaseGroup.action == 'view')) \
+                        .group_by(dbEntity).having(func.count('*') == 2)
+                elif not group:
+                    results_cursor = results_cursor.filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+                                                   dbBaseGroup.action == 'view')
 
-                    if field:
-                        results_cursor = results_cursor.join(dbPerspective.dictionaryperspectivetofield).filter(
+                if field:
+                    results_cursor = results_cursor.join(dbPerspective.dictionaryperspectivetofield).filter(
+                        dbPerspectiveToField.field == field)
+                    if published_cursor:
+                        published_cursor = published_cursor.join(
+                            dbPerspective.dictionaryperspectivetofield).filter(
                             dbPerspectiveToField.field == field)
-                        if published_cursor:
-                            published_cursor = published_cursor.join(
-                                dbPerspective.dictionaryperspectivetofield).filter(
-                                dbPerspectiveToField.field == field)
 
-                    entries = list()
+                entries = list()
 
-                    for item in results_cursor:
+                for item in results_cursor:
+                    if item.parent not in entries:
+                        entries.append(item.parent)
+                if published_cursor:
+                    for item in published_cursor:
                         if item.parent not in entries:
                             entries.append(item.parent)
-                    if published_cursor:
-                        for item in published_cursor:
-                            if item.parent not in entries:
-                                entries.append(item.parent)
 
-                    lexical_entries = list()
-                    for entry in entries:
-                        if not entry.marked_for_deletion:
-                            if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_deleted():
-                                continue
-                            if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_hidden():
-                                continue
-                            lexical_entries.append(entry.track(search_in_published, info.context["locale_id"]))
+                lexes = list()
+                for entry in entries:
+                    if not entry.marked_for_deletion:
+                        if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_deleted():
+                            continue
+                        if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_hidden():
+                            continue
+                        lexes.append(entry)
 
-                    lexical_entries_list = list()
-                    for entry in lexical_entries:
-                        entities = []
-                        for ent in entry['contains']:
-                            del ent["contains"]
-                            del ent["level"]
-                            del ent["accepted"]
-                            del ent["published"]
-                            if "link_client_id" in ent and "link_object_id" in ent:
-                                ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
-                            else:
-                                ent["link_id"] = None
-                            ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
-                            del ent["field_client_id"]
-                            del ent["field_object_id"]
-                            if "self_client_id" in ent and "self_object_id" in ent:
-                                ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
-                            else:
-                                ent["self_id"] = None
-                            if "content" not in ent:
-                                ent["content"] = None
-                            if "additional_metadata" in ent:
+                lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
+                        for lex in lexes]
 
-                                ent["additional_metadata_string"] = ent["additional_metadata"]
-                                del ent["additional_metadata"]
-                            if 'entity_type' in ent:
-                                del ent['entity_type']
-                            gr_entity_object = Entity(id=[ent['client_id'],
-                                                          ent['object_id']],
-                                                      # link_id = (ent["link_client_id"], ent["link_object_id"]),
-                                                      parent_id=(ent["parent_client_id"], ent["parent_object_id"]),
-                                                      #**ent  # all other args from sub_result
-                                                      )
-                            entities.append(gr_entity_object)
-                        del entry["published"]
-                        del entry["contains"]
-                        del entry["level"]
-                        gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
-                                                                  entry['object_id']],
-                                                              entities=entities, #**entry
-                                                              )
+                entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
+                                                           publish=search_in_published, accept=True)
 
-                        lexical_entries_list.append(gr_lexicalentry_object)
-                    return lexical_entries_list
-            raise ResponseError(message="Bad string")
+                def graphene_entity(cur_entity, cur_publishing):
+                    ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
+                    ent.dbObject = cur_entity
+                    ent.publishingentity = cur_publishing
+                    return ent
+
+                def graphene_obj(dbobj, cur_cls):
+                    obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
+                    obj.dbObject = dbobj
+                    return obj
+
+                entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
+                lexical_entries = [graphene_obj(lex, LexicalEntry) for lex in lexes]
+                return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
+
+
+                # lexical_entries_list = list()
+                # for entry in lexical_entries:
+                #     entities = []
+                #     for ent in entry['contains']:
+                #         del ent["contains"]
+                #         del ent["level"]
+                #         del ent["accepted"]
+                #         del ent["published"]
+                #         if "link_client_id" in ent and "link_object_id" in ent:
+                #             ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
+                #         else:
+                #             ent["link_id"] = None
+                #         ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
+                #         del ent["field_client_id"]
+                #         del ent["field_object_id"]
+                #         if "self_client_id" in ent and "self_object_id" in ent:
+                #             ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
+                #         else:
+                #             ent["self_id"] = None
+                #         if "content" not in ent:
+                #             ent["content"] = None
+                #         if "additional_metadata" in ent:
+                #
+                #             ent["additional_metadata_string"] = ent["additional_metadata"]
+                #             del ent["additional_metadata"]
+                #         if 'entity_type' in ent:
+                #             del ent['entity_type']
+                #         gr_entity_object = Entity(id=[ent['client_id'],
+                #                                       ent['object_id']],
+                #                                   # link_id = (ent["link_client_id"], ent["link_object_id"]),
+                #                                   parent_id=(ent["parent_client_id"], ent["parent_object_id"]),
+                #                                   #**ent  # all other args from sub_result
+                #                                   )
+                #         entities.append(gr_entity_object)
+                #     del entry["published"]
+                #     del entry["contains"]
+                #     del entry["level"]
+                #     gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
+                #                                               entry['object_id']],
+                #                                           entities=entities, #**entry
+                #                                           )
+                #
+                #     lexical_entries_list.append(gr_lexicalentry_object)
+                # return lexical_entries_list
+        raise ResponseError(message="Bad string")
 
     def resolve_advanced_lexicalentries(self, info, searchstrings, perspectives=None, adopted=None,
                                         adopted_type=None, with_etimology=None): #advanced_search() function
