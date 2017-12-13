@@ -309,13 +309,17 @@ class CompositeIdMixin(object):
         if not kwargs.get("object_id", None):
             client_by_id = get_client_counter(kwargs['client_id'])
             kwargs["object_id"] = client_by_id.counter
-
+        if kwargs.get("session", None):
+            DBSession = kwargs['session']
         DBSession.merge(ObjectTOC(client_id=kwargs['client_id'],
                                 object_id=kwargs['object_id'],
                                 table_name=self.__tablename__,
                                 marked_for_deletion=kwargs.get('marked_for_deletion', False)
                                 )
                       )
+        if kwargs.get("session", None):
+            del kwargs['session']
+
         super().__init__(**kwargs)
 
 
