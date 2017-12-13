@@ -1092,7 +1092,7 @@ class Query(graphene.ObjectType):
                                                           ent['object_id']],
                                                       # link_id = (ent["link_client_id"], ent["link_object_id"]),
                                                       parent_id=(ent["parent_client_id"], ent["parent_object_id"]),
-                                                      **ent  # all other args from sub_result
+                                                      #**ent  # all other args from sub_result
                                                       )
                             entities.append(gr_entity_object)
                         del entry["published"]
@@ -1100,7 +1100,8 @@ class Query(graphene.ObjectType):
                         del entry["level"]
                         gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
                                                                   entry['object_id']],
-                                                              entities=entities, **entry)
+                                                              entities=entities, #**entry
+                                                              )
 
                         lexical_entries_list.append(gr_lexicalentry_object)
                     return lexical_entries_list
