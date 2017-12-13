@@ -1,3 +1,4 @@
+import time
 import random
 import string
 import collections
@@ -113,7 +114,7 @@ def csv_to_columns(path):
             col_num += 1
     # hack #1
 
-    column_dict["NUMBER"] = list(range(1, len(column_dict["NUMBER"]) + 1))
+    column_dict["NUMBER"] = [int(x) for x in column_dict["NUMBER"]] #list(range(1, len(column_dict["NUMBER"]) + 1))
     return column_dict
 from lingvodoc.scripts.convert_five_tiers import convert_all
 from lingvodoc.queue.celery import celery
@@ -301,15 +302,6 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
     """
     # pr = cProfile.Profile()
     # pr.enable()
-    import time
-    # from lingvodoc.cache.caching import initialize_cache
-    # initialize_cache(cache_kwargs)
-    # task_status = TaskStatus.get_from_cache(task_key)
-    # task_status.set(1, 1, "Preparing")
-    # engine = create_engine(sqlalchemy_url)
-    # #DBSession.remove()
-    # DBSession.configure(bind=engine, autoflush=False)
-    # obj_id = ObjectId()
     from lingvodoc.cache.caching import initialize_cache
     try:
         with transaction.manager:
@@ -484,12 +476,14 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 le_list = []
                 for number in csv_data["NUMBER"]:  # range()
                     le_client_id, le_object_id = client_id, obj_id.next
-                    lexentr = dbLexicalEntry(object_id=le_object_id, client_id=le_client_id, parent_client_id=perspective_id[0],
-                                parent_object_id=perspective_id[1])
+                    lexentr = dbLexicalEntry(object_id=le_object_id,
+                                             client_id=le_client_id,
+                                             parent_client_id=perspective_id[0],
+                                             parent_object_id=perspective_id[1])
                     DBSession.add(lexentr)
                     le_list.append((le_client_id, le_object_id))
                     persp_to_lexentry[blob_id][number] = (le_client_id, le_object_id)
-                    number += 1
+                    #number += 1
                 #DBSession.bulk_save_objects(le_list)
 
                 i = 0
@@ -528,14 +522,18 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 for num_col in link_field_dict[blob_id]:
                     if num_col in link_col_to_blob[blob_id].keys():
                         new_blob_link = link_col_to_blob[blob_id][num_col]
-                        link_numbers = [(i+1, int(x)) for i, x in enumerate(perspective_column_dict[blob_id][num_col])] ###
+                        link_numbers = list(zip(
+                                           [int(x) for x in perspective_column_dict[blob_id]["NUMBER"]],
+                                           [int(x) for x in perspective_column_dict[blob_id][num_col]])
+                        )
                         for link_pair in link_numbers:
                             # TODO: fix
                             le_numb = link_pair[1]
                             if not le_numb:
                                 continue
                             if not le_numb in persp_to_lexentry[new_blob_link]:
-                                continue #raise ResponseError(message="%s line not (blob_id = %s)" % (le_numb, str(new_blob_link)))
+                                # raise ResponseError(message="%s line not found (blob_id = %s)" % (le_numb, str(new_blob_link)))
+                                continue
                             link_lexical_entry = persp_to_lexentry[new_blob_link][le_numb]
                             lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
                             perspective = blob_to_perspective[new_blob_link]
@@ -556,24 +554,9 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             # etymology tag
                             #"""
                             if starling_dictionary.get("add_etymology"):
-                                pass
-
-                                # if not blob_id in d:
-                                #     d[blob_id] = {}
-                                # if not num_col in d[blob_id]
-                                #     d[blob_id][]
-                                #client_id = link_lexical_entry[0]
-                                #object_id = link_lexical_entry[1]
-                                # item = {"entity_type": "Etymology", "tag": "",
-                                #         "field_client_id": etymology_field_id[0],
-                                #         "field_object_id": etymology_field_id[1],
-                                #         "connections": [{"client_id": client_id, "object_id": object_id}, {"client_id": lexical_entry_ids[0], "object_id": lexical_entry_ids[1]}]}
-                                # create_group_entity(item, client, user, obj_id)
-                                #DBSession.add(tag_entity)
                                 tag = "%s_%s_%s_%s" % (num_col, str(new_blob_link), str(link_lexical_entry), timestamp)
-                                if not (num_col, str(new_blob_link), str(link_lexical_entry)) in etymology_set:
-
-                                    etymology_set.add((num_col, str(new_blob_link), str(link_lexical_entry)))
+                                if not tag in etymology_set:
+                                    etymology_set.add(tag)
                                     tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
                                         field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=link_lexical_entry[0], parent_object_id=link_lexical_entry[1], content=tag)
                                     # additional_metadata num_col
@@ -589,9 +572,11 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 for field_id in copy_field_to_starlig:
                     starling_field = copy_field_to_starlig[field_id]
                     word_list = perspective_column_dict[blob_id][starling_field]
-                    i = 1
+                    numb_list = iter(perspective_column_dict[blob_id]["NUMBER"])
+                    i = 0
                     for word in word_list:
-                        word = word_list[i-1]
+                        i = next(numb_list)
+                        #word = word_list[i]
                         lexical_entry_ids = persp_to_lexentry[blob_id][i]
                         if lexical_entry_ids in le_links:
                             for other_blob in le_links[lexical_entry_ids]:
@@ -610,7 +595,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         request=None,
                                         save_object=False)
                                     DBSession.add(new_ent)
-                        i+=1
+                        #i+=1
             DBSession.flush()
 
     except  Exception as err:
