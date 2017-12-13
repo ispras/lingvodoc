@@ -972,7 +972,7 @@ class Query(graphene.ObjectType):
 
                 published_cursor = None
 
-                if not group:
+                if group:
                     results_cursor = DBSession.query(dbEntity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
                     if perspective_id:
                         perspective_client_id, perspective_object_id = perspective_id
@@ -1635,7 +1635,7 @@ class MyMutations(graphene.ObjectType):
     delete_lexicalentry = DeleteLexicalEntry.Field()
     bulk_create_lexicalentry = BulkCreateLexicalEntry.Field()
     connect_lexical_entries = ConnectLexicalEntries.Field()
-    delete_grouping_tags =  DeleteGroupingTags.Field()
+    delete_grouping_tags = DeleteGroupingTags.Field()
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
     update_perspective_status = UpdatePerspectiveStatus.Field()
