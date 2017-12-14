@@ -978,20 +978,30 @@ class Query(graphene.ObjectType):
                 published_cursor = None
 
                 if group:
-                    results_cursor = DBSession.query(dbEntity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
+                    results_cursor = DBSession.query(dbEntity).join(dbEntity.publishingentity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
                     if perspective_id:
                         perspective_client_id, perspective_object_id = perspective_id
                         results_cursor = results_cursor.join(dbLexicalEntry) \
                             .join(dbPerspective) \
                             .filter(dbPerspective.client_id == perspective_client_id,
                                     dbPerspective.object_id == perspective_object_id)
+
+                    if search_in_published is not None:
+                        results_cursor.filter(dbPublishingEntity.published == search_in_published)
+
+                    results_cursor.filter(dbPublishingEntity.accepted==True)
                 else:
-                    results_cursor = DBSession.query(dbEntity) \
+                    results_cursor = DBSession.query(dbEntity).join(dbEntity.publishingentity) \
                         .join(dbEntity.parent) \
                         .join(dbPerspective)
 
                     if not perspective_id:
                         published_cursor = results_cursor
+
+                    if search_in_published is not None:
+                        results_cursor.filter(dbPublishingEntity.published == search_in_published)
+
+                    results_cursor.filter(dbPublishingEntity.accepted==True)
 
                     ignore_groups = False
                     db_published_gist = translation_gist_search('Published')
@@ -1050,8 +1060,11 @@ class Query(graphene.ObjectType):
                 entries = list()
 
                 for item in results_cursor:
+                    if item.parent_client_id==1125 and item.parent_object_id==29:
+                        pass
                     if item.parent not in entries:
                         entries.append(item.parent)
+
                 if published_cursor:
                     for item in published_cursor:
                         if item.parent not in entries:
@@ -1088,50 +1101,6 @@ class Query(graphene.ObjectType):
                 return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
 
 
-                # lexical_entries_list = list()
-                # for entry in lexical_entries:
-                #     entities = []
-                #     for ent in entry['contains']:
-                #         del ent["contains"]
-                #         del ent["level"]
-                #         del ent["accepted"]
-                #         del ent["published"]
-                #         if "link_client_id" in ent and "link_object_id" in ent:
-                #             ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
-                #         else:
-                #             ent["link_id"] = None
-                #         ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
-                #         del ent["field_client_id"]
-                #         del ent["field_object_id"]
-                #         if "self_client_id" in ent and "self_object_id" in ent:
-                #             ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
-                #         else:
-                #             ent["self_id"] = None
-                #         if "content" not in ent:
-                #             ent["content"] = None
-                #         if "additional_metadata" in ent:
-                #
-                #             ent["additional_metadata_string"] = ent["additional_metadata"]
-                #             del ent["additional_metadata"]
-                #         if 'entity_type' in ent:
-                #             del ent['entity_type']
-                #         gr_entity_object = Entity(id=[ent['client_id'],
-                #                                       ent['object_id']],
-                #                                   # link_id = (ent["link_client_id"], ent["link_object_id"]),
-                #                                   parent_id=(ent["parent_client_id"], ent["parent_object_id"]),
-                #                                   #**ent  # all other args from sub_result
-                #                                   )
-                #         entities.append(gr_entity_object)
-                #     del entry["published"]
-                #     del entry["contains"]
-                #     del entry["level"]
-                #     gr_lexicalentry_object = LexicalEntry(id=[entry['client_id'],
-                #                                               entry['object_id']],
-                #                                           entities=entities, #**entry
-                #                                           )
-                #
-                #     lexical_entries_list.append(gr_lexicalentry_object)
-                # return lexical_entries_list
         raise ResponseError(message="Bad string")
 
     def resolve_advanced_lexicalentries(self, info, searchstrings, perspectives=None, adopted=None,
