@@ -240,7 +240,7 @@ class Query(graphene.ObjectType):
     organization = graphene.Field(Organization, id=LingvodocID())
     organizations = graphene.List(Organization)
     lexicalentry = graphene.Field(LexicalEntry, id=LingvodocID())
-    lexicalentries = graphene.Field(LexicalEntriesAndEntities, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
+    basic_search = graphene.Field(LexicalEntriesAndEntities, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
                                    perspective_id=LingvodocID(), field_id=LingvodocID(),
                                    search_in_published=graphene.Boolean())
     advanced_lexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
@@ -948,10 +948,10 @@ class Query(graphene.ObjectType):
         return response
 
 
-    def resolve_lexicalentries(self, info, searchstring, search_in_published, field_id=None, perspective_id=None, can_add_tags=None): #basic_search() function
+    def resolve_basic_search(self, info, searchstring, search_in_published, field_id=None, perspective_id=None, can_add_tags=None): #basic_search() function
         """
         query EntriesList {
-            lexicalentries(searchstring: "следить", search_in_published: true) {
+            basic_search(searchstring: "следить", search_in_published: true) {
                 id
                 entities {
                      id
