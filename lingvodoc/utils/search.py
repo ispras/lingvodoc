@@ -113,7 +113,7 @@ class FakeObject(object):
 
 
 
-def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted):
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepted, published=None):
     result = DBSession.query(dbLexicalEntry) \
         .join(dbLexicalEntry.entity) \
         .join(dbEntity.publishingentity) \
@@ -124,16 +124,21 @@ def find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accepte
                 dbField.object_id == field_object_id)
     if accepted:
         result = result.filter(dbPublishingEntity.accepted == True)
+    if published:
+        result = result.filter(dbPublishingEntity.published == True)
     result = result.all()
     return result
 
 
-def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
+def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted, published=None):
     tag = None
     for entity in lexical_entry.entity:
         if not entity.marked_for_deletion and entity.field_client_id == field_client_id and entity.field_object_id == field_object_id:
             if accepted:
                 if not entity.publishingentity.accepted:
+                    continue
+            if published:
+                if not entity.publishingentity.published:
                     continue
             tag = entity.content
             break
@@ -143,7 +148,7 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
         tags = {tag}
         new_tags =  {tag}
         while new_tags:
-            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted)
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id, accepted, published)
             new_tags = set()
             for lex in lexical_entries:
                 entities = DBSession.query(dbEntity) \
@@ -155,6 +160,8 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted):
                             dbEntity.marked_for_deletion==False)
                 if accepted:
                     entities = entities.filter(dbPublishingEntity.accepted == True)
+                if published:
+                    entities = entities.filter(dbPublishingEntity.published == True)
 
                 entities = entities.all()
                 for entity in entities:
