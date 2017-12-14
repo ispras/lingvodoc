@@ -1430,8 +1430,8 @@ class Query(graphene.ObjectType):
         lexical_entry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if not lexical_entry or lexical_entry.marked_for_deletion:
             raise ResponseError(message="No such lexical entry in the system")
-        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accept)
-        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accept)
+        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accept, publish)
+        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accept, publish)
         lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
                                 for lex in lexes]
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
