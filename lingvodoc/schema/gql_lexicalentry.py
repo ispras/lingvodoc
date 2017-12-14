@@ -315,11 +315,11 @@ class DeleteGroupingTags(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+    @acl_check_by_id('delete', 'lexical_entries_and_entities', id_key= "parent_id")
     def mutate(root, info, **args):
         """
-                    mutation DeleteTag{
-                delete_grouping_tags(field_id: [66,25]
+        mutation DeleteTag{
+            delete_grouping_tags(field_id: [66,25]
         id:[1523, 9499]
              ) {
                     triumph
@@ -331,34 +331,31 @@ class DeleteGroupingTags(graphene.Mutation):
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         tags = list()
-        tag = args.get('id')
-        if tag is not None:
-            tags.append(tag)
 
 
 
-            client_id, object_id = args.get("id")
-            field_client_id, field_object_id = args.get("field_id")
-            field = DBSession.query(dbField).filter_by(client_id=field_client_id,
-                                                     object_id=field_object_id).first()
-            if not field:
-                return {'error': str("No such field in the system")}
-            elif field.data_type != 'Grouping Tag':
-                return {'error': str("Wrong type of field")}
+        client_id, object_id = args.get("id")
+        field_client_id, field_object_id = args.get("field_id")
+        field = DBSession.query(dbField).filter_by(client_id=field_client_id,
+                                                 object_id=field_object_id).first()
+        if not field:
+            return {'error': str("No such field in the system")}
+        elif field.data_type != 'Grouping Tag':
+            return {'error': str("Wrong type of field")}
 
-            entities = DBSession.query(dbEntity).filter_by(field_client_id=field_client_id,
-                                                         field_object_id=field_object_id,
-                                                         parent_client_id=client_id,
-                                                         parent_object_id=object_id, marked_for_deletion=False).all()
-            if entities:
-                for entity in entities:
-                    del_object(entity)
-                    # if 'desktop' in request.registry.settings:
-                    #     real_delete_entity(entity, request.registry.settings)
-                    # else:
-                    # entity.marked_for_deletion = True
-                    # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=entity.client_id,
-                    #                                                  object_id=entity.object_id).one()
-                    # objecttoc.marked_for_deletion = True
-                return DeleteGroupingTags(triumph=True)
-            return DeleteGroupingTags(triumph=False)
+        entities = DBSession.query(dbEntity).filter_by(field_client_id=field_client_id,
+                                                     field_object_id=field_object_id,
+                                                     parent_client_id=client_id,
+                                                     parent_object_id=object_id, marked_for_deletion=False).all()
+        if entities:
+            for entity in entities:
+                del_object(entity)
+                # if 'desktop' in request.registry.settings:
+                #     real_delete_entity(entity, request.registry.settings)
+                # else:
+                # entity.marked_for_deletion = True
+                # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=entity.client_id,
+                #                                                  object_id=entity.object_id).one()
+                # objecttoc.marked_for_deletion = True
+            return DeleteGroupingTags(triumph=True)
+        return DeleteGroupingTags(triumph=False)
