@@ -49,7 +49,7 @@ class AdvancedSearch(LingvodocObjectType):
     dictionaries = graphene.List(Dictionary)
 
     @classmethod
-    def constructor(cls, languages, tag_list, category, adopted, etymology, search_strings, publish=None, accept=True):
+    def constructor(cls, languages, tag_list, category, adopted, etymology, search_strings, publish=True, accept=True):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
