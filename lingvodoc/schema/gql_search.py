@@ -49,7 +49,7 @@ class AdvancedSearch(LingvodocObjectType):
     dictionaries = graphene.List(Dictionary)
 
     @classmethod
-    def constructor(cls, languages, tag_list, category, adopted, etymology, search_strings, publish=True, accept=True):
+    def constructor(cls, languages, tag_list, category, adopted, etymology, search_strings, publish, accept):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
@@ -66,8 +66,29 @@ class AdvancedSearch(LingvodocObjectType):
         res_perspectives = list()
         res_dictionaries = list()
         # normal dictionaries
+
+        db_published_gist = translation_gist_search('Published')
+        state_translation_gist_client_id = db_published_gist.client_id
+        state_translation_gist_object_id = db_published_gist.object_id
+        db_la_gist = translation_gist_search('Limited access')
+        limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+
+
+
         if category != 1:
             normal_dictionaries = dictionaries.filter(dbDictionary.category == 0)
+            if publish:
+                normal_dictionaries = normal_dictionaries.filter(dbDictionary.marked_for_deletion == False).filter(
+            or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
+                     dbDictionary.state_translation_gist_client_id == limited_client_id))). \
+            join(dbDictionaryPerspective) \
+            .filter(or_(and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                             dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                        and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                             dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
+            filter(dbDictionaryPerspective.marked_for_deletion == False)
             lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
                 .join(dbDictionaryPerspective.parent) \
                 .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(
@@ -166,6 +187,18 @@ class AdvancedSearch(LingvodocObjectType):
         # corpora
         if category != 0:
             corporas = dictionaries.filter(dbDictionary.category == 1)
+            if publish:
+                corporas = corporas.filter(dbDictionary.marked_for_deletion == False).filter(
+            or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
+                     dbDictionary.state_translation_gist_client_id == limited_client_id))). \
+            join(dbDictionaryPerspective) \
+            .filter(or_(and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                             dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                        and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                             dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
+            filter(dbDictionaryPerspective.marked_for_deletion == False)
 
             lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
                 .join(dbDictionaryPerspective.parent) \
@@ -266,5 +299,3 @@ class AdvancedSearch(LingvodocObjectType):
             tmp_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
             res_dictionaries += tmp_dictionaries
         return cls(entities=res_entities, lexical_entries=res_lexical_entries, perspectives=res_perspectives, dictionaries=res_dictionaries)
-
-        # todo: what if there corpora and dictionaries

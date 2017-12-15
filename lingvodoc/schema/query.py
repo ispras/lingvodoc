@@ -284,8 +284,7 @@ class Query(graphene.ObjectType):
                                      adopted=graphene.Boolean(),
                                      etymology=graphene.Boolean(),
                                      search_strings=graphene.List(graphene.List(ObjectVal), required=True),
-                                     publish=graphene.Boolean(),
-                                     accept=graphene.Boolean())
+                                     mode=graphene.String())
     search_strings=graphene.List(graphene.List(ObjectVal))
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
@@ -440,7 +439,25 @@ class Query(graphene.ObjectType):
         result = [create_levelandid(i) for i in result]
         return result
 
-    def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, publish=None, accept=True):
+    def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, mode='published'):
+
+        if mode == 'all':
+            publish = None
+            accept = True
+        elif mode == 'published':
+            publish = True
+            accept = True
+        elif mode == 'not_accepted':
+            publish = None
+            accept = False
+        elif mode == 'deleted':
+            publish = None
+            accept = None
+        elif mode == 'all_with_deleted':
+            publish = None
+            accept = None
+        else:
+            raise ResponseError(message="mode: <all|published|not_accepted>")
         if not search_strings:
             raise ResponseError(message="search_strings is empty")
         return AdvancedSearch().constructor(languages, tag_list, category, adopted, etymology, search_strings, publish, accept)
