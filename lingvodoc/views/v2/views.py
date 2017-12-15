@@ -341,13 +341,16 @@ def testing(request):
     markup_fields = DBSession.query(Field.client_id, Field.object_id).filter(Field.data_type_translation_gist_client_id == data_type.client_id,
                                                   Field.data_type_translation_gist_object_id == data_type.object_id).all()
     for dbentity in DBSession.query(Entity).filter(tuple_(Entity.field_client_id, Entity.field_object_id).in_(markup_fields)):
-        print(dbentity.client_id, dbentity.object_id)
-        if dbentity.additional_metadata['data_type'] != 'elan markup':
-            print(dbentity.additional_metadata['data_type'])
-            continue
-        bag_of_words = list(eaf_wordlist(dbentity))
-        dbentity.additional_metadata['bag_of_words'] = bag_of_words
-        flag_modified(dbentity, 'additional_metadata')
+        try:
+            print(dbentity.client_id, dbentity.object_id)
+            if dbentity.additional_metadata['data_type'] != 'elan markup':
+                print(dbentity.additional_metadata['data_type'])
+                continue
+            bag_of_words = list(eaf_wordlist(dbentity))
+            dbentity.additional_metadata['bag_of_words'] = bag_of_words
+            flag_modified(dbentity, 'additional_metadata')
+        except:
+            pass
 
     if translation_gist_search("Relation") or translation_gist_search("Directed Link"):
         return "Already patched"
