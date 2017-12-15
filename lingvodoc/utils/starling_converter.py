@@ -534,8 +534,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             if not le_numb:
                                 continue
                             if not le_numb in persp_to_lexentry[new_blob_link]:
-                                raise ResponseError(message="%s line not found (blob_id = %s)" % (le_numb, str(new_blob_link)))
-                                #continue
+                                #raise ResponseError(message="%s line not found (blob_id = %s)" % (le_numb, str(new_blob_link)))
+                                continue
                             link_lexical_entry = persp_to_lexentry[new_blob_link][le_numb]
                             lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
                             perspective = blob_to_perspective[new_blob_link]
