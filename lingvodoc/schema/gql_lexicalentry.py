@@ -58,8 +58,9 @@ class LexicalEntry(LingvodocObjectType):
 
     class Meta:
         interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)
+
     @fetch_object('entities')
-    @acl_check_by_id('view', 'lexical_entries_and_entities')
+    # @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info):
         result = list()
         for db_entity in self.dbObject.entity:
