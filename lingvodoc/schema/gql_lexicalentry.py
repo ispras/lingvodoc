@@ -58,8 +58,9 @@ class LexicalEntry(LingvodocObjectType):
 
     class Meta:
         interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)
+
     @fetch_object('entities')
-    @acl_check_by_id('view', 'lexical_entries_and_entities')
+    # @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info):
         result = list()
         for db_entity in self.dbObject.entity:
@@ -267,7 +268,7 @@ class ConnectLexicalEntries(graphene.Mutation):
                 filter_by(client_id=par[0], object_id=par[1]).first()
             if not parent:
                 raise ResponseError("No such lexical entry in the system")
-            par_tags = find_all_tags(parent, field_id[0], field_id[1], False)
+            par_tags = find_all_tags(parent, field_id[0], field_id[1], False, False)
             for tag in par_tags:
                 if tag not in tags:
                     tags.append(tag)
@@ -276,7 +277,7 @@ class ConnectLexicalEntries(graphene.Mutation):
             tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                          for c in range(n))
             tags.append(tag)
-        lexical_entries = find_lexical_entries_by_tags(tags, field_id[0], field_id[1], False)
+        lexical_entries = find_lexical_entries_by_tags(tags, field_id[0], field_id[1], False, False)
         for par in connections:
             parent = DBSession.query(dbLexicalEntry).\
                 filter_by(client_id=par[0], object_id=par[1]).first()
