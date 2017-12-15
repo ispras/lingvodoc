@@ -1258,14 +1258,14 @@ class Query(graphene.ObjectType):
             raise ResponseError('not authenticated')
         if data_type:
             if not is_global:
-                user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id, data_type=data_type).all()
+                user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id, data_type=data_type).all()
             else:
                 if data_type in allowed_global_types:
-                    user_blobs = DBSession.query(dbUserBlobs).filter_by(data_type=data_type).all()
+                    user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=data_type).all()
                 else:
                     raise ResponseError(message="Error: you can not list that data type globally.")
         else:
-            user_blobs = DBSession.query(dbUserBlobs).filter_by(user_id=client.user_id).all()
+            user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id).all()
         user_blobs_list = list()
         for db_blob in user_blobs:
             gql_blob = UserBlobs(id=[db_blob.client_id, db_blob.object_id])
