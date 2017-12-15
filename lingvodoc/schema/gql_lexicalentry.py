@@ -351,6 +351,12 @@ class ConnectLexicalEntries(graphene.Mutation):
                         dbBaseGroup.action == 'create').one()
                     if user in group.users:
                         tag_entity.publishingentity.accepted = True
+                    group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+                        dbBaseGroup.subject == 'lexical_entries_and_entities',
+                        dbGroup.subject_override == True,
+                        dbBaseGroup.action == 'create').one()
+                    if user in group.users:
+                        tag_entity.publishingentity.accepted = True
         return ConnectLexicalEntries(triumph=True)
 
 
