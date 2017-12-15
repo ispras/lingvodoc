@@ -104,7 +104,7 @@ class LexicalEntry(LingvodocObjectType):
             publ = db_entity.publishingentity
             if publish is not None and publ.published != publish:
                 continue
-            if accept is not None and publ.published != publish:
+            if accept is not None and publ.accepted != accept:
                 continue
             if db_entity.marked_for_deletion:
                 continue
