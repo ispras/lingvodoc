@@ -36,6 +36,7 @@ import hashlib
 import json
 import os
 from webob.multidict import MultiDict, NoVars
+from lingvodoc.utils.elan_functions import eaf_wordlist
 
 @view_config(route_name='get_entity_indict', renderer='json', request_method='GET')
 @view_config(route_name='get_entity', renderer='json', request_method='GET', permission='view')
@@ -203,6 +204,12 @@ def create_entity(request):  # tested
                     data_type = 'praat markup'
                 elif ext.lower() == 'eaf':
                     data_type = 'elan markup'
+
+
+            if 'elan' in data_type:
+                bag_of_words = list(eaf_wordlist(entity))
+                entity.additional_metadata['bag_of_words'] = bag_of_words
+
             entity.additional_metadata['data_type'] = data_type
         elif data_type == 'link':
             try:

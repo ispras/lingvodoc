@@ -7,6 +7,10 @@ import os
 import re
 import sys
 import time
+from lingvodoc.utils.search import eaf_words
+import requests
+import random
+import string
 
 def to_eaf(file_path, eaf_obj, pretty=True):
     """
@@ -105,3 +109,63 @@ def to_eaf(file_path, eaf_obj, pretty=True):
     # https://github.com/dopefishh/pympi/blob/master/pympi/Elan.py
 
     return '<?xml version="1.0" encoding="UTF-8"?>'+etree.tostring(ADOCUMENT, encoding='utf-8').decode("utf-8")
+
+
+def _export_to_elan(textGrid_file):
+    if os.stat(textGrid_file).st_size == 0:
+        return 'error'
+    try:
+        textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-8')
+        elan = tgt.io.export_to_elan(textgrid)
+    except Exception as e:
+        try:
+            print('first exception')
+            print(e)
+            textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-16')
+            elan = tgt.io.export_to_elan(textgrid)
+        except Exception as e:
+            print('second exception')
+            print(e)
+            return 'error'
+    return elan
+
+
+def eaf_wordlist(entity):
+        if not entity:
+            raise KeyError("No such file")
+        resp = requests.get(entity.content)
+        if not resp:
+            raise KeyError("Cannot access file")
+        content = resp.content
+        try:
+            n = 10
+            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                              for c in range(n))
+            # extension = os.path.splitext(blob.content)[1]
+            f = open(filename, 'wb')
+        except Exception as e:
+            raise KeyError(str(e))
+        try:
+            f.write(content)
+            f.close()
+            if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
+                if 'data_type' in entity.additional_metadata :
+                    if 'praat' in entity.additional_metadata['data_type']:
+                        textgrid_obj = pympi.TextGrid(file_path=filename)
+                        eaf_obj = textgrid_obj.to_eaf()
+                        word_list = eaf_words(eaf_obj)
+                        return word_list
+
+                    elif 'elan' in entity.additional_metadata['data_type']:
+                        eaf_obj = pympi.Eaf(file_path=filename)
+                        word_list = eaf_words(eaf_obj)
+                        return word_list
+                    else:
+                        raise KeyError("Not allowed convert option")
+                raise KeyError("Not allowed convert option")
+            raise KeyError('File too big')
+        except Exception as e:
+            raise KeyError(e)
+        finally:
+            os.remove(filename)
+            pass
