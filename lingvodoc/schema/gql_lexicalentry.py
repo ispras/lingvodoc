@@ -53,7 +53,7 @@ class LexicalEntry(LingvodocObjectType):
      #moved_to            | text                        |
      #additional_metadata | jsonb                       |
     """
-    entities = graphene.List(Entity)
+    entities = graphene.List(Entity, mode=graphene.String())
     dbType = dbLexicalEntry
 
     class Meta:
@@ -61,12 +61,59 @@ class LexicalEntry(LingvodocObjectType):
 
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
-    def resolve_entities(self, info):
+    def resolve_entities(self, info, mode='all'):
+        if mode == 'all':
+            publish = None
+            accept = True
+        elif mode == 'published':
+            publish = True
+            accept = True
+        elif mode == 'not_accepted':
+            publish = None
+            accept = False
+        elif mode == 'deleted':
+            publish = None
+            accept = None
+        elif mode == 'all_with_deleted':
+            publish = None
+            accept = None
+        else:
+            raise ResponseError(message="mode: <all|published|not_accepted>")
+
         result = list()
+        # entities = DBSession.query(dbEntity, dbPublishingEntity).filter(dbEntity.parent == self.dbObject)
+        # if publish is not None:
+        #     entities = entities.filter(dbPublishingEntity.published == publish)
+        # if accept is not None:
+        #     entities = entities.filter(dbPublishingEntity.accepted == accept)
+        # entities = entities.filter(dbEntity.marked_for_deletion == False)
+        #
+        # def graphene_entity(cur_entity, cur_publishing):
+        #     ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
+        #     ent.dbObject = cur_entity
+        #     ent.publishingentity = cur_publishing
+        #     return ent
+        #
+        # entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
+        # for db_entity in entities:
+        #     gr_entity_object = Entity(id=[db_entity.client_id, db_entity.object_id])
+        #     gr_entity_object.dbObject = db_entity
+        #     gr_entity_object.publishingentity = db_entity.publishingentity
+        #     result.append(gr_entity_object)
         for db_entity in self.dbObject.entity:
-            gr_entity_object = Entity(id=[db_entity.client_id, db_entity.object_id])
-            gr_entity_object.dbObject = db_entity
-            result.append(gr_entity_object)
+            publ = db_entity.publishingentity
+            if publish is not None and publ.published != publish:
+                continue
+            if accept is not None and publ.published != publish:
+                continue
+            if db_entity.marked_for_deletion:
+                continue
+            ent = Entity(id = [db_entity.client_id, db_entity.object_id])
+            ent.dbObject = db_entity
+            ent.publishingentity = publ
+            result.append(ent)
+
+
         return result
 
 
