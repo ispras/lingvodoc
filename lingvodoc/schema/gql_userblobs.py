@@ -148,7 +148,7 @@ class CreateUserBlob(graphene.Mutation):
                 input_file.seek(0)
 
                 with input_file  as csvfile:
-                    starling_fields = csvfile.readline().decode('utf-8').rstrip().split('|')
+                    starling_fields = csvfile.readline().decode('utf-8').rstrip().split('#####')
                     # starling_fields = csv.reader(csvfile, delimiter = '|')
 
                     if not blob_object.additional_metadata:
