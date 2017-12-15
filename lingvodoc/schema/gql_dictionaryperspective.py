@@ -54,6 +54,7 @@ from lingvodoc.utils.creation import (
     translationgist_contents,
     edit_role
 )
+from lingvodoc.utils.deletion import real_delete_perspective
 
 from sqlalchemy import (
     func,
@@ -713,8 +714,10 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbPerspective or not dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
-
-        del_object(dbperspective)
+        if 'desktop' in info.context["request"].registry.settings["cache_kwargs"]:
+            pass
+        else:
+            del_object(dbperspective)
 
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
