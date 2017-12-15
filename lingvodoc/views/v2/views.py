@@ -72,6 +72,7 @@ from hashlib import sha224
 from base64 import urlsafe_b64decode
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.utils.proxy import ProxyPass
+from lingvodoc.utils.elan_functions import eaf_wordlist
 
 log = logging.getLogger(__name__)
 
@@ -335,6 +336,18 @@ def testing(request):
                 if DBSession.query(Dictionary).filter_by(client_id=ids['client_id'], object_id=ids['object_id'], marked_for_deletion=False).first() is None:
                     grant.additional_metadata['participant'].remove(ids)
                     flag_modified(grant, 'additional_metadata')
+    # markup_fields = list()
+    data_type = translation_gist_search('Markup')
+    markup_fields = DBSession.query(Field.client_id, Field.object_id).filter(Field.data_type_translation_gist_client_id == data_type.client_id,
+                                                  Field.data_type_translation_gist_object_id == data_type.object_id).all()
+    for dbentity in DBSession.query(Entity).filter(tuple_(Entity.field_client_id, Entity.field_object_id).in_(markup_fields)):
+        print(dbentity.client_id, dbentity.object_id)
+        if dbentity.additional_metadata['data_type'] != 'elan markup':
+            print(dbentity.additional_metadata['data_type'])
+            continue
+        bag_of_words = list(eaf_wordlist(dbentity))
+        dbentity.additional_metadata['bag_of_words'] = bag_of_words
+        flag_modified(dbentity, 'additional_metadata')
 
     if translation_gist_search("Relation") or translation_gist_search("Directed Link"):
         return "Already patched"

@@ -57,6 +57,8 @@ from lingvodoc.utils.creation import create_entity
 
 from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
 
+from lingvodoc.utils.elan_functions import eaf_wordlist
+
 
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     filename = sanitize_filename(filename)
@@ -270,9 +272,15 @@ class CreateEntity(graphene.Mutation):
                 ext = name[len(name) - 1]
                 if ext.lower() == 'textgrid':
                     data_type = 'praat markup'
+
                 elif ext.lower() == 'eaf':
                     data_type = 'elan markup'
+
             dbentity.additional_metadata['data_type'] = data_type
+
+            if 'elan' in data_type:
+                bag_of_words = list(eaf_wordlist(dbentity))
+                dbentity.additional_metadata['bag_of_words'] = bag_of_words
         elif data_type == 'link':
             if args.get('link_id'):
                 link_client_id, link_object_id = args.get('link_id')

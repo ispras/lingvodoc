@@ -12,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_
-
+from lingvodoc.utils.elan_functions import eaf_wordlist
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -329,8 +329,14 @@ def create_entity(id=None,
             ext = name[len(name) - 1]
             if ext.lower() == 'textgrid':
                 data_type = 'praat markup'
+
             elif ext.lower() == 'eaf':
                 data_type = 'elan markup'
+
+        if 'elan' in data_type:
+            bag_of_words = list(eaf_wordlist(dbentity))
+            dbentity.additional_metadata['bag_of_words'] = bag_of_words
+
         dbentity.additional_metadata['data_type'] = data_type
     elif data_type in ('link', "directed link"):
         if link_id:
