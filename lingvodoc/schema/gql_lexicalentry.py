@@ -36,6 +36,7 @@ from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 from lingvodoc.utils.creation import create_lexicalentry
+from lingvodoc.utils.deletion import real_delete_entity
 from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
 import time
@@ -242,7 +243,12 @@ class DeleteLexicalEntry(graphene.Mutation):
         client_id, object_id = id
         dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if dblexicalentry and not dblexicalentry.marked_for_deletion:
-            del_object(dblexicalentry)
+            settings = info.context["request"].registry.settings
+            if 'desktop' in settings:
+                real_delete_lexical_entry(dblexicalentry, settings)
+            else:
+                del_object(dblexicalentry)
+
             # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dblexicalentry.client_id,
             #                                                  object_id=dblexicalentry.object_id).one()
             # del_object(objecttoc)
@@ -380,6 +386,7 @@ class DeleteGroupingTags(graphene.Mutation):
                 }
             }
         """
+        settings = info.context["request"].registry.settings
         request = info.context.request
         variables = {'auth': authenticated_userid(request)}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -402,11 +409,11 @@ class DeleteGroupingTags(graphene.Mutation):
                                                      parent_client_id=client_id,
                                                      parent_object_id=object_id, marked_for_deletion=False).all()
         if entities:
-            for entity in entities:
-                del_object(entity)
-                # if 'desktop' in request.registry.settings:
-                #     real_delete_entity(entity, request.registry.settings)
-                # else:
+            for dbentity in entities:
+                if 'desktop' in settings:
+                    real_delete_entity(dbentity, settings)
+                else:
+                    del_object(dbentity)
                 # entity.marked_for_deletion = True
                 # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=entity.client_id,
                 #                                                  object_id=entity.object_id).one()

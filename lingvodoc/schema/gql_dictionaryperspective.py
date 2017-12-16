@@ -712,10 +712,11 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         id = args.get("id")
         client_id, object_id = id
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if not dbPerspective or not dbperspective.marked_for_deletion:
+        if not dbPerspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
-        if 'desktop' in info.context["request"].registry.settings["cache_kwargs"]:
-            pass
+        settings = info.context["request"].registry.settings
+        if 'desktop' in settings:
+            real_delete_perspective(dbperspective, settings)
         else:
             del_object(dbperspective)
 

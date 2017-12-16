@@ -28,6 +28,7 @@ from lingvodoc.utils.creation import (
     create_dblanguage,
     create_gists_with_atoms,
     add_user_to_group)
+from lingvodoc.utils.deletion import real_delete_language
 # from lingvodoc.schema.gql_dictionary import Dictionary
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import (
@@ -416,7 +417,11 @@ class DeleteLanguage(graphene.Mutation):
         if not dblanguageobj or dblanguageobj.marked_for_deletion:
             raise ResponseError(message="No such language in the system")
             # dbentryobj = dbentityobj.parent - ?
-        del_object(dblanguageobj)
+        settings = info.context["request"].registry.settings
+        if 'desktop' in settings:
+            real_delete_language(dblanguageobj, settings)
+        else:
+            del_object(dblanguageobj)
         language = Language(id=id)
         language.dbObject = dblanguageobj
         return DeleteLanguage(language=language, triumph=True)

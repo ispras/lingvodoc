@@ -54,6 +54,7 @@ import base64
 import hashlib
 
 from lingvodoc.utils.creation import create_entity
+from lingvodoc.utils.deletion import real_delete_entity
 
 from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
 
@@ -436,12 +437,17 @@ class DeleteEntity(graphene.Mutation):
         lexical_entry = dbentity.parent
         info.context.acl_check('delete', 'lexical_entries_and_entities',
                                (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
-        if dbentity and not dbentity.marked_for_deletion:
+        if not dbentity or dbentity.marked_for_deletion:
+            raise ResponseError(message="No such entity in the system")
+        settings = info.context["request"].registry.settings
+        if 'desktop' in settings:
+            real_delete_entity(dbentity, settings)
+        else:
             del_object(dbentity)
-            entity = Entity(id=id)
-            entity.dbObject = dbentity
-            return DeleteEntity(entity=entity, triumph=True)
-        raise ResponseError(message="No such entity in the system")
+        entity = Entity(id=id)
+        entity.dbObject = dbentity
+        return DeleteEntity(entity=entity, triumph=True)
+
 
 
 class BulkCreateEntity(graphene.Mutation):
