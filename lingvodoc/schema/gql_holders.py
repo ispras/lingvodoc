@@ -265,6 +265,9 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
 
             #if attrib_name != 'id':
             if attrib_name and hasattr(cls, attrib_name) and not hasattr(getattr(cls, attrib_name), '_meta') and not hasattr(getattr(cls, attrib_name), 'of_type'):
+                    id_value = getattr(cls, attrib_name)
+                    if type(id_value) is list:
+                        return [int(x) for x in id_value]
                     return getattr(cls, attrib_name)
 
             if ACLSubject and ACLKey == 'id':
