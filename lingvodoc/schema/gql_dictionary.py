@@ -38,6 +38,7 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field,
                                       edit_role)
+from lingvodoc.utils.deletion import real_delete_dictionary
 
 class UserToRoles(graphene.ObjectType):
     id_user = graphene.Int()
@@ -688,7 +689,12 @@ class DeleteDictionary(graphene.Mutation):
             if grant.additional_metadata  and grant.additional_metadata.get('participant') and dict_id in grant.additional_metadata['participants']:
                 grant.additional_metadata['participants'].remove(dict_id)
                 flag_modified(grant, 'additional_metadata')
-        del_object(dbdictionary_obj)
+
+        settings = info.context["request"].registry.settings
+        if 'desktop' in settings:
+            real_delete_dictionary(dbdictionary_obj, settings)
+        else:
+            del_object(dbdictionary_obj)
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
         return DeleteDictionary(dictionary=dictionary, triumph=True)

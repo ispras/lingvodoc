@@ -265,12 +265,12 @@ class DeleteColumn(graphene.Mutation):
     def mutate(root, info, **args):
         id = args.get('id')
         client_id, object_id = id
-        field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
+        column_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
-        if not field_object or field_object.marked_for_deletion:
+        if not column_object or column_object.marked_for_deletion:
             raise ResponseError(message="No such field object in the system")
-        del_object(field_object)
+        del_object(column_object)
         column = Column(id=id)
-        column.dbObject = field_object
+        column.dbObject = column_object
         return DeleteColumn(column=column, triumph=True)
 
