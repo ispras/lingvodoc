@@ -59,7 +59,7 @@ def translation_service_search(searchstring):
 
 #: Set of statistically simple field types, statistics of entities belonging to fields with these types are
 #: simple counts.
-simple_field_type_set = set(['image', 'link', 'markup', 'sound', 'text'])
+simple_field_type_set = set(['image', 'link', 'markup', 'sound', 'text', "directed link"])
 
 
 def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
