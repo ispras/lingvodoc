@@ -141,9 +141,9 @@ class AdvancedSearch(LingvodocObjectType):
                     if matching_type == "full_string":
                         inner_and_block.append(func.lower(dbEntity.content) == func.lower(search_string["search_string"]))
                     elif matching_type == 'substring':
-                        inner_and_block.append(dbEntity.content.like("".join(['%', search_string["search_string"].lower(), '%'])))
+                        inner_and_block.append(func.lower(dbEntity.content).like("".join(['%', search_string["search_string"].lower(), '%'])))
                     elif matching_type == 'regexp':
-                        inner_and_block.append(dbEntity.content.op('~*')(search_string["search_string"]))
+                        inner_and_block.append(func.lower(dbEntity.content).op('~*')(search_string["search_string"]))
                     else:
                         raise ResponseError(message='wrong matching_type')
                     or_block.append(and_(*inner_and_block))

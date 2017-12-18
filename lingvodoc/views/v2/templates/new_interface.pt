@@ -1,1 +1,13 @@
-<h3>Please install React-based interface via Python's setup tools.</h3>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lingvodoc</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta charset="utf-8">
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="shortcut icon" href="/assets/favicon.ico"><link href="/assets/vendor.631be571.css" rel="stylesheet"><link href="/assets/client.f50c0c66.css" rel="stylesheet"></head>
+<body>
+  <div id="root">Application Content</div>
+<script type="text/javascript" src="/assets/manifest.a6250341.js"></script><script type="text/javascript" src="/assets/vendor.d31020a4.js"></script><script type="text/javascript" src="/assets/client.e847f631.js"></script></body>
+</html>
