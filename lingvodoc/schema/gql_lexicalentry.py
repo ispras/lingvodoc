@@ -82,37 +82,36 @@ class LexicalEntry(LingvodocObjectType):
             raise ResponseError(message="mode: <all|published|not_accepted>")
 
         result = list()
-        # entities = DBSession.query(dbEntity, dbPublishingEntity).filter(dbEntity.parent == self.dbObject)
-        # if publish is not None:
-        #     entities = entities.filter(dbPublishingEntity.published == publish)
-        # if accept is not None:
-        #     entities = entities.filter(dbPublishingEntity.accepted == accept)
-        # entities = entities.filter(dbEntity.marked_for_deletion == False)
-        #
-        # def graphene_entity(cur_entity, cur_publishing):
-        #     ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
-        #     ent.dbObject = cur_entity
-        #     ent.publishingentity = cur_publishing
-        #     return ent
-        #
-        # entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
-        # for db_entity in entities:
-        #     gr_entity_object = Entity(id=[db_entity.client_id, db_entity.object_id])
-        #     gr_entity_object.dbObject = db_entity
-        #     gr_entity_object.publishingentity = db_entity.publishingentity
-        #     result.append(gr_entity_object)
-        for db_entity in self.dbObject.entity:
-            publ = db_entity.publishingentity
-            if publish is not None and publ.published != publish:
-                continue
-            if accept is not None and publ.accepted != accept:
-                continue
-            if db_entity.marked_for_deletion:
-                continue
-            ent = Entity(id = [db_entity.client_id, db_entity.object_id])
-            ent.dbObject = db_entity
-            ent.publishingentity = publ
-            result.append(ent)
+        entities = DBSession.query(dbEntity, dbPublishingEntity).\
+            filter(dbEntity.parent_client_id == self.dbObject.client_id,
+                   dbEntity.parent_object_id == self.dbObject.object_id,
+                   dbEntity.client_id == dbPublishingEntity.client_id,
+                   dbEntity.object_id == dbPublishingEntity.object_id)
+        if publish is not None:
+            entities = entities.filter(dbPublishingEntity.published == publish)
+        if accept is not None:
+            entities = entities.filter(dbPublishingEntity.accepted == accept)
+        entities = entities.filter(dbEntity.marked_for_deletion == False).yield_per(100)
+
+        def graphene_entity(cur_entity, cur_publishing):
+            ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
+            ent.dbObject = cur_entity
+            ent.publishingentity = cur_publishing
+            return ent
+
+        result = [graphene_entity(entity[0], entity[1]) for entity in entities]
+        # for db_entity in self.dbObject.entity:
+        #     publ = db_entity.publishingentity
+        #     if publish is not None and publ.published != publish:
+        #         continue
+        #     if accept is not None and publ.accepted != accept:
+        #         continue
+        #     if db_entity.marked_for_deletion:
+        #         continue
+        #     ent = Entity(id = [db_entity.client_id, db_entity.object_id])
+        #     ent.dbObject = db_entity
+        #     ent.publishingentity = publ
+        #     result.append(ent)
 
 
         return result
