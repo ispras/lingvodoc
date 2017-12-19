@@ -502,6 +502,39 @@ class UpdateDictionary(graphene.Mutation):
             db_dictionary.parent_object_id = language_object_id
         if translation_gist_id:
             db_dictionary.translation_gist_client_id, translation_gist_object_id = translation_gist_id
+        # location hook
+        if additional_metadata:
+
+            if "locaton" in additional_metadata:
+                child_persps = DBSession.query(dbDictionaryPerspective)\
+                    .filter_by(parent=db_dictionary).all()
+                for persp in child_persps:
+                    if not persp.additional_metadata:
+                        persp.additional_metadata = dict()
+                    persp.additional_metadata["location"] = {
+                                                                "location":
+                                                                 {
+                                                                  "type":"location",
+                                                                  "content":
+                                                                      additional_metadata["location"]
+                                                                  }
+                                                             }
+                    flag_modified(persp, 'additional_metadata')
+
+            if "authors" in additional_metadata:
+                child_persps = DBSession.query(dbDictionaryPerspective)\
+                    .filter_by(parent=db_dictionary).all()
+                for persp in child_persps:
+                    if not persp.additional_metadata:
+                        persp.additional_metadata = dict()
+                    persp.additional_metadata['authors'] = {"authors":
+                                                                {
+                                                                 "type":"authors",
+                                                                 "content":additional_metadata["authors"]}
+                                                            }
+                    flag_modified(persp, 'additional_metadata')
+
+
 
         update_metadata(db_dictionary, additional_metadata)
         return db_dictionary

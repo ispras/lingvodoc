@@ -269,6 +269,41 @@ from lingvodoc.utils.search import translation_gist_search
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
+    simpler_info = lambda x: [i['info']['content'] for i in x]
+    persp_to_dict = lambda x: [
+        p.additional_metadata['location']['content'] for p in x]
+    persps = DBSession.query(DictionaryPerspective).filter().all()
+    dicts = []
+    for persp in persps:
+        if not persp.additional_metadata:
+            continue
+        parent = persp.parent
+        if not parent.additional_metadata:
+            parent.additional_metadata = dict()
+        if persp.additional_metadata.get('location'): # not parent.additional_metadata.get('location') check deleted
+            parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
+        # if persp.additional_metadata.get('location'):
+        #     del persp.additional_metadata['location']
+        if persp.additional_metadata.get('authors'): # not parent.additional_metadata.get('authors') check eleted
+            parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
+        # if persp.additional_metadata.get('authors'):
+        #     del persp.additional_metadata['authors']
+
+        if persp.additional_metadata.get('info'):
+            if not parent.additional_metadata.get('blobs'):
+                parent.additional_metadata['blobs'] = list()
+            for item in simpler_info(persp.additional_metadata['info']['content']):
+                if item not in parent.additional_metadata['blobs']:
+                    parent.additional_metadata['blobs'].append(item)
+
+            # del persp.additional_metadata['info']
+        #if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
+        #    parent.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
+            #del persp.additional_metadata['origin_client_id']
+            #del persp.additional_metadata['origin_object_id']
+        flag_modified(parent, 'additional_metadata')
+        flag_modified(persp, 'additional_metadata')
+
     return "Success"
 
 def recursive_sort(langs, visited, stack, result):
