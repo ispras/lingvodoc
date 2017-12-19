@@ -116,7 +116,7 @@ class AdvancedSearch(LingvodocObjectType):
                     else:
                         lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
 
-            lexes = lexes.yield_per(yield_batch_count)
+            # lexes = lexes.yield_per(yield_batch_count)
 
             basic_search = DBSession.query(dbEntity, dbPublishingEntity, dbLexicalEntry, dbDictionaryPerspective, dbDictionary).join(dbEntity.parent).join(
                 dbEntity.publishingentity) \
@@ -216,7 +216,7 @@ class AdvancedSearch(LingvodocObjectType):
                     else:
                         lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
 
-            lexes = lexes.yield_per(yield_batch_count)
+            # lexes = lexes.yield_per(yield_batch_count)
 
             basic_search = DBSession.query(dbEntity, dbPublishingEntity, dbLexicalEntry, dbDictionaryPerspective,
                                            dbDictionary).join(dbEntity.parent).join(
