@@ -280,20 +280,22 @@ def testing(request):
         parent = persp.parent
         if not parent.additional_metadata:
             parent.additional_metadata = dict()
-        if not parent.additional_metadata.get('location') and persp.additional_metadata.get('location'):
+        if persp.additional_metadata.get('location'): # not parent.additional_metadata.get('location') check deleted
             parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
         # if persp.additional_metadata.get('location'):
         #     del persp.additional_metadata['location']
-        if not parent.additional_metadata.get('authors') and persp.additional_metadata.get('authors'):
+        if persp.additional_metadata.get('authors'): # not parent.additional_metadata.get('authors') check eleted
             parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
         # if persp.additional_metadata.get('authors'):
         #     del persp.additional_metadata['authors']
+
         if persp.additional_metadata.get('info'):
             if not parent.additional_metadata.get('blobs'):
                 parent.additional_metadata['blobs'] = list()
             for item in simpler_info(persp.additional_metadata['info']['content']):
                 if item not in parent.additional_metadata['blobs']:
                     parent.additional_metadata['blobs'].append(item)
+
             # del persp.additional_metadata['info']
         #if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
         #    parent.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
