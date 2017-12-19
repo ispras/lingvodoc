@@ -510,14 +510,14 @@ def edit_perspective_meta(request):  # tested & in docs
             else:
                 perspective.additional_metadata = req
             if "location" in req:
-                if "content" in req:
+                if "content" in req["location"]:
                     if not parent.additional_metadata:
                         parent.additional_metadata = dict()
                     loc = req["location"]["content"]
                     parent.additional_metadata['location'] = loc
                     flag_modified(parent, 'additional_metadata')
             if "authors" in req:
-                if "authors" in req:
+                if "content" in req["authors"]:
                     if not parent.additional_metadata:
                         parent.additional_metadata = dict()
                     parent.additional_metadata['authors'] = req["authors"]["content"]
