@@ -271,8 +271,6 @@ def testing(request):
     # I've come to use you once again
     return "Success"
 
-
-
 def recursive_sort(langs, visited, stack, result):
     for lang in langs:
         parent = (lang.parent_client_id, lang.parent_object_id)
