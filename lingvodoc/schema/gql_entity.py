@@ -444,7 +444,7 @@ class DeleteEntity(graphene.Mutation):
             real_delete_entity(dbentity, settings)
         else:
             del_object(dbentity)
-        entity = Entity(id=id)
+        entity = Entity(id=[client_id, object_id])
         entity.dbObject = dbentity
         return DeleteEntity(entity=entity, triumph=True)
 
