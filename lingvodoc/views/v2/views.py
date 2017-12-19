@@ -264,117 +264,11 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
 
 from lingvodoc.models import UserRequest as dbUserRequest
 from lingvodoc.utils.search import translation_gist_search
+
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    simpler_info = lambda x: [i['info']['content'] for i in x]
-    persp_to_dict = lambda x: [
-        p.additional_metadata['location']['content'] for p in x]
-    persps = DBSession.query(DictionaryPerspective).filter().all()
-    dicts = []
-    for persp in persps:
-        if not persp.additional_metadata:
-            continue
-        parent = persp.parent
-        if not parent.additional_metadata:
-            parent.additional_metadata = dict()
-        if not parent.additional_metadata.get('location') and persp.additional_metadata.get('location'):
-            parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
-        # if persp.additional_metadata.get('location'):
-        #     del persp.additional_metadata['location']
-        if not parent.additional_metadata.get('authors') and persp.additional_metadata.get('authors'):
-            parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
-        # if persp.additional_metadata.get('authors'):
-        #     del persp.additional_metadata['authors']
-        if persp.additional_metadata.get('info'):
-            if not parent.additional_metadata.get('blobs'):
-                parent.additional_metadata['blobs'] = list()
-            for item in simpler_info(persp.additional_metadata['info']['content']):
-                if item not in parent.additional_metadata['blobs']:
-                    parent.additional_metadata['blobs'].append(item)
-            # del persp.additional_metadata['info']
-        #if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
-        #    parent.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
-            #del persp.additional_metadata['origin_client_id']
-            #del persp.additional_metadata['origin_object_id']
-        flag_modified(parent, 'additional_metadata')
-        flag_modified(persp, 'additional_metadata')
-    # and again
-    # add_dict_to_grant = DBSession.query(dbUserRequest).filter_by(type="add_dict_to_grant").all()
-    # for req in add_dict_to_grant:
-    #     subject = req.subject
-    #     grant_id = subject["grant_id"]
-    #     if "client_id" in subject and "object_id" in subject:
-    #         client_id = subject["client_id"]
-    #         object_id = subject["object_id"]
-    #         dictionary_id = [client_id, object_id]
-    #         req.subject = {
-    #             "grant_id": grant_id,
-    #             "dictionary_id": dictionary_id
-    #            }
-
-    # create tree from langs
-    langs = DBSession.query(Language).filter_by(marked_for_deletion=False).order_by(Language.parent_client_id, Language.parent_object_id).all()
-    prev_langs = list()
-    prev_parent = (None, None)
-    for lang in langs:
-        parent = (lang.parent_client_id, lang.parent_object_id)
-        if parent != prev_parent:
-            prev_parent = parent
-            prev_langs = list()
-        if not lang.additional_metadata:
-            lang.additional_metadata = dict()
-        lang.additional_metadata['younger_siblings'] = list(prev_langs)
-        prev_langs.append((lang.client_id, lang.object_id))
-        flag_modified(lang, 'additional_metadata')
-
-    # Service translation "Directed Link"
-    for grant in DBSession.query(Grant).all():
-        if grant.additional_metadata and grant.additional_metadata.get('participant'):
-            for ids in grant.additional_metadata['participant']:
-                if DBSession.query(Dictionary).filter_by(client_id=ids['client_id'], object_id=ids['object_id'], marked_for_deletion=False).first() is None:
-                    grant.additional_metadata['participant'].remove(ids)
-                    flag_modified(grant, 'additional_metadata')
-    # markup_fields = list()
-    data_type = translation_gist_search('Markup')
-    markup_fields = DBSession.query(Field.client_id, Field.object_id).filter(Field.data_type_translation_gist_client_id == data_type.client_id,
-                                                  Field.data_type_translation_gist_object_id == data_type.object_id).all()
-    for dbentity in DBSession.query(Entity).filter(tuple_(Entity.field_client_id, Entity.field_object_id).in_(markup_fields)):
-        try:
-            print(dbentity.client_id, dbentity.object_id)
-            if dbentity.additional_metadata['data_type'] != 'elan markup':
-                print(dbentity.additional_metadata['data_type'])
-                continue
-            bag_of_words = list(eaf_wordlist(dbentity))
-            dbentity.additional_metadata['bag_of_words'] = bag_of_words
-            flag_modified(dbentity, 'additional_metadata')
-        except:
-            pass
-
-    if translation_gist_search("Relation") or translation_gist_search("Directed Link"):
-        return "Already patched"
-    dl_link_gist = TranslationGist(client_id=1, type="Service")
-    DBSession.add(dl_link_gist)
-    DBSession.flush()
-    atom = TranslationAtom(client_id=1, content="Directed Link", locale_id=2, parent=dl_link_gist)
-    DBSession.add(atom)
-    DBSession.flush()
-    #
-    relation_gist = TranslationGist(client_id=1, type="Field")
-    DBSession.add(relation_gist)
-    DBSession.flush()
-    #
-    atom = TranslationAtom(client_id=1, content="Relation", locale_id=2, parent=relation_gist)
-    DBSession.add(atom)
-    DBSession.flush()
-    word_field = Field(client_id=1,
-                       translation_gist_client_id=relation_gist.client_id,
-                       translation_gist_object_id=relation_gist.object_id,
-                       data_type_translation_gist_client_id=dl_link_gist.client_id,
-                       data_type_translation_gist_object_id=dl_link_gist.object_id)
-    DBSession.add(word_field)
-    DBSession.flush()
     return "Success"
 
 
