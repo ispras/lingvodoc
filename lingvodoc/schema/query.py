@@ -226,7 +226,8 @@ class Query(graphene.ObjectType):
     client = graphene.String()
     dictionaries = graphene.List(Dictionary, published=graphene.Boolean(),
                                  mode=graphene.Int(),
-                                 category=graphene.Int())
+                                 category=graphene.Int(),
+                                 proxy=graphene.Boolean())
     dictionary = graphene.Field(Dictionary, id=LingvodocID())
     perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
@@ -537,7 +538,7 @@ class Query(graphene.ObjectType):
             response.append(gql_tr_gist)
         return response
 
-    def resolve_dictionaries(self, info, published=None, mode=None, category=None):
+    def resolve_dictionaries(self, info, published=None, mode=None, category=None, proxy=False):
         """
         example:
 
@@ -553,6 +554,10 @@ class Query(graphene.ObjectType):
             }
         }
         """
+        request = info.context.request
+        if proxy:
+            try_proxy(request)
+
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
