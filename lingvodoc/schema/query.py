@@ -100,6 +100,7 @@ from lingvodoc.schema.gql_grant import (
 )
 from lingvodoc.schema.gql_sync import (
     DownloadDictionary,
+    DownloadDictionaries,
     Synchronize
 )
 
@@ -166,13 +167,14 @@ from lingvodoc.views.v2.utils import (
 from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
-
+from lingvodoc.schema.gql_tasks import Task, DeleteTask
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import phonology as utils_phonology
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.views.v2.utils import anonymous_userid
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -293,20 +295,19 @@ class Query(graphene.ObjectType):
         graphene.List(graphene.String), id=LingvodocID(required=True))
     language_tree = graphene.List(Language)
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
-    # convert_starling = graphene.Field(graphene.Boolean, blob_id=LingvodocID(),
-    #     parent_id=LingvodocID(required=True),
-    #     translation_gist_id=LingvodocID(),
-    #     translation_atoms=graphene.List(ObjectVal),
-    #     field_map=graphene.List(StarlingField, required=True),
-    #     add_etymology=graphene.Boolean()
-    # )
-    # convert_starling = graphene.Field(graphene.Boolean, blob_id=LingvodocID(),
-    #     parent_id=LingvodocID(required=True),
-    #     translation_gist_id=LingvodocID(),
-    #     translation_atoms=graphene.List(ObjectVal),
-    #     field_map=graphene.List(StarlingField, required=True),
-    #     add_etymology=graphene.Boolean()
-    # )
+    tasks = graphene.List(Task)
+
+    def resolve_tasks(self, info):
+        request = info.context.request
+        client_id = authenticated_userid(request)
+        if not client_id:
+            tasks_dicts = TaskStatus.get_user_tasks(anonymous_userid(request), clear_out=True)
+            tasks = [Task(**task_dict) for task_dict in tasks_dicts]
+            return tasks
+        user = Client.get_user_by_client_id(authenticated_userid(request))
+        tasks_dicts = TaskStatus.get_user_tasks(user.id, clear_out=True)
+        tasks = [Task(**task_dict) for task_dict in tasks_dicts]
+        return tasks
 
     def resolve_permission_lists(self, info, proxy):
         request = info.context.request
@@ -1605,9 +1606,6 @@ class Query(graphene.ObjectType):
             raise ResponseError(message=str(e))
 
 
-
-
-
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -1670,7 +1668,9 @@ class MyMutations(graphene.ObjectType):
     accept_userrequest = AcceptUserRequest.Field()
     #delete_userrequest = DeleteUserRequest.Field()
     download_dictionary = DownloadDictionary.Field()
+    download_dictionaries = DownloadDictionaries.Field()
     synchronize = Synchronize.Field()
+    delete_task = DeleteTask.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
