@@ -1183,8 +1183,8 @@ class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, Add
     issuer_url = Column(String(2048), nullable=False)
     grant_url = Column(String(2048), nullable=False)
     grant_number = Column(String(2048), nullable=False)
-    begin = Column(Date)
-    end = Column(Date)
+    begin = Column(EpochTypeForDate)
+    end = Column(EpochTypeForDate)
     owners = Column(JSONB)
 
 

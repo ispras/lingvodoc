@@ -21,7 +21,8 @@ from lingvodoc.models import (
     DictionaryPerspectiveToField,
     LexicalEntry,
     Entity,
-    UserBlobs
+    UserBlobs,
+    Grant
 )
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id
@@ -95,7 +96,7 @@ def create_nested_content(tmp_resp):
 
 def basic_tables_content(user_id = None, client_id=None):
     response = dict()
-    for table in [Client, User, BaseGroup, Field, Locale, TranslationAtom, TranslationGist, Group, Language]:
+    for table in [Client, User, BaseGroup, Field, Locale, TranslationAtom, TranslationGist, Group, Language, Grant]:
         tmp_resp = [row2dict(entry) for entry in DBSession.query(table)]
         if tmp_resp:
             tmp_resp = create_nested_content(tmp_resp)
@@ -146,8 +147,9 @@ def basic_sync(request):
     import requests
     import transaction
 
-    return_date_time = lambda r: {key: datetime.datetime.fromtimestamp(r[key]) if key == 'created_at' else r[key] for
-                                  key in r}
+    return_date_time = lambda r: {
+    key: datetime.datetime.fromtimestamp(r[key]) if key == 'created_at' else r[key]
+    for key in r}
     settings = request.registry.settings
     existing = basic_tables_content()
     path = settings['desktop']['central_server'] + 'sync/basic/server'
@@ -165,7 +167,7 @@ def basic_sync(request):
     langs = list()
 
     # todo: rework diff
-    for table in [Locale, User, Client, BaseGroup, TranslationGist, TranslationAtom, Field, Group, Language]:
+    for table in [Locale, User, Client, BaseGroup, TranslationGist, TranslationAtom, Field, Group, Language, Grant]:
         curr_server = server[table.__tablename__]
         curr_existing = existing[table.__tablename__]
         curr_old = list()
@@ -240,7 +242,7 @@ def basic_sync(request):
     for entry in DBSession.query(Language).all():
         client_id = str(entry.client_id)
         object_id = str(entry.object_id)
-        if client_id in curr_server and object_id in old_langs[client_id]:
+        if client_id in curr_server and object_id in curr_server[client_id]:
                 for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
                     setattr(entry, key, value)
     DBSession.bulk_save_objects(new_entries)
