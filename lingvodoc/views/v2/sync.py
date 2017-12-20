@@ -108,7 +108,10 @@ def basic_tables_content(user_id = None, client_id=None):
         if tmp_resp:
             tmp_resp = create_nested_content(tmp_resp)
         response['group'] = tmp_resp
-        response['user_to_group_association'] = DBSession.query(user_to_group_association)\
+        if user_id == 1:
+            response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
+        else:
+            response['user_to_group_association'] = DBSession.query(user_to_group_association)\
             .join(Group).filter(user_to_group_association.c.user_id==user_id, Group.subject_client_id==client_id).all()
     else:
         response['user_to_group_association'] = DBSession.query(user_to_group_association).filter_by(user_id=user_id).all()
@@ -385,6 +388,13 @@ def make_request(path, cookies, req_type='get', json_data=None, data=None, files
         return None
     return status
 
+def check_client(current_client, client_id):
+    if current_client.user_id == 1:
+        return True
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    if not client or client.user_id != current_client.user_id:
+        return False
+    return True
 
 @view_config(route_name='diff_desk', renderer='json', request_method='POST')
 def diff_desk(request):
@@ -475,188 +485,200 @@ def diff_desk(request):
 
 
     for entry in translationgist:
-        desk_gist = DBSession.query(TranslationGist).filter_by(client_id=entry['client_id'],
-                                                               object_id=entry['object_id']).one()
-        path = central_server + 'translationgist'
-        status = make_request(path, cookies, 'post', row2dict(desk_gist))
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 2")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_gist = DBSession.query(TranslationGist).filter_by(client_id=entry['client_id'],
+                                                                   object_id=entry['object_id']).one()
+            path = central_server + 'translationgist'
+            status = make_request(path, cookies, 'post', row2dict(desk_gist))
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 2")}
 
     for entry in translationatom:
-        desk_atom = DBSession.query(TranslationAtom).filter_by(client_id=entry['client_id'],
-                                                               object_id=entry['object_id']).one()
-        path = central_server + 'translationatom'
-        status = make_request(path, cookies, 'post', row2dict(desk_atom))
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 3")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_atom = DBSession.query(TranslationAtom).filter_by(client_id=entry['client_id'],
+                                                                   object_id=entry['object_id']).one()
+            path = central_server + 'translationatom'
+            status = make_request(path, cookies, 'post', row2dict(desk_atom))
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 3")}
 
     task_status.set(6, 35, "Uploaded translations", "")
 
     for entry in language:
-        desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
-                                                        object_id=entry['object_id']).one()
-        path = central_server + 'language'
-        status = make_request(path, cookies, 'post', row2dict(desk_lang))
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 4")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_lang = DBSession.query(Language).filter_by(client_id=entry['client_id'],
+                                                            object_id=entry['object_id']).one()
+            path = central_server + 'language'
+            status = make_request(path, cookies, 'post', row2dict(desk_lang))
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 4")}
 
     task_status.set(7, 40, "Uploaded languages", "")
 
 
     for entry in dictionary:
-        desk_dict = DBSession.query(Dictionary).filter_by(client_id=entry['client_id'],
-                                                          object_id=entry['object_id']).one()
-        path = central_server + 'dictionary'
-        desk_json = row2dict(desk_dict)
-        desk_json['category'] = categories[desk_json['category']]
-        status = make_request(path, cookies, 'post', desk_json)
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 5")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_dict = DBSession.query(Dictionary).filter_by(client_id=entry['client_id'],
+                                                              object_id=entry['object_id']).one()
+            path = central_server + 'dictionary'
+            desk_json = row2dict(desk_dict)
+            desk_json['category'] = categories[desk_json['category']]
+            status = make_request(path, cookies, 'post', desk_json)
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 5")}
     task_status.set(8, 45, "Uploaded dictionaries", "")
 
     for entry in perspective:
-        desk_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=entry['client_id'],
-                                                                      object_id=entry['object_id']).one()
-        path = central_server + 'dictionary/%s/%s/perspective' % (
-            desk_persp.parent_client_id, desk_persp.parent_object_id)
-        status = make_request(path, cookies, 'post', row2dict(desk_persp))
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 6")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=entry['client_id'],
+                                                                          object_id=entry['object_id']).one()
+            path = central_server + 'dictionary/%s/%s/perspective' % (
+                desk_persp.parent_client_id, desk_persp.parent_object_id)
+            status = make_request(path, cookies, 'post', row2dict(desk_persp))
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 6")}
     task_status.set(9, 50, "Uploaded perspectives", "")
 
     for entry in field:
-        desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
-                                                           object_id=entry['object_id']).one()
-        path = central_server + 'field'
-        status = make_request(path, cookies, 'post', row2dict(desk_field))
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 7")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
+                                                               object_id=entry['object_id']).one()
+            path = central_server + 'field'
+            status = make_request(path, cookies, 'post', row2dict(desk_field))
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 7")}
 
     # set_trace()
     for entry in dictionaryperspectivetofield:
-        desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
-                                                           object_id=entry['object_id']).one()
-        # if desk_field.parent_client_id == client.id:
-        persp = desk_field.parent
-        path = central_server + 'dictionary/%s/%s/perspective/%s/%s/field' % (persp.parent_client_id,
-                                                                                      persp.parent_object_id,
-                                                                                      persp.client_id,
-                                                                                      persp.object_id)
-        status = make_request(path, cookies, 'post', row2dict(desk_field))
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 8")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
+                                                               object_id=entry['object_id']).one()
+            # if desk_field.parent_client_id == client.id:
+            persp = desk_field.parent
+            path = central_server + 'dictionary/%s/%s/perspective/%s/%s/field' % (persp.parent_client_id,
+                                                                                          persp.parent_object_id,
+                                                                                          persp.client_id,
+                                                                                          persp.object_id)
+            status = make_request(path, cookies, 'post', row2dict(desk_field))
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 8")}
     task_status.set(10, 55, "Uploaded fields", "")
 
     for entry in lexicalentry:
-        desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
-                                                           object_id=entry['object_id']).one()
-        persp = desk_lex.parent
-        path = central_server + 'dictionary/%s/%s/perspective/%s/%s/lexical_entry' % (persp.parent_client_id,
-                                                                                      persp.parent_object_id,
-                                                                                      persp.client_id,
-                                                                                      persp.object_id)
-        status = make_request(path, cookies, 'post', row2dict(desk_lex))
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 9")}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
+                                                               object_id=entry['object_id']).one()
+            persp = desk_lex.parent
+            path = central_server + 'dictionary/%s/%s/perspective/%s/%s/lexical_entry' % (persp.parent_client_id,
+                                                                                          persp.parent_object_id,
+                                                                                          persp.client_id,
+                                                                                          persp.object_id)
+            status = make_request(path, cookies, 'post', row2dict(desk_lex))
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 9")}
     task_status.set(11, 65, "Uploaded lexical entries", "")
 
     grouping_tags = dict()
     for entry in entity:
-        do_not_add = False
-        desk_ent = DBSession.query(Entity).filter_by(client_id=entry['client_id'],
-                                                     object_id=entry['object_id']).one()
-        lex = desk_ent.parent
-        persp = lex.parent
-        path = central_server + 'dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/entity' % (
-            persp.parent_client_id,
-            persp.parent_object_id,
-            persp.client_id,
-            persp.object_id,
-            lex.client_id,
-            lex.object_id)  # todo: normal content upload
-        ent_req = row2dict(desk_ent)
-        changed_content = False
-        filename = None
-        if desk_ent.additional_metadata:
-            tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
-                TranslationAtom.locale_id == 2,
-                TranslationAtom.parent_client_id == TranslationGist.client_id,
-                TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
-                TranslationGist.client_id == Field.data_type_translation_gist_client_id,
-                TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
-                Field.client_id == desk_ent.field_client_id, Field.object_id == desk_ent.field_object_id).first()
-            data_type = tr_atom.content.lower()
-            # data_type = desk_ent.additional_metadata.get('data_type')
-            if data_type:
-                data_type = data_type.lower()
-                if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-                    full_name = desk_ent.content.split('/')
-                    filename = full_name[len(full_name) - 1]
-                    content_resp = make_request(desk_ent.content, cookies)
-                    if content_resp.status_code != 200:
-                        log.error(desk_ent.content)
-                        do_not_add = True
-                        error_happened = True
-                    else:
-                        content = content_resp.content
-                        content = base64.urlsafe_b64encode(content)
-                        changed_content = True
+        if check_client(current_client=client, client_id=entry['client_id']):
+            do_not_add = False
+            desk_ent = DBSession.query(Entity).filter_by(client_id=entry['client_id'],
+                                                         object_id=entry['object_id']).one()
+            lex = desk_ent.parent
+            persp = lex.parent
+            path = central_server + 'dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/entity' % (
+                persp.parent_client_id,
+                persp.parent_object_id,
+                persp.client_id,
+                persp.object_id,
+                lex.client_id,
+                lex.object_id)  # todo: normal content upload
+            ent_req = row2dict(desk_ent)
+            changed_content = False
+            content = ent_req
+            filename = None
+            if desk_ent.additional_metadata:
+                tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+                    TranslationAtom.locale_id == 2,
+                    TranslationAtom.parent_client_id == TranslationGist.client_id,
+                    TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+                    TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+                    TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+                    Field.client_id == desk_ent.field_client_id, Field.object_id == desk_ent.field_object_id).first()
+                data_type = tr_atom.content.lower()
+                # data_type = desk_ent.additional_metadata.get('data_type')
+                if data_type:
+                    data_type = data_type.lower()
+                    if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+                        full_name = desk_ent.content.split('/')
+                        filename = full_name[len(full_name) - 1]
+                        content_resp = make_request(desk_ent.content, cookies)
+                        if content_resp.status_code != 200:
+                            log.error(desk_ent.content)
+                            do_not_add = True
+                            error_happened = True
+                        else:
+                            content = content_resp.content
+                            content = base64.urlsafe_b64encode(content)
+                            changed_content = True
 
-        # if ent_req['content']:   # todo: find out, why if content is failing
-        #     ent_req['content'] = urllib.parse.quote(content, safe = '/:')
-        if changed_content:
-            # ent_req['content'] = urllib.parse.quote(content)
-            ent_req['content'] = content
-        ent_req['filename'] = filename
-        if desk_ent.field.data_type == 'Grouping Tag':
-            field_ids = str(desk_ent.field.client_id) + '_' + str(desk_ent.field.object_id)
-            if field_ids not in grouping_tags:
-                grouping_tags[field_ids] = {'field_client_id': desk_ent.field.client_id,
-                                            'field_object_id': desk_ent.field.object_id,
-                                            'tag_groups': dict()}
-            if desk_ent.content not in grouping_tags[field_ids]['tag_groups']:
-                grouping_tags[field_ids]['tag_groups'][desk_ent.content] = [row2dict(desk_ent)]
+            # if ent_req['content']:   # todo: find out, why if content is failing
+            #     ent_req['content'] = urllib.parse.quote(content, safe = '/:')
+            if changed_content:
+                # ent_req['content'] = urllib.parse.quote(content)
+                ent_req['content'] = content
+            ent_req['filename'] = filename
+            if desk_ent.field.data_type == 'Grouping Tag':
+                field_ids = str(desk_ent.field.client_id) + '_' + str(desk_ent.field.object_id)
+                if field_ids not in grouping_tags:
+                    grouping_tags[field_ids] = {'field_client_id': desk_ent.field.client_id,
+                                                'field_object_id': desk_ent.field.object_id,
+                                                'tag_groups': dict()}
+                if desk_ent.content not in grouping_tags[field_ids]['tag_groups']:
+                    grouping_tags[field_ids]['tag_groups'][desk_ent.content] = [row2dict(desk_ent)]
+                else:
+                    grouping_tags[field_ids]['tag_groups'][desk_ent.content].append(row2dict(desk_ent))
             else:
-                grouping_tags[field_ids]['tag_groups'][desk_ent.content].append(row2dict(desk_ent))
-        else:
-            if not do_not_add:
-                status = make_request(path, cookies, 'post', ent_req)
-                if status.status_code != 200:
-                    set_trace()
-                    error_happened = True
-                    # request.response.status = HTTPInternalServerError.code
-                    # return {'error': str("internet error 11")}
+                if not do_not_add:
+                    status = make_request(path, cookies, 'post', ent_req)
+                    if status.status_code != 200:
+                        set_trace()
+                        error_happened = True
+                        # request.response.status = HTTPInternalServerError.code
+                        # return {'error': str("internet error 11")}
     task_status.set(12, 80, "Uploaded entities", "")
     for entry in grouping_tags:
-        path = central_server + 'group_entity/bulk'
-        req = grouping_tags[entry]
-        req['counter'] = client.counter
-        status = make_request(path, cookies, 'post', req)
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 42")}
-        client.counter = status.json()['counter']
-        DBSession.flush()
+        if check_client(current_client=client, client_id=entry['client_id']):
+            path = central_server + 'group_entity/bulk'
+            req = grouping_tags[entry]
+            req['counter'] = client.counter
+            status = make_request(path, cookies, 'post', req)
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 42")}
+            client.counter = status.json()['counter']
+            DBSession.flush()
     task_status.set(13, 80, "Uploaded etymology", "")
     for entry in userblobs:
-        desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
-                                                         object_id=entry['object_id']).one()
-        path = central_server + 'blob'
-        data = {'object_id': desk_blob.object_id, 'data_type': desk_blob.data_type, 'client_id': desk_blob.client_id}
-        files = {'blob': open(desk_blob.real_storage_path, 'rb')}
+        if check_client(current_client=client, client_id=entry['client_id']):
+            desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
+                                                             object_id=entry['object_id']).one()
+            path = central_server + 'blob'
+            data = {'object_id': desk_blob.object_id, 'data_type': desk_blob.data_type, 'client_id': desk_blob.client_id}
+            files = {'blob': open(desk_blob.real_storage_path, 'rb')}
 
-        status = make_request(path, cookies, 'post', data=data, files=files)
-        if status.status_code != 200:
-            request.response.status = HTTPInternalServerError.code
-            return {'error': str("internet error 12")}
+            status = make_request(path, cookies, 'post', data=data, files=files)
+            if status.status_code != 200:
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error 12")}
     task_status.set(14, 85, "Uploaded userblobs", "")
 
     log.error('before deletion in diff_desk')

@@ -8,10 +8,14 @@ from lingvodoc.models import (
     Client
 )
 from lingvodoc.cache.caching import TaskStatus
+from pyramid.response import Response
+from pyramid.request import Request
+
 from pyramid.httpexceptions import (
     HTTPOk,
     HTTPBadRequest,
-    HTTPUnauthorized
+    HTTPUnauthorized,
+    HTTPInternalServerError
 )
 from lingvodoc.views.v2.desktop_sync.core import async_download_dictionary
 import json
@@ -39,6 +43,16 @@ def make_request(path, cookies, req_type='get', json_data=None):
 @view_config(route_name='download_dictionary', renderer='json', request_method='POST')
 def download_dictionary(request):  # TODO: test
     req = request.json_body
+
+    path = request.route_url('basic_sync')
+    subreq = Request.blank(path)
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    resp = request.invoke_subrequest(subreq)
+    if resp.status_code != 200:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'network error 3'}
+
     args = dict()
     locale_id = int(request.cookies.get('locale_id') or 2)
     client_id = request.authenticated_userid
