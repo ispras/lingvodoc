@@ -103,7 +103,7 @@ def create_translationgist(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == 1:
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest
@@ -188,7 +188,7 @@ def create_translationatom(request):
 
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']):
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == 1:
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest

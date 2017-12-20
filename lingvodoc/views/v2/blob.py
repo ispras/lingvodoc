@@ -119,8 +119,16 @@ def upload_user_blob(request):  # TODO: remove blob Object
         pass
 
     client_id = variables['auth']
+
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
     if request.POST.get('client_id', None):
-        if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']):
+
+        if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']) or user.id == 1:
             client_id = request.POST['client_id']
         else:
             request.response.status_code = HTTPBadRequest
