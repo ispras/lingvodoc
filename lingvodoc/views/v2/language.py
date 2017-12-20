@@ -32,6 +32,7 @@ from sqlalchemy.exc import IntegrityError
 from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.utils.verification import check_client_id
 from lingvodoc.views.v2.delete import real_delete_language
+from sqlalchemy import or_
 
 
 @view_config(route_name='languages', renderer='templates/languages.pt', request_method='GET')
@@ -166,6 +167,20 @@ def create_language(request):  # tested & in docs
         DBSession.add(language)
         if parent:
             language.parent = parent
+
+        prev_sibling = DBSession.query(Language).filter(Language.parent_client_id == parent_client_id,
+                                                            Language.parent_object_id == parent_object_id,
+                                                            Language.marked_for_deletion == False,
+                                                        or_(Language.client_id != language.client_id,
+                                                            Language.object_id != language.object_id)).order_by(Language.parent_client_id,
+                                                                                            Language.parent_object_id,
+                                                                                            Language.additional_metadata[
+                                                                                                'younger_siblings'].desc()).first()
+        language.additional_metadata = dict()
+        language.additional_metadata['younger_siblings'] = list()
+        if prev_sibling:
+            language.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
+            language.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
         DBSession.flush()
         basegroups = []
         basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]

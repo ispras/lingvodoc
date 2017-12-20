@@ -303,7 +303,33 @@ def testing(request):
             #del persp.additional_metadata['origin_object_id']
         flag_modified(parent, 'additional_metadata')
         flag_modified(persp, 'additional_metadata')
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False, additional_metadata=None).order_by(Language.parent_client_id, Language.parent_object_id).all()
+    for lang in langs:
+        if lang.additional_metadata is None:
 
+            prev_sibling = DBSession.query(Language).filter(Language.parent_client_id == lang.parent_client_id,
+                                                                Language.parent_object_id == lang.parent_object_id,
+                                                                Language.marked_for_deletion == False,
+                                                            or_(Language.client_id != lang.client_id,
+                                                                Language.object_id != lang.object_id)).order_by(Language.parent_client_id,
+                                                                                                Language.parent_object_id,
+                                                                                                Language.additional_metadata[
+                                                                                                    'younger_siblings'].desc()).first()
+            lang.additional_metadata = dict()
+            lang.additional_metadata['younger_siblings'] = list()
+            if prev_sibling:
+                if prev_sibling.additional_metadata is None:
+                    prev_sibling.additional_metadata = dict()
+                    prev_sibling.additional_metadata['younger_siblings'] = list()
+                lang.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
+                lang.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
+            DBSession.flush()
+
+
+            # lang.additional_metadata = dict()
+            # lang.additional_metadata['younger_siblings'] = list(prev_langs)
+            # prev_langs.append((lang.client_id, lang.object_id))
+        flag_modified(lang, 'additional_metadata')
     return "Success"
 
 def recursive_sort(langs, visited, stack, result):
