@@ -75,7 +75,7 @@ class AdvancedSearch(LingvodocObjectType):
             filter(dbField.data_type_translation_gist_client_id == text_data_type.client_id,
                    dbField.data_type_translation_gist_object_id == text_data_type.object_id).all()
 
-        markup_data_type = translation_gist_search('Text')
+        markup_data_type = translation_gist_search('Markup')
         markup_fields = DBSession.query(dbField.client_id, dbField.object_id).\
             filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
                    dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()

@@ -509,6 +509,20 @@ def edit_perspective_meta(request):  # tested & in docs
                 flag_modified(perspective, 'additional_metadata')
             else:
                 perspective.additional_metadata = req
+            if "location" in req:
+                if "content" in req["location"]:
+                    if not parent.additional_metadata:
+                        parent.additional_metadata = dict()
+                    loc = req["location"]["content"]
+                    parent.additional_metadata['location'] = loc
+                    flag_modified(parent, 'additional_metadata')
+            if "authors" in req:
+                if "content" in req["authors"]:
+                    if not parent.additional_metadata:
+                        parent.additional_metadata = dict()
+                    parent.additional_metadata['authors'] = req["authors"]["content"]
+                    flag_modified(parent, 'additional_metadata')
+
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
