@@ -297,6 +297,7 @@ class Query(graphene.ObjectType):
     language_tree = graphene.List(Language)
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     tasks = graphene.List(Task)
+    is_authenticated = graphene.Boolean()
 
     def resolve_tasks(self, info):
         request = info.context.request
@@ -734,6 +735,13 @@ class Query(graphene.ObjectType):
 
     def resolve_user(self, info, id):
         return User(id=id)
+
+    def resolve_is_authenticated(self, info):
+        client_id = info.context.get('client_id')
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if not client:
+            return False
+        return True
 
     def resolve_users(self, info, search=None):
         """
