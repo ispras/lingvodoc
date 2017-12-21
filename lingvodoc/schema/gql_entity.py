@@ -289,6 +289,13 @@ class CreateEntity(graphene.Mutation):
                 dbentity.link_object_id = link_object_id
             else:
                 raise ResponseError(message="The field is of link type. You should provide client_id and object id in the content")
+        elif data_type == 'directed link':
+            if args.get('link_id'):
+                link_client_id, link_object_id = args.get('link_id')
+                dbentity.link_client_id = link_client_id
+                dbentity.link_object_id = link_object_id
+            else:
+                raise ResponseError(message="The field is of link type. You should provide client_id and object id in the content")
         else:
             content = args.get("content")
             dbentity.content = content
