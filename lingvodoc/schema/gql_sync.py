@@ -277,31 +277,18 @@ class Synchronize(graphene.Mutation):
             raise ResponseError('network error 3')
         task.set(15, 95, "All data uploaded to server", "")
 
+        log.error('before downloading dictionaries')
+        locale_id = int(request.cookies.get('locale_id') or 2)
         for dict_obj in DBSession.query(dbDictionary).all():
-            path = request.route_url('download_dictionary')
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {"client_id": dict_obj.client_id,
-                           "object_id": dict_obj.object_id}
-            resp = request.invoke_subrequest(subreq)
-            if resp.status_code != 200:
-                raise ResponseError('network error 4')
+            download_dictionary([dict_obj.client_id, dict_obj.object_id], request, user_id, locale_id)
+        log.error('after downloading dictionaries')
 
-        path = request.route_url('new_client')
+        path = request.route_url('basic_sync')
         subreq = Request.blank(path)
         subreq.method = 'POST'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
         if resp.status_code != 200:
-            raise ResponseError('network error 5')
-        else:
-            path = request.route_url('basic_sync')
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            resp = request.invoke_subrequest(subreq)
-            if resp.status_code != 200:
-                raise ResponseError('network error 2')
-            task.set(16, 100, "Synchronisation complete (New data still can be downloading from server, look a other tasks)", "")
-            return Synchronize(triumph=True)
+            raise ResponseError('network error 2')
+        task.set(16, 100, "Synchronisation complete (New data still can be downloading from server, look a other tasks)", "")
+        return Synchronize(triumph=True)
