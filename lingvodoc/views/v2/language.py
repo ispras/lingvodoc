@@ -142,20 +142,20 @@ def create_language(request):  # tested & in docs
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         object_id = req.get('object_id', None)
 
-        client_id = variables['auth']
-        if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']):
-                client_id = req['client_id']
-            else:
-                request.response.status_code = HTTPBadRequest
-                return {'error': 'client_id from another user'}
-
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            variables['auth'])
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        client_id = variables['auth']
+        if 'client_id' in req:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == 1:
+                client_id = req['client_id']
+            else:
+                request.response.status_code = HTTPBadRequest
+                return {'error': 'client_id from another user'}
 
         parent = None
         if parent_client_id and parent_object_id:

@@ -379,7 +379,7 @@ def create_lexical_entry(request):  # tested
 
             object_id = request.json_body.get('object_id', None)
             if 'client_id' in request.json_body:
-                if check_client_id(authenticated = client.id, client_id=request.json_body['client_id']):
+                if check_client_id(authenticated = client.id, client_id=request.json_body['client_id']) or user.id == 1:
                     client_id = request.json_body['client_id']
                 else:
                     request.response.status_code = HTTPBadRequest

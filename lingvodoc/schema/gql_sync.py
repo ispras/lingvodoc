@@ -88,7 +88,10 @@ def download_dictionary(dict_id, request, user_id, locale_id):
                 gist = DBSession.query(dbTranslationGist). \
                     filter_by(client_id=dict_json['translation_gist_client_id'],
                               object_id=dict_json['translation_gist_object_id']).first()
-                task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
+                if gist:
+                    task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
+                else:
+                    task = TaskStatus(user_id, "Dictionary sync with server", "dictionary name placeholder", 5)
 
         else:
             gist = DBSession.query(dbTranslationGist). \
@@ -96,7 +99,7 @@ def download_dictionary(dict_id, request, user_id, locale_id):
                           object_id=dictionary_obj.translation_gist_object_id).first()
             task = TaskStatus(user_id, "Dictionary sync with server", gist.get_translation(locale_id), 5)
     except:
-        raise ResponseError('this should be impossible in graphql')
+        raise ResponseError('bad request')
     my_args["task_key"] = task.key
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     res = async_download_dictionary.delay(**my_args)
@@ -140,6 +143,14 @@ class DownloadDictionary(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, info, **args):
+        request = info.context.request
+        path = request.route_url('basic_sync')
+        subreq = Request.blank(path)
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if resp.status_code != 200:
+            raise ResponseError('network error')
         request = info.context.request
         locale_id = int(request.cookies.get('locale_id') or 2)
         dict_id = args['id']
@@ -188,6 +199,14 @@ class DownloadDictionaries(graphene.Mutation):
     @client_id_check()
     def mutate(root, info, **args):
         request = info.context.request
+
+        path = request.route_url('basic_sync')
+        subreq = Request.blank(path)
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if resp.status_code != 200:
+            raise ResponseError('network error')
         locale_id = int(request.cookies.get('locale_id') or 2)
         ids = args['ids']
         variables = {'auth': authenticated_userid(request)}
@@ -222,6 +241,10 @@ class Synchronize(graphene.Mutation):
 
         client_id = request.authenticated_userid
         user_id = Client.get_user_by_client_id(client_id).id
+
+        is_admin = False
+        if user_id == 1:
+            is_admin = True
 
         task = TaskStatus(user_id, "Synchronisation with server", '', 16)
         task.set(1, 10, "Started", "")
