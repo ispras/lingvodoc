@@ -53,6 +53,7 @@ from sqlalchemy import (
 import base64
 import hashlib
 
+from lingvodoc.models import DictionaryPerspective as dbPerspective
 from lingvodoc.utils.creation import create_entity
 from lingvodoc.utils.deletion import real_delete_entity
 
@@ -148,6 +149,8 @@ class CreateEntity(graphene.Mutation):
         field_id = LingvodocID(required=True)
         self_id = LingvodocID()
         link_id = LingvodocID()
+        link_perspective_id = LingvodocID()
+
         locale_id = graphene.Int()
         filename = graphene.String(
 
@@ -288,14 +291,27 @@ class CreateEntity(graphene.Mutation):
                 dbentity.link_client_id = link_client_id
                 dbentity.link_object_id = link_object_id
             else:
-                raise ResponseError(message="The field is of link type. You should provide client_id and object id in the content")
+                raise ResponseError(
+                    message="The field is of link type. You should provide client_id and object id in the content")
         elif data_type == 'directed link':
             if args.get('link_id'):
-                link_client_id, link_object_id = args.get('link_id')
+                link_client_id, link_object_id = args.get('link_id') # TODO: le check
                 dbentity.link_client_id = link_client_id
                 dbentity.link_object_id = link_object_id
             else:
-                raise ResponseError(message="The field is of link type. You should provide client_id and object id in the content")
+                raise ResponseError(
+                    message="The field is of link type. You should provide client_id and object id in the content")
+            if args.get("link_perspective_id"):
+                link_persp_client_id, link_persp_object_id = args.get('link_perspective_id')
+                if not DBSession.query(dbPerspective)\
+                        .filter_by(client_id=link_persp_client_id, object_id=link_persp_object_id).first():
+                    raise ResponseError(message="link_perspective not found")
+                dbentity.additional_metadata['link_perspective_id'] = [link_persp_client_id, link_persp_object_id]
+
+            else:
+                raise ResponseError(
+                    message="The field is of link type. You should provide link_perspective_id id in the content")
+
         else:
             content = args.get("content")
             dbentity.content = content
@@ -441,11 +457,12 @@ class DeleteEntity(graphene.Mutation):
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbentity or dbentity.marked_for_deletion:
+            raise ResponseError(message="No such entity in the system")
         lexical_entry = dbentity.parent
         info.context.acl_check('delete', 'lexical_entries_and_entities',
                                (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
-        if not dbentity or dbentity.marked_for_deletion:
-            raise ResponseError(message="No such entity in the system")
+
         settings = info.context["request"].registry.settings
         if 'desktop' in settings:
             real_delete_entity(dbentity, settings)
