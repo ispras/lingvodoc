@@ -101,20 +101,25 @@ def basic_tables_content(user_id = None, client_id=None):
         if tmp_resp:
             tmp_resp = create_nested_content(tmp_resp)
         response[table.__tablename__] = tmp_resp
-    if not user_id:
-        response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
-    elif client_id:
-        tmp_resp = [row2dict(entry) for entry in DBSession.query(Group).filter_by(subject_client_id=client_id)]
-        if tmp_resp:
-            tmp_resp = create_nested_content(tmp_resp)
-        response['group'] = tmp_resp
-        if user_id == 1:
-            response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
-        else:
-            response['user_to_group_association'] = DBSession.query(user_to_group_association)\
-            .join(Group).filter(user_to_group_association.c.user_id==user_id, Group.subject_client_id==client_id).all()
-    else:
-        response['user_to_group_association'] = DBSession.query(user_to_group_association).filter_by(user_id=user_id).all()
+    response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
+    tmp_resp = [row2dict(entry) for entry in DBSession.query(Group)]
+    if tmp_resp:
+        tmp_resp = create_nested_content(tmp_resp)
+    response['group'] = tmp_resp
+    # if not user_id:
+    #     response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
+    # elif client_id:
+    #     tmp_resp = [row2dict(entry) for entry in DBSession.query(Group).filter_by(subject_client_id=client_id)]
+    #     if tmp_resp:
+    #         tmp_resp = create_nested_content(tmp_resp)
+    #     response['group'] = tmp_resp
+    #     if user_id == 1:
+    #         response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
+    #     else:
+    #         response['user_to_group_association'] = DBSession.query(user_to_group_association)\
+    #         .join(Group).filter(user_to_group_association.c.user_id==user_id, Group.subject_client_id==client_id).all()
+    # else:
+    #     response['user_to_group_association'] = DBSession.query(user_to_group_association).filter_by(user_id=user_id).all()
     return response
 
 
@@ -293,7 +298,6 @@ def basic_sync(request):
         if desk_field:
             real_delete_object(desk_field)
 
-
     request.response.status = HTTPOk.code
     return HTTPOk(json_body={})
 
@@ -332,17 +336,19 @@ def all_toc(request):
 
 @view_config(route_name='diff_server', renderer='json', request_method='POST')
 def diff_server(request):
+    dict2str = lambda x: "_".join([str(x['client_id']), str(x['object_id'])])
 
     # todo: rework diff
     tmp_list = DBSession.query(ObjectTOC).yield_per(10000).enable_eagerloads(False)
     existing = [row2dict(entry) for entry in tmp_list]
     req = request.json_body
     upload = list()
-    existing = [dict2ids(o) for o in existing]
+    existing ={dict2str(o) for o in existing}
     log.error('before looking through giant list')
-    for entry in req:
-        if dict2ids(entry) not in existing:
-            upload.append(entry)
+    # for entry in req:
+    #     if dict2ids(entry) not in existing:
+    #         upload.append(entry)
+    upload = [entry for entry in req if dict2str(entry) not in existing]
     log.error('after looking through giant list')
     return upload
 
@@ -353,23 +359,28 @@ def diff_group_server(request):
     # todo: rework diff
     upload = list()
     groups = DBSession.query(Group).all()
-    existing = [entry.id for entry in groups]
+    existing = {entry.id for entry in groups}
     req = request.json_body
-    for entry in req:
-        if entry not in existing:
-            upload.append(entry)
+    upload = [entry for entry in req if entry not in existing]
+    # for entry in req:
+    #     if entry not in existing:
+    #         upload.append(entry)
     return upload
 
 
 @view_config(route_name='delete_sync_server', renderer='json', request_method='POST')
 def delete_sync_server(request):
+    dict2str = lambda x: "_".join([str(x['client_id']), str(x['object_id'])])
     non_existing = [row2dict(entry) for entry in DBSession.query(ObjectTOC).filter_by(marked_for_deletion=True)]
     req = request.json_body
     for_deletion = list()
-    non_existing = [dict2ids(o) for o in non_existing]
-    for entry in req:
-        if dict2ids(entry) in non_existing:
-            for_deletion.append(entry)
+    non_existing = {dict2str(o) for o in non_existing}
+    # for entry in req:
+    #     if dict2ids(entry) in non_existing:
+    #         for_deletion.append(entry)
+    log.error('before looking through delete list')
+    for_deletion = [entry for entry in req if dict2str(entry) in non_existing]
+    log.error('after looking through delete list')
     return for_deletion
 
 
@@ -423,6 +434,7 @@ def diff_desk(request):
 
     cookies = json.loads(request.cookies.get('server_cookies'))
     server = make_request(path, cookies, 'post', existing).json()
+    log.error('after getting objecttoc list in diff_desk')
     task_status.set(3, 20, "Recieved list of objects for uploading", "")
     for_deletion = make_request(central_server + 'sync/delete/server', cookies, 'post', existing)
     task_status.set(4, 25, "Recieved list of objects for deleting", "")
@@ -472,10 +484,10 @@ def diff_desk(request):
 
     for entry in upload_groups:
         group = DBSession.query(Group).filter_by(id=entry).first()
-        if group and group.subject_client_id and get_user_by_client_id(group.subject_client_id).id == user.id:
+        if group and group.subject_client_id and (get_user_by_client_id(group.subject_client_id).id == user.id or user.id == 1):
             path = central_server + 'group'
             gr_req = row2dict(group)
-            gr_req['users']=[user.id]
+            gr_req['users']=[cur_user.id for cur_user in group.users]
             status = make_request(path, cookies, 'post', gr_req)
             if status.status_code != 200:
                 request.response.status = HTTPInternalServerError.code
@@ -636,36 +648,36 @@ def diff_desk(request):
                 # ent_req['content'] = urllib.parse.quote(content)
                 ent_req['content'] = content
             ent_req['filename'] = filename
-            if desk_ent.field.data_type == 'Grouping Tag':
-                field_ids = str(desk_ent.field.client_id) + '_' + str(desk_ent.field.object_id)
-                if field_ids not in grouping_tags:
-                    grouping_tags[field_ids] = {'field_client_id': desk_ent.field.client_id,
-                                                'field_object_id': desk_ent.field.object_id,
-                                                'tag_groups': dict()}
-                if desk_ent.content not in grouping_tags[field_ids]['tag_groups']:
-                    grouping_tags[field_ids]['tag_groups'][desk_ent.content] = [row2dict(desk_ent)]
-                else:
-                    grouping_tags[field_ids]['tag_groups'][desk_ent.content].append(row2dict(desk_ent))
-            else:
-                if not do_not_add:
-                    status = make_request(path, cookies, 'post', ent_req)
-                    if status.status_code != 200:
-                        set_trace()
-                        error_happened = True
-                        # request.response.status = HTTPInternalServerError.code
-                        # return {'error': str("internet error 11")}
+            # if desk_ent.field.data_type == 'Grouping Tag':
+            #     field_ids = str(desk_ent.field.client_id) + '_' + str(desk_ent.field.object_id)
+            #     if field_ids not in grouping_tags:
+            #         grouping_tags[field_ids] = {'field_client_id': desk_ent.field.client_id,
+            #                                     'field_object_id': desk_ent.field.object_id,
+            #                                     'tag_groups': dict()}
+            #     if desk_ent.content not in grouping_tags[field_ids]['tag_groups']:
+            #         grouping_tags[field_ids]['tag_groups'][desk_ent.content] = [row2dict(desk_ent)]
+            #     else:
+            #         grouping_tags[field_ids]['tag_groups'][desk_ent.content].append(row2dict(desk_ent))
+            # else:
+            if not do_not_add:
+                status = make_request(path, cookies, 'post', ent_req)
+                if status.status_code != 200:
+                    set_trace()
+                    error_happened = True
+                    # request.response.status = HTTPInternalServerError.code
+                    # return {'error': str("internet error 11")}
     task_status.set(12, 80, "Uploaded entities", "")
-    for entry in grouping_tags:
-        if check_client(current_client=client, client_id=entry['client_id']):
-            path = central_server + 'group_entity/bulk'
-            req = grouping_tags[entry]
-            req['counter'] = client.counter
-            status = make_request(path, cookies, 'post', req)
-            if status.status_code != 200:
-                request.response.status = HTTPInternalServerError.code
-                return {'error': str("internet error 42")}
-            client.counter = status.json()['counter']
-            DBSession.flush()
+    # for key in grouping_tags:
+    #     # if check_client(current_client=client, client_id=entry['client_id']):
+    #     path = central_server + 'group_entity/bulk'
+    #     req = grouping_tags[entry]
+    #     req['counter'] = client.counter
+    #     status = make_request(path, cookies, 'post', req)
+    #     if status.status_code != 200:
+    #         request.response.status = HTTPInternalServerError.code
+    #         return {'error': str("internet error 42")}
+    #     client.counter = status.json()['counter']
+    #     DBSession.flush()
     task_status.set(13, 80, "Uploaded etymology", "")
     for entry in userblobs:
         if check_client(current_client=client, client_id=entry['client_id']):
