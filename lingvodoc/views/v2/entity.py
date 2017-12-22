@@ -218,6 +218,7 @@ def create_entity(request):  # tested
             except (KeyError, TypeError):
                 request.response.status = HTTPBadRequest.code
                 return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
+        
         else:
             entity.content = req['content']
         # return None
