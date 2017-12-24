@@ -440,6 +440,10 @@ class Query(graphene.ObjectType):
             return obj
 
         result = [create_levelandid(i) for i in result]
+        if len(result) != len(langs):
+            lang_set = {(l.dbObject.client_id, l.dbObject.object_id) for l in result}
+            errors = [(lang.client_id, lang.object_id) for lang in langs if (lang.client_id, lang.object_id) not in lang_set]
+            print(errors)
         return result
 
     def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, mode='published'):
