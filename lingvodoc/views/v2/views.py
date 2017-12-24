@@ -321,7 +321,7 @@ def testing(request):
                 if prev_sibling.additional_metadata is None:
                     prev_sibling.additional_metadata = dict()
                     prev_sibling.additional_metadata['younger_siblings'] = list()
-                lang.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
+                lang.additional_metadata['younger_siblings'] = list(prev_sibling.additional_metadata.get('younger_siblings'))
                 lang.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
             DBSession.flush()
 
@@ -330,7 +330,13 @@ def testing(request):
             # lang.additional_metadata['younger_siblings'] = list(prev_langs)
             # prev_langs.append((lang.client_id, lang.object_id))
         flag_modified(lang, 'additional_metadata')
+    for lang in DBSession.query(Language).filter_by(marked_for_deletion=False).all():
+        for ids in lang.additional_metadata.get('younger_siblings'):
+            if (lang.client_id, lang.object_id) == tuple(ids):
+                lang.additional_metadata['younger_siblings'].remove(ids)
+                flag_modified(lang, 'additional_metadata')
     return "Success"
+
 
 def recursive_sort(langs, visited, stack, result):
     for lang in langs:
