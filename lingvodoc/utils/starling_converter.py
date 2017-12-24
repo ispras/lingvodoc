@@ -410,11 +410,17 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
                 # perspective:field_id
 
-
+                fields_fix = list()
                 for field in fields:
                     starling_type = field.get("starling_type")
                     field_id = tuple(field.get("field_id"))
                     starling_name = field.get("starling_name")
+                    if field_id in fields_fix:
+                        starlingname_to_column[starling_name] = field_id
+                        keep_field_dict[blob_id][field_id] = starling_name
+                        continue
+                    else:
+                        fields_fix.append(field_id)
                     if starling_type == 1:
                         persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
                                          parent_id=perspective_id,
