@@ -1,0 +1,289 @@
+This product includes software developed by
+The Institute for System Programming of the Russian Academy of Sciences
+(ISPRAS)  (http://www.ispras.ru)
+and
+The Institute of Linguistics, Russian Academy of Sciences (http://iling-ran.ru)
+
+Copyright (C) 2014-2017 ISP RAS, ILing.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this product except in compliance with the License.
+You may see file LICENSE or You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+ITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+This product also includes software developed by other legal entities:
+
+1. amqp - Perl Compatible Regular Expressions (http://www.pcre.org)
+   Written by: Philip Hazel <ph10@cam.ac.uk>
+
+   Copyright (c) 1997-2017 University of Cambridge
+   Copyright(c) 2010-2017 Zoltan Herczeg
+   Copyright(c) 2009-2017 Zoltan Herczeg
+
+   Release 10 of PCRE is distributed under the terms of the "BSD" licence, as
+   specified at http://www.pcre.org/license.txt.
+
+2. anyjson (http://bitbucket.org/runeh/anyjson)
+   Copyright (c) 2009, Ask Solem
+   Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+The license text can also be found here: http://www.opensource.org/licenses/BSD-3-Clause
+
+
+3 bcrypt (http://expat.sourceforge.net)
+   Copyright (c) 2013 The Python Cryptographic Authority developers
+   Distributed under the terms of Apache License, Version 2.0, as
+   specified at http://www.apache.org/licenses/LICENSE-2.0
+
+
+4. billiard (https://github.com/celery/billiard)
+   Copyright (c) 2006-2008, R Oudkerk and Contributors
+   Distributed under the terms of Apache License, Version 2.0, as
+   specified at http://www.apache.org/licenses/LICENSE-2.0
+
+5. celery (https://github.com/celery/celery)
+Copyright (c) 2015-2016 Ask Solem & contributors.  All rights reserved.
+Copyright (c) 2012-2014 GoPivotal, Inc.  All rights reserved.
+Copyright (c) 2009, 2010, 2011, 2012 Ask Solem, and individual contributors.  All rights reserved.
+
+Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+The license text can also be found here: http://www.opensource.org/licenses/BSD-3-Clause
+
+6. cffi (http://cffi.readthedocs.org)
+   Copyright (c) 2012-2015, Armin Rigo, Maciej Fijalkowski
+   Distributed under the terms of the MIT License
+   (http://www.opensource.org/licenses/mit-license.php)
+
+7. Chameleon (https://chameleon.readthedocs.io/en/latest/)
+   Copyright 2008-2011 by Malthe Borch and the Repoze Community
+This software is licensed under the Repoze (BSD-like) license
+The license text can also be found here: http://repoze.org/license.html
+
+8. cchardet (https://github.com/chardet/chardet)
+   Copyright (C) 1991, 1999 Free Software Foundation, Inc. 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+   chardet/chardet is licensed under the GNU Lesser General Public License v2.1
+
+9. dogpile.cache (https://bitbucket.org/zzzeek/dogpile.cache)
+   Copyright (c) 2011-2017 Mike Bayer
+   License: BSD
+
+10. kombu (https://kombu.readthedocs.io)
+   Copyright (c) 2015-2016 Ask Solem & contributors.  All rights reserved.
+Copyright (c) 2012-2014 GoPivotal Inc & contributors.  All rights reserved.
+Copyright (c) 2009-2012, Ask Solem & contributors.  All rights reserved.
+
+   Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+
+11. Mako (http://www.makotemplates.org/)
+copyright © by Michael Bayer. All rights reserved
+   Distributed under the terms of the MIT License (http://www.opensource.org/licenses/mit-license.php)
+
+12. MarkupSafe (http://github.com/pallets/markupsafe)
+Copyright (c) 2010 by Armin Ronacher and contributors.
+   Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+
+13. matplotlib (http://matplotlib.org)
+   Copyright (c) 2002-2009 John D. Hunter; All Rights Reserved”
+   License: BSD
+
+14. multiprocess (http://github.com/uqfoundation)
+   Copyright (c) 2004-2016 California Institute of Technology.
+   Copyright (c) 2016-2017 The Uncertainty Quantification Foundation.
+   License: BSD
+
+15. numpy (http://www.numpy.org)
+   Copyright © 2005-2017, NumPy Developers.
+   All rights reserved.
+   License: BSD
+
+16. passlib (https://bitbucket.org/ecollins/passlib/wiki/Home)
+   Copyright (c) 2008-2017 Assurance Technologies, LLC. All rights reserved.
+   Distributed under the terms of the MIT License
+   License: BSD (http://www.opensource.org/licenses/bsd-license.php)
+
+17. PasteDeploy (http://pythonpaste.org/deploy/news.html)
+   Copyright (c) 2011, Ian Bicking and contributors.
+   Distributed under the terms of the MIT License
+   (at http://www.opensource.org/licenses/mit-license.php)
+
+18. psycopg2 (http://initd.org/psycopg/)
+   Copyright (c), Federico Di Gregorio, Daniele Varrazzo
+   License: LGPL with exceptions or ZPL
+
+19. pycparser (http://expat.sourceforge.net)
+   Copyright (c) 2008-2017, Eli Bendersky
+   Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+
+
+20. Pygments (http://pygments.org/)
+  Copyright (c) 2006-2017 by the respective authors (see AUTHORS file). All rights reserved.
+  The AUTHORS file can be found here: https://bitbucket.org/birkenfeld/pygments-main/src/7941677dc77d4f2bf0bbd6140ade85a9454b8b80/AUTHORS?at=default&fileviewer=file-view-default
+License: BSD License
+
+21. pylev (https://github.com/toastdriven/pylev)
+   Copyright (c) 2012, Daniel Lindsley
+   Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+
+22. pympi https://github.com/dopefishh/pympi)
+   Copyright (c) 2015 Mart Lubbers
+   Distributed under the terms of the MIT License
+   (https://github.com/dopefishh/pympi/blob/master/LICENCE or copy
+   at http://www.opensource.org/licenses/mit-license.php)
+
+23. pyramid (https://trypyramid.com)
+   Copyright (c) 2008-2011 Agendaless Consulting and Contributors.
+   (http://www.agendaless.com), All Rights Reserved
+
+   Portions (c) Zope Foundation and contributors (http://www.zope.org/).
+   Portions (c) Edgewall Software (http://edgewall.org)
+   Portions (c) Ian Bicking.
+
+   License: BSD-derived (http://www.repoze.org/LICENSE.txt)
+
+24. pyramid-chameleon (https://github.com/Pylons/pyramid_chameleon)
+   Copyright (c) 2013 Pylons Project and Contributors.
+   <http://www.pylonsproject.org/>, All Rights Reserved
+   License: BSD-derived (http://www.repoze.org/LICENSE.txt)
+
+25. pyramid-debugtoolbar   (https://docs.pylonsproject.org/projects/pyramid-debugtoolbar/en/latest/)
+Copyright (c) Rob Hudson, the Werkzeug Team, and individual contributors.
+All rights reserved.
+License: BSD
+
+26. pyramid-mako (https://github.com/Pylons/pyramid_mako)
+  Copyright (c) 2013 Agendaless Consulting and Contributors. (http://www.agendaless.com),       All Rights Reserved
+   License: BSD-derived (http://www.repoze.org/LICENSE.txt)
+
+27. pyramid-tm (http://docs.pylonsproject.org/projects/pyramid-tm/en/latest/)
+Copyright (c) 2008-2011 Agendaless Consulting and Contributors. (http://www.agendaless.com), All Rights Reserved
+   License: BSD-derived (http://www.repoze.org/LICENSE.txt)
+
+28. pytz (http://pythonhosted.org/pytz)
+    Copyright (c) 2003-2017 Stuart Bishop <stuart@stuartbishop.net>
+   Distributed under the terms of the MIT License
+   (http://www.opensource.org/licenses/mit-license.php)
+
+29. redis (http://github.com/andymccurdy/redis-py)
+   Copyright (c) 2012 Andy McCurdy
+   Distributed under the terms of the MIT License
+   (http://www.opensource.org/licenses/mit-license.php)
+
+30. repoze.lru (http://www.repoze.org)
+   Copyright (c) 2009 Agendaless Consulting and Contributors.
+   (http://www.agendaless.com), All Rights Reserved
+   License: BSD-derived (http://www.repoze.org/LICENSE.txt)
+
+31. requests (http://python-requests.org)
+    Copyright 2017 Kenneth Reitz
+   License: Apache 2.0
+
+32. scipy (https://www.scipy.org)
+   Copyright (c) 2001, 2002 Enthought, Inc.
+   All rights reserved.
+   Copyright (c) 2003-2017 SciPy Developers.
+   All rights reserved.
+   License: BSD
+
+33. six (http://pypi.python.org/pypi/six/)
+   Copyright (c) 2010-2017 Benjamin Peterson
+   Distributed under the terms of the MIT License
+   (https://github.com/benjaminp/six/blob/master/LICENSE or copy
+   at http://www.opensource.org/licenses/mit-license.php)
+
+34. SQLAlchemy (http://www.sqlalchemy.org)
+   Copyright (c) 2005-2017 Michael Bayer and contributors. SQLAlchemy is a trademark of Michael Bayer.
+   Distributed under the terms of the MIT License
+   (http://www.opensource.org/licenses/mit-license.php)
+
+
+35. transaction (https://github.com/zopefoundation/transaction)
+   Copyright (c) 2001-2017, Zope Foundation and Contributors
+   License: ZPL 2.1 (https://github.com/zopefoundation/transaction/blob/master/LICENSE.txt)
+
+36. translationstring (http://pylonsproject.org)
+  Copyright (c) 2011 Agendaless Consulting and Contributors.
+   (http://www.agendaless.com), All Rights Reserved
+   License: BSD-like (http://repoze.org/license.html)
+
+37. venusian (http://pylonsproject.org)
+   Copyright (c) 2011 Agendaless Consulting and Contributors. (http://www.agendaless.com), All Rights Reserved
+   License: BSD-derived (http://www.repoze.org/LICENSE.txt)
+
+38. waitress (https://github.com/Pylons/waitress)
+   Copyright (c) Zope Foundation and Contributors
+   License: ZPL 2.1
+
+39. WebOb (http://webob.org/)
+   Copyright (c)  2015, Ian Bicking and contributors
+   Distributed under the terms of the MIT License
+   (http://www.opensource.org/licenses/mit-license.php)
+
+40. zope.deprecation (http://pypi.python.org/pypi/zope.deprecation)
+   Copyright (c) Zope Foundation and Contributors
+   License: ZPL 2.1
+
+41. zope.interface (https://github.com/zopefoundation/zope.interface)
+   Copyright (c) Zope Foundation and Contributors
+   License: ZPL 2.1
+
+42. zope.sqlalchemy (http://pypi.python.org/pypi/zope.sqlalchemy)
+   Copyright (c) Zope Foundation and Contributors
+    License: ZPL 2.1
+
+43. pathvalidate (https://github.com/thombashi/pathvalidate)
+   Copyright (c) 2016 Tsuyoshi Hombashi
+   Distributed under the terms of the MIT License
+   (https://github.com/thombashi/pathvalidate/blob/master/LICENSE or copy
+   at http://www.opensource.org/licenses/mit-license.php)
+
+
+44. pydub (http://pydub.com)
+   Copyright (c) 2011 James Robert, http://jiaaro.com
+   Distributed under the terms of the MIT License
+   (https://github.com/jiaaro/pydub/blob/master/LICENSE  or copy
+   at http://www.opensource.org/licenses/mit-license.php)
+
+45. xlsxwriter (https://github.com/jmcnamara/XlsxWriter)
+   Copyright (c) 2013, John McNamara <jmcnamara@cpan.org> All rights reserved.
+   License: BSD
+
+46. xlrd (http://www.python-excel.org/)
+Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+The license text can also be found here: http://www.opensource.org/licenses/BSD-3-Clause
+
+47. xlwt (http://www.python-excel.org/)
+Distributed under the terms of the BSD License (3 Clause, also known as the new BSD license)
+The license text can also be found here: http://www.opensource.org/licenses/BSD-3-Clause
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+   1. Redistributions of source code must retain the above copyright
+          notice, this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright
+          notice, this list of conditions and the following disclaimer in the
+          documentation and/or other materials provided with the distribution.
+   3. Neither the name of the project nor the names of its contributors
+          may be used to endorse or promote products derived from this software
+          without specific prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+   ARE DISCLAIMED.      IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+   OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+   HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+   OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+   SUCH DAMAGE.
+
+
