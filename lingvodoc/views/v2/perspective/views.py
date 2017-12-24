@@ -523,16 +523,21 @@ def edit_perspective_meta(request):  # tested & in docs
                     parent.additional_metadata['authors'] = req["authors"]["content"]
                     flag_modified(parent, 'additional_metadata')
             if "info" in req:
-                if not parent.additional_metadata:
-                    parent.additional_metadata = dict()
-                if not parent.additional_metadata.get('blobs'):
-                    parent.additional_metadata['blobs'] = list()
-                for info_dict in req["info"]:
-                    if info_dict.get("type") == "blob":
-                        for blob_id in [[x["client_id"], x["object_id"]] for x in info_dict['info']['content']]:
-                            if blob_id not in parent.additional_metadata['blobs']:
-                                parent.additional_metadata['blobs'].append(blob_id)
-                                flag_modified(parent, 'additional_metadata')
+                if "content" in req["info"]:
+                    blobs = list()
+                    for info_dict in req["info"]["content"]:
+                        if info_dict["info"].get("type") == "blob":
+                            if not parent.additional_metadata:
+                                parent.additional_metadata = dict()
+                            if not "blobs" in parent.additional_metadata:
+                                parent.additional_metadata["blobs"] = []
+                            blobs.append({
+                                "client_id": info_dict["info"]["content"]["client_id"],
+                                "object_id": info_dict["info"]["content"]["object_id"]
+                                                                        }
+                            )
+                            parent.additional_metadata['blobs'] = blobs
+                            flag_modified(parent, 'additional_metadata')
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
