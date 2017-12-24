@@ -522,7 +522,22 @@ def edit_perspective_meta(request):  # tested & in docs
                         parent.additional_metadata = dict()
                     parent.additional_metadata['authors'] = req["authors"]["content"]
                     flag_modified(parent, 'additional_metadata')
-
+            if "info" in req:
+                if "content" in req["info"]:
+                    blobs = list()
+                    for info_dict in req["info"]["content"]:
+                        if info_dict["info"].get("type") == "blob":
+                            if not parent.additional_metadata:
+                                parent.additional_metadata = dict()
+                            if not "blobs" in parent.additional_metadata:
+                                parent.additional_metadata["blobs"] = []
+                            blobs.append({
+                                "client_id": info_dict["info"]["content"]["client_id"],
+                                "object_id": info_dict["info"]["content"]["object_id"]
+                                                                        }
+                            )
+                            parent.additional_metadata['blobs'] = blobs
+                            flag_modified(parent, 'additional_metadata')
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
