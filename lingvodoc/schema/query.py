@@ -1284,7 +1284,7 @@ class Query(graphene.ObjectType):
             lexical_entries_list.append(gr_lexicalentry_object)
         return lexical_entries_list
 
-    @client_id_check()
+    # @client_id_check()
     def resolve_user_blobs(self, info, data_type=None, is_global=None):
         allowed_global_types = ["sociolinguistics", "pdf"]
         client_id = info.context.get('client_id')
@@ -1297,7 +1297,7 @@ class Query(graphene.ObjectType):
                 user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=data_type).all()
             else:
                 raise ResponseError(message="Error: you can not list that data type globally.")
-        if not client:
+        elif not client:
             raise ResponseError('not authenticated')
         if data_type:
             if not is_global:
