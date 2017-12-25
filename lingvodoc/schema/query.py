@@ -1286,7 +1286,7 @@ class Query(graphene.ObjectType):
 
     @client_id_check()
     def resolve_user_blobs(self, info, data_type=None, is_global=None):
-        allowed_global_types = ["sociolinguistics"]
+        allowed_global_types = ["sociolinguistics", "pdf"]
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user_blobs = list()
