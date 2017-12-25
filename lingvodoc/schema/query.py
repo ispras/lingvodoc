@@ -440,6 +440,10 @@ class Query(graphene.ObjectType):
             return obj
 
         result = [create_levelandid(i) for i in result]
+        if len(result) != len(langs):
+            lang_set = {(l.dbObject.client_id, l.dbObject.object_id) for l in result}
+            errors = [(lang.client_id, lang.object_id) for lang in langs if (lang.client_id, lang.object_id) not in lang_set]
+            print(errors)
         return result
 
     def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, mode='published'):
@@ -1280,21 +1284,24 @@ class Query(graphene.ObjectType):
             lexical_entries_list.append(gr_lexicalentry_object)
         return lexical_entries_list
 
-    @client_id_check()
+    # @client_id_check()
     def resolve_user_blobs(self, info, data_type=None, is_global=None):
-        allowed_global_types = ["sociolinguistics"]
+        allowed_global_types = ["sociolinguistics", "pdf"]
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
-        if not client:
+        user_blobs = list()
+        if not data_type and is_global:
+            raise ResponseError("Error: cannot list globally without data_type")
+        if data_type and is_global:
+            if data_type in allowed_global_types:
+                user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=data_type).all()
+            else:
+                raise ResponseError(message="Error: you can not list that data type globally.")
+        elif not client:
             raise ResponseError('not authenticated')
         if data_type:
             if not is_global:
                 user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id, data_type=data_type).all()
-            else:
-                if data_type in allowed_global_types:
-                    user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=data_type).all()
-                else:
-                    raise ResponseError(message="Error: you can not list that data type globally.")
         else:
             user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id).all()
         user_blobs_list = list()

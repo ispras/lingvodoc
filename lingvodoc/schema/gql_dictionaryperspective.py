@@ -313,6 +313,9 @@ class DictionaryPerspective(LingvodocObjectType):
 
         dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, position=position, self_client_id=None,
                                                        self_object_id=None).first()
+        if not dbcolumn:
+            dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, self_client_id=None,
+                                                       self_object_id=None).first()
 
         lexes = DBSession.query(dbLexicalEntry).join(dbLexicalEntry.entity).join(dbEntity.publishingentity) \
             .filter(dbLexicalEntry.parent == self.dbObject)

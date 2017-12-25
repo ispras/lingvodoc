@@ -533,7 +533,25 @@ class UpdateDictionary(graphene.Mutation):
                                                                  "content":additional_metadata["authors"]}
                                                             }
                     flag_modified(persp, 'additional_metadata')
+            if "blobs" in additional_metadata:
+                child_persps = DBSession.query(dbDictionaryPerspective)\
+                    .filter_by(parent=db_dictionary).all()
+                for persp in child_persps:
+                    if not persp.additional_metadata:
+                        persp.additional_metadata = dict()
+                    old_format_blobs = []
+                    for blob in additional_metadata["blobs"]:
+                        old_format_blobs.append( {'info': {'content':
+                                                               {'object_id': blob[1],
+                                                                'client_id': blob[1]
+                                                                },
+                                                           'type': 'blob'
 
+                                                           }
+                                                  }
+                                                )
+                    persp.additional_metadata['info'] = {'content': old_format_blobs, 'type': 'list'}
+                    flag_modified(persp, 'additional_metadata')
 
 
         update_metadata(db_dictionary, additional_metadata)

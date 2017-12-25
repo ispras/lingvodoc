@@ -162,7 +162,7 @@ def move_language(language, parent_id, previous_sibling):
         lang.additional_metadata['younger_siblings'].remove(lang_ids)
         flag_modified(lang, 'additional_metadata')
 
-    parent = DBSession.query(dbLanguage).filter(dbLanguage.client_id==parent_id[0], dbLanguage.client_id==parent_id[0]).first()
+    parent = DBSession.query(dbLanguage).filter(dbLanguage.client_id==parent_id[0], dbLanguage.object_id==parent_id[1]).first()
     if parent:
         while parent is not None:
             tmp_ids = [parent.client_id, parent.object_id]
