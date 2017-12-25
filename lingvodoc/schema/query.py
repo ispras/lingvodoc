@@ -1289,16 +1289,19 @@ class Query(graphene.ObjectType):
         allowed_global_types = ["sociolinguistics"]
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
+        user_blobs = list()
+        if not data_type and is_global:
+            raise ResponseError("Error: cannot list globally without data_type")
+        if data_type and is_global:
+            if data_type in allowed_global_types:
+                user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=data_type).all()
+            else:
+                raise ResponseError(message="Error: you can not list that data type globally.")
         if not client:
             raise ResponseError('not authenticated')
         if data_type:
             if not is_global:
                 user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id, data_type=data_type).all()
-            else:
-                if data_type in allowed_global_types:
-                    user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, data_type=data_type).all()
-                else:
-                    raise ResponseError(message="Error: you can not list that data type globally.")
         else:
             user_blobs = DBSession.query(dbUserBlobs).filter_by(marked_for_deletion=False, user_id=client.user_id).all()
         user_blobs_list = list()
