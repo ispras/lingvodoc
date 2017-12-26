@@ -165,12 +165,15 @@ def phonology(request, group_by_description, only_first_translation, perspective
 
         return (std_phonology if synchronous else async_phonology.delay)(
             task_key,
-            perspective_cid, perspective_oid,
-            dictionary_name, perspective_name,
-            cache_kwargs, storage,
-            group_by_description, vowel_selection, only_first_translation, maybe_tier_set,
-            limit, limit_exception, limit_no_vowel, limit_result,
-            sqlalchemy_url)
+            perspective_cid=perspective_cid, perspective_oid=perspective_oid,
+            dictionary_name=dictionary_name, perspective_name=perspective_name,
+            cache_kwargs=cache_kwargs, storage=storage,
+            group_by_description=group_by_description, vowel_selection=vowel_selection, only_first_translation=only_first_translation, maybe_tier_set=maybe_tier_set,
+            limit=limit, limit_exception=limit_exception, limit_no_vowel=limit_no_vowel, limit_result=limit_result,
+            sqlalchemy_url=sqlalchemy_url,
+            use_automatic_markup=None,
+        maybe_translation_field=None)
+
 
     # Some unknown external exception.
 
