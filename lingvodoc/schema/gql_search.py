@@ -40,7 +40,132 @@ from sqlalchemy import (
     tuple_,
     not_
 )
+from sqlalchemy.orm.util import aliased
 
+
+def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, search_strings, publish, accept, adopted,
+                     etymology, yield_batch_count, category_fields):
+    state_translation_gist_client_id, state_translation_gist_object_id = state_gist_id
+    limited_client_id, limited_object_id = limited_gist_id
+    dictionaries = dictionaries.filter(dbDictionary.category == category)
+    if publish:
+        dictionaries = dictionaries.filter(dbDictionary.marked_for_deletion == False).filter(
+            or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
+                     dbDictionary.state_translation_gist_client_id == limited_client_id))). \
+            join(dbDictionaryPerspective) \
+            .filter(or_(
+            and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                 dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+            and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                 dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
+            filter(dbDictionaryPerspective.marked_for_deletion == False)
+    lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
+        .join(dbDictionaryPerspective.parent) \
+        .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
+
+    if adopted is not None or etymology is not None:
+        lexes.join(dbLexicalEntry.entity)
+        if adopted is False:
+            lexes = lexes.filter(~func.lower(dbEntity.content).contains('заим.%'))
+        elif adopted:
+            lexes = lexes.filter(func.lower(dbEntity.content).contains('заим.%'))
+        if etymology is not None:
+            gist = translation_gist_search('Grouping Tag')
+            fields = DBSession.query(dbField.client_id, dbField.object_id).filter(
+                tuple_(dbField.data_type_translation_gist_client_id,
+                       dbField.data_type_translation_gist_object_id) == (gist.client_id, gist.object_id))
+            if etymology:
+                lexes = lexes.filter(not_(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields)))
+            else:
+                lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
+
+    aliases = list()
+    and_block = list()
+    for search_block in search_strings:
+        cur_dbEntity = aliased(dbEntity)
+        cur_dbPublishingEntity = aliased(dbPublishingEntity)
+        aliases.append(cur_dbEntity)
+        aliases.append(cur_dbPublishingEntity)
+        # add entity alias in aliases
+        or_block = list()
+        for search_string in search_block:
+            inner_and_block = list()
+            if 'field_id' in search_string:
+                inner_and_block.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
+                inner_and_block.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
+            else:
+                inner_and_block.append(tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id).in_(category_fields))
+
+            matching_type = search_string.get('matching_type')
+            if matching_type == "full_string":
+                if category == 1:
+                    inner_and_block.append(cur_dbEntity.additional_metadata['bag_of_words'].contains([search_string["search_string"].lower()]))
+                else:
+                    inner_and_block.append(func.lower(cur_dbEntity.content) == func.lower(search_string["search_string"]))
+            elif matching_type == 'substring':
+                if category == 1:
+                    inner_and_block.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).like("".join(['%', search_string["search_string"].lower(), '%'])))
+                else:
+
+                    inner_and_block.append(func.lower(cur_dbEntity.content).like("".join(['%', search_string["search_string"].lower(), '%'])))
+            elif matching_type == 'regexp':
+                if category == 1:
+                    inner_and_block.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(search_string["search_string"]))
+                else:
+                    inner_and_block.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
+            else:
+                raise ResponseError(message='wrong matching_type')
+
+            or_block.append(and_(*inner_and_block))
+        if publish is not None:
+            and_block.append(cur_dbPublishingEntity.published == publish)
+        if accept is not None:
+            and_block.append(cur_dbPublishingEntity.accepted == accept)
+        and_block.append(cur_dbEntity.client_id == cur_dbPublishingEntity.client_id)
+        and_block.append(cur_dbEntity.object_id == cur_dbPublishingEntity.object_id)
+        and_block.append(cur_dbEntity.parent_client_id == dbLexicalEntry.client_id)
+        and_block.append(cur_dbEntity.parent_object_id == dbLexicalEntry.object_id)
+        and_block.append(or_(*or_block))
+    and_block.append(dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id)
+    and_block.append(dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id)
+    and_block.append(dbDictionaryPerspective.parent_client_id == dbDictionary.client_id)
+    and_block.append(dbDictionaryPerspective.parent_object_id == dbDictionary.object_id)
+    and_block = and_(*and_block)
+    aliases_len = len(aliases)
+    aliases.append(dbLexicalEntry)
+    aliases.append(dbDictionaryPerspective)
+    aliases.append(dbDictionary)
+
+    search = DBSession.query(*aliases).filter(and_block, tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
+        lexes)).yield_per(yield_batch_count)
+    resolved_search = [entity for entity in search]
+
+    def graphene_entity(entity, publishing):
+        ent = Entity(id=(entity.client_id, entity.object_id))
+        ent.dbObject = entity
+        ent.publishingentity = publishing
+        return ent
+
+    def graphene_obj(dbobj, cur_cls):
+        obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
+        obj.dbObject = dbobj
+        return obj
+    full_entities_and_publishing = set()
+    for i in range(int(aliases_len / 2)):
+        counter = i * 2
+        entities_and_publishing = {(entity[counter], entity[counter+1]) for entity in resolved_search}
+        full_entities_and_publishing |= entities_and_publishing
+
+    res_entities = [graphene_entity(entity[0], entity[1]) for entity in full_entities_and_publishing]
+    lexical_entries = {entity[aliases_len ] for entity in resolved_search}
+    res_lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in lexical_entries]
+    perspectives = {entity[aliases_len + 1] for entity in resolved_search}
+    res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in perspectives]
+    res_dictionaries = {entity[aliases_len + 2] for entity in search}
+    res_dictionaries = [graphene_obj(ent, Dictionary) for ent in res_dictionaries]
+    return res_entities, res_lexical_entries, res_perspectives, res_dictionaries
 
 class AdvancedSearch(LingvodocObjectType):
     entities = graphene.List(Entity)
@@ -76,210 +201,48 @@ class AdvancedSearch(LingvodocObjectType):
                    dbField.data_type_translation_gist_object_id == text_data_type.object_id).all()
 
         markup_data_type = translation_gist_search('Markup')
-        markup_fields = DBSession.query(dbField.client_id, dbField.object_id).\
+        markup_fields = DBSession.query(dbField.client_id, dbField.object_id). \
             filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
                    dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()
 
         # normal dictionaries
         if category != 1:
-            normal_dictionaries = dictionaries.filter(dbDictionary.category == 0)
-            if publish:
-                normal_dictionaries = normal_dictionaries.filter(dbDictionary.marked_for_deletion == False).filter(
-                    or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                             dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                        and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                             dbDictionary.state_translation_gist_client_id == limited_client_id))). \
-                    join(dbDictionaryPerspective) \
-                    .filter(or_(
-                    and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                         dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                    and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                         dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
-                    filter(dbDictionaryPerspective.marked_for_deletion == False)
-            lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
-                .join(dbDictionaryPerspective.parent) \
-                .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(normal_dictionaries))
-
-            if adopted is not None or etymology is not None:
-                lexes.join(dbLexicalEntry.entity)
-                if adopted is False:
-                    lexes = lexes.filter(~func.lower(dbEntity.content).contains('заим.%'))
-                elif adopted:
-                    lexes = lexes.filter(func.lower(dbEntity.content).contains('заим.%'))
-                if etymology is not None:
-                    gist = translation_gist_search('Grouping Tag')
-                    fields = DBSession.query(dbField.client_id, dbField.object_id).filter(
-                        tuple_(dbField.data_type_translation_gist_client_id,
-                               dbField.data_type_translation_gist_object_id) == (gist.client_id, gist.object_id))
-                    if etymology:
-                        lexes = lexes.filter(not_(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields)))
-                    else:
-                        lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
-
-            # lexes = lexes.yield_per(yield_batch_count)
-
-            basic_search = DBSession.query(dbEntity, dbPublishingEntity, dbLexicalEntry, dbDictionaryPerspective, dbDictionary).join(dbEntity.parent).join(
-                dbEntity.publishingentity) \
-                .join(dbLexicalEntry.parent).join(dbDictionaryPerspective.parent).filter(
-                dbPublishingEntity.client_id == dbEntity.client_id,
-                dbPublishingEntity.object_id == dbEntity.object_id
+            res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
+                dictionaries=dictionaries,
+                category=0,
+                state_gist_id = (state_translation_gist_client_id,
+                                state_translation_gist_object_id),
+                limited_gist_id = (limited_client_id, limited_object_id),
+                search_strings=search_strings,
+                publish=publish,
+                accept=accept,
+                adopted=adopted,
+                etymology=etymology,
+                category_fields=text_fields,
+                yield_batch_count=yield_batch_count
             )
 
-            if publish is not None:
-                basic_search = basic_search.filter(dbPublishingEntity.published == publish)
-            if accept is not None:
-                basic_search = basic_search.filter(dbPublishingEntity.accepted == accept)
-
-            and_block = list()
-            for search_block in search_strings:
-                or_block = list()
-                for search_string in search_block:
-                    inner_and_block = list()
-                    if 'field_id' in search_string:
-                        inner_and_block.append(dbEntity.field_client_id == search_string["field_id"][0])
-                        inner_and_block.append(dbEntity.field_object_id == search_string["field_id"][1])
-                    else:
-                        inner_and_block.append(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(text_fields))
-
-                    matching_type = search_string.get('matching_type')
-                    if matching_type == "full_string":
-                        inner_and_block.append(func.lower(dbEntity.content) == func.lower(search_string["search_string"]))
-                    elif matching_type == 'substring':
-                        inner_and_block.append(func.lower(dbEntity.content).like("".join(['%', search_string["search_string"].lower(), '%'])))
-                    elif matching_type == 'regexp':
-                        inner_and_block.append(func.lower(dbEntity.content).op('~*')(search_string["search_string"]))
-                    else:
-                        raise ResponseError(message='wrong matching_type')
-                    or_block.append(and_(*inner_and_block))
-
-                and_block.append(or_(*or_block))
-            and_block = and_(*and_block)
-
-            search = basic_search.filter(and_block, tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
-                lexes)).yield_per(yield_batch_count)
-
-            def graphene_entity(entity, publishing):
-                ent = Entity(id=(entity.client_id, entity.object_id))
-                ent.dbObject = entity
-                ent.publishingentity = publishing
-                return ent
-
-            def graphene_obj(dbobj, cur_cls):
-                obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-                obj.dbObject = dbobj
-                return obj
-
-            res_entities = [graphene_entity(entity[0], entity[1]) for entity in search]
-            lexical_entries = {entity[2] for entity in search}
-            res_lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in lexical_entries]
-            perspectives = {entity[3] for entity in search}
-            res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in perspectives]
-            res_dictionaries = {entity[4] for entity in search}
-            res_dictionaries = [graphene_obj(ent, Dictionary) for ent in res_dictionaries]
 
         # corpora
         if category != 0:
-            corporas = dictionaries.filter(dbDictionary.category == 1)
-            if publish:
-                corporas = corporas.filter(dbDictionary.marked_for_deletion == False).filter(
-                    or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                             dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                        and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                             dbDictionary.state_translation_gist_client_id == limited_client_id))). \
-                    join(dbDictionaryPerspective) \
-                    .filter(or_(
-                    and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                         dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                    and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                         dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
-                    filter(dbDictionaryPerspective.marked_for_deletion == False)
-
-            lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
-                .join(dbDictionaryPerspective.parent) \
-                .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(
-                corporas))
-
-            if adopted is not None or etymology is not None:
-                lexes.join(dbLexicalEntry.entity)
-                if adopted is False:
-                    lexes = lexes.filter(~func.lower(dbEntity.content).contains('заим.%'))
-                elif adopted:
-                    lexes = lexes.filter(func.lower(dbEntity.content).contains('заим.%'))
-                if etymology is not None:
-                    gist = translation_gist_search('Grouping Tag')
-                    fields = DBSession.query(dbField.client_id, dbField.object_id).filter(
-                        tuple_(dbField.data_type_translation_gist_client_id,
-                               dbField.data_type_translation_gist_object_id) == (gist.client_id, gist.object_id))
-                    if etymology:
-                        lexes = lexes.filter(
-                            not_(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields)))
-                    else:
-                        lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
-
-            # lexes = lexes.yield_per(yield_batch_count)
-
-            basic_search = DBSession.query(dbEntity, dbPublishingEntity, dbLexicalEntry, dbDictionaryPerspective,
-                                           dbDictionary).join(dbEntity.parent).join(
-                dbEntity.publishingentity) \
-                .join(dbLexicalEntry.parent).join(dbDictionaryPerspective.parent).filter(
-                dbPublishingEntity.client_id == dbEntity.client_id,
-                dbPublishingEntity.object_id == dbEntity.object_id
+            tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
+                dictionaries=dictionaries,
+                category=1,
+                state_gist_id=(state_translation_gist_client_id,
+                               state_translation_gist_object_id),
+                limited_gist_id=(limited_client_id,
+                                 limited_object_id),
+                search_strings=search_strings,
+                publish=publish,
+                accept=accept,
+                adopted=adopted,
+                etymology=etymology,
+                category_fields=markup_fields,
+                yield_batch_count=yield_batch_count
             )
-
-            if publish is not None:
-                basic_search = basic_search.filter(dbPublishingEntity.published == publish)
-            if accept is not None:
-                basic_search = basic_search.filter(dbPublishingEntity.accepted == accept)
-
-            and_block = list()
-            for search_block in search_strings:
-                or_block = list()
-                for search_string in search_block:
-                    inner_and_block = list()
-                    if 'field_id' in search_string:
-                        inner_and_block.append(dbEntity.field_client_id == search_string["field_id"][0])
-                        inner_and_block.append(dbEntity.field_object_id == search_string["field_id"][1])
-                    else:
-                        inner_and_block.append(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(markup_fields))
-
-                    matching_type = search_string.get('matching_type')
-                    if matching_type == "full_string":
-                        inner_and_block.append(dbEntity.additional_metadata['bag_of_words'].contains([search_string["search_string"].lower()]))
-                    elif matching_type == 'substring':
-                        inner_and_block.append(func.lower(dbEntity.additional_metadata['bag_of_words'].astext).like("".join(['%', search_string["search_string"].lower(), '%'])))
-                    elif matching_type == 'regexp':
-                        inner_and_block.append(func.lower(dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(search_string["search_string"]))
-                    else:
-                        raise ResponseError(message='wrong matching_type')
-                    or_block.append(and_(*inner_and_block))
-
-                and_block.append(or_(*or_block))
-            and_block = and_(*and_block)
-
-            search = basic_search.filter(and_block, tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
-                lexes)).yield_per(yield_batch_count)
-
-            def graphene_entity(entity, publishing):
-                ent = Entity(id=(entity.client_id, entity.object_id))
-                ent.dbObject = entity
-                ent.publishingentity = publishing
-                return ent
-
-            def graphene_obj(dbobj, cur_cls):
-                obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-                obj.dbObject = dbobj
-                return obj
-
-            entities = [graphene_entity(entity[0], entity[1]) for entity in search]
-            res_entities += entities
-            lexical_entries = {entity[2] for entity in search}
-            lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in lexical_entries]
-            res_lexical_entries += lexical_entries
-            perspectives = {entity[3] for entity in search}
-            perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in perspectives]
-            res_perspectives += perspectives
-            tmp_dictionaries = {entity[4] for entity in search}
-            tmp_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
+            res_entities += tmp_entities
+            res_lexical_entries += tmp_lexical_entries
+            res_perspectives += res_perspectives
             res_dictionaries += tmp_dictionaries
 
         return cls(entities=res_entities, lexical_entries=res_lexical_entries, perspectives=res_perspectives, dictionaries=res_dictionaries)
