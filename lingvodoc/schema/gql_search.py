@@ -123,6 +123,7 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
             and_block.append(cur_dbPublishingEntity.published == publish)
         if accept is not None:
             and_block.append(cur_dbPublishingEntity.accepted == accept)
+        and_block.append(cur_dbEntity.marked_for_deletion == False)
         and_block.append(cur_dbEntity.client_id == cur_dbPublishingEntity.client_id)
         and_block.append(cur_dbEntity.object_id == cur_dbPublishingEntity.object_id)
         and_block.append(cur_dbEntity.parent_client_id == dbLexicalEntry.client_id)
@@ -159,12 +160,12 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
         full_entities_and_publishing |= entities_and_publishing
 
     res_entities = [graphene_entity(entity[0], entity[1]) for entity in full_entities_and_publishing]
-    lexical_entries = {entity[aliases_len ] for entity in resolved_search}
-    res_lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in lexical_entries]
-    perspectives = {entity[aliases_len + 1] for entity in resolved_search}
-    res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in perspectives]
-    res_dictionaries = {entity[aliases_len + 2] for entity in search}
-    res_dictionaries = [graphene_obj(ent, Dictionary) for ent in res_dictionaries]
+    tmp_lexical_entries = {entity[aliases_len ] for entity in resolved_search}
+    res_lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in tmp_lexical_entries]
+    tmp_perspectives = {entity[aliases_len + 1] for entity in resolved_search}
+    res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in tmp_perspectives]
+    tmp_dictionaries = {entity[aliases_len + 2] for entity in resolved_search}
+    res_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
     return res_entities, res_lexical_entries, res_perspectives, res_dictionaries
 
 class AdvancedSearch(LingvodocObjectType):
@@ -242,7 +243,7 @@ class AdvancedSearch(LingvodocObjectType):
             )
             res_entities += tmp_entities
             res_lexical_entries += tmp_lexical_entries
-            res_perspectives += res_perspectives
+            res_perspectives += tmp_perspectives
             res_dictionaries += tmp_dictionaries
 
         return cls(entities=res_entities, lexical_entries=res_lexical_entries, perspectives=res_perspectives, dictionaries=res_dictionaries)
