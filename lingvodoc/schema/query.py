@@ -1559,9 +1559,9 @@ class Query(graphene.ObjectType):
             convert_markup(id: [742, 5494] )
         }
         """
-        client_id = info.context.get('client_id')
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        # client_id = info.context.get('client_id')
+        # client = DBSession.query(Client).filter_by(id=client_id).first()
+        # user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
         try:
             # out_type = req['out_type']
