@@ -91,9 +91,9 @@ log = logging.getLogger(__name__)
 celery_log = get_task_logger(__name__)
 celery_log.setLevel(logging.DEBUG)
 
-def phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
+def gql_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
               synchronous, vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
-              limit_exception=None, limit_no_vowel=None, limit_result=None, locale_id=2):
+              limit_exception=None, limit_no_vowel=None, limit_result=None, locale_id=2, maybe_translation_field=None):
     """
     Computes phonology of a specified perspective.
     Perspective is specified by JSON request parameters 'perspective_client_id' and 'perspective_object_id'.
@@ -172,7 +172,7 @@ def phonology(request, group_by_description, only_first_translation, perspective
             limit=limit, limit_exception=limit_exception, limit_no_vowel=limit_no_vowel, limit_result=limit_result,
             sqlalchemy_url=sqlalchemy_url,
             use_automatic_markup=None,
-        maybe_translation_field=None)
+        maybe_translation_field=maybe_translation_field)
 
 
     # Some unknown external exception.
