@@ -170,7 +170,7 @@ from sqlalchemy.sql.functions import coalesce
 from lingvodoc.schema.gql_tasks import Task, DeleteTask
 from pyramid.security import authenticated_userid
 
-from lingvodoc.utils.phonology import phonology as utils_phonology
+from lingvodoc.utils.phonology import gql_phonology as utils_phonology
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
@@ -278,7 +278,9 @@ class Query(graphene.ObjectType):
         vowel_selection=graphene.Boolean(),
         maybe_tier_list=graphene.List(graphene.String),
         maybe_tier_set=graphene.List(graphene.String),
-        synchronous=graphene.Boolean())
+        synchronous=graphene.Boolean(),
+        maybe_translation_field=LingvodocID(required=True),
+        )
     connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True), field_id = LingvodocID(required=True), mode=graphene.String())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
@@ -1377,10 +1379,12 @@ class Query(graphene.ObjectType):
 
     def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
                           vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
-                            limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False):
+                            limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
         """
         query MyQuery {
-           phonology(perspective_id: [671, 15155], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [])
+                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
+
+                    )
         }
         """
         perspective_cid, perspective_oid = perspective_id
@@ -1389,7 +1393,7 @@ class Query(graphene.ObjectType):
 
         utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
                   synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
-                  limit_exception, limit_no_vowel, limit_result, locale_id)
+                  limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
 
         return True
 
@@ -1559,9 +1563,9 @@ class Query(graphene.ObjectType):
             convert_markup(id: [742, 5494] )
         }
         """
-        client_id = info.context.get('client_id')
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        # client_id = info.context.get('client_id')
+        # client = DBSession.query(Client).filter_by(id=client_id).first()
+        # user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
         try:
             # out_type = req['out_type']
