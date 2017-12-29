@@ -66,8 +66,8 @@ def grant_contents(grant, locale_id=2):
     result['issuer_url'] = grant.issuer_url
     result['grant_url'] = grant.grant_url
     result['grant_number'] = grant.grant_number
-    result['begin'] = grant.begin.strftime("%d.%m.%Y")
-    result['end'] = grant.end.strftime("%d.%m.%Y")
+    result['begin'] = grant.begin
+    result['end'] = grant.end
     owners = grant.owners
     if owners is None:
         owners = []
