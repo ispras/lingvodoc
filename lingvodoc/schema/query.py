@@ -128,6 +128,8 @@ from lingvodoc.schema.gql_userrequest import (
 
 import lingvodoc.acl as acl
 import time
+import random
+import string
 from lingvodoc.models import (
     DBSession,
     Dictionary as dbDictionary,
@@ -1630,6 +1632,93 @@ class Query(graphene.ObjectType):
             raise ResponseError(message=str(e))
 
 
+
+class PerspectivesAndFields(graphene.InputObjectType):
+    perspective_id = LingvodocID()
+    field_id = LingvodocID()
+
+class StarlingEtymologyObject(graphene.InputObjectType):
+    starling_perspective_id = LingvodocID()
+    perspectives_and_fields = graphene.List(PerspectivesAndFields)
+
+class StarlingEtymology(graphene.Mutation):
+
+    class Arguments:
+        etymology_field_id = LingvodocID()
+        complex_list = graphene.List(StarlingEtymologyObject)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+
+        client_id = info.context.get('client_id')
+
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        if not user:
+            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+        if user.id != 1:
+            raise ResponseError(message="not admin")
+
+        etymology_field_id = args['etymology_field_id']
+        etymology_field = DBSession.query(dbField).filter_by(client_id=etymology_field_id[0],
+                                                             object_id=etymology_field_id[1],
+                                                             marked_for_deletion=False).first()
+        if not etymology_field:
+            raise ResponseError(message='no such field')
+        timestamp = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                for c in range(10))
+        for complex_element in args['complex_list']:
+            starling_ids = complex_element['starling_perspective_id']
+            starling_perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=starling_ids[0],
+                                                                                      object_id=starling_ids[1],
+                                                                                      marked_for_deletion=False).first()
+            if not starling_perspective:
+                raise ResponseError(message='no such starling perspective')
+            for persp_and_field in complex_element['perspectives_and_fields']:
+                persp_ids = persp_and_field['perspective_id']
+                cur_persp = DBSession.query(dbDictionaryPerspective).filter_by(client_id=persp_ids[0],
+                                                                               object_id=persp_ids[1],
+                                                                               marked_for_deletion=False).first()
+                field_id = persp_and_field['field_id']
+                field = DBSession.query(dbField).filter_by(client_id=field_id[0],
+                                                           object_id=field_id[1],
+                                                           marked_for_deletion=False).first()
+                if not cur_persp:
+                    raise ResponseError(message='no such perspective')
+
+                StarlingEntity = aliased(dbEntity)
+                StarlingLexicalEntry = aliased(dbLexicalEntry)
+                result = DBSession.query(dbEntity, dbLexicalEntry, StarlingEntity, StarlingLexicalEntry).filter(
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    StarlingEntity.parent_client_id == StarlingLexicalEntry.client_id,
+                    StarlingEntity.parent_object_id == StarlingLexicalEntry.object_id,
+                    dbLexicalEntry.parent_client_id == cur_persp.client_id,
+                    dbLexicalEntry.parent_object_id == cur_persp.object_id,
+                    StarlingLexicalEntry.parent_client_id == starling_perspective.client_id,
+                    StarlingLexicalEntry.parent_object_id == starling_perspective.object_id,
+                    dbEntity.content == StarlingEntity.content,
+                    dbEntity.field == field).all()
+                for sub_res in result:
+                    first_lex = sub_res[1]
+                    second_lex = sub_res[3]
+                    tag = sub_res[0].content + timestamp
+                    first_tag = dbEntity(client_id = client.id, parent=first_lex, content=tag, field=etymology_field)
+                    first_tag.publishingentity.accepted = True
+                    first_tag.publishingentity.published = True
+                    DBSession.add(first_tag)
+                    second_tag = dbEntity(client_id = client.id, parent=second_lex, content=tag, field=etymology_field)
+                    second_tag.publishingentity.accepted = True
+                    second_tag.publishingentity.published = True
+                    DBSession.add(second_tag)
+
+        return StarlingEtymology(triumph=True)
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -1695,6 +1784,7 @@ class MyMutations(graphene.ObjectType):
     download_dictionaries = DownloadDictionaries.Field()
     synchronize = Synchronize.Field()
     delete_task = DeleteTask.Field()
+    starling_etymology = StarlingEtymology.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
