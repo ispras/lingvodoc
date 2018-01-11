@@ -172,7 +172,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
     @fetch_object() # tested
     def resolve_columns(self, info):
-        columns = DBSession.query(dbColumn).filter_by(parent=self.dbObject, marked_for_deletion=False).all()
+        columns = DBSession.query(dbColumn).filter_by(parent=self.dbObject, marked_for_deletion=False).order_by(dbColumn.position).all()
         result = list()
         for dbfield in columns:
             gr_field_obj = Column(id=[dbfield.client_id, dbfield.object_id])
