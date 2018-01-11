@@ -177,6 +177,7 @@ from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.views.v2.utils import anonymous_userid
+from sqlite3 import connect
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -222,6 +223,27 @@ class StarlingDictionary(graphene.InputObjectType):
     translation_atoms = graphene.List(ObjectVal)
     field_map = graphene.List(StarlingField, required=True)
     add_etymology = graphene.Boolean(required=True)
+
+class DialeqtInfo(graphene.ObjectType):
+    dictionary_name = graphene.String()
+    dialeqt_id = graphene.Int()
+
+def get_dict_attributes(sqconn):
+    dict_trav = sqconn.cursor()
+    dict_trav.execute("""SELECT
+                        dict_name,
+                        dict_identificator,
+                        dict_description
+                        FROM
+                        dict_attributes
+                        WHERE
+                        id = 1;""")
+    req = dict()
+    for dictionary in dict_trav:
+        req['dictionary_name'] = dictionary[0]
+        req['dialeqt_id'] = dictionary[1]
+    return req
+
 
 
 class Query(graphene.ObjectType):
@@ -302,6 +324,22 @@ class Query(graphene.ObjectType):
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
+    dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo)
+
+    def resolve_dictionary_dialeqt_get_info(request):  # TODO: test
+        blob_client_id = request.matchdict.get('blob_client_id')
+        blob_object_id = request.matchdict.get('blob_object_id')
+        blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
+        if blob:
+            filename = blob.real_storage_path
+            sqconn = connect(filename)
+            try:
+                dict_attributes = get_dict_attributes(sqconn)
+            except:
+                raise ResponseError(message="database disk image is malformed")
+            dictionary_name = dict_attributes["dictionary_name"]
+            return {"dictionary_name": dictionary_name}
+        raise ResponseError(message="No such blob in the system")
 
     def resolve_tasks(self, info):
         request = info.context.request
