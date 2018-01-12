@@ -861,7 +861,7 @@ def graphql(request):
                                                 'cookies': dict(request.cookies)}),
                                             variable_values=variable_values)
                     if result.invalid:
-                        return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
+                        return {'errors': [{"message": str(e)} for e in result.errors]}
                     if result.errors:
                         sp.rollback()
                         return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
@@ -884,7 +884,7 @@ def graphql(request):
                         if type(error.original_error) == ProxyPass:
                             return json.loads(error.original_error.response_body.decode("utf-8") )
             if result.invalid:
-                return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
+                return {'errors': [{"message": str(e)} for e in result.errors]}
             if result.errors:
                 sp.rollback()
                 return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
