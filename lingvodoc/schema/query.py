@@ -170,6 +170,7 @@ from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
 from lingvodoc.schema.gql_tasks import Task, DeleteTask
+from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import gql_phonology as utils_phonology
@@ -226,7 +227,7 @@ class StarlingDictionary(graphene.InputObjectType):
 
 class DialeqtInfo(graphene.ObjectType):
     dictionary_name = graphene.String()
-    dialeqt_id = graphene.Int()
+    dialeqt_id = graphene.String()
 
 def get_dict_attributes(sqconn):
     dict_trav = sqconn.cursor()
@@ -324,12 +325,11 @@ class Query(graphene.ObjectType):
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
-    dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo)
+    dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
 
-    def resolve_dictionary_dialeqt_get_info(request):  # TODO: test
-        blob_client_id = request.matchdict.get('blob_client_id')
-        blob_object_id = request.matchdict.get('blob_object_id')
-        blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
+    def resolve_dictionary_dialeqt_get_info(self, info, blob_id):  # TODO: test
+        blob_client_id, blob_object_id = blob_id
+        blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
         if blob:
             filename = blob.real_storage_path
             sqconn = connect(filename)
@@ -337,8 +337,7 @@ class Query(graphene.ObjectType):
                 dict_attributes = get_dict_attributes(sqconn)
             except:
                 raise ResponseError(message="database disk image is malformed")
-            dictionary_name = dict_attributes["dictionary_name"]
-            return {"dictionary_name": dictionary_name}
+            return DialeqtInfo(dictionary_name=dict_attributes['dictionary_name'], dialeqt_id=dict_attributes["dialeqt_id"])
         raise ResponseError(message="No such blob in the system")
 
     def resolve_tasks(self, info):
@@ -1765,7 +1764,7 @@ class MyMutations(graphene.ObjectType):
     for more beautiful imports
     """
     convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
-
+    convert_dialeqt = ConvertDictionary.Field()
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()

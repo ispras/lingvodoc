@@ -46,11 +46,10 @@ import json
 import requests
 from pyramid.request import Request
 from pyramid.response import Response
-from lingvodoc.utils.proxy import send_server_request
 
 from lingvodoc.views.v2.utils import anonymous_userid
 log = logging.getLogger(__name__)
-
+from lingvodoc.utils.creation import create_gists_with_atoms
 
 class ConvertDictionary(graphene.Mutation):
     """
@@ -84,7 +83,8 @@ class ConvertDictionary(graphene.Mutation):
         dictionary_id = LingvodocID()
         blob_id = LingvodocID(required=True)
         language_id = LingvodocID()
-        gist_id = LingvodocID()
+        translation_gist_id = LingvodocID()
+        translation_atoms = graphene.List(ObjectVal)
 
     triumph = graphene.Boolean()
 
@@ -114,9 +114,15 @@ class ConvertDictionary(graphene.Mutation):
         else:
             cur_args["language_client_id"] = None
             cur_args["language_object_id"] = None
-        if "gist_id" in args:
-            cur_args["gist_client_id"] = args['gist_id'][0]
-            cur_args["gist_object_id"] = args['gist_id'][1]
+        if "translation_gist_id" in args:
+            cur_args["gist_client_id"] = args['translation_gist_id'][0]
+            cur_args["gist_object_id"] = args['translation_gist_id'][1]
+        elif "translation_atoms" in args:
+            tr_atoms = args.get("translation_atoms")
+            translation_gist_id = args.get('translation_gist_id')
+            translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None])
+            cur_args["gist_client_id"] = translation_gist_id[0]
+            cur_args["gist_object_id"] = translation_gist_id[1]
         else:
             cur_args["gist_client_id"] = None
             cur_args["gist_object_id"] = None
@@ -129,6 +135,7 @@ class ConvertDictionary(graphene.Mutation):
         try:
             if gist:
                 task = TaskStatus(user_id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
+
             else:
                 dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
                                                                object_id=args["dictionary_id"][1]).first()
