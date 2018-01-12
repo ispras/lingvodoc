@@ -170,6 +170,7 @@ from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
 from lingvodoc.schema.gql_tasks import Task, DeleteTask
+from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import gql_phonology as utils_phonology
@@ -177,6 +178,7 @@ from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.views.v2.utils import anonymous_userid
+from sqlite3 import connect
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -222,6 +224,27 @@ class StarlingDictionary(graphene.InputObjectType):
     translation_atoms = graphene.List(ObjectVal)
     field_map = graphene.List(StarlingField, required=True)
     add_etymology = graphene.Boolean(required=True)
+
+class DialeqtInfo(graphene.ObjectType):
+    dictionary_name = graphene.String()
+    dialeqt_id = graphene.String()
+
+def get_dict_attributes(sqconn):
+    dict_trav = sqconn.cursor()
+    dict_trav.execute("""SELECT
+                        dict_name,
+                        dict_identificator,
+                        dict_description
+                        FROM
+                        dict_attributes
+                        WHERE
+                        id = 1;""")
+    req = dict()
+    for dictionary in dict_trav:
+        req['dictionary_name'] = dictionary[0]
+        req['dialeqt_id'] = dictionary[1]
+    return req
+
 
 
 class Query(graphene.ObjectType):
@@ -302,6 +325,20 @@ class Query(graphene.ObjectType):
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
+    dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
+
+    def resolve_dictionary_dialeqt_get_info(self, info, blob_id):  # TODO: test
+        blob_client_id, blob_object_id = blob_id
+        blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
+        if blob:
+            filename = blob.real_storage_path
+            sqconn = connect(filename)
+            try:
+                dict_attributes = get_dict_attributes(sqconn)
+            except:
+                raise ResponseError(message="database disk image is malformed")
+            return DialeqtInfo(dictionary_name=dict_attributes['dictionary_name'], dialeqt_id=dict_attributes["dialeqt_id"])
+        raise ResponseError(message="No such blob in the system")
 
     def resolve_tasks(self, info):
         request = info.context.request
@@ -1727,7 +1764,7 @@ class MyMutations(graphene.ObjectType):
     for more beautiful imports
     """
     convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
-
+    convert_dialeqt = ConvertDictionary.Field()
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
