@@ -801,20 +801,20 @@ def graphql(request):
             data = request.POST
 
             if not data:
-                return {'error': 'empty request'}
+                return {'errors': [{"message": 'empty request'}]}
             elif not "operations" in data:
-                return {'error': 'operations key not nound'}
+                return {'errors': [{"message": 'operations key not nound'}]}
             elif not "query" in data["operations"]:
-                return {'error': 'query key not nound in operations'}
+                return {'errors': [{"message": 'query key not nound in operations'}]}
             elif not "variables.content" in data:
-                return {'error': 'variables.content key not nound'}
+                return {'errors': [{"message": 'variables.content key not nound'}]}
 
             request_string = request.POST.pop("operations")
             request_string= request_string.rstrip()
             #body = request_string.decode('utf-8')
             json_req = json.loads(request_string)
             if "query" not in json_req:
-                return {'error': 'query key not nound'}
+                return {'errors': [{"message": 'query key not nound'}]}
             request_string = json_req["query"]
             request_string= request_string.rstrip()
             if "variables" in json_req:
@@ -829,7 +829,7 @@ def graphql(request):
                 # files = data.getall("file")
             else:
                 request.response.status = HTTPBadRequest.code
-                return {'error': 'wrong data'}
+                return {'errors': [{"message": 'wrong data'}]}
 
             '''
         elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
@@ -841,14 +841,14 @@ def graphql(request):
                 batch = True
             if not batch:   
                 if "query" not in json_req:
-                    return {'error': 'query key not nound'}
+                    return {'errors': [{"message": 'query key not nound'}]}
                 request_string = json_req["query"]
                 if "variables" in json_req:
                     variable_values = json_req["variables"]
             else:
                 for query in json_req:
                     if "query" not in query:
-                        return {'error': 'query key not nound'}
+                        return {'errors': [{"message": 'query key not nound'}]}
                     request_string = query["query"]
                     if "variables" in query:
                         variable_values = query["variables"]
@@ -861,16 +861,16 @@ def graphql(request):
                                                 'cookies': dict(request.cookies)}),
                                             variable_values=variable_values)
                     if result.invalid:
-                        return {'errors': [str(e) for e in result.errors]}
+                        return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
                     if result.errors:
                         sp.rollback()
-                        return {'errors': [str(e) for e in result.errors]}
+                        return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
                     results.append(result.data)
                 # TODO: check errors
                 return {"data": results}
         else:
             request.response.status = HTTPBadRequest.code
-            return {'error': 'wrong content type'}
+            return {'errors': [{"message": 'wrong content type'}]}
         if not batch:
             result = schema.execute(request_string,
                                     context_value=Context({
@@ -884,10 +884,10 @@ def graphql(request):
                         if type(error.original_error) == ProxyPass:
                             return json.loads(error.original_error.response_body.decode("utf-8") )
             if result.invalid:
-                return {'errors': [str(e) for e in result.errors]}
+                return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
             if result.errors:
                 sp.rollback()
-                return {'errors': [str(e) for e in result.errors]}
+                return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
             return {"data": result.data}
 
     except ProxyPass as e:
