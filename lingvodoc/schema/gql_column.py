@@ -206,15 +206,11 @@ class UpdateColumn(graphene.Mutation):
         client_id, object_id = id
         field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
-        if not field_object or not field_object.marked_for_deletion:
+        if not field_object or field_object.marked_for_deletion:
             raise ResponseError(message="Error: No such field object in the system")
-
-        parent_id = args.get('parent_id')
         field_id = args.get('field_id')
         link_id = args.get('link_id')
         position = args.get('position')
-        if parent_id:
-            field_object.parent_client_id, field_object.parent_object_id = parent_id
         if field_id:
             field_object.field_client_id, field_object.field_object_id = field_id
         if link_id:
@@ -268,7 +264,7 @@ class DeleteColumn(graphene.Mutation):
         column_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
         if not column_object or column_object.marked_for_deletion:
-            raise ResponseError(message="No such field object in the system")
+            raise ResponseError(message="No such column object in the system")
         del_object(column_object)
         column = Column(id=id)
         column.dbObject = column_object
