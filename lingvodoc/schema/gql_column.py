@@ -193,6 +193,7 @@ class UpdateColumn(graphene.Mutation):
         id = LingvodocID(required=True)
         parent_id = LingvodocID()
         field_id = LingvodocID()
+        self_id = LingvodocID()
         link_id = LingvodocID()
         position = graphene.Int()
 
@@ -209,10 +210,13 @@ class UpdateColumn(graphene.Mutation):
         if not field_object or field_object.marked_for_deletion:
             raise ResponseError(message="Error: No such field object in the system")
         field_id = args.get('field_id')
+        self_id = args.get('field_id')
         link_id = args.get('link_id')
         position = args.get('position')
         if field_id:
             field_object.field_client_id, field_object.field_object_id = field_id
+        if self_id:
+            field_object.self_client_id, field_object.self_object_id = self_id
         if link_id:
             field_object.link_client_id, field_object.link_object_id = link_id
         if position:
