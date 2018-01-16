@@ -201,7 +201,7 @@ class UpdateColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("edit", "perspective", id_key="parent_id")
+    # @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id, object_id = id
@@ -209,6 +209,9 @@ class UpdateColumn(graphene.Mutation):
                                                                                  object_id=object_id).first()
         if not field_object or field_object.marked_for_deletion:
             raise ResponseError(message="Error: No such field object in the system")
+
+        info.context.acl_check('edit', 'perspective',
+                                   (field_object.parent_client_id, field_object.parent_object_id))
         field_id = args.get('field_id')
         self_id = args.get('field_id')
         link_id = args.get('link_id')

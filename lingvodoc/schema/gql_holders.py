@@ -74,30 +74,7 @@ def acl_check_by_id(action, subject, id_key='id'):
 
     def decorator(resolve_f):
         def wrapper(self,info, **kwargs):
-            # if id_key != 'id':
-            #     obj_id = kwargs.get("id")
-            #     if not obj_id:
-            #         raise ResponseError('no id key')
-            #     obj_toc = DBSession.query(ObjectTOC).filter_by(client_id = obj_id[0], object_id = obj_id[1]).first()
-            #     if not obj_toc:
-            #         raise ResponseError('no such object in the system')
-            #     for table in [DictionaryPerspectiveToField, LexicalEntry]:
-            #         if obj_toc.table_name == table.__tablename__:
-            #             db_object = DBSession.query(table).filter_by(client_id = obj_id[0], object_id = obj_id[1]).first()
-            #             if not db_object:
-            #                 raise ResponseError('please contact administrator: database may be corrupted')
-            #             client_id_key = id_key.replace('_', '_client_')
-            #             object_id_key = id_key.replace('_', '_object_')
-            #             if not hasattr(db_object, client_id_key) or not hasattr(db_object, object_id_key):
-            #                 raise ResponseError('no such key in the object')
-            #
-            #             id_value = (getattr(db_object, client_id_key), getattr(db_object, object_id_key))
-            #
-            #             if info.context.acl_check_if(action, subject, id_value):
-            #                 return resolve_f(self, info, **kwargs)
-            #             else:
-            #                 raise PermissionException(info.context.client_id, action, subject, id_value)
-            #     raise ResponseError('please contact administrator: method may reference wrong object')
+
             if info.context.acl_check_if(action, subject, kwargs.get(id_key)):
                 return resolve_f(self, info, **kwargs )
 
