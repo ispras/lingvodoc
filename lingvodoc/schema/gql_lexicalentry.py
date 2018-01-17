@@ -56,6 +56,7 @@ class LexicalEntry(LingvodocObjectType):
     """
     entities = graphene.List(Entity, mode=graphene.String())
     dbType = dbLexicalEntry
+    gql_Entities = None
 
     class Meta:
         interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)
@@ -63,6 +64,8 @@ class LexicalEntry(LingvodocObjectType):
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
     def resolve_entities(self, info, mode='all'):
+        if self.gql_Entities is not None:
+            return self.gql_Entities
         if mode == 'all':
             publish = None
             accept = True
