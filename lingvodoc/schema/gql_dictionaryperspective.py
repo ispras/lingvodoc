@@ -114,9 +114,9 @@ class DictionaryPerspective(LingvodocObjectType):
 
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     columns = graphene.List(Column)
-    entities = graphene.List(Entity, mode=graphene.String())
-    entities_old = graphene.List(Entity, mode=graphene.String())
-    lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID))
+    # entities = graphene.List(Entity, mode=graphene.String())
+    # entities_old = graphene.List(Entity, mode=graphene.String())
+    lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID), mode=graphene.String())
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     # stats = graphene.String() # ?
     roles = graphene.Field(UserAndOrganizationsRoles)
@@ -181,113 +181,30 @@ class DictionaryPerspective(LingvodocObjectType):
         return result
 
     #@acl_check_by_id('view', 'approve_entities')
-    @fetch_object()
-    def resolve_lexical_entries(self, info, ids=None):
-        lex_list = list()
-        query = DBSession.query(dbLexicalEntry)
-        if ids is None:
-            query = query.filter(dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
-        else:
-            query = query.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids), dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
-        for lex in query.all():
-            lex_object = LexicalEntry(id=[lex.client_id, lex.object_id])
-            lex_object.dbObject = lex
-            lex_list.append(lex_object)
-        return lex_list
+    # @fetch_object()
+    # def resolve_lexical_entries(self, info, ids=None):
+    #     lex_list = list()
+    #     query = DBSession.query(dbLexicalEntry, dbEntity)
+    #     if ids is None:
+    #         query = query.filter(dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
+    #     else:
+    #         query = query.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids), dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
+    #     for lex in query.all():
+    #         lex_object = LexicalEntry(id=[lex.client_id, lex.object_id])
+    #         lex_object.dbObject = lex
+    #         lex_list.append(lex_object)
+    #     return lex_list
 
 
 
-    #@acl_check_by_id('view', 'approve_entities')
-    @fetch_object()
-    def resolve_entities_old(self, info, mode=None):
-        result = list()
-        request = info.context.get('request')
-        if mode == 'all':
-            publish=None
-            accept=True
-        elif mode == 'published':
-            publish=True
-            accept=True
-        elif mode == 'not_accepted':
-            publish=None
-            accept=False
-        else:
-            raise ResponseError(message="mode: <all|published|not_accepted>")
-        # dbPersp = DBSession.query(dbPerspective).filter_by(client_id=self.id[0], object_id=self.id[1]).one()
-        lexes = DBSession.query(dbLexicalEntry).filter_by(parent=self.dbObject)
-
-        lexes_composite_list = [(lex.created_at,
-                                 lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
-                                 lex.marked_for_deletion, lex.additional_metadata,
-                                 lex.additional_metadata.get('came_from')
-                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
-                                for lex in lexes.all()]
-        # for lex in lexes:
-        #     dbentities = DBSession.query(dbEntity).filter_by(parent=lex).all()
-        #     entities = [Entity(id=[ent.client_id, ent.object_id]) for ent in dbentities]
-        #     result.append(LexicalEntry(id=[lex.client_id, lex.object_id], entities = entities))
-        sub_result = dbLexicalEntry.track_multiple(lexes_composite_list,
-                                                   int(request.cookies.get('locale_id') or 2),
-                                                   publish=publish, accept=accept)
-
-        entities = []
-        for entry in sub_result:
-            for ent in entry['contains']:
-
-                # del attributes that Entity class doesn`t have
-                # the code below has to be refactored
-
-                del ent["contains"]
-                del ent["level"]
-                # del ent["accepted"]
-                del ent["entity_type"]
-                # del ent["published"]
-                if "link_client_id" in ent and "link_object_id" in ent:
-                    ent["link_id"] = (ent["link_client_id"], ent["link_object_id"])
-                    del ent["link_client_id"]
-                    del ent["link_object_id"]
-                else:
-                    ent["link_id"] = None
-
-                ent["field_id"] = (ent["field_client_id"], ent["field_object_id"])
-                if "self_client_id" in ent and "self_object_id" in ent:
-                    ent["self_id"] = (ent["self_client_id"], ent["self_object_id"])
-                    del ent["self_client_id"]
-                    del ent["self_object_id"]
-
-                else:
-                    ent["self_id"] = None
-                    # context["request"].body = str(context["request"].body).replace("self_id", "").encode("utf-8")
-                if "content" not in ent:
-                    ent["content"] = None
-                if "additional_metadata" in ent:
-
-                    # used in AdditionalMetadata interface (gql_holders.py) and sets metadata dictionary
-
-                    #ent["additional_metadata_string"] = ent["additional_metadata"]
-                    del ent["additional_metadata"]
-                tmp_id = [ent['client_id'], ent['object_id']]
-                del ent["client_id"]
-                del ent["object_id"]
-                del ent["field_client_id"]
-                del ent["field_object_id"]
-                parent_client_id, parent_object = ent["parent_client_id"], ent["parent_object_id"]
-                del ent["parent_client_id"]
-                del ent["parent_object_id"]
-                gr_entity_object = Entity(id=tmp_id,
-                                       # link_id = (ent["link_client_id"], ent["link_object_id"]),
-                                       parent_id = [parent_client_id, parent_object],
-                                       **ent  # all other args from sub_result
-                                          )
-                #print(ent)
-                entities.append(gr_entity_object)
-        return entities
 
     @fetch_object()
-    def resolve_entities(self, info, mode=None, authors=None, clients=None, start_date=None, end_date=None,
+    def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
                              position=1):
         result = list()
         request = info.context.get('request')
+        parid2str = lambda x: "_".join([str(x.parent_client_id), str(x.parent_object_id)])
+        id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
         if mode == 'all':
             publish = None
             accept = True
@@ -319,6 +236,8 @@ class DictionaryPerspective(LingvodocObjectType):
 
         lexes = DBSession.query(dbLexicalEntry).join(dbLexicalEntry.entity).join(dbEntity.publishingentity) \
             .filter(dbLexicalEntry.parent == self.dbObject)
+        if ids is not None:
+            lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids))
         if publish is not None:
             lexes = lexes.filter(dbPublishingEntity.published == publish)
         if accept is not None:
@@ -342,6 +261,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
         lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
                                 for lex in lexes.yield_per(100)]
+
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                    publish=publish, accept=accept, delete=delete)
 
@@ -351,9 +271,55 @@ class DictionaryPerspective(LingvodocObjectType):
             ent.publishingentity = cur_publishing
             return ent
 
-        entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
+        def graphene_lex(cur_lexical_entry, cur_entities):
+            lex = LexicalEntry(id = (cur_lexical_entry.client_id, cur_lexical_entry.object_id))
+            lex.gql_Entities = cur_entities
+            lex.dbObject = cur_lexical_entry
+            return lex
 
-        return entities
+        entities_list = entities.all()
+        lexes_list = lexes.all()
+        i = 0
+        lex_i = 0
+        entities_count = len(entities_list)
+        if entities_count == 0:
+            # todo: return only lexes
+            return []
+
+        # find starting point
+        ids = id2str(lexes_list[lex_i])
+        parids = parid2str(entities_list[i][0])
+        while ids != parids:
+            i += 1
+            if i == entities_count:
+                i = 0
+                lex_i += 1
+                id2str(lexes_list[lex_i])
+            id2str(entities_list[i][0])
+
+        # iterate over two lists
+        new_lexes = list()
+        for lex in lexes_list[lex_i:]:
+            ids = id2str(lex)
+            cur_entities = list()
+            parids = parid2str(entities_list[i][0])
+            while ids == parids:
+                cur_entities.append(graphene_entity(entities_list[i][0], entities_list[i][1]))
+                i += 1
+                if i == entities_count:
+                    break
+                parids = parid2str(entities_list[i][0])
+            # cur_entities = [graphene_entity(ent[0], ent[1]) for ent in entities_list[i:] if parid2str(ent[0]) == ids]
+            new_lexes.append((lex, cur_entities))
+            if i == entities_count:
+                break
+
+
+        lexicaEntries = [graphene_lex(lex[0], lex[1]) for lex in new_lexes]
+
+        # entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
+
+        return lexicaEntries
 
     @fetch_object()
     def resolve_authors(self, info):
