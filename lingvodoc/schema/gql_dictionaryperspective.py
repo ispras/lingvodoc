@@ -196,8 +196,6 @@ class DictionaryPerspective(LingvodocObjectType):
     #     return lex_list
 
 
-
-
     @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
                              position=1):
@@ -283,8 +281,7 @@ class DictionaryPerspective(LingvodocObjectType):
         lex_i = 0
         entities_count = len(entities_list)
         if entities_count == 0:
-            # todo: return only lexes
-            return []
+            return [graphene_lex(lex[0], []) for lex in lexes_list]
 
         # find starting point
         ids = id2str(lexes_list[lex_i])
