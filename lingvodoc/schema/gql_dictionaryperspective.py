@@ -65,6 +65,26 @@ from sqlalchemy import (
 
 from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
+
+class MyGen:  # used in resolve_lexical_entries to go through entities once
+    def __init__(self, iterable, stop, max_count, i=0):
+        self.i = i
+        self.stop = stop
+        self.iterable = iterable
+        self.max_count = max_count
+
+    def __iter__(self):
+        while self.i < self.max_count and parid2str(self.iterable[self.i][0]) == self.stop:
+            yield self.iterable[self.i]
+            self.i += 1
+
+    def get_i(self):
+        return self.i
+
+parid2str = lambda x: "_".join([str(x.parent_client_id), str(x.parent_object_id)])
+id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
+
+
 class DictionaryPerspective(LingvodocObjectType):
     """
      #created_at                       | timestamp without time zone | NOT NULL
@@ -201,8 +221,6 @@ class DictionaryPerspective(LingvodocObjectType):
                              position=1):
         result = list()
         request = info.context.get('request')
-        parid2str = lambda x: "_".join([str(x.parent_client_id), str(x.parent_object_id)])
-        id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
         if mode == 'all':
             publish = None
             accept = True
@@ -277,46 +295,20 @@ class DictionaryPerspective(LingvodocObjectType):
 
         entities_list = entities.all()
         lexes_list = lexes.all()
-        i = 0
-        lex_i = 0
         entities_count = len(entities_list)
-        if entities_count == 0:
-            return [graphene_lex(lex[0], []) for lex in lexes_list]
 
-        # find starting point
-        ids = id2str(lexes_list[lex_i])
-        parids = parid2str(entities_list[i][0])
-        while ids != parids:
-            i += 1
-            if i == entities_count:
-                i = 0
-                lex_i += 1
-                id2str(lexes_list[lex_i])
-            id2str(entities_list[i][0])
-
+        i = 0
         # iterate over two lists
         new_lexes = list()
-        for lex in lexes_list[lex_i:]:
+        for lex in lexes_list:
             ids = id2str(lex)
-            cur_entities = list()
-            parids = parid2str(entities_list[i][0])
-            while ids == parids:
-                cur_entities.append(graphene_entity(entities_list[i][0], entities_list[i][1]))
-                i += 1
-                if i == entities_count:
-                    break
-                parids = parid2str(entities_list[i][0])
-            # cur_entities = [graphene_entity(ent[0], ent[1]) for ent in entities_list[i:] if parid2str(ent[0]) == ids]
+            my_generator = MyGen(entities_list, ids, entities_count, i)
+            cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
+            i = my_generator.get_i()
             new_lexes.append((lex, cur_entities))
-            if i == entities_count:
-                break
+        lexical_entries = [graphene_lex(lex[0], lex[1]) for lex in new_lexes]
 
-
-        lexicaEntries = [graphene_lex(lex[0], lex[1]) for lex in new_lexes]
-
-        # entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
-
-        return lexicaEntries
+        return lexical_entries
 
     @fetch_object()
     def resolve_authors(self, info):
