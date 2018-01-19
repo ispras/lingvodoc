@@ -193,6 +193,7 @@ class UpdateColumn(graphene.Mutation):
         id = LingvodocID(required=True)
         parent_id = LingvodocID()
         field_id = LingvodocID()
+        self_id = LingvodocID()
         link_id = LingvodocID()
         position = graphene.Int()
 
@@ -200,23 +201,25 @@ class UpdateColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("edit", "perspective", id_key="parent_id")
+    # @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id, object_id = id
         field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
-        if not field_object or not field_object.marked_for_deletion:
+        if not field_object or field_object.marked_for_deletion:
             raise ResponseError(message="Error: No such field object in the system")
 
-        parent_id = args.get('parent_id')
+        info.context.acl_check('edit', 'perspective',
+                                   (field_object.parent_client_id, field_object.parent_object_id))
         field_id = args.get('field_id')
+        self_id = args.get('field_id')
         link_id = args.get('link_id')
         position = args.get('position')
-        if parent_id:
-            field_object.parent_client_id, field_object.parent_object_id = parent_id
         if field_id:
             field_object.field_client_id, field_object.field_object_id = field_id
+        if self_id:
+            field_object.self_client_id, field_object.self_object_id = self_id
         if link_id:
             field_object.link_client_id, field_object.link_object_id = link_id
         if position:
@@ -268,7 +271,7 @@ class DeleteColumn(graphene.Mutation):
         column_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
         if not column_object or column_object.marked_for_deletion:
-            raise ResponseError(message="No such field object in the system")
+            raise ResponseError(message="No such column object in the system")
         del_object(column_object)
         column = Column(id=id)
         column.dbObject = column_object
