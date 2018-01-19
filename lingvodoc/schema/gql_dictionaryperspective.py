@@ -281,6 +281,7 @@ class DictionaryPerspective(LingvodocObjectType):
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                    publish=publish, accept=accept, delete=delete)
 
+
         def graphene_entity(cur_entity, cur_publishing):
             ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
             ent.dbObject = cur_entity
@@ -295,6 +296,8 @@ class DictionaryPerspective(LingvodocObjectType):
 
         entities_list = entities.all()
         lexes_list = lexes.all()
+
+
         entities_count = len(entities_list)
 
         i = 0
@@ -306,6 +309,23 @@ class DictionaryPerspective(LingvodocObjectType):
             cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
             i = my_generator.get_i()
             new_lexes.append((lex, cur_entities))
+
+        if mode == 'not_accepted':
+            new_lexes_composite_list = [(lex[0].client_id, lex[0].object_id, lex[0].parent_client_id, lex[0].parent_object_id)
+                                for lex in new_lexes if lex[1]]
+            new_entities = dbLexicalEntry.graphene_track_multiple(new_lexes_composite_list,
+                                                   publish=None, accept=None, delete=False)
+            new_entities_list = new_entities.all()
+            i = 0
+            new_entities_count = len(new_entities_list)
+            new_lexes = list()
+            for lex in lexes_list:
+                ids = id2str(lex)
+                my_generator = MyGen(new_entities_list, ids, new_entities_count, i)
+                cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
+                i = my_generator.get_i()
+                new_lexes.append((lex, cur_entities))
+
         lexical_entries = [graphene_lex(lex[0], lex[1]) for lex in new_lexes]
 
         return lexical_entries

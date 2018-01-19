@@ -919,7 +919,7 @@ class LexicalEntry(CompositeIdMixin,
             where_cond = ["WHERE", " AND ".join(where_cond)]
             pub_filter = " ".join(where_cond)
 
-        temp_table_name = 'lexical_entries_temp_table'
+        temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
         DBSession.execute(
             '''create TEMPORARY TABLE %s (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)

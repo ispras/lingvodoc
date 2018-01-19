@@ -71,7 +71,9 @@ class Language(LingvodocObjectType):
         for dictionary in DBSession.query(dbDictionary).filter(
                 and_(dbDictionary.parent_object_id == self.dbObject.object_id,
                      dbDictionary.parent_client_id == self.dbObject.client_id)):
-            result.append(Dictionary(id=[dictionary.client_id, dictionary.object_id]))
+            gql_dictionary = Dictionary(id=[dictionary.client_id, dictionary.object_id])
+            gql_dictionary.dbObject = dictionary
+            result.append(gql_dictionary)
         return result
 
 
