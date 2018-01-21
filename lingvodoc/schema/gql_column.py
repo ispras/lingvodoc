@@ -264,7 +264,7 @@ class DeleteColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("perspective", "edit", id_key="parent_id")
+    @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id, object_id = id
