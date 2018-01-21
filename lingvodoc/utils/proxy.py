@@ -8,7 +8,11 @@ class ProxyPass(Exception):
         self.message = str(message)
         settings = request.registry.settings
         path = settings['desktop']['central_server'] + request.path[1:]
-        cookies = json.loads(request.cookies.get('server_cookies'))
+        server_cookies = request.cookies.get('server_cookies')
+        if server_cookies:
+            cookies = json.loads(request.cookies.get('server_cookies'))
+        else:
+            cookies = None
         session = requests.Session()
         session.headers.update({'Connection': 'Keep-Alive'})
         adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
