@@ -1,5 +1,10 @@
-FROM python:3.4-alpine
+FROM ubuntu:trusty
 ADD . /api
 WORKDIR /api
-RUN apk add --update postgresql-dev build-base python-dev py-pip wget freetype-dev libpng-dev openssl-dev libffi-dev
-RUN pip install -U pip setuptools && pip install -r server-requirements.txt && pip install alembic gunicorn 
+RUN apt-get update && apt-get install -y python3.4-dev python3.4 python3-setuptools libssl-dev libffi-dev wget build-essential xz-utils bzip2 tar
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
+	sudo apt-key add - && \ 
+	apt-get update && \
+	apt-get install -y postgresql-server-dev-10
+RUN easy_install3 pip==9.0.1 && pip3 install -r server-requirements.txt && pip3 install alembic gunicorn 
