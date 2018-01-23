@@ -294,7 +294,10 @@ class DictionaryPerspective(LingvodocObjectType):
             lex.dbObject = cur_lexical_entry
             return lex
 
-        entities_list = entities.all()
+        if type(entities) == list:
+            entities_list = []
+        else:
+            entities_list = entities.all()
         lexes_list = lexes.all()
 
 
