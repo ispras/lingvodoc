@@ -18,16 +18,27 @@ services:
     volumes:
       - ./frontend:/dist
       - ./nginx:/etc/nginx/conf.d
+      - ./sock:/sock
     depends_on:
       - pg
+      - api
+  redis:
+    image: 'bitnami/redis:latest'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    labels:
+      kompose.service.type: nodeport
+    ports:
+      - '6379:6379'
   api:
     build: ..
     depends_on:
       - pg
-      - nginx
+      - redis
     container_name: ld
     volumes:
       - ./frontend:/dist
-    command: "python3 setup.py --react-frontend /dist install && gunicorn --paster docker.ini"
+      - ./sock:/sock
+    command: "python3.4 setup.py --react-frontend /dist install && sleep 5 && gunicorn --paster docker.ini"
     ports:
       - "6543:6543"
