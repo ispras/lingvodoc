@@ -313,12 +313,15 @@ class DictionaryPerspective(LingvodocObjectType):
             i = my_generator.get_i()
             new_lexes.append((lex, cur_entities))
 
-        if mode == 'not_accepted':
+        if mode == 'not_accepted':  # todo: rewrite
             new_lexes_composite_list = [(lex[0].client_id, lex[0].object_id, lex[0].parent_client_id, lex[0].parent_object_id)
                                 for lex in new_lexes if lex[1]]
             new_entities = dbLexicalEntry.graphene_track_multiple(new_lexes_composite_list,
                                                    publish=None, accept=None, delete=False)
-            new_entities_list = new_entities.all()
+            if type(new_entities) == list:
+                new_entities_list = new_entities
+            else:
+                new_entities_list = new_entities.all()
             i = 0
             new_entities_count = len(new_entities_list)
             new_lexes = list()
