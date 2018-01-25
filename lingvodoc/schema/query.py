@@ -174,6 +174,7 @@ from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import gql_phonology as utils_phonology
+from lingvodoc.utils.phonology import gql_phonology_tier_list as utils_phonology_tier_list
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
@@ -195,6 +196,10 @@ ENGLISH_LOCALE = 2
 
 
 #Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
+
+class TierList(graphene.ObjectType):
+    tier_count = graphene.Field(ObjectVal)
+    total_count = graphene.Int()
 
 class LexicalEntriesAndEntities(graphene.ObjectType):
     entities = graphene.List(Entity)
@@ -306,6 +311,9 @@ class Query(graphene.ObjectType):
         synchronous=graphene.Boolean(),
         maybe_translation_field=LingvodocID(required=True),
         )
+
+    phonology_tier_list = graphene.Field(TierList, perspective_id=LingvodocID(required=True))
+
     connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True), field_id = LingvodocID(required=True), mode=graphene.String())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
@@ -1435,6 +1443,22 @@ class Query(graphene.ObjectType):
                   limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
 
         return True
+
+    def resolve_phonology_tier_list(self, info, perspective_id):
+        """
+        query MyQuery {
+                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
+
+                    )
+        }
+        """
+        perspective_cid, perspective_oid = perspective_id
+        locale_id = info.context.get('locale_id')
+        request = info.context.get('request')
+
+        answer = utils_phonology_tier_list(perspective_cid, perspective_oid)
+
+        return TierList(tier_count=answer['tier_count'], total_count=answer['total_count'])
 
     # def resolve_convert_starling(self, info, starling_dictionaries):
     #     """
