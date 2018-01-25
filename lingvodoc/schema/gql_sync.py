@@ -46,6 +46,7 @@ import json
 import requests
 from pyramid.request import Request
 from pyramid.response import Response
+from lingvodoc.utils.search import recursive_sort
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +66,81 @@ def make_request(path, cookies, req_type='get', json_data=None):
     else:
         return None
     return status
+
+# single_id_tables = [Client, dbUser]
+#
+# composite_id_tables = [dbLanguage, dbDictionary]
+#
+# dict_from_obj = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
+# str_from_ids = lambda x: "_".join([str(x.client_id), str(x.object_id)])
+#
+#
+#
+#
+# def server_basic_sync(existing):
+#     existing_sets = dict()
+#
+#     for tablename in existing:
+#         existing_sets[tablename] = set(existing[tablename])
+#
+#     server_answer = dict()
+#     server_answer['update'] = dict()
+#     server_answer['insert'] = dict()
+#
+#     for table in single_id_tables:
+#         server_current = DBSession.query(table).all()
+#         server_answer['update'][tablename] = [dict_from_obj(obj) for obj in server_current if obj.id in existing_sets[tablename]]
+#         server_answer['insert'][tablename] = [dict_from_obj(obj) for obj in server_current if obj.id  not in existing_sets[tablename]]
+#
+#     for table in composite_id_tables[1:]:
+#         server_current = DBSession.query(table).all()
+#         server_answer['update'][tablename] = [dict_from_obj(obj) for obj in server_current if str_from_ids(obj.client_id, obj.client_object_id) in existing_sets[tablename]]
+#         server_answer['insert'][tablename] = [dict_from_obj(obj) for obj in server_current if not str_from_ids(obj.client_id, obj.client_object_id) in existing_sets[tablename]]
+#
+#
+#     langs = DBSession.query(dbLanguage).filter_by(marked_for_deletion=False).order_by(dbLanguage.parent_client_id,
+#                                                                                     dbLanguage.parent_object_id,
+#                                                                                     dbLanguage.additional_metadata[
+#                                                                                         'younger_siblings']).all()
+#     visited = set()
+#     stack = set()
+#     current_languages = list()
+#     recursive_sort(langs, visited, stack, current_languages)
+#     # sort_language_tree()
+#     server_answer['language'] = [dict_from_obj(obj) for obj in current_languages]
+#
+#     return server_answer
+#
+#
+# def bulk_upsert(items):
+#     # todo: find out, how to do it right
+#     inserts = [DBSession.insert(dbLanguage).values(item).on_conflict_do_update(
+#         index_elements=[dbLanguage.client_id, dbLanguage.object_id], set_=item) for item in items]
+#     for insert in inserts:
+#         dbLanguage.execute(insert)
+#
+#
+# def desktop_basic_sync():
+#     existing = dict()
+#     for table in single_id_tables:
+#         existing[table.__tablename__] = DBSession.query(table.id).all()
+#
+#     for table in composite_id_tables:
+#         existing[table.__tablename__] = str_from_ids(DBSession.query(table.client_id, table.client_object_id).all())
+#
+#
+#     server_answer = send(existing)
+#     # updated objects may link to new, so all inserts should be done first
+#     for tablename in [t.__tablename__ for t in single_id_tables]:
+#         DBSession.bulk_insert_mappings(server_answer['insert'][tablename])
+#         DBSession.bulk_insert_mappings(server_answer['update'][tablename])
+#
+#     bulk_upsert(server_answer['language'])
+#
+#     for tablename in [t.__tablename__ for t in composite_id_tables]:
+#         DBSession.bulk_insert_mappings(server_answer['insert'][tablename])
+#         DBSession.bulk_insert_mappings(server_answer['update'][tablename])
+
 
 def download_dictionary(dict_id, request, user_id, locale_id):
     my_args = dict()

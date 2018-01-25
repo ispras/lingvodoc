@@ -180,6 +180,7 @@ from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
+from lingvodoc.utils.merge import merge_suggestions
 import tempfile
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
@@ -340,7 +341,32 @@ class Query(graphene.ObjectType):
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
     convert_five_tiers_validate = graphene.Boolean()
+    merge_suggestions = graphene.Field(ObjectVal, perspective_id=LingvodocID(required=True),
+                                       algorithm=graphene.String(required=True),
+                                       entity_type_primary=graphene.String(),
+                                       entity_type_secondary=graphene.String(),
+                                       levenshtein=graphene.Int(),
+                                       threshold=graphene.Float(),
+                                       field_selection_list=graphene.List(ObjectVal),)
 
+    def resolve_merge_suggestions(self, info, perspective_id, algorithm, threshold=0.1,
+                                  entity_type_primary='Transcription',
+                                  entity_type_secondary='Translation',
+                                  levenshtein=1,
+                                  field_selection_list=None
+                                  ):
+        request = info.context.request
+        locale_id = info.context.get('locale_id')
+
+        return merge_suggestions(request=request,
+                                  perspective_client_id=perspective_id[0],
+                                  perspective_object_id=perspective_id[1],
+                                  algorithm=algorithm, threshold=threshold,
+                                  entity_type_primary=entity_type_primary,
+                                  entity_type_secondary=entity_type_secondary,
+                                  levenshtein=levenshtein,
+                                  field_selection_list=field_selection_list,
+                                  locale_id=locale_id)
 
     def resolve_convert_five_tiers_validate(self, info, eaf_url):
         request = info.context.request

@@ -17,6 +17,7 @@ from pyramid.view import view_config
 
 from sqlalchemy import and_, BigInteger, cast, extract, func, tuple_
 from sqlalchemy.orm import aliased
+from lingvodoc.schema.gql_holders import ResponseError
 
 # Lingvodoc imports.
 
@@ -45,16 +46,6 @@ from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.schema.gql_holders import ResponseError
 
 log = logging.getLogger(__name__)
-def translation_service_search(searchstring):
-    translationatom = DBSession.query(TranslationAtom)\
-        .join(TranslationGist).\
-        filter(TranslationAtom.content == searchstring,
-               TranslationAtom.locale_id == 2,
-               TranslationGist.type == 'Service')\
-        .order_by(TranslationAtom.client_id)\
-        .first()
-    response = translationgist_contents(translationatom.parent)
-    return response
 
 
 #: Set of statistically simple field types, statistics of entities belonging to fields with these types are
@@ -94,7 +85,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
         perspective_client_id = perspective_id[0] ###########
         perspective_object_id = perspective_id[1] ############
         if time_end is None:
-            return {'error': message('Invalid time representation \'{0}\'.'.format(time_end_string))}
+            raise ResponseError(message='Invalid time representation \'{0}\'.'.format(time_end))
 
         log.debug('stat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5})'.format(
             perspective_client_id, perspective_object_id,
@@ -108,8 +99,8 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
             object_id = perspective_object_id).first()
 
         if not perspective:
-            return {'error': message('No such perspective {0}/{1}.'.format(
-                perspective_client_id, perspective_object_id))}
+            raise ResponseError(message='No such perspective {0}/{1}.'.format(
+                perspective_client_id, perspective_object_id))
 
         # Getting lexical entries, using following base view:
         #
@@ -279,7 +270,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
             # Unknown field data type.
 
             else:
-                return {'error': message('Unknown field data type \'{0}\'.'.format(data_type))}
+                raise ResponseError(message='Unknown field data type \'{0}\'.'.format(data_type))
 
             # Adding user/client info, getting final entity counts.
 
@@ -345,7 +336,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
         log.debug('stat_perspective: exception')
         log.debug('\n' + traceback_string)
 
-        return {'error': message('\n' + traceback_string)}
+        raise ResponseError(message='\n' + traceback_string)
 
 
 def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
@@ -389,8 +380,8 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
             object_id = dictionary_object_id).first()
 
         if not dictionary:
-            return {'error': message('No such dictionary {0}/{1}.'.format(
-                dictionary_client_id, dictionary_object_id))}
+            raise ResponseError(message='No such dictionary {0}/{1}.'.format(
+                dictionary_client_id, dictionary_object_id))
 
         primary_locale_id = int(locale_id or 2)
 
@@ -528,8 +519,8 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
             elif data_type == 'grouping tag':
                 grouping_field_id_list.append((field.client_id, field.object_id))
 
-            else: return {'error':
-                message('Unknown field data type \'{0}\'.'.format(data_type))}
+            else:
+                raise ResponseError(message='Unknown field data type \'{0}\'.'.format(data_type))
 
         # Some parts of the counting and aggregation process are shared for simple and grouping fields, so
         # we process both these field types together.
@@ -801,4 +792,4 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
         log.debug('stat_dictionary: exception')
         log.debug('\n' + traceback_string)
 
-        return {'error': message('\n' + traceback_string)}
+        raise ResponseError(message='\n' + traceback_string)
