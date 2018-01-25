@@ -148,3 +148,73 @@ class ConvertDictionary(graphene.Mutation):
         cur_args["task_key"] = task.key
         res = async_convert_dictionary_new.delay(**cur_args)
         return ConvertDictionary(triumph=True)
+
+class ConvertFiveTiers(graphene.Mutation):
+    """
+    example:
+    mutation {
+        create_lexicalentry(id: [949,21], perspective_id: [71,5]) {
+            field {
+                id
+            }
+            triumph
+        }
+    }
+
+    (this example works)
+    returns:
+
+    {
+      "create_lexicalentry": {
+        "field": {
+          "id": [
+            949,
+            21
+          ]
+        },
+        "triumph": true
+      }
+    }
+    """
+
+    class Arguments:
+        dictionary_id = LingvodocID()
+        blob_id = LingvodocID(required=True)
+        language_id = LingvodocID()
+        translation_gist_id = LingvodocID()
+        translation_atoms = graphene.List(ObjectVal)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 1)
+        client_id = request.authenticated_userid
+        if not client_id:
+            user_id = anonymous_userid(request)
+        else:
+            user_id = Client.get_user_by_client_id(client_id).id
+
+        cur_args = dict()
+        cur_args['client_id'] = client_id
+        cur_args["dictionary_client_id"] = args["dictionary_id"][0]
+        cur_args["dictionary_object_id"] = args["dictionary_id"][1]
+        cur_args['origin_client_id'] = args['origin_id'][0]
+        cur_args['origin_object_id'] = args['origin_id'][1]
+        cur_args['eaf_url'] = args['eaf_url']
+        cur_args["locale_id"] = locale_id
+
+        cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
+        cur_args["storage"] = request.registry.settings["storage"]
+
+        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
+                                                   object_id=args["dictionary_id"][1]).first()
+        gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                                                          object_id=dictionary_obj.translation_gist_object_id).first()
+        task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
+        cur_args["task_key"] = task.key
+        cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+        res = async_convert_dictionary_new.delay(**cur_args)
+        return ConvertFiveTiers(triumph=True)

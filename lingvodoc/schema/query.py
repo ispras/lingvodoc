@@ -170,7 +170,7 @@ from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
 from lingvodoc.schema.gql_tasks import Task, DeleteTask
-from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary
+from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary, ConvertFiveTiers
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import gql_phonology as utils_phonology
@@ -180,10 +180,15 @@ from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
+import tempfile
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
+from pyramid.httpexceptions import (
+    HTTPError
+)
 
+from lingvodoc.scripts import elan_parser
 
 
 
@@ -334,6 +339,27 @@ class Query(graphene.ObjectType):
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
+    convert_five_tiers_validate = graphene.Boolean()
+
+
+    def resolve_convert_five_tiers_validate(self, info, eaf_url):
+        request = info.context.request
+        try:
+            result = False
+            eaffile = request.urlopen(eaf_url)
+        except HTTPError as e:
+            raise ResponseError(message=str(e))
+        except KeyError as e:
+            raise ResponseError(message=str(e))
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write(eaffile.read())
+            elan_check = elan_parser.ElanCheck(temp.name)
+            elan_check.parse()
+            if elan_check.check():
+                result = True
+            temp.flush()
+        return result
+
 
     def resolve_dictionary_dialeqt_get_info(self, info, blob_id):  # TODO: test
         blob_client_id, blob_object_id = blob_id
@@ -1789,6 +1815,7 @@ class MyMutations(graphene.ObjectType):
     """
     convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
     convert_dialeqt = ConvertDictionary.Field()
+    convert_five_tiers = ConvertFiveTiers.Field()
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
