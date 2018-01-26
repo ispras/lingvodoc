@@ -170,7 +170,7 @@ from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
 from lingvodoc.schema.gql_tasks import Task, DeleteTask
-from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary
+from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary, ConvertFiveTiers
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import gql_phonology as utils_phonology
@@ -180,10 +180,16 @@ from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
+from lingvodoc.utils.merge import merge_suggestions
+import tempfile
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
+from pyramid.httpexceptions import (
+    HTTPError
+)
 
+from lingvodoc.scripts import elan_parser
 
 
 
@@ -298,19 +304,19 @@ class Query(graphene.ObjectType):
     grant = graphene.Field(Grant, id=graphene.Int())
     grants = graphene.List(Grant)
     column = graphene.Field(Column, id=LingvodocID())
-    phonology = graphene.Field(graphene.Boolean, perspective_id=LingvodocID(),
-        limit=graphene.Int(),
-        limit_exception=graphene.Int(),
-        limit_no_vowel=graphene.Int(),
-        limit_result=graphene.Int(),
-        group_by_description=graphene.Boolean(),
-        only_first_translation=graphene.Boolean(),
-        vowel_selection=graphene.Boolean(),
-        maybe_tier_list=graphene.List(graphene.String),
-        maybe_tier_set=graphene.List(graphene.String),
-        synchronous=graphene.Boolean(),
-        maybe_translation_field=LingvodocID(required=True),
-        )
+    # phonology = graphene.Field(graphene.Boolean, perspective_id=LingvodocID(),
+    #     limit=graphene.Int(),
+    #     limit_exception=graphene.Int(),
+    #     limit_no_vowel=graphene.Int(),
+    #     limit_result=graphene.Int(),
+    #     group_by_description=graphene.Boolean(),
+    #     only_first_translation=graphene.Boolean(),
+    #     vowel_selection=graphene.Boolean(),
+    #     maybe_tier_list=graphene.List(graphene.String),
+    #     maybe_tier_set=graphene.List(graphene.String),
+    #     synchronous=graphene.Boolean(),
+    #     maybe_translation_field=LingvodocID(required=True),
+    #     )
 
     phonology_tier_list = graphene.Field(TierList, perspective_id=LingvodocID(required=True))
 
@@ -334,6 +340,52 @@ class Query(graphene.ObjectType):
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
+    convert_five_tiers_validate = graphene.Boolean()
+    merge_suggestions = graphene.Field(ObjectVal, perspective_id=LingvodocID(required=True),
+                                       algorithm=graphene.String(required=True),
+                                       entity_type_primary=graphene.String(),
+                                       entity_type_secondary=graphene.String(),
+                                       levenshtein=graphene.Int(),
+                                       threshold=graphene.Float(),
+                                       field_selection_list=graphene.List(ObjectVal),)
+
+    def resolve_merge_suggestions(self, info, perspective_id, algorithm, threshold=0.1,
+                                  entity_type_primary='Transcription',
+                                  entity_type_secondary='Translation',
+                                  levenshtein=1,
+                                  field_selection_list=None
+                                  ):
+        request = info.context.request
+        locale_id = info.context.get('locale_id')
+
+        return merge_suggestions(request=request,
+                                  perspective_client_id=perspective_id[0],
+                                  perspective_object_id=perspective_id[1],
+                                  algorithm=algorithm, threshold=threshold,
+                                  entity_type_primary=entity_type_primary,
+                                  entity_type_secondary=entity_type_secondary,
+                                  levenshtein=levenshtein,
+                                  field_selection_list=field_selection_list,
+                                  locale_id=locale_id)
+
+    def resolve_convert_five_tiers_validate(self, info, eaf_url):
+        request = info.context.request
+        try:
+            result = False
+            eaffile = request.urlopen(eaf_url)
+        except HTTPError as e:
+            raise ResponseError(message=str(e))
+        except KeyError as e:
+            raise ResponseError(message=str(e))
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write(eaffile.read())
+            elan_check = elan_parser.ElanCheck(temp.name)
+            elan_check.parse()
+            if elan_check.check():
+                result = True
+            temp.flush()
+        return result
+
 
     def resolve_dictionary_dialeqt_get_info(self, info, blob_id):  # TODO: test
         blob_client_id, blob_object_id = blob_id
@@ -1424,25 +1476,25 @@ class Query(graphene.ObjectType):
 
         return grants_list
 
-    def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
-                          vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
-                            limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
-        """
-        query MyQuery {
-                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
-
-                    )
-        }
-        """
-        perspective_cid, perspective_oid = perspective_id
-        locale_id = info.context.get('locale_id')
-        request = info.context.get('request')
-
-        utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
-                  synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
-                  limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
-
-        return True
+    # def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
+    #                       vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
+    #                         limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
+    #     """
+    #     query MyQuery {
+    #                 phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
+    #
+    #                 )
+    #     }
+    #     """
+    #     perspective_cid, perspective_oid = perspective_id
+    #     locale_id = info.context.get('locale_id')
+    #     request = info.context.get('request')
+    #
+    #     utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
+    #               synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
+    #               limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
+    #
+    #     return True
 
     def resolve_phonology_tier_list(self, info, perspective_id):
         """
@@ -1779,6 +1831,47 @@ class StarlingEtymology(graphene.Mutation):
 
         return StarlingEtymology(triumph=True)
 
+class Phonology(graphene.Mutation):
+
+    class Arguments:
+        perspective_id=LingvodocID(),
+        limit=graphene.Int(),
+        limit_exception=graphene.Int(),
+        limit_no_vowel=graphene.Int(),
+        limit_result=graphene.Int(),
+        group_by_description=graphene.Boolean(),
+        only_first_translation=graphene.Boolean(),
+        vowel_selection=graphene.Boolean(),
+        maybe_tier_list=graphene.List(graphene.String),
+        maybe_tier_set=graphene.List(graphene.String),
+        synchronous=graphene.Boolean(),
+        maybe_translation_field=LingvodocID(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+
+    def mutate(self, info, perspective_id, group_by_description, only_first_translation,
+                          vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
+                            limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
+        """
+        query MyQuery {
+                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
+
+                    )
+        }
+        """
+        perspective_cid, perspective_oid = perspective_id
+        locale_id = info.context.get('locale_id')
+        request = info.context.get('request')
+
+        utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
+                  synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
+                  limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
+
+        return Phonology(triumph=True)
+
 
 class MyMutations(graphene.ObjectType):
     """
@@ -1789,6 +1882,7 @@ class MyMutations(graphene.ObjectType):
     """
     convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
     convert_dialeqt = ConvertDictionary.Field()
+    convert_five_tiers = ConvertFiveTiers.Field()
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
@@ -1846,6 +1940,7 @@ class MyMutations(graphene.ObjectType):
     synchronize = Synchronize.Field()
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
+    phonology = Phonology.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
