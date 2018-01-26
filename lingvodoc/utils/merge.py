@@ -138,7 +138,6 @@ def merge_suggestions(request, perspective_client_id, perspective_object_id, alg
     Finds groups of mergeable lexical entries according to specified criteria.
     """
 
-
     if algorithm not in {'simple', 'fields'}:
         raise ResponseError('Unknown entity matching algorithm \'{0}\'.'.format(algorithm))
 
@@ -198,29 +197,19 @@ def merge_suggestions(request, perspective_client_id, perspective_object_id, alg
     if not match_result_list:
 
         return {
-            'entry_data': [],
             'match_result': [],
             'user_has_permissions': user_has_permissions}
 
     # Returning match data together with data of matching lexical entries.
-
-    match_id_set = set(id
-        for id_a, id_b, confidence in match_result_list
-            for id in (id_a, id_b))
-
     return {
-
-        'entry_data': [
-            entry_data for entry_data in entry_data_list
-                if (entry_data['client_id'], entry_data['object_id']) in match_id_set],
-
         'match_result': [
-            ({'client_id': id_a[0], 'object_id': id_a[1]},
-                {'client_id': id_b[0], 'object_id': id_b[1]},
-                confidence)
-                for id_a, id_b, confidence in match_result_list],
+            ({'id': list(id_a)},
+             {'id': list(id_b)},
+             confidence)
+            for id_a, id_b, confidence in match_result_list],
 
         'user_has_permissions': user_has_permissions}
+
 
 def match_simple(entry_data_list, entity_type_primary, entity_type_secondary, threshold, levenshtein):
     """

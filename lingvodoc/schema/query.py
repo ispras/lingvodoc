@@ -240,6 +240,11 @@ class DialeqtInfo(graphene.ObjectType):
     dictionary_name = graphene.String()
     dialeqt_id = graphene.String()
 
+
+class MergeSuggestions(graphene.ObjectType):
+    match_result = graphene.List(ObjectVal)
+    user_has_permissions = graphene.Boolean()
+
 def get_dict_attributes(sqconn):
     dict_trav = sqconn.cursor()
     dict_trav.execute("""SELECT
@@ -341,13 +346,14 @@ class Query(graphene.ObjectType):
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
     convert_five_tiers_validate = graphene.Boolean()
-    merge_suggestions = graphene.Field(ObjectVal, perspective_id=LingvodocID(required=True),
+    merge_suggestions = graphene.Field(MergeSuggestions, perspective_id=LingvodocID(required=True),
                                        algorithm=graphene.String(required=True),
                                        entity_type_primary=graphene.String(),
                                        entity_type_secondary=graphene.String(),
                                        levenshtein=graphene.Int(),
                                        threshold=graphene.Float(),
                                        field_selection_list=graphene.List(ObjectVal),)
+
 
     def resolve_merge_suggestions(self, info, perspective_id, algorithm, threshold=0.1,
                                   entity_type_primary='Transcription',
@@ -358,7 +364,7 @@ class Query(graphene.ObjectType):
         request = info.context.request
         locale_id = info.context.get('locale_id')
 
-        return merge_suggestions(request=request,
+        result = merge_suggestions(request=request,
                                   perspective_client_id=perspective_id[0],
                                   perspective_object_id=perspective_id[1],
                                   algorithm=algorithm, threshold=threshold,
@@ -367,6 +373,10 @@ class Query(graphene.ObjectType):
                                   levenshtein=levenshtein,
                                   field_selection_list=field_selection_list,
                                   locale_id=locale_id)
+
+        return MergeSuggestions(user_has_permissions=result['user_has_permissions'],
+                                match_result=result['match_result'])
+
 
     def resolve_convert_five_tiers_validate(self, info, eaf_url):
         request = info.context.request
@@ -1839,13 +1849,13 @@ class Phonology(graphene.Mutation):
         limit_exception=graphene.Int()
         limit_no_vowel=graphene.Int()
         limit_result=graphene.Int()
-        group_by_description=graphene.Boolean()
-        only_first_translation=graphene.Boolean()
-        vowel_selection=graphene.Boolean()
+        group_by_description=graphene.Boolean(required=True)
+        only_first_translation=graphene.Boolean(required=True)
+        vowel_selection=graphene.Boolean(required=True)
         maybe_tier_list=graphene.List(graphene.String)
         maybe_tier_set=graphene.List(graphene.String)
         synchronous=graphene.Boolean()
-        maybe_translation_field=LingvodocID(required=True)
+        maybe_translation_field=LingvodocID()
 
     triumph = graphene.Boolean()
 
@@ -1861,10 +1871,10 @@ class Phonology(graphene.Mutation):
         }
         """
         perspective_id = args['perspective_id']
-        maybe_translation_field = args['maybe_translation_field']
-        group_by_description = args.get('group_by_description')
-        only_first_translation = args.get('only_first_translation')
-        vowel_selection = args.get('vowel_selection')
+        maybe_translation_field = args.get('maybe_translation_field')
+        group_by_description = args['group_by_description']
+        only_first_translation = args['only_first_translation']
+        vowel_selection = args['vowel_selection']
         maybe_tier_list = args.get('maybe_tier_list')
         maybe_tier_set = args.get('maybe_tier_set')
         limit = args.get('limit')
