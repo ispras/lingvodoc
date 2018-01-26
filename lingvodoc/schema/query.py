@@ -1869,7 +1869,7 @@ class Phonology(graphene.Mutation):
         maybe_tier_set = args.get('maybe_tier_set')
         limit = args.get('limit')
         limit_exception = args.get('limit_exception')
-        # limit_no_vowel = args.get('limit_no_vowel')
+        limit_no_vowel = args.get('limit_no_vowel')
         limit_result = args.get('limit_result')
         synchronous = args.get('synchronous')
         perspective_cid, perspective_oid = perspective_id
