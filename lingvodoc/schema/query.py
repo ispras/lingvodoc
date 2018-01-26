@@ -1834,17 +1834,17 @@ class StarlingEtymology(graphene.Mutation):
 class Phonology(graphene.Mutation):
 
     class Arguments:
-        perspective_id=LingvodocID(),
-        limit=graphene.Int(),
-        limit_exception=graphene.Int(),
-        limit_no_vowel=graphene.Int(),
-        limit_result=graphene.Int(),
-        group_by_description=graphene.Boolean(),
-        only_first_translation=graphene.Boolean(),
-        vowel_selection=graphene.Boolean(),
-        maybe_tier_list=graphene.List(graphene.String),
-        maybe_tier_set=graphene.List(graphene.String),
-        synchronous=graphene.Boolean(),
+        perspective_id=LingvodocID(required=True)
+        limit=graphene.Int()
+        limit_exception=graphene.Int()
+        limit_no_vowel=graphene.Int()
+        limit_result=graphene.Int()
+        group_by_description=graphene.Boolean()
+        only_first_translation=graphene.Boolean()
+        vowel_selection=graphene.Boolean()
+        maybe_tier_list=graphene.List(graphene.String)
+        maybe_tier_set=graphene.List(graphene.String)
+        synchronous=graphene.Boolean()
         maybe_translation_field=LingvodocID(required=True)
 
     triumph = graphene.Boolean()
@@ -1852,9 +1852,7 @@ class Phonology(graphene.Mutation):
     @staticmethod
     # @client_id_check()
 
-    def mutate(self, info, perspective_id, group_by_description, only_first_translation,
-                          vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
-                            limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
+    def mutate(self, info, **args):
         """
         query MyQuery {
                     phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
@@ -1862,13 +1860,26 @@ class Phonology(graphene.Mutation):
                     )
         }
         """
+        perspective_id = args['perspective_id']
+        maybe_translation_field = args['maybe_translation_field']
+        group_by_description = args.get('group_by_description')
+        only_first_translation = args.get('only_first_translation')
+        vowel_selection = args.get('vowel_selection')
+        maybe_tier_list = args.get('maybe_tier_list')
+        maybe_tier_set = args.get('maybe_tier_set')
+        limit = args.get('limit')
+        limit_exception = args.get('limit_exception')
+        # limit_no_vowel = args.get('limit_no_vowel')
+        limit_result = args.get('limit_result')
+        synchronous = args.get('synchronous')
         perspective_cid, perspective_oid = perspective_id
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')
 
         utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
-                  synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
-                  limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
+                        synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
+                        limit_exception, limit_no_vowel, limit_result, locale_id,
+                        maybe_translation_field=maybe_translation_field)
 
         return Phonology(triumph=True)
 
