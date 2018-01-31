@@ -37,8 +37,11 @@ services:
       - redis
     container_name: ld
     volumes:
-      - ./frontend:/dist
+      - ./frontend/dist:/dist
       - ./sock:/sock
-    command: "python3.4 setup.py --react-frontend /dist install && sleep 5 && gunicorn --paster docker.ini"
+      - /api/build/
+    env_file:
+      - ./locale_env.sh
+    command: bash -c "pip3 install setuptools --upgrade && python3.4 setup.py clean && python3.4 setup.py install --react-interface=/dist && sleep 5 && gunicorn --paster /api/docker/docker.ini"
     ports:
       - "6543:6543"
