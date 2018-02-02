@@ -78,6 +78,7 @@ from lingvodoc.schema.gql_language import (
     DeleteLanguage,
     MoveLanguage
 )
+from lingvodoc.schema.gql_merge import MergeBulk
 from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
@@ -1962,6 +1963,7 @@ class MyMutations(graphene.ObjectType):
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
     phonology = Phonology.Field()
+    merge_bulk = MergeBulk.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
