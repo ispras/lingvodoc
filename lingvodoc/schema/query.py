@@ -346,7 +346,7 @@ class Query(graphene.ObjectType):
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
-    convert_five_tiers_validate = graphene.Boolean()
+    convert_five_tiers_validate = graphene.Boolean(eaf_url=graphene.String(required=True))
     merge_suggestions = graphene.Field(MergeSuggestions, perspective_id=LingvodocID(required=True),
                                        algorithm=graphene.String(required=True),
                                        entity_type_primary=graphene.String(),
@@ -380,7 +380,8 @@ class Query(graphene.ObjectType):
 
 
     def resolve_convert_five_tiers_validate(self, info, eaf_url):
-        request = info.context.request
+        import urllib.request
+        request = urllib.request #info.context.request
         try:
             result = False
             eaffile = request.urlopen(eaf_url)
@@ -1904,7 +1905,7 @@ class MyMutations(graphene.ObjectType):
     """
     convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
     convert_dialeqt = ConvertDictionary.Field()
-    convert_five_tiers = ConvertFiveTiers.Field()
+    convert_corpus = ConvertFiveTiers.Field()
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
