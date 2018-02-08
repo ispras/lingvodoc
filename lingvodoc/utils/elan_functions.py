@@ -12,6 +12,16 @@ import requests
 import random
 import string
 
+from lingvodoc.schema.gql_holders import ResponseError
+import sys
+import os
+import random
+import string
+import requests
+from sqlalchemy.exc import IntegrityError
+from lingvodoc.exceptions import CommonException
+from lingvodoc.scripts.convert_rules import praat_to_elan
+
 def to_eaf(file_path, eaf_obj, pretty=True):
     """
     modified function from https://github.com/dopefishh/pympi/blob/master/pympi/Elan.py
@@ -169,3 +179,63 @@ def eaf_wordlist(entity):
         finally:
             os.remove(filename)
             pass
+
+
+def tgt_to_eaf(content, additional_metadata):
+    from urllib import request
+    try:
+        try:
+            n = 10
+            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                              for c in range(n))
+            # extension = os.path.splitext(blob.content)[1]
+            f = open(filename, 'wb')
+        except Exception as e:
+            return ResponseError(message=str(e))
+        try:
+            f.write(content)
+            f.close()
+            if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
+                if 'data_type' in additional_metadata :
+                    if 'praat' in additional_metadata['data_type']:
+                        content = praat_to_elan(filename)
+                        if sys.getsizeof(content) / (10 * 1024 * 1024.0) < 1:
+                            # filename2 = 'abc.xml'
+                            # f2 = open(filename2, 'w')
+                            # try:
+                            #     f2.write(content)
+                            #     f2.close()
+                            #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
+                            #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
+                            # except:
+                            #     print('fail with xmllint')
+                            # finally:
+                            #     pass
+                            #     os.remove(filename2)
+                            return content
+                    elif 'elan' in additional_metadata['data_type']:
+                        with open(filename, 'r') as f:
+                            return f.read()
+                    else:
+                        raise KeyError("Not allowed convert option")
+                    raise KeyError('File too big')
+                raise KeyError("Not allowed convert option")
+            raise KeyError('File too big')
+        except Exception as e:
+            raise ResponseError(message=str(e))
+            #request.response.status = HTTPInternalServerError.code
+            #return {'error': str(e)}
+        finally:
+            os.remove(filename)
+            pass
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}

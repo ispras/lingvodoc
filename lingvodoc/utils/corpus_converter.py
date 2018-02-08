@@ -8,6 +8,7 @@ import transaction
 import tempfile
 import warnings
 import logging
+import requests
 from collections import defaultdict
 from pathvalidate import sanitize_filename
 from urllib import request
@@ -38,6 +39,7 @@ from lingvodoc.models import (
     user_to_group_association,
 
 )
+from lingvodoc.utils.elan_functions import tgt_to_eaf
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary)
 
@@ -328,7 +330,7 @@ def convert_five_tiers(dictionary_id,
                 origin_id,
                 sqlalchemy_url,
                 storage,
-                markup_url,
+                markup_id,
                 locale_id,
                 task_status,
                 cache_kwargs,
@@ -421,42 +423,42 @@ def convert_five_tiers(dictionary_id,
         DBSession.flush()
 
 
-    if dictionary_id:
-        dictionary_client_id, dictionary_object_id = dictionary_id
-    else:
-        #dbdictionary_obj = create_dbdictionary(id=[client_id, None],
-        #                                       parent_id=parent_id,
-        #                                       translation_gist_id=dictionary_translation_gist_id,
-        #                                       add_group=True)
-        #DBSession.add(dbdictionary_obj)
-        #DBSession.flush()
-        lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id,
-                                                          object_id=language_object_id).first()
+        if dictionary_id:
+            dictionary_client_id, dictionary_object_id = dictionary_id
+        else:
+            #dbdictionary_obj = create_dbdictionary(id=[client_id, None],
+            #                                       parent_id=parent_id,
+            #                                       translation_gist_id=dictionary_translation_gist_id,
+            #                                       add_group=True)
+            #DBSession.add(dbdictionary_obj)
+            #DBSession.flush()
+            lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id,
+                                                              object_id=language_object_id).first()
 
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-        dictionary = Dictionary(client_id=client_id,
-                                state_translation_gist_object_id=state_translation_gist_object_id,
-                                state_translation_gist_client_id=state_translation_gist_client_id,
-                                parent=lang_parent,
-                                translation_gist_client_id=gist_client_id,
-                                translation_gist_object_id=gist_object_id
-                                      )
-                                #additional_metadata=additional_metadata)
-        DBSession.add(dictionary)
-        DBSession.flush()
-
-        dictionary_client_id = dictionary.client_id
-        dictionary_object_id = dictionary.object_id
-        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-            new_group = Group(parent=base,
-                              subject_object_id=dictionary.object_id,
-                              subject_client_id=dictionary.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            DBSession.add(new_group)
+            resp = translation_service_search("WiP")
+            state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+            dictionary = Dictionary(client_id=client_id,
+                                    state_translation_gist_object_id=state_translation_gist_object_id,
+                                    state_translation_gist_client_id=state_translation_gist_client_id,
+                                    parent=lang_parent,
+                                    translation_gist_client_id=gist_client_id,
+                                    translation_gist_object_id=gist_object_id
+                                          )
+                                    #additional_metadata=additional_metadata)
+            DBSession.add(dictionary)
             DBSession.flush()
-        #dictionary_client_id, dictionary_object_id = dbdictionary_obj.client_id, dbdictionary_obj.object_id
+
+            dictionary_client_id = dictionary.client_id
+            dictionary_object_id = dictionary.object_id
+            for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+                new_group = Group(parent=base,
+                                  subject_object_id=dictionary.object_id,
+                                  subject_client_id=dictionary.client_id)
+                if user not in new_group.users:
+                    new_group.users.append(user)
+                DBSession.add(new_group)
+                DBSession.flush()
+            #dictionary_client_id, dictionary_object_id = dbdictionary_obj.client_id, dbdictionary_obj.object_id
 
 
 
@@ -678,15 +680,24 @@ def convert_five_tiers(dictionary_id,
         sp_fields_dict["Paradigm Markup"] = (field_ids["Paradigm Markup"][0], field_ids["Paradigm Markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
         dubl = []
-        try:
-           eaffile = request.urlopen(markup_url)
-        except HTTPError as e:
-            return {'error': str(e.read().decode("utf8", 'ignore'))}
+
+
+        client_id, object_id = markup_id
+        entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not entity:
+            raise KeyError("No such file")
+        resp = requests.get(entity.content)
+        if not resp:
+            raise KeyError("Cannot access file")
+        content = resp.content
+        result = False
         with tempfile.NamedTemporaryFile() as temp:
-            temp.write(eaffile.read())
+            markup = tgt_to_eaf(content, entity.additional_metadata)
+            temp.write(markup.encode("utf-8"))
             converter = elan_parser.Elan(temp.name)
             converter.parse()
             final_dicts = converter.proc()
+
         lex_rows = {}
         par_rows = {}
         task_status.set(8, 60, "Uploading sounds and words")
