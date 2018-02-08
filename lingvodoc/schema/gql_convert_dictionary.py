@@ -161,7 +161,7 @@ def async_convert_five_tiers(dictionary_id,
                 origin_id,
                 sqlalchemy_url,
                 storage,
-                eaf_url,
+                markup_id,
                 locale_id,
                 task_key,
                 cache_kwargs,
@@ -174,7 +174,7 @@ def async_convert_five_tiers(dictionary_id,
                 origin_id,
                 sqlalchemy_url,
                 storage,
-                eaf_url,
+                markup_id,
                 locale_id,
                 task_key,
                 cache_kwargs,
@@ -215,7 +215,7 @@ class ConvertFiveTiers(graphene.Mutation):
     class Arguments:
         dictionary_id = LingvodocID()
         origin_id = LingvodocID(required=True)
-        eaf_url = graphene.String(required=True)
+        markup_id = LingvodocID(required=True)
         language_id = LingvodocID()
         translation_gist_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
@@ -238,7 +238,7 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args['client_id'] = client_id
         cur_args["dictionary_id"] = args.get("dictionary_id")
         cur_args['origin_id'] = args.get('origin_id')
-        cur_args['eaf_url'] = args['eaf_url']
+        cur_args['markup_id'] = args['markup_id']
         cur_args["locale_id"] = locale_id
         cur_args['sound_url'] = args.get('sound_url')
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
