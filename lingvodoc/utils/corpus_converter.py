@@ -23,6 +23,7 @@ from lingvodoc.models import (
     Entity,
     LexicalEntry,
     Dictionary,
+    Language,
     User,
     DictionaryPerspectiveToField,
     DictionaryPerspective,
@@ -327,7 +328,7 @@ def convert_five_tiers(dictionary_id,
                 origin_id,
                 sqlalchemy_url,
                 storage,
-                eaf_url,
+                markup_url,
                 locale_id,
                 task_status,
                 cache_kwargs,
@@ -341,14 +342,7 @@ def convert_five_tiers(dictionary_id,
     language_client_id, language_object_id = language_id
     dictionary_translation_gist_id = translation_gist_id
     parent_id = language_id
-    if dictionary_id:
-        dictionary_client_id, dictionary_object_id = dictionary_id
-    else:
-        dbdictionary_obj = create_dbdictionary(id=[client_id, None],
-                                               parent_id=parent_id,
-                                               translation_gist_id=dictionary_translation_gist_id,
-                                               add_group=True)
-        dictionary_client_id, dictionary_object_id = dbdictionary_obj.client_id, dbdictionary_obj.object_id
+
     task_status.set(1, 1, "Preparing")
     no_sound = True
     if sound_url:
@@ -425,6 +419,49 @@ def convert_five_tiers(dictionary_id,
         fp_structure = set([field_ids[x] for x in fp_fields])
         sp_structure = set([field_ids[x] for x in sp_fields])
         DBSession.flush()
+
+
+    if dictionary_id:
+        dictionary_client_id, dictionary_object_id = dictionary_id
+    else:
+        #dbdictionary_obj = create_dbdictionary(id=[client_id, None],
+        #                                       parent_id=parent_id,
+        #                                       translation_gist_id=dictionary_translation_gist_id,
+        #                                       add_group=True)
+        #DBSession.add(dbdictionary_obj)
+        #DBSession.flush()
+        lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id,
+                                                          object_id=language_object_id).first()
+
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+        dictionary = Dictionary(client_id=client_id,
+                                state_translation_gist_object_id=state_translation_gist_object_id,
+                                state_translation_gist_client_id=state_translation_gist_client_id,
+                                parent=lang_parent,
+                                translation_gist_client_id=gist_client_id,
+                                translation_gist_object_id=gist_object_id
+                                      )
+                                #additional_metadata=additional_metadata)
+        DBSession.add(dictionary)
+        DBSession.flush()
+
+        dictionary_client_id = dictionary.client_id
+        dictionary_object_id = dictionary.object_id
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+            new_group = Group(parent=base,
+                              subject_object_id=dictionary.object_id,
+                              subject_client_id=dictionary.client_id)
+            if user not in new_group.users:
+                new_group.users.append(user)
+            DBSession.add(new_group)
+            DBSession.flush()
+        #dictionary_client_id, dictionary_object_id = dbdictionary_obj.client_id, dbdictionary_obj.object_id
+
+
+
+
+
 
 
         origin_metadata= {"origin_id": (origin_client_id, origin_object_id)}
@@ -642,7 +679,7 @@ def convert_five_tiers(dictionary_id,
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
         dubl = []
         try:
-           eaffile = request.urlopen(eaf_url)
+           eaffile = request.urlopen(markup_url)
         except HTTPError as e:
             return {'error': str(e.read().decode("utf8", 'ignore'))}
         with tempfile.NamedTemporaryFile() as temp:
@@ -1225,7 +1262,7 @@ def convert_all(dictionary_id,
                 origin_id,
                 sqlalchemy_url,
                 storage,
-                eaf_url,
+                markup_id,
                 locale_id,
                 task_key,
                 cache_kwargs,
@@ -1245,7 +1282,7 @@ def convert_all(dictionary_id,
                 origin_id,
                 sqlalchemy_url,
                 storage,
-                eaf_url,
+                markup_id,
                 locale_id,
                 task_status,
                 cache_kwargs,
