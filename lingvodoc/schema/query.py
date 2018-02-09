@@ -1,5 +1,6 @@
 import graphene
-
+from lingvodoc.utils.elan_functions import tgt_to_eaf
+import requests
 from lingvodoc.schema.gql_entity import (
     Entity,
     CreateEntity,
@@ -78,6 +79,7 @@ from lingvodoc.schema.gql_language import (
     DeleteLanguage,
     MoveLanguage
 )
+from lingvodoc.schema.gql_merge import MergeBulk
 from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
@@ -345,7 +347,7 @@ class Query(graphene.ObjectType):
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
-    convert_five_tiers_validate = graphene.Boolean()
+    convert_five_tiers_validate = graphene.Boolean(markup_id=LingvodocID(required=True))
     merge_suggestions = graphene.Field(MergeSuggestions, perspective_id=LingvodocID(required=True),
                                        algorithm=graphene.String(required=True),
                                        entity_type_primary=graphene.String(),
@@ -378,17 +380,19 @@ class Query(graphene.ObjectType):
                                 match_result=result['match_result'])
 
 
-    def resolve_convert_five_tiers_validate(self, info, eaf_url):
-        request = info.context.request
-        try:
-            result = False
-            eaffile = request.urlopen(eaf_url)
-        except HTTPError as e:
-            raise ResponseError(message=str(e))
-        except KeyError as e:
-            raise ResponseError(message=str(e))
+    def resolve_convert_five_tiers_validate(self, info, markup_id):
+        client_id, object_id = markup_id
+        entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not entity:
+            raise KeyError("No such file")
+        resp = requests.get(entity.content)
+        if not resp:
+            raise ResponseError("Cannot access file")
+        content = resp.content
+        result = False
         with tempfile.NamedTemporaryFile() as temp:
-            temp.write(eaffile.read())
+            markup = tgt_to_eaf(content, entity.additional_metadata)
+            temp.write(markup.encode("utf-8"))
             elan_check = elan_parser.ElanCheck(temp.name)
             elan_check.parse()
             if elan_check.check():
@@ -396,6 +400,29 @@ class Query(graphene.ObjectType):
             temp.flush()
         return result
 
+    """
+        from urllib import request
+        from urllib.parse import quote
+        #request = urllib.request #info.context.request
+        try:
+            result = False
+            file_name = eaf_url.split("/")[-1]
+            folder = "/".join(eaf_url.split("/")[:-1])
+            eaffile = request.urlopen("%s/%s" % (folder, quote(file_name)))
+        except HTTPError as e:
+            raise ResponseError(message=str(e))
+        except KeyError as e:
+            raise ResponseError(message=str(e))
+        with tempfile.NamedTemporaryFile() as temp:
+            markup = tgt_to_eaf(eaffile.read(), {"data_type": "praat"})
+            temp.write(markup)
+            elan_check = elan_parser.ElanCheck(temp.name)
+            elan_check.parse()
+            if elan_check.check():
+                result = True
+            temp.flush()
+        return result
+    """
 
     def resolve_dictionary_dialeqt_get_info(self, info, blob_id):  # TODO: test
         blob_client_id, blob_object_id = blob_id
@@ -1671,16 +1698,7 @@ class Query(graphene.ObjectType):
 
 
     def resolve_convert_markup(self, info, id):
-        # TODO: delete
 
-        import sys
-        import os
-        import random
-        import string
-        import requests
-        from sqlalchemy.exc import IntegrityError
-        from lingvodoc.exceptions import CommonException
-        from lingvodoc.scripts.convert_rules import praat_to_elan
 
         # TODO: permission check
         """
@@ -1691,68 +1709,17 @@ class Query(graphene.ObjectType):
         # client_id = info.context.get('client_id')
         # client = DBSession.query(Client).filter_by(id=client_id).first()
         # user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        client_id, object_id = id
+        entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not entity:
+            raise KeyError("No such file")
+        resp = requests.get(entity.content)
+        if not resp:
+            raise ResponseError("Cannot access file")
+        content = resp.content
+        return tgt_to_eaf(content, entity.additional_metadata)
 
-        try:
-            # out_type = req['out_type']
-            client_id, object_id = id
 
-            entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
-            if not entity:
-                raise KeyError("No such file")
-            resp = requests.get(entity.content)
-            if not resp:
-                raise ResponseError("Cannot access file")
-            content = resp.content
-            try:
-                n = 10
-                filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                                  for c in range(n))
-                # extension = os.path.splitext(blob.content)[1]
-                f = open(filename, 'wb')
-            except Exception as e:
-                return ResponseError(message=str(e))
-            try:
-                f.write(content)
-                f.close()
-                if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
-                    if 'data_type' in entity.additional_metadata :
-                        if 'praat' in entity.additional_metadata['data_type']:
-                            elan_content = praat_to_elan(filename)
-                            if sys.getsizeof(elan_content) / (10 * 1024 * 1024.0) < 1:
-                                # filename2 = 'abc.xml'
-                                # f2 = open(filename2, 'w')
-                                # try:
-                                #     f2.write(content)
-                                #     f2.close()
-                                #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
-                                #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
-                                # except:
-                                #     print('fail with xmllint')
-                                # finally:
-                                #     pass
-                                #     os.remove(filename2)
-                                return elan_content
-                        elif 'elan' in entity.additional_metadata['data_type']:
-                            with open(filename, 'r') as f:
-                                return f.read()
-                        else:
-                            raise KeyError("Not allowed convert option")
-                        raise KeyError('File too big')
-                    raise KeyError("Not allowed convert option")
-                raise KeyError('File too big')
-            except Exception as e:
-                raise ResponseError(message=e)
-            finally:
-                os.remove(filename)
-                pass
-        except KeyError as e:
-            raise ResponseError(message=str(e))
-
-        except IntegrityError as e:
-            raise ResponseError(message=str(e))
-
-        except CommonException as e:
-            raise ResponseError(message=str(e))
 
 
 
@@ -1903,7 +1870,7 @@ class MyMutations(graphene.ObjectType):
     """
     convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
     convert_dialeqt = ConvertDictionary.Field()
-    convert_five_tiers = ConvertFiveTiers.Field()
+    convert_corpus = ConvertFiveTiers.Field()
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
@@ -1962,6 +1929,7 @@ class MyMutations(graphene.ObjectType):
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
     phonology = Phonology.Field()
+    merge_bulk = MergeBulk.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

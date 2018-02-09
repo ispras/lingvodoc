@@ -244,22 +244,23 @@ class DictionaryPerspective(LingvodocObjectType):
         else:
             raise ResponseError(message="mode: <all|published|not_accepted|deleted|all_with_deleted>")
 
-        dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, position=position, self_client_id=None,
-                                                       self_object_id=None).first()
-        if not dbcolumn:
-            dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, self_client_id=None,
-                                                       self_object_id=None).first()
+        # dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, position=position, self_client_id=None,
+        #                                                self_object_id=None).first()
+        # if not dbcolumn:
+        #     dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, self_client_id=None,
+        #                                                self_object_id=None).first()
 
-        lexes = DBSession.query(dbLexicalEntry).join(dbLexicalEntry.entity).join(dbEntity.publishingentity) \
-            .filter(dbLexicalEntry.parent == self.dbObject)
+        lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
+        if authors or start_date or end_date:
+            lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
         if ids is not None:
             lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids))
-        if publish is not None:
-            lexes = lexes.filter(dbPublishingEntity.published == publish)
-        if accept is not None:
-            lexes = lexes.filter(dbPublishingEntity.accepted == accept)
-        if delete is not None:
-            lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
+        # if publish is not None:
+        #     lexes = lexes.filter(dbPublishingEntity.published == publish)
+        # if accept is not None:
+        #     lexes = lexes.filter(dbPublishingEntity.accepted == accept)
+        # if delete is not None:
+        #     lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
 
         if authors:
             lexes = lexes.join(dbClient, dbEntity.client_id == dbClient.id).join(dbClient.user).filter(dbUser.id.in_(authors))
@@ -267,29 +268,30 @@ class DictionaryPerspective(LingvodocObjectType):
             lexes = lexes.filter(dbEntity.created_at >= start_date)
         if end_date:
             lexes = lexes.filter(dbEntity.created_at <= end_date)
-        lexes = lexes \
-            .order_by(func.min(case(
-            [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
-                  dbEntity.field_object_id != dbcolumn.field_object_id),
-              'яяяяяя')],
-            else_=dbEntity.content))) \
-            .group_by(dbLexicalEntry)
+        # lexes = lexes \
+        #     .order_by(func.min(case(
+        #     [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
+        #           dbEntity.field_object_id != dbcolumn.field_object_id),
+        #       'яяяяяя')],
+        #     else_=dbEntity.content))) \
+        #     .group_by(dbLexicalEntry)
 
         lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
                                 for lex in lexes.yield_per(100)]
 
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                   publish=publish, accept=accept, delete=delete)
-
+                                                          publish=publish,
+                                                          accept=accept,
+                                                          delete=delete)
 
         def graphene_entity(cur_entity, cur_publishing):
-            ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
+            ent = Entity(id=(cur_entity.client_id, cur_entity.object_id))
             ent.dbObject = cur_entity
             ent.publishingentity = cur_publishing
             return ent
 
         def graphene_lex(cur_lexical_entry, cur_entities):
-            lex = LexicalEntry(id = (cur_lexical_entry.client_id, cur_lexical_entry.object_id))
+            lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
             lex.gql_Entities = cur_entities
             lex.dbObject = cur_lexical_entry
             return lex
@@ -299,7 +301,6 @@ class DictionaryPerspective(LingvodocObjectType):
         else:
             entities_list = entities.all()
         lexes_list = lexes.all()
-
 
         entities_count = len(entities_list)
 

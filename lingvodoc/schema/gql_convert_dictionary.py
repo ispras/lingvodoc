@@ -42,6 +42,7 @@ from pyramid.httpexceptions import (
     HTTPUnauthorized
 )
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
+from lingvodoc.views.v2.convert_five_tiers.core import async_convert_dictionary_new as convert_five_tiers
 import json
 import requests
 from pyramid.request import Request
@@ -50,6 +51,10 @@ from pyramid.response import Response
 from lingvodoc.views.v2.utils import anonymous_userid
 log = logging.getLogger(__name__)
 from lingvodoc.utils.creation import create_gists_with_atoms
+###############
+from lingvodoc.utils.corpus_converter import convert_all
+from lingvodoc.queue.celery import celery
+
 
 class ConvertDictionary(graphene.Mutation):
     """
@@ -149,6 +154,34 @@ class ConvertDictionary(graphene.Mutation):
         res = async_convert_dictionary_new.delay(**cur_args)
         return ConvertDictionary(triumph=True)
 
+
+@celery.task
+def async_convert_five_tiers(dictionary_id,
+                client_id,
+                sqlalchemy_url,
+                storage,
+                markup_id,
+                locale_id,
+                task_key,
+                cache_kwargs,
+                translation_gist_id=None,
+                language_id=None,
+                sound_url=None):
+
+    convert_all(dictionary_id,
+                client_id,
+                sqlalchemy_url,
+                storage,
+                markup_id,
+                locale_id,
+                task_key,
+                cache_kwargs,
+                translation_gist_id,
+                language_id,
+                sound_url)
+    return
+
+
 class ConvertFiveTiers(graphene.Mutation):
     """
     example:
@@ -179,10 +212,11 @@ class ConvertFiveTiers(graphene.Mutation):
 
     class Arguments:
         dictionary_id = LingvodocID()
-        blob_id = LingvodocID(required=True)
+        markup_id = LingvodocID(required=True)
         language_id = LingvodocID()
         translation_gist_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
+
 
     triumph = graphene.Boolean()
 
@@ -199,22 +233,53 @@ class ConvertFiveTiers(graphene.Mutation):
 
         cur_args = dict()
         cur_args['client_id'] = client_id
-        cur_args["dictionary_client_id"] = args["dictionary_id"][0]
-        cur_args["dictionary_object_id"] = args["dictionary_id"][1]
-        cur_args['origin_client_id'] = args['origin_id'][0]
-        cur_args['origin_object_id'] = args['origin_id'][1]
-        cur_args['eaf_url'] = args['eaf_url']
+        cur_args["dictionary_id"] = args.get("dictionary_id")
+        cur_args['markup_id'] = args['markup_id']
         cur_args["locale_id"] = locale_id
-
+        cur_args['sound_url'] = args.get('sound_url')
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
         cur_args["storage"] = request.registry.settings["storage"]
+        cur_args["language_id"] = args.get('language_id')
+        if "translation_gist_id" in args:
+            cur_args["gist_client_id"] = args['translation_gist_id'][0]
+            cur_args["gist_object_id"] = args['translation_gist_id'][1]
+        elif "translation_atoms" in args:
+            tr_atoms = args.get("translation_atoms")
+            translation_gist_id = args.get('gist_id')
+            translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None])
+            cur_args["translation_gist_id"] = translation_gist_id
+        else:
+            cur_args["translation_gist_id"] = None
+        #dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
+        #                                           object_id=args["dictionary_id"][1]).first()
+        #gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
+        #                                                  object_id=dictionary_obj.translation_gist_object_id).first()
+        if cur_args["translation_gist_id"]:
+            gist = DBSession.query(dbTranslationGist).filter_by(client_id=cur_args["translation_gist_id"][0],
+                                                              object_id=cur_args["translation_gist_id"][1]).first()
+        else:
+            gist=None
+        try:
+            if gist:
+                task = TaskStatus(user_id, "FT dictionary conversion", gist.get_translation(locale_id), 10)
 
-        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
-                                                   object_id=args["dictionary_id"][1]).first()
-        gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
-                                                          object_id=dictionary_obj.translation_gist_object_id).first()
-        task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
+            else:
+                dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
+                                                               object_id=args["dictionary_id"][1]).first()
+                gist = DBSession.query(dbTranslationGist).\
+                    filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                              object_id=dictionary_obj.translation_gist_object_id).first()
+                task = TaskStatus(user_id, "FT dictionary conversion", gist.get_translation(locale_id), 10)
+        except:
+            raise ResponseError(message="wrong parameters")
+
+
+
+
+
+
+        #task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
         cur_args["task_key"] = task.key
         cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-        res = async_convert_dictionary_new.delay(**cur_args)
+        res = async_convert_five_tiers.delay(**cur_args)
         return ConvertFiveTiers(triumph=True)
