@@ -327,7 +327,6 @@ def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
 
 def convert_five_tiers(dictionary_id,
                 client_id,
-                origin_id,
                 sqlalchemy_url,
                 storage,
                 markup_id,
@@ -339,7 +338,6 @@ def convert_five_tiers(dictionary_id,
                 sound_url):
 
 
-    origin_client_id, origin_object_id = origin_id
     gist_client_id, gist_object_id = translation_gist_id
     language_client_id, language_object_id = language_id
     dictionary_translation_gist_id = translation_gist_id
@@ -463,7 +461,13 @@ def convert_five_tiers(dictionary_id,
 
 
 
-
+        client_id, object_id = markup_id
+        entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not entity:
+            raise KeyError("No such file")
+        origin_perspective = entity.parent.parent
+        origin_client_id = origin_perspective.client_id
+        origin_object_id = origin_perspective.object_id
 
 
         origin_metadata= {"origin_id": (origin_client_id, origin_object_id)}
@@ -682,10 +686,7 @@ def convert_five_tiers(dictionary_id,
         dubl = []
 
 
-        client_id, object_id = markup_id
-        entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
-        if not entity:
-            raise KeyError("No such file")
+
         resp = requests.get(entity.content)
         if not resp:
             raise KeyError("Cannot access file")
@@ -1270,7 +1271,6 @@ def convert_five_tiers(dictionary_id,
 
 def convert_all(dictionary_id,
                 client_id,
-                origin_id,
                 sqlalchemy_url,
                 storage,
                 markup_id,
@@ -1290,7 +1290,6 @@ def convert_all(dictionary_id,
         convert_five_tiers(
                 dictionary_id,
                 client_id,
-                origin_id,
                 sqlalchemy_url,
                 storage,
                 markup_id,
