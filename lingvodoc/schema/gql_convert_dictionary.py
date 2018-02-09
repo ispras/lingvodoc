@@ -240,28 +240,41 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
         cur_args["storage"] = request.registry.settings["storage"]
         cur_args["language_id"] = args.get('language_id')
-        if "translation_gist_id" in args:
-            cur_args["gist_client_id"] = args['translation_gist_id'][0]
-            cur_args["gist_object_id"] = args['translation_gist_id'][1]
-        elif "translation_atoms" in args:
-            tr_atoms = args.get("translation_atoms")
-            translation_gist_id = args.get('gist_id')
-            translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None])
-            cur_args["translation_gist_id"] = translation_gist_id
+        if not args.get("dictionary_id"):
+            if "translation_gist_id" in args:
+                cur_args["gist_client_id"] = args['translation_gist_id'][0]
+                cur_args["gist_object_id"] = args['translation_gist_id'][1]
+                if cur_args["translation_gist_id"]:
+                    gist = DBSession.query(dbTranslationGist).filter_by(client_id=cur_args["translation_gist_id"][0],
+                                                                      object_id=cur_args["translation_gist_id"][1]).first()
+                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
+                else:
+                    gist=None
+            elif "translation_atoms" in args:
+                tr_atoms = args.get("translation_atoms")
+                translation_gist_id = args.get('gist_id')
+                translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None])
+                cur_args["translation_gist_id"] = translation_gist_id
+                gist = DBSession.query(dbTranslationGist).filter_by(client_id=translation_gist_id[0],
+                                                                 object_id=translation_gist_id[1]).first()
+
+
+                if gist:
+                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
+            else:
+                raise ResponseError(message="dictionary_id or translation_atoms missed")
+
         else:
-            cur_args["translation_gist_id"] = None
-        #dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
-        #                                           object_id=args["dictionary_id"][1]).first()
-        #gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
-        #                                                  object_id=dictionary_obj.translation_gist_object_id).first()
-        if cur_args["translation_gist_id"]:
-            gist = DBSession.query(dbTranslationGist).filter_by(client_id=cur_args["translation_gist_id"][0],
-                                                              object_id=cur_args["translation_gist_id"][1]).first()
-        else:
-            gist=None
-        try:
+            dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
+                                                      object_id=args["dictionary_id"][1]).first()
+            if not dictionary_obj:
+                ResponseError(message="Dictionary not found")
+            gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                                                             object_id=dictionary_obj.translation_gist_object_id).first()
+
+
             if gist:
-                task = TaskStatus(user_id, "FT dictionary conversion", gist.get_translation(locale_id), 10)
+                task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
 
             else:
                 dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
@@ -269,10 +282,7 @@ class ConvertFiveTiers(graphene.Mutation):
                 gist = DBSession.query(dbTranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()
-                task = TaskStatus(user_id, "FT dictionary conversion", gist.get_translation(locale_id), 10)
-        except:
-            raise ResponseError(message="wrong parameters")
-
+                task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
 
 
 
