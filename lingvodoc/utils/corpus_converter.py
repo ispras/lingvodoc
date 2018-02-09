@@ -338,41 +338,10 @@ def convert_five_tiers(dictionary_id,
                 sound_url):
 
 
-    gist_client_id, gist_object_id = translation_gist_id
-    language_client_id, language_object_id = language_id
-    dictionary_translation_gist_id = translation_gist_id
-    parent_id = language_id
+
 
     task_status.set(1, 1, "Preparing")
-    no_sound = True
-    if sound_url:
-        no_sound = False
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error')
-        try:
-            from pydub import AudioSegment
-        except Warning as e:
-            no_sound = True
-    if not no_sound:
-        sound_format = "wav"
-        if sound_url.endswith(".mp3"):
-            sound_format = "mp3"
-        if sound_url.endswith(".flac"):
-            sound_format = "flac"
-        with tempfile.NamedTemporaryFile() as temp:
-            try:
-               sound_file = request.urlopen(sound_url)
-            except HTTPError as e:
-                return {'error': str(e.read().decode("utf8", 'ignore'))}
-            with open(temp.name,'wb') as output:
-                output.write(sound_file.read())
-            if sound_format == "wav":
-                full_audio = AudioSegment.from_wav(temp.name)
-            elif sound_format == "mp3":
-                full_audio = AudioSegment.from_mp3(temp.name)
-            elif sound_format == "flac":
-                full_audio = AudioSegment.from_file(temp.name, "flac")
-            temp.flush()
+
 
     field_ids = {}
     with transaction.manager:
@@ -424,6 +393,8 @@ def convert_five_tiers(dictionary_id,
         if dictionary_id:
             dictionary_client_id, dictionary_object_id = dictionary_id
         else:
+            gist_client_id, gist_object_id = translation_gist_id
+            language_client_id, language_object_id = language_id
             #dbdictionary_obj = create_dbdictionary(id=[client_id, None],
             #                                       parent_id=parent_id,
             #                                       translation_gist_id=dictionary_translation_gist_id,
@@ -462,10 +433,51 @@ def convert_five_tiers(dictionary_id,
 
 
         client_id, object_id = markup_id
-        entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
-        if not entity:
+        markup_entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not markup_entity:
             raise KeyError("No such file")
-        origin_perspective = entity.parent.parent
+
+
+
+        sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
+        sound_url = None
+        if sound_entity:
+            sound_url = sound_entity.content
+        no_sound = True
+        if sound_url:
+            no_sound = False
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            try:
+                from pydub import AudioSegment
+            except Warning as e:
+                no_sound = True
+        if not no_sound:
+            sound_format = "wav"
+            if sound_url.endswith(".mp3"):
+                sound_format = "mp3"
+            if sound_url.endswith(".flac"):
+                sound_format = "flac"
+            with tempfile.NamedTemporaryFile() as temp:
+                try:
+                   sound_file = request.urlopen(sound_url)
+                except HTTPError as e:
+                    return {'error': str(e.read().decode("utf8", 'ignore'))}
+                with open(temp.name,'wb') as output:
+                    output.write(sound_file.read())
+                if sound_format == "wav":
+                    full_audio = AudioSegment.from_wav(temp.name)
+                elif sound_format == "mp3":
+                    full_audio = AudioSegment.from_mp3(temp.name)
+                elif sound_format == "flac":
+                    full_audio = AudioSegment.from_file(temp.name, "flac")
+                temp.flush()
+
+
+
+
+
+        origin_perspective = markup_entity.parent.parent
         origin_client_id = origin_perspective.client_id
         origin_object_id = origin_perspective.object_id
 
@@ -687,13 +699,13 @@ def convert_five_tiers(dictionary_id,
 
 
 
-        resp = requests.get(entity.content)
+        resp = requests.get(markup_entity.content)
         if not resp:
             raise KeyError("Cannot access file")
         content = resp.content
         result = False
         with tempfile.NamedTemporaryFile() as temp:
-            markup = tgt_to_eaf(content, entity.additional_metadata)
+            markup = tgt_to_eaf(content, markup_entity.additional_metadata)
             temp.write(markup.encode("utf-8"))
             converter = elan_parser.Elan(temp.name)
             converter.parse()
