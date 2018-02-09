@@ -158,7 +158,6 @@ class ConvertDictionary(graphene.Mutation):
 @celery.task
 def async_convert_five_tiers(dictionary_id,
                 client_id,
-                origin_id,
                 sqlalchemy_url,
                 storage,
                 markup_id,
@@ -171,7 +170,6 @@ def async_convert_five_tiers(dictionary_id,
 
     convert_all(dictionary_id,
                 client_id,
-                origin_id,
                 sqlalchemy_url,
                 storage,
                 markup_id,
@@ -214,7 +212,6 @@ class ConvertFiveTiers(graphene.Mutation):
 
     class Arguments:
         dictionary_id = LingvodocID()
-        origin_id = LingvodocID(required=True)
         markup_id = LingvodocID(required=True)
         language_id = LingvodocID()
         translation_gist_id = LingvodocID()
@@ -237,7 +234,6 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args = dict()
         cur_args['client_id'] = client_id
         cur_args["dictionary_id"] = args.get("dictionary_id")
-        cur_args['origin_id'] = args.get('origin_id')
         cur_args['markup_id'] = args['markup_id']
         cur_args["locale_id"] = locale_id
         cur_args['sound_url'] = args.get('sound_url')
