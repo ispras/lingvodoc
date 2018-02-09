@@ -14,7 +14,7 @@ services:
     image: nginx:latest
     container_name: ngx
     ports:
-      - "80:6543"
+      - "80:80"
     volumes:
       - ./frontend:/dist
       - ./nginx:/etc/nginx/conf.d
@@ -42,6 +42,6 @@ services:
       - /api/build/
     env_file:
       - ./locale_env.sh
-    command: bash -c "pip3 install setuptools --upgrade && python3.4 setup.py clean && python3.4 setup.py install --react-interface=/dist && sleep 5 && gunicorn --paster /api/docker/docker.ini"
+    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist &&  gunicorn --paster /api/docker/docker.ini"
     ports:
       - "6543:6543"
