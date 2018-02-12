@@ -9,14 +9,14 @@ services:
     volumes:
       - ./dbdump:/docker-entrypoint-initdb.d
     ports:
-      - "5432:5432"
+      - "15432:5432"
   nginx:
     image: nginx:latest
     container_name: ngx
     ports:
       - "80:80"
     volumes:
-      - ./frontend:/dist
+      - ./frontend/dist:/dist
       - ./nginx:/etc/nginx/conf.d
       - ./sock:/sock
     depends_on:
@@ -29,19 +29,25 @@ services:
     labels:
       kompose.service.type: nodeport
     ports:
-      - '6379:6379'
+      - '16379:6379'
   api:
     build: ..
     depends_on:
       - pg
       - redis
+    links:
+      - pg
+      - redis
+      
     container_name: ld
     volumes:
       - ./frontend/dist:/dist
       - ./sock:/sock
       - /api/build/
+      - ../:/api
+
     env_file:
       - ./locale_env.sh
-    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist &&  gunicorn --paster /api/docker/docker.ini"
+    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg gunicorn --paster /api/docker/docker.ini"
     ports:
-      - "6543:6543"
+      - "16543:6543"
