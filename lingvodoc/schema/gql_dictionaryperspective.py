@@ -259,9 +259,11 @@ class DictionaryPerspective(LingvodocObjectType):
         #     lexes = lexes.filter(dbPublishingEntity.published == publish)
         # if accept is not None:
         #     lexes = lexes.filter(dbPublishingEntity.accepted == accept)
-        # if delete is not None:
-        #     lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
-
+        if delete is not None:
+            if authors or start_date or end_date:
+                lexes = lexes.filter(or_(dbLexicalEntry.marked_for_deletion == delete, dbEntity.marked_for_deletion == delete))
+            else:
+                lexes = lexes.filter(dbLexicalEntry.marked_for_deletion == delete)
         if authors:
             lexes = lexes.join(dbClient, dbEntity.client_id == dbClient.id).join(dbClient.user).filter(dbUser.id.in_(authors))
         if start_date:

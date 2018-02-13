@@ -256,32 +256,9 @@ class DeleteLexicalEntry(graphene.Mutation):
 
 
 class BulkDeleteLexicalEntry(graphene.Mutation):
-    """
-    example:
-    mutation {
-        delete_lexicalentry(id: [949,21]) {
-            lexicalentry {
-                id
-            }
-            triumph
-        }
-    }
-    now returns:
-      {
-      "delete_lexicalentry": {
-        "lexicalentry": {
-          "id": [
-            949,
-            21
-          ]
-        },
-        "triumph": true
-      }
-    }
-    """
 
     class Arguments:
-        ids = graphene.List(LingvodocID, jrrequired=True)
+        ids = graphene.List(LingvodocID, required=True)
 
     lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
