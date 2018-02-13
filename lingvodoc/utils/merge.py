@@ -212,9 +212,8 @@ def merge_suggestions(request, perspective_client_id, perspective_object_id, alg
     # Returning match data together with data of matching lexical entries.
     return {
         'match_result': [
-            ({'id': list(id_a)},
-             {'id': list(id_b)},
-             confidence)
+            {"lexical_entries": [list(id_a), list(id_b)],
+             "confidence": confidence}
             for id_a, id_b, confidence in match_result_list],
 
         'user_has_permissions': user_has_permissions}
@@ -366,7 +365,7 @@ def match_fields(entry_data_list, field_selection_list, threshold):
     field_data_dict = {}
 
     for field_selection in field_selection_list:
-        field_id = (field_selection['client_id'], field_selection['object_id'])
+        field_id = (field_selection['field_id'][0], field_selection['field_id'][1])
 
         if field_id not in field_data_dict:
             field_data_dict[field_id] = ([field_selection], [])
