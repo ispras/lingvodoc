@@ -67,6 +67,7 @@ from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
     CreateLexicalEntry,
     DeleteLexicalEntry,
+    BulkDeleteLexicalEntry,
     BulkCreateLexicalEntry,
     ConnectLexicalEntries,
     DeleteGroupingTags
@@ -184,6 +185,7 @@ from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
 from lingvodoc.utils.merge import merge_suggestions
 import tempfile
+
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -194,24 +196,15 @@ from pyramid.httpexceptions import (
 from lingvodoc.scripts import elan_parser
 
 
-
-
-# def have_tag(lex, tags, field_client_id, field_object_id):
-#     return bool([x for x in lex if x.field_client_id == field_client_id and x.field_object_id == field_object_id and x.content in tags and x.published and x.accepted])
-
-
-
-
-
-#Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
-
 class TierList(graphene.ObjectType):
     tier_count = graphene.Field(ObjectVal)
     total_count = graphene.Int()
 
+
 class LexicalEntriesAndEntities(graphene.ObjectType):
     entities = graphene.List(Entity)
     lexical_entries = graphene.List(LexicalEntry)
+
 
 class Permissions(graphene.ObjectType):
     edit = graphene.List(DictionaryPerspective)
@@ -225,7 +218,7 @@ class StarlingField(graphene.InputObjectType):
     starling_type = graphene.Int(required=True)
     field_id = LingvodocID(required=True)
     fake_id = graphene.String()
-    link_fake_id = LingvodocID() #graphene.String()
+    link_fake_id = LingvodocID()  # graphene.String()
 
 
 class StarlingDictionary(graphene.InputObjectType):
@@ -238,6 +231,7 @@ class StarlingDictionary(graphene.InputObjectType):
     field_map = graphene.List(StarlingField, required=True)
     add_etymology = graphene.Boolean(required=True)
 
+
 class DialeqtInfo(graphene.ObjectType):
     dictionary_name = graphene.String()
     dialeqt_id = graphene.String()
@@ -246,6 +240,7 @@ class DialeqtInfo(graphene.ObjectType):
 class MergeSuggestions(graphene.ObjectType):
     match_result = graphene.List(ObjectVal)
     user_has_permissions = graphene.Boolean()
+
 
 def get_dict_attributes(sqconn):
     dict_trav = sqconn.cursor()
@@ -262,7 +257,6 @@ def get_dict_attributes(sqconn):
         req['dictionary_name'] = dictionary[0]
         req['dialeqt_id'] = dictionary[1]
     return req
-
 
 
 class Query(graphene.ObjectType):
@@ -286,16 +280,18 @@ class Query(graphene.ObjectType):
     organization = graphene.Field(Organization, id=LingvodocID())
     organizations = graphene.List(Organization)
     lexicalentry = graphene.Field(LexicalEntry, id=LingvodocID())
-    basic_search = graphene.Field(LexicalEntriesAndEntities, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
-                                   perspective_id=LingvodocID(), field_id=LingvodocID(),
-                                   search_in_published=graphene.Boolean())
+    basic_search = graphene.Field(LexicalEntriesAndEntities, searchstring=graphene.String(),
+                                  can_add_tags=graphene.Boolean(),
+                                  perspective_id=LingvodocID(), field_id=LingvodocID(),
+                                  search_in_published=graphene.Boolean())
     advanced_lexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
                                             perspectives=LingvodocID(),
                                             adopted=graphene.Boolean(),
                                             adopted_type=LingvodocID(),
                                             with_entimology=graphene.Boolean())
     translationgists = graphene.List(TranslationGist)
-    translation_search = graphene.List(TranslationGist, searchstring=graphene.String(), translation_type=graphene.String())
+    translation_search = graphene.List(TranslationGist, searchstring=graphene.String(),
+                                       translation_type=graphene.String())
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
@@ -327,7 +323,8 @@ class Query(graphene.ObjectType):
 
     phonology_tier_list = graphene.Field(TierList, perspective_id=LingvodocID(required=True))
 
-    connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True), field_id = LingvodocID(required=True), mode=graphene.String())
+    connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True),
+                                     field_id=LingvodocID(required=True), mode=graphene.String())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
                                      tag_list=LingvodocID(),
@@ -336,7 +333,7 @@ class Query(graphene.ObjectType):
                                      etymology=graphene.Boolean(),
                                      search_strings=graphene.List(graphene.List(ObjectVal), required=True),
                                      mode=graphene.String())
-    search_strings=graphene.List(graphene.List(ObjectVal))
+    search_strings = graphene.List(graphene.List(ObjectVal))
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
 
@@ -354,8 +351,7 @@ class Query(graphene.ObjectType):
                                        entity_type_secondary=graphene.String(),
                                        levenshtein=graphene.Int(),
                                        threshold=graphene.Float(),
-                                       field_selection_list=graphene.List(ObjectVal),)
-
+                                       field_selection_list=graphene.List(ObjectVal), )
 
     def resolve_merge_suggestions(self, info, perspective_id, algorithm, threshold=0.1,
                                   entity_type_primary='Transcription',
@@ -367,18 +363,17 @@ class Query(graphene.ObjectType):
         locale_id = info.context.get('locale_id')
 
         result = merge_suggestions(request=request,
-                                  perspective_client_id=perspective_id[0],
-                                  perspective_object_id=perspective_id[1],
-                                  algorithm=algorithm, threshold=threshold,
-                                  entity_type_primary=entity_type_primary,
-                                  entity_type_secondary=entity_type_secondary,
-                                  levenshtein=levenshtein,
-                                  field_selection_list=field_selection_list,
-                                  locale_id=locale_id)
+                                   perspective_client_id=perspective_id[0],
+                                   perspective_object_id=perspective_id[1],
+                                   algorithm=algorithm, threshold=threshold,
+                                   entity_type_primary=entity_type_primary,
+                                   entity_type_secondary=entity_type_secondary,
+                                   levenshtein=levenshtein,
+                                   field_selection_list=field_selection_list,
+                                   locale_id=locale_id)
 
         return MergeSuggestions(user_has_permissions=result['user_has_permissions'],
                                 match_result=result['match_result'])
-
 
     def resolve_convert_five_tiers_validate(self, info, markup_id):
         client_id, object_id = markup_id
@@ -1900,6 +1895,7 @@ class MyMutations(graphene.ObjectType):
     delete_translationgist = DeleteTranslationGist.Field()
     create_lexicalentry = CreateLexicalEntry.Field()
     delete_lexicalentry = DeleteLexicalEntry.Field()
+    bulk_delete_lexicalentry = BulkDeleteLexicalEntry.Field()
     bulk_create_lexicalentry = BulkCreateLexicalEntry.Field()
     join_lexical_entry_group = ConnectLexicalEntries.Field()
     leave_lexical_entry_group = DeleteGroupingTags.Field()

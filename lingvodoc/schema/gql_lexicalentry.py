@@ -43,6 +43,7 @@ import time
 import string
 import random
 
+
 class LexicalEntry(LingvodocObjectType):
     """
      #created_at          | timestamp without time zone | NOT NULL
@@ -235,14 +236,14 @@ class DeleteLexicalEntry(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
 
-    lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('delete', 'lexical_entries_and_entities', id_key= "parent_id")
     def mutate(root, info, **args):
-        id = args.get('id')
-        client_id, object_id = id
+        lex_id = args.get('id')
+        client_id, object_id = lex_id
+        info.context.acl_check('delete', 'lexical_entries_and_entities',
+                               (client_id, object_id))
         dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if dblexicalentry and not dblexicalentry.marked_for_deletion:
             settings = info.context["request"].registry.settings
@@ -250,14 +251,59 @@ class DeleteLexicalEntry(graphene.Mutation):
                 real_delete_lexical_entry(dblexicalentry, settings)
             else:
                 del_object(dblexicalentry)
-
-            # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dblexicalentry.client_id,
-            #                                                  object_id=dblexicalentry.object_id).one()
-            # del_object(objecttoc)
-            lexicalentry = LexicalEntry(id=[dblexicalentry.client_id, dblexicalentry.object_id])
-            lexicalentry.dbObject = dblexicalentry
-            return DeleteLexicalEntry(lexicalentry=lexicalentry, triumph=True)
+            return DeleteLexicalEntry(triumph=True)
         raise ResponseError(message="No such entity in the system")
+
+
+class BulkDeleteLexicalEntry(graphene.Mutation):
+    """
+    example:
+    mutation {
+        delete_lexicalentry(id: [949,21]) {
+            lexicalentry {
+                id
+            }
+            triumph
+        }
+    }
+    now returns:
+      {
+      "delete_lexicalentry": {
+        "lexicalentry": {
+          "id": [
+            949,
+            21
+          ]
+        },
+        "triumph": true
+      }
+    }
+    """
+
+    class Arguments:
+        ids = graphene.List(LingvodocID, jrrequired=True)
+
+    lexicalentry = graphene.Field(LexicalEntry)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+        ids = args.get('ids')
+        for lex_id in ids:
+            client_id, object_id = lex_id
+            info.context.acl_check('delete', 'lexical_entries_and_entities',
+                                   (client_id, object_id))
+            dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+            if dblexicalentry and not dblexicalentry.marked_for_deletion:
+                settings = info.context["request"].registry.settings
+                if 'desktop' in settings:
+                    real_delete_lexical_entry(dblexicalentry, settings)
+                else:
+                    del_object(dblexicalentry)
+            else:
+                raise ResponseError(message="No such entity in the system")
+        return DeleteLexicalEntry(triumph=True)
+
 
 class BulkCreateLexicalEntry(graphene.Mutation):
     class Arguments:
@@ -280,7 +326,6 @@ class BulkCreateLexicalEntry(graphene.Mutation):
 
             dblexentry = create_lexicalentry(id, perspective_id, False)
             lexentries_list.append(dblexentry)
-
 
         DBSession.bulk_save_objects(lexentries_list)
         DBSession.flush()
