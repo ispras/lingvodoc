@@ -158,21 +158,31 @@ def eaf_wordlist(entity):
         try:
             f.write(content)
             f.close()
-            if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
-                if 'data_type' in entity.additional_metadata :
-                    if 'praat' in entity.additional_metadata['data_type']:
-                        textgrid_obj = pympi.TextGrid(file_path=filename)
-                        eaf_obj = textgrid_obj.to_eaf()
-                        word_list = eaf_words(eaf_obj)
-                        return word_list
-
-                    elif 'elan' in entity.additional_metadata['data_type']:
-                        eaf_obj = pympi.Eaf(file_path=filename)
-                        word_list = eaf_words(eaf_obj)
-                        return word_list
-                    else:
-                        raise KeyError("Not allowed convert option")
-                raise KeyError("Not allowed convert option")
+            if os.path.getsize(filename) / (50 * 1024 * 1024.0) < 1:
+                try:
+                    eaf_obj = pympi.Eaf(file_path=filename)
+                    word_list = eaf_words(eaf_obj)
+                    return word_list
+                except:
+                    textgrid_obj = pympi.TextGrid(file_path=filename)
+                    eaf_obj = textgrid_obj.to_eaf()
+                    word_list = eaf_words(eaf_obj)
+                    return word_list
+                #
+                # if 'data_type' in entity.additional_metadata :
+                #     if 'praat' in entity.additional_metadata['data_type']:
+                #         textgrid_obj = pympi.TextGrid(file_path=filename)
+                #         eaf_obj = textgrid_obj.to_eaf()
+                #         word_list = eaf_words(eaf_obj)
+                #         return word_list
+                #
+                #     elif 'elan' in entity.additional_metadata['data_type']:
+                #         eaf_obj = pympi.Eaf(file_path=filename)
+                #         word_list = eaf_words(eaf_obj)
+                #         return word_list
+                #     else:
+                #         raise KeyError("Not allowed convert option")
+                #raise KeyError("Not allowed convert option")
             raise KeyError('File too big')
         except Exception as e:
             raise KeyError(e)
