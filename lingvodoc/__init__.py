@@ -742,6 +742,9 @@ def configure_routes(config):
     config.add_route(name='fix_groups', pattern='/fix_groups',
                      factory='lingvodoc.models.AdminAcl')
 
+    config.add_route(name='remove_dicts_from_grants', pattern='/remove_dicts_from_grants',
+                     factory='lingvodoc.models.AdminAcl')
+
     config.add_route(name='save_media', pattern='/save_media',
                      factory='lingvodoc.models.AdminAcl')
 

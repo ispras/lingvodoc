@@ -179,6 +179,17 @@ def save_media(request):
         res.update(count)
     return res
 
+
+@view_config(route_name='remove_dicts_from_grants', renderer='json', permission='admin')
+def remove_dicts_from_grants(request):
+    ids = request.json
+    for dict_id in ids:
+        for grant in DBSession.query(Grant).all():
+            if grant.additional_metadata and grant.additional_metadata['participant'] and dict_id in grant.additional_metadata['participant']:
+                grant.additional_metadata['participant'].remove(dict_id)
+                flag_modified(grant, 'additional_metadata')
+
+
 @view_config(route_name='fix_groups', renderer='json', permission='admin')
 def fix_groups(request):
     for dictionary in DBSession.query(Dictionary):
