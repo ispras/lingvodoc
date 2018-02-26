@@ -85,6 +85,14 @@ parid2str = lambda x: "_".join([str(x.parent_client_id), str(x.parent_object_id)
 id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
 
 
+
+class PerspectiveCounters(graphene.ObjectType):
+    all = graphene.Int()
+    published = graphene.Int()
+    not_accepted = graphene.Int()
+    # deleted = graphene.Int()
+    # all_with_deleted = graphene.Int()
+
 class DictionaryPerspective(LingvodocObjectType):
     """
      #created_at                       | timestamp without time zone | NOT NULL
@@ -142,6 +150,7 @@ class DictionaryPerspective(LingvodocObjectType):
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     is_template = graphene.Boolean()
+    counters = graphene.Field(PerspectiveCounters)
 
     dbType = dbPerspective
 
@@ -214,6 +223,20 @@ class DictionaryPerspective(LingvodocObjectType):
     #         lex_object.dbObject = lex
     #         lex_list.append(lex_object)
     #     return lex_list
+
+
+    @fetch_object()
+    def resolve_counters(self, info):
+        lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
+        lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
+        all_count = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False).count()
+        published_count = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False).count()
+        not_accepted_count = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False).count()
+        return PerspectiveCounters(all=all_count, published=published_count, not_accepted=not_accepted_count)
+
 
 
     @fetch_object()
