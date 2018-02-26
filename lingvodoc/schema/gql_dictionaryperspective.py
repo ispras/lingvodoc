@@ -40,7 +40,8 @@ from lingvodoc.schema.gql_column import Column
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
-from  lingvodoc.schema.gql_user import User
+from lingvodoc.schema.gql_user import User
+from lingvodoc.utils.search import translation_gist_search
 
 from sqlalchemy.sql.expression import case, true, false
 
@@ -299,6 +300,15 @@ class DictionaryPerspective(LingvodocObjectType):
             lexes = lexes.filter(dbEntity.created_at >= start_date)
         if end_date:
             lexes = lexes.filter(dbEntity.created_at <= end_date)
+
+        db_la_gist = translation_gist_search('Limited access')
+        limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+
+        if self.dbObject.state_translation_gist_client_id == limited_client_id and self.dbObject.state_translation_gist_object_id == limited_object_id and mode != 'not_accepted':
+            if not info.context.acl_check_if('view', 'lexical_entries_and_entities',
+                                   (self.dbObject.client_id, self.dbObject.object_id)):
+                lexes = lexes.limit(20)
+
         # lexes = lexes \
         #     .order_by(func.min(case(
         #     [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
