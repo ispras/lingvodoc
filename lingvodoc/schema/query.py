@@ -731,7 +731,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
         if mode is not None:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-            if mode:
+            if not mode:
                 # available
                 clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
                 cli = [o.id for o in clients]
