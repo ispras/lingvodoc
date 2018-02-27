@@ -428,11 +428,15 @@ class DictionaryPerspective(LingvodocObjectType):
         if starting_time is None or ending_time is None:
             raise ResponseError(message="Bad time period")
         locale_id = info.context.get('locale_id')
-        return statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
-                                   starting_time,
-                                   ending_time,
-                                   locale_id=locale_id
-                                   )
+        current_statistics = statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
+                                                         starting_time,
+                                                         ending_time,
+                                                         locale_id=locale_id
+                                                         )
+        new_format_statistics = [
+            {"user_id": key, "name": current_statistics[key]['name'], "entities": current_statistics[key]['entities']}
+            for key in current_statistics]
+        return new_format_statistics
 
 
 class CreateDictionaryPerspective(graphene.Mutation):
