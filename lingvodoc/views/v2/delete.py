@@ -7,6 +7,7 @@ from lingvodoc.models import (
     Field,
     LexicalEntry,
     Entity,
+    PublishingEntity,
     Language,
     Organization,
     User,
@@ -80,6 +81,8 @@ def real_delete_lexical_entry(lexical_entry, settings):
 
 
 def real_delete_entity(entity, settings):
+    DBSession.delete(DBSession.query(PublishingEntity).filter_by(client_id=entity.client_id, object_id=entity.object_id).first())
+
     for child in entity.entity:
         real_delete_entity(child, settings)
     if entity.additional_metadata and 'data_type' in entity.additional_metadata:
