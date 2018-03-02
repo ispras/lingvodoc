@@ -216,7 +216,7 @@ class UpdateColumn(graphene.Mutation):
         info.context.acl_check('edit', 'perspective',
                                    (field_object.parent_client_id, field_object.parent_object_id))
         field_id = args.get('field_id')
-        self_id = args.get('field_id')
+        self_id = args.get('self_id')
         link_id = args.get('link_id')
         position = args.get('position')
         if field_id:

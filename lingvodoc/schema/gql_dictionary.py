@@ -129,11 +129,16 @@ class Dictionary(LingvodocObjectType):  # tested
         if starting_time is None or ending_time is None:
             raise ResponseError(message="Time period is not chosen")
         locale_id = info.context.get('locale_id')
-        return statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
+        current_statistics = statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
                                    starting_time,
                                    ending_time,
                                    locale_id=locale_id
-                                   )
+                                                        )
+        new_format_statistics = [
+            {"user_id": key, "name": current_statistics[key]['name'], "entities": current_statistics[key]['entities']}
+            for key in current_statistics]
+        return new_format_statistics
+
     @fetch_object()
     def resolve_perspectives(self, info):
         if not self.id:

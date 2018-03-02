@@ -1,5 +1,6 @@
 import graphene
-
+from lingvodoc.utils.elan_functions import tgt_to_eaf
+import requests
 from lingvodoc.schema.gql_entity import (
     Entity,
     CreateEntity,
@@ -66,6 +67,7 @@ from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
     CreateLexicalEntry,
     DeleteLexicalEntry,
+    BulkDeleteLexicalEntry,
     BulkCreateLexicalEntry,
     ConnectLexicalEntries,
     DeleteGroupingTags
@@ -78,6 +80,7 @@ from lingvodoc.schema.gql_language import (
     DeleteLanguage,
     MoveLanguage
 )
+from lingvodoc.schema.gql_merge import MergeBulk
 from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
     CreateDictionaryPerspective,
@@ -170,35 +173,38 @@ from sqlalchemy.orm import aliased
 
 from sqlalchemy.sql.functions import coalesce
 from lingvodoc.schema.gql_tasks import Task, DeleteTask
-from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary
+from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary, ConvertFiveTiers
 from pyramid.security import authenticated_userid
 
 from lingvodoc.utils.phonology import gql_phonology as utils_phonology
+from lingvodoc.utils.phonology import gql_phonology_tier_list as utils_phonology_tier_list
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
+from lingvodoc.utils.merge import merge_suggestions
+import tempfile
+
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
+from pyramid.httpexceptions import (
+    HTTPError
+)
+
+from lingvodoc.scripts import elan_parser
 
 
+class TierList(graphene.ObjectType):
+    tier_count = graphene.Field(ObjectVal)
+    total_count = graphene.Int()
 
-
-
-# def have_tag(lex, tags, field_client_id, field_object_id):
-#     return bool([x for x in lex if x.field_client_id == field_client_id and x.field_object_id == field_object_id and x.content in tags and x.published and x.accepted])
-
-
-
-
-
-#Category = graphene.Enum('Category', [('corpus', 0), ('dictionary', 1)])
 
 class LexicalEntriesAndEntities(graphene.ObjectType):
     entities = graphene.List(Entity)
     lexical_entries = graphene.List(LexicalEntry)
+
 
 class Permissions(graphene.ObjectType):
     edit = graphene.List(DictionaryPerspective)
@@ -212,7 +218,7 @@ class StarlingField(graphene.InputObjectType):
     starling_type = graphene.Int(required=True)
     field_id = LingvodocID(required=True)
     fake_id = graphene.String()
-    link_fake_id = LingvodocID() #graphene.String()
+    link_fake_id = LingvodocID()  # graphene.String()
 
 
 class StarlingDictionary(graphene.InputObjectType):
@@ -225,9 +231,16 @@ class StarlingDictionary(graphene.InputObjectType):
     field_map = graphene.List(StarlingField, required=True)
     add_etymology = graphene.Boolean(required=True)
 
+
 class DialeqtInfo(graphene.ObjectType):
     dictionary_name = graphene.String()
     dialeqt_id = graphene.String()
+
+
+class MergeSuggestions(graphene.ObjectType):
+    match_result = graphene.List(ObjectVal)
+    user_has_permissions = graphene.Boolean()
+
 
 def get_dict_attributes(sqconn):
     dict_trav = sqconn.cursor()
@@ -244,7 +257,6 @@ def get_dict_attributes(sqconn):
         req['dictionary_name'] = dictionary[0]
         req['dialeqt_id'] = dictionary[1]
     return req
-
 
 
 class Query(graphene.ObjectType):
@@ -268,16 +280,18 @@ class Query(graphene.ObjectType):
     organization = graphene.Field(Organization, id=LingvodocID())
     organizations = graphene.List(Organization)
     lexicalentry = graphene.Field(LexicalEntry, id=LingvodocID())
-    basic_search = graphene.Field(LexicalEntriesAndEntities, searchstring=graphene.String(), can_add_tags=graphene.Boolean(),
-                                   perspective_id=LingvodocID(), field_id=LingvodocID(),
-                                   search_in_published=graphene.Boolean())
+    basic_search = graphene.Field(LexicalEntriesAndEntities, searchstring=graphene.String(),
+                                  can_add_tags=graphene.Boolean(),
+                                  perspective_id=LingvodocID(), field_id=LingvodocID(),
+                                  search_in_published=graphene.Boolean())
     advanced_lexicalentries = graphene.List(LexicalEntry, searchstrings=graphene.List(ObjectVal),
                                             perspectives=LingvodocID(),
                                             adopted=graphene.Boolean(),
                                             adopted_type=LingvodocID(),
                                             with_entimology=graphene.Boolean())
     translationgists = graphene.List(TranslationGist)
-    translation_search = graphene.List(TranslationGist, searchstring=graphene.String(), translation_type=graphene.String())
+    translation_search = graphene.List(TranslationGist, searchstring=graphene.String(),
+                                       translation_type=graphene.String())
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
@@ -293,20 +307,24 @@ class Query(graphene.ObjectType):
     grant = graphene.Field(Grant, id=graphene.Int())
     grants = graphene.List(Grant)
     column = graphene.Field(Column, id=LingvodocID())
-    phonology = graphene.Field(graphene.Boolean, perspective_id=LingvodocID(),
-        limit=graphene.Int(),
-        limit_exception=graphene.Int(),
-        limit_no_vowel=graphene.Int(),
-        limit_result=graphene.Int(),
-        group_by_description=graphene.Boolean(),
-        only_first_translation=graphene.Boolean(),
-        vowel_selection=graphene.Boolean(),
-        maybe_tier_list=graphene.List(graphene.String),
-        maybe_tier_set=graphene.List(graphene.String),
-        synchronous=graphene.Boolean(),
-        maybe_translation_field=LingvodocID(required=True),
-        )
-    connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True), field_id = LingvodocID(required=True), mode=graphene.String())
+    # phonology = graphene.Field(graphene.Boolean, perspective_id=LingvodocID(),
+    #     limit=graphene.Int(),
+    #     limit_exception=graphene.Int(),
+    #     limit_no_vowel=graphene.Int(),
+    #     limit_result=graphene.Int(),
+    #     group_by_description=graphene.Boolean(),
+    #     only_first_translation=graphene.Boolean(),
+    #     vowel_selection=graphene.Boolean(),
+    #     maybe_tier_list=graphene.List(graphene.String),
+    #     maybe_tier_set=graphene.List(graphene.String),
+    #     synchronous=graphene.Boolean(),
+    #     maybe_translation_field=LingvodocID(required=True),
+    #     )
+
+    phonology_tier_list = graphene.Field(TierList, perspective_id=LingvodocID(required=True))
+
+    connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True),
+                                     field_id=LingvodocID(required=True), mode=graphene.String())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
                                      tag_list=LingvodocID(),
@@ -315,7 +333,7 @@ class Query(graphene.ObjectType):
                                      etymology=graphene.Boolean(),
                                      search_strings=graphene.List(graphene.List(ObjectVal), required=True),
                                      mode=graphene.String())
-    search_strings=graphene.List(graphene.List(ObjectVal))
+    search_strings = graphene.List(graphene.List(ObjectVal))
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
 
@@ -326,6 +344,80 @@ class Query(graphene.ObjectType):
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
+    convert_five_tiers_validate = graphene.Boolean(markup_id=LingvodocID(required=True))
+    merge_suggestions = graphene.Field(MergeSuggestions, perspective_id=LingvodocID(required=True),
+                                       algorithm=graphene.String(required=True),
+                                       entity_type_primary=graphene.String(),
+                                       entity_type_secondary=graphene.String(),
+                                       levenshtein=graphene.Int(),
+                                       threshold=graphene.Float(),
+                                       field_selection_list=graphene.List(ObjectVal), )
+
+    def resolve_merge_suggestions(self, info, perspective_id, algorithm, threshold=0.1,
+                                  entity_type_primary='Transcription',
+                                  entity_type_secondary='Translation',
+                                  levenshtein=1,
+                                  field_selection_list=None
+                                  ):
+        request = info.context.request
+        locale_id = info.context.get('locale_id')
+
+        result = merge_suggestions(request=request,
+                                   perspective_client_id=perspective_id[0],
+                                   perspective_object_id=perspective_id[1],
+                                   algorithm=algorithm, threshold=threshold,
+                                   entity_type_primary=entity_type_primary,
+                                   entity_type_secondary=entity_type_secondary,
+                                   levenshtein=levenshtein,
+                                   field_selection_list=field_selection_list,
+                                   locale_id=locale_id)
+
+        return MergeSuggestions(user_has_permissions=result['user_has_permissions'],
+                                match_result=result['match_result'])
+
+    def resolve_convert_five_tiers_validate(self, info, markup_id):
+        client_id, object_id = markup_id
+        entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not entity:
+            raise KeyError("No such file")
+        resp = requests.get(entity.content)
+        if not resp:
+            raise ResponseError("Cannot access file")
+        content = resp.content
+        result = False
+        with tempfile.NamedTemporaryFile() as temp:
+            markup = tgt_to_eaf(content, entity.additional_metadata)
+            temp.write(markup.encode("utf-8"))
+            elan_check = elan_parser.ElanCheck(temp.name)
+            elan_check.parse()
+            if elan_check.check():
+                result = True
+            temp.flush()
+        return result
+
+    """
+        from urllib import request
+        from urllib.parse import quote
+        #request = urllib.request #info.context.request
+        try:
+            result = False
+            file_name = eaf_url.split("/")[-1]
+            folder = "/".join(eaf_url.split("/")[:-1])
+            eaffile = request.urlopen("%s/%s" % (folder, quote(file_name)))
+        except HTTPError as e:
+            raise ResponseError(message=str(e))
+        except KeyError as e:
+            raise ResponseError(message=str(e))
+        with tempfile.NamedTemporaryFile() as temp:
+            markup = tgt_to_eaf(eaffile.read(), {"data_type": "praat"})
+            temp.write(markup)
+            elan_check = elan_parser.ElanCheck(temp.name)
+            elan_check.parse()
+            if elan_check.check():
+                result = True
+            temp.flush()
+        return result
+    """
 
     def resolve_dictionary_dialeqt_get_info(self, info, blob_id):  # TODO: test
         blob_client_id, blob_object_id = blob_id
@@ -639,7 +731,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
         if mode is not None:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-            if mode:
+            if not mode:
                 # available
                 clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
                 cli = [o.id for o in clients]
@@ -1416,9 +1508,27 @@ class Query(graphene.ObjectType):
 
         return grants_list
 
-    def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
-                          vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
-                            limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
+    # def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
+    #                       vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
+    #                         limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
+    #     """
+    #     query MyQuery {
+    #                 phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
+    #
+    #                 )
+    #     }
+    #     """
+    #     perspective_cid, perspective_oid = perspective_id
+    #     locale_id = info.context.get('locale_id')
+    #     request = info.context.get('request')
+    #
+    #     utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
+    #               synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
+    #               limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
+    #
+    #     return True
+
+    def resolve_phonology_tier_list(self, info, perspective_id):
         """
         query MyQuery {
                     phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
@@ -1430,11 +1540,9 @@ class Query(graphene.ObjectType):
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')
 
-        utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
-                  synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
-                  limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
+        answer = utils_phonology_tier_list(perspective_cid, perspective_oid)
 
-        return True
+        return TierList(tier_count=answer['tier_count'], total_count=answer['total_count'])
 
     # def resolve_convert_starling(self, info, starling_dictionaries):
     #     """
@@ -1585,16 +1693,7 @@ class Query(graphene.ObjectType):
 
 
     def resolve_convert_markup(self, info, id):
-        # TODO: delete
 
-        import sys
-        import os
-        import random
-        import string
-        import requests
-        from sqlalchemy.exc import IntegrityError
-        from lingvodoc.exceptions import CommonException
-        from lingvodoc.scripts.convert_rules import praat_to_elan
 
         # TODO: permission check
         """
@@ -1605,68 +1704,17 @@ class Query(graphene.ObjectType):
         # client_id = info.context.get('client_id')
         # client = DBSession.query(Client).filter_by(id=client_id).first()
         # user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        client_id, object_id = id
+        entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not entity:
+            raise KeyError("No such file")
+        resp = requests.get(entity.content)
+        if not resp:
+            raise ResponseError("Cannot access file")
+        content = resp.content
+        return tgt_to_eaf(content, entity.additional_metadata)
 
-        try:
-            # out_type = req['out_type']
-            client_id, object_id = id
 
-            entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
-            if not entity:
-                raise KeyError("No such file")
-            resp = requests.get(entity.content)
-            if not resp:
-                raise ResponseError("Cannot access file")
-            content = resp.content
-            try:
-                n = 10
-                filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                                  for c in range(n))
-                # extension = os.path.splitext(blob.content)[1]
-                f = open(filename, 'wb')
-            except Exception as e:
-                return ResponseError(message=str(e))
-            try:
-                f.write(content)
-                f.close()
-                if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
-                    if 'data_type' in entity.additional_metadata :
-                        if 'praat' in entity.additional_metadata['data_type']:
-                            elan_content = praat_to_elan(filename)
-                            if sys.getsizeof(elan_content) / (10 * 1024 * 1024.0) < 1:
-                                # filename2 = 'abc.xml'
-                                # f2 = open(filename2, 'w')
-                                # try:
-                                #     f2.write(content)
-                                #     f2.close()
-                                #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
-                                #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
-                                # except:
-                                #     print('fail with xmllint')
-                                # finally:
-                                #     pass
-                                #     os.remove(filename2)
-                                return elan_content
-                        elif 'elan' in entity.additional_metadata['data_type']:
-                            with open(filename, 'r') as f:
-                                return f.read()
-                        else:
-                            raise KeyError("Not allowed convert option")
-                        raise KeyError('File too big')
-                    raise KeyError("Not allowed convert option")
-                raise KeyError('File too big')
-            except Exception as e:
-                raise ResponseError(message=e)
-            finally:
-                os.remove(filename)
-                pass
-        except KeyError as e:
-            raise ResponseError(message=str(e))
-
-        except IntegrityError as e:
-            raise ResponseError(message=str(e))
-
-        except CommonException as e:
-            raise ResponseError(message=str(e))
 
 
 
@@ -1755,6 +1803,58 @@ class StarlingEtymology(graphene.Mutation):
 
         return StarlingEtymology(triumph=True)
 
+class Phonology(graphene.Mutation):
+
+    class Arguments:
+        perspective_id=LingvodocID(required=True)
+        limit=graphene.Int()
+        limit_exception=graphene.Int()
+        limit_no_vowel=graphene.Int()
+        limit_result=graphene.Int()
+        group_by_description=graphene.Boolean(required=True)
+        only_first_translation=graphene.Boolean(required=True)
+        vowel_selection=graphene.Boolean(required=True)
+        maybe_tier_list=graphene.List(graphene.String)
+        maybe_tier_set=graphene.List(graphene.String)
+        synchronous=graphene.Boolean()
+        maybe_translation_field=LingvodocID()
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+
+    def mutate(self, info, **args):
+        """
+        query MyQuery {
+                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
+
+                    )
+        }
+        """
+        perspective_id = args['perspective_id']
+        maybe_translation_field = args.get('maybe_translation_field')
+        group_by_description = args['group_by_description']
+        only_first_translation = args['only_first_translation']
+        vowel_selection = args['vowel_selection']
+        maybe_tier_list = args.get('maybe_tier_list')
+        maybe_tier_set = args.get('maybe_tier_set')
+        limit = args.get('limit')
+        limit_exception = args.get('limit_exception')
+        limit_no_vowel = args.get('limit_no_vowel')
+        limit_result = args.get('limit_result')
+        synchronous = args.get('synchronous')
+        perspective_cid, perspective_oid = perspective_id
+        locale_id = info.context.get('locale_id')
+        request = info.context.get('request')
+
+        utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
+                        synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
+                        limit_exception, limit_no_vowel, limit_result, locale_id,
+                        maybe_translation_field=maybe_translation_field)
+
+        return Phonology(triumph=True)
+
 
 class MyMutations(graphene.ObjectType):
     """
@@ -1765,6 +1865,7 @@ class MyMutations(graphene.ObjectType):
     """
     convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
     convert_dialeqt = ConvertDictionary.Field()
+    convert_corpus = ConvertFiveTiers.Field()
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
@@ -1794,6 +1895,7 @@ class MyMutations(graphene.ObjectType):
     delete_translationgist = DeleteTranslationGist.Field()
     create_lexicalentry = CreateLexicalEntry.Field()
     delete_lexicalentry = DeleteLexicalEntry.Field()
+    bulk_delete_lexicalentry = BulkDeleteLexicalEntry.Field()
     bulk_create_lexicalentry = BulkCreateLexicalEntry.Field()
     join_lexical_entry_group = ConnectLexicalEntries.Field()
     leave_lexical_entry_group = DeleteGroupingTags.Field()
@@ -1822,6 +1924,8 @@ class MyMutations(graphene.ObjectType):
     synchronize = Synchronize.Field()
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
+    phonology = Phonology.Field()
+    merge_bulk = MergeBulk.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
