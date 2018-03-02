@@ -135,13 +135,16 @@ class CreateColumn(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    @acl_check_by_id("edit", "perspective", id_key="parent_id")
+    # @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         id = [client_id, object_id]
         parent_id = args.get('parent_id')
+
+        info.context.acl_check('edit', 'perspective',
+                                   parent_id)
         field_id = args.get('field_id')
         self_id = args.get('self_id')
         link_id = args.get('link_id')
@@ -213,7 +216,7 @@ class UpdateColumn(graphene.Mutation):
         info.context.acl_check('edit', 'perspective',
                                    (field_object.parent_client_id, field_object.parent_object_id))
         field_id = args.get('field_id')
-        self_id = args.get('field_id')
+        self_id = args.get('self_id')
         link_id = args.get('link_id')
         position = args.get('position')
         if field_id:
@@ -264,7 +267,7 @@ class DeleteColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("perspective", "edit", id_key="parent_id")
+    @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id, object_id = id

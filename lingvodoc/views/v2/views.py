@@ -179,6 +179,17 @@ def save_media(request):
         res.update(count)
     return res
 
+
+@view_config(route_name='remove_dicts_from_grants', renderer='json', permission='admin')
+def remove_dicts_from_grants(request):
+    ids = request.json
+    for dict_id in ids:
+        for grant in DBSession.query(Grant).all():
+            if grant.additional_metadata and grant.additional_metadata['participant'] and dict_id in grant.additional_metadata['participant']:
+                grant.additional_metadata['participant'].remove(dict_id)
+                flag_modified(grant, 'additional_metadata')
+
+
 @view_config(route_name='fix_groups', renderer='json', permission='admin')
 def fix_groups(request):
     for dictionary in DBSession.query(Dictionary):
@@ -269,73 +280,78 @@ from lingvodoc.utils.search import translation_gist_search
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    simpler_info = lambda x: [i['info']['content'] for i in x]
-    persp_to_dict = lambda x: [
-        p.additional_metadata['location']['content'] for p in x]
-    persps = DBSession.query(DictionaryPerspective).filter().all()
-    dicts = []
-    for persp in persps:
-        if not persp.additional_metadata:
-            continue
-        parent = persp.parent
-        if not parent.additional_metadata:
-            parent.additional_metadata = dict()
-        if persp.additional_metadata.get('location'): # not parent.additional_metadata.get('location') check deleted
-            parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
-        # if persp.additional_metadata.get('location'):
-        #     del persp.additional_metadata['location']
-        if persp.additional_metadata.get('authors'): # not parent.additional_metadata.get('authors') check eleted
-            parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
-        # if persp.additional_metadata.get('authors'):
-        #     del persp.additional_metadata['authors']
-
-        if persp.additional_metadata.get('info'):
-            if not parent.additional_metadata.get('blobs'):
-                parent.additional_metadata['blobs'] = list()
-            for item in simpler_info(persp.additional_metadata['info']['content']):
-                if item not in parent.additional_metadata['blobs']:
-                    parent.additional_metadata['blobs'].append(item)
-
-            # del persp.additional_metadata['info']
-        #if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
-        #    parent.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
-            #del persp.additional_metadata['origin_client_id']
-            #del persp.additional_metadata['origin_object_id']
-        flag_modified(parent, 'additional_metadata')
+    res =  DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.additional_metadata['authors'].has_key('authors')).all()
+    for persp in res:
+        persp.additional_metadata['authors'] = persp.additional_metadata['authors']['authors']
         flag_modified(persp, 'additional_metadata')
-    langs = DBSession.query(Language).filter_by(marked_for_deletion=False, additional_metadata=None).order_by(Language.parent_client_id, Language.parent_object_id).all()
-    for lang in langs:
-        if lang.additional_metadata is None:
-
-            prev_sibling = DBSession.query(Language).filter(Language.parent_client_id == lang.parent_client_id,
-                                                                Language.parent_object_id == lang.parent_object_id,
-                                                                Language.marked_for_deletion == False,
-                                                            or_(Language.client_id != lang.client_id,
-                                                                Language.object_id != lang.object_id)).order_by(Language.parent_client_id,
-                                                                                                Language.parent_object_id,
-                                                                                                Language.additional_metadata[
-                                                                                                    'younger_siblings'].desc()).first()
-            lang.additional_metadata = dict()
-            lang.additional_metadata['younger_siblings'] = list()
-            if prev_sibling:
-                if prev_sibling.additional_metadata is None:
-                    prev_sibling.additional_metadata = dict()
-                    prev_sibling.additional_metadata['younger_siblings'] = list()
-                lang.additional_metadata['younger_siblings'] = list(prev_sibling.additional_metadata.get('younger_siblings'))
-                lang.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
-            DBSession.flush()
-
-
-            # lang.additional_metadata = dict()
-            # lang.additional_metadata['younger_siblings'] = list(prev_langs)
-            # prev_langs.append((lang.client_id, lang.object_id))
-        flag_modified(lang, 'additional_metadata')
-    for lang in DBSession.query(Language).filter_by(marked_for_deletion=False).all():
-        for ids in lang.additional_metadata.get('younger_siblings'):
-            if (lang.client_id, lang.object_id) == tuple(ids):
-                lang.additional_metadata['younger_siblings'].remove(ids)
-                flag_modified(lang, 'additional_metadata')
-    return "Success"
+    return [x.additional_metadata['authors'] for x in res]
+    # simpler_info = lambda x: [i['info']['content'] for i in x]
+    # persp_to_dict = lambda x: [
+    #     p.additional_metadata['location']['content'] for p in x]
+    # persps = DBSession.query(DictionaryPerspective).filter().all()
+    # dicts = []
+    # for persp in persps:
+    #     if not persp.additional_metadata:
+    #         continue
+    #     parent = persp.parent
+    #     if not parent.additional_metadata:
+    #         parent.additional_metadata = dict()
+    #     if persp.additional_metadata.get('location'): # not parent.additional_metadata.get('location') check deleted
+    #         parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
+    #     # if persp.additional_metadata.get('location'):
+    #     #     del persp.additional_metadata['location']
+    #     if persp.additional_metadata.get('authors'): # not parent.additional_metadata.get('authors') check eleted
+    #         parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
+    #     # if persp.additional_metadata.get('authors'):
+    #     #     del persp.additional_metadata['authors']
+    #
+    #     if persp.additional_metadata.get('info'):
+    #         if not parent.additional_metadata.get('blobs'):
+    #             parent.additional_metadata['blobs'] = list()
+    #         for item in simpler_info(persp.additional_metadata['info']['content']):
+    #             if item not in parent.additional_metadata['blobs']:
+    #                 parent.additional_metadata['blobs'].append(item)
+    #
+    #         # del persp.additional_metadata['info']
+    #     #if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
+    #     #    parent.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
+    #         #del persp.additional_metadata['origin_client_id']
+    #         #del persp.additional_metadata['origin_object_id']
+    #     flag_modified(parent, 'additional_metadata')
+    #     flag_modified(persp, 'additional_metadata')
+    # langs = DBSession.query(Language).filter_by(marked_for_deletion=False, additional_metadata=None).order_by(Language.parent_client_id, Language.parent_object_id).all()
+    # for lang in langs:
+    #     if lang.additional_metadata is None:
+    #
+    #         prev_sibling = DBSession.query(Language).filter(Language.parent_client_id == lang.parent_client_id,
+    #                                                             Language.parent_object_id == lang.parent_object_id,
+    #                                                             Language.marked_for_deletion == False,
+    #                                                         or_(Language.client_id != lang.client_id,
+    #                                                             Language.object_id != lang.object_id)).order_by(Language.parent_client_id,
+    #                                                                                             Language.parent_object_id,
+    #                                                                                             Language.additional_metadata[
+    #                                                                                                 'younger_siblings'].desc()).first()
+    #         lang.additional_metadata = dict()
+    #         lang.additional_metadata['younger_siblings'] = list()
+    #         if prev_sibling:
+    #             if prev_sibling.additional_metadata is None:
+    #                 prev_sibling.additional_metadata = dict()
+    #                 prev_sibling.additional_metadata['younger_siblings'] = list()
+    #             lang.additional_metadata['younger_siblings'] = list(prev_sibling.additional_metadata.get('younger_siblings'))
+    #             lang.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
+    #         DBSession.flush()
+    #
+    #
+    #         # lang.additional_metadata = dict()
+    #         # lang.additional_metadata['younger_siblings'] = list(prev_langs)
+    #         # prev_langs.append((lang.client_id, lang.object_id))
+    #     flag_modified(lang, 'additional_metadata')
+    # for lang in DBSession.query(Language).filter_by(marked_for_deletion=False).all():
+    #     for ids in lang.additional_metadata.get('younger_siblings'):
+    #         if (lang.client_id, lang.object_id) == tuple(ids):
+    #             lang.additional_metadata['younger_siblings'].remove(ids)
+    #             flag_modified(lang, 'additional_metadata')
+    # return "Success"
 
 
 def recursive_sort(langs, visited, stack, result):

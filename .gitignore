@@ -26,3 +26,7 @@ pytest.output
 sphinx/source/apidoc-*/
 sphinx/pyramid_autodoc
 alembic.ini
+
+# docker stuff
+docker/dbdump/*
+docker/frontend/*
