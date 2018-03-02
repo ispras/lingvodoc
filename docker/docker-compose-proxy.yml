@@ -1,0 +1,102 @@
+version: '3.2'
+services:
+  pg:
+    image: postgres:10.1
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lingvodoc
+    volumes:
+      - ./dbdump:/docker-entrypoint-initdb.d
+    ports:
+      - "15432:5432"
+  pg-proxy:
+    image: postgres:10.1
+    container_name: postgres-proxy
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lingvodoc
+    ports:
+      - "25432:5432"
+  nginx:
+    image: nginx:latest
+    container_name: ngx
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/dist:/dist
+      - ./nginx:/etc/nginx/conf.d
+      - ./sock:/sock
+    depends_on:
+      - pg
+      - api
+  nginx-proxy:
+    image: nginx:latest
+    container_name: ngx-proxy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend-proxy/dist:/dist
+      - ./nginx:/etc/nginx/conf.d
+      - ./sock-proxy:/sock
+    depends_on:
+      - pg
+      - api
+  redis:
+    image: 'bitnami/redis:latest'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    labels:
+      kompose.service.type: nodeport
+    ports:
+      - '16379:6379'
+  redis-proxy:
+    image: 'bitnami/redis:latest'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    labels:
+      kompose.service.type: nodeport
+    ports:
+      - '26379:6379'
+  api:
+    build: ..
+    depends_on:
+      - pg
+      - redis
+    links:
+      - pg
+      - redis
+      
+    container_name: ld
+    volumes:
+      - ./frontend/dist:/dist
+      - ./sock:/sock
+      - /api/build/
+      - ../:/api
+
+    env_file:
+      - ./locale_env.sh
+    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg gunicorn --paster /api/docker/docker.ini"
+    ports:
+      - "16543:6543"
+  api-proxy:
+    build: ..
+    depends_on:
+      - pg-proxy
+      - redis-proxy
+    links:
+      - pg-proxy
+      - redis-proxy
+      
+    container_name: ld-proxy
+    volumes:
+      - ./frontend-proxy/dist:/dist
+      - ./sock-proxy:/sock
+      - /api/build/
+      - ../:/api
+
+    env_file:
+      - ./locale_env.sh
+    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg-proxy  alembic -c /api/docker/docker-alembic.ini upgrade head && gunicorn --paster /api/docker/docker-proxy.ini"
+    ports:
+      - "26543:6543"
