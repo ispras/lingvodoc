@@ -22,7 +22,7 @@ services:
     image: nginx:latest
     container_name: ngx
     ports:
-      - "80:80"
+      - "1080:80"
     volumes:
       - ./frontend/dist:/dist
       - ./nginx:/etc/nginx/conf.d
