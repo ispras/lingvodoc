@@ -40,7 +40,8 @@ from lingvodoc.schema.gql_column import Column
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
-from  lingvodoc.schema.gql_user import User
+from lingvodoc.schema.gql_user import User
+from lingvodoc.utils.search import translation_gist_search
 
 from sqlalchemy.sql.expression import case, true, false
 
@@ -84,6 +85,14 @@ class MyGen:  # used in resolve_lexical_entries to go through entities once
 parid2str = lambda x: "_".join([str(x.parent_client_id), str(x.parent_object_id)])
 id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
 
+
+
+class PerspectiveCounters(graphene.ObjectType):
+    all = graphene.Int()
+    published = graphene.Int()
+    not_accepted = graphene.Int()
+    # deleted = graphene.Int()
+    # all_with_deleted = graphene.Int()
 
 class DictionaryPerspective(LingvodocObjectType):
     """
@@ -142,6 +151,7 @@ class DictionaryPerspective(LingvodocObjectType):
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     is_template = graphene.Boolean()
+    counters = graphene.Field(PerspectiveCounters)
 
     dbType = dbPerspective
 
@@ -217,6 +227,20 @@ class DictionaryPerspective(LingvodocObjectType):
 
 
     @fetch_object()
+    def resolve_counters(self, info):
+        lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
+        lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
+        all_count = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False).count()
+        published_count = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False).count()
+        not_accepted_count = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False).count()
+        return PerspectiveCounters(all=all_count, published=published_count, not_accepted=not_accepted_count)
+
+
+
+    @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
                              position=1):
         result = list()
@@ -225,6 +249,8 @@ class DictionaryPerspective(LingvodocObjectType):
             publish = None
             accept = True
             delete = False
+            info.context.acl_check('view', 'lexical_entries_and_entities',
+                                   (self.dbObject.client_id, self.dbObject.object_id))
         elif mode == 'published':
             publish = True
             accept = True
@@ -237,10 +263,14 @@ class DictionaryPerspective(LingvodocObjectType):
             publish = None
             accept = None
             delete = True
+            info.context.acl_check('view', 'lexical_entries_and_entities',
+                                   (self.dbObject.client_id, self.dbObject.object_id))
         elif mode == 'all_with_deleted':
             publish = None
             accept = None
             delete = None
+            info.context.acl_check('view', 'lexical_entries_and_entities',
+                                   (self.dbObject.client_id, self.dbObject.object_id))
         else:
             raise ResponseError(message="mode: <all|published|not_accepted|deleted|all_with_deleted>")
 
@@ -270,6 +300,15 @@ class DictionaryPerspective(LingvodocObjectType):
             lexes = lexes.filter(dbEntity.created_at >= start_date)
         if end_date:
             lexes = lexes.filter(dbEntity.created_at <= end_date)
+
+        db_la_gist = translation_gist_search('Limited access')
+        limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+
+        if self.dbObject.state_translation_gist_client_id == limited_client_id and self.dbObject.state_translation_gist_object_id == limited_object_id and mode != 'not_accepted':
+            if not info.context.acl_check_if('view', 'lexical_entries_and_entities',
+                                   (self.dbObject.client_id, self.dbObject.object_id)):
+                lexes = lexes.limit(20)
+
         # lexes = lexes \
         #     .order_by(func.min(case(
         #     [(or_(dbEntity.field_client_id != dbcolumn.field_client_id,
@@ -389,11 +428,15 @@ class DictionaryPerspective(LingvodocObjectType):
         if starting_time is None or ending_time is None:
             raise ResponseError(message="Bad time period")
         locale_id = info.context.get('locale_id')
-        return statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
-                                   starting_time,
-                                   ending_time,
-                                   locale_id=locale_id
-                                   )
+        current_statistics = statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
+                                                         starting_time,
+                                                         ending_time,
+                                                         locale_id=locale_id
+                                                         )
+        new_format_statistics = [
+            {"user_id": key, "name": current_statistics[key]['name'], "entities": current_statistics[key]['entities']}
+            for key in current_statistics]
+        return new_format_statistics
 
 
 class CreateDictionaryPerspective(graphene.Mutation):
