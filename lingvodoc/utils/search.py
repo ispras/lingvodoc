@@ -83,10 +83,23 @@ def recursive_sort(langs, visited, stack, result):
 def eaf_words(eaf_obj):
     annotations = list()
     for tier in eaf_obj.tiers:
-        ann_list = [x[2].lower() for x in eaf_obj.get_annotation_data_for_tier(tier)]
-        ref_ann_list = [x[2].lower() for x in eaf_obj.get_ref_annotation_data_for_tier(tier)]
-        annotations += ann_list
-        annotations += ref_ann_list
+        if not eaf_obj.tiers[tier][1]:
+            a = eaf_obj.tiers[tier][0]
+            ann_data = [a[b][2]
+                for b in a]
+            ann_list = [x.lower() for x in ann_data]
+            annotations += ann_list
+
+        if eaf_obj.tiers[tier][1]:
+            ann_data = []
+            for aid, (ref, value, prev, _) in eaf_obj.tiers[tier][1].items():
+                tier_data = eaf_obj.tiers[eaf_obj.annotations[ref]]
+                if ref in tier_data[0]:
+                    ann_data.append(value)
+                if ref in tier_data[1]:
+                    ann_data.append(value)
+            ref_ann_list = [x.lower() for x in ann_data]
+            annotations += ref_ann_list
         #for ann in ann_list + ref_ann_list:
         #    annotations.add(ann)
     annotations = set(annotations)
