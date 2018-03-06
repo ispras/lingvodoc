@@ -276,82 +276,26 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
 from lingvodoc.models import UserRequest as dbUserRequest
 from lingvodoc.utils.search import translation_gist_search
 
+
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    res =  DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.additional_metadata['authors'].has_key('authors')).all()
-    for persp in res:
-        persp.additional_metadata['authors'] = persp.additional_metadata['authors']['authors']
-        flag_modified(persp, 'additional_metadata')
-    return [x.additional_metadata['authors'] for x in res]
-    # simpler_info = lambda x: [i['info']['content'] for i in x]
-    # persp_to_dict = lambda x: [
-    #     p.additional_metadata['location']['content'] for p in x]
-    # persps = DBSession.query(DictionaryPerspective).filter().all()
-    # dicts = []
-    # for persp in persps:
-    #     if not persp.additional_metadata:
-    #         continue
-    #     parent = persp.parent
-    #     if not parent.additional_metadata:
-    #         parent.additional_metadata = dict()
-    #     if persp.additional_metadata.get('location'): # not parent.additional_metadata.get('location') check deleted
-    #         parent.additional_metadata['location'] = persp.additional_metadata['location']['content']
-    #     # if persp.additional_metadata.get('location'):
-    #     #     del persp.additional_metadata['location']
-    #     if persp.additional_metadata.get('authors'): # not parent.additional_metadata.get('authors') check eleted
-    #         parent.additional_metadata['authors'] = persp.additional_metadata['authors']['content']
-    #     # if persp.additional_metadata.get('authors'):
-    #     #     del persp.additional_metadata['authors']
-    #
-    #     if persp.additional_metadata.get('info'):
-    #         if not parent.additional_metadata.get('blobs'):
-    #             parent.additional_metadata['blobs'] = list()
-    #         for item in simpler_info(persp.additional_metadata['info']['content']):
-    #             if item not in parent.additional_metadata['blobs']:
-    #                 parent.additional_metadata['blobs'].append(item)
-    #
-    #         # del persp.additional_metadata['info']
-    #     #if persp.additional_metadata.get('origin_client_id') and persp.additional_metadata.get('origin_object_id'):
-    #     #    parent.additional_metadata['origin_id'] = (persp.additional_metadata['origin_client_id'], persp.additional_metadata['origin_object_id'])
-    #         #del persp.additional_metadata['origin_client_id']
-    #         #del persp.additional_metadata['origin_object_id']
-    #     flag_modified(parent, 'additional_metadata')
-    #     flag_modified(persp, 'additional_metadata')
-    # langs = DBSession.query(Language).filter_by(marked_for_deletion=False, additional_metadata=None).order_by(Language.parent_client_id, Language.parent_object_id).all()
-    # for lang in langs:
-    #     if lang.additional_metadata is None:
-    #
-    #         prev_sibling = DBSession.query(Language).filter(Language.parent_client_id == lang.parent_client_id,
-    #                                                             Language.parent_object_id == lang.parent_object_id,
-    #                                                             Language.marked_for_deletion == False,
-    #                                                         or_(Language.client_id != lang.client_id,
-    #                                                             Language.object_id != lang.object_id)).order_by(Language.parent_client_id,
-    #                                                                                             Language.parent_object_id,
-    #                                                                                             Language.additional_metadata[
-    #                                                                                                 'younger_siblings'].desc()).first()
-    #         lang.additional_metadata = dict()
-    #         lang.additional_metadata['younger_siblings'] = list()
-    #         if prev_sibling:
-    #             if prev_sibling.additional_metadata is None:
-    #                 prev_sibling.additional_metadata = dict()
-    #                 prev_sibling.additional_metadata['younger_siblings'] = list()
-    #             lang.additional_metadata['younger_siblings'] = list(prev_sibling.additional_metadata.get('younger_siblings'))
-    #             lang.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
-    #         DBSession.flush()
-    #
-    #
-    #         # lang.additional_metadata = dict()
-    #         # lang.additional_metadata['younger_siblings'] = list(prev_langs)
-    #         # prev_langs.append((lang.client_id, lang.object_id))
-    #     flag_modified(lang, 'additional_metadata')
-    # for lang in DBSession.query(Language).filter_by(marked_for_deletion=False).all():
-    #     for ids in lang.additional_metadata.get('younger_siblings'):
-    #         if (lang.client_id, lang.object_id) == tuple(ids):
-    #             lang.additional_metadata['younger_siblings'].remove(ids)
-    #             flag_modified(lang, 'additional_metadata')
-    # return "Success"
+    import datetime
+    all_blobs = DBSession.query(UserBlobs).order_by(UserBlobs.created_at).all()
+    correct_list = list()
+    wrong_list = list()
+    for blob in all_blobs:
+        storage_path = blob.real_storage_path.split('/')
+        path_len = len(storage_path)
+        path_client_id = int(storage_path[path_len - 3])
+        path_object_id = int(storage_path[path_len - 2])
+        blob_info = (str(datetime.datetime.fromtimestamp(blob.created_at)), blob.client_id, blob.object_id, path_client_id, path_object_id)
+        if path_object_id != blob.object_id or path_client_id != blob.client_id:
+            wrong_list.append(blob_info)
+        else:
+            correct_list.append(blob_info)
+    return {"wrong": wrong_list, "correct": correct_list}
 
 
 def recursive_sort(langs, visited, stack, result):
