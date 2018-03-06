@@ -22,7 +22,7 @@ services:
     image: nginx:latest
     container_name: ngx
     ports:
-      - "80:80"
+      - "1080:80"
     volumes:
       - ./frontend/dist:/dist
       - ./nginx:/etc/nginx/conf.d
@@ -34,14 +34,14 @@ services:
     image: nginx:latest
     container_name: ngx-proxy
     ports:
-      - "8080:80"
+      - "2080:80"
     volumes:
       - ./frontend-proxy/dist:/dist
       - ./nginx:/etc/nginx/conf.d
       - ./sock-proxy:/sock
     depends_on:
-      - pg
-      - api
+      - pg-proxy
+      - api-proxy
   redis:
     image: 'bitnami/redis:latest'
     environment:
@@ -97,6 +97,6 @@ services:
 
     env_file:
       - ./locale_env.sh
-    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg-proxy  alembic -c /api/docker/docker-alembic.ini upgrade head && gunicorn --paster /api/docker/docker-proxy.ini"
+    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg-proxy alembic -c /api/docker/docker-alembic.ini upgrade head && gunicorn --paster /api/docker/docker-proxy.ini"
     ports:
       - "26543:6543"
