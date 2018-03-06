@@ -281,21 +281,7 @@ from lingvodoc.utils.search import translation_gist_search
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    import datetime
-    all_blobs = DBSession.query(UserBlobs).order_by(UserBlobs.created_at).all()
-    correct_list = list()
-    wrong_list = list()
-    for blob in all_blobs:
-        storage_path = blob.real_storage_path.split('/')
-        path_len = len(storage_path)
-        path_client_id = int(storage_path[path_len - 3])
-        path_object_id = int(storage_path[path_len - 2])
-        blob_info = (str(datetime.datetime.fromtimestamp(blob.created_at)), blob.client_id, blob.object_id, path_client_id, path_object_id)
-        if path_object_id != blob.object_id or path_client_id != blob.client_id:
-            wrong_list.append(blob_info)
-        else:
-            correct_list.append(blob_info)
-    return {"wrong": wrong_list, "correct": correct_list}
+    return
 
 
 def recursive_sort(langs, visited, stack, result):
