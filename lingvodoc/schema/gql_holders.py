@@ -561,7 +561,7 @@ class Metadata(graphene.ObjectType):
     merged_by = LingvodocID()
     data_type = graphene.String()
     blob_description = graphene.String()
-    merge =  graphene.Field(MergeMetadata)  # TODO: MergeMetadata
+    merge = graphene.Field(MergeMetadata)  # TODO: MergeMetadata
     original_filename = graphene.String()
     location = ObjectVal()
     client_id = graphene.Int()
@@ -624,7 +624,15 @@ class AdditionalMetadata(graphene.Interface):
 
         # initializes dict with None, for keys nonexistent in dbObject.additional_metadata
         # list of keys is taken from Metadata attributes
-        metadata_dict = {i: None for i in Metadata().__class__.__dict__ if not i.startswith("_")}
+
+        def default_value(i):
+            if type(getattr(Metadata, i)) == ObjectVal:
+                return {}
+            if type(getattr(Metadata, i)) == graphene.List:
+                return []
+            return None
+
+        metadata_dict = {i: default_value(i) for i in Metadata().__class__.__dict__ if not i.startswith("_")}
 
         if db_object.additional_metadata:
             new_meta = {key: db_object.additional_metadata[key] for key in db_object.additional_metadata if key in metadata_dict}
@@ -638,8 +646,6 @@ class AdditionalMetadata(graphene.Interface):
             if metadata_dict["blobs"]:
                 old_id_meta = metadata_dict["blobs"]
                 metadata_dict["blobs"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
-            else:
-                metadata_dict["blobs"] = None
         metadata_object = Metadata(**metadata_dict)
         return metadata_object
 
