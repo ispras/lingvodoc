@@ -574,6 +574,7 @@ class Metadata(graphene.ObjectType):
     starling_fields = graphene.List(graphene.String)
     participant = graphene.List(LingvodocID)
     link_perspective_id = LingvodocID()
+    tag_list = ObjectVal()
 
 
 
