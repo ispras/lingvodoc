@@ -574,7 +574,7 @@ class Metadata(graphene.ObjectType):
     starling_fields = graphene.List(graphene.String)
     participant = graphene.List(LingvodocID)
     link_perspective_id = LingvodocID()
-    tag_list = ObjectVal()
+    tag_list = graphene.List(graphene.String)
 
 
 
@@ -626,6 +626,8 @@ class AdditionalMetadata(graphene.Interface):
         # list of keys is taken from Metadata attributes
 
         def default_value(i):
+            if i == 'location':
+                return None
             if type(getattr(Metadata, i)) == ObjectVal:
                 return {}
             if type(getattr(Metadata, i)) == graphene.List:
