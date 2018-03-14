@@ -626,10 +626,6 @@ class AdditionalMetadata(graphene.Interface):
         # list of keys is taken from Metadata attributes
 
         def default_value(i):
-            if i == 'location':
-                return None
-            if type(getattr(Metadata, i)) == ObjectVal:
-                return {}
             if type(getattr(Metadata, i)) == graphene.List:
                 return []
             return None

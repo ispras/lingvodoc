@@ -538,6 +538,7 @@ class UpdateDictionary(graphene.Mutation):
                                                             }
                     flag_modified(persp, 'additional_metadata')
             if "blobs" in additional_metadata:
+                additional_metadata['blobs'] = [{"client_id": i[0], "object_id": i[1]} for i in additional_metadata['blobs']]
                 child_persps = DBSession.query(dbDictionaryPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
@@ -546,9 +547,7 @@ class UpdateDictionary(graphene.Mutation):
                     old_format_blobs = []
                     for blob in additional_metadata["blobs"]:
                         old_format_blobs.append( {'info': {'content':
-                                                               {'object_id': blob[1],
-                                                                'client_id': blob[1]
-                                                                },
+                                                               blob,
                                                            'type': 'blob'
 
                                                            }
@@ -556,8 +555,6 @@ class UpdateDictionary(graphene.Mutation):
                                                 )
                     persp.additional_metadata['info'] = {'content': old_format_blobs, 'type': 'list'}
                     flag_modified(persp, 'additional_metadata')
-
-
         update_metadata(db_dictionary, additional_metadata)
         return db_dictionary
 
