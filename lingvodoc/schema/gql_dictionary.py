@@ -423,7 +423,7 @@ class CreateDictionary(graphene.Mutation):
                         link_id=(persp_to_link.client_id, persp_to_link.object_id)
                     if self_fake_id:
                         self_id = CreateDictionary.get_by_fake_id(field_fake_ids, self_fake_id)
-                    persp_to_field = create_dictionary_persp_to_field(id=id,
+                    persp_to_field = create_dictionary_persp_to_field(id=(client_id, None),
                                                      parent_id=parent_id,
                                                      field_id=field_id,
                                                      upper_level=self_id,
