@@ -214,102 +214,119 @@ class CreateDictionary(graphene.Mutation):
     }
 
     complex_create:
-    mutation CreateDictionary1($persp_tr:[ObjectVal],
-        $metadata: ObjectVal,
-        $dictionary_atoms:[ObjectVal]){
-        create_dictionary(
-                parent_id: [500, 121],
-                additional_metadata: $metadata,
-                translation_atoms: $dictionary_atoms,
-                perspectives: $persp_tr
-     ) {
-        dictionary {
-          id
-          perspectives {
-            id
-            created_at
-            translation
-          }
-          translation
-        }
+    mutation CreateDictionaryMutation($parentId: LingvodocID!, $dictionaryTranslations: [ObjectVal]!, $perspectives: [ObjectVal]!) {
+      create_dictionary(parent_id: $parentId, translation_atoms: $dictionaryTranslations, perspectives: $perspectives) {
+        triumph
+        __typename
       }
     }
+
     ============================
       # variables:
     ============================
-
 {
-
-
-	"dictionary_atoms": [
+	"parentId": [
+		508,
+		36
+	],
+	"dictionaryTranslations": [
 		{
-			"content": "dictionary_cool_name3",
-			"locale_id": 2
+			"locale_id": 1,
+			"content": "Test dict"
 		}
 	],
-	"metadata": {
-		"hash": "1234567"
-	},
-	"persp_tr": [
+	"perspectives": [
 		{
 			"translation_atoms": [
 				{
-					"locale_id": 2,
-					"content": "The first perspective"
+					"locale_id": 1,
+					"content": "One"
 				}
 			],
-			"fake_id": "0ce97e69-ece9-400b-a625-e7a20110246e3",
+            "fake_id": "0ce97e69-ece9-400b-a625-e7a20110246e3A",
 			"fields": [
 				{
 					"field_id": [
 						1,
 						213
 					],
-					"link": {
-						"fake_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75"
-					}
+						"link_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75B"
+
 				},
 				{
-									"field_id": [
+					"fake_id": "2914bee7-4ef8-4275-869b-af8cdf268631",
+					"self_id": null,
+					"link_id": null,
+					"field_id": [
 						66,
 						6
 					]
 				},
 				{
+					"fake_id": "b33baa65-0314-4aa8-9c99-ab182bae765d",
+					"self_id": null,
+					"link_id": null,
+					"field_id": [
+						66,
+						8
+					]
+				},
+				{
+					"fake_id": "386a5913-c209-47de-aafa-f5a14f59612e",
+					"self_id": null,
+					"link_id": null,
+					"field_id": [
+						66,
+						10
+					]
+				},
+				{
+					"fake_id": "6aebd1a7-d105-495e-af2f-b118e53d939d",
+					"self_id": null,
+					"link_id": null,
 					"field_id": [
 						66,
 						12
-					],
-					"fake_id": "FIELD_LINK_FAKE_ID-ae10aee"
+					]
 				},
 				{
+					"fake_id": "8a8c9c8b-c127-42e7-a8bb-b51ac714331c",
+					"self_id": "6aebd1a7-d105-495e-af2f-b118e53d939d",
+					"link_id": null,
 					"field_id": [
 						66,
 						23
-					],
-					"self_fake_id": "FIELD_LINK_FAKE_ID-ae10aee"
+					]
 				}
-
 			]
 		},
 		{
 			"translation_atoms": [
 				{
-					"locale_id": 2,
-					"content": "The second perspective"
+					"locale_id": 1,
+					"content": "Two"
 				}
 			],
-			"fake_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75",
+            "fake_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75B",
 			"fields": [
+				{
+					"fake_id": "ZZ",
+					"self_id": null,
+					"link_id": null,
+					"field_id": [
+						66,
+						12
+					]
+				},
 				{
 					"field_id": [
 						1,
 						213
 					],
 
-					"link": {
-						"fake_id": "0ce97e69-ece9-400b-a625-e7a20110246e3"
-					}
+
+						"link_id": "0ce97e69-ece9-400b-a625-e7a20110246e3A"
+
 				}
 			]
 		}
@@ -330,10 +347,10 @@ class CreateDictionary(graphene.Mutation):
     class FieldInfo(object):
         id = None
         fake_id = None
-        link_fake_id = None
+        link_id = None
         field_id = None
-        field_fake_id = None
-        self_fake_id = None
+        #field_fake_id = None
+        self_id = None
         perspective_obj = None
         def __init__(self, perspective_obj=None):
             self.perspective_obj = perspective_obj
@@ -400,33 +417,33 @@ class CreateDictionary(graphene.Mutation):
                         if not "field_id" in new_ptofield:
                             raise ResponseError(message="One of fields in list has not field_id")
                         field_info.field_id = new_ptofield["field_id"]
-                        if "self_fake_id" in new_ptofield:
-                            field_info.self_fake_id = new_ptofield["self_fake_id"]
+                        if "self_id" in new_ptofield:
+                            field_info.self_id = new_ptofield["self_id"]
                         if 'fake_id' in new_ptofield:
                             field_info.fake_id = new_ptofield['fake_id']
-                        if new_ptofield.get('link') and new_ptofield['link'].get('fake_id'):
-                            field_info.link_fake_id = new_ptofield['link'].get('fake_id')
+                        if "link_id" in new_ptofield:
+                            field_info.link_id = new_ptofield['link_id']
                         persp_fields_list[new_persp].append(field_info)
             for persp in persp_fields_list:
                 counter = 0
                 fields = persp_fields_list[persp]
                 for field in fields:
                     counter += 1
-                    link_id = field.link_fake_id # TODO: rename field.link_id to fake_link_id
+                    link_id = field.link_id
                     field_id = field.field_id
                     fake_id = field.fake_id
-                    self_fake_id = field.self_fake_id
-                    self_id = None
+                    self_id = field.self_id
                     parent_id = (persp.client_id, persp.object_id)
                     if link_id:
                         persp_to_link = CreateDictionary.get_by_fake_id(persp_fake_ids, link_id)
                         link_id=(persp_to_link.client_id, persp_to_link.object_id)
-                    if self_fake_id:
-                        self_id = CreateDictionary.get_by_fake_id(field_fake_ids, self_fake_id)
+                    if self_id:
+                        parent_field = CreateDictionary.get_by_fake_id(field_fake_ids, self_id)
+                        self_id = (parent_field.client_id, parent_field.object_id)
                     persp_to_field = create_dictionary_persp_to_field(id=(client_id, None),
                                                      parent_id=parent_id,
                                                      field_id=field_id,
-                                                     upper_level=self_id,
+                                                     self_id=self_id,
                                                      link_id=link_id,
                                                      position=counter)
                     if fake_id:
