@@ -870,7 +870,11 @@ class Query(graphene.ObjectType):
     def resolve_entity(self, info, id):
         return Entity(id=id)
 
-    def resolve_user(self, info, id):
+    def resolve_user(self, info, id=None):
+        if id is None:
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id=client_id).first()
+            id = client.user_id
         return User(id=id)
 
     def resolve_is_authenticated(self, info):
