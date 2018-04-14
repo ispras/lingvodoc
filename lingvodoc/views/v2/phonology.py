@@ -1992,6 +1992,150 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
     return (entity_counter_dict, sound_counter_dict, chart_stream_list)
 
 
+class Phonology_Parameters(object):
+    """
+    Stores phonology computation parameters.
+    """
+
+    @staticmethod
+    def from_request(request):
+        """
+        Creates new phonology parameters object, extracts parameters from HTTP request.
+        """
+
+        parameters = Phonology_Parameters()
+        parameters.get_from_request(request)
+
+        return parameters
+
+    def get_from_request(self, request):
+        """
+        Extracts phonology parameters from HTTP request.
+        """
+
+        # Getting request parameters either from URL parameters...
+
+        if 'url_parameters' in request.params:
+
+            self.perspective_cid = int(request.params.get('perspective_client_id'))
+            self.perspective_oid = int(request.params.get('perspective_object_id'))
+
+            self.group_by_description = 'group_by_description' in request.params
+
+            self.maybe_translation_field = None
+            self.only_first_translation = 'only_first_translation' in request.params
+
+            self.use_automatic_markup = 'use_automatic_markup' in request.params
+            self.vowel_selection = 'vowel_selection' in request.params
+
+            self.maybe_tier_list = None
+            self.maybe_tier_set = None
+
+            self.synchronous = 'synchronous' in request.params
+
+        # ...or from JSON data.
+
+        else:
+            request_json = request.json
+
+            self.perspective_cid = request_json.get('perspective_client_id')
+            self.perspective_oid = request_json.get('perspective_object_id')
+
+            self.group_by_description = request_json.get('group_by_description')
+
+            self.maybe_translation_field = request_json.get('maybe_translation_field')
+            self.only_first_translation = request_json.get('only_first_translation')
+
+            self.use_automatic_markup = request_json.get('use_automatic_markup')
+            self.vowel_selection = request_json.get('vowel_selection')
+
+            self.maybe_tier_list = request_json.get('maybe_tier_list')
+            self.maybe_tier_set = set(maybe_tier_list) if maybe_tier_list else None
+
+            self.synchronous = request_json.get('synchronous')
+
+        # Checking if we have limits on number of computed results.
+
+        parameter_dict = \
+            request.params if 'url_parameters' in request.params else request_json
+
+        self.limit = (None if 'limit' not in parameter_dict else
+            int(parameter_dict.get('limit')))
+
+        self.limit_exception = (None if 'limit_exception' not in parameter_dict else
+            int(parameter_dict.get('limit_exception')))
+
+        self.limit_no_vowel = (None if 'limit_no_vowel' not in parameter_dict else
+            int(parameter_dict.get('limit_no_vowel')))
+
+        self.limit_result = (None if 'limit_result' not in parameter_dict else
+            int(parameter_dict.get('limit_result')))
+
+        # Getting perspective and perspective's dictionary names.
+
+        self.get_pd_names(int(request.cookies.get('locale_id') or 2))
+
+    def get_pd_names(self, locale_id):
+        """
+        Queries names of phonology perspective and its dictionary.
+        """
+
+        perspective = DBSession.query(DictionaryPerspective).filter_by(
+            client_id = self.perspective_cid, object_id = self.perspective_oid).first()
+
+        perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
+            client_id = perspective.translation_gist_client_id,
+            object_id = perspective.translation_gist_object_id).first()
+
+        dictionary = DBSession.query(Dictionary).filter_by(
+            client_id = perspective.parent_client_id,
+            object_id = perspective.parent_object_id).first()
+
+        dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
+            client_id = dictionary.translation_gist_client_id,
+            object_id = dictionary.translation_gist_object_id).first()
+
+        self.dictionary_name = dictionary_translation_gist.get_translation(locale_id)
+        self.perspective_name = perspective_translation_gist.get_translation(locale_id)
+
+    @staticmethod
+    def from_mutation(args):
+        """
+        Creates new phonology parameters object, extracts parameters from GraphQL phonology mutation
+        arguments.
+        """
+
+        parameters = Phonology_Parameters()
+        parameters.get_from_mutation(args)
+
+        return parameters
+
+    def get_from_mutation(args):
+        """
+        Extracts phonology parameters from GraphQL phonology mutation arguments.
+        """
+
+        self.perspective_cid, self.perspective_oid = args['perspective_id']
+
+        self.group_by_description = args['group_by_description']
+
+        self.maybe_translation_field = args.get('maybe_translation_field')
+        self.only_first_translation = args['only_first_translation']
+
+        self.use_automatic_markup = args.get('use_automatic_markup')
+        self.vowel_selection = args['vowel_selection']
+
+        self.maybe_tier_list = args.get('maybe_tier_list')
+        self.maybe_tier_set = args.get('maybe_tier_set')
+
+        self.synchronous = args.get('synchronous')
+
+        self.limit = args.get('limit')
+        self.limit_exception = args.get('limit_exception')
+        self.limit_no_vowel = args.get('limit_no_vowel')
+        self.limit_result = args.get('limit_result')
+
+
 @view_config(route_name = 'phonology', renderer = 'json')
 def phonology(request):
     """
@@ -2017,73 +2161,15 @@ def phonology(request):
     task_status = None
 
     try:
-        # Getting request parameters either from URL parameters...
-
-        if 'url_parameters' in request.params:
-
-            perspective_cid = int(request.params.get('perspective_client_id'))
-            perspective_oid = int(request.params.get('perspective_object_id'))
-
-            group_by_description = 'group_by_description' in request.params
-
-            maybe_translation_field = None
-            only_first_translation = 'only_first_translation' in request.params
-
-            use_automatic_markup = 'use_automatic_markup' in request.params
-            vowel_selection = 'vowel_selection' in request.params
-
-            maybe_tier_list = None
-            maybe_tier_set = None
-
-        # ...or from JSON data.
-
-        else:
-            request_json = request.json
-
-            perspective_cid = request_json.get('perspective_client_id')
-            perspective_oid = request_json.get('perspective_object_id')
-
-            group_by_description = request_json.get('group_by_description')
-
-            maybe_translation_field = request_json.get('maybe_translation_field')
-            only_first_translation = request_json.get('only_first_translation')
-
-            use_automatic_markup = request_json.get('use_automatic_markup')
-            vowel_selection = request_json.get('vowel_selection')
-
-            maybe_tier_list = request_json.get('maybe_tier_list')
-            maybe_tier_set = set(maybe_tier_list) if maybe_tier_list else None
-
-        # Indicating that we are starting to process phonology request.
+        args = Phonology_Parameters.from_request(request)
 
         log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}'.format(
-            perspective_cid, perspective_oid,
-            group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-            maybe_tier_list))
-
-        # Getting perspective and perspective's dictionary info.
-
-        perspective = DBSession.query(DictionaryPerspective).filter_by(
-            client_id = perspective_cid, object_id = perspective_oid).first()
-
-        perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
-            client_id = perspective.translation_gist_client_id,
-            object_id = perspective.translation_gist_object_id).first()
-
-        dictionary = DBSession.query(Dictionary).filter_by(
-            client_id = perspective.parent_client_id,
-            object_id = perspective.parent_object_id).first()
-
-        dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
-            client_id = dictionary.translation_gist_client_id,
-            object_id = dictionary.translation_gist_object_id).first()
+            args.perspective_cid, args.perspective_oid,
+            args.group_by_description, args.vowel_selection,
+            args.only_first_translation, args.use_automatic_markup,
+            args.maybe_tier_list))
 
         # Phonology task status setup.
-
-        locale_id = int(request.cookies.get('locale_id') or 2)
-
-        dictionary_name = dictionary_translation_gist.get_translation(locale_id)
-        perspective_name = perspective_translation_gist.get_translation(locale_id)
 
         client_id = request.authenticated_userid
 
@@ -2091,25 +2177,8 @@ def phonology(request):
             Client.get_user_by_client_id(client_id).id
                 if client_id else anonymous_userid(request))
 
-        task_status = TaskStatus(user_id,
-            'Phonology compilation', '{0}: {1}'.format(dictionary_name, perspective_name), 4)
-
-        # Checking if we have limits on number of computed results.
-
-        parameter_dict = \
-            request.params if 'url_parameters' in request.params else request_json
-
-        limit = (None if 'limit' not in parameter_dict else
-            int(parameter_dict.get('limit')))
-
-        limit_exception = (None if 'limit_exception' not in parameter_dict else
-            int(parameter_dict.get('limit_exception')))
-
-        limit_no_vowel = (None if 'limit_no_vowel' not in parameter_dict else
-            int(parameter_dict.get('limit_no_vowel')))
-
-        limit_result = (None if 'limit_result' not in parameter_dict else
-            int(parameter_dict.get('limit_result')))
+        task_status = TaskStatus(user_id, 'Phonology compilation',
+            '{0}: {1}'.format(args.dictionary_name, args.perspective_name), 4)
 
         # Performing either synchronous or asynchronous phonology compilation.
 
@@ -2121,15 +2190,8 @@ def phonology(request):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_phonology if 'synchronous' in request.params else async_phonology.delay)(
-            task_key,
-            perspective_cid, perspective_oid,
-            dictionary_name, perspective_name,
-            cache_kwargs, storage,
-            group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-            maybe_tier_set, maybe_translation_field,
-            limit, limit_exception, limit_no_vowel, limit_result,
-            sqlalchemy_url)
+        return (std_phonology if args.synchronous else async_phonology.delay)(
+            args, task_key, cache_kwargs, storage, sqlalchemy_url)
 
     # Some unknown external exception.
 
@@ -2149,15 +2211,7 @@ def phonology(request):
         return {'error': 'external error'}
 
 
-def std_phonology(
-    task_key,
-    perspective_cid, perspective_oid,
-    dictionary_name, perspective_name,
-    cache_kwargs, storage,
-    group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-    maybe_tier_set, maybe_translation_field,
-    limit, limit_exception, limit_no_vowel, limit_result,
-    sqlalchemy_url):
+def std_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
     """
     Synchronous phonology compilation, useful for debugging.
     """
@@ -2165,13 +2219,7 @@ def std_phonology(
     task_status = TaskStatus.get_from_cache(task_key)
 
     try:
-        return perform_phonology(
-            perspective_cid, perspective_oid,
-            dictionary_name, perspective_name,
-            group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-            maybe_tier_set, maybe_translation_field,
-            limit, limit_exception, limit_no_vowel, limit_result,
-            task_status, storage)
+        return perform_phonology(args, task_status, storage)
 
     # Some unknown external exception.
 
@@ -2190,15 +2238,7 @@ def std_phonology(
 
 
 @celery.task
-def async_phonology(
-    task_key,
-    perspective_cid, perspective_oid,
-    dictionary_name, perspective_name,
-    cache_kwargs, storage,
-    group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-    maybe_tier_set, maybe_translation_field,
-    limit, limit_exception, limit_no_vowel, limit_result,
-    sqlalchemy_url):
+def async_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
     """
     Asynchronous phonology compilation.
     """
@@ -2217,15 +2257,9 @@ def async_phonology(
     task_status = TaskStatus.get_from_cache(task_key)
 
     with manager:
-        try:
 
-            return perform_phonology(
-                perspective_cid, perspective_oid,
-                dictionary_name, perspective_name,
-                group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-                maybe_tier_set, maybe_translation_field,
-                limit, limit_exception, limit_no_vowel, limit_result,
-                task_status, storage)
+        try:
+            return perform_phonology(args, task_status, storage)
 
         # Some unknown external exception.
 
@@ -2243,13 +2277,7 @@ def async_phonology(
             return {'error': 'external error'}
 
 
-def perform_phonology(
-    perspective_cid, perspective_oid,
-    dictionary_name, perspective_name,
-    group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-    maybe_tier_set, maybe_translation_field,
-    limit, limit_exception, limit_no_vowel, limit_result,
-    task_status, storage):
+def perform_phonology(args, task_status, storage):
     """
     Performs phonology compilation.
     """
@@ -2260,23 +2288,24 @@ def perform_phonology(
         '\n  only_first_translation: {6}\n  use_automatic_markup: {7}'
         '\n  maybe_tier_set: {8}\n  maybe_translation_field: {9}'
         '\n  limit: {10}\n  limit_exception: {11}\n  limit_no_vowel: {12}\n  limit_result: {13}'.format(
-        perspective_cid, perspective_oid,
-        dictionary_name, perspective_name,
-        group_by_description, vowel_selection, only_first_translation, use_automatic_markup,
-        maybe_tier_set, maybe_translation_field,
-        limit, limit_exception, limit_no_vowel, limit_result))
+        args.perspective_cid, args.perspective_oid,
+        args.dictionary_name, args.perspective_name,
+        args.group_by_description, args.vowel_selection,
+        args.only_first_translation, args.use_automatic_markup,
+        args.maybe_tier_set, args.maybe_translation_field,
+        args.limit, args.limit_exception, args.limit_no_vowel, args.limit_result))
 
     task_status.set(1, 0, 'Preparing')
 
     # Setting up result filteting based on allowed tiers, if required.
 
-    if maybe_tier_set:
+    if args.maybe_tier_set:
 
         def result_filter(textgrid_result_list):
 
             return [(tier_number, tier_name, tier_data)
                 for tier_number, tier_name, tier_data in textgrid_result_list
-                    if tier_name in maybe_tier_set]
+                    if tier_name in args.maybe_tier_set]
 
     else:
 
@@ -2286,12 +2315,12 @@ def perform_phonology(
     # If we have no explicitly specified translation field, we try to find one ourselves.
     # For SQLAlchemy regular expression conditionals see https://stackoverflow.com/a/34989788/2016856.
 
-    if not maybe_translation_field:
+    if not args.maybe_translation_field:
 
         field_data = DBSession.query(
             DictionaryPerspectiveToField, Field, TranslationAtom).filter(
-                DictionaryPerspectiveToField.parent_client_id == perspective_cid,
-                DictionaryPerspectiveToField.parent_object_id == perspective_oid,
+                DictionaryPerspectiveToField.parent_client_id == args.perspective_cid,
+                DictionaryPerspectiveToField.parent_object_id == args.perspective_oid,
                 DictionaryPerspectiveToField.marked_for_deletion == False,
                 Field.client_id == DictionaryPerspectiveToField.field_client_id,
                 Field.object_id == DictionaryPerspectiveToField.field_object_id,
@@ -2306,7 +2335,7 @@ def perform_phonology(
     # Otherwise we get info of the specified field.
 
     else:
-        field_client_id, field_object_id = maybe_translation_field
+        field_client_id, field_object_id = args.maybe_translation_field
 
         field_data = DBSession.query(
             Field, TranslationAtom).filter(
@@ -2336,8 +2365,8 @@ def perform_phonology(
 
     data_query = DBSession.query(
         LexicalEntry, Markup, Sound).filter(
-            LexicalEntry.parent_client_id == perspective_cid,
-            LexicalEntry.parent_object_id == perspective_oid,
+            LexicalEntry.parent_client_id == args.perspective_cid,
+            LexicalEntry.parent_object_id == args.perspective_oid,
             LexicalEntry.marked_for_deletion == False,
             Markup.parent_client_id == LexicalEntry.client_id,
             Markup.parent_object_id == LexicalEntry.object_id,
@@ -2385,7 +2414,7 @@ def perform_phonology(
     task_status.set(2, 1, 'Analyzing sound and markup')
 
     log.debug('phonology {0}/{1}: {2} sound/markup pairs'.format(
-        perspective_cid, perspective_oid, total_count))
+        args.perspective_cid, args.perspective_oid, total_count))
 
     # We get lexical entries of the perspective with markup'ed sounds, and possibly with translations, and
     # process these lexical entries in batches.
@@ -2403,7 +2432,7 @@ def perform_phonology(
 
     for index, row in enumerate(row
         for row in data_query.yield_per(100)
-        if use_automatic_markup or 'amr' not in row.Markup.additional_metadata):
+        if args.use_automatic_markup or 'amr' not in row.Markup.additional_metadata):
 
         markup_url = row.Markup.content
         sound_url = row.Sound.content
@@ -2411,7 +2440,7 @@ def perform_phonology(
         translation_list = ([] if not translation_field else
             [translation for translation in row[3] if translation])
 
-        if only_first_translation:
+        if args.only_first_translation:
             translation_list = translation_list[:3]
 
         # Sound/markup data message and cache key strings.
@@ -2432,7 +2461,7 @@ def perform_phonology(
 
         group_list = [None]
 
-        if group_by_description and 'blob_description' in row.Markup.additional_metadata:
+        if args.group_by_description and 'blob_description' in row.Markup.additional_metadata:
             group_list.append(row.Markup.additional_metadata['blob_description'])
 
             log.debug(message('\n  blob description: {0}/{1}'.format(
@@ -2458,8 +2487,8 @@ def perform_phonology(
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                     'Analyzing sound and markup')
 
-                if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
-                    limit and index + 1 >= limit):
+                if (args.limit_no_vowel and no_vowel_counter >= args.limit_no_vowel or
+                    args.limit and index + 1 >= args.limit):
                     break
 
                 continue
@@ -2481,8 +2510,8 @@ def perform_phonology(
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                     'Analyzing sound and markup')
 
-                if (limit_exception and exception_counter >= limit_exception or
-                    limit and index + 1 >= limit):
+                if (args.limit_exception and exception_counter >= args.limit_exception or
+                    args.limit and index + 1 >= args.limit):
                     break
 
                 continue
@@ -2502,7 +2531,7 @@ def perform_phonology(
                     row_str, cache_key, markup_url, sound_url, translation_list,
                     format_textgrid_result(group_list, textgrid_result_list)))
 
-                if maybe_tier_set:
+                if args.maybe_tier_set:
 
                     log.debug('filtered result:\n{0}'.format(
                         format_textgrid_result(group_list, filtered_result_list)))
@@ -2515,8 +2544,8 @@ def perform_phonology(
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                     'Analyzing sound and markup')
 
-                if (limit_result and len(result_list) >= limit_result or
-                    limit and index + 1 >= limit):
+                if (args.limit_result and len(result_list) >= args.limit_result or
+                    args.limit and index + 1 >= args.limit):
                     break
 
                 continue
@@ -2597,8 +2626,8 @@ def perform_phonology(
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                     'Analyzing sound and markup')
 
-                if (limit_no_vowel and no_vowel_counter >= limit_no_vowel or
-                    limit and index + 1 >= limit):
+                if (args.limit_no_vowel and no_vowel_counter >= args.limit_no_vowel or
+                    args.limit and index + 1 >= args.limit):
                     break
 
                 continue
@@ -2637,7 +2666,7 @@ def perform_phonology(
                 row_str, markup_url, sound_url, translation_list,
                 format_textgrid_result(group_list, textgrid_result_list)))
 
-            if maybe_tier_set:
+            if args.maybe_tier_set:
 
                 log.debug('filtered result:\n{0}'.format(
                     format_textgrid_result(group_list, filtered_result_list)))
@@ -2645,8 +2674,8 @@ def perform_phonology(
             task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                 'Analyzing sound and markup')
 
-            if (limit_result and len(result_list) >= limit_result or
-                limit and index + 1 >= limit):
+            if (args.limit_result and len(result_list) >= args.limit_result or
+                args.limit and index + 1 >= args.limit):
                 break
 
         except Exception as exception:
@@ -2687,12 +2716,12 @@ def perform_phonology(
             task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
                 'Analyzing sound and markup')
 
-            if (limit_exception and exception_counter >= limit_exception or
-                limit and index + 1 >= limit):
+            if (args.limit_exception and exception_counter >= args.limit_exception or
+                args.limit and index + 1 >= args.limit):
                 break
 
     log.debug('phonology {0}/{1}: {2} result{3}, {4} no vowels, {5} exceptions'.format(
-        perspective_cid, perspective_oid,
+        args.perspective_cid, args.perspective_oid,
         len(result_list), '' if len(result_list) == 1 else 's',
         no_vowel_counter, exception_counter))
 
@@ -2716,7 +2745,7 @@ def perform_phonology(
 
     try:
         entry_count_dict, sound_count_dict, chart_stream_list = compile_workbook(
-            vowel_selection, result_list, result_group_set, workbook_stream)
+            args.vowel_selection, result_list, result_group_set, workbook_stream)
 
         workbook_stream.seek(0)
 
@@ -2822,16 +2851,12 @@ def perform_phonology(
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
 
-@view_config(route_name = 'phonology_tier_list', renderer = 'json')
-def phonology_tier_list(request):
+def get_tier_list(perspective_cid, perspective_oid):
     """
-    Gets a list of names of phonology markup tiers for a specified perspective.
+    Helper function, gets a list of names of phonology markup tiers for a specified perspective.
     """
 
     try:
-        perspective_cid = request.params.get('perspective_client_id')
-        perspective_oid = request.params.get('perspective_object_id')
-
         log.debug('phonology_tier_list {0}/{1}'.format(
             perspective_cid, perspective_oid))
 
@@ -2952,7 +2977,7 @@ def phonology_tier_list(request):
         log.debug('phonology_tier_list {0}/{1}: {2}, {3}'.format(
             perspective_cid, perspective_oid, total_count, tier_list))
 
-        return {'tier_count': dict(tier_count), 'total_count': total_count}
+        return True, {'tier_count': dict(tier_count), 'total_count': total_count}
 
     # Some unknown external exception.
 
@@ -2964,8 +2989,26 @@ def phonology_tier_list(request):
         log.debug('phonology_tier_list: exception')
         log.debug(traceback_string)
 
+        raise False, traceback_string
+
+
+@view_config(route_name = 'phonology_tier_list', renderer = 'json')
+def phonology_tier_list(request):
+    """
+    Gets a list of names of phonology markup tiers for a specified perspective.
+    """
+
+    perspective_cid = request.params.get('perspective_client_id')
+    perspective_oid = request.params.get('perspective_object_id')
+
+    try_ok, result = get_tier_list(perspective_cid, perspective_oid)
+
+    if not try_ok:
+
         request.response.status = HTTPInternalServerError.code
         return {'error': 'external error'}
+
+    return result
 
 
 @view_config(route_name = 'sound_and_markup', renderer = 'json')
