@@ -1,3 +1,5 @@
+import copy
+
 import graphene
 from lingvodoc.utils.elan_functions import tgt_to_eaf
 import requests
@@ -362,14 +364,20 @@ class Query(graphene.ObjectType):
         request = info.context.request
         locale_id = info.context.get('locale_id')
 
+        old_field_selection_list = copy.deepcopy(field_selection_list)
+
+        for field_selection in old_field_selection_list:
+            field_selection['client_id'] = field_selection['field_id'][0]
+            field_selection['object_id'] = field_selection['field_id'][1]
+
         result = merge_suggestions(request=request,
                                    perspective_client_id=perspective_id[0],
                                    perspective_object_id=perspective_id[1],
-                                   algorithm=algorithm, threshold=threshold,
+                                   algorithm=algorithm,
                                    entity_type_primary=entity_type_primary,
                                    entity_type_secondary=entity_type_secondary,
-                                   levenshtein=levenshtein,
-                                   field_selection_list=field_selection_list,
+                                   threshold=threshold, levenshtein=levenshtein,
+                                   field_selection_list=old_field_selection_list,
                                    locale_id=locale_id)
 
         return MergeSuggestions(user_has_permissions=result['user_has_permissions'],
