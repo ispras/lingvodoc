@@ -23,10 +23,12 @@ import sys
 import tempfile
 from time import time
 import traceback
+import unicodedata
 
 import urllib.request
 import urllib.parse
 
+import warnings
 import zipfile
 
 # External imports.
@@ -721,6 +723,10 @@ def find_max_interval_praat(sound, interval_list):
 vowel_set = set('AEIOUYaeiouyÄÆÉØäæéøŒœƆƏƐƗƜƟƱɄɅɐɑɒɔɘəɛɜɞɤɨɪɯɵɶʉʊʌʏАОаоⱭⱯⱰꞫ')
 
 
+#: Set of consonants, as opposed to vowels and modifiers.
+consonant_set = set('bcdfhjklmnpqrstvxzðħŋǀǁǂǃɓɕɖɗɟɠɡɢɣɦɬɭɮɰɱɲɳɴɸɹɺɻɽɾʀʁʂʃʄʈʋʎʐʑʒʔʕʘʙʛʜʝʟʡʢʼˀ˔˞βθχᶑⱱ')
+
+
 #: List of Unicode characters which can be used to write phonetic transcriptions.
 #:
 #: We have to define it through Unicode character codes because it contains combining characters, which mess
@@ -920,8 +926,8 @@ def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
                 transcription_check = re.fullmatch(transcription_re, interval_text)
 
                 if (len(interval_text) > 0 and
-                        any(character in vowel_set for character in interval_text) and
-                        (len(interval_text) <= 2 or transcription_check)):
+                    any(character in vowel_set for character in interval_text) and
+                    (len(interval_text) <= 2 or transcription_check)):
 
                     interval_seq_list[-1].append(interval)
 
@@ -992,11 +998,14 @@ class Tier_Result(object):
         max_length_str,
         max_length_r_length,
         max_length_f_list,
+        max_length_source_index,
         max_intensity_str,
         max_intensity_r_length,
         max_intensity_f_list,
+        max_intensity_source_index,
         coincidence_str,
-        interval_data_list):
+        interval_data_list,
+        source_interval_list):
 
         self.transcription = transcription
 
@@ -1008,14 +1017,17 @@ class Tier_Result(object):
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
         self.max_length_f_list = max_length_f_list
+        self.max_length_source_index = max_length_source_index
 
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
         self.max_intensity_f_list = max_intensity_f_list
+        self.max_intensity_source_index = max_intensity_source_index
 
         self.coincidence_str = coincidence_str
 
         self.interval_data_list = interval_data_list
+        self.source_interval_list = source_interval_list
 
     def format(self):
         """
@@ -1026,9 +1038,10 @@ class Tier_Result(object):
 
             ([interval_str,
                 '{0:.2f}%'.format(r_length * 100),
-                is_max_length, is_max_intensity], [f_list])
+                is_max_length, is_max_intensity, source_index],
+                f_list)
 
-                for interval_str, r_length, f_list, is_max_length, is_max_intensity in
+                for interval_str, r_length, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -1050,6 +1063,32 @@ class Tier_Result(object):
             width = 192)
 
 
+def before_after_text(join_set, index, interval_list):
+    """
+    Extracts any preceeding or following markup to be joined to an interval's text.
+    """
+
+    before_text, after_text = '', ''
+
+    # Checking if we have some preceeding or following markup to join with.
+
+    if join_set:
+
+        if index > 0:
+
+            before_text = ''.join(character
+                for character in interval_list[index - 1][2]
+                if character in join_set)
+
+        if index < len(interval_list) - 1:
+
+            after_text = ''.join(character
+                for character in interval_list[index + 1][2]
+                if character in join_set)
+
+    return before_text, after_text
+
+
 def process_sound(tier_data_list, sound, translation_list = []):
     """
     Analyzes sound intervals corresponding to vowel-containing markup.
@@ -1065,7 +1104,7 @@ def process_sound(tier_data_list, sound, translation_list = []):
 
         # Analyzing vowel sounds of each interval sequence.
 
-        (raw_interval_list, raw_interval_seq_list,
+        (source_interval_list, raw_interval_seq_list,
             interval_seq_list, interval_idx_to_raw_idx,
             transcription) = tier_data
 
@@ -1104,28 +1143,40 @@ def process_sound(tier_data_list, sound, translation_list = []):
 
             mean_interval_length = total_interval_length / len(raw_interval_list)
 
-            # Preparing interval data.
+            # Preparing data of maximum length and maximum intensity intervals.
+
+            max_length_source_index = interval_idx_to_raw_idx[(seq_index, max_length_index)]
 
             max_length_str = '{0} {1:.3f} [{2}]'.format(
-                max_length_interval[2], max_length,
+                max_length_interval[2].strip(),
+                max_length,
                 len(''.join(text for index, (begin, end, text) in
                     raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_length_index]])))
 
+            max_intensity_source_index = interval_idx_to_raw_idx[(seq_index, max_intensity_index)]
+
             max_intensity_str = '{0} {1:.3f} [{2}]'.format(
-                max_intensity_interval[2],
+                max_intensity_interval[2].strip(),
                 max_intensity,
                 len(''.join(text for index, (begin, end, text) in
                     raw_interval_list[:interval_idx_to_raw_idx[seq_index][max_intensity_index]])))
 
+            # Preparing data of all other intervals.
+
             str_list = [
 
                 '{0} {1:.3f} {2:.3f} [{3}]'.format(
-                    text, end_sec - begin_sec, intensity,
+                    text.strip(),
+                    end_sec - begin_sec, intensity,
                     len(''.join(text for raw_index, (begin, end, text) in
                         raw_interval_list[:interval_idx_to_raw_idx[seq_index][index]])))
 
                     for index, (intensity, (begin_sec, end_sec, text)) in
                         enumerate(zip(intensity_list, interval_list))]
+
+            source_index_list = [
+                interval_idx_to_raw_idx[(seq_index, index)]
+                    for index in range(len(interval_list))]
 
             # Compiling results.
 
@@ -1135,10 +1186,11 @@ def process_sound(tier_data_list, sound, translation_list = []):
                     (end - begin) / mean_interval_length,
                     list(map('{0:.3f}'.format, f_list)),
                     '+' if index == max_length_index else '-',
-                    '+' if index == max_intensity_index else '-')
+                    '+' if index == max_intensity_index else '-',
+                    source_index)
 
-                    for index, (interval_str, f_list, (begin, end, text)) in
-                        enumerate(zip(str_list, formant_list, interval_list))]
+                    for index, (interval_str, f_list, (begin, end, text), source_index) in
+                        enumerate(zip(str_list, formant_list, interval_list, source_index_list))]
 
             textgrid_result_list[-1][2].append(Tier_Result(
                 ''.join(text for index, (begin, end, text) in raw_interval_list),
@@ -1148,11 +1200,14 @@ def process_sound(tier_data_list, sound, translation_list = []):
                 max_length_str,
                 max_length / mean_interval_length,
                 list(map('{0:.3f}'.format, max_length_f_list)),
+                max_length_source_index,
                 max_intensity_str,
                 (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
                 list(map('{0:.3f}'.format, max_intensity_f_list)),
+                max_intensity_source_index,
                 '+' if max_intensity_index == max_length_index else '-',
-                interval_data_list))
+                interval_data_list,
+                source_interval_list))
 
     # Returning analysis results.
 
@@ -1224,7 +1279,14 @@ def formant_reference(f1, f2):
     return vowel_list
 
 
-def compile_workbook(vowel_selection, result_list, result_group_set, workbook_stream):
+def compile_workbook(
+    vowel_selection,
+    keep_set,
+    join_set,
+    chart_threshold,
+    result_list,
+    result_group_set,
+    workbook_stream):
     """
     Compiles analysis results into an Excel workbook.
     """
@@ -1292,6 +1354,19 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
 
     vowel_formant_dict = {group: collections.defaultdict(list) for group in result_group_set}
 
+    def get_vowel_class(index, interval_list):
+        """
+        Extracts vowel class label given vowel's interval index and markup interval info.
+        """
+
+        interval_text = ''.join(character
+            for character in interval_list[index][2]
+            if character in vowel_set or character in keep_set)
+
+        before_text, after_text = before_after_text(join_set, index, interval_list)
+
+        return before_text + interval_text + after_text
+
     # Filling in analysis results.
 
     for textgrid_group_list, textgrid_result_list in result_list:
@@ -1310,18 +1385,27 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                     f_list_a = list(map(float, tier_result.max_length_f_list[:3]))
                     f_list_b = list(map(float, tier_result.max_intensity_f_list[:3]))
 
+                    text_a_list = tier_result.max_length_str.split()
+                    text_b_list = tier_result.max_intensity_str.split()
+
+                    vowel_a = get_vowel_class(
+                        tier_result.max_length_source_index, tier_result.source_interval_list) 
+
+                    vowel_b = get_vowel_class(
+                        tier_result.max_intensity_source_index, tier_result.source_interval_list) 
+
+                    # Writing out interval data and any additional translations.
+
                     row_list = ([
                         tier_result.transcription,
                         translation_list[0] if translation_list else '',
-                        tier_result.max_length_str,
+                        ' '.join([vowel_a] + text_a_list[1:]),
                         round(tier_result.max_length_r_length, 4)] + f_list_a + [
                         ', '.join(formant_reference(*f_list_a[:2])),
-                        tier_result.max_intensity_str,
+                        ' '.join([vowel_b] + text_b_list[1:]),
                         round(tier_result.max_intensity_r_length, 4)] + f_list_b + [
                         ', '.join(formant_reference(*f_list_b[:2])),
                         tier_result.coincidence_str])
-
-                    # Writing out interval data and any additional translations.
 
                     for group in textgrid_group_list:
 
@@ -1334,12 +1418,6 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                             row_counter_dict[group] += 1
 
                     # Collecting vowel formant data.
-
-                    text_a_list = tier_result.max_length_str.split()
-                    text_b_list = tier_result.max_intensity_str.split()
-
-                    vowel_a = ''.join(filter(lambda character: character in vowel_set, text_a_list[0]))
-                    vowel_b = ''.join(filter(lambda character: character in vowel_set, text_b_list[0]))
 
                     for group in textgrid_group_list:
 
@@ -1355,18 +1433,20 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                 # ...for all intervals.
 
                 else:
-                    for index, (interval_str, interval_r_length, f_list, sign_longest, sign_highest) in \
+
+                    for index, (interval_str, interval_r_length,
+                        f_list, sign_longest, sign_highest, source_index) in \
                         enumerate(tier_result.interval_data_list):
 
-                        text_list = interval_str.split()
-                        vowel = ''.join(filter(lambda character: character in vowel_set, text_list[0]))
+                        vowel = get_vowel_class(
+                            source_index, tier_result.source_interval_list) 
 
                         f_list = list(map(float, f_list[:3]))
 
                         row_list = ([
                             tier_result.transcription,
                             translation_list[index] if index < len(translation_list) else '',
-                            interval_str,
+                            ' '.join([vowel] + interval_str.split()[1:]),
                             round(interval_r_length, 4)] + f_list + [
                             ', '.join(formant_reference(*f_list[:2])),
                             sign_longest,
@@ -1390,7 +1470,39 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                             sound_counter_dict[group] += 1
                             vowel_formant_dict[group][vowel].append(tuple(f_list))
 
-    # And now we will produce 2d F1/F2 and 3d F1/F2/F3  scatter charts for all analysed and sufficiently
+    def sigma_inverse(sigma):
+        """
+        Inverts covariance matrix, suitably modifying it, if it's singular.
+        """
+
+        for i in range(len(sigma)):
+            if numpy.isnan(sigma[i, i]):
+                sigma[i, i] = 625.0
+
+        sigma[numpy.isnan(sigma)] = 0.0
+
+        w, v = numpy.linalg.eigh(sigma)
+        w_max = max(w)
+
+        # Checking if covariance matrix is singular (i.e., one of axes of its corresponding ellipsoid is too
+        # small, i.e. corresponding eigenvalue is too small), fixing it if it is.
+
+        singular_flag = False
+
+        for i in range(len(w)):
+            if abs(w[i]) <= 1e-6:
+
+                w[i] = w_max / 256
+                singular_flag = True
+
+        if singular_flag:
+            sx = numpy.matmul(numpy.matmul(v, numpy.diag(w)), v.T)
+            sigma = (sx + sx.T) / 2
+
+        inverse = numpy.linalg.inv(sigma)
+        return sigma, inverse
+
+    # And now we will produce 2d F1/F2 and 3d F1/F2/F3 scatter charts for all analysed and sufficiently
     # frequent vowels of all result groups.
 
     chart_stream_list = []
@@ -1404,7 +1516,8 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
         for vowel, f_tuple_list in sorted(vowel_formant_dict[group].items()):
             f_tuple_list = list(set(f_tuple_list))
 
-            if len(f_tuple_list) >= 8:
+            if len(f_tuple_list) >= chart_threshold:
+
                 vowel_formant_list.append((vowel,
                     list(map(lambda f_tuple: numpy.array(f_tuple[:2]), f_tuple_list)),
                     list(map(numpy.array, f_tuple_list))))
@@ -1425,18 +1538,26 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
         for index, (vowel, f_2d_list, f_3d_list) in enumerate(vowel_formant_list):
 
             mean_2d = sum(f_2d_list) / len(f_2d_list)
-            sigma_2d = numpy.cov(numpy.array(f_2d_list).T)
-            inverse_2d = numpy.linalg.inv(sigma_2d)
+
+            sigma_2d = \
+                numpy.cov(numpy.array(f_2d_list).T) if len(f_2d_list) > 1 else \
+                numpy.array([[625.0, 0.0], [0.0, 625.0]])
+
+            sigma_2d, inverse_2d = sigma_inverse(sigma_2d)
 
             mean_3d = sum(f_3d_list) / len(f_3d_list)
-            sigma_3d = numpy.cov(numpy.array(f_3d_list).T)
-            inverse_3d = numpy.linalg.inv(sigma_3d)
 
-            distance_2d_list = []
-            distance_3d_list = []
+            sigma_3d = \
+                numpy.cov(numpy.array(f_3d_list).T) if len(f_3d_list) > 1 else \
+                numpy.array([[625.0, 0.0, 0.0], [0.0, 625.0, 0.0], [0.0, 0.0, 625.0]])
+
+            sigma_3d, inverse_3d = sigma_inverse(sigma_3d)
 
             # Calculation of squared Mahalanobis distance inspired by the StackOverflow answer
             # http://stackoverflow.com/q/27686240/2016856.
+
+            distance_2d_list = []
+            distance_3d_list = []
 
             for f_2d in f_2d_list:
 
@@ -1448,8 +1569,8 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                 delta_3d = f_3d - mean_3d
                 distance_3d_list.append((numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d), f_3d))
 
-            distance_2d_list.sort()
-            distance_3d_list.sort()
+            distance_2d_list.sort(key = lambda df: df[0])
+            distance_3d_list.sort(key = lambda df: df[0])
 
             # Trying to produce one standard deviation ellipse for F1/F2 2-vectors.
 
@@ -1602,7 +1723,9 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
 
                 f1_list, f2_list = zip(*f_2d_list)
 
-                f1_outlier_list, f2_outlier_list = zip(*outlier_list)
+                f1_outlier_list, f2_outlier_list = \
+                    zip(*outlier_list) if outlier_list else ([], [])
+
                 x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
 
                 f1_column = column_list[index * 2]
@@ -1764,7 +1887,9 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                 outlier_list, mean, sigma_3d, inverse_3d) in enumerate(chart_data_3d_list):
 
                 f1_list, f2_list, f3_list = zip(*f_3d_list)
-                f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*outlier_list)
+
+                f1_outlier_list, f2_outlier_list, f3_outlier_list = \
+                    zip(*outlier_list) if outlier_list else ([], [], [])
 
                 f1_column = column_list[index * 3]
                 f2_column = column_list[index * 3 + 1]
@@ -1837,11 +1962,13 @@ def compile_workbook(vowel_selection, result_list, result_group_set, workbook_st
                         [f_3d[2] for f_3d in f_3d_list],
                         color = color, s = 4, depthshade = False, alpha = 0.5, zorder = 1000 + index)
 
-                    f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*outlier_list)
+                    if outlier_list:
 
-                    axes.scatter(
-                        f1_outlier_list, f2_outlier_list, f3_outlier_list,
-                        color = color, s = 1.44, depthshade = False, alpha = 0.5, zorder = index)
+                        f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*outlier_list)
+
+                        axes.scatter(
+                            f1_outlier_list, f2_outlier_list, f3_outlier_list,
+                            color = color, s = 1.44, depthshade = False, alpha = 0.5, zorder = index)
 
                     # Using 'plot' and not 'scatter' so that z-ordering would work correctly and mean
                     # formant vector markers are in the forefront.
@@ -1997,6 +2124,36 @@ class Phonology_Parameters(object):
     Stores phonology computation parameters.
     """
 
+    def parse_keep_join_list(self, keep_list, join_list):
+        """
+        Checks if we are given a list of characters specified by their code points to keep in the vowel
+        interval markup, and a list of characters to join into the vowel markup from adjacent intervals.
+        """
+
+        if isinstance(keep_list, str):
+            keep_list = keep_list.split(',')
+
+        if isinstance(join_list, str):
+            join_list = join_list.split(',')
+
+        if keep_list:
+
+           keep_list = [
+                (chr(codepoint) if isinstance(codepoint, int) else chr(int(codepoint_str, base = 0)))
+                for codepoint in keep_list]
+
+        if join_list:
+
+           join_list = [
+                (chr(codepoint) if isinstance(codepoint, int) else chr(int(codepoint_str, base = 0)))
+                for codepoint in join_list]
+
+        self.keep_list = keep_list
+        self.join_list = join_list
+
+        self.keep_set = set(keep_list) if keep_list else set()
+        self.join_set = set(join_list) if join_list else set()
+
     @staticmethod
     def from_request(request):
         """
@@ -2031,6 +2188,12 @@ class Phonology_Parameters(object):
             self.maybe_tier_list = None
             self.maybe_tier_set = None
 
+            self.parse_keep_join_list(
+                request.params.get('keep_list'), request.params.get('join_list'))
+
+            self.chart_threshold = (int(request.params['chart_threshold'])
+                if 'chart_threshold' in request.params else 8)
+
             self.synchronous = 'synchronous' in request.params
 
         # ...or from JSON data.
@@ -2050,7 +2213,12 @@ class Phonology_Parameters(object):
             self.vowel_selection = request_json.get('vowel_selection')
 
             self.maybe_tier_list = request_json.get('maybe_tier_list')
-            self.maybe_tier_set = set(maybe_tier_list) if maybe_tier_list else None
+            self.maybe_tier_set = set(self.maybe_tier_list) if self.maybe_tier_list else None
+
+            self.parse_keep_join_list(
+                request_json.get('keep_list'), request_json.get('join_list'))
+
+            self.chart_threshold = request_json.get('chart_threshold', 8)
 
             self.synchronous = request_json.get('synchronous')
 
@@ -2099,18 +2267,18 @@ class Phonology_Parameters(object):
         self.perspective_name = perspective_translation_gist.get_translation(locale_id)
 
     @staticmethod
-    def from_mutation(args):
+    def from_graphql(args):
         """
         Creates new phonology parameters object, extracts parameters from GraphQL phonology mutation
         arguments.
         """
 
         parameters = Phonology_Parameters()
-        parameters.get_from_mutation(args)
+        parameters.get_from_graphql(args)
 
         return parameters
 
-    def get_from_mutation(args):
+    def get_from_graphql(self, args):
         """
         Extracts phonology parameters from GraphQL phonology mutation arguments.
         """
@@ -2122,11 +2290,16 @@ class Phonology_Parameters(object):
         self.maybe_translation_field = args.get('maybe_translation_field')
         self.only_first_translation = args['only_first_translation']
 
-        self.use_automatic_markup = args.get('use_automatic_markup')
+        self.use_automatic_markup = args.get('use_automatic_markup', False)
         self.vowel_selection = args['vowel_selection']
 
         self.maybe_tier_list = args.get('maybe_tier_list')
-        self.maybe_tier_set = args.get('maybe_tier_set')
+        self.maybe_tier_set = set(self.maybe_tier_list) if self.maybe_tier_list else None
+
+        self.parse_keep_join_list(
+            args.get('keep_list'), args.get('join_list'))
+
+        self.chart_threshold = args.get('chart_threshold', 8)
 
         self.synchronous = args.get('synchronous')
 
@@ -2163,11 +2336,13 @@ def phonology(request):
     try:
         args = Phonology_Parameters.from_request(request)
 
-        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}'.format(
+        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}'.format(
             args.perspective_cid, args.perspective_oid,
             args.group_by_description, args.vowel_selection,
             args.only_first_translation, args.use_automatic_markup,
-            args.maybe_tier_list))
+            args.maybe_tier_list,
+            args.keep_list, args.join_list,
+            args.chart_threshold))
 
         # Phonology task status setup.
 
@@ -2284,16 +2459,24 @@ def perform_phonology(args, task_status, storage):
 
     log.debug('phonology {0}/{1}:'
         '\n  dictionary_name: \'{2}\'\n  perspective_name: \'{3}\''
-        '\n  group_by_description: {4}\n  vowel_selection: {5}'
-        '\n  only_first_translation: {6}\n  use_automatic_markup: {7}'
-        '\n  maybe_tier_set: {8}\n  maybe_translation_field: {9}'
-        '\n  limit: {10}\n  limit_exception: {11}\n  limit_no_vowel: {12}\n  limit_result: {13}'.format(
+        '\n  group_by_description: {4}'
+        '\n  maybe_translation_field: {5}\n  only_first_translation: {6}'
+        '\n  use_automatic_markup: {7}\n  vowel_selection: {8}'
+        '\n  maybe_tier_set: {9}'
+        '\n  keep_set: {10}\n  join_set: {11}'
+        '\n  chart_threshold: {12}'
+        '\n  limit: {13}\n  limit_exception: {14}'
+        '\n  limit_no_vowel: {15}\n  limit_result: {16}'.format(
         args.perspective_cid, args.perspective_oid,
         args.dictionary_name, args.perspective_name,
-        args.group_by_description, args.vowel_selection,
-        args.only_first_translation, args.use_automatic_markup,
-        args.maybe_tier_set, args.maybe_translation_field,
-        args.limit, args.limit_exception, args.limit_no_vowel, args.limit_result))
+        args.group_by_description,
+        args.maybe_translation_field, args.only_first_translation,
+        args.use_automatic_markup, args.vowel_selection,
+        args.maybe_tier_set,
+        args.keep_set, args.join_set,
+        args.chart_threshold,
+        args.limit, args.limit_exception,
+        args.limit_no_vowel, args.limit_result))
 
     task_status.set(1, 0, 'Preparing')
 
@@ -2744,8 +2927,16 @@ def perform_phonology(args, task_status, storage):
     workbook_stream = io.BytesIO()
 
     try:
-        entry_count_dict, sound_count_dict, chart_stream_list = compile_workbook(
-            args.vowel_selection, result_list, result_group_set, workbook_stream)
+        entry_count_dict, sound_count_dict, chart_stream_list = \
+                                                                \
+            compile_workbook(
+                args.vowel_selection,
+                args.keep_set,
+                args.join_set,
+                args.chart_threshold,
+                result_list,
+                result_group_set,
+                workbook_stream)
 
         workbook_stream.seek(0)
 
@@ -2773,7 +2964,7 @@ def perform_phonology(args, task_status, storage):
     current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
     result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}'.format(
-        dictionary_name[:64], perspective_name[:64],
+        args.dictionary_name[:64], args.perspective_name[:64],
         current_datetime.year,
         current_datetime.month,
         current_datetime.day)
@@ -2808,7 +2999,7 @@ def perform_phonology(args, task_status, storage):
             raise
 
         result_filename = '{0} - {1} - {2:04d}.{3:02d}.{4:02d}'.format(
-            dictionary_name[:32], perspective_name[:32],
+            args.dictionary_name[:32], args.perspective_name[:32],
             current_datetime.year,
             current_datetime.month,
             current_datetime.day)
@@ -2851,16 +3042,23 @@ def perform_phonology(args, task_status, storage):
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
 
-def get_tier_list(perspective_cid, perspective_oid):
+class Sound_Markup_Iterator(object):
     """
-    Helper function, gets a list of names of phonology markup tiers for a specified perspective.
+    Iterates over sound/markup pairs of a specified perspective while keeping state.
     """
 
-    try:
-        log.debug('phonology_tier_list {0}/{1}'.format(
-            perspective_cid, perspective_oid))
+    def __init__(self, perspective_id, cache_key_str):
+        """
+        Initialization of iteration parameters.
+        """
 
-        # We are going to look through all perspective's accessible markup/sound pairs.
+        self.perspective_id = perspective_id
+        self.cache_key_str = cache_key_str
+
+    def run(self):
+        """
+        Iteratively processes sound/markup pairs of the perspective.
+        """
 
         Markup = aliased(Entity, name = 'Markup')
         Sound = aliased(Entity, name = 'Sound')
@@ -2870,8 +3068,8 @@ def get_tier_list(perspective_cid, perspective_oid):
 
         data_query = DBSession.query(
             LexicalEntry, Markup, Sound).filter(
-                LexicalEntry.parent_client_id == perspective_cid,
-                LexicalEntry.parent_object_id == perspective_oid,
+                LexicalEntry.parent_client_id == self.perspective_id[0],
+                LexicalEntry.parent_object_id == self.perspective_id[1],
                 LexicalEntry.marked_for_deletion == False,
                 Markup.parent_client_id == LexicalEntry.client_id,
                 Markup.parent_object_id == LexicalEntry.object_id,
@@ -2891,10 +3089,11 @@ def get_tier_list(perspective_cid, perspective_oid):
 
         # Processing sound/markup pairs.
 
-        tier_count = collections.Counter()
-        total_count = 0
+        self.markup_count = 0
 
         for index, row in enumerate(data_query.yield_per(100)):
+
+            self.markup_count += 1
             markup_url = row.Markup.content
 
             row_str = '{0} (LexicalEntry {1}/{2}, sound-Entity {3}/{4}, markup-Entity {5}/{6})'.format(
@@ -2907,24 +3106,24 @@ def get_tier_list(perspective_cid, perspective_oid):
 
             # Checking if we have cached tier list for this pair of sound/markup.
 
-            cache_key = 'phonology_tier_list:{0}:{1}:{2}:{3}'.format(
+            cache_key = '{0}:{1}:{2}:{3}:{4}'.format(
+                self.cache_key_str,
                 row.Sound.client_id, row.Sound.object_id,
                 row.Markup.client_id, row.Markup.object_id)
 
             cache_result = caching.CACHE.get(cache_key)
+            if cache_result is not None:
 
-            if cache_result:
-
-                tier_count.update(cache_result)
-                total_count += 1
-
-                log.debug('{0} [CACHE {1}]: {2}'.format(row_str, cache_key, list(sorted(cache_result))))
+                self.process_cache(row_str, cache_key, cache_result)
                 continue
 
             # Trying to download and parse markup and get its tiers.
 
             try:
-                with urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')) as markup_stream:
+
+                with urllib.request.urlopen(
+                    urllib.parse.quote(markup_url, safe = '/:')) as markup_stream:
+
                     markup_bytes = markup_stream.read()
 
                 try:
@@ -2940,7 +3139,9 @@ def get_tier_list(perspective_cid, perspective_oid):
 
                     markup_url = row.Sound.content
 
-                    with urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')) as markup_stream:
+                    with urllib.request.urlopen(
+                        urllib.parse.quote(markup_url, safe = '/:')) as markup_stream:
+
                         markup_bytes = markup_stream.read()
 
                     textgrid = pympi.Praat.TextGrid(xmax = 0)
@@ -2949,15 +3150,8 @@ def get_tier_list(perspective_cid, perspective_oid):
                         io.BytesIO(markup_bytes),
                         codec = chardet.detect(markup_bytes)['encoding'])
 
-                markup_tier_set = set(tier_name
-                    for tier_number, tier_name in textgrid.get_tier_name_num())
-
-                caching.CACHE.set(cache_key, markup_tier_set)
-
-                tier_count.update(markup_tier_set)
-                total_count += 1
-
-                log.debug('{0}: {1}'.format(row_str, list(sorted(markup_tier_set))))
+                result = self.process_sound_markup(row_str, textgrid)
+                caching.CACHE.set(cache_key, result)
 
             # Markup processing error, we report it and go on.
 
@@ -2969,15 +3163,73 @@ def get_tier_list(perspective_cid, perspective_oid):
                 log.debug('{0}: exception'.format(row_str))
                 log.debug(traceback_string)
 
+
+class Tier_List_Iterator(Sound_Markup_Iterator):
+    """
+    Iterates over sound/markup pairs of a specified perspective, compiles list of markup tier names.
+    """
+
+    def __init__(self, perspective_id):
+        """
+        Initializes state of markup tier name compilation.
+        """
+
+        super().__init__(perspective_id, 'phonology_tier_list')
+
+        self.tier_count = collections.Counter()
+        self.total_count = 0
+
+    def process_sound_markup(self, row_str, textgrid):
+        """
+        Processes another markup.
+        """
+
+        markup_tier_set = set(tier_name
+            for tier_number, tier_name in textgrid.get_tier_name_num())
+
+        self.tier_count.update(markup_tier_set)
+        self.total_count += 1
+
+        log.debug('{0}: {1}'.format(row_str,
+            list(sorted(markup_tier_set))))
+
+        return markup_tier_set
+
+    def process_cache(self, row_str, cache_key, markup_tier_set):
+        """
+        Processes cached result.
+        """
+
+        self.tier_count.update(markup_tier_set)
+        self.total_count += 1
+
+        log.debug('{0} [CACHE {1}]: {2}'.format(row_str, cache_key,
+            list(sorted(markup_tier_set))))
+
+
+def get_tier_list(perspective_cid, perspective_oid):
+    """
+    Helper function, gets a list of names of phonology markup tiers for specified perspective.
+    """
+
+    try:
+        log.debug('phonology_tier_list {0}/{1}'.format(
+            perspective_cid, perspective_oid))
+
+        iterator = Tier_List_Iterator((perspective_cid, perspective_oid))
+        iterator.run()
+
         # Logging and returning list of all tier names we encountered.
 
-        tier_list = list(sorted(tier_count.items(),
+        tier_list = list(sorted(iterator.tier_count.items(),
             key = lambda tier_count: (tier_count[0].lower(), tier_count[0])))
 
         log.debug('phonology_tier_list {0}/{1}: {2}, {3}'.format(
-            perspective_cid, perspective_oid, total_count, tier_list))
+            perspective_cid, perspective_oid, iterator.total_count, tier_list))
 
-        return True, {'tier_count': dict(tier_count), 'total_count': total_count}
+        return True, {
+            'tier_count': dict(iterator.tier_count),
+            'total_count': iterator.total_count}
 
     # Some unknown external exception.
 
@@ -2989,19 +3241,211 @@ def get_tier_list(perspective_cid, perspective_oid):
         log.debug('phonology_tier_list: exception')
         log.debug(traceback_string)
 
-        raise False, traceback_string
+        return False, traceback_string
 
 
 @view_config(route_name = 'phonology_tier_list', renderer = 'json')
 def phonology_tier_list(request):
     """
-    Gets a list of names of phonology markup tiers for a specified perspective.
+    Gets a list of names of phonology markup tiers for specified perspective.
     """
 
     perspective_cid = request.params.get('perspective_client_id')
     perspective_oid = request.params.get('perspective_object_id')
 
     try_ok, result = get_tier_list(perspective_cid, perspective_oid)
+
+    if not try_ok:
+
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'external error'}
+
+    return result
+
+
+class Skip_List_Iterator(Sound_Markup_Iterator):
+    """
+    Iterates over sound/markup pairs of a specified perspective, compiles list of characters skipped during
+    processing of vowel phonology for this perspective, and a list of characters from intervals adjacent to
+    intervals with vowel markup.
+    """
+
+    def __init__(self, perspective_id):
+        """
+        Initializes state of markup tier name compilation.
+        """
+
+        super().__init__(perspective_id, 'phonology_skip_list')
+
+        self.skip_count = collections.Counter()
+        self.total_skip_count = 0
+
+        self.neighbour_count = collections.Counter()
+        self.total_neighbour_count = 0
+
+    def process_sound_markup(self, row_str, textgrid):
+        """
+        Processes another markup.
+        """
+
+        skip_set = set()
+        neighbour_set = set()
+
+        # Looking through all intervals of all tiers of the current markup.
+
+        for tier_number, tier_name in textgrid.get_tier_name_num():
+
+            interval_list = [(begin, end, character_escape(text).strip())
+                for begin, end, text in textgrid.get_tier(tier_number).get_all_intervals()]
+
+            for index, (begin, end, text) in enumerate(interval_list):
+                transcription_check = re.fullmatch(transcription_re, text)
+
+                if (len(text) > 0 and
+                    any(character in vowel_set for character in text) and
+                    (len(text) <= 2 or transcription_check)):
+
+                    # If we have an interval with vowel markup, we update sets of skipped and adjacent
+                    # characters of this markup.
+
+                    skip_set.update(set(character
+                        for character in text
+                        if character not in vowel_set))
+
+                    if index > 0:
+
+                        neighbour_set.update(set(character
+                            for character in interval_list[index - 1][2]
+                            if character not in vowel_set))
+
+                    if index < len(interval_list) - 1:
+
+                        neighbour_set.update(set(character
+                            for character in interval_list[index + 1][2]
+                            if character not in vowel_set))
+
+        # Updating data of skipped and adjacent characters.
+
+        self.skip_count.update(skip_set)
+        self.total_skip_count += 1
+
+        self.neighbour_count.update(neighbour_set)
+        self.total_neighbour_count += 1
+
+        log.debug('{0}: {1}, {2}'.format(row_str,
+            list(sorted(skip_set)), list(sorted(neighbour_set))))
+
+        return skip_set, neighbour_set
+
+    def process_cache(self, row_str, cache_key, cache_result):
+        """
+        Processes cached result.
+        """
+
+        skip_set, neighbour_set = cache_result
+
+        self.skip_count.update(skip_set)
+        self.total_skip_count += len(neighbour_set)
+
+        self.neighbour_count.update(neighbour_set)
+        self.total_neighbour_count += 1
+
+        log.debug('{0} [CACHE {1}]: {2}, {3}'.format(row_str, cache_key,
+            list(sorted(skip_set)), list(sorted(neighbour_set))))
+
+
+def get_skip_list(perspective_cid, perspective_oid):
+    """
+    Helper function, gets a list of characters skipped during processing of vowel phonology, and a list of
+    characters from markup intervals adjacent to intervals with vowel markup, for specified perspective.
+    """
+
+    try:
+        log.debug('phonology_skip_list {0}/{1}'.format(
+            perspective_cid, perspective_oid))
+
+        iterator = Skip_List_Iterator((perspective_cid, perspective_oid))
+        iterator.run()
+
+        def info_list(character_count):
+            """
+            Compiles info of a set of unicode characters given their counts in the form of a dictionary-like
+            object.
+            """
+
+            return list(sorted(
+                
+                (ord(character), count,
+                    character if unicodedata.combining(character) == 0 else u'◌' + character,
+                    unicodedata.name(character).title())
+
+                    for character, count in character_count.items()
+                    if not character.isspace()))
+
+        skip_list = info_list(iterator.skip_count)
+        neighbour_list = info_list(iterator.neighbour_count)
+
+        def info_to_str(info_list, total_count):
+            """
+            Builds string representation of a character info list.
+            """
+
+            return ''.join(
+                '\n  \'{0}\' U+{1:04x} {2}: {3}/{4} ({5:.2f}%)'.format(
+                    string, point, name, count, total_count, 100.0 * count / total_count)
+                for point, count, string, name in info_list)
+
+        # Logging lists of all skipped and adjacent characters we encountered.
+
+        log.debug(
+            'phonology_skip_list {0}/{1}: {2} sound/markup pairs'.format(
+            perspective_cid, perspective_oid, iterator.markup_count))
+
+        log.debug(
+            'phonology_skip_list {0}/{1}: {2} skipped character instances, {3} unique{4}'.format(
+                perspective_cid, perspective_oid,
+                iterator.total_skip_count, len(skip_list),
+                info_to_str(skip_list, iterator.total_skip_count)))
+
+        log.debug(
+            'phonology_skip_list {0}/{1}: {2} adjacent character instances, {3} unique{4}'.format(
+                perspective_cid, perspective_oid,
+                iterator.total_neighbour_count, len(neighbour_list),
+                info_to_str(neighbour_list, iterator.total_neighbour_count)))
+
+        # Returning skipped and adjacent character data.
+
+        return True, {
+            'markup_count': iterator.markup_count,
+            'neighbour_list': neighbour_list,
+            'skip_list': skip_list,
+            'total_neighbour_count': iterator.total_neighbour_count,
+            'total_skip_count': iterator.total_skip_count}
+
+    # Some unknown external exception.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('phonology_skip_list: exception')
+        log.debug(traceback_string)
+
+        return False, traceback_string
+
+
+@view_config(route_name = 'phonology_skip_list', renderer = 'json')
+def phonology_skip_list(request):
+    """
+    Gets a list of characters skipped during processing of vowel phonology, and a list of characters from
+    markup intervals adjacent to intervals with vowel markup, for specified perspective.
+    """
+
+    perspective_cid = request.params.get('perspective_client_id')
+    perspective_oid = request.params.get('perspective_object_id')
+
+    try_ok, result = get_skip_list(perspective_cid, perspective_oid)
 
     if not try_ok:
 
@@ -3903,9 +4347,9 @@ def main_test_alpha(args):
 
     for raw_index, interval in enumerate(raw_interval_list):
 
-        if len(interval[2]) <= 2 \
-                and len(interval[2].strip()) \
-                and any(character in vowel_set for character in interval[2]):
+        if len(interval[2]) <= 2 and \
+            len(interval[2].strip()) and \
+            any(character in vowel_set for character in interval[2]):
 
             interval_list.append(interval)
             interval_idx_to_raw_idx[len(interval_list)-1] = raw_index

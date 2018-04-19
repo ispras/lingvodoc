@@ -775,6 +775,9 @@ def configure_routes(config):
     # Gets a list of names of phonology markup tiers for a specified perspective.
     config.add_route(name="phonology_tier_list", pattern="/phonology_tier_list")
 
+    # Gets a list of characters skipped during processing of vowel phonology for a specified perspective.
+    config.add_route(name="phonology_skip_list", pattern="/phonology_skip_list")
+
     config.add_route(name="tasks", pattern="/tasks", request_method='GET')
 
     config.add_route(name="delete_task", pattern="/tasks/{task_id}", request_method='DELETE')

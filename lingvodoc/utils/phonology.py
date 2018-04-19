@@ -1,3 +1,6 @@
+
+# Standard library imports.
+
 import base64
 import collections
 import datetime
@@ -62,7 +65,12 @@ import xlsxwriter
 
 import lingvodoc.cache.caching as caching
 from lingvodoc.cache.caching import CACHE, initialize_cache, TaskStatus
-from lingvodoc.views.v2.phonology import get_tier_list, std_phonology, async_phonology
+
+from lingvodoc.views.v2.phonology import (
+    async_phonology,
+    get_skip_list,
+    get_tier_list,
+    std_phonology)
 
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.models import (
@@ -92,7 +100,7 @@ celery_log = get_task_logger(__name__)
 celery_log.setLevel(logging.DEBUG)
 
 
-def gql_phonology(request, locale_id = 2, args):
+def gql_phonology(request, locale_id, args):
     """
     Computes phonology of a specified perspective.
     """
@@ -127,7 +135,7 @@ def gql_phonology(request, locale_id = 2, args):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_phonology if synchronous else async_phonology.delay)(
+        return (std_phonology if args.synchronous else async_phonology.delay)(
             args, task_key, cache_kwargs, storage, sqlalchemy_url)
 
     # Some unknown external exception.
@@ -148,10 +156,26 @@ def gql_phonology(request, locale_id = 2, args):
 
 def gql_phonology_tier_list(perspective_cid, perspective_oid):
     """
-    Gets a list of names of phonology markup tiers for a specified perspective.
+    Gets a list of names of phonology markup tiers for specified perspective.
     """
 
     try_ok, result = get_tier_list(perspective_cid, perspective_oid)
+
+    if not try_ok:
+
+        traceback_string = result
+        raise ResponseError(message = 'External error:\n' + traceback_string)
+
+    return result
+
+
+def gql_phonology_skip_list(perspective_cid, perspective_oid):
+    """
+    Gets a list of characters skipped during processing of vowel phonology, and a list of characters from
+    markup intervals adjacent to intervals with vowel markup, for specified perspective.
+    """
+
+    try_ok, result = get_skip_list(perspective_cid, perspective_oid)
 
     if not try_ok:
 

@@ -178,8 +178,11 @@ from lingvodoc.schema.gql_tasks import Task, DeleteTask
 from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary, ConvertFiveTiers
 from pyramid.security import authenticated_userid
 
-from lingvodoc.utils.phonology import gql_phonology as utils_phonology
-from lingvodoc.utils.phonology import gql_phonology_tier_list as utils_phonology_tier_list
+from lingvodoc.utils.phonology import (
+    gql_phonology as utils_phonology,
+    gql_phonology_skip_list as utils_phonology_skip_list,
+    gql_phonology_tier_list as utils_phonology_tier_list)
+
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
@@ -204,6 +207,14 @@ from lingvodoc.scripts import elan_parser
 class TierList(graphene.ObjectType):
     tier_count = graphene.Field(ObjectVal)
     total_count = graphene.Int()
+
+
+class SkipList(graphene.ObjectType):
+    markup_count = graphene.Int()
+    neighbour_list = graphene.Field(ObjectVal)
+    skip_list = graphene.Field(ObjectVal)
+    total_neighbour_count = graphene.Int()
+    total_skip_count = graphene.Int()
 
 
 class LexicalEntriesAndEntities(graphene.ObjectType):
@@ -314,6 +325,7 @@ class Query(graphene.ObjectType):
     column = graphene.Field(Column, id=LingvodocID())
 
     phonology_tier_list = graphene.Field(TierList, perspective_id=LingvodocID(required=True))
+    phonology_skip_list = graphene.Field(SkipList, perspective_id=LingvodocID(required=True))
 
     connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True),
                                      field_id=LingvodocID(required=True), mode=graphene.String())
@@ -1513,18 +1525,31 @@ class Query(graphene.ObjectType):
     def resolve_phonology_tier_list(self, info, perspective_id):
         """
         query MyQuery {
-                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
-
-                    )
+          phonology_tier_list(perspective_id: [330, 4]) {
+            tier_count
+            total_count
+          }
         }
         """
-        perspective_cid, perspective_oid = perspective_id
-        locale_id = info.context.get('locale_id')
-        request = info.context.get('request')
 
-        answer = utils_phonology_tier_list(perspective_cid, perspective_oid)
+        answer = utils_phonology_tier_list(*perspective_id)
+        return TierList(**answer)
 
-        return TierList(tier_count=answer['tier_count'], total_count=answer['total_count'])
+    def resolve_phonology_skip_list(self, info, perspective_id):
+        """
+        query MyQuery {
+          phonology_skip_list(perspective_id: [1251, 14]) {
+            markup_count
+            neighbour_list
+            skip_list
+            total_neighbour_count
+            total_skip_count
+          }
+        }
+        """
+
+        answer = utils_phonology_skip_list(*perspective_id)
+        return SkipList(**answer)
 
     # def resolve_convert_starling(self, info, starling_dictionaries):
     #     """
@@ -1797,7 +1822,9 @@ class Phonology(graphene.Mutation):
         only_first_translation=graphene.Boolean(required=True)
         vowel_selection=graphene.Boolean(required=True)
         maybe_tier_list=graphene.List(graphene.String)
-        maybe_tier_set=graphene.List(graphene.String)
+        keep_list=graphene.List(graphene.Int)
+        join_list=graphene.List(graphene.Int)
+        chart_threshold=graphene.Int()
         synchronous=graphene.Boolean()
         maybe_translation_field=LingvodocID()
 
@@ -1809,13 +1836,17 @@ class Phonology(graphene.Mutation):
     def mutate(self, info, **args):
         """
         query MyQuery {
-                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
-
-                    )
+          phonology(
+            perspective_id: [126, 5],
+            group_by_description: false,
+            only_first_translation: false,
+            vowel_selection: false,
+            maybe_tier_list: [],
+            maybe_translation_field: [66, 19])
         }
         """
 
-        parameters = Phonology_Parameters.from_mutation(args)
+        parameters = Phonology_Parameters.from_graphql(args)
 
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')
