@@ -150,15 +150,19 @@ def login_post(request):  # tested
 
 @view_config(route_name='signin', renderer='json', request_method='POST')
 def signin(request):
+
     req = request.json_body
+
     login = req['login']
     password = req['password']
-    # login = request.POST.get('login', '')
-    # password = request.POST.get('password', '')
     desktop = req.get('desktop', False)
 
     user = DBSession.query(User).filter_by(login=login).first()
-    if user and user.check_password(password):
+
+    # We need existing user, with correct password, and not deactivated.
+
+    if user and user.check_password(password) and user.is_active:
+
         client = Client(user_id=user.id, is_browser_client=not desktop)
         user.clients.append(client)
         DBSession.add(client)
@@ -174,24 +178,27 @@ def signin(request):
         result = dict()
         result['client_id'] = client.id
         request.response.status = HTTPOk.code
-        #print(result)
-        # request.response.headers = headers
-        # return response
+
         return HTTPOk(headers=response.headers, json_body=result)
-        # return result
+
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
 @view_config(route_name='sync_signin', renderer='json', request_method='POST')
 def sync_signin(request):
+
     req = request.json_body
     login = req['login']
     password = req['password']
 
     user = DBSession.query(User).filter_by(login=login).first()
-    if user and user.check_password(password):
+
+    # We need existing user, with correct password, and not deactivated.
+
+    if user and user.check_password(password) and user.is_active:
         request.response.status = HTTPOk.code
         return HTTPOk(json_body={})
+
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
