@@ -1,5 +1,7 @@
 __author__ = 'alexander'
 
+import lingvodoc.cache.caching as caching
+
 from lingvodoc.exceptions import CommonException
 from lingvodoc.models import (
     BaseGroup,
@@ -39,10 +41,14 @@ from sqlalchemy import (
 import logging
 import json
 from lingvodoc.utils.creation import add_user_to_group
+from pyramid_mailer.message import Message
 from pyramid.request import Request
 import datetime
 from time import sleep
+from hashlib import md5
 import requests
+import traceback
+import pprint
 
 log = logging.getLogger(__name__)
 
@@ -53,8 +59,41 @@ def signup_get(request):
     return render_to_response('templates/signup.pt', variables, request=request)
 
 
+def new_user(login, name, email, password, year, month, day):
+    """
+    Creates a new user account with specified info.
+    """
+
+    birthday = datetime.date(year, month, day)
+    new_user = User(login=login, name=name,
+        created_at=datetime.datetime.utcnow(), intl_name=login, birthday=birthday, is_active=True)
+
+    pwd = Passhash(password=password)
+    email = Email(email=email)
+    new_user.password = pwd
+    new_user.email = email
+
+    DBSession.add(new_user)
+
+    basegroups = []
+    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create dictionaries").first()]
+    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create languages").first()]
+    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create organizations").first()]
+    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create translation strings").first()]
+
+    groups = []
+    for base in basegroups:
+        groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]
+
+    for group in groups:
+        add_user_to_group(new_user, group)
+
+    DBSession.flush()
+
+
 @view_config(route_name='signup', renderer='json', request_method='POST')
 def signup_post(request):  # tested
+
     try:
         req = request.json_body
         login = req['login']
@@ -68,12 +107,11 @@ def signup_post(request):  # tested
         if day is None or month is None or year is None:
             request.response.status = HTTPBadRequest.code
             return {'Error': "day, month or year of the birth is missing"}
-        # birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
+
         try:
             day = int(day)
             month = int(month)
             year = int(year)
-            birthday = datetime.date(year, month, day)
         except ValueError:
             request.response.status = HTTPBadRequest.code
             return {'Error': "Invalid birthday"}
@@ -82,24 +120,57 @@ def signup_post(request):  # tested
             raise CommonException("The user with this login is already registered")
         if DBSession.query(Email).filter_by(email=email).first():
             raise CommonException("The user with this email is already registered")
-        new_user = User(login=login, name=name, created_at=datetime.datetime.utcnow(), intl_name=login, birthday=birthday, is_active=True)
-        pwd = Passhash(password=password)
-        email = Email(email=email)
-        new_user.password = pwd
-        new_user.email = email
-        DBSession.add(new_user)
-        basegroups = []
-        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create dictionaries").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create languages").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create organizations").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create translation strings").first()]
-        groups = []
-        for base in basegroups:
-            groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]
-        for group in groups:
-            add_user_to_group(new_user, group)
-        DBSession.flush()
-        return {}
+
+        # If we require user signup approval, we save user data and send pending approval email.
+
+        signup_settings = request.registry.settings['signup']
+        if signup_settings.get('approve'):
+
+            if 'address' not in signup_settings:
+                raise Exception('User signup approval email address is not specified')
+
+            user_dict = {
+                'login': login,
+                'name': name,
+                'email': email,
+                'password': password,
+                'day': day,
+                'month': month,
+                'year': year}
+
+            user_digest = md5(repr(list(sorted(user_dict.items()))).encode('utf-8')).hexdigest()
+            cache_key = 'signup:' + user_digest
+
+            cache_result = caching.CACHE.get(cache_key)
+
+            # If we already have info of this user saved, it means that we already have their registration
+            # pending approval, so we do nothing.
+
+            if cache_result:
+                return {'result': 'Already have signup of such user pending approval.'}
+
+            # Otherwise we save user info and send signup approval email.
+
+            caching.CACHE.set(cache_key, user_dict)
+
+            approve_url = request.route_url('signup_approve') + '?key={0}'.format(user_digest)
+
+            message = Message(
+                subject = 'User \'{0}\' signup approval'.format(login),
+                sender = 'noreply@ispras.ru',
+                recipients = signup_settings['address'],
+                body = 'User signup is pending approval. User\'s data:\n\n'
+                    'Login: {0}\nName: {1}\nEmail: {2}\n\n'
+                    'To approve, please follow this link:\n{3}\n'.format(
+                        login, name, email, approve_url))
+
+            request.registry.mailer.send_immediately(message, fail_silently = False)
+            return {'result': 'Signup approval pending.'}
+
+        # No approval required, we just create new user account.
+
+        new_user(login, name, email, password, year, month, day)
+        return {'result': 'Signup success.'}
 
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
@@ -112,6 +183,90 @@ def signup_post(request):  # tested
     except ValueError as e:
         request.response.status = HTTPConflict.code
         return {'status': request.response.status, 'error': str(e)}
+
+    # Some unknown error.
+
+    except Exception as exception:
+
+        request.response.status = HTTPInternalServerError.code
+        return {'status': request.response.status, 'error': repr(exception)}
+
+
+@view_config(route_name='signup_approve', renderer='json')
+def signup_approve(request):
+    """
+    Used to approve moderated user signups.
+    """
+
+    log.debug('signup_approve')
+
+    try:
+        user_digest = request.params.get('key')
+
+        if not user_digest:
+            return {'error': 'No signup identifier supplied.'}
+
+        log.debug('signup_approve {0}'.format(user_digest))
+
+        cache_key = 'signup:' + user_digest
+        cache_result = caching.CACHE.get(cache_key)
+
+        if cache_result is None:
+            return {'error': 'Unknown signup identifier. Perhaps this signup was already approved?'}
+
+        log.debug('signup_approve {0}:\n{1}'.format(user_digest, pprint.pformat(cache_result)))
+
+        # Checking if we have any user accounts with supplied login or email.
+        #
+        # NOTE: In normal operation this shouldn't be possible, as the same checks are made during signup,
+        # but this is useful for debugging.
+
+        login = cache_result['login']
+        name = cache_result['name']
+        email = cache_result['email']
+
+        if DBSession.query(User).filter_by(login = login).first():
+
+            caching.CACHE.rem(cache_key)
+            return {'error': 'User account with login \'{0}\' already exists.'.format(login)}
+
+        if DBSession.query(Email).filter_by(email = email).first():
+
+            caching.CACHE.rem(cache_key)
+            return {'error': 'User account with email \'{0}\' already exists.'.format(email)}
+
+        # Creating new user account, removing user data from cache, sending notification email.
+
+        new_user(**cache_result)
+        caching.CACHE.rem(cache_key)
+
+        message = Message(
+            subject = 'Signup approval notification',
+            sender = 'noreply@ispras.ru',
+            recipients = [email],
+            body = 'User account \'{0}\' ({1}) with your '
+                'email address was registred at Lingvodoc {2}.\n'.format(
+                    login, name, request.application_url))
+
+        log.debug('signup_approve {0}:\n'
+            'From: {1}\nTo: {2}\nSubject: {3}\n{4}'.format(user_digest,
+            message.sender, ', '.join(message.recipients), message.subject, message.body.rstrip()))
+
+        request.registry.mailer.send_immediately(message, fail_silently = False)
+        return {'result': 'Signup success.'}
+
+    # Handling any possible exception.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('signup_approve: exception')
+        log.debug(traceback_string)
+
+        request.response.status = HTTPInternalServerError.code
+        return {'error': repr(exception), 'traceback': traceback_string}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
