@@ -1826,6 +1826,7 @@ class Phonology(graphene.Mutation):
         keep_list=graphene.List(graphene.Int)
         join_list=graphene.List(graphene.Int)
         chart_threshold=graphene.Int()
+        generate_csv=graphene.Boolean()
         synchronous=graphene.Boolean()
         maybe_translation_field=LingvodocID()
 

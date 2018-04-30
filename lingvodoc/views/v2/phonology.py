@@ -3,6 +3,7 @@
 
 import base64
 import collections
+import csv
 import datetime
 from errno import EEXIST
 from hashlib import md5
@@ -994,7 +995,6 @@ class Tier_Result(object):
         transcription,
         total_interval_length,
         mean_interval_length,
-        translation_list,
         max_length_str,
         max_length_r_length,
         max_length_f_list,
@@ -1011,8 +1011,6 @@ class Tier_Result(object):
 
         self.total_interval_length = total_interval_length
         self.mean_interval_length = mean_interval_length
-
-        self.translation_list = translation_list
 
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
@@ -1049,7 +1047,6 @@ class Tier_Result(object):
             [[self.transcription,
                 '{0:.3f}s'.format(self.total_interval_length),
                 '{0:.3f}s'.format(self.mean_interval_length),
-                self.translation_list,
 
                 self.max_length_str,
                 self.max_length_r_length,
@@ -1089,7 +1086,7 @@ def before_after_text(join_set, index, interval_list):
     return before_text, after_text
 
 
-def process_sound(tier_data_list, sound, translation_list = []):
+def process_sound(tier_data_list, sound):
     """
     Analyzes sound intervals corresponding to vowel-containing markup.
     """
@@ -1196,7 +1193,6 @@ def process_sound(tier_data_list, sound, translation_list = []):
                 ''.join(text for index, (begin, end, text) in raw_interval_list),
                 total_interval_length,
                 mean_interval_length,
-                translation_list,
                 max_length_str,
                 max_length / mean_interval_length,
                 list(map('{0:.3f}'.format, max_length_f_list)),
@@ -1212,18 +1208,6 @@ def process_sound(tier_data_list, sound, translation_list = []):
     # Returning analysis results.
 
     return textgrid_result_list
-
-
-def update_textgrid_result(textgrid_result_list, translation_list):
-    """
-    Replaces translation lists in textgrid/sound processing results.
-    """
-
-    for tier_number, tier_name, tier_result_list in textgrid_result_list:
-        if isinstance(tier_result_list, list):
-
-            for tier_result in tier_result_list:
-                tier_result.translation_list = translation_list
 
 
 def format_textgrid_result(group_list, textgrid_result_list):
@@ -1286,13 +1270,17 @@ def compile_workbook(
     chart_threshold,
     result_list,
     result_group_set,
-    workbook_stream):
+    workbook_stream,
+    csv_stream = None):
     """
-    Compiles analysis results into an Excel workbook.
+    Compiles analysis results into an Excel workbook, and, if required, a CSV file.
     """
 
     workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
     format_percent = workbook.add_format({'num_format': '0.00%'})
+
+    if csv_stream:
+        csv_writer = csv.writer(csv_stream)
 
     group_string_dict = {group: repr(group)
         for group in result_group_set if group != None}
@@ -1303,27 +1291,30 @@ def compile_workbook(
     group_list = [None] + list(
         map(lambda group_string_and_group: group_string_and_group[1], group_sorted_list))
 
+    # Determining what fields our results would have.
+
+    if vowel_selection:
+
+        header_list = [
+            'Longest (seconds) interval', 'Relative length',
+            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
+            'Highest intensity (dB) interval', 'Relative length',
+            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
+            'Coincidence']
+
+    else:
+
+        header_list = [
+            'Interval', 'Relative length',
+            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
+            'Longest', 'Highest intensity']
+
     # Creating sets of worksheets for each result group, including the universal one.
 
     worksheet_dict = {}
 
     for group in group_list:
         group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
-
-        if vowel_selection:
-
-            header_list = [
-                'Longest (seconds) interval', 'Relative length',
-                'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
-                'Highest intensity (dB) interval', 'Relative length',
-                'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
-                'Coincidence']
-
-        else:
-            header_list = [
-                'Interval', 'Relative length',
-                'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
-                'Longest', 'Highest intensity']
 
         worksheet_results = workbook.add_worksheet('Results' + group_name_string)
         worksheet_results.write_row('A1', ['Transcription', 'Translation'] + header_list)
@@ -1349,6 +1340,19 @@ def compile_workbook(
             workbook.add_worksheet('F-chart' + group_name_string),
             workbook.add_worksheet('F-table (3d)' + group_name_string))
 
+    # Writing out header for CSV file, if required.
+
+    if csv_stream:
+
+        csv_writer.writerow([
+            'Lexical entry client id', 'Lexical entry object id',
+            'Sound entity client id', 'Sound entity object id',
+            'Markup entity client id', 'Markup entity object id',
+            'Tier number', 'Tier name',
+            'Transcription',
+            'Translation entity client id', 'Translation entity object id',
+            'Translation'] + header_list)
+
     row_counter_dict = {group: 2 for group in result_group_set}
     sound_counter_dict = {group: 0 for group in result_group_set}
 
@@ -1369,14 +1373,41 @@ def compile_workbook(
 
     # Filling in analysis results.
 
-    for textgrid_group_list, textgrid_result_list in result_list:
+    for (entry_cid, entry_oid, sound_cid, sound_oid, makrup_cid, markup_oid,
+        translation_list, textgrid_group_list, textgrid_result_list) in result_list:
+
+        id_list = [entry_cid, entry_oid, sound_cid, sound_oid, makrup_cid, markup_oid]
+
+        translation = translation_list[0] if translation_list else None
+        translation_str = translation[2] if translation else ''
+        translation_index = 0
+
+        def next_translation():
+            """
+            Gets next translation from the translation list.
+            """
+
+            nonlocal translation
+            nonlocal translation_str
+            nonlocal translation_index
+
+            translation_index += 1
+
+            translation = translation_list[translation_index] \
+                if translation_index < len(translation_list) else None
+
+            translation_str = translation[2] if translation else ''
+
+            return translation
+
+        # Going through all tiers of the markup.
+
         for tier_number, tier_name, tier_result_list in textgrid_result_list:
 
             if tier_result_list == 'no_vowel' or tier_result_list == 'no_vowel_selected':
                 continue
 
             for tier_result in tier_result_list:
-                translation_list = tier_result.translation_list
 
                 # Either only for longest interval and interval with highest intensity, or...
 
@@ -1389,16 +1420,16 @@ def compile_workbook(
                     text_b_list = tier_result.max_intensity_str.split()
 
                     vowel_a = get_vowel_class(
-                        tier_result.max_length_source_index, tier_result.source_interval_list) 
+                        tier_result.max_length_source_index, tier_result.source_interval_list)
 
                     vowel_b = get_vowel_class(
-                        tier_result.max_intensity_source_index, tier_result.source_interval_list) 
+                        tier_result.max_intensity_source_index, tier_result.source_interval_list)
 
                     # Writing out interval data and any additional translations.
 
                     row_list = ([
                         tier_result.transcription,
-                        translation_list[0] if translation_list else '',
+                        translation_str,
                         ' '.join([vowel_a] + text_a_list[1:]),
                         round(tier_result.max_length_r_length, 4)] + f_list_a + [
                         ', '.join(formant_reference(*f_list_a[:2])),
@@ -1412,10 +1443,17 @@ def compile_workbook(
                         worksheet_dict[group][0].write_row('A' + str(row_counter_dict[group]), row_list)
                         row_counter_dict[group] += 1
 
-                        for translation in translation_list[1:]:
+                    # Saving to CSV file, if required.
 
-                            worksheet_dict[group][0].write('B' + str(row_counter_dict[group]), translation)
-                            row_counter_dict[group] += 1
+                    if csv_stream:
+
+                        csv_writer.writerow(
+                            id_list +
+                            [tier_number, tier_name, tier_result.transcription] +
+                            (translation if translation else ['', '', '']) +
+                            row_list[2:])
+
+                    next_translation()
 
                     # Collecting vowel formant data.
 
@@ -1439,15 +1477,16 @@ def compile_workbook(
                         enumerate(tier_result.interval_data_list):
 
                         vowel = get_vowel_class(
-                            source_index, tier_result.source_interval_list) 
+                            source_index, tier_result.source_interval_list)
 
                         f_list = list(map(float, f_list[:3]))
 
                         row_list = ([
                             tier_result.transcription,
-                            translation_list[index] if index < len(translation_list) else '',
+                            translation_str,
                             ' '.join([vowel] + interval_str.split()[1:]),
-                            round(interval_r_length, 4)] + f_list + [
+                            round(interval_r_length, 4)] +
+                            f_list + [
                             ', '.join(formant_reference(*f_list[:2])),
                             sign_longest,
                             sign_highest])
@@ -1460,15 +1499,33 @@ def compile_workbook(
                             worksheet_dict[group][0].write_row('A' + str(row_counter_dict[group]), row_list)
                             row_counter_dict[group] += 1
 
-                            for translation in translation_list[len(tier_result.interval_data_list):]:
-
-                                worksheet_dict[group][0].write(
-                                    'B' + str(row_counter_dict[group]), translation)
-
-                                row_counter_dict[group] += 1
-
                             sound_counter_dict[group] += 1
                             vowel_formant_dict[group][vowel].append(tuple(f_list))
+
+                        if csv_stream:
+
+                            csv_writer.writerow(
+                                id_list +
+                                [tier_number, tier_name, tier_result.transcription] +
+                                (translation if translation else ['', '', '']) +
+                                row_list[2:])
+
+                        next_translation()
+
+        # Writing out any additional translations not written out during writing out of data of vowel
+        # intervals of all markup tiers.
+
+        while translation:
+
+            for group in textgrid_group_list:
+
+                worksheet_dict[group][0].write('B' + str(row_counter_dict[group]), translation[2])
+                row_counter_dict[group] += 1
+
+            if csv_stream:
+                csv_writer.writerow(id_list + ['', '', ''] + translation)
+
+            next_translation()
 
     def sigma_inverse(sigma):
         """
@@ -2194,6 +2251,8 @@ class Phonology_Parameters(object):
             self.chart_threshold = (int(request.params['chart_threshold'])
                 if 'chart_threshold' in request.params else 8)
 
+            self.generate_csv = 'generate_csv' in request.params
+
             self.synchronous = 'synchronous' in request.params
 
         # ...or from JSON data.
@@ -2219,6 +2278,7 @@ class Phonology_Parameters(object):
                 request_json.get('keep_list'), request_json.get('join_list'))
 
             self.chart_threshold = request_json.get('chart_threshold', 8)
+            self.generate_csv = request_json.get('generate_csv')
 
             self.synchronous = request_json.get('synchronous')
 
@@ -2300,6 +2360,7 @@ class Phonology_Parameters(object):
             args.get('keep_list'), args.get('join_list'))
 
         self.chart_threshold = args.get('chart_threshold', 8)
+        self.generate_csv = args.get('generate_csv', False)
 
         self.synchronous = args.get('synchronous')
 
@@ -2336,13 +2397,14 @@ def phonology(request):
     try:
         args = Phonology_Parameters.from_request(request)
 
-        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}'.format(
+        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}'.format(
             args.perspective_cid, args.perspective_oid,
             args.group_by_description, args.vowel_selection,
             args.only_first_translation, args.use_automatic_markup,
             args.maybe_tier_list,
             args.keep_list, args.join_list,
-            args.chart_threshold))
+            args.chart_threshold,
+            args.generate_csv))
 
         # Phonology task status setup.
 
@@ -2465,8 +2527,9 @@ def perform_phonology(args, task_status, storage):
         '\n  maybe_tier_set: {9}'
         '\n  keep_set: {10}\n  join_set: {11}'
         '\n  chart_threshold: {12}'
-        '\n  limit: {13}\n  limit_exception: {14}'
-        '\n  limit_no_vowel: {15}\n  limit_result: {16}'.format(
+        '\n  generate_csv: {13}'
+        '\n  limit: {14}\n  limit_exception: {15}'
+        '\n  limit_no_vowel: {16}\n  limit_result: {17}'.format(
         args.perspective_cid, args.perspective_oid,
         args.dictionary_name, args.perspective_name,
         args.group_by_description,
@@ -2475,6 +2538,7 @@ def perform_phonology(args, task_status, storage):
         args.maybe_tier_set,
         args.keep_set, args.join_set,
         args.chart_threshold,
+        args.generate_csv,
         args.limit, args.limit_exception,
         args.limit_no_vowel, args.limit_result))
 
@@ -2572,7 +2636,7 @@ def perform_phonology(args, task_status, storage):
     if translation_field:
 
         data_query = (data_query
-            
+
             .outerjoin(Translation, and_(
                 Translation.parent_client_id == LexicalEntry.client_id,
                 Translation.parent_object_id == LexicalEntry.object_id,
@@ -2585,10 +2649,10 @@ def perform_phonology(args, task_status, storage):
                 PublishingTranslation.object_id == Translation.object_id,
                 PublishingTranslation.published == True,
                 PublishingTranslation.accepted == True))
-            
-            .add_columns(
-                func.array_agg(Translation.content))
-            
+
+            .add_columns(func.jsonb_agg(func.jsonb_build_array(
+                Translation.client_id, Translation.object_id, Translation.content)))
+
             .group_by(LexicalEntry, Markup, Sound))
 
     # Before everything else we should count how many sound/markup pairs we are to process.
@@ -2624,7 +2688,7 @@ def perform_phonology(args, task_status, storage):
             [translation for translation in row[3] if translation])
 
         if args.only_first_translation:
-            translation_list = translation_list[:3]
+            translation_list = translation_list[:1]
 
         # Sound/markup data message and cache key strings.
 
@@ -2704,8 +2768,6 @@ def perform_phonology(args, task_status, storage):
 
             elif cache_result:
 
-                update_textgrid_result(cache_result, translation_list)
-
                 textgrid_result_list = cache_result
                 filtered_result_list = result_filter(textgrid_result_list)
 
@@ -2721,7 +2783,12 @@ def perform_phonology(args, task_status, storage):
 
                 # Acquiring another result, updating progress status, stopping earlier, if required.
 
-                result_list.append((group_list, filtered_result_list))
+                result_list.append((
+                    row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                    row.Sound.client_id, row.Sound.object_id,
+                    row.Markup.client_id, row.Markup.object_id,
+                    translation_list, group_list, filtered_result_list))
+
                 result_group_set.update(group_list)
 
                 task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
@@ -2831,13 +2898,18 @@ def perform_phonology(args, task_status, storage):
                 sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
 
             textgrid_result_list = process_sound(
-                tier_data_list, sound, translation_list)
+                tier_data_list, sound)
 
             # Saving analysis results.
 
             filtered_result_list = result_filter(textgrid_result_list)
 
-            result_list.append((group_list, filtered_result_list))
+            result_list.append((
+                row.LexicalEntry.client_id, row.LexicalEntry.object_id,
+                row.Sound.client_id, row.Sound.object_id,
+                row.Markup.client_id, row.Markup.object_id,
+                translation_list, group_list, filtered_result_list))
+
             result_group_set.update(group_list)
 
             caching.CACHE.set(cache_key, textgrid_result_list)
@@ -2924,7 +2996,11 @@ def perform_phonology(args, task_status, storage):
     # Otherwise we create an Excel file with results.
 
     task_status.set(3, 99, 'Compiling results')
+
     workbook_stream = io.BytesIO()
+
+    csv_stream = io.BytesIO() if args.generate_csv else None
+    csv_wrapper = io.TextIOWrapper(csv_stream, encoding = 'utf-8') if args.generate_csv else None
 
     try:
         entry_count_dict, sound_count_dict, chart_stream_list = \
@@ -2936,9 +3012,16 @@ def perform_phonology(args, task_status, storage):
                 args.chart_threshold,
                 result_list,
                 result_group_set,
-                workbook_stream)
+                workbook_stream,
+                csv_wrapper)
+
+        # Getting ready to write out Excel and, if required, CSV file data.
 
         workbook_stream.seek(0)
+
+        if csv_stream:
+            csv_wrapper.flush()
+            csv_stream.seek(0)
 
     except Exception as exception:
 
@@ -2969,16 +3052,18 @@ def perform_phonology(args, task_status, storage):
         current_datetime.month,
         current_datetime.day)
 
-    table_filename = sanitize_filename(result_filename + '.xlsx')
+    xlsx_filename = sanitize_filename(result_filename + '.xlsx')
+    csv_filename = sanitize_filename(result_filename + '.csv')
 
     cur_time = time()
     storage_dir = path.join(storage['path'], 'phonology', str(cur_time))
-    makedirs(storage_dir, exist_ok = True)
 
     # Storing file with the results.
 
-    storage_path = path.join(storage_dir, table_filename)
-    directory = path.dirname(storage_path)
+    xlsx_path = path.join(storage_dir, xlsx_filename)
+    csv_path = path.join(storage_dir, csv_filename)
+
+    directory = path.dirname(xlsx_path)
 
     try:
         makedirs(directory)
@@ -2990,7 +3075,7 @@ def perform_phonology(args, task_status, storage):
     # If the name of the result file is too long, we try again with a shorter name.
 
     try:
-        with open(storage_path, 'wb+') as workbook_file:
+        with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
 
     except OSError as os_error:
@@ -3004,11 +3089,21 @@ def perform_phonology(args, task_status, storage):
             current_datetime.month,
             current_datetime.day)
 
-        table_filename = sanitize_filename(result_filename + '.xlsx')
-        storage_path = path.join(storage_dir, table_filename)
+        xlsx_filename = sanitize_filename(result_filename + '.xlsx')
+        csv_filename = sanitize_filename(result_filename + '.csv')
 
-        with open(storage_path, 'wb+') as workbook_file:
+        xlsx_path = path.join(storage_dir, xlsx_filename)
+        csv_path = path.join(storage_dir, csv_filename)
+
+        with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
+
+    # Writing out data in a CSV file, if required.
+
+    if csv_stream:
+
+        with open(csv_path, 'wb+') as csv_file:
+            copyfileobj(csv_stream, csv_file)
 
     # Storing 3d F1/F2/F3 scatter charts, if we have any.
 
@@ -3016,17 +3111,21 @@ def perform_phonology(args, task_status, storage):
 
     for chart_stream, group_string in chart_stream_list:
 
-        filename = sanitize_filename(result_filename + group_string + '.png')
-        storage_path = path.join(storage_dir, filename)
+        chart_filename = sanitize_filename(result_filename + group_string + '.png')
+        chart_path = path.join(storage_dir, chart_filename)
 
         chart_stream.seek(0)
 
-        with open(storage_path, 'wb+') as chart_file:
+        with open(chart_path, 'wb+') as chart_file:
             copyfileobj(chart_stream, chart_file)
 
-        chart_filename_list.append(filename)
+        chart_filename_list.append(chart_filename)
 
     # Successfully compiled phonology, finishing and returning links to files with results.
+
+    filename_list = [xlsx_filename] + \
+        ([csv_filename] if args.generate_csv else []) + \
+        chart_filename_list
 
     url_list = [
 
@@ -3037,7 +3136,7 @@ def perform_phonology(args, task_status, storage):
             str(cur_time), '/',
             filename])
 
-        for filename in [table_filename] + chart_filename_list]
+        for filename in filename_list]
 
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
@@ -3374,7 +3473,7 @@ def get_skip_list(perspective_cid, perspective_oid):
             """
 
             return list(sorted(
-                
+
                 (ord(character), count,
                     character if unicodedata.combining(character) == 0 else u'◌' + character,
                     unicodedata.name(character).title())
@@ -3772,7 +3871,7 @@ def perform_sound_and_markup(
 
     else:
         sound_field_str = '\n' + ''.join(
-                
+
             '  {0}/{1} \'{2}\'\n'.format(
                 field_data.Field.client_id, field_data.Field.object_id,
                 field_data.FieldTranslationAtom.content)
@@ -3850,7 +3949,7 @@ def perform_sound_and_markup(
     if translation_field:
 
         data_query = (data_query
-                
+
             .outerjoin(Translation, and_(
                 Translation.parent_client_id == LexicalEntry.client_id,
                 Translation.parent_object_id == LexicalEntry.object_id,
@@ -3859,16 +3958,16 @@ def perform_sound_and_markup(
                 Translation.marked_for_deletion == False))
 
             .outerjoin(PublishingTranslation, translation_condition)
-            
+
             .add_columns(
                 func.array_agg(Translation.content))
-            
+
             .group_by(LexicalEntry, Markup, Sound))
 
         # Unpaired sounds we also try to match with translations.
 
         sound_query = (sound_query
-                
+
             .outerjoin(Translation, and_(
                 Translation.parent_client_id == LexicalEntry.client_id,
                 Translation.parent_object_id == LexicalEntry.object_id,
@@ -3877,10 +3976,10 @@ def perform_sound_and_markup(
                 Translation.marked_for_deletion == False))
 
             .outerjoin(PublishingTranslation, translation_condition)
-            
+
             .add_columns(
                 func.array_agg(Translation.content))
-            
+
             .group_by(LexicalEntry, Sound))
 
     # Preparing for writing out sound/markup archive.
@@ -4114,7 +4213,7 @@ def perform_sound_and_markup(
 
         no_markup_str = 'no_markup_sounds/'
         no_markup_len = len(no_markup_str)
-        
+
         for zip_info in zip_info_list:
 
             if zip_info.filename.startswith(no_markup_str):

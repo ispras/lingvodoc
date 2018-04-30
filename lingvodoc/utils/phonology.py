@@ -108,11 +108,14 @@ def gql_phonology(request, locale_id, args):
     task_status = None
 
     try:
-        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}'.format(
+        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}'.format(
             args.perspective_cid, args.perspective_oid,
             args.group_by_description, args.vowel_selection,
             args.only_first_translation, args.use_automatic_markup,
-            args.maybe_tier_list))
+            args.maybe_tier_list,
+            args.keep_list, args.join_list,
+            args.chart_threshold,
+            args.generate_csv))
 
         args.get_pd_names(locale_id)
 
