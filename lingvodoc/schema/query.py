@@ -96,7 +96,7 @@ from lingvodoc.schema.gql_user import (
     User,
     CreateUser,
     UpdateUser,
-    DeactivateUser
+    ActivateDeactivateUser
 )
 from lingvodoc.schema.gql_grant import (
     Grant,
@@ -1877,7 +1877,7 @@ class MyMutations(graphene.ObjectType):
     bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
-    deactivate_user = DeactivateUser.Field();
+    activate_deactivate_user = ActivateDeactivateUser.Field();
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     move_language = MoveLanguage.Field()
