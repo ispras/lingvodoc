@@ -266,48 +266,49 @@ class UpdateUser(graphene.Mutation):
         return UpdateUser(user=user, triumph=True)
 
 
-class DeactivateUser(graphene.Mutation):
+class ActivateDeactivateUser(graphene.Mutation):
     """
     example:
 
     mutation {
-        deactivate_user(user_id: 70) { triumph } }
+        activate_deactivate_user(user_id: 70, is_active: False) { triumph } }
 
     returns:
     {
-      "deactivate_user": {
+      "activate_deactivate_user": {
           "triumph": true }
     }
     """
 
     class Arguments:
         user_id = graphene.Int()
+        is_active = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, info, **args):
 
-        # Only administrator can deactivate users.
+        # Only administrator can activate/deactivate users.
 
         client_id = info.context.get('client_id')
 
         if not client_id:
-            return ResponseError(message = 'Error: only administrator can deactivate users')
+            return ResponseError(message = 'Error: only administrator can activate/deactivate users')
 
         client = DBSession.query(Client).filter_by(id = client_id).first()
 
         if not client or client.user_id != 1:
-            return ResponseError(message = 'Error: only administrator can deactivate users')
+            return ResponseError(message = 'Error: only administrator can activate/deactivate users')
 
-        deactivate_id = args.get('user_id')
-        user = DBSession.query(dbUser).filter_by(id = deactivate_id).first()
+        user_id = args.get('user_id')
+        user = DBSession.query(dbUser).filter_by(id = user_id).first()
 
         # Checking that we have a valid user to deactivate.
 
         if not user:
             return ResponseError(message = 'Error: No such user in the system')
 
-        user.is_active = False
-        return DeactivateUser(triumph = True)
+        user.is_active = args.get('is_active')
+        return ActivateDeactivateUser(triumph = True)
 
