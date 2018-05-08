@@ -526,7 +526,7 @@ class ParticipateOrg(graphene.Mutation):
         req = dict()
         req['sender_id'] = user_id
         req['broadcast_uuid'] = str(uuid4())
-        req['type'] = 'administrate_org'
+        req['type'] = 'participate_org'
         req['subject'] = {'org_id': org_id, 'user_id': user_id}
         req['message'] = ''
         if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
