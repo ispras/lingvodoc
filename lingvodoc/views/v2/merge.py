@@ -948,6 +948,7 @@ def match_graph(match_result_list):
 def merge_suggestions_compute(
     request,
     perspective_client_id, perspective_object_id,
+    algorithm,
     entity_type_primary, entity_type_secondary,
     threshold, levenshtein,
     field_selection_list, locale_id):
@@ -1055,9 +1056,10 @@ def merge_suggestions(request):
     entry_data_list, match_result_list, user_has_permissions = merge_suggestions_compute(
         request,
         perspective_client_id, perspective_object_id,
+        algorithm,
         entity_type_primary, entity_type_secondary,
         threshold, levenshtein,
-        locale_id)
+        field_selection_list, locale_id)
 
     if not match_result_list:
 

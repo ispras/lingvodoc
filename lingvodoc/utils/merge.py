@@ -77,10 +77,11 @@ log = logging.getLogger(__name__)
 
 
 def merge_suggestions(request,
-                      perspective_client_id, perspective_object_id, algorithm,
-                      entity_type_primary='Transcription', entity_type_secondary='Translation',
-                      threshold=0.1, levenshtein=1,
-                      field_selection_list=None, locale_id=2):
+                      perspective_client_id, perspective_object_id,
+                      algorithm,
+                      entity_type_primary = 'Transcription', entity_type_secondary = 'Translation',
+                      threshold = 0.1, levenshtein = 1,
+                      field_selection_list = None, locale_id = 2):
     """
     Finds groups of mergeable lexical entries according to specified criteria.
     """
@@ -93,9 +94,10 @@ def merge_suggestions(request,
     entry_data_list, match_result_list, user_has_permissions = merge_suggestions_compute(
         request,
         perspective_client_id, perspective_object_id,
+        algorithm,
         entity_type_primary, entity_type_secondary,
         threshold, levenshtein,
-        locale_id)
+        field_selection_list, locale_id)
 
     if not match_result_list:
 
@@ -106,6 +108,7 @@ def merge_suggestions(request,
     # Returning match data together with data of matching lexical entries.
 
     return {
+
         'match_result': [
             {"lexical_entries": [list(id_a), list(id_b)],
              "confidence": confidence}
