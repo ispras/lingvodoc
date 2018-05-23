@@ -378,7 +378,7 @@ class TranslationMixin(PrimeTableArgs):
                                      ['TranslationGist'.lower() + '.object_id',
                                       'TranslationGist'.lower() + '.client_id']),) + super().__table_args__
 
-    def get_translation(self, locale_id):
+    def get_translation(self, locale_id, session=DBSession):
         from lingvodoc.cache.caching import CACHE
 
         main_locale = str(locale_id)
@@ -392,7 +392,7 @@ class TranslationMixin(PrimeTableArgs):
             return translation
         log.debug("No cached value, getting from DB: %s " % str(key))
 
-        all_translations = DBSession.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(
+        all_translations = session.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(
             parent_client_id=self.translation_gist_client_id,
             parent_object_id=self.translation_gist_object_id).all()
         all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
