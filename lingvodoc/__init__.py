@@ -3,10 +3,13 @@ from configparser import (
     ConfigParser,
     NoSectionError
 )
+import distutils.util
 
 from sqlalchemy import engine_from_config
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+
+from pyramid_mailer.mailer import Mailer
 
 from .models import (
     DBSession,
@@ -71,6 +74,9 @@ def configure_routes(config):
     # web-view #GET && POST
     # registration page
     config.add_route(name='signup', pattern='/signup')
+
+    # Used to approve moderated user signups.
+    config.add_route(name='signup_approve', pattern = '/signup_approve')
 
     # web-view #GET
     # login page
@@ -775,6 +781,9 @@ def configure_routes(config):
     # Gets a list of names of phonology markup tiers for a specified perspective.
     config.add_route(name="phonology_tier_list", pattern="/phonology_tier_list")
 
+    # Gets a list of characters skipped during processing of vowel phonology for a specified perspective.
+    config.add_route(name="phonology_skip_list", pattern="/phonology_skip_list")
+
     config.add_route(name="tasks", pattern="/tasks", request_method='GET')
 
     config.add_route(name="delete_task", pattern="/tasks/{task_id}", request_method='DELETE')
@@ -852,8 +861,26 @@ def main(global_config, **settings):
         initialize_cache(cache_kwargs)
         settings['cache_kwargs'] = cache_kwargs
 
-    config = Configurator(settings=settings)
+    # Getting SMTP account settings.
 
+    if parser.has_section('smtp'):
+        settings['smtp'] = dict(parser.items('smtp'))
+
+    # Setting up user signup approval settings.
+
+    if parser.has_section('signup'):
+
+        signup_dict = dict(parser.items('signup'))
+
+        signup_dict['approve'] = bool(distutils.util.strtobool(signup_dict['approve']))
+        signup_dict['address'] = [address.strip() for address in signup_dict['address'].split(',')]
+
+        settings['signup'] = signup_dict
+
+    else:
+        settings['signup'] = {'approve': False, 'address': []}
+
+    config = Configurator(settings=settings)
 
     # config.configure_celery('development_test.ini')
 
@@ -863,6 +890,11 @@ def main(global_config, **settings):
     config.set_authentication_policy(authentication_policy)
     config.set_authorization_policy(authorization_policy)
     config.include('pyramid_chameleon')
+
+    # Creating email sender.
+
+    config.registry.mailer = Mailer.from_settings(settings['smtp'], prefix = '')
+
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
     config.add_static_view('assets', path='lingvodoc:assets', cache_max_age=3600)
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)

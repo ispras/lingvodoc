@@ -45,7 +45,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
-from pyramid.security import authenticated_userid
+from pyramid.security import authenticated_userid, forget
 # from pyramid.chameleon_zpt import render_template_to_response
 from pyramid.renderers import render_to_response
 from lingvodoc.exceptions import CommonException
@@ -738,8 +738,28 @@ def graphql(request):
         variables = {'auth': request.authenticated_userid}
         client_id = variables["auth"]
         results = list()
+
         if not client_id:
             client_id = None
+
+        else:
+
+            # If we have a client of deactivated user, we perform forced logout, see route 'logout',
+            # function logout_any() from lingvodoc/views/v2/user_and_login.py.
+
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+            if not client.user.is_active:
+
+                response = Response()
+
+                response.headers = forget(request)
+                response.set_cookie(key = 'client_id', value = None)
+                response.set_cookie(key = 'auth_tkt', value = None)
+                response.status_code = 200
+                response.json_body = {'errors': [{'message': 'this user account is deactivated'}]}
+
+                return response
+
         locale_id = int(request.cookies.get('locale_id') or 2)
 
         if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \

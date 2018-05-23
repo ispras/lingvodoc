@@ -97,7 +97,7 @@ class MergeBulk(graphene.Mutation):
     def mutate(root, info, **args):
         group_list=args['group_list']
         async=args['async']
-        publish_any=args['async']
+        publish_any=args['publish_any']
         request = info.context.request
         old_group_list = [[{'client_id': xx[0], "object_id": xx[1]} for xx in x] for x in group_list]
         if async:
