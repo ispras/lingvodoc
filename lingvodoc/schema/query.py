@@ -194,6 +194,8 @@ from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
 from lingvodoc.utils.merge import merge_suggestions
 import tempfile
+from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
+import json
 
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
@@ -1858,6 +1860,98 @@ class Phonology(graphene.Mutation):
         return Phonology(triumph=True)
 
 
+def save_dictionary(dict_id, request, user_id, locale_id, publish):
+    my_args = dict()
+    my_args["client_id"] = dict_id[0]
+    my_args["object_id"] = dict_id[1]
+    my_args["locale_id"] = locale_id
+    my_args["storage"] = request.registry.settings["storage"]
+    my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
+    try:
+        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
+                                                                 object_id=dict_id[1]).first()
+        gist = DBSession.query(dbTranslationGist). \
+            filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                      object_id=dictionary_obj.translation_gist_object_id).first()
+        dict_name = gist.get_translation(locale_id)
+        task = TaskStatus(user_id, "Saving dictionary", dict_name, 4)
+    except:
+        raise ResponseError('bad request')
+    my_args['dict_name'] = dict_name
+    my_args["task_key"] = task.key
+    my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+    my_args["published"] = publish
+    res = async_save_dictionary.delay(**my_args)
+    # async_convert_dictionary_new(user_id, req['blob_client_id'], req['blob_object_id'], req["language_client_id"], req["language_object_id"], req["gist_client_id"], req["gist_object_id"], request.registry.settings["sqlalchemy.url"], request.registry.settings["storage"])
+    return
+
+class SaveDictionary(graphene.Mutation):
+    """
+    example:
+    mutation {
+        create_lexicalentry(id: [949,21], perspective_id: [71,5]) {
+            field {
+                id
+            }
+            triumph
+        }
+    }
+
+    (this example works)
+    returns:
+
+    {
+      "create_lexicalentry": {
+        "field": {
+          "id": [
+            949,
+            21
+          ]
+        },
+        "triumph": true
+      }
+    }
+    """
+
+    class Arguments:
+        id = LingvodocID(required=True)
+        mode = graphene.String(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        dict_id = args['id']
+        mode = args['mode']
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        user_id = user.id
+
+        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
+                                                               object_id=dict_id[1]).first()
+        for persp in dictionary_obj.dictionaryperspective:
+            if mode == 'published':
+                publish = True
+                pass
+                # info.context.acl_check('view', 'lexical_entries_and_entities',
+                #                        (persp.client_id, persp.object_id))
+            elif mode == 'all':
+                publish = None
+                info.context.acl_check('view', 'lexical_entries_and_entities',
+                                       (persp.client_id, persp.object_id))
+            else:
+                raise ResponseError(message="mode: <all|published>")
+
+
+        save_dictionary(dict_id, request, user_id, locale_id, publish)
+
+        return DownloadDictionary(triumph=True)
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -1923,6 +2017,7 @@ class MyMutations(graphene.ObjectType):
     accept_userrequest = AcceptUserRequest.Field()
     #delete_userrequest = DeleteUserRequest.Field()
     download_dictionary = DownloadDictionary.Field()
+    save_dictionary = SaveDictionary.Field()
     download_dictionaries = DownloadDictionaries.Field()
     synchronize = Synchronize.Field()
     delete_task = DeleteTask.Field()
