@@ -70,6 +70,7 @@ from lingvodoc.views.v2.phonology import (
     async_phonology,
     get_skip_list,
     get_tier_list,
+    get_link_perspective_data,
     std_phonology)
 
 from lingvodoc.schema.gql_holders import ResponseError
@@ -108,14 +109,18 @@ def gql_phonology(request, locale_id, args):
     task_status = None
 
     try:
-        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}'.format(
-            args.perspective_cid, args.perspective_oid,
-            args.group_by_description, args.vowel_selection,
-            args.only_first_translation, args.use_automatic_markup,
-            args.maybe_tier_list,
-            args.keep_list, args.join_list,
-            args.chart_threshold,
-            args.generate_csv))
+        log.debug(
+            'phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}'.format(
+                args.perspective_cid, args.perspective_oid,
+                args.group_by_description, args.vowel_selection,
+                args.maybe_translation_field,
+                args.only_first_translation, args.use_automatic_markup,
+                args.maybe_tier_list,
+                args.keep_list, args.join_list,
+                args.chart_threshold,
+                args.generate_csv,
+                args.link_field_list,
+                args.link_perspective_list))
 
         args.get_pd_names(locale_id)
 
@@ -179,6 +184,20 @@ def gql_phonology_skip_list(perspective_cid, perspective_oid):
     """
 
     try_ok, result = get_skip_list(perspective_cid, perspective_oid)
+
+    if not try_ok:
+
+        traceback_string = result
+        raise ResponseError(message = 'External error:\n' + traceback_string)
+
+    return result
+
+
+def gql_phonology_link_perspective_data(perspective_id, field_id_list):
+    """
+    """
+
+    try_ok, result = get_link_perspective_data(perspective_id, field_id_list)
 
     if not try_ok:
 
