@@ -4573,7 +4573,7 @@ def perform_sound_and_markup(
 
                     log.debug(traceback_string)
 
-                    task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                    task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / total_count)),
                         'Archiving sound and markup')
 
                     continue
@@ -4607,7 +4607,7 @@ def perform_sound_and_markup(
 
                 # Another sound/markup pair is processed successfully.
 
-                task_status.set(2, 1 + int(math.floor((index + 1) * 99 / total_count)),
+                task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / total_count)),
                     'Archiving sound and markup')
 
                 if limit and index + 1 >= limit:
@@ -4651,7 +4651,7 @@ def perform_sound_and_markup(
 
                     log.debug(traceback_string)
 
-                    task_status.set(3, 1 + int(math.floor((index + 1) * 99 / sound_count)),
+                    task_status.set(3, int(math.floor(50.5 + (index + 1) * 49.5 / sound_count)),
                         'Archiving sounds without markup')
 
                     continue
@@ -4666,7 +4666,7 @@ def perform_sound_and_markup(
                 archive_file.writestr(zip_info, sound_bytes)
                 no_markup_count += 1
 
-                task_status.set(3, 1 + int(math.floor((index + 1) * 99 / sound_count)),
+                task_status.set(3, int(math.floor(50.5 + (index + 1) * 49.5 / sound_count)),
                     'Archiving sounds without markup')
 
                 if limit and index + 1 >= limit:
@@ -4822,7 +4822,7 @@ def perform_sound_and_markup(
 
                         log.debug(traceback_string)
 
-                        task_status.set(2, 1 + int(math.floor((index + 1) * 99 / len(update_list))),
+                        task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / len(update_list))),
                             'Archiving sound and markup')
 
                         continue
@@ -4851,7 +4851,7 @@ def perform_sound_and_markup(
 
                     # Another sound/markup pair is processed successfully.
 
-                    task_status.set(2, 1 + int(math.floor((index + 1) * 99 / len(update_list))),
+                    task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / len(update_list))),
                         'Archiving sound and markup')
 
                     if limit and index + 1 >= limit:
@@ -4893,7 +4893,8 @@ def perform_sound_and_markup(
 
                         log.debug(traceback_string)
 
-                        task_status.set(3, 1 + int(math.floor((index + 1) * 99 / len(sound_update_list))),
+                        task_status.set(3,
+                            int(math.floor(50.5 + (index + 1) * 49.5 / len(sound_update_list))),
                             'Archiving sounds without markup')
 
                         continue
@@ -4908,7 +4909,8 @@ def perform_sound_and_markup(
                     archive_file.writestr(zip_info, sound_bytes)
                     no_markup_count += 1
 
-                    task_status.set(3, 1 + int(math.floor((index + 1) * 99 / len(sound_update_list))),
+                    task_status.set(3,
+                        int(math.floor(50.5 + (index + 1) * 49.5 / len(sound_update_list))),
                         'Archiving sounds without markup')
 
                     if limit and index + 1 >= limit:
