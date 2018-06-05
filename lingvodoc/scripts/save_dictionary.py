@@ -117,13 +117,14 @@ def generate_massive_cell(tag, session, text_fields, published):
     result = list()
     tags = find_all_tags(tag, session, published)
     lexical_entries = find_lexical_entries_by_tags(tags, session, published)
-    if published is not None:
-        lexical_entries = lexical_entries.filter(PublishingEntity.published == published)
     for lex in lexical_entries:
-        entities = session.query(Entity) \
+        entities = session.query(Entity).join(PublishingEntity) \
             .filter(Entity.parent_client_id == lex.client_id,
                     Entity.parent_object_id == lex.object_id,
+                    PublishingEntity.accepted == True,
                     Entity.marked_for_deletion == False)
+        if published is not None:
+            entities = entities.filter(PublishingEntity.published == published)
         subres = []
         for entity in entities:
             if (entity.field_client_id, entity.field_object_id) in text_fields and entity.content is not None:
@@ -153,7 +154,16 @@ def compile_workbook(client_id, object_id, workbook_stream, session, locale_id, 
                                                                   parent_object_id=object_id,
                                                                   marked_for_deletion=False).all()
     for perspective in perspectives:
-        perspective_name = perspective.get_translation(client_id, session)
+        perspective_name = perspective.get_translation(client_id, session) + "_" + str(
+            perspective.client_id) + "_" + str(perspective.object_id)
+        for c in u"[]:?/*\x00":
+            perspective_name = perspective_name.replace(c, "")
+        if len(perspective_name) >= 31:
+            perspective_name = perspective_name[:20] + "_" + str(perspective.client_id) + "_" + str(
+                perspective.object_id)
+        if len(perspective_name) >= 31:
+            perspective_name = perspective_name[:10] + "_" + str(perspective.client_id) + "_" + str(
+                perspective.object_id)
         worksheet = workbook.add_worksheet(name=perspective_name)
         fields = session.query(DictionaryPerspectiveToField).filter_by(parent_client_id=perspective.client_id,
                                                                        parent_object_id=perspective.object_id,
@@ -212,6 +222,7 @@ def compile_workbook(client_id, object_id, workbook_stream, session, locale_id, 
     return
 
 
+# @profile()
 def save(
         client_id,
         object_id,
@@ -268,8 +279,25 @@ def save(
 
     table_filename = sanitize_filename(result_filename + '.xlsx')
 
-    cur_time = time.time()
-    storage_dir = path.join(storage['path'], 'save_dictionary', str(cur_time))
+    # cur_time = time.time()
+    dictionary = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).one()
+    dict_status_atom = session.query(TranslationAtom).filter_by(
+        parent_client_id=dictionary.state_translation_gist_client_id,
+        parent_object_id=dictionary.state_translation_gist_object_id,
+        locale_id=2).first()
+    if not dict_status_atom:
+        dict_status = 'translation_failure'
+    else:
+        dict_status = dict_status_atom.content
+
+    if published is None:
+        cur_folder = 'edit'
+    elif published is True:
+        cur_folder = 'view'
+    else:
+        cur_folder = 'should_be_impossible'
+
+    storage_dir = path.join(storage['path'], 'save_dictionary', dict_status, cur_folder)
     makedirs(storage_dir, exist_ok=True)
 
     # Storing file with the results.
@@ -315,7 +343,8 @@ def save(
             storage['prefix'],
             storage['static_route'],
             'save_dictionary', '/',
-            str(cur_time), '/',
+            dict_status, '/',
+            cur_folder, '/',
             filename])
 
         for filename in [table_filename]]

@@ -1936,36 +1936,10 @@ def save_dictionary(dict_id, request, user_id, locale_id, publish):
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     my_args["published"] = publish
     res = async_save_dictionary.delay(**my_args)
-    # async_convert_dictionary_new(user_id, req['blob_client_id'], req['blob_object_id'], req["language_client_id"], req["language_object_id"], req["gist_client_id"], req["gist_object_id"], request.registry.settings["sqlalchemy.url"], request.registry.settings["storage"])
     return
 
+
 class SaveDictionary(graphene.Mutation):
-    """
-    example:
-    mutation {
-        create_lexicalentry(id: [949,21], perspective_id: [71,5]) {
-            field {
-                id
-            }
-            triumph
-        }
-    }
-
-    (this example works)
-    returns:
-
-    {
-      "create_lexicalentry": {
-        "field": {
-          "id": [
-            949,
-            21
-          ]
-        },
-        "triumph": true
-      }
-    }
-    """
 
     class Arguments:
         id = LingvodocID(required=True)
@@ -1987,21 +1961,55 @@ class SaveDictionary(graphene.Mutation):
 
         dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
                                                                object_id=dict_id[1]).first()
-        for persp in dictionary_obj.dictionaryperspective:
-            if mode == 'published':
-                publish = True
-                pass
-                # info.context.acl_check('view', 'lexical_entries_and_entities',
-                #                        (persp.client_id, persp.object_id))
-            elif mode == 'all':
-                publish = None
-                info.context.acl_check('view', 'lexical_entries_and_entities',
-                                       (persp.client_id, persp.object_id))
-            else:
-                raise ResponseError(message="mode: <all|published>")
+        if mode == 'published':
+            publish = True
+        elif mode == 'all':
+            publish = None
+        else:
+            raise ResponseError(message="mode: <all|published>")
 
+        for persp in dictionary_obj.dictionaryperspective:
+            if mode == 'all':
+                info.context.acl_check('view', 'lexical_entries_and_entities',
+                                   (persp.client_id, persp.object_id))
 
         save_dictionary(dict_id, request, user_id, locale_id, publish)
+
+        return DownloadDictionary(triumph=True)
+
+class SaveAllDictionaries(graphene.Mutation):
+
+    class Arguments:
+        mode = graphene.String(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        mode = args['mode']
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        user_id = user.id
+        if user_id != 1:
+            raise ResponseError(message="not admin")
+        # counter = 0
+        dictionaries = DBSession.query(dbDictionary).filter_by(marked_for_deletion=False).all()
+        if mode == 'published':
+            publish = True
+        elif mode == 'all':
+            publish = None
+
+        else:
+            raise ResponseError(message="mode: <all|published>")
+        for dictionary in dictionaries:
+            save_dictionary([dictionary.client_id, dictionary.object_id], request, user_id, locale_id, publish)
+            # if not counter % 5:
+            #     time.sleep(5)
+            # counter += 1
 
         return DownloadDictionary(triumph=True)
 
@@ -2072,6 +2080,7 @@ class MyMutations(graphene.ObjectType):
     #delete_userrequest = DeleteUserRequest.Field()
     download_dictionary = DownloadDictionary.Field()
     save_dictionary = SaveDictionary.Field()
+    save_all_dictionaries = SaveAllDictionaries.Field()
     download_dictionaries = DownloadDictionaries.Field()
     synchronize = Synchronize.Field()
     delete_task = DeleteTask.Field()
