@@ -1981,12 +1981,14 @@ class MoveColumn(graphene.Mutation):
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
-        if user_id != 1:
-            raise ResponseError(message="not admin")
+        # if user_id != 1:
+        #     raise ResponseError(message="not admin")
         # counter = 0
         perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=perspective_id[0],
                                                                          object_id=perspective_id[1],
                                                                          marked_for_deletion=False).first()
+        info.context.acl_check('view', 'lexical_entries_and_entities',
+                           (perspective.client_id, perspective.object_id))
         if not perspective:
             raise ResponseError('No such perspective')
 
