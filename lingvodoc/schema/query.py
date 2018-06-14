@@ -207,6 +207,7 @@ from pyramid.httpexceptions import (
 )
 
 from lingvodoc.scripts import elan_parser
+from lingvodoc.utils.creation import create_entity
 
 
 class TierList(graphene.ObjectType):
@@ -2014,6 +2015,86 @@ class SaveAllDictionaries(graphene.Mutation):
         return DownloadDictionary(triumph=True)
 
 
+class MoveColumn(graphene.Mutation):
+    class Arguments:
+        perspective_id = LingvodocID(required=True)
+        from_id = LingvodocID(required=True)
+        to_id = LingvodocID(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        perspective_id = args['perspective_id']
+        from_id = args['from_id']
+        to_id = args['to_id']
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        user_id = user.id
+        if user_id != 1:
+            raise ResponseError(message="not admin")
+        # counter = 0
+        perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=perspective_id[0],
+                                                                         object_id=perspective_id[1],
+                                                                         marked_for_deletion=False).first()
+        if not perspective:
+            raise ResponseError('No such perspective')
+
+        lexes = DBSession.query(dbLexicalEntry).join(dbEntity).join(dbPublishingEntity).filter(
+            dbLexicalEntry.parent_client_id == perspective_id[0],
+            dbLexicalEntry.parent_object_id == perspective_id[1],
+            dbLexicalEntry.marked_for_deletion == False,
+            dbEntity.field_client_id == from_id[0],
+            dbEntity.field_object_id == from_id[1],
+            dbEntity.marked_for_deletion == False,
+            dbPublishingEntity.accepted == True).all()
+
+        for lex in lexes:
+            entities = DBSession.query(dbEntity).join(dbPublishingEntity).filter(
+                dbEntity.parent_client_id == lex.client_id,
+                dbEntity.parent_object_id == lex.object_id,
+                dbEntity.field_client_id == from_id[0],
+                dbEntity.field_object_id == from_id[1],
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.accepted == True).all()
+            for entity in entities:
+                existing = DBSession.query(dbEntity).join(dbPublishingEntity).filter(
+                    dbEntity.parent_client_id == lex.client_id,
+                    dbEntity.parent_object_id == lex.object_id,
+                    dbEntity.field_client_id == to_id[0],
+                    dbEntity.field_object_id == to_id[1],
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.accepted == True,
+                    dbEntity.content == entity.content).first()
+                if not existing:
+                    self_id = None
+                    if entity.self_client_id and entity.self_object_id:
+                        self_id = [entity.self_client_id, entity.self_object_id]
+                    link_id = None
+                    if entity.link_client_id and entity.link_object_id:
+                        link_id = [entity.link_client_id, entity.link_object_id]
+                    create_entity(id=[client.id, None],
+                                  parent_id=[lex.client_id, lex.object_id],
+                                  field_id=to_id,
+                                  self_id=self_id,
+                                  additional_metadata=entity.additional_metadata,
+                                  link_id=link_id,
+                                  locale_id=entity.locale_id,
+                                  filename=None,
+                                  content=entity.content,
+                                  registry=None,
+                                  request=request,
+                                  )
+                entity.marked_for_deletion = True
+
+        return MoveColumn(triumph=True)
+
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -2088,6 +2169,7 @@ class MyMutations(graphene.ObjectType):
     phonology = Phonology.Field()
     sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
+    move_column = MoveColumn.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
