@@ -1981,21 +1981,23 @@ class MoveColumn(graphene.Mutation):
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
+        client_ids = DBSession.query(Client.id).filter(Client.user_id==user_id).all()
         # if user_id != 1:
         #     raise ResponseError(message="not admin")
         # counter = 0
         perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=perspective_id[0],
                                                                          object_id=perspective_id[1],
                                                                          marked_for_deletion=False).first()
-        info.context.acl_check('view', 'lexical_entries_and_entities',
-                           (perspective.client_id, perspective.object_id))
         if not perspective:
             raise ResponseError('No such perspective')
+        info.context.acl_check('view', 'lexical_entries_and_entities',
+                           (perspective.client_id, perspective.object_id))
 
         lexes = DBSession.query(dbLexicalEntry).join(dbEntity).join(dbPublishingEntity).filter(
             dbLexicalEntry.parent_client_id == perspective_id[0],
             dbLexicalEntry.parent_object_id == perspective_id[1],
             dbLexicalEntry.marked_for_deletion == False,
+            dbEntity.client_id.in_(client_ids),
             dbEntity.field_client_id == from_id[0],
             dbEntity.field_object_id == from_id[1],
             dbEntity.marked_for_deletion == False,
@@ -2003,6 +2005,7 @@ class MoveColumn(graphene.Mutation):
 
         for lex in lexes:
             entities = DBSession.query(dbEntity).join(dbPublishingEntity).filter(
+                dbEntity.client_id.in_(client_ids),
                 dbEntity.parent_client_id == lex.client_id,
                 dbEntity.parent_object_id == lex.object_id,
                 dbEntity.field_client_id == from_id[0],
