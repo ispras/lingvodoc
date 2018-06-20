@@ -1,5 +1,4 @@
 ## Docker-compose
-==============
 
 This folder contains docker-compose scripts that make possible to bring up lingvodoc
 with near-production settings. There are two version provided:
@@ -11,7 +10,7 @@ This mode acts like lingvodoc at lingvodoc.ispras.ru . To use it you should:
 
 - put `.sql` file with lingvodoc database dump (from any site -- even a proxy one) into the folder dbdump. The dump should be made like this: ```pg_dump -U lingvodoc --clean --if-exists lingvodoc | xz -5 > /home/lingvodoc/backups/lingvodoc-`date "+%Y-%m-%d.%H-%M"`.sql.xz```
 
-- unpack `lingvodoc-react` release into frontend folder.
+- unpack `lingvodoc-react-server-build-<build_number>.tar.gz` release into frontend folder. You can get the latest here: https://github.com/ispras/lingvodoc-react
 
 So the needed files for this mode to work are the following:
 ```
@@ -50,10 +49,10 @@ This mode simulates simple lingvodoc with proxy-version associated to it. To use
 
 - put `.sql` file with lingvodoc database dump (from any site -- even a proxy one) into the$
 
-- unpack `lingvodoc-react` release into frontend folder
+- unpack `lingvodoc-react-server-build-<build_number>.tar.gz` release into frontend folder. You can get the latest here: https://github.com/ispras/lingvodoc-react
 
-- unpack `lingvodoc-react proxy` release into frontend-proxy folder. NOTE: proxy release 
-really differs from simple lingvodoc-react release.
+- unpack `lingvodoc-react-proxy-build-<build_number>.tar.gz` release into frontend-proxy folder. NOTE: proxy release 
+really differs from simple lingvodoc-react release. Build numbers should match.
 
 So the needed files for this mode to work are the following:
 ```
