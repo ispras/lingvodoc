@@ -1,20 +1,22 @@
 version: '3.2'
 services:
   pg:
-    image: postgres:10.1
+    image: postgres:10.4
     container_name: postgres
     environment:
-      POSTGRES_PASSWORD: password
+#      POSTGRES_PASSWORD: password
+      POSTGRES_USER: lingvodoc
       POSTGRES_DB: lingvodoc
     volumes:
       - ./dbdump:/docker-entrypoint-initdb.d
     ports:
       - "15432:5432"
   pg-proxy:
-    image: postgres:10.1
+    image: postgres:10.4
     container_name: postgres-proxy
     environment:
-      POSTGRES_PASSWORD: password
+#      POSTGRES_PASSWORD: password
+      POSTGRES_USER: lingvodoc
       POSTGRES_DB: lingvodoc
     ports:
       - "25432:5432"

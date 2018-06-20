@@ -1,11 +1,12 @@
 version: '3.2'
 services:
   pg:
-    image: postgres:10.1
+    image: postgres:10.4
     container_name: postgres
     environment:
-      POSTGRES_PASSWORD: password
+#      POSTGRES_PASSWORD: password
       POSTGRES_DB: lingvodoc
+      POSTGRES_USER: lingvodoc
     volumes:
       - ./dbdump:/docker-entrypoint-initdb.d
     ports:
