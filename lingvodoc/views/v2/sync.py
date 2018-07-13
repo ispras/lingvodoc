@@ -74,6 +74,7 @@ real_delete_perspective
 import urllib
 from pdb import set_trace
 from lingvodoc.cache.caching import TaskStatus
+from sqlalchemy.orm.attributes import flag_modified
 
 log = logging.getLogger(__name__)
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
@@ -223,6 +224,8 @@ def basic_sync(request):
                         if client_id in curr_server and object_id in curr_server[client_id]:
                             for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
                                 setattr(entry, key, value)
+                                flag_modified(entry, key)
+
             else:
                 for entry in all_entries:
                     id = str(entry.id)
@@ -230,6 +233,7 @@ def basic_sync(request):
                         for key, value in list(return_date_time(curr_server[id]).items()):
                             if key != 'counter' and table != User:
                                 setattr(entry, key, value)
+                                flag_modified(entry, key)
             new_entries.extend(all_entries)
         else:
             old_langs = curr_server
