@@ -309,7 +309,7 @@ class Query(graphene.ObjectType):
                                             adopted=graphene.Boolean(),
                                             adopted_type=LingvodocID(),
                                             with_entimology=graphene.Boolean())
-    translationgists = graphene.List(TranslationGist)
+    translationgists = graphene.List(TranslationGist, gists_type=graphene.String())
     translation_search = graphene.List(TranslationGist, searchstring=graphene.String(),
                                        translation_type=graphene.String())
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
@@ -971,7 +971,7 @@ class Query(graphene.ObjectType):
     def resolve_translationgist(self, info, id):
         return TranslationGist(id=id)
 
-    def resolve_translationgists(self, info):
+    def resolve_translationgists(self, info, gists_type=None):
         """
         example:
         query GistsList {
@@ -982,7 +982,12 @@ class Query(graphene.ObjectType):
         }
         """
 
-        gists = DBSession.query(dbTranslationGist).filter_by(marked_for_deletion=False).order_by(dbTranslationGist.type).all()
+        gists_query = DBSession.query(dbTranslationGist).filter_by(marked_for_deletion=False)
+        if gists_type:
+            gists_query = gists_query.filter(dbTranslationGist.type == gists_type)
+        else:
+            gists_query = gists_query.order_by(dbTranslationGist.type)
+        gists = gists_query.all()
         gists_list = list()
         for db_gist in gists:
             gql_gist = TranslationGist(id=[db_gist.client_id, db_gist.object_id])
