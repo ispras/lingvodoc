@@ -68,9 +68,12 @@ from lingvodoc.cache.caching import CACHE, initialize_cache, TaskStatus
 
 from lingvodoc.views.v2.phonology import (
     async_phonology,
+    async_sound_and_markup,
     get_skip_list,
     get_tier_list,
-    std_phonology)
+    get_link_perspective_data,
+    std_phonology,
+    std_sound_and_markup)
 
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.models import (
@@ -108,14 +111,18 @@ def gql_phonology(request, locale_id, args):
     task_status = None
 
     try:
-        log.debug('phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}'.format(
-            args.perspective_cid, args.perspective_oid,
-            args.group_by_description, args.vowel_selection,
-            args.only_first_translation, args.use_automatic_markup,
-            args.maybe_tier_list,
-            args.keep_list, args.join_list,
-            args.chart_threshold,
-            args.generate_csv))
+        log.debug(
+            'phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}'.format(
+                args.perspective_cid, args.perspective_oid,
+                args.group_by_description, args.vowel_selection,
+                args.maybe_translation_field,
+                args.only_first_translation, args.use_automatic_markup,
+                args.maybe_tier_list,
+                args.keep_list, args.join_list,
+                args.chart_threshold,
+                args.generate_csv,
+                args.link_field_list,
+                args.link_perspective_list))
 
         args.get_pd_names(locale_id)
 
@@ -154,7 +161,7 @@ def gql_phonology(request, locale_id, args):
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
 
-        raise ResponseError(message="External error")
+        raise ResponseError(message = 'External error')
 
 
 def gql_phonology_tier_list(perspective_cid, perspective_oid):
@@ -186,4 +193,109 @@ def gql_phonology_skip_list(perspective_cid, perspective_oid):
         raise ResponseError(message = 'External error:\n' + traceback_string)
 
     return result
+
+
+def gql_phonology_link_perspective_data(perspective_id, field_id_list):
+    """
+    Gets info of perspectives holding data linked from a specified perspective through given link fields.
+    """
+
+    try_ok, result = get_link_perspective_data(perspective_id, field_id_list)
+
+    if not try_ok:
+
+        traceback_string = result
+        raise ResponseError(message = 'External error:\n' + traceback_string)
+
+    return result
+
+
+def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
+    """
+    Tries to launch sound and markup compilation for a specified perspective.
+    """
+
+    task_status = None
+
+    try:
+        log.debug('sound_and_markup {0}/{1}: {2}'.format(
+            perspective_id[0], perspective_id[1], published_mode))
+
+        limit = (None if 'limit' not in request.params else
+            int(request.params.get('limit')))
+
+        # Getting perspective and perspective's dictionary info.
+
+        perspective = DBSession.query(DictionaryPerspective).filter_by(
+            client_id = perspective_id[0], object_id = perspective_id[1]).first()
+
+        if not perspective:
+
+            raise ResponseError(message =
+                'Unknown perspective {0}/{1}.'.format(
+                    perspective_id[0], perspective_id[1]))
+
+        perspective_translation_gist = DBSession.query(TranslationGist).filter_by(
+            client_id = perspective.translation_gist_client_id,
+            object_id = perspective.translation_gist_object_id).first()
+
+        dictionary = DBSession.query(Dictionary).filter_by(
+            client_id = perspective.parent_client_id,
+            object_id = perspective.parent_object_id).first()
+
+        if not dictionary:
+
+            raise ResponseError(message =
+                'Unknown dictionary {0}/{1}.'.format(
+                    perspective.parent_client_id, perspective.parent_object_id))
+
+        dictionary_translation_gist = DBSession.query(TranslationGist).filter_by(
+            client_id = dictionary.translation_gist_client_id,
+            object_id = dictionary.translation_gist_object_id).first()
+
+        # Sound/markup archiving task status setup.
+
+        dictionary_name = dictionary_translation_gist.get_translation(locale_id)
+        perspective_name = perspective_translation_gist.get_translation(locale_id)
+
+        client_id = request.authenticated_userid
+
+        user_id = (
+            Client.get_user_by_client_id(client_id).id
+                if client_id else anonymous_userid(request))
+
+        task_status = TaskStatus(user_id,
+            'Sound/markup archive compilation',
+            '{0}: {1}'.format(dictionary_name, perspective_name), 4)
+
+        # Performing either synchronous or asynchronous sound/markup archive compilation.
+
+        request.response.status = HTTPOk.code
+
+        task_key = task_status.key
+
+        cache_kwargs = request.registry.settings['cache_kwargs']
+        sqlalchemy_url = request.registry.settings['sqlalchemy.url']
+        storage = request.registry.settings['storage']
+
+        return (std_sound_and_markup if 'synchronous' in request.params else async_sound_and_markup.delay)(
+            task_key,
+            perspective_id[0], perspective_id[1], published_mode, limit,
+            dictionary_name, perspective_name,
+            cache_kwargs, storage, sqlalchemy_url)
+
+    # Some unknown external exception.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('sound_and_markup: exception')
+        log.debug(traceback_string)
+
+        if task_status is not None:
+            task_status.set(4, 100, 'Finished (ERROR), external error')
+
+        raise ResponseError(message = 'External error')
 

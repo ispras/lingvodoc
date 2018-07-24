@@ -182,7 +182,9 @@ from pyramid.security import authenticated_userid
 from lingvodoc.utils.phonology import (
     gql_phonology as utils_phonology,
     gql_phonology_skip_list as utils_phonology_skip_list,
-    gql_phonology_tier_list as utils_phonology_tier_list)
+    gql_phonology_tier_list as utils_phonology_tier_list,
+    gql_phonology_link_perspective_data,
+    gql_sound_and_markup)
 
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
@@ -219,6 +221,11 @@ class SkipList(graphene.ObjectType):
     skip_list = graphene.Field(ObjectVal)
     total_neighbour_count = graphene.Int()
     total_skip_count = graphene.Int()
+
+
+class Link_Perspective_Data(graphene.ObjectType):
+    field_data_list = graphene.List(ObjectVal)
+    perspective_id_list = graphene.List(LingvodocID)
 
 
 class LexicalEntriesAndEntities(graphene.ObjectType):
@@ -330,6 +337,11 @@ class Query(graphene.ObjectType):
 
     phonology_tier_list = graphene.Field(TierList, perspective_id=LingvodocID(required=True))
     phonology_skip_list = graphene.Field(SkipList, perspective_id=LingvodocID(required=True))
+
+    phonology_link_perspective_data = graphene.Field(
+        Link_Perspective_Data,
+        perspective_id = LingvodocID(required = True),
+        field_id_list = graphene.List(LingvodocID, required = True))
 
     connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True),
                                      field_id=LingvodocID(required=True), mode=graphene.String())
@@ -1561,6 +1573,21 @@ class Query(graphene.ObjectType):
         answer = utils_phonology_skip_list(*perspective_id)
         return SkipList(**answer)
 
+    def resolve_phonology_link_perspective_data(self, info, perspective_id, field_id_list):
+        """
+        query MyQuery {
+          phonology_link_perspective_data(
+            perspective_id: [657, 4],
+            field_id_list: [[1, 213]])
+          {
+            perspective_id_list
+          }
+        }
+        """
+
+        answer = gql_phonology_link_perspective_data(perspective_id, field_id_list)
+        return Link_Perspective_Data(**answer)
+
     # def resolve_convert_starling(self, info, starling_dictionaries):
     #     """
     #     query myQuery {
@@ -1820,6 +1847,7 @@ class StarlingEtymology(graphene.Mutation):
 
         return StarlingEtymology(triumph=True)
 
+
 class Phonology(graphene.Mutation):
 
     class Arguments:
@@ -1829,6 +1857,7 @@ class Phonology(graphene.Mutation):
         limit_no_vowel=graphene.Int()
         limit_result=graphene.Int()
         group_by_description=graphene.Boolean(required=True)
+        maybe_translation_field=LingvodocID()
         only_first_translation=graphene.Boolean(required=True)
         vowel_selection=graphene.Boolean(required=True)
         maybe_tier_list=graphene.List(graphene.String)
@@ -1836,8 +1865,9 @@ class Phonology(graphene.Mutation):
         join_list=graphene.List(graphene.Int)
         chart_threshold=graphene.Int()
         generate_csv=graphene.Boolean()
+        link_field_list=graphene.List(LingvodocID)
+        link_perspective_list=graphene.List(graphene.List(LingvodocID))
         synchronous=graphene.Boolean()
-        maybe_translation_field=LingvodocID()
 
     triumph = graphene.Boolean()
 
@@ -1865,6 +1895,30 @@ class Phonology(graphene.Mutation):
         utils_phonology(request, locale_id, parameters)
 
         return Phonology(triumph=True)
+
+
+class SoundAndMarkup(graphene.Mutation):
+
+    class Arguments:
+        perspective_id = LingvodocID(required = True)
+        published_mode = graphene.String(required = True)
+
+    triumph = graphene.Boolean()
+
+    def mutate(self, info, **args):
+        """
+        query MyQuery {
+          sound_and_markup(
+            perspective_id: [657, 4])
+        }
+        """
+
+        locale_id = info.context.get('locale_id')
+        request = info.context.get('request')
+
+        gql_sound_and_markup(request, locale_id, args['perspective_id'], args['published_mode'])
+
+        return SoundAndMarkup(triumph = True)
 
 
 def save_dictionary(dict_id, request, user_id, locale_id, publish):
@@ -2124,6 +2178,7 @@ class MyMutations(graphene.ObjectType):
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
     phonology = Phonology.Field()
+    sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
     move_column = MoveColumn.Field()
 
