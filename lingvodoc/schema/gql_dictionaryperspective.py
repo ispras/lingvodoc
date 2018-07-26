@@ -246,17 +246,17 @@ class DictionaryPerspective(LingvodocObjectType):
         if mode == 'all':
             # info.context.acl_check('view', 'lexical_entries_and_entities',
             #                        (self.dbObject.client_id, self.dbObject.object_id))
-            counter = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
-                                 dbEntity.marked_for_deletion == False).count()
+            counter_query = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False)
         elif mode == 'published':
-            counter = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
-                                 dbEntity.marked_for_deletion == False).count()
+            counter_query = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False)
         elif mode == 'not_accepted':
-            counter = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
-                                 dbEntity.marked_for_deletion == False).count()
+            counter_query = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False)
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
-
+        counter = counter_query.group_by(dbLexicalEntry).count()
         return counter
 
     @fetch_object()
