@@ -167,7 +167,7 @@ def create_entity(request):  # tested
                 BaseGroup.subject == 'lexical_entries_and_entities',
                 Group.subject_override == True,
                 BaseGroup.action == 'create').one()
-        if user in group.users or user in override_group.users:
+        if user.is_active and (user in group.users or user in override_group.users):
             entity.publishingentity.accepted = True
         if upper_level:
             entity.upper_level = upper_level

@@ -168,6 +168,7 @@ class CreateLexicalEntry(graphene.Mutation):
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         id = [client_id, object_id]
+        info.context.acl_check('create', 'lexical_entries_and_entities', perspective_id)
         dblexentry = create_lexicalentry(id, perspective_id, True)
         """
         perspective_client_id = perspective_id[0]
@@ -380,13 +381,13 @@ class ConnectLexicalEntries(graphene.Mutation):
                         dbGroup.subject_client_id == tag_entity.parent.parent.client_id,
                         dbGroup.subject_object_id == tag_entity.parent.parent.object_id,
                         dbBaseGroup.action == 'create').one()
-                    if user in group.users:
+                    if user.is_active and user in group.users:
                         tag_entity.publishingentity.accepted = True
                     group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
                         dbBaseGroup.subject == 'lexical_entries_and_entities',
                         dbGroup.subject_override == True,
                         dbBaseGroup.action == 'create').one()
-                    if user in group.users:
+                    if user.is_active and user in group.users:
                         tag_entity.publishingentity.accepted = True
         return ConnectLexicalEntries(triumph=True)
 

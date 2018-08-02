@@ -314,9 +314,7 @@ def signin(request):
 
     user = DBSession.query(User).filter_by(login=login).first()
 
-    # We need existing user, with correct password, and not deactivated.
-
-    if user and user.check_password(password) and user.is_active:
+    if user and user.check_password(password):
 
         client = Client(user_id=user.id, is_browser_client=not desktop)
         user.clients.append(client)
@@ -348,9 +346,7 @@ def sync_signin(request):
 
     user = DBSession.query(User).filter_by(login=login).first()
 
-    # We need existing user, with correct password, and not deactivated.
-
-    if user and user.check_password(password) and user.is_active:
+    if user and user.check_password(password):
         request.response.status = HTTPOk.code
         return HTTPOk(json_body={})
 

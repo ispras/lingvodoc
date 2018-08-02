@@ -106,6 +106,8 @@ def merge_dictionaries(request):  # TODO: test
         dictionaries = new_dicts
         base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
         override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if not user.is_active:
+            raise KeyError("Not enough permission to do that")
         if user not in override.users:
             grps = []
             for dict in dictionaries:
@@ -232,6 +234,8 @@ def merge_perspectives_api(request):  # TODO: test
                 raise KeyError("Both perspective should from same dictionary.")
         base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
         override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if not user.is_active:
+            raise KeyError("Not enough permission to do that")
         if user not in override.users:
             group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                   subject_client_id=dictionary_client_id,
@@ -410,6 +414,11 @@ def check_user_merge_permissions_direct(user_id, perspective_client_id, perspect
     NOTE: replaced by check_user_merge_permissions.
     """
 
+    user = DBSession.query(User).filter_by(id = user_id).first()
+
+    if not user.is_active:
+        return False
+
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
 
@@ -467,6 +476,9 @@ def check_user_merge_permissions(
     Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
     create and delete them, via perspective user role subrequest.
     """
+
+    if not user.is_active:
+        return False
 
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
