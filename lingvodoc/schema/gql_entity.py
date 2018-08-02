@@ -185,7 +185,7 @@ class CreateEntity(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()  # TODO context acl check
+    @client_id_check()
     def mutate(root, info, **args):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
@@ -205,6 +205,9 @@ class CreateEntity(graphene.Mutation):
         parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent:
             raise ResponseError(message="No such lexical entry in the system")
+
+        info.context.acl_check('create', 'lexical_entries_and_entities',
+            (parent.parent_client_id, parent.parent_object_id))
 
         additional_metadata = args.get('additional_metadata')
         upper_level = None

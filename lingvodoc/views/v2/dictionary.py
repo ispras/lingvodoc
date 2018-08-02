@@ -873,14 +873,14 @@ def edit_dictionary_roles(request):  # tested & in docs
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged.is_active and userlogged in group.users:
                         permitted = True
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
                                 permitted = True
                                 break
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                         if userlogged in override_group.users:
                             permitted = True
@@ -914,14 +914,14 @@ def edit_dictionary_roles(request):  # tested & in docs
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged.is_active and userlogged in group.users:
                         permitted = True
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
                                 permitted = True
                                 break
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                         if userlogged in override_group.users:
                             permitted = True
@@ -981,14 +981,14 @@ def delete_dictionary_roles(request):  # & in docs
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged.is_active and userlogged in group.users:
                         permitted = True
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
                                 permitted = True
                                 break
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                         if userlogged in override_group.users:
                             permitted = True
@@ -1025,14 +1025,14 @@ def delete_dictionary_roles(request):  # & in docs
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged.is_active and userlogged in group.users:
                         permitted = True
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
                                 permitted = True
                                 break
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                         if userlogged in override_group.users:
                             permitted = True

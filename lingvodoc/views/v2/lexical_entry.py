@@ -202,7 +202,7 @@ def bulk_group_entities(request):  # tested
                         Group.subject_client_id == lex.parent_client_id,
                         Group.subject_object_id == lex.parent_object_id,
                         BaseGroup.action == 'create').one()
-                    if user in group.users:
+                    if user in group.users and user.is_active:
                         tag_entity.publishingentity.accepted = True
         # if 'tag' in req:
         #     tags.append(req['tag'])
@@ -242,7 +242,7 @@ def bulk_group_entities(request):  # tested
                             Group.subject_client_id == lex.parent_client_id,
                             Group.subject_object_id == lex.parent_object_id,
                             BaseGroup.action == 'create').one()
-                        if user in group.users:
+                        if user in group.users and user.is_active:
                             tag_entity.publishingentity.accepted = True
             request.response.status = HTTPOk.code
             response['counter'] = client.counter
@@ -330,7 +330,7 @@ def create_group_entity(request):  # tested
                         Group.subject_client_id == tag_entity.parent.parent.client_id,
                         Group.subject_object_id == tag_entity.parent.parent.object_id,
                         BaseGroup.action == 'create').one()
-                    if user in group.users:
+                    if user in group.users and user.is_active:
                         tag_entity.publishingentity.accepted = True
         request.response.status = HTTPOk.code
         return response
@@ -577,7 +577,10 @@ def move_lexical_entry(request):
             .filter_by(subject='lexical_entries_and_entities')\
             .first()
         if user not in groupoverride.users and  user not in group.users:
-                raise CommonException("You should only move to lexical entires you own")
+                raise CommonException("You should only move to lexical entires you own.")
+        if not user.is_active:
+                raise CommonException("This user account is deactivated, it can't be used to move lexical "
+                    "entries.")
         if parent.moved_to is None:
             if entry.moved_to is None:
 
