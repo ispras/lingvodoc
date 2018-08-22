@@ -1,3 +1,5 @@
+import copy
+
 import graphene
 from lingvodoc.utils.elan_functions import tgt_to_eaf
 import requests
@@ -93,7 +95,8 @@ from lingvodoc.schema.gql_dictionaryperspective import (
 from lingvodoc.schema.gql_user import (
     User,
     CreateUser,
-    UpdateUser
+    UpdateUser,
+    ActivateDeactivateUser
 )
 from lingvodoc.schema.gql_grant import (
     Grant,
@@ -176,15 +179,25 @@ from lingvodoc.schema.gql_tasks import Task, DeleteTask
 from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary, ConvertFiveTiers
 from pyramid.security import authenticated_userid
 
-from lingvodoc.utils.phonology import gql_phonology as utils_phonology
-from lingvodoc.utils.phonology import gql_phonology_tier_list as utils_phonology_tier_list
+from lingvodoc.utils.phonology import (
+    gql_phonology as utils_phonology,
+    gql_phonology_skip_list as utils_phonology_skip_list,
+    gql_phonology_tier_list as utils_phonology_tier_list,
+    gql_phonology_link_perspective_data,
+    gql_sound_and_markup)
+
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 from lingvodoc.cache.caching import TaskStatus
+
+from lingvodoc.views.v2.phonology import Phonology_Parameters
 from lingvodoc.views.v2.utils import anonymous_userid
+
 from sqlite3 import connect
 from lingvodoc.utils.merge import merge_suggestions
 import tempfile
+from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
+import json
 
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
@@ -194,11 +207,25 @@ from pyramid.httpexceptions import (
 )
 
 from lingvodoc.scripts import elan_parser
+from lingvodoc.utils.creation import create_entity
 
 
 class TierList(graphene.ObjectType):
     tier_count = graphene.Field(ObjectVal)
     total_count = graphene.Int()
+
+
+class SkipList(graphene.ObjectType):
+    markup_count = graphene.Int()
+    neighbour_list = graphene.Field(ObjectVal)
+    skip_list = graphene.Field(ObjectVal)
+    total_neighbour_count = graphene.Int()
+    total_skip_count = graphene.Int()
+
+
+class Link_Perspective_Data(graphene.ObjectType):
+    field_data_list = graphene.List(ObjectVal)
+    perspective_id_list = graphene.List(LingvodocID)
 
 
 class LexicalEntriesAndEntities(graphene.ObjectType):
@@ -289,7 +316,7 @@ class Query(graphene.ObjectType):
                                             adopted=graphene.Boolean(),
                                             adopted_type=LingvodocID(),
                                             with_entimology=graphene.Boolean())
-    translationgists = graphene.List(TranslationGist)
+    translationgists = graphene.List(TranslationGist, gists_type=graphene.String())
     translation_search = graphene.List(TranslationGist, searchstring=graphene.String(),
                                        translation_type=graphene.String())
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
@@ -307,21 +334,14 @@ class Query(graphene.ObjectType):
     grant = graphene.Field(Grant, id=graphene.Int())
     grants = graphene.List(Grant)
     column = graphene.Field(Column, id=LingvodocID())
-    # phonology = graphene.Field(graphene.Boolean, perspective_id=LingvodocID(),
-    #     limit=graphene.Int(),
-    #     limit_exception=graphene.Int(),
-    #     limit_no_vowel=graphene.Int(),
-    #     limit_result=graphene.Int(),
-    #     group_by_description=graphene.Boolean(),
-    #     only_first_translation=graphene.Boolean(),
-    #     vowel_selection=graphene.Boolean(),
-    #     maybe_tier_list=graphene.List(graphene.String),
-    #     maybe_tier_set=graphene.List(graphene.String),
-    #     synchronous=graphene.Boolean(),
-    #     maybe_translation_field=LingvodocID(required=True),
-    #     )
 
     phonology_tier_list = graphene.Field(TierList, perspective_id=LingvodocID(required=True))
+    phonology_skip_list = graphene.Field(SkipList, perspective_id=LingvodocID(required=True))
+
+    phonology_link_perspective_data = graphene.Field(
+        Link_Perspective_Data,
+        perspective_id = LingvodocID(required = True),
+        field_id_list = graphene.List(LingvodocID, required = True))
 
     connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True),
                                      field_id=LingvodocID(required=True), mode=graphene.String())
@@ -362,14 +382,20 @@ class Query(graphene.ObjectType):
         request = info.context.request
         locale_id = info.context.get('locale_id')
 
+        old_field_selection_list = copy.deepcopy(field_selection_list)
+
+        for field_selection in old_field_selection_list:
+            field_selection['client_id'] = field_selection['field_id'][0]
+            field_selection['object_id'] = field_selection['field_id'][1]
+
         result = merge_suggestions(request=request,
                                    perspective_client_id=perspective_id[0],
                                    perspective_object_id=perspective_id[1],
-                                   algorithm=algorithm, threshold=threshold,
+                                   algorithm=algorithm,
                                    entity_type_primary=entity_type_primary,
                                    entity_type_secondary=entity_type_secondary,
-                                   levenshtein=levenshtein,
-                                   field_selection_list=field_selection_list,
+                                   threshold=threshold, levenshtein=levenshtein,
+                                   field_selection_list=old_field_selection_list,
                                    locale_id=locale_id)
 
         return MergeSuggestions(user_has_permissions=result['user_has_permissions'],
@@ -729,6 +755,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
             else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
+        dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
         if mode is not None:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             if not mode:
@@ -870,7 +897,11 @@ class Query(graphene.ObjectType):
     def resolve_entity(self, info, id):
         return Entity(id=id)
 
-    def resolve_user(self, info, id):
+    def resolve_user(self, info, id=None):
+        if id is None:
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id=client_id).first()
+            id = client.user_id
         return User(id=id)
 
     def resolve_is_authenticated(self, info):
@@ -953,7 +984,7 @@ class Query(graphene.ObjectType):
     def resolve_translationgist(self, info, id):
         return TranslationGist(id=id)
 
-    def resolve_translationgists(self, info):
+    def resolve_translationgists(self, info, gists_type=None):
         """
         example:
         query GistsList {
@@ -964,7 +995,12 @@ class Query(graphene.ObjectType):
         }
         """
 
-        gists = DBSession.query(dbTranslationGist).filter_by(marked_for_deletion=False).order_by(dbTranslationGist.type).all()
+        gists_query = DBSession.query(dbTranslationGist).filter_by(marked_for_deletion=False)
+        if gists_type:
+            gists_query = gists_query.filter(dbTranslationGist.type == gists_type)
+        else:
+            gists_query = gists_query.order_by(dbTranslationGist.type)
+        gists = gists_query.all()
         gists_list = list()
         for db_gist in gists:
             gql_gist = TranslationGist(id=[db_gist.client_id, db_gist.object_id])
@@ -1508,41 +1544,49 @@ class Query(graphene.ObjectType):
 
         return grants_list
 
-    # def resolve_phonology(self, info, perspective_id, group_by_description, only_first_translation,
-    #                       vowel_selection, maybe_tier_list, maybe_tier_set=None, limit=None,
-    #                         limit_exception=None, limit_no_vowel=None, limit_result=None, synchronous=False, maybe_translation_field=None):
-    #     """
-    #     query MyQuery {
-    #                 phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
-    #
-    #                 )
-    #     }
-    #     """
-    #     perspective_cid, perspective_oid = perspective_id
-    #     locale_id = info.context.get('locale_id')
-    #     request = info.context.get('request')
-    #
-    #     utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
-    #               synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
-    #               limit_exception, limit_no_vowel, limit_result, locale_id, maybe_translation_field=maybe_translation_field)
-    #
-    #     return True
-
     def resolve_phonology_tier_list(self, info, perspective_id):
         """
         query MyQuery {
-                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
-
-                    )
+          phonology_tier_list(perspective_id: [330, 4]) {
+            tier_count
+            total_count
+          }
         }
         """
-        perspective_cid, perspective_oid = perspective_id
-        locale_id = info.context.get('locale_id')
-        request = info.context.get('request')
 
-        answer = utils_phonology_tier_list(perspective_cid, perspective_oid)
+        answer = utils_phonology_tier_list(*perspective_id)
+        return TierList(**answer)
 
-        return TierList(tier_count=answer['tier_count'], total_count=answer['total_count'])
+    def resolve_phonology_skip_list(self, info, perspective_id):
+        """
+        query MyQuery {
+          phonology_skip_list(perspective_id: [1251, 14]) {
+            markup_count
+            neighbour_list
+            skip_list
+            total_neighbour_count
+            total_skip_count
+          }
+        }
+        """
+
+        answer = utils_phonology_skip_list(*perspective_id)
+        return SkipList(**answer)
+
+    def resolve_phonology_link_perspective_data(self, info, perspective_id, field_id_list):
+        """
+        query MyQuery {
+          phonology_link_perspective_data(
+            perspective_id: [657, 4],
+            field_id_list: [[1, 213]])
+          {
+            perspective_id_list
+          }
+        }
+        """
+
+        answer = gql_phonology_link_perspective_data(perspective_id, field_id_list)
+        return Link_Perspective_Data(**answer)
 
     # def resolve_convert_starling(self, info, starling_dictionaries):
     #     """
@@ -1803,6 +1847,7 @@ class StarlingEtymology(graphene.Mutation):
 
         return StarlingEtymology(triumph=True)
 
+
 class Phonology(graphene.Mutation):
 
     class Arguments:
@@ -1812,12 +1857,17 @@ class Phonology(graphene.Mutation):
         limit_no_vowel=graphene.Int()
         limit_result=graphene.Int()
         group_by_description=graphene.Boolean(required=True)
+        maybe_translation_field=LingvodocID()
         only_first_translation=graphene.Boolean(required=True)
         vowel_selection=graphene.Boolean(required=True)
         maybe_tier_list=graphene.List(graphene.String)
-        maybe_tier_set=graphene.List(graphene.String)
+        keep_list=graphene.List(graphene.Int)
+        join_list=graphene.List(graphene.Int)
+        chart_threshold=graphene.Int()
+        generate_csv=graphene.Boolean()
+        link_field_list=graphene.List(LingvodocID)
+        link_perspective_list=graphene.List(graphene.List(LingvodocID))
         synchronous=graphene.Boolean()
-        maybe_translation_field=LingvodocID()
 
     triumph = graphene.Boolean()
 
@@ -1827,33 +1877,233 @@ class Phonology(graphene.Mutation):
     def mutate(self, info, **args):
         """
         query MyQuery {
-                    phonology(perspective_id: [126, 5], group_by_description: false, only_first_translation: false, vowel_selection: false, maybe_tier_list: [] maybe_translation_field:[66, 19]
-
-                    )
+          phonology(
+            perspective_id: [126, 5],
+            group_by_description: false,
+            only_first_translation: false,
+            vowel_selection: false,
+            maybe_tier_list: [],
+            maybe_translation_field: [66, 19])
         }
         """
-        perspective_id = args['perspective_id']
-        maybe_translation_field = args.get('maybe_translation_field')
-        group_by_description = args['group_by_description']
-        only_first_translation = args['only_first_translation']
-        vowel_selection = args['vowel_selection']
-        maybe_tier_list = args.get('maybe_tier_list')
-        maybe_tier_set = args.get('maybe_tier_set')
-        limit = args.get('limit')
-        limit_exception = args.get('limit_exception')
-        limit_no_vowel = args.get('limit_no_vowel')
-        limit_result = args.get('limit_result')
-        synchronous = args.get('synchronous')
-        perspective_cid, perspective_oid = perspective_id
+
+        parameters = Phonology_Parameters.from_graphql(args)
+
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')
 
-        utils_phonology(request, group_by_description, only_first_translation, perspective_cid, perspective_oid,
-                        synchronous, vowel_selection, maybe_tier_list, maybe_tier_set, limit,
-                        limit_exception, limit_no_vowel, limit_result, locale_id,
-                        maybe_translation_field=maybe_translation_field)
+        utils_phonology(request, locale_id, parameters)
 
         return Phonology(triumph=True)
+
+
+class SoundAndMarkup(graphene.Mutation):
+
+    class Arguments:
+        perspective_id = LingvodocID(required = True)
+        published_mode = graphene.String(required = True)
+
+    triumph = graphene.Boolean()
+
+    def mutate(self, info, **args):
+        """
+        query MyQuery {
+          sound_and_markup(
+            perspective_id: [657, 4])
+        }
+        """
+
+        locale_id = info.context.get('locale_id')
+        request = info.context.get('request')
+
+        gql_sound_and_markup(request, locale_id, args['perspective_id'], args['published_mode'])
+
+        return SoundAndMarkup(triumph = True)
+
+
+def save_dictionary(dict_id, request, user_id, locale_id, publish):
+    my_args = dict()
+    my_args["client_id"] = dict_id[0]
+    my_args["object_id"] = dict_id[1]
+    my_args["locale_id"] = locale_id
+    my_args["storage"] = request.registry.settings["storage"]
+    my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
+    try:
+        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
+                                                                 object_id=dict_id[1]).first()
+        gist = DBSession.query(dbTranslationGist). \
+            filter_by(client_id=dictionary_obj.translation_gist_client_id,
+                      object_id=dictionary_obj.translation_gist_object_id).first()
+        dict_name = gist.get_translation(locale_id)
+        task = TaskStatus(user_id, "Saving dictionary", dict_name, 4)
+    except:
+        raise ResponseError('bad request')
+    my_args['dict_name'] = dict_name
+    my_args["task_key"] = task.key
+    my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+    my_args["published"] = publish
+    res = async_save_dictionary.delay(**my_args)
+    return
+
+
+class SaveDictionary(graphene.Mutation):
+
+    class Arguments:
+        id = LingvodocID(required=True)
+        mode = graphene.String(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        dict_id = args['id']
+        mode = args['mode']
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        user_id = user.id
+
+        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
+                                                               object_id=dict_id[1]).first()
+        if mode == 'published':
+            publish = True
+        elif mode == 'all':
+            publish = None
+        else:
+            raise ResponseError(message="mode: <all|published>")
+
+        for persp in dictionary_obj.dictionaryperspective:
+            if mode == 'all':
+                info.context.acl_check('view', 'lexical_entries_and_entities',
+                                   (persp.client_id, persp.object_id))
+
+        save_dictionary(dict_id, request, user_id, locale_id, publish)
+
+        return DownloadDictionary(triumph=True)
+
+class SaveAllDictionaries(graphene.Mutation):
+
+    class Arguments:
+        mode = graphene.String(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        mode = args['mode']
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        user_id = user.id
+        if user_id != 1:
+            raise ResponseError(message="not admin")
+        # counter = 0
+        dictionaries = DBSession.query(dbDictionary).filter_by(marked_for_deletion=False).all()
+        if mode == 'published':
+            publish = True
+        elif mode == 'all':
+            publish = None
+
+        else:
+            raise ResponseError(message="mode: <all|published>")
+        for dictionary in dictionaries:
+            save_dictionary([dictionary.client_id, dictionary.object_id], request, user_id, locale_id, publish)
+            # if not counter % 5:
+            #     time.sleep(5)
+            # counter += 1
+
+        return DownloadDictionary(triumph=True)
+
+
+class MoveColumn(graphene.Mutation):
+    class Arguments:
+        perspective_id = LingvodocID(required=True)
+        from_id = LingvodocID(required=True)
+        to_id = LingvodocID(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    # @client_id_check()
+    def mutate(root, info, **args):
+        request = info.context.request
+        locale_id = int(request.cookies.get('locale_id') or 2)
+        perspective_id = args['perspective_id']
+        from_id = args['from_id']
+        to_id = args['to_id']
+        variables = {'auth': authenticated_userid(request)}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        user_id = user.id
+        client_ids = DBSession.query(Client.id).filter(Client.user_id==user_id).all()
+        # if user_id != 1:
+        #     raise ResponseError(message="not admin")
+        # counter = 0
+        perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=perspective_id[0],
+                                                                         object_id=perspective_id[1],
+                                                                         marked_for_deletion=False).first()
+        if not perspective:
+            raise ResponseError('No such perspective')
+        info.context.acl_check('view', 'lexical_entries_and_entities',
+                           (perspective.client_id, perspective.object_id))
+
+        lexes = DBSession.query(dbLexicalEntry).join(dbEntity).join(dbPublishingEntity).filter(
+            dbLexicalEntry.parent_client_id == perspective_id[0],
+            dbLexicalEntry.parent_object_id == perspective_id[1],
+            dbLexicalEntry.marked_for_deletion == False,
+            dbEntity.client_id.in_(client_ids),
+            dbEntity.field_client_id == from_id[0],
+            dbEntity.field_object_id == from_id[1],
+            dbEntity.marked_for_deletion == False,
+            dbPublishingEntity.accepted == True).all()
+
+        for lex in lexes:
+            entities = DBSession.query(dbEntity).join(dbPublishingEntity).filter(
+                dbEntity.client_id.in_(client_ids),
+                dbEntity.parent_client_id == lex.client_id,
+                dbEntity.parent_object_id == lex.object_id,
+                dbEntity.field_client_id == from_id[0],
+                dbEntity.field_object_id == from_id[1],
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.accepted == True).all()
+            for entity in entities:
+                existing = DBSession.query(dbEntity).join(dbPublishingEntity).filter(
+                    dbEntity.parent_client_id == lex.client_id,
+                    dbEntity.parent_object_id == lex.object_id,
+                    dbEntity.field_client_id == to_id[0],
+                    dbEntity.field_object_id == to_id[1],
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.accepted == True,
+                    dbEntity.content == entity.content).first()
+                if not existing:
+                    self_id = None
+                    if entity.self_client_id and entity.self_object_id:
+                        self_id = [entity.self_client_id, entity.self_object_id]
+                    link_id = None
+                    if entity.link_client_id and entity.link_object_id:
+                        link_id = [entity.link_client_id, entity.link_object_id]
+                    create_entity(id=[client.id, None],
+                                  parent_id=[lex.client_id, lex.object_id],
+                                  field_id=to_id,
+                                  self_id=self_id,
+                                  additional_metadata=entity.additional_metadata,
+                                  link_id=link_id,
+                                  locale_id=entity.locale_id,
+                                  filename=None,
+                                  content=entity.content,
+                                  registry=None,
+                                  request=request,
+                                  )
+                entity.marked_for_deletion = True
+
+        return MoveColumn(triumph=True)
+
 
 
 class MyMutations(graphene.ObjectType):
@@ -1875,6 +2125,7 @@ class MyMutations(graphene.ObjectType):
     bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
+    activate_deactivate_user = ActivateDeactivateUser.Field();
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     move_language = MoveLanguage.Field()
@@ -1920,12 +2171,16 @@ class MyMutations(graphene.ObjectType):
     accept_userrequest = AcceptUserRequest.Field()
     #delete_userrequest = DeleteUserRequest.Field()
     download_dictionary = DownloadDictionary.Field()
+    save_dictionary = SaveDictionary.Field()
+    save_all_dictionaries = SaveAllDictionaries.Field()
     download_dictionaries = DownloadDictionaries.Field()
     synchronize = Synchronize.Field()
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
     phonology = Phonology.Field()
+    sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
+    move_column = MoveColumn.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

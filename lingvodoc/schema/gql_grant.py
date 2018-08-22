@@ -72,11 +72,11 @@ class Grant(LingvodocObjectType):
 
     @fetch_object("begin")
     def resolve_begin(self, info):
-        return int(time.mktime(self.dbObject.begin.timetuple()))  # find better option
+        return datetime.datetime.strptime(self.dbObject.begin,'%Y-%m-%d').timestamp()  # find better option
 
     @fetch_object("end")
     def resolve_end(self, info):
-        return int(time.mktime(self.dbObject.end.timetuple()))  # find better option
+        return datetime.datetime.strptime(self.dbObject.end,'%Y-%m-%d').timestamp()
 
     @fetch_object("issuer_translation_gist_id")
     def resolve_issuer_translation_gist_id(self, info):

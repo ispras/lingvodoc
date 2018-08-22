@@ -45,7 +45,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
-from pyramid.security import authenticated_userid
+from pyramid.security import authenticated_userid, forget
 # from pyramid.chameleon_zpt import render_template_to_response
 from pyramid.renderers import render_to_response
 from lingvodoc.exceptions import CommonException
@@ -738,8 +738,10 @@ def graphql(request):
         variables = {'auth': request.authenticated_userid}
         client_id = variables["auth"]
         results = list()
+
         if not client_id:
             client_id = None
+
         locale_id = int(request.cookies.get('locale_id') or 2)
 
         if request.content_type in ['application/x-www-form-urlencoded','multipart/form-data'] \

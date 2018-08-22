@@ -87,12 +87,12 @@ id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
 
 
 
-class PerspectiveCounters(graphene.ObjectType):
-    all = graphene.Int()
-    published = graphene.Int()
-    not_accepted = graphene.Int()
-    # deleted = graphene.Int()
-    # all_with_deleted = graphene.Int()
+# class PerspectiveCounters(graphene.ObjectType):
+#     all = graphene.Int()
+#     published = graphene.Int()
+#     not_accepted = graphene.Int()
+#     # deleted = graphene.Int()
+#     all_with_deleted = graphene.Int()
 
 class DictionaryPerspective(LingvodocObjectType):
     """
@@ -151,7 +151,8 @@ class DictionaryPerspective(LingvodocObjectType):
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     is_template = graphene.Boolean()
-    counters = graphene.Field(PerspectiveCounters)
+    # counters = graphene.Field(PerspectiveCounters)
+    counter = graphene.Int(mode=graphene.String())
 
     dbType = dbPerspective
 
@@ -226,19 +227,37 @@ class DictionaryPerspective(LingvodocObjectType):
     #     return lex_list
 
 
+    # @fetch_object()
+    # def resolve_counters(self, info):
+    #     lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
+    #     lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
+    #     all_count = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
+    #                              dbEntity.marked_for_deletion == False).count()
+    #     published_count = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
+    #                              dbEntity.marked_for_deletion == False).count()
+    #     not_accepted_count = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
+    #                              dbEntity.marked_for_deletion == False).count()
+    #     return PerspectiveCounters(all=all_count, published=published_count, not_accepted=not_accepted_count)
+
     @fetch_object()
-    def resolve_counters(self, info):
+    def resolve_counter(self, info, mode):
         lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
         lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
-        all_count = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
-                                 dbEntity.marked_for_deletion == False).count()
-        published_count = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
-                                 dbEntity.marked_for_deletion == False).count()
-        not_accepted_count = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
-                                 dbEntity.marked_for_deletion == False).count()
-        return PerspectiveCounters(all=all_count, published=published_count, not_accepted=not_accepted_count)
-
-
+        if mode == 'all':
+            # info.context.acl_check('view', 'lexical_entries_and_entities',
+            #                        (self.dbObject.client_id, self.dbObject.object_id))
+            counter_query = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False)
+        elif mode == 'published':
+            counter_query = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False)
+        elif mode == 'not_accepted':
+            counter_query = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
+                                 dbEntity.marked_for_deletion == False)
+        else:
+            raise ResponseError(message="mode: <all|published|not_accepted>")
+        counter = counter_query.group_by(dbLexicalEntry).count()
+        return counter
 
     @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,

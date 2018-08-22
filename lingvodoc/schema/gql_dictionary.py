@@ -143,13 +143,14 @@ class Dictionary(LingvodocObjectType):  # tested
     def resolve_perspectives(self, info):
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
-        dictionary_client_id, dictionary_object_id = self.id  #self.dbObject.client_id, self.dbObject.object_id
+        dictionary_client_id, dictionary_object_id = self.id  # self.dbObject.client_id, self.dbObject.object_id
 
         perspectives = list()
-        child_persps = DBSession.query(dbDictionaryPerspective)\
-            .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id).all()
+        child_persps = DBSession.query(dbDictionaryPerspective) \
+            .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id,
+                       marked_for_deletion=False).all()
         for persp in child_persps:
-            persp_object = self.persp_class(id = [persp.client_id, persp.object_id])
+            persp_object = self.persp_class(id=[persp.client_id, persp.object_id])
             persp_object.dbObject = persp
             perspectives.append(persp_object)
         return perspectives
@@ -755,8 +756,8 @@ class DeleteDictionary(graphene.Mutation):
             raise ResponseError(message="Error: No such dictionary in the system")
         for grant in DBSession.query(dbGrant).all():
             dict_id = {'client_id': client_id, 'object_id': object_id}
-            if grant.additional_metadata  and grant.additional_metadata.get('participant') and dict_id in grant.additional_metadata['participants']:
-                grant.additional_metadata['participants'].remove(dict_id)
+            if grant.additional_metadata and grant.additional_metadata.get('participant') and dict_id in grant.additional_metadata['participant']:
+                grant.additional_metadata['participant'].remove(dict_id)
                 flag_modified(grant, 'additional_metadata')
 
         settings = info.context["request"].registry.settings

@@ -106,6 +106,8 @@ def merge_dictionaries(request):  # TODO: test
         dictionaries = new_dicts
         base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
         override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if not user.is_active:
+            raise KeyError("Not enough permission to do that")
         if user not in override.users:
             grps = []
             for dict in dictionaries:
@@ -232,6 +234,8 @@ def merge_perspectives_api(request):  # TODO: test
                 raise KeyError("Both perspective should from same dictionary.")
         base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
         override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if not user.is_active:
+            raise KeyError("Not enough permission to do that")
         if user not in override.users:
             group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                   subject_client_id=dictionary_client_id,
@@ -410,6 +414,11 @@ def check_user_merge_permissions_direct(user_id, perspective_client_id, perspect
     NOTE: replaced by check_user_merge_permissions.
     """
 
+    user = DBSession.query(User).filter_by(id = user_id).first()
+
+    if not user.is_active:
+        return False
+
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
 
@@ -467,6 +476,9 @@ def check_user_merge_permissions(
     Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
     create and delete them, via perspective user role subrequest.
     """
+
+    if not user.is_active:
+        return False
 
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
@@ -638,7 +650,7 @@ def match_fields(entry_data_list, field_selection_list, threshold):
 
     Description of this algorithm follows.
 
-    Each lexical entry L transformed into a feature vector V(L) given fields F1, ..., Fn:
+    Each lexical entry L is transformed into a feature vector V(L) given fields F1, ..., Fn:
 
     V(L) = V(F1, L) + ... + V(Fn, L)
 
@@ -945,43 +957,19 @@ def match_graph(match_result_list):
             pprint.pformat(group_entry_list))
 
 
-@view_config(
-    route_name = 'merge_suggestions',
-    renderer = 'json',
-    request_method = 'POST',
-    permission = 'view')
-def merge_suggestions(request):
+def merge_suggestions_compute(
+    request,
+    perspective_client_id, perspective_object_id,
+    algorithm,
+    entity_type_primary, entity_type_secondary,
+    threshold, levenshtein,
+    field_selection_list, locale_id):
     """
-    Finds groups of mergeable lexical entries according to specified criteria.
+    Computes merge suggestions.
     """
-
-    perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_object_id = request.matchdict.get('perspective_object_id')
-
-    request_json = request.json
-
-    algorithm = request_json.get('algorithm')
-    threshold = request_json.get('threshold') or 0.1
-
-    if algorithm not in set(['simple', 'fields']):
-        return {'error': message('Unknown entity matching algorithm \'{0}\'.'.format(algorithm))}
-
-    # Getting merge suggestions options.
-
-    if algorithm == 'simple':
-
-        entity_type_primary = request_json.get('entity_type_primary') or 'Transcription'
-        entity_type_secondary = request_json.get('entity_type_secondary') or 'Translation'
-
-        levenshtein = request_json.get('levenshtein') or 1
-
-    else:
-        field_selection_list = request_json['field_selection_list']
 
     log.debug('merge_suggestions {0}/{1}'.format(
         perspective_client_id, perspective_object_id))
-
-    locale_id = int(request.cookies.get('locale_id') or 2)
 
     # Checking if the user has sufficient permissions to perform suggested merges.
 
@@ -1007,10 +995,7 @@ def merge_suggestions(request):
         log.debug('merge_suggestions {0}/{1}: 0 lexical entries'.format(
             perspective_client_id, perspective_object_id))
 
-        return {
-            'entry_data': [],
-            'match_result': [],
-            'user_has_permissions': user_has_permissions}
+        return [], [], user_has_permissions
 
     entry_data_list = [l.track(False, locale_id) for l in lexical_entry_list]
     remove_deleted(entry_data_list)
@@ -1026,10 +1011,67 @@ def merge_suggestions(request):
             entity_type_primary, entity_type_secondary, threshold, levenshtein)
 
     else:
-        match_result_list = match_fields(entry_data_list, field_selection_list, threshold)
+
+        match_result_list = match_fields(entry_data_list,
+            field_selection_list, threshold)
 
     log.debug('merge_suggestions {0}/{1}: {2} matches'.format(
         perspective_client_id, perspective_object_id, len(match_result_list)))
+
+    return entry_data_list, match_result_list, user_has_permissions
+
+
+@view_config(
+    route_name = 'merge_suggestions',
+    renderer = 'json',
+    request_method = 'POST',
+    permission = 'view')
+def merge_suggestions(request):
+    """
+    Finds groups of mergeable lexical entries according to specified criteria.
+    """
+
+    perspective_client_id = request.matchdict.get('perspective_client_id')
+    perspective_object_id = request.matchdict.get('perspective_object_id')
+
+    request_json = request.json
+
+    algorithm = request_json.get('algorithm')
+    threshold = request_json.get('threshold') or 0.1
+
+    if algorithm not in set(['simple', 'fields']):
+        return {'error': message('Unknown entity matching algorithm \'{0}\'.'.format(algorithm))}
+
+    # Getting merge suggestions options.
+
+    entity_type_primary = 'Transcription'
+    entity_type_secondary = 'Translation'
+
+    levenshtein = 1
+
+    field_selection_list = None
+
+    if algorithm == 'simple':
+
+        entity_type_primary = request_json.get('entity_type_primary', entity_type_primary)
+        entity_type_secondary = request_json.get('entity_type_secondary', entity_type_secondary)
+
+        levenshtein = request_json.get('levenshtein', levenshtein)
+
+    else:
+        field_selection_list = request_json['field_selection_list']
+
+    locale_id = int(request.cookies.get('locale_id') or 2)
+
+    # Computing merge suggestions.
+
+    entry_data_list, match_result_list, user_has_permissions = merge_suggestions_compute(
+        request,
+        perspective_client_id, perspective_object_id,
+        algorithm,
+        entity_type_primary, entity_type_secondary,
+        threshold, levenshtein,
+        field_selection_list, locale_id)
 
     if not match_result_list:
 
@@ -1149,7 +1191,7 @@ class Merge_Context(object):
         self.request = request
         self.client_id = client_id
         self.user = user
-        
+
         self.publish_any = publish_any
         self.group_list = group_list
 
@@ -1958,11 +2000,9 @@ class Merge_Context(object):
                 self_reference_replace(link_entity, merge_entity)
 
 
-@view_config(route_name = 'merge_bulk', renderer = 'json', request_method = 'POST')
-def merge_bulk(request):
+def merge_bulk_try(request, publish_any, group_list, error_f):
     """
-    Merges multiple groups of lexical entries, provided that each group is a subset of a single perspective,
-    returns client/object ids of new lexical entries, a new entry for each merged group.
+    Helper function for bulk merges.
     """
 
     log.debug('merge_bulk')
@@ -1972,20 +2012,19 @@ def merge_bulk(request):
     client_id = request.authenticated_userid
 
     if not client_id:
-        return {'error': message('Unrecognized client.')}
+        return False, error_f('Unrecognized client.')
 
     user = Client.get_user_by_client_id(client_id)
 
     if not user:
-        return {'error': message('User authentification failure.')}
+        return False, error_f('User authentification failure.')
 
     # Processing lexical entries group by group.
 
     try:
         merge_context = Merge_Context(
             'merge_bulk', request, client_id, user,
-            request.json['publish_any'],
-            request.json['group_list'])
+            publish_any, group_list)
 
         for index, entry_id_list in enumerate(merge_context.group_list):
             merge_context.merge_group(index, entry_id_list)
@@ -2001,14 +2040,37 @@ def merge_bulk(request):
         log.debug('\n' + traceback_string)
 
         DBSession.rollback()
-        return {'error': message('\n' + traceback_string)}
+        return False, error_f(message('\n' + traceback_string))
 
-    # Returning identifiers of new lexical entries.
+    # Returning resulting merge data.
 
     log.debug('merge_bulk: result{0}{1}'.format(
         '\n' if len(merge_context.result_list) > 1 else ' ',
         pprint.pformat(merge_context.result_list)))
 
+    return True, merge_context
+
+
+@view_config(route_name = 'merge_bulk', renderer = 'json', request_method = 'POST')
+def merge_bulk(request):
+    """
+    Merges multiple groups of lexical entries, provided that each group is a subset of a single perspective,
+    returns client/object ids of new lexical entries, a new entry for each merged group.
+    """
+
+    try_ok, result = merge_bulk_try(request,
+        request.json['publish_any'],
+        request.json['group_list'],
+        lambda error_message: {'error': error_message})
+
+    if not try_ok:
+
+        error_dict = result
+        return error_dict
+
+    # Returning identifiers of new lexical entries.
+
+    merge_context = result
     return {'result': merge_context.result_list}
 
 
@@ -2232,6 +2294,46 @@ def merge_update_3(request):
         return {'error': message('\n' + traceback_string)}
 
 
+def merge_bulk_task_try(task_status, merge_context):
+    """
+    Helper function for asynchronous background merge task.
+    """
+
+    try:
+
+        task_status.set(1, 0,
+            'Merging lexical entries and entities')
+
+        # Merging entry groups one by one.
+
+        for index, entry_id_list in enumerate(merge_context.group_list):
+            merge_context.merge_group(index, entry_id_list)
+
+            task_status.set(1,
+                int(math.floor((index + 1) * 100 / len(merge_context.group_list))),
+                'Merging lexical entries and entities')
+
+        task_status.set(1, 100, 'Finished merge')
+
+        return True, None
+
+    # If something is not right, we report it.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('merge_bulk_async: exception')
+        log.debug('\n' + traceback_string)
+
+        print(traceback_string)
+
+        if task_status is not None:
+            task_status.set(1, 100, 'Finished (ERROR), external error')
+
+        return False, traceback_string
+
 @celery.task
 def merge_bulk_task(task_key, cache_kwargs, sqlalchemy_url, merge_context):
     """
@@ -2245,45 +2347,17 @@ def merge_bulk_task(task_key, cache_kwargs, sqlalchemy_url, merge_context):
     task_status = TaskStatus.get_from_cache(task_key)
 
     with manager:
-        try:
+        try_ok, traceback_string = merge_bulk_task_try(task_status, merge_context)
 
-            task_status.set(1, 0,
-                'Merging lexical entries and entities')
+    if not try_ok:
 
-            # Merging entry groups one by one.
-
-            for index, entry_id_list in enumerate(merge_context.group_list):
-                merge_context.merge_group(index, entry_id_list)
-
-                task_status.set(1,
-                    int(math.floor((index + 1) * 100 / len(merge_context.group_list))),
-                    'Merging lexical entries and entities')
-
-            task_status.set(1, 100, 'Finished merge')
-
-        # If something is not right, we report it.
-
-        except Exception as exception:
-
-            traceback_string = ''.join(traceback.format_exception(
-                exception, exception, exception.__traceback__))[:-1]
-
-            log.debug('merge_bulk_async: exception')
-            log.debug('\n' + traceback_string)
-
-            print(traceback_string)
-
-            if task_status is not None:
-                task_status.set(1, 100, 'Finished (ERROR), external error')
-
-            DBSession.rollback()
-            return {'error': message('\n' + traceback_string)}
+        DBSession.rollback()
+        return {'error': message('\n' + traceback_string)}
 
 
-@view_config(route_name = 'merge_bulk_async', renderer = 'json', request_method = 'POST')
-def merge_bulk_async(request):
+def merge_bulk_async_try(request, publish_any, group_list):
     """
-    Launches asynchronous background merge task, see 'merge_bulk' procedure.
+    Helper function for asynchronous background merge task launch attempt.
     """
 
     log.debug('merge_bulk_async')
@@ -2307,8 +2381,7 @@ def merge_bulk_async(request):
     try:
         merge_context = Merge_Context(
             'merge_bulk_async', request, client_id, user,
-            request.json['publish_any'],
-            request.json['group_list'])
+            publish_any, group_list)
 
         # Pre-checking that each entry group belongs to the same perspective, and that the user has
         # necessary permissions to perform the merge, and dropping request info.
@@ -2330,6 +2403,7 @@ def merge_bulk_async(request):
         sqlalchemy_url = request.registry.settings["sqlalchemy.url"]
 
         merge_bulk_task.delay(task_key, cache_kwargs, sqlalchemy_url, merge_context)
+        return True, task_status
 
     # If something is not right, we report it.
 
@@ -2344,10 +2418,32 @@ def merge_bulk_async(request):
         if task_status is not None:
             task_status.set(1, 100, 'Finished (ERROR), external error')
 
+        return False, traceback_string
+
+
+@view_config(route_name = 'merge_bulk_async', renderer = 'json', request_method = 'POST')
+def merge_bulk_async(request):
+    """
+    Launches asynchronous background merge task, see 'merge_bulk' procedure.
+    """
+
+    try_ok, result = merge_bulk_async_try(request,
+        request.json['publish_any'],
+        request.json['group_list'])
+
+    # If something was not as expected, we report it.
+
+    if not try_ok:
+        traceback_string = result
+
         request.response.status = HTTPInternalServerError.code
 
         DBSession.rollback()
         return {'error': message('\n' + traceback_string)}
+
+    # Launched asynchronous merge task successfully.
+
+    task_status = result
 
     request.response.status = HTTPOk.code
     return {'result': task_status.key if task_status is not None else ''}

@@ -1126,14 +1126,14 @@ def edit_perspective_roles(request):
                 userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                 permitted = False
-                if userlogged in group.users:
+                if userlogged.is_active and userlogged in group.users:
                     permitted = True
-                if not permitted:
+                if userlogged.is_active and not permitted:
                     for org in userlogged.organizations:
                         if org in group.organizations:
                             permitted = True
                             break
-                if not permitted:
+                if userlogged.is_active and not permitted:
                     override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                     if userlogged in override_group.users:
                         permitted = True
@@ -1166,14 +1166,14 @@ def edit_perspective_roles(request):
                 userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                 permitted = False
-                if userlogged in group.users:
+                if userlogged.is_active and userlogged in group.users:
                     permitted = True
-                if not permitted:
+                if userlogged.is_active and not permitted:
                     for org in userlogged.organizations:
                         if org in group.organizations:
                             permitted = True
                             break
-                if not permitted:
+                if userlogged.is_active and not permitted:
                     override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                     if userlogged in override_group.users:
                         permitted = True
@@ -1239,14 +1239,14 @@ def delete_perspective_roles(request):  # TODO: test
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged.is_active and userlogged in group.users:
                         permitted = True
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
                                 permitted = True
                                 break
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                         if userlogged in override_group.users:
                             permitted = True
@@ -1282,14 +1282,14 @@ def delete_perspective_roles(request):  # TODO: test
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged.is_active and userlogged in group.users:
                         permitted = True
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
                                 permitted = True
                                 break
-                    if not permitted:
+                    if userlogged.is_active and not permitted:
                         override_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                         if userlogged in override_group.users:
                             permitted = True
@@ -1995,7 +1995,7 @@ def approve_entity(request):
                 Group.subject_client_id == entity.parent.parent.client_id,
                 Group.subject_object_id == entity.parent.parent.object_id,
                 BaseGroup.action == 'create').one()
-            if user in group.users:
+            if user.is_active and user in group.users:
                 if entity:
                     entity.publishingentity.published = True
                 else:
@@ -2046,7 +2046,7 @@ def accept_entity(request):
                         BaseGroup.subject == 'lexical_entries_and_entities',
                         Group.subject_override == True,
                         BaseGroup.action == 'create').one()
-                if user in group.users or user in override_group.users:
+                if user.is_active and (user in group.users or user in override_group.users):
                     if entity:
                         entity.publishingentity.accepted = True
                     else:
@@ -2095,7 +2095,7 @@ def disapprove_entity(request):
                 Group.subject_client_id == entity.parent.parent.client_id,
                 Group.subject_object_id == entity.parent.parent.object_id,
                 BaseGroup.action == 'delete').one()
-            if user in group.users:
+            if user.is_active and user in group.users:
                 if entity:
                     entity.publishingentity.published = False
                 else:
@@ -2254,7 +2254,7 @@ def create_entities_bulk(request):
                                                                       Group.subject_client_id == entity.parent.parent.client_id,
                                                                       Group.subject_object_id == entity.parent.parent.object_id,
                                                                       BaseGroup.action == 'create').one()
-                if user in group.users:
+                if user.is_active and user in group.users:
                     entity.publishingentity.accepted = True
                 upper_level = None
                 if item.get('self_client_id') and item.get('self_object_id'):
