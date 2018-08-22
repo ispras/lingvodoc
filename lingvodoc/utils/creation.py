@@ -400,7 +400,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
             if json_input:
                 f.write(base64.urlsafe_b64decode(content))
             else:
-                shutil.copyfileobj(content, f)
+                f.write(content)
 
         real_location = storage_path
 
