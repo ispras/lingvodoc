@@ -176,8 +176,7 @@ def create_entity(request):  # tested
         url = None
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
             if content is not None:
-                content_data = content.file.read()
-                real_location, url = create_object(request, content_data, entity, data_type, filename, json_input=False)
+                real_location, url = create_object(request, content.file, entity, data_type, filename, json_input=False)
             else:
                 real_location, url = create_object(request, req['content'], entity, data_type, filename)
 
@@ -189,7 +188,8 @@ def create_entity(request):  # tested
                     need_hash = False
             if need_hash:
                 if content is not None:
-                    hash = hashlib.sha224(content_data).hexdigest()
+                    content.file.seek(0)
+                    hash = hashlib.sha224(content.file.read()).hexdigest()
                 else:
                     hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
                 hash_dict = {'hash': hash}
