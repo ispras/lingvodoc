@@ -588,6 +588,8 @@ class UpdateEntityContent(graphene.Mutation):
         dbentity_old = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbentity_old or dbentity_old.marked_for_deletion:
             raise ResponseError(message="No such entity in the system")
+        if dbentity_old.field.data_type != "Text":
+            raise ResponseError(message="Can't edit non-text entities")
         lexical_entry = dbentity_old.parent
         info.context.acl_check('delete', 'lexical_entries_and_entities',
                                (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
