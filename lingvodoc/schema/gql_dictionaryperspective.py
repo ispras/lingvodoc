@@ -674,7 +674,7 @@ class AddPerspectiveRoles(graphene.Mutation):
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
-        client_id = info.context.get('locale_id')
+        client_id = info.context.get('client_id')
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
         if roles_users:
@@ -707,7 +707,7 @@ class DeletePerspectiveRoles(graphene.Mutation):
         roles_organizations = args.get('roles_organizations')
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id,
                                                                  object_id=perspective_object_id).first()
-        client_id = info.context.get('locale_id')
+        client_id = info.context.get('client_id')
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
         if roles_users:
