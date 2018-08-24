@@ -663,7 +663,7 @@ class AddDictionaryRoles(graphene.Mutation):
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
         dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
-        client_id = info.context.get('locale_id')
+        client_id = info.context.get('client_id')
         if not dbdictionary or dbdictionary.marked_for_deletion:
             raise ResponseError(message="No such dictionary in the system")
         if roles_users:
@@ -702,7 +702,7 @@ class DeleteDictionaryRoles(graphene.Mutation):
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
         dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
-        client_id = info.context.get('locale_id')
+        client_id = info.context.get('client_id')
 
         if not dbdictionary or dbdictionary.marked_for_deletion:
             raise ResponseError(message="No such dictionary in the system")
