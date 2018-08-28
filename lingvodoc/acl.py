@@ -65,7 +65,7 @@ def groupfinder(client_id, request, factory = None, subject = None):
                 return None
 
         groupset = set()
-        if user.id == 1:
+        if user is not None and user.id == 1:
             groupset.add('Admin')
         return groupset
 

@@ -1,3 +1,5 @@
+import json
+
 import pympi
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
@@ -182,3 +184,9 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted, pub
                         tags.add(entity.content)
                         new_tags.add(entity.content)
         return tags
+
+def get_id_to_field_dict():
+    with open('static_fields.json') as f:
+        dict_with_lists = json.load(f)
+        dict_with_tuples = {k: tuple(v) for k, v in dict_with_lists.items()}
+        return dict_with_tuples
