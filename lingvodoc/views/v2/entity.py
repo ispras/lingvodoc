@@ -188,6 +188,7 @@ def create_entity(request):  # tested
                     need_hash = False
             if need_hash:
                 if content is not None:
+                    content.file.seek(0)
                     hash = hashlib.sha224(content.file.read()).hexdigest()
                 else:
                     hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()

@@ -392,7 +392,7 @@ class CreateEntity(graphene.Mutation):
 class UpdateEntity(graphene.Mutation):
     """
     mutation Mu{
-	update_entity(id:[1995,2017], published: true){
+	update_entity_content(id:[1995,2017], published: true){
 		entity{
 			created_at
 		}
@@ -554,3 +554,78 @@ class BulkCreateEntity(graphene.Mutation):
             entity.dbObject = dbentity
             entities.append(entity)
         return BulkCreateEntity(entities=entities, triumph=True)
+
+
+class UpdateEntityContent(graphene.Mutation):
+    """
+
+
+		mutation My {
+	update_entity_content(id:[1907,10], content: "cat"){
+		entity{
+			created_at
+		}
+	}
+}
+    """
+
+    class Arguments:
+        """
+        input values from request. Look at "LD methods" exel table
+        """
+        id = LingvodocID()
+        content = graphene.String()
+
+
+    entity = graphene.Field(Entity)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+        # delete
+        client_id, object_id = args.get('id')
+        content = args.get("content")
+        dbentity_old = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbentity_old or dbentity_old.marked_for_deletion:
+            raise ResponseError(message="No such entity in the system")
+        if dbentity_old.field.data_type != "Text":
+            raise ResponseError(message="Can't edit non-text entities")
+        lexical_entry = dbentity_old.parent
+        info.context.acl_check('delete', 'lexical_entries_and_entities',
+                               (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
+        settings = info.context["request"].registry.settings
+        if 'desktop' in settings:
+            real_delete_entity(dbentity_old, settings)
+        else:
+            del_object(dbentity_old)
+        # create
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+        if not user:
+            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentity_old.parent_client_id,
+                                                           object_id=dbentity_old.parent_object_id).first()
+        if not parent:
+            raise ResponseError(message="No such lexical entry in the system")
+
+        info.context.acl_check('create', 'lexical_entries_and_entities',
+                               (parent.parent_client_id, parent.parent_object_id))
+        dbentity = dbEntity(client_id=client_id,
+                        object_id=None,
+                        field_client_id=dbentity_old.field_client_id,
+                        field_object_id=dbentity_old.field_object_id,
+                        locale_id=dbentity_old.locale_id,
+                        additional_metadata=dbentity_old.additional_metadata,
+                        parent=dbentity_old.parent)
+
+        dbentity.publishingentity.accepted = dbentity_old.publishingentity.accepted
+        dbentity.content = content
+            # if args.get('is_translatable', None): # TODO: fix it
+            #     field.is_translatable = bool(args['is_translatable'])
+        DBSession.add(dbentity)
+        DBSession.flush()
+        entity = Entity(id = [dbentity.client_id, dbentity.object_id])
+        entity.dbObject = dbentity
+        return UpdateEntityContent(entity=entity, triumph=True)
