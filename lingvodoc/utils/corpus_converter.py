@@ -42,8 +42,7 @@ from lingvodoc.models import (
 from lingvodoc.utils.elan_functions import tgt_to_eaf
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary)
-
-
+from lingvodoc.utils.search import get_id_to_field_dict
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -367,17 +366,18 @@ def convert_five_tiers(dictionary_id,
                           "Sounds of Paradigmatic forms"
                          )
         task_status.set(2, 5, "Checking fields")
-        for name in all_fieldnames:
-            data_type_query = DBSession.query(Field) \
-                .join(TranslationGist,
-                      and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                           Field.translation_gist_client_id == TranslationGist.client_id))\
-                .join(TranslationGist.translationatom)
-            field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                           TranslationAtom.content == name)\
-                                   .order_by(TranslationAtom.client_id)\
-                                   .first()
-            field_ids[name] = (field.client_id, field.object_id)
+        field_ids = get_id_to_field_dict()
+        # for name in all_fieldnames:
+        #     data_type_query = DBSession.query(Field) \
+        #         .join(TranslationGist,
+        #               and_(Field.translation_gist_object_id == TranslationGist.object_id,
+        #                    Field.translation_gist_client_id == TranslationGist.client_id))\
+        #         .join(TranslationGist.translationatom)
+        #     field = data_type_query.filter(TranslationAtom.locale_id == 2,
+        #                                    TranslationAtom.content == name)\
+        #                            .order_by(TranslationAtom.client_id)\
+        #                            .first()
+        #     field_ids[name] = (field.client_id, field.object_id)
         fp_fields = ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")
         sp_fields = ("Word of Paradigmatic forms",
                      "Transcription of Paradigmatic forms",

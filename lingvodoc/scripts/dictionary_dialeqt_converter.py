@@ -36,6 +36,8 @@ from lingvodoc.models import (
     PublishingEntity,
     user_to_group_association
 )
+from lingvodoc.utils.search import get_id_to_field_dict
+
 
 def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
     return DBSession.query(LexicalEntry) \
@@ -623,18 +625,19 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                           "Sounds of Paradigmatic forms"
                          )
         task_status.set(2, 5, "Checking fields")
-        for name in all_fieldnames:
-            data_type_query = DBSession.query(Field) \
-                .join(TranslationGist,
-                      and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                           Field.translation_gist_client_id == TranslationGist.client_id))\
-                .join(TranslationGist.translationatom)
-            #todo: a way to find this fields if wwe cannot use one
-            field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                           TranslationAtom.content == name)\
-                                   .order_by(TranslationAtom.client_id)\
-                                   .first()
-            field_ids[name] = (field.client_id, field.object_id)
+        field_ids = get_id_to_field_dict()
+        # for name in all_fieldnames:
+        #     data_type_query = DBSession.query(Field) \
+        #         .join(TranslationGist,
+        #               and_(Field.translation_gist_object_id == TranslationGist.object_id,
+        #                    Field.translation_gist_client_id == TranslationGist.client_id))\
+        #         .join(TranslationGist.translationatom)
+        #     #todo: a way to find this fields if wwe cannot use one
+        #     field = data_type_query.filter(TranslationAtom.locale_id == 2,
+        #                                    TranslationAtom.content == name)\
+        #                            .order_by(TranslationAtom.client_id)\
+        #                            .first()
+        #     field_ids[name] = (field.client_id, field.object_id)
         fp_fields = ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")
         sp_fields = ("Word of Paradigmatic forms",
                      "Transcription of Paradigmatic forms",
