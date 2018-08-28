@@ -1,0 +1,23 @@
+Test ids: 
+lex_entry 1: [2, 18] 
+lex_entry 2: [2, 19] 
+lex_link_entry 1: [2, 20] 
+lex_link_entry 2: [2, 21] 
+
+lex_entity_1: [2, 22] 
+lex_entity_2: [2, 23] 
+link_lex_entity_1: [2, 24] 
+link_lex_entity_2: [2, 25] 
+
+ Field ids: 
+Field: [2, 5] 
+
+Test_dict: [2, 2] 
+Test_persp: [2, 3] 
+Test_persp_link: [2, 4] 
+
+Word gist: [1, 193] 
+
+Test gist: [1, 61] 
+
+English atom: [1, 8] 

@@ -1,8 +1,18 @@
 import os
 import sys
+from configparser import ConfigParser
+
 import transaction
 
 from sqlalchemy import engine_from_config
+
+from lingvodoc.utils.creation import (create_perspective,
+                                      create_dbdictionary,
+                                      create_dictionary_persp_to_field,
+                                      edit_role,
+                                      create_lexicalentry
+                                      )
+from lingvodoc.utils.starling_converter import create_entity
 
 from pyramid.paster import (
     get_appsettings,
@@ -31,7 +41,7 @@ from ..models import (
     )
 
 import json
-
+from sqlalchemy import create_engine
 test_init = True
 
 
@@ -49,7 +59,7 @@ def create_translation(client_id, contents=list(), gist_type='Service'):
     for content in contents:
         atom = TranslationAtom(client_id=client_id, content=content[0], locale_id=content[1], parent=gist)
         DBSession.add(atom)
-    DBSession.flush()
+        DBSession.flush()
     return gist
 
 
@@ -65,14 +75,18 @@ def find_service_translation(content, locale_id=2):
 
 
 def find_translation(content, locale_id=2):
-    atom = DBSession.query(TranslationAtom).filter_by(content=content, locale_id=locale_id).first()
+    atom = DBSession.query(TranslationAtom).filter_by(content=content, locale_id=locale_id).order_by(TranslationAtom.client_id).first()
     if atom:
         return atom.parent
     else:
         return None
 
 
-def data_init(manager, accounts):
+def data_init(manager, accounts, dbname):
+
+
+    engine = create_engine(dbname)
+    DBSession.configure(bind=engine)
     with manager:
 
         # creating base locales
@@ -190,7 +204,7 @@ def data_init(manager, accounts):
                                                               gist_type='Service')
         translations = dict()
         try:
-            with open('lingvodoc/scripts/translations_base.json', 'r') as json_file:
+            with open(os.path.dirname(__file__) + '/translations_base.json', 'r') as json_file:
                 translations = json.loads(json_file.read())
         except Exception as e:
             import traceback
@@ -329,18 +343,6 @@ def data_init(manager, accounts):
                                      action="create",
                                      perspective_default=True))
 
-        create_gist_from_string("Can delete lexical entries")
-        base_groups.append(BaseGroup(name="Can delete lexical entries",
-                                     subject="lexical_entries_and_entities",
-                                     action="delete",
-                                     perspective_default=True))
-
-        # create_gist_from_string("Can delete lexical entries")
-        # base_groups.append(BaseGroup(name="Can delete lexical entries",
-        #                              subject="lexical_entries_and_entities",
-        #                              action="delete",
-        #                              perspective_default=True))
-
         create_gist_from_string("Can view unpublished lexical entries")
         base_groups.append(BaseGroup(name="Can view unpublished lexical entries",
                                      subject="lexical_entries_and_entities",
@@ -365,6 +367,12 @@ def data_init(manager, accounts):
                                      action="create",
                                      dictionary_default=True))
 
+        create_gist_from_string("Can delete lexical entries and entities")
+        base_groups.append(BaseGroup(name="Can delete lexical entries and entities",
+                                     subject="lexical_entries_and_entities",
+                                     action="delete",
+                                     perspective_default=True))
+
         create_gist_from_string("Can edit translationatom")
         base_groups.append(BaseGroup(name="Can edit translationatom",
                                      subject="translations",
@@ -374,6 +382,44 @@ def data_init(manager, accounts):
         base_groups.append(BaseGroup(name="Can delete translationgist",
                                      subject="translations",
                                      action="delete"))
+
+        create_gist_from_string("Can create grants")
+        base_groups.append(BaseGroup(name="Can create grants ",
+                                     subject="grant",
+                                     action="create"))
+
+        create_gist_from_string("Can approve grants")
+        base_groups.append(BaseGroup(name="Can approve grants",
+                                     subject="grant",
+                                     action="approve"))
+
+        create_gist_from_string("Can approve organizations")
+        base_groups.append(BaseGroup(name="Can approve organizations",
+                                     subject="organization",
+                                     action="approve"))
+
+        create_gist_from_string("Can edit dictionary status")
+        base_groups.append(BaseGroup(name="Can edit dictionary status",
+                                     subject="dictionary_status",
+                                     action="edit",
+                                     dictionary_default=True))
+
+        create_gist_from_string("Can edit perspective status")
+        base_groups.append(BaseGroup(name="Can edit perspective status",
+                                     subject="perspective_status",
+                                     action="edit",
+                                     perspective_default=True))
+
+
+        # create_gist_from_string("Can delete lexical entries")
+        # base_groups.append(BaseGroup(name="Can delete lexical entries",
+        #                              subject="lexical_entries_and_entities",
+        #                              action="delete",
+        #                              perspective_default=True))
+
+
+
+
 
         for base_group in base_groups:
             DBSession.add(base_group)
@@ -396,7 +442,7 @@ def data_init(manager, accounts):
                                      name="Test",
                                      intl_name="Test"
                                      )
-                test_pwd = Passhash(password="123456")
+                test_pwd = Passhash(password="12345")
                 test_email = Email(email="test@test.ru")
                 test_account.password = test_pwd
                 DBSession.add(test_pwd)
@@ -418,8 +464,6 @@ def data_init(manager, accounts):
                     if group not in test_account.groups:
                         test_account.groups.append(group)
                 DBSession.flush()
-
-
                 translationatom = DBSession.query(TranslationAtom)\
                     .join(TranslationGist).\
                     filter(TranslationAtom.content == "WiP",
@@ -428,7 +472,8 @@ def data_init(manager, accounts):
                     .one()
                 state_gist = translationatom.parent
                 dict_name_gist = find_translation('Dictionary of Middle-Ob dialect Mansi')
-                persp_name_gist = find_translation('Lingvodoc 0.98 etymology dictionary')
+                le_persp_name_gist = find_translation('Lexical Entries')
+                par_persp_name_gist = find_translation('Paradigms')
                 text_type_gist = find_service_translation('Text')
                 sound_type_gist = find_service_translation('Sound')
                 link_type_gist = find_service_translation('Link')
@@ -439,9 +484,9 @@ def data_init(manager, accounts):
                 transcription_gist = find_translation('Transcription')
                 sound_gist = find_translation('Sound')
                 paradigm_gist = find_translation('Paradigmatic forms')
-                praat_gist = find_translation('Spectrogram')
-                image_gist = find_translation('Image ')
-                elan_gist = find_translation('ELAN markup ')
+                #praat_gist = find_translation('Spectrogram')
+                image_gist = find_translation('Image')
+                elan_gist = find_translation('ELAN markup')
                 test_dict = Dictionary(client_id=test_client.id,
                                        translation_gist_client_id=dict_name_gist.client_id,
                                        translation_gist_object_id=dict_name_gist.object_id,
@@ -449,26 +494,44 @@ def data_init(manager, accounts):
                                        parent_object_id=russian_language.object_id,
                                        state_translation_gist_client_id=state_gist.client_id,
                                        state_translation_gist_object_id=state_gist.object_id)
+                for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+                    new_group = Group(parent=base,
+                                      subject_object_id=test_dict.object_id,
+                                      subject_client_id=test_dict.client_id)
+                    DBSession.add(new_group)
+                    DBSession.flush()
                 DBSession.add(test_dict)
                 DBSession.flush()
 
                 test_persp = DictionaryPerspective(client_id=test_client.id,
-                                                   translation_gist_client_id=persp_name_gist.client_id,
-                                                   translation_gist_object_id=persp_name_gist.object_id,
+                                                   translation_gist_client_id=le_persp_name_gist.client_id,
+                                                   translation_gist_object_id=le_persp_name_gist.object_id,
                                                    parent_client_id=test_dict.client_id,
                                                    parent_object_id=test_dict.object_id,
                                                    state_translation_gist_client_id=state_gist.client_id,
                                                    state_translation_gist_object_id=state_gist.object_id)
+                for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+                    new_group = Group(parent=base,
+                                      subject_object_id=test_persp.object_id,
+                                      subject_client_id=test_persp.client_id)
+                    DBSession.add(new_group)
+                    DBSession.flush()
                 DBSession.add(test_persp)
                 DBSession.flush()
 
                 test_persp_link = DictionaryPerspective(client_id=test_client.id,
-                                                   translation_gist_client_id=persp_name_gist.client_id,
-                                                   translation_gist_object_id=persp_name_gist.object_id,
+                                                   translation_gist_client_id=par_persp_name_gist.client_id,
+                                                   translation_gist_object_id=par_persp_name_gist.object_id,
                                                    parent_client_id=test_dict.client_id,
                                                    parent_object_id=test_dict.object_id,
                                                    state_translation_gist_client_id=state_gist.client_id,
                                                    state_translation_gist_object_id=state_gist.object_id)
+                for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+                    new_group = Group(parent=base,
+                                      subject_object_id=test_persp_link.object_id,
+                                      subject_client_id=test_persp_link.client_id)
+                    DBSession.add(new_group)
+                    DBSession.flush()
                 DBSession.add(test_persp_link)
                 DBSession.flush()
 
@@ -516,13 +579,13 @@ def data_init(manager, accounts):
                                    data_type_translation_gist_object_id=elan_type_gist.object_id)
                 DBSession.add(elan_field)
 
-
-                praat_field = Field(client_id=test_client.id,
-                                   translation_gist_client_id=praat_gist.client_id,
-                                   translation_gist_object_id=praat_gist.object_id,
-                                   data_type_translation_gist_client_id=praat_type_gist.client_id,
-                                   data_type_translation_gist_object_id=praat_type_gist.object_id)
-                DBSession.add(praat_field)
+                #
+                # praat_field = Field(client_id=test_client.id,
+                #                    translation_gist_client_id=praat_gist.client_id,
+                #                    translation_gist_object_id=praat_gist.object_id,
+                #                    data_type_translation_gist_client_id=praat_type_gist.client_id,
+                #                    data_type_translation_gist_object_id=praat_type_gist.object_id)
+                # DBSession.add(praat_field)
 
                 field_1 = DictionaryPerspectiveToField(client_id=test_client.id,
                                                        parent=test_persp,
@@ -567,6 +630,79 @@ def data_init(manager, accounts):
                 for field in [field_1,field_2, field_3]:
                     DBSession.add(field)
 
+                for group in base_groups:
+                    if group.name == "Can edit dictionary status":
+                        test_group = group
+                edit_role(test_dict, test_account.id, test_group.id, admin_account.id, dictionary_default=True)
+
+                lex_entry_1 = create_lexicalentry([test_client.id, None], [test_persp.client_id, test_persp.object_id],
+                                                                             save_object=True)
+                lex_entry_2 = create_lexicalentry([test_client.id, None], [test_persp.client_id, test_persp.object_id],
+                                                                             save_object=True)
+                link_lex_entry_1 = create_lexicalentry([test_client.id, None], [test_persp_link.client_id,
+                                                                                test_persp_link.object_id],
+                                                                            save_object=True)
+                link_lex_entry_2 = create_lexicalentry([test_client.id, None], [test_persp_link.client_id,
+                                                                                test_persp_link.object_id],
+                                                                            save_object=True)
+                lex_entity_1 = create_entity(id=[test_client.id, None], parent_id=[lex_entry_1.client_id,
+                                                                                    lex_entry_1.object_id],
+                                             additional_metadata=None, field_id=[word_field.client_id,
+                                                                                 word_field.object_id],
+                                             self_id=None, link_id=None,
+                                             locale_id= locale_id, filename=None, content="lex entity 1",
+                                             registry=None, request=None, save_object=False)
+
+                lex_entity_2 = create_entity(id=[test_client.id, None], parent_id=[lex_entry_2.client_id,
+                                                                                   lex_entry_2.object_id],
+                                             additional_metadata=None, field_id=[word_field.client_id,
+                                                                                 word_field.object_id],
+                                             self_id=None, link_id=None,
+                                             locale_id=locale_id, filename=None, content="lex entity 2",
+                                             registry=None, request=None, save_object=False)
+
+                link_lex_entity_1 = create_entity(id=[test_client.id, None], parent_id=[link_lex_entry_1.client_id,
+                                                                                   link_lex_entry_1.object_id],
+                                             additional_metadata=None, field_id=[word_field.client_id,
+                                                                                 word_field.object_id],
+                                             self_id=None, link_id=None,
+                                             locale_id=locale_id, filename=None, content="link lex entity 1",
+                                             registry=None, request=None, save_object=False)
+
+                link_lex_entity_2 = create_entity(id=[test_client.id, None], parent_id=[link_lex_entry_2.client_id,
+                                                                                   link_lex_entry_2.object_id],
+                                             additional_metadata=None, field_id=[word_field.client_id,
+                                                                                 word_field.object_id],
+                                             self_id=None, link_id=None,
+                                             locale_id=locale_id, filename=None, content="link lex entity 2",
+                                             registry=None, request=None, save_object=False)
+
+                '''
+                with open(os.path.dirname(__file__)  + '/test_ids.txt', 'w', encoding='utf-8') as file:
+                   file.write("Test ids: \n")
+                   file.write("lex_entry 1: [%s, %s] \n" % (lex_entry_1.client_id, lex_entry_1.object_id))
+                   file.write("lex_entry 2: [%s, %s] \n" % (lex_entry_2.client_id, lex_entry_2.object_id))
+                   file.write("lex_link_entry 1: [%s, %s] \n" % (link_lex_entry_1.client_id, link_lex_entry_1.object_id))
+                   file.write("lex_link_entry 2: [%s, %s] \n" % (link_lex_entry_2.client_id, link_lex_entry_2.object_id))
+                   file.write("\n")
+                   file.write("lex_entity_1: [%s, %s] \n" % (lex_entity_1.client_id, lex_entity_1.object_id))
+                   file.write("lex_entity_2: [%s, %s] \n" % (lex_entity_2.client_id, lex_entity_2.object_id))
+                   file.write("link_lex_entity_1: [%s, %s] \n" % (link_lex_entity_1.client_id, link_lex_entity_1.object_id))
+                   file.write("link_lex_entity_2: [%s, %s] \n" % (link_lex_entity_2.client_id, link_lex_entity_2.object_id))
+                   file.write("\n Field ids: \n")
+                   file.write("Field: [%s, %s] \n" % (word_field.client_id, word_field.object_id))
+                   file.write("\n")
+                   file.write("Test_dict: [%s, %s] \n" % (test_dict.client_id, test_dict.object_id))
+                   file.write("Test_persp: [%s, %s] \n" % (test_persp.client_id, test_persp.object_id))
+                   file.write("Test_persp_link: [%s, %s] \n" % (test_persp_link.client_id, test_persp_link.object_id))
+                   file.write("\n")
+                   file.write("Word gist: [%s, %s] \n" % (word_gist.client_id, word_gist.object_id))
+                   file.write("\n")
+                   file.write("Test gist: [%s, %s] \n" % (dict_name_gist.client_id, dict_name_gist.object_id))
+                   file.write("\n")
+                   file.write("English atom: [%s, %s] \n" % (english_atom.client_id, english_atom.object_id))
+                '''
+
             except Exception as e:
                 import traceback
                 print('couldn\'t create all test data')
@@ -575,371 +711,6 @@ def data_init(manager, accounts):
                 pass
 
 
-        # fake_dictionary = Dictionary(client_id=client.id,
-        #                              #object_id=1,
-        #                              translation_string="Fake dictionary",
-        #                              state="Service")
-        # DBSession.add(fake_dictionary)
-        # DBSession.flush()
-        #
-        # dialeqt_template = DictionaryPerspective(client_id=client.id,
-        #                                          #object_id=1,
-        #                                          parent_client_id=fake_dictionary.client_id,
-        #                                          parent_object_id=fake_dictionary.object_id,
-        #                                          is_template=True,
-        #                                          state="Service",
-        #                                          translation_string="Lingvodoc desktop version")
-        # DBSession.add(dialeqt_template)
-        # DBSession.flush()
-        #
-        # word_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                      #object_id=1,
-        #                                      client_id=client.id,
-        #                                      entity_type="Word", data_type="text", level="leveloneentity", position=1,
-        #                                      state="enabled")
-        # transcription_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                               #object_id=2,
-        #                                               client_id=client.id,
-        #                                               entity_type="Transcription", data_type="text",
-        #                                               level="leveloneentity", position=2,
-        #                                               state="enabled")
-        # translation_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                             #object_id=3,
-        #                                             client_id=client.id,
-        #                                             entity_type="Translation",
-        #                                             data_type="text", level="leveloneentity", position=3,
-        #                                             state="enabled")
-        # sound_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                       #object_id=4,
-        #                                       client_id=client.id,
-        #                                       entity_type="Sound", data_type="sound", level="leveloneentity", position=4,
-        #                                       state="enabled")
-        # for field in [word_ld, transcription_ld, translation_ld, sound_ld]:
-        #     DBSession.add(field)
-        # DBSession.flush()
-        # praat_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                       entity_object_id=sound_ld.object_id, entity_client_id=sound_ld.client_id,
-        #                                       #object_id=5,
-        #                                       client_id=client.id,
-        #                                       entity_type="Praat markup", data_type="markup", level="leveltwoentity", position=5,
-        #                                       state="enabled")
-        # paradigm_word_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                               #object_id=6,
-        #                                               client_id=client.id,
-        #                                               entity_type="Paradigm word", data_type="text", level="leveloneentity",
-        #                                               group="Paradigm", position=6,
-        #                                               state="enabled")
-        # paradigm_transcription_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                                        #object_id=7,
-        #                                                        client_id=client.id,
-        #                                                        entity_type="Paradigm transcription", data_type="text",
-        #                                                        level="leveloneentity",
-        #                                                        group="Paradigm",
-        #                                                        position=7,
-        #                                                        state="enabled")
-        # paradigm_translation_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                                      #object_id=8,
-        #                                                      client_id=client.id,
-        #                                                      entity_type="Paradigm translation", data_type="text",
-        #                                                      group="Paradigm",
-        #                                                      level="leveloneentity", position=8,
-        #                                                      state="enabled")
-        # paradigm_sound_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                                #object_id=9,
-        #                                                client_id=client.id,
-        #                                                group="Paradigm",
-        #                                                entity_type="Paradigm sound", data_type="sound", level="leveloneentity",
-        #                                                position=9,
-        #                                                state="enabled")
-        # for field in [praat_ld, paradigm_word_ld, paradigm_transcription_ld,
-        #               paradigm_translation_ld, paradigm_sound_ld]:
-        #     DBSession.add(field)
-        # DBSession.flush()
-        # paradigm_praat_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                                entity_object_id=paradigm_sound_ld.object_id, entity_client_id=paradigm_sound_ld.client_id,
-        #                                                #object_id=10,
-        #                                                client_id=client.id,
-        #                                                group="Paradigm",
-        #                                                entity_type="Paradigm Praat markup", data_type="markup",
-        #                                                level="leveltwoentity", position=10,
-        #                                                state="enabled")
-        # etymology_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
-        #                                           #object_id=11,
-        #                                           client_id=client.id,
-        #                                           entity_type="Etymology", data_type="grouping_tag", level="groupingentity",
-        #                                           position=11,
-        #                                           state="enabled")
-        # for field in [paradigm_praat_ld, etymology_ld]:
-        #     DBSession.add(field)
-        #
-        # regular_dictionary_template = DictionaryPerspective(client_id=client.id,
-        #                                                     #object_id=1,
-        #                                                     parent_client_id=fake_dictionary.client_id,
-        #                                                     parent_object_id=fake_dictionary.object_id,
-        #                                                     is_template=True,
-        #                                                     state="Service",
-        #                                                     translation_string="Regular dictionary")
-        # DBSession.add(regular_dictionary_template)
-        # DBSession.flush()
-        #
-        # protoform_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                 parent_object_id=regular_dictionary_template.object_id,
-        #                                                 client_id=client.id,
-        #                                                 data_type="text",
-        #                                                 level='leveloneentity',
-        #                                                 state="enabled",
-        #                                                 position=1,
-        #                                                 entity_type="Protoform"
-        #                                                 )
-        # word_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                            parent_object_id=regular_dictionary_template.object_id,
-        #                                            client_id=client.id,
-        #                                            data_type="text",
-        #                                            level='leveloneentity',
-        #                                            state="enabled",
-        #                                            position=2,
-        #                                            entity_type="Word"
-        #                                            )
-        # transcription_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                     parent_object_id=regular_dictionary_template.object_id,
-        #                                                     client_id=client.id,
-        #                                                     data_type="text",
-        #                                                     level='leveloneentity',
-        #                                                     state="enabled",
-        #                                                     position=3,
-        #                                                     entity_type="Transcription"
-        #                                                     )
-        # duration_1_vowel_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                        parent_object_id=regular_dictionary_template.object_id,
-        #                                                        client_id=client.id,
-        #                                                        data_type="text",
-        #                                                        level='leveloneentity',
-        #                                                        state="enabled",
-        #                                                        position=4,
-        #                                                        entity_type="Duration 1 vowel"
-        #                                                        )
-        #
-        # intensity_1_vowel_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                         parent_object_id=regular_dictionary_template.object_id,
-        #                                                         client_id=client.id,
-        #                                                         data_type="text",
-        #                                                         level='leveloneentity',
-        #                                                         state="enabled",
-        #                                                         position=5,
-        #                                                         entity_type="Intensity 1 vowel"
-        #                                                         )
-        # native_speaker_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                      parent_object_id=regular_dictionary_template.object_id,
-        #                                                      client_id=client.id,
-        #                                                      data_type="text",
-        #                                                      level='leveloneentity',
-        #                                                      state="enabled",
-        #                                                      position=6,
-        #                                                      entity_type="Native speaker"
-        #                                                      )
-        # dialect_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                               parent_object_id=regular_dictionary_template.object_id,
-        #                                               client_id=client.id,
-        #                                               data_type="text",
-        #                                               level='leveloneentity',
-        #                                               state="enabled",
-        #                                               position=1,
-        #                                               entity_type="Dialect"
-        #                                               )
-        # translation_ld_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                      parent_object_id=regular_dictionary_template.object_id,
-        #                                                      client_id=client.id,
-        #                                                      data_type="text",
-        #                                                      level='leveloneentity',
-        #                                                      state="enabled",
-        #                                                      position=7,
-        #                                                      entity_type="Translation"
-        #                                                      )
-        # grammatical_form_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                        parent_object_id=regular_dictionary_template.object_id,
-        #                                                        client_id=client.id,
-        #                                                        data_type="text",
-        #                                                        level='leveloneentity',
-        #                                                        state="enabled",
-        #                                                        position=8,
-        #                                                        entity_type="Grammatical form"
-        #                                                        )
-        # it_is_formed_from_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                         parent_object_id=regular_dictionary_template.object_id,
-        #                                                         client_id=client.id,
-        #                                                         data_type="text",
-        #                                                         level='leveloneentity',
-        #                                                         state="enabled",
-        #                                                         position=9,
-        #                                                         entity_type="It is formed from"
-        #                                                         )
-        # similarity_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                  parent_object_id=regular_dictionary_template.object_id,
-        #                                                  client_id=client.id,
-        #                                                  data_type="text",
-        #                                                  level='leveloneentity',
-        #                                                  state="enabled",
-        #                                                  position=10,
-        #                                                  entity_type="Similarity"
-        #                                                  )
-        # the_page_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                parent_object_id=regular_dictionary_template.object_id,
-        #                                                client_id=client.id,
-        #                                                data_type="text",
-        #                                                level='leveloneentity',
-        #                                                state="enabled",
-        #                                                position=11,
-        #                                                entity_type="the Page"
-        #                                                )
-        # the_line_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                parent_object_id=regular_dictionary_template.object_id,
-        #                                                client_id=client.id,
-        #                                                data_type="text",
-        #                                                level='leveloneentity',
-        #                                                state="enabled",
-        #                                                position=12,
-        #                                                entity_type="the Line"
-        #                                                )
-        # the_head_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                parent_object_id=regular_dictionary_template.object_id,
-        #                                                client_id=client.id,
-        #                                                data_type="text",
-        #                                                level='leveloneentity',
-        #                                                state="enabled",
-        #                                                position=13,
-        #                                                entity_type="the Head"
-        #                                                )
-        # the_verse_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                                 parent_object_id=regular_dictionary_template.object_id,
-        #                                                 client_id=client.id,
-        #                                                 data_type="text",
-        #                                                 level='leveloneentity',
-        #                                                 state="enabled",
-        #                                                 position=14,
-        #                                                 entity_type="the Verse"
-        #                                                 )
-        # notes_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
-        #                                             parent_object_id=regular_dictionary_template.object_id,
-        #                                             client_id=client.id,
-        #                                             data_type="text",
-        #                                             level='leveloneentity',
-        #                                             state="enabled",
-        #                                             position=15,
-        #                                             entity_type="Notes"
-        #                                             )
-        # for field in [protoform_ordinary, word_ordinary, transcription_ordinary, duration_1_vowel_ordinary, intensity_1_vowel_ordinary,
-        #               native_speaker_ordinary, dialect_ordinary, translation_ld_ordinary, grammatical_form_ordinary,
-        #               it_is_formed_from_ordinary, similarity_ordinary, the_page_ordinary, the_line_ordinary,
-        #               the_head_ordinary, the_verse_ordinary, notes_ordinary]:
-        #     DBSession.add(field)
-        #
-        #
-        # morphodict = DictionaryPerspective(client_id=client.id,
-        #                                    parent_client_id=fake_dictionary.client_id,
-        #                                    parent_object_id=fake_dictionary.object_id,
-        #                                    is_template=True,
-        #                                    state="Service",
-        #                                    translation_string="Morhological dictionary")
-        # DBSession.add(morphodict)
-        # DBSession.flush()
-        #
-        # morph_cate = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                         parent_object_id=morphodict.object_id,
-        #                                         client_id=client.id,
-        #                                         data_type="text", level="leveloneentity",
-        #                                         state='enabled',
-        #                                         position=0,
-        #                                         entity_type="Grammatical category")
-        #
-        # form_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                         parent_object_id=morphodict.object_id,
-        #                                         client_id=client.id,
-        #                                         data_type="text", level="leveloneentity",
-        #                                         state='enabled',
-        #                                         position=1,
-        #                                         entity_type="Form")
-        # transcription_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                                  parent_object_id=morphodict.object_id,
-        #                                                  client_id=client.id,
-        #                                                  data_type="text", level="leveloneentity",
-        #                                                  state='enabled',
-        #                                                  position=2,
-        #                                                  entity_type="Transcription")
-        # variants_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                             parent_object_id=morphodict.object_id,
-        #                                             client_id=client.id,
-        #                                             data_type="text", level="leveloneentity",
-        #                                             state='enabled',
-        #                                             position=3,
-        #                                             entity_type="Variants")
-        # native_speaker_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                                   parent_object_id=morphodict.object_id,
-        #                                                   client_id=client.id,
-        #                                                   data_type="text", level="leveloneentity",
-        #                                                   state='enabled',
-        #                                                   position=4,
-        #                                                   entity_type="Native speaker")
-        # text_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                         parent_object_id=morphodict.object_id,
-        #                                         client_id=client.id,
-        #                                         data_type="text", level="leveloneentity",
-        #                                         state='enabled',
-        #                                         position=5,
-        #                                         entity_type="Text")
-        # dialect_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                            parent_object_id=morphodict.object_id,
-        #                                            client_id=client.id,
-        #                                            data_type="text", level="leveloneentity",
-        #                                            state='enabled',
-        #                                            position=6,
-        #                                            entity_type="Dialect")
-        # in_combination_with_cat_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                                            parent_object_id=morphodict.object_id,
-        #                                                            client_id=client.id,
-        #                                                            data_type="text", level="leveloneentity",
-        #                                                            state='enabled',
-        #                                                            position=7,
-        #                                                            entity_type="in combination with categories")
-        # frequency_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                              parent_object_id=morphodict.object_id,
-        #                                              client_id=client.id,
-        #                                              data_type="text", level="leveloneentity",
-        #                                              state='enabled',
-        #                                              position=8,
-        #                                              entity_type="Frequency")
-        # number_of_an_affix_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                                       parent_object_id=morphodict.object_id,
-        #                                                       client_id=client.id,
-        #                                                       data_type="text", level="leveloneentity",
-        #                                                       state='enabled',
-        #                                                       position=9,
-        #                                                       entity_type="Number of an affix")
-        # the_page_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                             parent_object_id=morphodict.object_id,
-        #                                             client_id=client.id,
-        #                                             data_type="text", level="leveloneentity",
-        #                                             state='enabled',
-        #                                             position=10,
-        #                                             entity_type="the Page")
-        # the_line_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                             parent_object_id=morphodict.object_id,
-        #                                             client_id=client.id,
-        #                                             data_type="text", level="leveloneentity",
-        #                                             state='enabled',
-        #                                             position=11,
-        #                                             entity_type="the Line")
-        # notes_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
-        #                                          parent_object_id=morphodict.object_id,
-        #                                          client_id=client.id,
-        #                                          data_type="text", level="leveloneentity",
-        #                                          state='enabled',
-        #                                          position=12,
-        #                                          entity_type="Notes")
-        #
-        # for field in [morph_cate, form_morph, transcription_morph, variants_morph, native_speaker_morph, text_morph,
-        #               dialect_morph, in_combination_with_cat_morph, frequency_morph, number_of_an_affix_morph,
-        #               the_page_morph, the_line_morph, notes_morph]:
-        #     DBSession.add(field)
 
 
 def main(argv=sys.argv):
@@ -955,4 +726,13 @@ def main(argv=sys.argv):
     DBSession.configure(bind=engine)
     # Base.metadata.create_all(engine)
     # with transaction.manager:
-    data_init(transaction.manager, accounts)
+    # alembic_ini_path = os.path.join(
+    #     os.path.dirname(__file__), 'alembic.ini')
+    # parser = ConfigParser()
+    # parser.read(alembic_ini_path)
+    # alembic_conf = dict()
+    # for k, v in parser.items('alembic'):
+    #     alembic_conf[k] = v
+    #dbname = alembic_conf['sqlalchemy.url']
+    dbname = 'postgresql+psycopg2://postgres:@/test_base_1'
+    data_init(transaction.manager, accounts, dbname)

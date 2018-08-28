@@ -229,7 +229,7 @@ def create_dblanguage(id=None,
                                                                                             'younger_siblings'].desc()).first()
     dblanguage.additional_metadata = dict()
     dblanguage.additional_metadata['younger_siblings'] = list()
-    if prev_sibling:
+    if prev_sibling and prev_sibling.additional_metadata:
         dblanguage.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
         dblanguage.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
 
