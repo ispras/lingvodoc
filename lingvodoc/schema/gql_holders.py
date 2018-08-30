@@ -148,6 +148,19 @@ class LingvodocID(Scalar):
             return None
 
 
+class Upload(graphene.types.Scalar):
+    @staticmethod
+    def serialize(value):
+        return value
+
+    @staticmethod
+    def parse_literal(node):
+        return node
+
+    @staticmethod
+    def parse_value(value):
+        return value
+
 # class LevelID(Scalar):
 #     """
 #     made specifically for returning language tree

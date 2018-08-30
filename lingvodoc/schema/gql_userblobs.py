@@ -16,8 +16,8 @@ from lingvodoc.schema.gql_holders import (
     RealStoragePath,
     del_object,
     ResponseError,
-    LingvodocID
-)
+    LingvodocID,
+    Upload)
 from lingvodoc.utils.creation import create_object
 
 from lingvodoc.models import (
@@ -89,6 +89,7 @@ class CreateUserBlob(graphene.Mutation):
     """
     class Arguments:
         id = LingvodocID()
+        file1 = Upload()
         data_type = graphene.String(required=True)  #(required=True)
 
 
@@ -102,6 +103,7 @@ class CreateUserBlob(graphene.Mutation):
         id = args.get('id')
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
+        
         if not "variables.content" in info.context.request.POST:
             raise ResponseError(message="file not found")
         multiparted = info.context.request.POST.pop("variables.content")
