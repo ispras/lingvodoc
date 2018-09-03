@@ -754,8 +754,8 @@ def graphql(request):
                 return {'errors': [{"message": 'operations key not nound'}]}
             elif not "query" in data["operations"]:
                 return {'errors': [{"message": 'query key not nound in operations'}]}
-            elif not "variables.content" in data:
-                return {'errors': [{"message": 'variables.content key not nound'}]}
+            elif not "0" in data:
+                return {'errors': [{"message": '0 key not nound'}]}
 
             request_string = request.POST.pop("operations")
             request_string= request_string.rstrip()
