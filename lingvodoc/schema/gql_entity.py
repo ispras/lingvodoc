@@ -6,8 +6,8 @@ from sqlalchemy import and_
 from lingvodoc.models import DBSession
 from lingvodoc.schema.gql_holders import (
     fetch_object,
-    ObjectVal
-)
+    ObjectVal,
+    Upload)
 from lingvodoc.models import (
     Entity as dbEntity,
     Client,
@@ -157,6 +157,7 @@ class CreateEntity(graphene.Mutation):
         )
         content = graphene.String()
         registry = ObjectVal()
+        file_content = Upload()
 
     # Result object
 
@@ -255,7 +256,7 @@ class CreateEntity(graphene.Mutation):
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-            blob = info.context.request.POST.pop("variables.content")
+            blob = info.context.request.POST.pop("0")
             filename=blob.filename
             content = blob.file.read()
             #filename=

@@ -104,9 +104,9 @@ class CreateUserBlob(graphene.Mutation):
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         
-        if not "variables.content" in info.context.request.POST:
+        if not "0" in info.context.request.POST:
             raise ResponseError(message="file not found")
-        multiparted = info.context.request.POST.pop("variables.content")
+        multiparted = info.context.request.POST.pop("0")
         # multiparted = info.context.request.POST.pop("opearations")
         filename = multiparted.filename
         input_file = multiparted.file#multiparted.file
