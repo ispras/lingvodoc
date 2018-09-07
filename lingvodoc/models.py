@@ -695,12 +695,32 @@ class Field(CompositeIdMixin,
     is_translatable = Column(Boolean, default=False, nullable=False)
 
 
+class ReprIdMixin(object):
+    """
+    Changes representation string to include client/object id, useful for debugging.
+
+    See https://stackoverflow.com/a/48777066/2016856 for how to mimic standard object.__repr__().
+    """
+
+    def __repr__(self):
+
+        self_type = type(self)
+
+        return '<{0}.{1} ({2}/{3}) object at {4:x}>'.format(
+            self_type.__module__,
+            self_type.__qualname__,
+            self.client_id,
+            self.object_id,
+            id(self))
+
+
 class LexicalEntry(CompositeIdMixin,
                    Base,
                    TableNameMixin,
                    RelationshipMixin,
                    CreatedAtMixin, MarkedForDeletionMixin,
-                   AdditionalMetadataMixin):
+                   AdditionalMetadataMixin,
+                   ReprIdMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -710,7 +730,8 @@ class LexicalEntry(CompositeIdMixin,
     __parentname__ = 'DictionaryPerspective'
     moved_to = Column(UnicodeText)
 
-    def track(self, publish, locale_id):
+    def track(self, publish, locale_id, accept = None, delete = False):
+
         metadata = self.additional_metadata if self.additional_metadata else None
         came_from = metadata.get('came_from') if metadata and 'came_from' in metadata else None
 
@@ -718,12 +739,12 @@ class LexicalEntry(CompositeIdMixin,
                                  self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
                                  self.marked_for_deletion, metadata, came_from)]
 
-        res_list = self.track_multiple(lexes_composite_list, locale_id, publish)
+        res_list = self.track_multiple(lexes_composite_list, locale_id, publish, accept, delete)
 
         return res_list[0] if res_list else {}
 
     @classmethod
-    def track_multiple(cls, lexs, locale_id, publish=None, accept=None):
+    def track_multiple(cls, lexs, locale_id, publish=None, accept=None, delete=False):
         log.debug(lexs)
         filtered_lexes = []
 
@@ -739,20 +760,39 @@ class LexicalEntry(CompositeIdMixin,
         if not ls:
             return []
 
+        # Filtering by deletion status, if requred.
+
+        delete_string = ''
+
+        if delete:
+            delete_string = 'cte_expr.marked_for_deletion = True'
+
+        elif delete is False:
+            delete_string = 'cte_expr.marked_for_deletion = False'
+
         pub_filter = ""
+
         if publish or accept:
+
             if publish and accept is None:
-                pub_filter = " WHERE publishingentity.published = True and cte_expr.marked_for_deletion = False"
+                pub_filter = " WHERE publishingentity.published = True "
             elif accept and publish is None:
-                pub_filter = " WHERE publishingentity.accepted = True and cte_expr.marked_for_deletion = False"
+                pub_filter = " WHERE publishingentity.accepted = True "
             elif accept and publish:
-                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True and cte_expr.marked_for_deletion = False"
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True"
             elif publish and not accept:
-                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True and cte_expr.marked_for_deletion = False"  # should not be used anywhere, just in case
+                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True"  # should not be used anywhere, just in case
             elif accept and not publish:
-                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False and cte_expr.marked_for_deletion = False"
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False"
+
+            if delete_string:
+                pub_filter += ' and ' + delete_string
+
+        elif delete_string:
+            pub_filter = ' WHERE ' + delete_string
+
         else:
-            pub_filter = " WHERE cte_expr.marked_for_deletion = False"
+            pub_filter = ''
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
@@ -968,7 +1008,6 @@ class LexicalEntry(CompositeIdMixin,
         return entries
 
 
-
 class Entity(CompositeIdMixin,
              Base,
              TableNameMixin,
@@ -977,7 +1016,8 @@ class Entity(CompositeIdMixin,
              SelfMixin,
              FieldMixin,
              ParentLinkMixin, MarkedForDeletionMixin,
-             AdditionalMetadataMixin):
+             AdditionalMetadataMixin,
+             ReprIdMixin):
     __parentname__ = "LexicalEntry"
 
     content = Column(UnicodeText)

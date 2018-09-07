@@ -32,6 +32,7 @@ import datetime
 from hashlib import md5
 import os
 import os.path
+import shutil
 import traceback
 import urllib
 
@@ -590,23 +591,55 @@ def anonymous_userid(request):
     unique_string = "unauthenticated_%s_%s" % (ip, useragent)
     return base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
 
+
+storage_url_prefix = 'http://lingvodoc.ispras.ru/objects/'
+
+
 def storage_file(storage_config, url):
     """
     Given a URL of a file from storage, first tries to open it as a file from local storage, and
     then as a download stream.
     """
 
-    storage_url_prefix = 'http://lingvodoc.ispras.ru/objects/'
-
     if url.startswith(storage_url_prefix):
 
-        storage_file_path = os.path.join('/root/lingvodoc-extra/backend_storage',
+        storage_file_path = os.path.join(
+            storage_config['path'],
             url[len(storage_url_prefix):])
 
         if os.path.exists(storage_file_path):
             return open(storage_file_path, 'rb')
 
     return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
+
+
+def as_storage_file(storage_config, url):
+    """
+    Given a URL of a file that should be present in the storage on the production Lingvodoc server,
+    downloads it, if it is not present in the local storage, and opens it as a file from the local storage.
+
+    Used for testing and debugging.
+    """
+
+    if not url.startswith(storage_url_prefix):
+        raise NotImplementedError
+
+    storage_file_path = os.path.join(
+        storage_config['path'],
+        url[len(storage_url_prefix):])
+
+    os.makedirs(
+        os.path.dirname(storage_file_path),
+        exist_ok = True)
+
+    if not os.path.exists(storage_file_path):
+
+        with open(storage_file_path, 'wb') as storage_file, \
+            urllib.request.urlopen(urllib.parse.quote(url, safe = '/:')) as url_file:
+
+            shutil.copyfileobj(url_file, storage_file)
+
+    return open(storage_file_path, 'rb')
 
 
 def translation_service_search(searchstring):
@@ -619,3 +652,4 @@ def translation_service_search(searchstring):
         .first()
     response = translationgist_contents(translationatom.parent)
     return response
+

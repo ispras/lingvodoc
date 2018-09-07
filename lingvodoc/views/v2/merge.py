@@ -5,6 +5,7 @@ __author__ = 'alexander'
 
 import collections
 import copy
+import hashlib
 import itertools
 import json
 import logging
@@ -61,8 +62,10 @@ from lingvodoc.models import (
 from lingvodoc.queue.celery import celery
 
 from lingvodoc.views.v2.utils import (
+    as_storage_file,
     message,
     remove_deleted,
+    storage_file,
     unimplemented
 )
 
@@ -476,6 +479,9 @@ def check_user_merge_permissions(
     Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
     create and delete them, via perspective user role subrequest.
     """
+
+    if user.id == 1:
+        return True
 
     if not user.is_active:
         return False
@@ -1182,27 +1188,36 @@ class Merge_Context(object):
     Data and procedures of the bulk merges.
     """
 
-    def __init__(self, method_string, request, client_id, user, publish_any, group_list):
+    def __init__(self,
+        method_string,
+        request,
+        client_id,
+        user,
+        publish_any = None,
+        group_list = None):
         """
         Initialization of the merge data.
         """
 
         self.method_string = method_string
         self.request = request
+
         self.client_id = client_id
         self.user = user
 
+        if group_list is not None:
+
+            self.group_list = group_list
+            self.entry_count = sum(len(entry_id_list) for entry_id_list in group_list)
+
+            log.debug('{0}: {1} lexical entry group{2}, {3} entries:\n{4}'.format(
+                method_string,
+                len(group_list),
+                '' if len(group_list) == 1 else 's',
+                self.entry_count,
+                pprint.pformat(group_list)))
+
         self.publish_any = publish_any
-        self.group_list = group_list
-
-        self.entry_count = sum(len(entry_id_list) for entry_id_list in group_list)
-
-        log.debug('{0}: {1} lexical entry group{2}, {3} entries:\n{4}'.format(
-            method_string,
-            len(group_list),
-            '' if len(group_list) == 1 else 's',
-            self.entry_count,
-            pprint.pformat(group_list)))
 
         self.user_permission_dict = {}
         self.result_list = []
@@ -1353,7 +1368,6 @@ class Merge_Context(object):
             entity_data['contains'], (entity_data['client_id'], entity_data['object_id']))
 
     def merge_contains(self, contains_dict, merge_entity_set, contains_list, container_id):
-
         """
         Merges entities contained in a lexical entry or another entity to already merged entities.
         """
@@ -1535,38 +1549,10 @@ class Merge_Context(object):
 
         return entry_list, perspective_id
 
-    def merge_group(self, index, entry_id_list):
+    def merge_entry_data(self, entry_list, entry_data_list):
         """
-        Merges a group of lexical entries.
+        Merges lexical entry data.
         """
-
-        entry_list, perspective_id = self.check_group(index, entry_id_list)
-
-        log.debug('{0}: group {1}/{2}, {3} lexical entries, perspective {4}/{5}'.format(
-            self.method_string,
-            index + 1,
-            len(self.group_list),
-            len(entry_id_list),
-            *perspective_id))
-
-        # Getting lexical entry data.
-
-        entry_data_list = [e.track(False, 2) for e in entry_list]
-        remove_deleted(entry_data_list)
-
-        log.debug('{0}: group {1}/{2}, lexical entries\' ids:\n{3}'.format(
-            self.method_string,
-            index + 1,
-            len(self.group_list),
-            pprint.pformat(entry_id_list)))
-
-        log.debug('{0}: group {1}/{2}, lexical entries\' data:\n{3}'.format(
-            self.method_string,
-            index + 1,
-            len(self.group_list),
-            pprint.pformat(entry_data_list)))
-
-        # Merging lexical entry data.
 
         entry_dict = {
             'additional_metadata': {},
@@ -1665,13 +1651,113 @@ class Merge_Context(object):
             'original_client_id': entry_original_client_id,
             'merge_tree': entry_merge_tree}
 
-        # Creating new lexical entry.
+        return entry_dict
+
+    def create_entity(self,
+        merge_entry,
+        entity_key,
+        entity_data,
+        entity_parent,
+        client_id = None):
+        """
+        Creates new entity given merged entity data.
+        """
+
+        entity_kwargs = {
+            'client_id': client_id or self.client_id,
+            'field_client_id': entity_data['field_client_id'],
+            'field_object_id': entity_data['field_object_id'],
+            'locale_id': entity_data['locale_id'],
+            'parent_client_id': merge_entry.client_id,
+            'parent_object_id': merge_entry.object_id}
+
+        # Optional attributes.
+
+        if len(entity_data['additional_metadata']) > 0:
+
+            metadata = self.metadata_restore(entity_data['additional_metadata'])
+
+            entity_data['additional_metadata'] = metadata
+            entity_kwargs['additional_metadata'] = metadata
+
+        for name in ['content', 'link_client_id', 'link_object_id']:
+
+            if name in entity_data:
+                entity_kwargs[name] = entity_data[name]
+
+        if entity_parent is not None:
+
+            entity_kwargs['self_client_id'] = entity_parent.client_id
+            entity_kwargs['self_object_id'] = entity_parent.object_id
+
+        # Creating new entity to replace merged entities.
+
+        merge_entity = Entity(**entity_kwargs)
+
+        if entity_data.get('accepted', False):
+            merge_entity.publishingentity.accepted = True
+
+        if entity_data.get('published', False):
+            merge_entity.publishingentity.published = True
+
+        DBSession.add(merge_entity)
+
+        log.debug(
+            '{0}: {1} entit{2} of type \'{3}\' with content '
+            '{4} merged into entity {5}/{6}:\n{7}'.format(
+            self.method_string,
+            len(entity_data['merge_set']),
+            'y' if len(entity_data['merge_set']) == 1 else 'ies',
+            entity_key[0],
+            repr(entity_key[1]),
+            merge_entity.client_id,
+            merge_entity.object_id,
+            pprint.pformat(dict(object_id = merge_entity.object_id, **entity_kwargs))))
+
+        return merge_entity
+
+    def merge_group(self, index, entry_id_list):
+        """
+        Merges a group of lexical entries.
+        """
+
+        entry_list, perspective_id = self.check_group(index, entry_id_list)
+
+        log.debug('{0}: group {1}/{2}, {3} lexical entries, perspective {4}/{5}'.format(
+            self.method_string,
+            index + 1,
+            len(self.group_list),
+            len(entry_id_list),
+            *perspective_id))
+
+        # Getting lexical entry data.
+
+        entry_data_list = [e.track(False, 2) for e in entry_list]
+        remove_deleted(entry_data_list)
+
+        log.debug('{0}: group {1}/{2}, lexical entries\' ids:\n{3}'.format(
+            self.method_string,
+            index + 1,
+            len(self.group_list),
+            pprint.pformat(entry_id_list)))
+
+        log.debug('{0}: group {1}/{2}, lexical entries\' data:\n{3}'.format(
+            self.method_string,
+            index + 1,
+            len(self.group_list),
+            pprint.pformat(entry_data_list)))
+
+        # Merging lexical entry data.
+
+        entry_dict = self.merge_entry_data(entry_list, entry_data_list)
 
         log.debug('{0}: group {1}/{2}, merged lexical entries\' data:\n{3}'.format(
             self.method_string,
             index + 1,
             len(self.group_list),
             pprint.pformat(entry_dict)))
+
+        # Creating new lexical entry.
 
         entry_kwargs = {
             'client_id': self.client_id,
@@ -1711,57 +1797,8 @@ class Merge_Context(object):
             Recursively creates new entities from merged entities.
             """
 
-            entity_kwargs = {
-                'client_id': self.client_id,
-                'field_client_id': entity_data['field_client_id'],
-                'field_object_id': entity_data['field_object_id'],
-                'locale_id': entity_data['locale_id'],
-                'parent_client_id': merge_entry.client_id,
-                'parent_object_id': merge_entry.object_id}
-
-            # Optional attributes.
-
-            if len(entity_data['additional_metadata']) > 0:
-
-                metadata = self.metadata_restore(entity_data['additional_metadata'])
-
-                entity_data['additional_metadata'] = metadata
-                entity_kwargs['additional_metadata'] = metadata
-
-            for name in ['content', 'link_client_id', 'link_object_id']:
-
-                if name in entity_data:
-                    entity_kwargs[name] = entity_data[name]
-
-            if entity_parent is not None:
-                entity_kwargs['self_client_id'] = entity_parent.client_id
-                entity_kwargs['self_object_id'] = entity_parent.object_id
-
-            # Creating new entity to replace merged entities.
-
-            merge_entity = Entity(**entity_kwargs)
-
-            if entity_data.get('accepted', False):
-                merge_entity.publishingentity.accepted = True
-
-            if entity_data.get('published', False):
-                merge_entity.publishingentity.published = True
-
-            DBSession.add(merge_entity)
-
-            log.debug(
-                '{0}: group {1}/{2}, {3} entit{4} of type \'{5}\' '
-                'with content {6} merged into entity {7}/{8}:\n{9}'.format(
-                self.method_string,
-                index + 1,
-                len(self.group_list),
-                len(entity_data['merge_set']),
-                'y' if len(entity_data['merge_set']) == 1 else 'ies',
-                entity_key[0],
-                repr(entity_key[1]),
-                merge_entity.client_id,
-                merge_entity.object_id,
-                pprint.pformat(dict(object_id = merge_entity.object_id, **entity_kwargs))))
+            merge_entity = self.create_entity(
+                merge_entry, entity_key, entity_data, entity_parent)
 
             # Updating merged entities.
 
@@ -1998,6 +2035,276 @@ class Merge_Context(object):
                 # too, if required.
 
                 self_reference_replace(link_entity, merge_entity)
+
+    def hash_fix(self, index_str, merge_entry, hash_content_dict):
+        """
+        Tries to update results of the merge after source lexical entries and entities were changed.
+        """
+
+        merge_tree = merge_entry.additional_metadata['merge']['merge_tree']
+        linear_flag = True
+
+        for entry_id in merge_tree:
+
+            if (len(entry_id) != 2 or
+                not isinstance(entry_id[0], int) or not isinstance(entry_id[1], int)):
+
+                linear_flag = False
+                break
+
+        # If we have a simple linear merge tree (so, just a merge list), we get merged lexical entries by
+        # their ids.
+
+        if linear_flag:
+
+            source_entry_id_list = merge_tree
+
+            source_entry_list = DBSession.query(LexicalEntry).filter(
+                tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(
+                    tuple(source_entry_id) for source_entry_id in source_entry_id_list)).all()
+
+        # Otherwise we have to search for source lexical entries based on their merge metadata tags.
+
+        else:
+
+            source_entry_list = DBSession.query(LexicalEntry).filter(
+                LexicalEntry.additional_metadata.contains({'merged_to':
+                    [merge_entry.client_id, merge_entry.object_id]})).all()
+
+            source_entry_id_list = [
+                (source_entry.client_id, source_entry.object_id)
+                for source_entry in source_entry_list]
+
+        # Showing info of source lexical entries.
+
+        log.debug('{0}: merge entry {1}/{2} ({3}), {4} source lexical entries ({5})'.format(
+            self.method_string,
+            merge_entry.client_id,
+            merge_entry.object_id,
+            index_str,
+            len(source_entry_id_list),
+            ', '.join('{0}/{1}'.format(*source_entry_id)
+                for source_entry_id in source_entry_id_list)))
+
+        # Getting and showing info of entites created in the merge being updated.
+
+        merge_entity_list = DBSession.query(Entity).filter_by(
+            parent_client_id = merge_entry.client_id,
+            parent_object_id = merge_entry.object_id).all()
+
+        merge_data = merge_entry.track(False, 2, None, None)
+
+        log.debug('{0}: {1} merge entities ({2})\n{3}'.format(
+            self.method_string,
+            len(merge_entity_list),
+            ', '.join('{0}/{1}'.format(entity.client_id, entity.object_id)
+                for entity in merge_entity_list),
+            pprint.pformat(merge_data)))
+
+        merge_entity_dict = {
+            (entity.client_id, entity.object_id): entity
+            for entity in merge_entity_list}
+
+        merge_dict = collections.defaultdict(set)
+
+        def f(entity_data_list):
+            """
+            Filters entity track data by leaving only entities used in a merge, gathers info on what
+            source entities were merged into which merge entities.
+            """
+
+            result_list = []
+
+            for entity_data in entity_data_list:
+
+                if ('additional_metadata' in entity_data and
+                    'merged_to' in entity_data['additional_metadata']):
+
+                    merged_to = tuple(
+                        entity_data['additional_metadata']['merged_to'])
+
+                    merge_dict[merged_to].add(
+                        (entity_data['client_id'], entity_data['object_id']))
+
+                    if 'contains' in entity_data:
+                        entity_data['contains'] = f(entity_data['contains'])
+
+                    result_list.append(entity_data)
+
+            return result_list
+
+        # Getting info of entities used for the merge.
+
+        entry_data_list = []
+
+        for source_entry in source_entry_list:
+            entry_data = source_entry.track(False, 2, None, None)
+
+            if 'contains' in entry_data:
+                entry_data['contains'] = f(entry_data['contains'])
+
+            entry_data_list.append(entry_data)
+
+        log.debug('{0}: source lexical entries\' data:\n{1}'.format(
+            self.method_string,
+            pprint.pformat(entry_data_list, width = 144)))
+
+        source_dict = {
+            tuple(sorted(entity_id_set)): entity_id
+            for entity_id, entity_id_set in merge_dict.items()}
+
+        log.debug('{0}: source/merge entity correspondece:\n{1}'.format(
+            self.method_string,
+            pprint.pformat(source_dict)))
+
+        # Merging lexical entry data.
+
+        entry_dict = self.merge_entry_data(source_entry_list, entry_data_list)
+
+        if len(entry_dict['additional_metadata']) > 0:
+            entry_dict['additional_metadata'] = self.metadata_restore(entry_dict['additional_metadata'])
+
+        log.debug('{0}: merged lexical entries\' data:\n{1}'.format(
+            self.method_string,
+            pprint.pformat(entry_dict, width = 144)))
+
+        modify_set = set()
+
+        def g(type, key, entity_data, entity_parent = None):
+            """
+            Looks through the merged data, processing hash-datatype ('Image', 'Markup', 'Sound') nodes.
+            """
+
+            log.debug('{0}: entity data {1}, {2}\n{3}'.format(
+                self.method_string,
+                repr(type),
+                repr(key),
+                pprint.pformat(entity_data)))
+
+            merge_entity = None
+
+            entity_set_key = tuple(
+                sorted(entity_data['merge_set']))
+
+            # Checking if we can reuse already existing entity.
+
+            if entity_set_key in source_dict:
+
+                merge_entity_id = source_dict[entity_set_key]
+                merge_entity = merge_entity_dict[merge_entity_id]
+
+                hash_flag = type in ['Image', 'Markup', 'Sound']
+
+                log.debug('{0}: {1} entity {2}/{3}\n{4}'.format(
+                    self.method_string,
+                    'modifying' if hash_flag else 'reusing',
+                    merge_entity.client_id,
+                    merge_entity.object_id,
+                    pprint.pformat({
+                        key: getattr(merge_entity, key)
+                        for key in dir(merge_entity)
+                        if not key.startswith('_')})))
+
+                # Ensuring proper child-parent entity linking, modifying hash, if required.
+
+                if entity_parent is not None:
+
+                    merge_entity.self_client_id = entity_parent.client_id
+                    merge_entity.self_object_id = entity_parent.object_id
+
+                else:
+
+                    merge_entity.self_client_id = None
+                    merge_entity.self_object_id = None
+
+                if hash_flag:
+
+                    merge_entity.additional_metadata['hash'] = \
+                        entity_data['additional_metadata']['hash']
+
+                    flag_modified(merge_entity, 'additional_metadata')
+
+                modify_set.add(merge_entity_id)
+
+            # We do not have an already existing merge entity, so we have to create a new one.
+
+            else:
+
+                # If 'publish_any' switch is not set, false 'publish' entity data key means that setting
+                # 'publish_any' switch could have changed entity merge results, and we should take care.
+
+                if not entity_data['published']:
+                    raise NotImplementedError
+
+                merge_entity = self.create_entity(
+                    merge_entry, (type, key), entity_data, entity_parent,
+                    client_id = merge_entry.client_id)
+
+                # Updating merged entities.
+
+                for c_id, o_id in sorted(entity_data['merge_set']):
+
+                    entity = DBSession.query(Entity).filter_by(
+                        client_id = c_id, object_id = o_id).one()
+
+                    if entity.marked_for_deletion is not True:
+                        raise NotImplementedError
+
+                    entity.additional_metadata['merged_to'] = [
+                        merge_entity.client_id, merge_entity.object_id]
+
+                    flag_modified(entity, 'additional_metadata')
+
+            # Processing underlying nodes.
+
+            for (c_type, c_key), c_entity_data in entity_data['contains'].items():
+                g(c_type, c_key, c_entity_data, merge_entity)
+
+        # Trying to fix hash merges.
+
+        for (type, key), entity_data_dict in entry_dict['contains'].items():
+            g(type, key, entity_data_dict)
+
+        # Checking if we have any unmodified merge entities we have to delete.
+
+        for merge_entity in merge_entity_list:
+
+            if (merge_entity.field.data_type not in ['Image', 'Markup', 'Sound'] or
+                (merge_entity.client_id, merge_entity.object_id) in modify_set or
+                'merge' not in merge_entity.additional_metadata):
+                continue
+
+            self_entity_count = DBSession.query(Entity).filter_by(
+                self_client_id = merge_entity.client_id,
+                self_object_id = merge_entity.object_id).count()
+
+            if self_entity_count > 0:
+                raise NotImplementedError
+
+            # Showing info of the entity we are to delete, fixing its hash data, changing its merge data and
+            # deleting it.
+
+            log.debug('{0}: deleting entity {1}/{2}\n{3}'.format(
+                self.method_string,
+                merge_entity.client_id,
+                merge_entity.object_id,
+                pprint.pformat({
+                    key: getattr(merge_entity, key)
+                    for key in dir(merge_entity)
+                    if not key.startswith('_')}, width = 144)))
+
+            if (merge_entity.additional_metadata['hash'] ==
+                'd14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f'):
+            
+                merge_entity.additional_metadata['hash'] = \
+                    hash_content_dict[merge_entity.content]
+
+            merge_entity.additional_metadata['merge_cancel'] = merge_entity.additional_metadata['merge']
+            del merge_entity.additional_metadata['merge']
+
+            flag_modified(merge_entity, 'additional_metadata')
+
+            merge_entity.marked_for_deletion = True
 
 
 def merge_bulk_try(request, publish_any, group_list, error_f):
@@ -2334,6 +2641,7 @@ def merge_bulk_task_try(task_status, merge_context):
 
         return False, traceback_string
 
+
 @celery.task
 def merge_bulk_task(task_key, cache_kwargs, sqlalchemy_url, merge_context):
     """
@@ -2447,4 +2755,192 @@ def merge_bulk_async(request):
 
     request.response.status = HTTPOk.code
     return {'result': task_status.key if task_status is not None else ''}
+
+
+@view_config(route_name = 'hash_fix', renderer = 'json', request_method = 'GET')
+def hash_fix(request):
+    """
+    Fixes, as much as possible, consequences of wrongly computed hashes of a subset of entities.
+    """
+
+    debug_flag = True
+    log.debug('hash_fix')
+
+    try:
+        user = Client.get_user_by_client_id(request.authenticated_userid)
+
+        if user is None or user.id != 1:
+            return {'error': 'Not an administrator.'}
+
+        # Getting info of entities with wrong hashes.
+
+        entity_query = DBSession.query(Entity).filter(
+            Entity.additional_metadata.contains({'hash':
+                'd14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f'}))
+
+        entity_count = entity_query.count()
+        log.debug('hash_fix: {0} entities'.format(entity_count))
+
+        entity_list = entity_query.all()
+
+        merge_dict = collections.defaultdict(list)
+        merge_entity_list = []
+
+        for entity in entity_list:
+            if 'merged_to' in entity.additional_metadata:
+
+                merge_dict[tuple(entity.additional_metadata['merged_to'])].append(
+                    (entity.client_id, entity.object_id))
+
+        log.debug('hash_fix: {0} entities merged from, {1} entities merged to'.format(
+            len(merge_dict),
+            sum(len(merge_list) for merge_list in merge_dict.values())))
+
+        # Righting hashes of entities not created by merges.
+
+        storage = request.registry.settings['storage']
+        hash_content_dict = {}
+
+        for index, entity in enumerate(entity_list):
+            entity_id = (entity.client_id, entity.object_id)
+
+            if entity_id in merge_dict:
+                merge_entity_list.append(entity)
+                continue
+
+            if entity.content in hash_content_dict:
+                hash = hash_content_dict[entity.content]
+
+            else:
+
+                with storage_file(storage, entity.content) as entity_file:
+                    hash = hashlib.sha224(entity_file.read()).hexdigest()
+
+            entity.additional_metadata['hash'] = hash
+            flag_modified(entity, 'additional_metadata')
+
+            log.debug(
+                'hash_fix: entity {0}/{1} ({2})\nurl: {3}\nhash: {4}'.format(
+                    entity.client_id,
+                    entity.object_id,
+                    index,
+                    entity.content,
+                    hash))
+
+            hash_content_dict[entity.content] = hash
+
+        # Checking if we have any merge entities created through merges of other merge entities.
+
+        intermediate_set = set()
+
+        for entity_id, merge_list in merge_dict.items():
+
+            for merge_id in merge_list:
+                if merge_id in merge_dict:
+
+                    intermediate_set.add(merge_id)
+
+                    log.debug(
+                        'hash_fix: entity {0} merged into entity {1} '
+                        'and was merged from entities {2}.'.format(
+                        merge_id, entity_id, merge_dict[merge_id]))
+
+        log.debug('hash_fix: {0} intermediate merge entities'.format(
+            len(intermediate_set)))
+
+        if len(intermediate_set) > 0:
+            raise NotImplementedError
+
+        # Getting identifiers of lexical entries resulting from merges related to our merge entities.
+
+        entry_list = []
+        entry_entity_dict = collections.defaultdict(list)
+
+        perspective_dict = {}
+
+        for entity in merge_entity_list:
+
+            entry = entity.parent
+            entry_id = (entry.client_id, entry.object_id)
+
+            entry_flag = entry_id not in entry_entity_dict
+
+            if entry_flag:
+                entry_list.append(entry)
+
+            entry_entity_dict[entry_id].append(entity)
+
+            # Getting perspective info, if required.
+
+            if debug_flag:
+
+                perspective = entry.parent
+                perspective_id = (perspective.client_id, perspective.object_id)
+
+                if perspective_id not in perspective_dict:
+                    perspective_dict[perspective_id] = [perspective, 1]
+
+                elif entry_flag:
+                    perspective_dict[perspective_id][1] += 1
+
+        log.debug('hash_fix: {0} merge lexical entries\n{1}'.format(
+            len(entry_list),
+            pprint.pformat(entry_entity_dict)))
+
+        if debug_flag:
+
+            # Showing additional info, if required.
+
+            info_list = []
+
+            for (perspective_cid, perspective_oid), (perspective, merge_entry_count) in sorted(
+                perspective_dict.items()):
+
+                dictionary = perspective.parent
+
+                entry_count = DBSession.query(LexicalEntry).filter_by(
+                    parent_client_id = perspective_cid,
+                    parent_object_id = perspective_oid,
+                    marked_for_deletion = False).count()
+
+                info_list.append(
+                    '\'{0}\' {1}/{2}:\n  \'{3}\' {4}/{5} '
+                    '({6} lexical entries, {7} affected lexical entries)'.format(
+                        dictionary.get_translation(locale_id = 2),
+                        dictionary.client_id,
+                        dictionary.object_id,
+                        perspective.get_translation(locale_id = 2),
+                        perspective_cid,
+                        perspective_oid,
+                        entry_count,
+                        merge_entry_count))
+
+            log.debug('hash_fix: {0} perspectives with affected merge entries\n{1}'.format(
+                len(perspective_dict),
+                '\n'.join(info_list)))
+
+        # And now we try to fix merge lexical entries and entities.
+
+        merge_context = Merge_Context(
+            'hash_fix', request, request.authenticated_userid, user)
+
+        for index, entry in enumerate(entry_list):
+
+            merge_context.hash_fix(
+                '{0}/{1}'.format(index + 1, len(entry_list)),
+                entry,
+                hash_content_dict)
+
+    # If something is not right, we report it.
+
+    except Exception as exception:
+
+        traceback_string = ''.join(traceback.format_exception(
+            exception, exception, exception.__traceback__))[:-1]
+
+        log.debug('hash_fix: exception')
+        log.debug('\n' + traceback_string)
+
+        DBSession.rollback()
+        return {'error': message('\n' + traceback_string)}
 
