@@ -808,10 +808,14 @@ def configure_routes(config):
 
     # Compiles archive of sound recordings and corresponding markups for a specified perspective.
     config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
+
     config.add_route(name = "graphql", pattern = "/graphql")
 
     # Creates copy of a specified dictionary for a specified user.
     config.add_route(name = 'dictionary_copy', pattern = '/dictionary_copy')
+
+    # Fixes, as much as possible, consequences of wrongly computed hashes of a subset of entities.
+    config.add_route(name = 'hash_fix', pattern = '/hash_fix')
 
 
 def main(global_config, **settings):
