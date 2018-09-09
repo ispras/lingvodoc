@@ -11,7 +11,8 @@ from lingvodoc.models import (
     DBSession,
     Client,
     LexicalEntry,
-    DictionaryPerspectiveToField
+    DictionaryPerspectiveToField,
+    TranslationGist as dbTranslationGist,
 )
 from lingvodoc.utils.verification import check_client_id
 
@@ -404,6 +405,7 @@ class TranslationGistHolder(graphene.Interface):
     def resolve_translation_gist_id(self, info):
         return (self.dbObject.translation_gist_client_id,
                 self.dbObject.translation_gist_object_id)
+
 
 class UserId(graphene.Interface):
     user_id = graphene.Int()

@@ -125,6 +125,7 @@ class CreateTranslationGist(graphene.Mutation):
         translationgist.dbObject = dbtranslationgist
         return CreateTranslationGist(translationgist=translationgist, triumph=True)
 
+
 class DeleteTranslationGist(graphene.Mutation):
     """
     example:
@@ -178,3 +179,29 @@ class DeleteTranslationGist(graphene.Mutation):
         translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
         translationgist.dbObject = dbtranslationgist
         return DeleteTranslationGist(translationgist=translationgist, triumph=True)
+
+
+class TranslationGistInterface(graphene.Interface):
+    """
+    Interface for querying translation gist with all its translations.
+
+    Why not in gql_holders? Because TranslationGist itself uses interfaces from there, can't have cyclic
+    dependency.
+    """
+
+    translation_gist = graphene.Field(TranslationGist)
+
+    @fetch_object("translation_gist")
+    def resolve_translation_gist(self, info):
+
+        db_translation_gist = DBSession.query(dbTranslationGist).filter_by(
+            client_id = self.dbObject.translation_gist_client_id,
+            object_id = self.dbObject.translation_gist_object_id).first()
+
+        translation_gist = TranslationGist(id =
+            [db_translation_gist.client_id, db_translation_gist.object_id])
+
+        translation_gist.dbObject = db_translation_gist
+
+        return translation_gist
+
