@@ -23,6 +23,7 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     LingvodocID
 )
+from lingvodoc.schema.gql_translationgist import TranslationGistInterface
 from .gql_dictionary import Dictionary
 from lingvodoc.utils.creation import (
     create_dblanguage,
@@ -59,7 +60,7 @@ class Language(LingvodocObjectType):
     dataType = graphene.String()
 
     class Meta:
-        interfaces = (CommonFieldsComposite, TranslationHolder)
+        interfaces = (CommonFieldsComposite, TranslationHolder, TranslationGistInterface)
 
     @fetch_object()
     def resolve_locale_exists(self):
