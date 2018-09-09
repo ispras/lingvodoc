@@ -48,28 +48,12 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dictionary_persp_to_field,
                                       edit_role,
                                       create_group_entity)
-from lingvodoc.utils.search import translation_gist_search
+from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
+
+
 #from lingvodoc.utils.creation import create_entity, create_lexicalentry
 
 
-def translation_gist_search_all(searchstring, gist_type):
-        translationatom = DBSession.query(dbTranslationAtom) \
-            .join(dbTranslationGist). \
-            filter(dbTranslationAtom.content == searchstring,
-                   dbTranslationAtom.locale_id == 2,
-                   dbTranslationGist.type == gist_type) \
-            .first()
-
-        if translationatom and translationatom.parent:
-            translationgist = translationatom.parent
-            return translationgist
-
-def get_field_id_by_name(field_name, gist_type="Service"):
-    # TODO: move to utils
-    gist = translation_gist_search_all(field_name, gist_type)
-    if gist:
-        field = DBSession.query(dbField).filter_by(translation_gist_client_id=gist.client_id, translation_gist_object_id=gist.object_id).first()
-        return (field.client_id, field.object_id)
 
 """
     column_dict = dict() #collections.OrderedDict()
@@ -325,8 +309,9 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
             DBSession.add(client)
             DBSession.flush()
             client_id = client.id
-            etymology_field_id = get_field_id_by_name("Etymology", "Field")
-            relation_field_id = get_field_id_by_name("Relation", "Field")
+            id_to_field_dict = get_id_to_field_dict()
+            etymology_field_id = id_to_field_dict.get("Etymology")
+            relation_field_id = id_to_field_dict.get("Relation")
 
 
             link_col_to_blob = collections.defaultdict(dict)
