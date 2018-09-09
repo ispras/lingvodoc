@@ -153,7 +153,11 @@ def signup_post(request):  # tested
 
             caching.CACHE.set(cache_key, user_dict)
 
-            approve_url = request.route_url('signup_approve') + '?key={0}'.format(user_digest)
+            if 'api_url' in req:
+                approve_url = req['api_url'] + '/signup_approve?key={0}'.format(user_digest)
+
+            else:
+                approve_url = request.route_url('signup_approve') + '?key={0}'.format(user_digest)
 
             message = Message(
                 subject = 'User \'{0}\' signup approval'.format(login),
