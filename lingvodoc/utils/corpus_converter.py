@@ -1312,9 +1312,7 @@ def convert_all(dictionary_id,
                 language_id,
                 sound_url
                     )
-    except Exception as e:
-        log.error("Converting failed")
-        log.error(e.__traceback__)
-        task_status.set(None, -1, "Conversion failed")
+    except Exception as err:
+        task_status.set(None, -1, "Conversion failed: %s" % str(err))
         raise
     DBSession.flush()

@@ -1447,11 +1447,8 @@ def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob
         status = convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
                                 language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
                                 storage, locale_id, task_status)
-    except Exception as e:
-        log.error("Converting failed")
-        log.error(e.__traceback__)
-        task_status.set(None, -1, "Conversion failed")
-        raise
+    except Exception as err:
+        task_status.set(None, -1, "Conversion failed: %s" % str(err))
     log.debug(status)
     log.debug('Finished')
     return status
