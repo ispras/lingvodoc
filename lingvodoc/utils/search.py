@@ -9,6 +9,7 @@ from lingvodoc.models import (
     PublishingEntity as dbPublishingEntity,
     Field as dbField,
     DBSession)
+from lingvodoc.utils.static_fields import fields_static
 
 #from lingvodoc.views.v2.translations import translationgist_contents
 
@@ -186,7 +187,9 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted, pub
         return tags
 
 def get_id_to_field_dict():
-    with open('static_fields.txt') as f:
-        dict_with_lists = json.load(f)
-        dict_with_tuples = {k: tuple(v) for k, v in dict_with_lists.items()}
-        return dict_with_tuples
+    dict_with_tuples = {k: tuple(v) for k, v in fields_static.items()}
+    return dict_with_tuples
+    # with open('static_fields.py') as f:
+    #     dict_with_lists = json.load(f)
+    #     dict_with_tuples = {k: tuple(v) for k, v in dict_with_lists.items()}
+    #     return dict_with_tuples
