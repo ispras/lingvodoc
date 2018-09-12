@@ -186,7 +186,7 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id, accepted, pub
         return tags
 
 def get_id_to_field_dict():
-    with open(path.join(path.dirname(__file__), 'static_fields.txt')) as f:
+    with open('static_fields.txt') as f:
         dict_with_lists = json.load(f)
         dict_with_tuples = {k: tuple(v) for k, v in dict_with_lists.items()}
         return dict_with_tuples
