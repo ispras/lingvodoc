@@ -1,4 +1,8 @@
 import copy
+import ctypes
+import logging
+import textwrap
+import traceback
 
 import graphene
 from lingvodoc.utils.elan_functions import tgt_to_eaf
@@ -209,6 +213,19 @@ from pyramid.httpexceptions import (
 
 from lingvodoc.scripts import elan_parser
 from lingvodoc.utils.creation import create_entity
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
+
+# Mikhail Oslon's analysis function.
+
+try:
+    get_all_output = ctypes.CDLL('liboslon.so').GetAllOutput
+
+except:
+    get_all_output = None
 
 
 class TierList(graphene.ObjectType):
@@ -1849,6 +1866,149 @@ class StarlingEtymology(graphene.Mutation):
         return StarlingEtymology(triumph=True)
 
 
+class PhonemicAnalysis(graphene.Mutation):
+
+    class Arguments:
+        perspective_id=LingvodocID(required=True)
+        text_field_id=LingvodocID(required=True)
+
+    triumph = graphene.Boolean()
+    entity_count = graphene.Int()
+    result = graphene.String()
+
+    @staticmethod
+    def mutate(self, info, **args):
+        """
+        mutation PhonemicAnalysis {
+          phonemic_analysis(
+            perspective_id: [70, 5],
+            text_field_id: [66, 8])
+          {
+            triumph
+            entity_count	
+            result
+          }
+        }
+        """
+
+        perspective_cid, perspective_oid = args['perspective_id']
+        text_field_cid, text_field_oid = args['text_field_id']
+
+        try:
+
+            log.debug(
+                'phonemic analysis {0}/{1}: text field {2}/{3}, get_all_output {4}'.format(
+                    perspective_cid, perspective_oid,
+                    text_field_cid, text_field_oid,
+                    repr(get_all_output)))
+
+            if get_all_output is None:
+
+                return ResponseError(message =
+                    'Analysis library is absent, please contact system administrator.')
+
+            # Query for non-deleted, published and accepted entities of the specified perspective with the
+            # specified field.
+
+            data_query = DBSession.query(dbEntity).filter(
+                dbLexicalEntry.parent_client_id == perspective_cid,
+                dbLexicalEntry.parent_object_id == perspective_oid,
+                dbLexicalEntry.marked_for_deletion == False,
+                dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                dbEntity.field_client_id == text_field_cid,
+                dbEntity.field_object_id == text_field_oid,
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbPublishingEntity.published == True,
+                dbPublishingEntity.accepted == True)
+
+            # Counting text entities we have. If we haven't got any, we return empty result.
+
+            total_count = data_query.count()
+
+            log.debug(
+                'phonemic analysis {0}/{1}: {2} text field {3}/{4} entities'.format(
+                    perspective_cid, perspective_oid,
+                    total_count,
+                    text_field_cid, text_field_oid))
+
+            if total_count <= 0:
+
+                return PhonemicAnalysis(
+                    triumph = True, total_count = total_count, result = u'')
+
+            # Otherwise we perform phonemic analysis.
+
+            text_list = [entity.content
+                for entity in data_query.all()]
+
+            text_list[-1] += u'\r\n'
+            input = u'\r\n'.join(text_list)
+
+            log.debug(
+                'phonemic analysis {0}/{1}: text field {2}/{3}'
+                '\ninput:\n{4}'.format(
+                    perspective_cid, perspective_oid,
+                    text_field_cid, text_field_oid,
+                    repr(input)))
+
+            # Calling analysis library.
+
+            input_buffer = ctypes.create_unicode_buffer(input)
+            output_buffer = ctypes.create_unicode_buffer(1048576)
+
+            result = get_all_output(input_buffer, output_buffer)
+            output = output_buffer.value
+
+            log.debug(
+                'phonemic analysis {0}/{1}: text field {2}/{3}: result {4}'
+                '\noutput:\n{5}'.format(
+                    perspective_cid, perspective_oid,
+                    text_field_cid, text_field_oid,
+                    result,
+                    repr(output)))
+
+            # Reflowing output.
+
+            line_list = output.split('\r\n')
+
+            text_wrapper = textwrap.TextWrapper(
+                width = 108, tabsize = 4)
+
+            reflow_list = []
+
+            for line in line_list:
+                reflow_list.extend(text_wrapper.wrap(line))
+
+            wrapped_output = '\n'.join(reflow_list)
+
+            log.debug(
+                'phonemic analysis {0}/{1}: text field {2}/{3}:'
+                '\nwrapped output:\n{4}'.format(
+                    perspective_cid, perspective_oid,
+                    text_field_cid, text_field_oid,
+                    wrapped_output))
+
+            # Returning result.
+
+            return PhonemicAnalysis(
+                triumph = True,
+                entity_count = total_count,
+                result = wrapped_output)
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug('phonemic analysis: exception')
+            log.debug(traceback_string)
+
+            return ResponseError(message = 'External error')
+
+
 class Phonology(graphene.Mutation):
 
     class Arguments:
@@ -2179,6 +2339,7 @@ class MyMutations(graphene.ObjectType):
     synchronize = Synchronize.Field()
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
+    phonemic_analysis = PhonemicAnalysis.Field()
     phonology = Phonology.Field()
     sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
