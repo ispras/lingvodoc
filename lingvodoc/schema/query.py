@@ -1942,7 +1942,8 @@ class PhonemicAnalysis(graphene.Mutation):
             # Otherwise we perform phonemic analysis.
 
             text_list = [entity.content
-                for entity in data_query.all()]
+                for entity in data_query.all()
+                if len(entity.content) > 0]
 
             text_list[-1] += u'\r\n'
             input = u'\r\n'.join(text_list)
