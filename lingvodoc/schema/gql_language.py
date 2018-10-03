@@ -132,7 +132,8 @@ class CreateLanguage(graphene.Mutation):
         translation_gist_id = create_gists_with_atoms(
                               translation_atoms,
                               translation_gist_id,
-                              [client_id,object_id]
+                              [client_id,object_id],
+                              gist_type="Language"
                               )
         dblanguage = create_dblanguage(id=id,
                                                       parent_id=parent_id,

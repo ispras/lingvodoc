@@ -157,13 +157,15 @@ class CreateGrant(graphene.Mutation):
         issuer_translation_atoms = args.get("issuer_translation_atoms")
         issuer_translation_gist_id = create_gists_with_atoms(issuer_translation_atoms,
                                                              issuer_translation_gist_id,
-                                                             [client_id,object_id])
+                                                             [client_id,object_id],
+                                                             gist_type="Grant")
         issuer_translation_gist_client_id, issuer_translation_gist_object_id = issuer_translation_gist_id
         translation_gist_id = args.get("translation_gist_id")
         translation_atoms = args.get("translation_atoms")
         translation_gist_id = create_gists_with_atoms(translation_atoms,
                                                       translation_gist_id,
-                                                      [client_id,object_id])
+                                                      [client_id,object_id],
+                                                      gist_type="Grant")
         translation_gist_client_id, translation_gist_object_id = translation_gist_id
         issuer_url = args.get('issuer_url')
         grant_url = args.get('grant_url')

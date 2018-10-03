@@ -275,13 +275,51 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
 
 from lingvodoc.models import UserRequest as dbUserRequest
 from lingvodoc.utils.search import translation_gist_search
-
+import transaction
 
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    return
+    not_dictionary = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(DictionaryPerspective).all()] +\
+                  [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Field).all()]
+    not_perspective = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Dictionary).all()] +\
+                  [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Field).all()]
+    not_field = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(DictionaryPerspective).all()] +\
+                  [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Dictionary).all()]
+
+    lang_gists = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in DBSession.query(Language).all()]
+
+
+    with transaction.manager:
+        for obj in DBSession.query(Dictionary).all():
+            tr_gist = DBSession.query(TranslationGist).filter_by(client_id=obj.translation_gist_client_id, object_id=obj.translation_gist_object_id).first()
+            tr_gist_type = tr_gist.type
+            if tr_gist_type != "Dictionary":
+                if (tr_gist.client_id, tr_gist.object_id) in not_dictionary or lang_gists.count((tr_gist.client_id, tr_gist.object_id)) > 0:
+                    raise CommonException("two objects with different types use this gist")
+                tr_gist.type = "Dictionary"
+                DBSession.flush()
+
+        for obj in DBSession.query(DictionaryPerspective).all():
+            tr_gist = DBSession.query(TranslationGist).filter_by(client_id=obj.translation_gist_client_id, object_id=obj.translation_gist_object_id).first()
+            tr_gist_type = tr_gist.type
+            if tr_gist_type != "Perspective":
+                if (tr_gist.client_id, tr_gist.object_id) in not_perspective or lang_gists.count((tr_gist.client_id, tr_gist.object_id)) > 0:
+                    raise CommonException("two objects with different types use this gist")
+                tr_gist.type = "Perspective"
+                DBSession.flush()
+
+        for obj in DBSession.query(Field).all():
+            tr_gist = DBSession.query(TranslationGist).filter_by(client_id=obj.translation_gist_client_id, object_id=obj.translation_gist_object_id).first()
+            tr_gist_type = tr_gist.type
+            if tr_gist_type != "Field":
+                if (tr_gist.client_id, tr_gist.object_id) in not_field or lang_gists.count((tr_gist.client_id, tr_gist.object_id)) > 0:
+                    raise CommonException("two objects with different types use this gist")
+                tr_gist.type = "Field"
+                DBSession.flush()
+
+    return "true"
 
 
 def recursive_sort(langs, visited, stack, result):
