@@ -370,7 +370,10 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 if atoms_to_create:
                     content = atoms_to_create[0].get("content")
                     task_status.set(4, 60, "%s (%s/%s)" % (content, task_status_counter, len(starling_dictionaries)))
-                dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create, None, (old_client_id, None))
+                dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create,
+                                                                         None,
+                                                                         (old_client_id, None),
+                                                                         gist_type="Dictionary")
                 parent_id = starling_dictionary.get("parent_id")
                 dbdictionary_obj = create_dbdictionary(id=obj_id.id_pair(client_id),
                                                        parent_id=parent_id,
@@ -378,7 +381,10 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                        add_group=True)
 
                 atoms_to_create = [{"locale_id": 2, "content": "starling_source"}]
-                persp_translation_gist_id = create_gists_with_atoms(atoms_to_create, None, (old_client_id, None))
+                persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
+                                                                    None,
+                                                                    (old_client_id, None),
+                                                                    gist_type="Perspective")
                 dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=obj_id.id_pair(client_id),
                                         parent_id=dictionary_id,  # TODO: use all object attrs

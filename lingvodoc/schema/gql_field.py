@@ -106,7 +106,10 @@ class CreateField(graphene.Mutation):
             data_type_translation_gist_id = args.get('data_type_translation_gist_id')
             translation_gist_id = args.get('translation_gist_id')
             translation_atoms = args.get("translation_atoms")
-            translation_gist_id = create_gists_with_atoms(translation_atoms, translation_gist_id, [client_id,object_id])
+            translation_gist_id = create_gists_with_atoms(translation_atoms,
+                                                          translation_gist_id,
+                                                          [client_id,object_id],
+                                                          gist_type="Field")
             dbfield = dbField(client_id=client_id,
                           object_id=object_id,
                           data_type_translation_gist_client_id=data_type_translation_gist_id[0],

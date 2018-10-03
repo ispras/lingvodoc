@@ -1115,12 +1115,22 @@ class Query(graphene.ObjectType):
         if not searchstrings:
             raise ResponseError(message="Error: no search strings")
 
-        translationatoms = DBSession.query(dbTranslationAtom) \
-            .join(dbTranslationGist). \
-            filter(dbTranslationAtom.content.in_(searchstrings),
-                   dbTranslationAtom.locale_id == 2,
-                   dbTranslationGist.type == 'Service') \
-            .all()
+        # translationatoms = DBSession.query(dbTranslationAtom) \
+        #     .join(dbTranslationGist). \
+        #     filter(dbTranslationAtom.content.in_(searchstrings),
+        #            dbTranslationAtom.locale_id == 2,
+        #            dbTranslationGist.type == 'Service') \
+        #     .all()
+
+        translationatoms = list()
+        for ss in searchstrings:
+            tratom = DBSession.query(dbTranslationAtom) \
+                    .join(dbTranslationGist). \
+                filter(dbTranslationAtom.content == ss,
+                       dbTranslationAtom.locale_id == 2,
+                       dbTranslationGist.type == 'Service') \
+                .first()
+            translationatoms.append(tratom)
 
         translationgists = list()
         for translationatom in translationatoms:

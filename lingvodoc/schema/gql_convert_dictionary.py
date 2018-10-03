@@ -125,7 +125,7 @@ class ConvertDictionary(graphene.Mutation):
         elif "translation_atoms" in args:
             tr_atoms = args.get("translation_atoms")
             translation_gist_id = args.get('translation_gist_id')
-            translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None])
+            translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None], gist_type="Dictionary")
             cur_args["gist_client_id"] = translation_gist_id[0]
             cur_args["gist_object_id"] = translation_gist_id[1]
         else:
@@ -253,7 +253,7 @@ class ConvertFiveTiers(graphene.Mutation):
             elif "translation_atoms" in args:
                 tr_atoms = args.get("translation_atoms")
                 translation_gist_id = args.get('gist_id')
-                translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None])
+                translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None], gist_type="Dictionary")
                 cur_args["translation_gist_id"] = translation_gist_id
                 gist = DBSession.query(dbTranslationGist).filter_by(client_id=translation_gist_id[0],
                                                                  object_id=translation_gist_id[1]).first()

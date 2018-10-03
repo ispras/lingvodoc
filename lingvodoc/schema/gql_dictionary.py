@@ -377,7 +377,10 @@ class CreateDictionary(graphene.Mutation):
         parent_id = args.get('parent_id')
         tr_atoms = args.get("translation_atoms")
         translation_gist_id = args.get('translation_gist_id')
-        translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id,object_id])
+        translation_gist_id = create_gists_with_atoms(tr_atoms,
+                                                      translation_gist_id,
+                                                      [client_id,object_id],
+                                                      gist_type="Dictionary")
         additional_metadata = args.get("additional_metadata")
         category = args.get("category")
         domain = args.get("domain")
@@ -400,7 +403,10 @@ class CreateDictionary(graphene.Mutation):
             for next_persp in persp_args:
                 atoms_to_create = next_persp.get("translation_atoms")
                 persp_translation_gist_id = next_persp.get("translation_gist_id")
-                persp_translation_gist_id = create_gists_with_atoms(atoms_to_create, persp_translation_gist_id, [client_id,object_id])
+                persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
+                                                                    persp_translation_gist_id,
+                                                                    [client_id,object_id],
+                                                                    gist_type="Dictionary")
                 parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=(client_id, None),
                                         parent_id=parent_id,  # TODO: use all object attrs

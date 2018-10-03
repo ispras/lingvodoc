@@ -415,7 +415,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
                   filename))
     return real_location, url
 
-def create_gists_with_atoms(translation_atoms, translation_gist_id, ids):
+def create_gists_with_atoms(translation_atoms, translation_gist_id, ids, gist_type=None):
         if translation_atoms is None:  # TODO: look at this
             if not translation_gist_id:
                 raise ResponseError(message="translation_gist_id arg not found")
@@ -424,18 +424,22 @@ def create_gists_with_atoms(translation_atoms, translation_gist_id, ids):
             client = DBSession.query(Client).filter_by(id=client_id).first()
 
             user = DBSession.query(User).filter_by(id=client.user_id).first()
-            dbtranslationgist = TranslationGist(client_id=client_id, object_id=object_id, type="Language")
-            DBSession.add(dbtranslationgist)
-            DBSession.flush()
-            translation_gist_client_id = dbtranslationgist.client_id
-            translation_gist_object_id = dbtranslationgist.object_id
-            translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
+            if not translation_gist_id:
+                dbtranslationgist = TranslationGist(client_id=client_id, object_id=object_id, type=gist_type)
+                DBSession.add(dbtranslationgist)
+                DBSession.flush()
+                translation_gist_client_id = dbtranslationgist.client_id
+                translation_gist_object_id = dbtranslationgist.object_id
+                translation_gist_id = [translation_gist_client_id, translation_gist_object_id]
+            else:
+                translation_gist_client_id, translation_gist_object_id = translation_gist_id
             basegroups = list()
             basegroups.append(DBSession.query(BaseGroup).filter_by(name="Can delete translationgist").first())
             if not object_id:
                 groups = []
                 for base in basegroups:
-                    group = Group(subject_client_id=translation_gist_client_id, subject_object_id=translation_gist_object_id,
+                    group = Group(subject_client_id=translation_gist_client_id,
+                                  subject_object_id=translation_gist_object_id,
                                   parent=base)
                     groups += [group]
                 for group in groups:
@@ -447,7 +451,8 @@ def create_gists_with_atoms(translation_atoms, translation_gist_id, ids):
                     content = atom_dict["content"]
                     dbtranslationatom = TranslationAtom(client_id=client_id,
                                                           object_id=object_id,
-                                                          parent=dbtranslationgist,
+                                                          parent_client_id=translation_gist_client_id,
+                                                          parent_object_id=translation_gist_object_id,
                                                           locale_id=locale_id,
                                                           content=content)
                     DBSession.add(dbtranslationatom)
