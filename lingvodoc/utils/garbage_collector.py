@@ -34,18 +34,9 @@ def get_empty_perspectives():
     This function detects perspectives that don't have any lexical entries
     :return: list
     """
-
     # NOTE: don't listen to PyCharm; here we must use '==' comparison instead of 'is'
     perspectives = DBSession.query(DictionaryPerspective).outerjoin(LexicalEntry)\
         .filter(DictionaryPerspective.lexicalentry == None)
-
-    # # double check
-    # for i in perspectives:
-    #     lexes = DBSession.query(LexicalEntry).filter(and_(LexicalEntry.parent_client_id==i.client_id, LexicalEntry.parent_object_id==i.object_id)).count()
-    #     if lexes != 0:
-    #         print("ASSERT!")
-    #         print(i.client_id, i.object_id)
-
     return perspectives
 
 
@@ -71,12 +62,17 @@ def get_useless_dictionaries():
         .filter(Dictionary.dictionaryperspective != None)
     useful_dictionaries = []
     no_content_dictionaries = []
-    for dictionary in all_dictionaries:
+
+    def is_useful(dictionary):
         for perspective in dictionary.dictionaryperspective:
             if perspective not in empty_perspectives:
-                useful_dictionaries.append(dictionary)
-                continue
-            no_content_dictionaries.append(dictionary)
+                return True
+        return False
+
+    for dictionary in all_dictionaries:
+        useful_dictionaries.append(dictionary) if is_useful(dictionary) else no_content_dictionaries.append(dictionary)
+
+
 
     return empty_dictionaries, no_content_dictionaries, useful_dictionaries
 
