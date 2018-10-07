@@ -10,6 +10,8 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.orm.attributes import flag_modified
 
+from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
+
 from sqlalchemy.sql import text
 
 from sqlalchemy import (
@@ -289,7 +291,7 @@ def get_client_counter(check_id):
     return DBSession.query(Client).filter_by(id=check_id).with_for_update(of=Client).first()
 
 
-class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin):
+class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
     """
     This is base of translations
     """
@@ -304,7 +306,6 @@ class CompositeIdMixin(object):
     """
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
-
 
     def __init__(self, **kwargs):
         if not kwargs.get("object_id", None):
@@ -324,6 +325,18 @@ class CompositeIdMixin(object):
             del kwargs['session']
 
         super().__init__(**kwargs)
+
+    def mark_deleted(self, message, **kwargs):
+        self.marked_for_deletion = True
+        if kwargs.get("session", None):
+            session = kwargs['session']
+        else:
+            session = DBSession
+        session.merge(ObjectTOC(client_id=self.client_id,
+                                object_id=self.object_id,
+                                table_name=self.__tablename__,
+                                additional_metadata=message,
+                                marked_for_deletion=True))
 
 
 class CompositeKeysHelper(object):
