@@ -73,6 +73,7 @@ from base64 import urlsafe_b64decode
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.utils.proxy import ProxyPass
 from lingvodoc.utils.elan_functions import eaf_wordlist
+import datetime
 
 log = logging.getLogger(__name__)
 
@@ -320,6 +321,64 @@ def testing(request):
                 DBSession.flush()
 
     return "true"
+
+
+@view_config(route_name='garbage_collector', renderer='json', permission='admin')
+def garbage_collector(request):
+    """
+    This route uses global utils module for all the kinds of garbage detection
+    :param request:
+    :return:
+    """
+    from lingvodoc.utils import garbage_collector
+    empty_dictionaries, no_content_dictionaries, useful_dictionaries = garbage_collector.get_useless_dictionaries()
+    collection_time = datetime.datetime.utcnow()
+    dicts_deleted = 0
+    perps_deleted = 0
+    gists_deleted = 0
+    for dictionary in empty_dictionaries:
+        dictionary_gist = DBSession.query(TranslationGist).filter(
+            and_(TranslationGist.client_id == dictionary.translation_gist_client_id,
+                 TranslationGist.object_id == dictionary.translation_gist_object_id)).one()
+
+        dictionary_gist.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                                  "Gist for dictionary with no perspectives",
+                                                                  dictionary))
+        dictionary.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                             "Dictionary with no perspectives",
+                                                             dictionary))
+        gists_deleted += 1
+        dicts_deleted += 1
+
+    for dictionary in no_content_dictionaries:
+        dictionary_gist = DBSession.query(TranslationGist). \
+            filter(and_(TranslationGist.client_id == dictionary.translation_gist_client_id,
+                        TranslationGist.object_id == dictionary.translation_gist_object_id)).one()
+        dictionary_gist.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                                  "Gist for dictionary with no content",
+                                                                  dictionary))
+        dictionary.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                             "Dictionary with no content",
+                                                             dictionary))
+        gists_deleted += 1
+        dicts_deleted += 1
+
+        for perspective in dictionary.dictionaryperspective:
+            perspective_gist = DBSession.query(TranslationGist).\
+                filter(and_(TranslationGist.client_id == perspective.translation_gist_client_id,
+                            TranslationGist.object_id == perspective.translation_gist_object_id)).one()
+            perspective_gist.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                                       "Gist for perspective from dictionary with no content",
+                                                                       perspective))
+            perspective.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                                  "Perspective from dictionary with no content",
+                                                                  dictionary))
+            perps_deleted += 1
+            gists_deleted += 1
+
+    return {"dictionaries_deleted": dicts_deleted,
+            "perspectives_deleted": perps_deleted,
+            "gists_deleted": gists_deleted}
 
 
 def recursive_sort(langs, visited, stack, result):
