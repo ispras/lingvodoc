@@ -274,53 +274,238 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
     DBSession.flush()
     return base_group
 
+from lingvodoc.models import PublishingEntity
 from lingvodoc.models import UserRequest as dbUserRequest
 from lingvodoc.utils.search import translation_gist_search
 import transaction
 
+import random
+import string
+from lingvodoc.utils.search import get_id_to_field_dict
+import itertools
+from time import ctime
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    not_dictionary = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(DictionaryPerspective).all()] +\
-                  [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Field).all()]
-    not_perspective = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Dictionary).all()] +\
-                  [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Field).all()]
-    not_field = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(DictionaryPerspective).all()] +\
-                  [(x.translation_gist_client_id, x.translation_gist_object_id) for x in  DBSession.query(Dictionary).all()]
 
-    lang_gists = [(x.translation_gist_client_id, x.translation_gist_object_id) for x in DBSession.query(Language).all()]
+    class ObjectId:
+
+        object_id_counter = 0
+
+        @property
+        def next(self):
+            self.object_id_counter += 1
+            return self.object_id_counter
+
+    def get_child_languages(parent_languages):
+        """
+        Returns child_langs set
+
+        (Uralic) -> set([UralicObject])
+        |       \
+        |        \
+        (lang_1, lang_2)  -> set([lang_1, lang_2])
+
+        """
+        child_langs = set()
+        for parent_language in parent_languages:
+            for lng_obj in DBSession.query(Language).filter_by(parent=parent_language, marked_for_deletion=False):
+                child_langs.add(lng_obj)
+        return child_langs
+
+    def get_all_persp_by_lang(lng_obj):
+        dictionaries = DBSession.query(Dictionary).filter_by(parent=lng_obj, marked_for_deletion=False).all()
+        perspectives = set()
+        for dictionary in dictionaries:
+            perspectives.update(set(
+                DBSession.query(DictionaryPerspective).filter_by(parent=dictionary, marked_for_deletion=False).all()))
+        return perspectives
+
+    def get_child_lang_list(parent_uralic_lang_id):
+        parent_uralic_obj = DBSession.query(Language).filter_by(client_id=parent_uralic_lang_id[0],
+                                                                object_id=parent_uralic_lang_id[1]).first()
+        parent_lang = parent_uralic_obj
+        all_languages = set([parent_uralic_obj])
+        next_siblings = set([parent_uralic_obj])
+
+        while next_siblings:
+            next_siblings = get_child_languages(next_siblings)
+            all_languages.update(next_siblings)
+        return all_languages
+
+    def get_persps_by_field(proto_form_id):
+        persp_list = set()
+        for persp_obj in all_persps:
+            for ptofield in DBSession.query(DictionaryPerspectiveToField).filter_by(parent=persp_obj).all():
+                if ptofield.field_client_id == proto_form_id[0] and ptofield.field_object_id == proto_form_id[1]:
+                    persp_list.add(ptofield.parent)
+        return persp_list
+
+    def comparator_func(x):
+        perspective, lexical_entry, entity = x
+        return entity.content[:5]
+
+    def set_tag_for_group(key, group, etymology_field_id, operation_tag):
+        group_list = list(group)
+        
+        if len(key) < 5:
+            return
+        if len([x for x in group if "." in x[2].content]) > 0:
+            return
+
+        print("=====================")
+        print(key)
+        print("---------------------")
+        for perspective, lexical_entry, entity in group_list:
+            print("(%s)\n[ http://83.149.198.133/dictionary/%s/%s/perspective/%s/%s/view ]" % (
+                            entity.content, perspective.parent_client_id, perspective.parent_object_id, perspective.client_id,
+                            perspective.object_id))
 
 
-    with transaction.manager:
-        for obj in DBSession.query(Dictionary).all():
-            tr_gist = DBSession.query(TranslationGist).filter_by(client_id=obj.translation_gist_client_id, object_id=obj.translation_gist_object_id).first()
-            tr_gist_type = tr_gist.type
-            if tr_gist_type != "Dictionary":
-                if (tr_gist.client_id, tr_gist.object_id) in not_dictionary or lang_gists.count((tr_gist.client_id, tr_gist.object_id)) > 0:
-                    raise CommonException("two objects with different types use this gist")
-                tr_gist.type = "Dictionary"
+            tag = "%s_%s" % (key, operation_tag)
+            tag_entity = Entity(client_id=client_id, object_id=obj_id.next,
+                                field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1],
+                                parent_client_id=lexical_entry.client_id, parent_object_id=lexical_entry.object_id,
+                                content=tag)
+            tag_entity.publishingentity.accepted = True
+            tag_entity.publishingentity.published = True ##
+            DBSession.add(tag_entity)
+            DBSession.flush()
+
+    def set_tag_for_child_group(key, group, etymology_field_id, operation_tag, parent_persp):
+        group_list = list(group)
+        if not parent_persp in [(x[0].client_id, x[0].object_id) for x in group_list]:
+            return
+        for perspective, lexical_entry, entity in group_list:
+            tag = "%s_%s" % (key, operation_tag)
+            tag_entity = Entity(client_id=client_id, object_id=obj_id.next,
+                                field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1],
+                                parent_client_id=lexical_entry.client_id, parent_object_id=lexical_entry.object_id,
+                                content=tag)
+            tag_entity.publishingentity.accepted = True
+            tag_entity.publishingentity.published = True ##
+            c2 += 1
+            DBSession.add(tag_entity)
+            DBSession.flush()
+
+    def get_entity_list_query(persps_with_field, filter_field_id):
+        word_entity_queries = list()
+        for persp in persps_with_field:
+            lexes = DBSession.query(DictionaryPerspective, LexicalEntry, Entity) \
+                .filter(and_(DictionaryPerspective.object_id == persp.object_id,
+                             DictionaryPerspective.client_id == persp.client_id,
+                             DictionaryPerspective.marked_for_deletion == False)) \
+                .join(LexicalEntry, and_(LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
+                                         LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+                                         LexicalEntry.marked_for_deletion == False)) \
+                .join(Entity, and_(LexicalEntry.object_id == Entity.parent_object_id,
+                                   LexicalEntry.client_id == Entity.parent_client_id,
+                                   tuple_(Entity.field_client_id, Entity.field_object_id).in_([(filter_field_id)]),
+                                   Entity.content != "",
+                                   Entity.content != " ",
+                                   Entity.marked_for_deletion == False,
+                                   )
+                      ).join(Entity.publishingentity).filter(PublishingEntity.accepted == True)
+            #lexes = [x for x in lexes.all() if x[2].publishingentity.accepted != False]
+            word_entity_queries.append(lexes)
+        return word_entity_queries
+
+    def is_leaf(lng):
+        if not DBSession.query(Language).filter(and_(Language.language == None,
+                                              Language.client_id == lng.client_id,
+                                              Language.object_id == lng.object_id)).first():
+            return False
+        return True
+
+    def gist_search_lng(searchstring):
+        translationatom = DBSession.query(TranslationAtom) \
+            .join(TranslationGist). \
+            filter(TranslationAtom.content == searchstring,
+                   TranslationAtom.locale_id == 2,
+                   TranslationGist.type == 'Language') \
+            .first()
+        if translationatom and translationatom.parent:
+            translationgist = translationatom.parent
+            return translationgist
+
+    try:
+        with transaction.manager:
+            с = 0
+            c2 = 0
+            old_client_id = 1
+            old_client = DBSession.query(Client).filter_by(id=old_client_id).first()
+            user = DBSession.query(User).filter_by(id=old_client.user_id).first()
+            client = Client(user_id=1)
+            user.clients.append(client)
+            DBSession.add(client)
+            DBSession.flush()
+            client_id = client.id
+            obj_id = ObjectId()
+
+            # input
+            parent_uralic_lang_id = [508, 36]
+            #all_languages = get_child_lang_list(parent_uralic_lang_id)
+            ####### 09 october 00:40
+            #######
+            lang_list = ["Nenets", "Enets", "Nganasan", "Selkup", "Kamas", "Hungarian", "Khanty", "Mansi", "Komi", "Udmurt",
+              "Mari", "Erzya", "Moksha", "Saami", "Finnish", "Karelian", "Veps", "Votic"]
+            all_languages = list()
+            for l in lang_list:
+                if l == "Nenets":
+                    obj = DBSession.query(Language).filter_by(client_id=508, object_id=48).first()
+                elif l == "Moksha":
+                    obj = DBSession.query(Language).filter_by(client_id=508, object_id=40).first()
+                elif l == "Enets":
+                    obj = DBSession.query(Language).filter_by(client_id=508, object_id=49).first()
+                else:
+                    tr_gist = gist_search_lng(l)
+                    obj = DBSession.query(Language).filter_by(translation_gist_client_id=tr_gist.client_id,
+                                                              translation_gist_object_id=tr_gist.object_id, marked_for_deletion=False).first()
+                all_languages.append(obj)
+                print(l, obj)
+            if len(all_languages) != len(lang_list):
+                return "Translation gist not found"
+            restrict_keys = ["-"]
+
+            ########
+            ########
+
+            for next_lang in all_languages:
+                all_persps = set()
+                print("Language: ", (next_lang.client_id, next_lang.object_id))
+                persps = get_all_persp_by_lang(next_lang)
+                all_persps.update(persps)
+                # all_persps
+                field_ids = get_id_to_field_dict()
+                etymology_field_id = field_ids.get("Etymology")
+                proto_form_id = (742, 4309)
+                word_field_id = field_ids.get("Word")
+
+                # getting perspectives with "Word" field
+
+                persps_with_word = get_persps_by_field(word_field_id)
+                operation_tag = str(client_id) + ctime() + "_" + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                                        for c in range(10))
+
+                # connect all uralic persps
+                word_entities = get_entity_list_query(persps_with_word, word_field_id)
+
+
+                words = itertools.chain.from_iterable(word_entities)
+                sorted_words = sorted(words, key=comparator_func)
+                for key, group in itertools.groupby(sorted_words, key=comparator_func):
+                    if key in restrict_keys:
+                        continue
+                    d = list(group)
+                    if len(d) > 1:
+                        с += 1
+                        set_tag_for_group(key, d, etymology_field_id, operation_tag)
+
                 DBSession.flush()
-
-        for obj in DBSession.query(DictionaryPerspective).all():
-            tr_gist = DBSession.query(TranslationGist).filter_by(client_id=obj.translation_gist_client_id, object_id=obj.translation_gist_object_id).first()
-            tr_gist_type = tr_gist.type
-            if tr_gist_type != "Perspective":
-                if (tr_gist.client_id, tr_gist.object_id) in not_perspective or lang_gists.count((tr_gist.client_id, tr_gist.object_id)) > 0:
-                    raise CommonException("two objects with different types use this gist")
-                tr_gist.type = "Perspective"
-                DBSession.flush()
-
-        for obj in DBSession.query(Field).all():
-            tr_gist = DBSession.query(TranslationGist).filter_by(client_id=obj.translation_gist_client_id, object_id=obj.translation_gist_object_id).first()
-            tr_gist_type = tr_gist.type
-            if tr_gist_type != "Field":
-                if (tr_gist.client_id, tr_gist.object_id) in not_field or lang_gists.count((tr_gist.client_id, tr_gist.object_id)) > 0:
-                    raise CommonException("two objects with different types use this gist")
-                tr_gist.type = "Field"
-                DBSession.flush()
-
-    return "true"
+            return с
+    except Exception as err:
+        return str(err)
 
 
 @view_config(route_name='garbage_collector', renderer='json', permission='admin')
