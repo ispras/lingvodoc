@@ -1134,6 +1134,9 @@ class Query(graphene.ObjectType):
 
         translationgists = list()
         for translationatom in translationatoms:
+            if translationatom is None:
+                translationgists.append(None)
+                continue
             parent = translationatom.parent
             if parent not in translationgists:
                 translationgists.append(parent)
@@ -1141,6 +1144,9 @@ class Query(graphene.ObjectType):
         if translationgists:
             translationgists_list = list()
             for translationgist in translationgists:
+                if translationgist is None:
+                    translationgists_list.append(None)
+                    continue
                 # translationatoms_list = list()
                 # for translationatom in translationgist.translationatom:
                 #     translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
