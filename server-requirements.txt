@@ -26,12 +26,12 @@ pyramid-debugtoolbar==3.0.4
 pyramid-mailer==0.15.1
 pyramid-mako==1.0.2
 pyramid-tm==1.0.1
-pytz==2016.7
+pytz==2018.5
 redis==2.10.5
 repoze.lru==0.6
 requests==2.11.1
 scipy==0.18.1
-six==1.10.0
+six==1.11.0
 SQLAlchemy==1.1.2
 tgt==1.4.2
 transaction==1.6.1

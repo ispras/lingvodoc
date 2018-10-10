@@ -908,6 +908,7 @@ def main(global_config, **settings):
     config.add_route('testing_langs', '/testing_langs',
                      factory='lingvodoc.models.AdminAcl')
     config.add_route('testing_translations', '/testing_translations')
+    config.add_route('garbage_collector', "/garbage_collector", factory="lingvodoc.models.AdminAcl")
 
     #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
     #    config.add_route('home', '/')
