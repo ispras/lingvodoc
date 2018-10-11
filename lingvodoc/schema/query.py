@@ -39,8 +39,8 @@ from lingvodoc.schema.gql_organization import (
 from lingvodoc.schema.gql_translationatom import (
     TranslationAtom,
     CreateTranslationAtom,
-    UpdateTranslationAtom
-)
+    UpdateTranslationAtom,
+    DeleteTranslationAtom)
 from lingvodoc.schema.gql_translationgist import (
     TranslationGist,
     CreateTranslationGist,
@@ -1901,7 +1901,7 @@ class PhonemicAnalysis(graphene.Mutation):
             text_field_id: [66, 8])
           {
             triumph
-            entity_count	
+            entity_count
             result
           }
         }
@@ -2321,6 +2321,7 @@ class MyMutations(graphene.ObjectType):
     #delete_organization = DeleteOrganization.Field()
     create_translationatom = CreateTranslationAtom.Field()
     update_translationatom = UpdateTranslationAtom.Field()
+    delete_translationatom = DeleteTranslationAtom.Field()
     create_translationgist = CreateTranslationGist.Field()
     delete_translationgist = DeleteTranslationGist.Field()
     create_lexicalentry = CreateLexicalEntry.Field()
