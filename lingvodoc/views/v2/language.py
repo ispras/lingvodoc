@@ -1,3 +1,5 @@
+from sqlalchemy.orm.attributes import flag_modified
+
 __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
@@ -115,6 +117,18 @@ def delete_language(request):  # tested & in docs
             if 'desktop' in request.registry.settings:
                 real_delete_language(language, request.registry.settings)
             else:
+                lang_ids = [language.client_id, language.object_id]
+                ids = lang_ids
+                older_siblings = DBSession.query(Language).filter(
+                    Language.parent_client_id == language.parent_client_id,
+                    Language.parent_object_id == language.parent_object_id,
+                    Language.marked_for_deletion == False,
+                    language.additional_metadata['younger_siblings'].contains(
+                        [ids])).all()
+                for lang in older_siblings:
+                    lang.additional_metadata['younger_siblings'].remove(lang_ids)
+                    flag_modified(lang, 'additional_metadata')
+                #
                 language.marked_for_deletion = True
                 objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=language.client_id,
                                                                  object_id=language.object_id).one()
