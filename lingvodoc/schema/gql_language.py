@@ -390,7 +390,7 @@ def get_child_languages(parent_languages):
     """
     child_langs = set()
     for parent_language in parent_languages:
-        for lng_obj in DBSession.query(dbLanguage).filter_by(parent=parent_language, marked_for_deletion=False):
+        for lng_obj in DBSession.query(dbLanguage).filter_by(parent=parent_language, marked_for_deletion=False).all():
             child_langs.add(lng_obj)
     return child_langs
 
@@ -398,12 +398,12 @@ def get_child_lang_list(parent_lang):
     # parent_uralic_obj = DBSession.query(Language).filter_by(client_id=parent_uralic_lang_id[0],
     #                                                         object_id=parent_uralic_lang_id[1]).first()
     # parent_lang = parent_uralic_obj
-    all_languages = set([])
-    next_siblings = set([parent_lang])
+    all_languages = set()
+    next_childs = set([parent_lang])
 
-    while next_siblings:
-        next_siblings = get_child_languages(next_siblings)
-        all_languages.update(next_siblings)
+    while next_childs:
+        next_childs = get_child_languages(next_childs)
+        all_languages.update(next_childs)
     return all_languages
 
 
