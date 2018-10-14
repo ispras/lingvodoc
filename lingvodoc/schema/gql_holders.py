@@ -13,8 +13,10 @@ from lingvodoc.models import (
     LexicalEntry,
     DictionaryPerspectiveToField,
     TranslationGist as dbTranslationGist,
+    TranslationAtom as dbTranslationAtom
 )
 from lingvodoc.utils.verification import check_client_id
+from lingvodoc.cache.caching import CACHE
 
 
 # Object types
@@ -257,11 +259,26 @@ class DateTime(Scalar):  # TODO: change format
 
 
 def del_object(tmp_object):
-    tmp_object.marked_for_deletion = True
-    tmp_objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=tmp_object.client_id,
-                                                         object_id=tmp_object.object_id).one()
-    tmp_objecttoc.marked_for_deletion = True
-
+    if not tmp_object.marked_for_deletion:
+        if hasattr(tmp_object, "translation_gist_object_id"):
+            gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
+                                                         object_id=tmp_object.translation_gist_object_id,
+                                                                marked_for_deletion=False).first()
+            if gist and gist.type != "Perspectove":
+                    atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
+                                                                         marked_for_deletion=False).all()
+                    for dbtranslationatom in atoms:
+                        key = "translation:%s:%s:%s" % (
+                            str(dbtranslationatom.parent_client_id),
+                            str(dbtranslationatom.parent_object_id),
+                            str(dbtranslationatom.locale_id))
+                        CACHE.rem(key)
+                        dbtranslationatom.mark_deleted("Manually deleted. gist: [%s,%s]" % (gist.client_id,
+                                                                                            gist.object_id))
+                    gist.mark_deleted("Manually deleted. object with this translationgist: [%s,%s]" % (
+                                                                                    tmp_object.client_id,
+                                                                                    tmp_object.object_id))
+        tmp_object.mark_deleted("Manually deleted")
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
     """

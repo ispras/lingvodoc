@@ -380,6 +380,32 @@ class UpdateLanguage(graphene.Mutation):
 #         language.dbObject = dblanguage
 #         return UpdateLanguage(language=language, triumph=True)
 
+def get_child_languages(parent_languages):
+    """
+    Returns child_langs set
+    (Uralic) -> set([UralicObject])
+    |       \
+    |        \
+    (lang_1, lang_2)  -> set([lang_1, lang_2])
+    """
+    child_langs = set()
+    for parent_language in parent_languages:
+        for lng_obj in DBSession.query(dbLanguage).filter_by(parent=parent_language, marked_for_deletion=False).all():
+            child_langs.add(lng_obj)
+    return child_langs
+
+def get_child_lang_list(parent_lang):
+    # parent_uralic_obj = DBSession.query(Language).filter_by(client_id=parent_uralic_lang_id[0],
+    #                                                         object_id=parent_uralic_lang_id[1]).first()
+    # parent_lang = parent_uralic_obj
+    all_languages = set()
+    next_childs = set([parent_lang])
+
+    while next_childs:
+        next_childs = get_child_languages(next_childs)
+        all_languages.update(next_childs)
+    return all_languages
+
 
 class DeleteLanguage(graphene.Mutation):
     """
@@ -420,11 +446,33 @@ class DeleteLanguage(graphene.Mutation):
 
         if not dblanguageobj or dblanguageobj.marked_for_deletion:
             raise ResponseError(message="No such language in the system")
-            # dbentryobj = dbentityobj.parent - ?
+
+        child_langs = get_child_lang_list(dblanguageobj)
+        for lang in child_langs:
+            dictionaries = DBSession.query(dbDictionary).filter_by(parent=lang, marked_for_deletion=False).all()
+            for child_dict in dictionaries:
+                if child_dict:
+                    if (lang.client_id, lang.object_id) == (dblanguageobj.client_id, dblanguageobj.object_id):
+                        raise ResponseError(message='This language contains dictionaries')
+                    else:
+                        raise ResponseError(message='Child language contains dictionaries')
+        if len(child_langs):
+            raise ResponseError(message='This language contains child languages')
         settings = info.context["request"].registry.settings
         if 'desktop' in settings:
             real_delete_language(dblanguageobj, settings)
         else:
+            lang_ids = [dblanguageobj.client_id, dblanguageobj.object_id]
+            ids = lang_ids
+            older_siblings = DBSession.query(dbLanguage).filter(
+                dbLanguage.parent_client_id == dblanguageobj.parent_client_id,
+                dbLanguage.parent_object_id == dblanguageobj.parent_object_id,
+                dbLanguage.marked_for_deletion == False,
+                dbLanguage.additional_metadata['younger_siblings'].contains(
+                    [ids])).all()
+            for lang in older_siblings:
+                lang.additional_metadata['younger_siblings'].remove(lang_ids)
+                flag_modified(lang, 'additional_metadata')
             del_object(dblanguageobj)
         language = Language(id=id)
         language.dbObject = dblanguageobj
