@@ -366,7 +366,7 @@ class Query(graphene.ObjectType):
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
                                      dicts_to_filter=graphene.List(LingvodocID),
-                                     tag_list=LingvodocID(),
+                                     tag_list=graphene.List(graphene.String),
                                      category=graphene.Int(),
                                      adopted=graphene.Boolean(),
                                      etymology=graphene.Boolean(),
