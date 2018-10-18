@@ -82,76 +82,64 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
                 lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
 
     aliases = list()
-
-    full_or_block = list()
-
+    and_block = list()
     for search_block in search_strings:
         cur_dbEntity = aliased(dbEntity)
         cur_dbPublishingEntity = aliased(dbPublishingEntity)
         aliases.append(cur_dbEntity)
         aliases.append(cur_dbPublishingEntity)
         # add entity alias in aliases
-
-        inner_and = list()
+        or_block = list()
         for search_string in search_block:
+            inner_and_block = list()
             if 'field_id' in search_string:
-                inner_and.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
-                inner_and.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
+                inner_and_block.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
+                inner_and_block.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
             else:
-                inner_and.append(tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id).in_(category_fields))
+                inner_and_block.append(tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id).in_(category_fields))
 
             matching_type = search_string.get('matching_type')
             if matching_type == "full_string":
                 if category == 1:
-                    inner_and.append(cur_dbEntity.additional_metadata['bag_of_words'].contains([search_string["search_string"].lower()]))
+                    inner_and_block.append(cur_dbEntity.additional_metadata['bag_of_words'].contains([search_string["search_string"].lower()]))
                 else:
-                    inner_and.append(func.lower(cur_dbEntity.content) == func.lower(search_string["search_string"]))
+                    inner_and_block.append(func.lower(cur_dbEntity.content) == func.lower(search_string["search_string"]))
             elif matching_type == 'substring':
                 if category == 1:
-                    inner_and.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).like("".join(['%', search_string["search_string"].lower(), '%'])))
+                    inner_and_block.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).like("".join(['%', search_string["search_string"].lower(), '%'])))
                 else:
 
-                    inner_and.append(func.lower(cur_dbEntity.content).like("".join(['%', search_string["search_string"].lower(), '%'])))
+                    inner_and_block.append(func.lower(cur_dbEntity.content).like("".join(['%', search_string["search_string"].lower(), '%'])))
             elif matching_type == 'regexp':
                 if category == 1:
-                    inner_and.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(search_string["search_string"]))
+                    inner_and_block.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(search_string["search_string"]))
                 else:
-                    inner_and.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
+                    inner_and_block.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
             else:
                 raise ResponseError(message='wrong matching_type')
 
-            #or_block.append(and_(*inner_and_block))
-
-
+            or_block.append(and_(*inner_and_block))
         if publish is not None:
-            inner_and.append(cur_dbPublishingEntity.published == publish)
+            and_block.append(cur_dbPublishingEntity.published == publish)
         if accept is not None:
-            inner_and.append(cur_dbPublishingEntity.accepted == accept)
-            inner_and.append(cur_dbEntity.marked_for_deletion == False)
-
-        inner_and.append(cur_dbEntity.client_id == cur_dbPublishingEntity.client_id)
-        inner_and.append(cur_dbEntity.object_id == cur_dbPublishingEntity.object_id)
-        inner_and.append(cur_dbEntity.parent_client_id == dbLexicalEntry.client_id)
-        inner_and.append(cur_dbEntity.parent_object_id == dbLexicalEntry.object_id)
-        inner_and_block = and_(*inner_and)
-        full_or_block.append(inner_and_block)
-
-
-    perspective_and_block = list()
-    perspective_and_block.append(dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id)
-    perspective_and_block.append(dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id)
-    perspective_and_block.append(dbDictionaryPerspective.parent_client_id == dbDictionary.client_id)
-    perspective_and_block.append(dbDictionaryPerspective.parent_object_id == dbDictionary.object_id)
-
-    result_and_block = and_(or_(*full_or_block), *perspective_and_block)
-
-
+            and_block.append(cur_dbPublishingEntity.accepted == accept)
+        and_block.append(cur_dbEntity.marked_for_deletion == False)
+        and_block.append(cur_dbEntity.client_id == cur_dbPublishingEntity.client_id)
+        and_block.append(cur_dbEntity.object_id == cur_dbPublishingEntity.object_id)
+        and_block.append(cur_dbEntity.parent_client_id == dbLexicalEntry.client_id)
+        and_block.append(cur_dbEntity.parent_object_id == dbLexicalEntry.object_id)
+        and_block.append(or_(*or_block))
+    and_block.append(dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id)
+    and_block.append(dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id)
+    and_block.append(dbDictionaryPerspective.parent_client_id == dbDictionary.client_id)
+    and_block.append(dbDictionaryPerspective.parent_object_id == dbDictionary.object_id)
+    and_block = and_(*and_block)
     aliases_len = len(aliases)
     aliases.append(dbLexicalEntry)
     aliases.append(dbDictionaryPerspective)
     aliases.append(dbDictionary)
 
-    search = DBSession.query(*aliases).filter(result_and_block, tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
+    search = DBSession.query(*aliases).filter(and_block, tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
         lexes)).yield_per(yield_batch_count)
     resolved_search = [entity for entity in search]
 
@@ -187,16 +175,13 @@ class AdvancedSearch(LingvodocObjectType):
     dictionaries = graphene.List(Dictionary)
 
     @classmethod
-    def constructor(cls, languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept):
+    def constructor(cls, languages, tag_list, category, adopted, etymology, search_strings, publish, accept):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
         if languages:
             dictionaries = dictionaries.join(dbDictionary.parent).filter(
                 tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
-        if dicts_to_filter:
-            dictionaries = dictionaries.filter(
-                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
 
