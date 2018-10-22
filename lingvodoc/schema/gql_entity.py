@@ -2,7 +2,7 @@ import os
 import shutil
 from pathvalidate import sanitize_filename
 import graphene
-from sqlalchemy import and_
+from sqlalchemy import and_, tuple_
 from lingvodoc.models import DBSession
 from lingvodoc.schema.gql_holders import (
     fetch_object,
@@ -19,7 +19,8 @@ from lingvodoc.models import (
     Field as dbField,
     Group as dbGroup,
     BaseGroup as dbBaseGroup,
-    PublishingEntity as dbPublishingEntity
+    PublishingEntity as dbPublishingEntity,
+    DictionaryPerspective as dbDictionaryPerspective
 
 )
 from lingvodoc.schema.gql_holders import (
@@ -447,6 +448,95 @@ class UpdateEntity(graphene.Mutation):
         entity = Entity(id=[dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return UpdateEntity(entity=entity, triumph=True)
+
+
+class ApproveAllForUser(graphene.Mutation):
+    """
+    mutation Mu{
+	update_entity_content(id:[1995,2017], published: true){
+		entity{
+			created_at
+		}
+	}
+    }
+    """
+    class Arguments:
+        user_id = graphene.Int()
+        published = graphene.Boolean()
+        accepted = graphene.Boolean()
+        field_ids = graphene.List(LingvodocID)
+        perspective_id = LingvodocID(required=True)
+
+    #entity = graphene.Field(Entity)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+        user_id = args.get('user_id')
+        published = args.get('published')
+        accepted = args.get('accepted')
+        field_ids = args.get('field_ids')
+        perspective_id = args.get('perspective_id')
+
+        given_perspective = DBSession.query(dbDictionaryPerspective).filter_by(marked_for_deletion=False,
+                                                                               client_id = perspective_id[0],
+                                                                               object_id = perspective_id[1]).first()
+        if not given_perspective:
+            raise ResponseError("Perspective Not found")
+        if published is not None:
+            info.context.acl_check('create', 'approve_entities',
+                                   (perspective_id[0], perspective_id[1]))
+
+        if published is not None:
+            info.context.acl_check('delete', 'approve_entities',
+                                   (perspective_id[0], perspective_id[1]))
+
+        if accepted is not None:
+            info.context.acl_check('create', 'lexical_entries_and_entities',
+                                   (perspective_id[0], perspective_id[1]))
+
+        # query(dbEntity).join(dbEntity.parent).join(dbEntity.publishingentity).filter(
+        #     dbPublishingEntity.accepted == false, dbLexicalEntry.parent == given_perspective,
+        #     dbEntity.client_id.in_(list_of_clients_of_given_user, dbEntity.field.in_(list_of_fields))).all()
+
+
+
+        list_of_clients_of_given_user = [x[0] for x in DBSession.query(Client.id).filter_by(user_id=user_id).all()]
+        list_of_fields = list()
+        for field_id in field_ids:
+            field = DBSession.query(dbField).filter_by(client_id=field_id[0], object_id=field_id[1]).first()
+            if not field:
+                raise ResponseError("field not found")
+            list_of_fields.append((field.client_id, field.object_id))
+        field_id_list = tuple(list_of_fields)
+        pub_entities = None
+        if published:
+            pub_entities = DBSession.query(dbPublishingEntity).join(dbEntity.parent).join(dbEntity.publishingentity).filter(
+                dbPublishingEntity.published==False,
+                dbLexicalEntry.parent==given_perspective,
+                tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(field_id_list),
+                dbEntity.client_id.in_(list_of_clients_of_given_user)
+            ).all()
+        if accepted:
+            pub_entities = DBSession.query(dbPublishingEntity).join(dbEntity.parent).join(dbEntity.publishingentity).filter(
+                dbPublishingEntity.accepted==False,
+                dbLexicalEntry.parent==given_perspective,
+                tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(field_id_list),
+                dbEntity.client_id.in_(list_of_clients_of_given_user)
+            ).all()
+        for pub_entity in pub_entities:
+            if published:
+                pub_entity.published = True
+            if accepted:
+                pub_entity.accepted = True
+        DBSession.flush()
+        # if accepted is not None and not accepted and dbpublishingentity.accepted:
+        #     raise ResponseError(message="Not allowed action")
+
+        # client_id = id[0] if id else info.context["client_id"]
+        # object_id = id[1] if id else None
+
+        return ApproveAllForUser( triumph=True)
 
 
 

@@ -13,8 +13,8 @@ from lingvodoc.schema.gql_entity import (
     UpdateEntity,
     DeleteEntity,
     UpdateEntityContent,
-    BulkCreateEntity
-)
+    BulkCreateEntity,
+    ApproveAllForUser)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -2302,6 +2302,7 @@ class MyMutations(graphene.ObjectType):
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
     update_entity_content = UpdateEntityContent.Field()
+    approve_all_for_user = ApproveAllForUser.Field()
     bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
