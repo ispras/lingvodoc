@@ -13,8 +13,8 @@ from lingvodoc.schema.gql_entity import (
     UpdateEntity,
     DeleteEntity,
     UpdateEntityContent,
-    BulkCreateEntity
-)
+    BulkCreateEntity,
+    ApproveAllForUser)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -365,7 +365,8 @@ class Query(graphene.ObjectType):
                                      field_id=LingvodocID(required=True), mode=graphene.String())
     advanced_search = graphene.Field(AdvancedSearch,
                                      languages=graphene.List(LingvodocID),
-                                     tag_list=LingvodocID(),
+                                     dicts_to_filter=graphene.List(LingvodocID),
+                                     tag_list=graphene.List(graphene.String),
                                      category=graphene.Int(),
                                      adopted=graphene.Boolean(),
                                      etymology=graphene.Boolean(),
@@ -623,7 +624,7 @@ class Query(graphene.ObjectType):
             print(errors)
         return result
 
-    def resolve_advanced_search(self, info, search_strings, languages=None, tag_list=None, category=None, adopted=None, etymology=None, mode='published'):
+    def resolve_advanced_search(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, mode='published'):
 
         if mode == 'all':
             publish = None
@@ -644,7 +645,7 @@ class Query(graphene.ObjectType):
             raise ResponseError(message="mode: <all|published|not_accepted>")
         if not search_strings:
             raise ResponseError(message="search_strings is empty")
-        return AdvancedSearch().constructor(languages, tag_list, category, adopted, etymology, search_strings, publish, accept)
+        return AdvancedSearch().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept)
 
     def resolve_template_modes(self, info):
         return ['corpora']
@@ -2301,6 +2302,7 @@ class MyMutations(graphene.ObjectType):
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
     update_entity_content = UpdateEntityContent.Field()
+    approve_all_for_user = ApproveAllForUser.Field()
     bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()

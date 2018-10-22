@@ -188,7 +188,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                             ('merge', 'min_created_at')].astext, BigInteger),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
-                    PublishingEntity.published)
+                    PublishingEntity.published, PublishingEntity.accepted)
 
                     .filter(and_(
                         LexicalEntry.parent_client_id == perspective_client_id,
@@ -207,11 +207,13 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                 entity_count_query = DBSession.query(
                     entity_query.c.entity_client_id,
                     entity_query.c.published,
+                    entity_query.c.accepted,
                     func.count('*').label('entity_count')).filter(and_(
                         entity_query.c.entity_created_at >= time_begin,
                         entity_query.c.entity_created_at < time_end)).group_by(
                             entity_query.c.entity_client_id,
-                            entity_query.c.published).subquery()
+                            entity_query.c.published,
+                            entity_query.c.accepted).subquery()
 
             # Grouping tags are counted in a special way.
 
@@ -232,7 +234,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                             ('merge', 'min_created_at')].astext, BigInteger),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
-                    PublishingEntity.published)
+                    PublishingEntity.published, PublishingEntity.accepted)
 
                     .filter(and_(
                         LexicalEntry.parent_client_id == perspective_client_id,
@@ -250,22 +252,26 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
                 entry_group_query = DBSession.query(
                     entity_query.c.entity_client_id,
-                    entity_query.c.published).filter(and_(
+                    entity_query.c.published,
+                    entity_query.c.accepted).filter(and_(
                         entity_query.c.entity_created_at >= time_begin,
                         entity_query.c.entity_created_at < time_end)).group_by(
                             entity_query.c.client_id,
                             entity_query.c.object_id,
                             entity_query.c.entity_client_id,
-                            entity_query.c.published).subquery()
+                            entity_query.c.published,
+                            entity_query.c.accepted).subquery()
 
                 # Grouping by clients and publishing status.
 
                 entity_count_query = DBSession.query(
                     entry_group_query.c.entity_client_id,
                     entry_group_query.c.published,
+                    entry_group_query.c.accepted,
                     func.count('*').label('entity_count')).group_by(
                         entry_group_query.c.entity_client_id,
-                        entry_group_query.c.published).subquery()
+                        entry_group_query.c.published,
+                        entry_group_query.c.accepted).subquery()
 
             # Unknown field data type.
 
@@ -277,24 +283,25 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
             entity_count_list = DBSession.query(
                 Client.id, Client.user_id, Client.is_browser_client,
                 entity_count_query.c.published,
+                entity_count_query.c.accepted,
                 entity_count_query.c.entity_count).join(
                     entity_count_query, Client.id == entity_count_query.c.entity_client_id).all()
 
             # Counting entities.
 
-            for client_id, user_id, is_browser, published, entity_count in entity_count_list:
+            for client_id, user_id, is_browser, published, accepted, entity_count in entity_count_list:
 
                 if user_id not in user_data_dict:
                     user = DBSession.query(User).filter_by(id = user_id).first()
 
                     user_data_dict[user_id] = {
                         'login': user.login, 'name': user.name,
-                        'entities': {'published': {}, 'unpublished': {}, 'total': {}}}
+                        'entities': {'published': {}, 'unpublished': {}, 'total': {}, "unaccepted": {}}}
 
                 user_data = user_data_dict[user_id]
 
                 if 'entities' not in user_data:
-                    user_data['entities'] = {'published': {}, 'unpublished': {}, 'total': {}}
+                    user_data['entities'] = {'published': {}, 'unpublished': {}, 'total': {}, "unaccepted": {}}
 
                 entity_data = user_data['entities']
 
@@ -311,10 +318,30 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                     for f_string in [field.get_translation(locale_id), 'total']:
 
                         if f_string not in entity_data[p_string]:
-                            entity_data[p_string][f_string] = {'web': 0, 'desktop': 0, 'total': 0}
+                            entity_data[p_string][f_string] = {'web': 0, 'desktop': 0, 'total': 0, 'field_id': [field.client_id, field.object_id]}
 
                         for c_string in [client_string, 'total']:
                             entity_data[p_string][f_string][c_string] += entity_count
+
+
+                #
+                accepted_string = 'accpeted' if accepted else 'unaccepted'
+                if accepted:
+                    continue
+
+                for a_string in [accepted_string, 'total']:
+
+                    if a_string not in entity_data:
+                        entity_data[a_string] = {}
+
+                    for f_string in [field.get_translation(locale_id), 'total']:
+
+                        if f_string not in entity_data[a_string]:
+                            entity_data[a_string][f_string] = {'web': 0, 'desktop': 0, 'total': 0, 'field_id': [field.client_id, field.object_id]}
+
+                        for c_string in [client_string, 'total']:
+                            entity_data[a_string][f_string][c_string] += entity_count
+
 
         # Returning gathered statistics.
 
