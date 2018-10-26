@@ -558,7 +558,7 @@ class UpdateDictionary(graphene.Mutation):
                         persp.additional_metadata = dict()
                     persp.additional_metadata['authors'] = {
                                                                  "type":"authors",
-                                                                 "content":additional_metadata["authors"]
+                                                                 "content": ",".join(additional_metadata["authors"])
                                                             }
                     flag_modified(persp, 'additional_metadata')
             if "blobs" in additional_metadata:

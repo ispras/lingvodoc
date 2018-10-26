@@ -28,7 +28,7 @@ from .gql_dictionary import Dictionary
 from lingvodoc.utils.creation import (
     create_dblanguage,
     create_gists_with_atoms,
-    add_user_to_group)
+    add_user_to_group, update_metadata)
 from lingvodoc.utils.deletion import real_delete_language
 # from lingvodoc.schema.gql_dictionary import Dictionary
 from sqlalchemy.orm.attributes import flag_modified
@@ -112,6 +112,7 @@ class CreateLanguage(graphene.Mutation):
         translation_gist_id = LingvodocID()
         parent_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
+        additional_metadata = ObjectVal()
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -126,7 +127,7 @@ class CreateLanguage(graphene.Mutation):
         object_id = id[1] if id else None
         id = [client_id, object_id]
         parent_id = args.get('parent_id')
-
+        additional_metadata = args.get("additional_metadata")
         translation_gist_id = args.get("translation_gist_id")
         translation_atoms = args.get("translation_atoms")
         translation_gist_id = create_gists_with_atoms(
@@ -294,6 +295,7 @@ class UpdateLanguage(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         translation_gist_id = LingvodocID()
+        additional_metadata = ObjectVal()
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -314,7 +316,9 @@ class UpdateLanguage(graphene.Mutation):
         if translation_gist_id:
             dblanguage.translation_gist_client_id = translation_gist_id[0]
             dblanguage.translation_gist_object_id = translation_gist_id[1]
-
+        additional_metadata = args.get("additional_metadata")
+        if additional_metadata:
+            update_metadata(dblanguage, additional_metadata)
         language = Language(id=[dblanguage.client_id, dblanguage.object_id])
         language.dbObject = dblanguage
         return UpdateLanguage(language=language, triumph=True)

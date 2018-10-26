@@ -520,7 +520,12 @@ def edit_perspective_meta(request):  # tested & in docs
                 if "content" in req["authors"]:
                     if not parent.additional_metadata:
                         parent.additional_metadata = dict()
-                    parent.additional_metadata['authors'] = req["authors"]["content"]
+                    authors_string = req["authors"]["content"]
+                    authors_list_metadata = list()
+                    if authors_string:
+                        for author in authors_string.split(","):
+                            authors_list_metadata.append(author.strip())
+                    parent.additional_metadata['authors'] = authors_list_metadata
                     flag_modified(parent, 'additional_metadata')
             if "info" in req:
                 if "content" in req["info"]:

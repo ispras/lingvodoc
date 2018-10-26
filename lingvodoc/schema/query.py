@@ -1,5 +1,6 @@
 import copy
 import ctypes
+import itertools
 import logging
 import textwrap
 import traceback
@@ -391,6 +392,38 @@ class Query(graphene.ObjectType):
                                        levenshtein=graphene.Int(),
                                        threshold=graphene.Float(),
                                        field_selection_list=graphene.List(ObjectVal), )
+    select_tags_metadata = ObjectVal()
+
+
+    def resolve_select_tags_metadata(self, info):
+        def get_sorted_metadata_keys(dictionary_metadata, metadata_name):
+            authors = [x[0].get(metadata_name) for x in dictionary_metadata if x[0] != None]
+            authors_set = set()
+            for author_list in authors:
+                if author_list:
+                    for author in author_list:
+                        authors_set.add(author)
+            authors_list = sorted(list(authors_set))
+            return authors_list
+
+        menu_json_data = {}
+        dictionary_metadata = DBSession.query(dbDictionary.additional_metadata).filter(dbDictionary.marked_for_deletion==False,
+                                                                           dbDictionary.additional_metadata!={}).all()
+        authors_list = get_sorted_metadata_keys(dictionary_metadata, "authors")
+        #menu_json_data["hasAudio"] = [0,1]
+        menu_json_data["authors"] = authors_list
+        menu_json_data["humanSettlement"] = get_sorted_metadata_keys(dictionary_metadata, "humanSettlement")
+        menu_json_data["years"] = get_sorted_metadata_keys(dictionary_metadata, "years")
+        menu_json_data["kind"] = ["Expedition", "Archive"]
+        menu_json_data["nativeSpeakersCount"] = ["vulnerable",
+                                                 "definitely endangerd",
+                                                 "critically endangerd", "extinct",
+                                                 "severely endangered",
+                                                 "safe"]
+
+        return menu_json_data
+
+
 
     def resolve_merge_suggestions(self, info, perspective_id, algorithm, threshold=0.1,
                                   entity_type_primary='Transcription',

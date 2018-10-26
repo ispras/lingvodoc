@@ -274,11 +274,23 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
     DBSession.flush()
     return base_group
 
+from lingvodoc.utils.creation import update_metadata
+
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    pass
+    all_dictionaries = DBSession.query(Dictionary).filter(Dictionary.marked_for_deletion==False).all()
+    for dictionary in all_dictionaries:
+        old_metadata = dictionary.additional_metadata
+        if old_metadata:
+            if "authors" in old_metadata:
+                old_authors_string = old_metadata.get("authors")
+                if old_authors_string:
+                    list_from_string = old_authors_string.split(",")
+                    list_from_string = sorted(list_from_string)
+                    list_from_string = [x.strip() for x in list_from_string]
+                    update_metadata(dictionary, {"authors": list_from_string})
 
 @view_config(route_name='garbage_collector', renderer='json', permission='admin')
 def garbage_collector(request):

@@ -196,7 +196,8 @@ def create_dictionary_persp_to_field(id=None,
 
 def create_dblanguage(id=None,
                       parent_id=None,
-                      translation_gist_id=None):
+                      translation_gist_id=None,
+                      additional_metadata=None):
     parent = None
     parent_client_id, parent_object_id = parent_id if parent_id else (None, None)
     client_id, object_id = id
@@ -212,7 +213,8 @@ def create_dblanguage(id=None,
         client_id=client_id,
         object_id=object_id,
         translation_gist_client_id=translation_gist_client_id,
-        translation_gist_object_id=translation_gist_object_id
+        translation_gist_object_id=translation_gist_object_id,
+        additional_metadata=additional_metadata
     )
     DBSession.add(dblanguage)
 
