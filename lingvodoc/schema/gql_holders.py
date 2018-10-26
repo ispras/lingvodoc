@@ -597,7 +597,6 @@ class Metadata(graphene.ObjectType):
     original_filename = graphene.String()
     location = ObjectVal()
     client_id = graphene.Int()
-    authors = graphene.String()
     row_id = graphene.Int()
     merged_to = LingvodocID()
     is_protected = graphene.Boolean()
@@ -607,7 +606,12 @@ class Metadata(graphene.ObjectType):
     participant = graphene.List(LingvodocID)
     link_perspective_id = LingvodocID()
     tag_list = graphene.List(graphene.String)
-
+    authors = graphene.List(graphene.String)
+    #hasAudio = graphene.Boolean()
+    years = graphene.List(graphene.String)
+    kind = graphene.String()
+    speakersAmount = graphene.String()
+    humanSettlement = graphene.List(graphene.String)
 
 
 # class LevelAndId(graphene.ObjectType):
