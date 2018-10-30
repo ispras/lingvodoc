@@ -251,12 +251,14 @@ def basic_sync(request):
         lang.parent_client_id, lang.parent_object_id) in parent_langs_ids])
         new_langs = [lang for lang in langs if (lang.client_id, lang.object_id) not in parent_langs_ids]
     new_entries.extend(parent_langs)
+    curr_server = server[Language.__tablename__]
     for entry in DBSession.query(Language).all():
         client_id = str(entry.client_id)
         object_id = str(entry.object_id)
         if client_id in curr_server and object_id in curr_server[client_id]:
                 for key, value in list(return_date_time(curr_server[client_id][object_id]).items()):
                     setattr(entry, key, value)
+                    flag_modified(entry, key)
     DBSession.bulk_save_objects(new_entries)
     #todo: delete everything marked_for_deletion? but then next time it will download them again and again and again
     #todo: make request to server with existing objecttocs. server will return objecttocs for deletion

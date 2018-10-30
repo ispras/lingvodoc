@@ -1149,54 +1149,51 @@ class Query(graphene.ObjectType):
         if not searchstrings:
             raise ResponseError(message="Error: no search strings")
 
-        # translationatoms = DBSession.query(dbTranslationAtom) \
-        #     .join(dbTranslationGist). \
-        #     filter(dbTranslationAtom.content.in_(searchstrings),
-        #            dbTranslationAtom.locale_id == 2,
-        #            dbTranslationGist.type == 'Service') \
-        #     .all()
 
-        translationatoms = list()
+
+
+        atoms_query = DBSession.query(dbTranslationAtom).join(dbTranslationGist). \
+                filter(dbTranslationAtom.locale_id == 2,
+                       dbTranslationGist.type == 'Service',
+                       dbTranslationGist.marked_for_deletion==False,
+                       dbTranslationAtom.marked_for_deletion==False)
+        atoms = atoms_query.all()
+
+        string_to_gist = dict()
+        for atom in atoms:
+            if atom.content in searchstrings:
+                string_to_gist[atom.content] = atom.parent
+
+        translationgists_list = list()
         for ss in searchstrings:
-            tratom = DBSession.query(dbTranslationAtom) \
-                    .join(dbTranslationGist). \
-                filter(dbTranslationAtom.content == ss,
-                       dbTranslationAtom.locale_id == 2,
-                       dbTranslationGist.type == 'Service') \
-                .first()
-            translationatoms.append(tratom)
-
-        translationgists = list()
-        for translationatom in translationatoms:
-            if translationatom is None:
-                translationgists.append(None)
-                continue
-            parent = translationatom.parent
-            if parent not in translationgists:
-                translationgists.append(parent)
-
-        if translationgists:
-            translationgists_list = list()
-            for translationgist in translationgists:
-                if translationgist is None:
-                    translationgists_list.append(None)
-                    continue
-                # translationatoms_list = list()
-                # for translationatom in translationgist.translationatom:
-                #     translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
-                #                                              parent_id=[translationatom.parent_client_id,
-                #                                                         translationatom.parent_object_id],
-                #                                              content=translationatom.content,
-                #                                              locale_id=translationatom.locale_id,
-                #                                              created_at=translationatom.created_at
-                #                                              )
-                #     translationatoms_list.append(translationatom_object)
-                gql_translationgist = TranslationGist(id=[translationgist.client_id, translationgist.object_id])
-                                                         #translationatoms=translationatoms_list)
+            if ss in string_to_gist:
+                translationgist = string_to_gist[ss]
+                gql_translationgist = TranslationGist(id=[translationgist.client_id, translationgist.object_id] , translation=ss)
                 gql_translationgist.dbObject = translationgist
                 translationgists_list.append(gql_translationgist)
-            return translationgists_list
-        raise ResponseError(message="Error: no result")
+            else:
+                translationgists_list.append(None)
+        # for ss in searchstrings:
+        #     gist = DBSession.query(atoms).filter(dbTranslationAtom.content=="Link").first()
+        #     translationgist = DBSession.query(dbTranslationGist) \
+        #             .join(dbTranslationAtom). \
+        #         filter(dbTranslationAtom.content == ss,
+        #                dbTranslationAtom.locale_id == 2,
+        #                dbTranslationGist.type == 'Service',
+        #                dbTranslationGist.marked_for_deletion==False,
+        #                dbTranslationAtom.marked_for_deletion==False) \
+        #         .first()
+        #     if translationgist:
+        #         gql_translationgist = TranslationGist(id=[translationgist.client_id, translationgist.object_id])
+        #         gql_translationgist.dbObject = translationgist
+        #         translationgists_list.append(gql_translationgist)
+        #     else:
+        #         translationgists_list.append(None)
+
+
+
+        return translationgists_list
+        # raise ResponseError(message="Error: no result")
 
     def resolve_userblob(self, info, id):
         return UserBlobs(id=id)
