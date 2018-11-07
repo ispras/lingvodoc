@@ -462,18 +462,19 @@ def view_perspective_from_object(request, perspective):
 def view_field_from_object(request, field):
     response = dict()
     if field and not field.marked_for_deletion:
+        locale_id = request.cookies.get('locale_id')
         response['client_id'] = field.client_id
         response['object_id'] = field.object_id
         response['created_at'] = field.created_at
         response['data_type_translation_gist_client_id'] = field.data_type_translation_gist_client_id
         response['data_type_translation_gist_object_id'] = field.data_type_translation_gist_object_id
-        response['translation'] = field.get_translation(request.cookies['locale_id'])
+        response['translation'] = field.get_translation(locale_id)
         response['is_translatable'] = field.is_translatable
         response['translation_gist_client_id'] = field.translation_gist_client_id
         response['translation_gist_object_id'] = field.translation_gist_object_id
         atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=field.data_type_translation_gist_client_id,
                                                           parent_object_id=field.data_type_translation_gist_object_id,
-                                                          locale_id=int(request.cookies['locale_id'])).first()
+                                                          locale_id=int(locale_id)).first()
         if atom:
             response['data_type'] = atom.content
         else:
