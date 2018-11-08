@@ -2398,33 +2398,40 @@ class CognateAnalysis(graphene.Mutation):
 
             # And then get all tags for entries we haven't already done it for.
 
-            tag_query = (
-                    
-                DBSession.query(
-                    dbEntity.parent_client_id,
-                    dbEntity.parent_object_id,
-                    dbEntity.content)
-                
-                .filter(
-                    tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                        .in_(entry_id_list),
-                    dbEntity.field_client_id == field_client_id,
-                    dbEntity.field_object_id == field_object_id,
-                    dbEntity.marked_for_deletion == False,
-                    dbPublishingEntity.client_id == dbEntity.client_id,
-                    dbPublishingEntity.object_id == dbEntity.object_id,
-                    dbPublishingEntity.published == True,
-                    dbPublishingEntity.accepted == True))
-
             tag_list = []
 
-            for entry_client_id, entry_object_id, tag in tag_query.all():
+            entry_id_list.sort()
+            log.debug('len(entry_id_list): {0}'.format(len(entry_id_list)))
 
-                entry_id = entry_client_id, entry_object_id
-                entry_id_dict[entry_id].add(tag)
+            for i in range((len(entry_id_list) + 16383) // 16384):
 
-                if tag not in tag_dict:
-                    tag_list.append(tag)
+                tag_query = (
+                        
+                    DBSession.query(
+                        dbEntity.parent_client_id,
+                        dbEntity.parent_object_id,
+                        dbEntity.content)
+
+                    # We have to split entries into parts due to the danger of stack overflow in Postgres.
+                    
+                    .filter(
+                        tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                            .in_(entry_id_list[i * 16384 : (i + 1) * 16384]),
+                        dbEntity.field_client_id == field_client_id,
+                        dbEntity.field_object_id == field_object_id,
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True))
+
+                for entry_client_id, entry_object_id, tag in tag_query.all():
+
+                    entry_id = entry_client_id, entry_object_id
+                    entry_id_dict[entry_id].add(tag)
+
+                    if tag not in tag_dict:
+                        tag_list.append(tag)
 
         # And now grouping lexical entries by tags.
 
@@ -2632,10 +2639,7 @@ class CognateAnalysis(graphene.Mutation):
         """
 
         group_field_cid, group_field_oid = args['group_field_id']
-
-        perspective_info_list = [
-            (tuple(perspective_id), tuple(text_field_id))
-            for perspective_id, text_field_id in args['perspective_info_list']]
+        perspective_info_list = args['perspective_info_list']
 
         try:
 
@@ -2652,6 +2656,10 @@ class CognateAnalysis(graphene.Mutation):
 
                 return ResponseError(message =
                     'Analysis library is absent, please contact system administrator.')
+
+            perspective_info_list = [
+                (tuple(perspective_id), tuple(text_field_id))
+                for perspective_id, text_field_id in perspective_info_list]
 
             locale_id = info.context.get('locale_id') or 2
 
