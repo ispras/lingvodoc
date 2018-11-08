@@ -1,8 +1,11 @@
+import collections
 import copy
 import ctypes
 import itertools
 import logging
+import pprint
 import textwrap
+import time
 import traceback
 
 import graphene
@@ -220,13 +223,17 @@ from lingvodoc.utils.creation import create_entity
 log = logging.getLogger(__name__)
 
 
-# Mikhail Oslon's analysis function.
+# Mikhail Oslon's analysis functions.
 
 try:
-    get_all_output = ctypes.CDLL('liboslon.so').GetAllOutput
+    liboslon = ctypes.CDLL('liboslon.so')
+
+    phonemic_analysis_f = liboslon.PhonemicAnalysis_GetAllOutput
+    cognate_analysis_f = liboslon.CognateAnalysis_GetAllOutput
 
 except:
-    get_all_output = None
+    phonemic_analysis_f = None
+    cognate_analysis_f = None
 
 
 class TierList(graphene.ObjectType):
@@ -1944,12 +1951,12 @@ class PhonemicAnalysis(graphene.Mutation):
         try:
 
             log.debug(
-                'phonemic analysis {0}/{1}: text field {2}/{3}, get_all_output {4}'.format(
+                'phonemic_analysis {0}/{1}: text field {2}/{3}, phonemic_analysis_f {4}'.format(
                     perspective_cid, perspective_oid,
                     text_field_cid, text_field_oid,
-                    repr(get_all_output)))
+                    repr(phonemic_analysis_f)))
 
-            if get_all_output is None:
+            if phonemic_analysis_f is None:
 
                 return ResponseError(message =
                     'Analysis library is absent, please contact system administrator.')
@@ -1976,7 +1983,7 @@ class PhonemicAnalysis(graphene.Mutation):
             total_count = data_query.count()
 
             log.debug(
-                'phonemic analysis {0}/{1}: {2} text field {3}/{4} entities'.format(
+                'phonemic_analysis {0}/{1}: {2} text field {3}/{4} entities'.format(
                     perspective_cid, perspective_oid,
                     total_count,
                     text_field_cid, text_field_oid))
@@ -1984,7 +1991,9 @@ class PhonemicAnalysis(graphene.Mutation):
             if total_count <= 0:
 
                 return PhonemicAnalysis(
-                    triumph = True, total_count = total_count, result = u'')
+                    triumph = True,
+                    entity_count = total_count,
+                    result = u'')
 
             # Otherwise we perform phonemic analysis.
 
@@ -1992,11 +2001,18 @@ class PhonemicAnalysis(graphene.Mutation):
                 for entity in data_query.all()
                 if len(entity.content) > 0]
 
+            if len(text_list) <= 0:
+
+                return PhonemicAnalysis(
+                    triumph = True,
+                    entity_count = total_count,
+                    result = u'No text entities with non-empty contents.')
+
             text_list[-1] += u'\r\n'
             input = u'\r\n'.join(text_list)
 
             log.debug(
-                'phonemic analysis {0}/{1}: text field {2}/{3}'
+                'phonemic_analysis {0}/{1}: text field {2}/{3}'
                 '\ninput:\n{4}'.format(
                     perspective_cid, perspective_oid,
                     text_field_cid, text_field_oid,
@@ -2005,17 +2021,40 @@ class PhonemicAnalysis(graphene.Mutation):
             # Calling analysis library.
 
             input_buffer = ctypes.create_unicode_buffer(input)
-            output_buffer = ctypes.create_unicode_buffer(1048576)
 
-            result = get_all_output(input_buffer, output_buffer)
+            output_buffer_size = 1048576
+            output_buffer = ctypes.create_unicode_buffer(output_buffer_size)
+
+            result = phonemic_analysis_f(input_buffer, output_buffer)
+            call_count = 1
+
+            while result != 1 and call_count < 4:
+
+                output_buffer_size *= 2
+                output_buffer = ctypes.create_unicode_buffer(output_buffer_size)
+
+                result = phonemic_analysis_f(input_buffer, output_buffer)
+                call_count += 1
+
+            # If we don't have a good result, we return an error.
+
+            log.debug(
+                'phonemic_analysis {0}/{1}: text field {2}/{3}: result {4}'.format(
+                    perspective_cid, perspective_oid,
+                    text_field_cid, text_field_oid,
+                    result))
+
+            if result != 1:
+
+                return ResponseError(message =
+                    'All {0} library call tries resulted in error.'.format(call_count))
+
             output = output_buffer.value
 
             log.debug(
-                'phonemic analysis {0}/{1}: text field {2}/{3}: result {4}'
-                '\noutput:\n{5}'.format(
+                'phonemic_analysis {0}/{1}: text field {2}/{3}:\noutput:\n{4}'.format(
                     perspective_cid, perspective_oid,
                     text_field_cid, text_field_oid,
-                    result,
                     repr(output)))
 
             # Reflowing output.
@@ -2033,7 +2072,7 @@ class PhonemicAnalysis(graphene.Mutation):
             wrapped_output = '\n'.join(reflow_list)
 
             log.debug(
-                'phonemic analysis {0}/{1}: text field {2}/{3}:'
+                'phonemic_analysis {0}/{1}: text field {2}/{3}:'
                 '\nwrapped output:\n{4}'.format(
                     perspective_cid, perspective_oid,
                     text_field_cid, text_field_oid,
@@ -2051,7 +2090,811 @@ class PhonemicAnalysis(graphene.Mutation):
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug('phonemic analysis: exception')
+            log.debug('phonemic_analysis: exception')
+            log.debug(traceback_string)
+
+            return ResponseError(message = 'External error')
+
+
+class CognateAnalysis(graphene.Mutation):
+
+    class Arguments:
+        group_field_id=LingvodocID(required=True)
+        perspective_info_list=graphene.List(graphene.List(LingvodocID), required=True)
+
+    triumph = graphene.Boolean()
+    dictionary_count = graphene.Int()
+    group_count = graphene.Int()
+    text_count = graphene.Int()
+    result = graphene.String()
+
+    @staticmethod
+    def tag_data_std(
+        entry_already_set,
+        group_list,
+        perspective_id,
+        field_client_id,
+        field_object_id):
+        """
+        Gets lexical entry grouping data using current standard methods, computes elapsed time.
+        """
+
+        start_time = time.time()
+
+        tag_data_list = (DBSession.query(
+            dbLexicalEntry, func.count('*'))
+            
+            .filter(
+                dbLexicalEntry.parent_client_id == perspective_id[0],
+                dbLexicalEntry.parent_object_id == perspective_id[1],
+                dbLexicalEntry.marked_for_deletion == False,
+                dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                dbEntity.field_client_id == field_client_id,
+                dbEntity.field_object_id == field_object_id,
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbPublishingEntity.published == True,
+                dbPublishingEntity.accepted == True)
+
+            .group_by(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id))
+
+        # Processing each lexical entry with at least one tag.
+
+        for entry, count in tag_data_list.all():
+
+            if (entry.client_id, entry.object_id) in entry_already_set:
+                continue
+
+            tag_set = find_all_tags(
+                entry, field_client_id, field_object_id, True, True)
+
+            entry_list = find_lexical_entries_by_tags(
+                tag_set, field_client_id, field_object_id, True, True)
+
+            entry_id_set = set(
+                (tag_entry.client_id, tag_entry.object_id)
+                for tag_entry in entry_list)
+
+            entry_already_set.update(entry_id_set)
+            group_list.append(entry_id_set)
+
+        return time.time() - start_time
+
+    @staticmethod
+    def find_group(
+        entry_client_id,
+        entry_object_id,
+        field_client_id,
+        field_object_id):
+        """
+        Retrieves all lexical entries grouped with a given id-specified entry.
+        """
+
+        entry_id_set = set((
+            (entry_client_id, entry_object_id),))
+
+        tag_query = (
+                
+            DBSession.query(
+                dbEntity.content)
+            
+            .filter(
+                dbEntity.parent_client_id == entry_client_id,
+                dbEntity.parent_object_id == entry_object_id,
+                dbEntity.field_client_id == field_client_id,
+                dbEntity.field_object_id == field_object_id,
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbPublishingEntity.published == True,
+                dbPublishingEntity.accepted == True))
+
+        tag_list = list(tag_query.all())
+        tag_set = set(tag_list)
+
+        # While we have tags we don't have all lexical entries for,
+        # we get these all entries of these tags...
+
+        while tag_list:
+
+            entry_id_query = (
+                    
+                DBSession.query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id)
+                
+                .filter(
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.field_client_id == field_client_id,
+                    dbEntity.field_object_id == field_object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbEntity.content.in_(tag_list),
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True))
+
+            entry_id_list = []
+
+            for entry_id in entry_id_query.all():
+                if entry_id not in entry_id_set:
+
+                    entry_id_set.add(entry_id)
+                    entry_id_list.append(entry_id)
+
+            # And then get all tags for entries we haven't already done it for.
+
+            tag_query = (
+                    
+                DBSession.query(
+                    dbEntity.content)
+                
+                .filter(
+                    tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                        .in_(entry_id_list),
+                    dbEntity.field_client_id == field_client_id,
+                    dbEntity.field_object_id == field_object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True))
+
+            tag_list = []
+
+            for tag in tag_query.all():
+                if tag not in tag_set:
+
+                    tag_set.add(tag)
+                    tag_list.append(tag)
+
+        return entry_id_set
+
+    @staticmethod
+    def tag_data_optimized(
+        entry_already_set,
+        group_list,
+        perspective_id,
+        field_client_id,
+        field_object_id):
+        """
+        Gets lexical entry grouping data using (hopefully) optimized version of the current standard
+        methods, computes elapsed time.
+        """
+
+        start_time = time.time()
+
+        tag_data_list = (
+                
+            DBSession.query(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id,
+                func.count('*'))
+            
+            .filter(
+                dbLexicalEntry.parent_client_id == perspective_id[0],
+                dbLexicalEntry.parent_object_id == perspective_id[1],
+                dbLexicalEntry.marked_for_deletion == False,
+                dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                dbEntity.field_client_id == field_client_id,
+                dbEntity.field_object_id == field_object_id,
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbPublishingEntity.published == True,
+                dbPublishingEntity.accepted == True)
+
+            .group_by(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id))
+
+        # Processing each lexical entry with at least one tag.
+
+        for entry_client_id, entry_object_id, count in tag_data_list.all():
+
+            if (entry_client_id, entry_object_id) in entry_already_set:
+                continue
+
+            entry_id_set = CognateAnalysis.find_group(
+                entry_client_id, entry_object_id,
+                field_client_id, field_object_id)
+
+            entry_already_set.update(entry_id_set)
+            group_list.append(entry_id_set)
+
+        return time.time() - start_time
+
+    @staticmethod
+    def tag_data_aggregated(
+        perspective_info_list,
+        field_client_id,
+        field_object_id,
+        statistics_flag = False,
+        optimize_flag = False):
+        """
+        Gets lexical entry grouping data using aggregated retrieval, computes elapsed time.
+        """
+
+        start_time = time.time()
+
+        entry_id_dict = collections.defaultdict(set)
+        tag_dict = collections.defaultdict(set)
+
+        tag_set = set()
+
+        # All tags for tagged lexical entries in specified perspectives.
+
+        for perspective_id, text_field_id in perspective_info_list:
+
+            tag_query = (
+                    
+                DBSession.query(
+                    dbEntity.parent_client_id,
+                    dbEntity.parent_object_id,
+                    dbEntity.content)
+                
+                .filter(
+                    dbLexicalEntry.parent_client_id == perspective_id[0],
+                    dbLexicalEntry.parent_object_id == perspective_id[1],
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.field_client_id == field_client_id,
+                    dbEntity.field_object_id == field_object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True))
+
+            for entry_client_id, entry_object_id, tag in tag_query.all():
+
+                entry_id_dict[(entry_client_id, entry_object_id)].add(tag)
+                tag_set.add(tag)
+
+        tag_list = tag_set
+
+        # While we have tags we don't have all lexical entries for,
+        # we get all entries of these tags...
+
+        while tag_list:
+
+            entry_id_query = (
+                    
+                DBSession.query(
+                    dbEntity.parent_client_id,
+                    dbEntity.parent_object_id,
+                    dbEntity.content)
+                
+                .filter(
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.field_client_id == field_client_id,
+                    dbEntity.field_object_id == field_object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbEntity.content.in_(tag_list),
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True))
+
+            entry_id_list = []
+
+            for entry_client_id, entry_object_id, tag in entry_id_query.all():
+
+                entry_id = entry_client_id, entry_object_id
+                tag_dict[tag].add(entry_id)
+
+                if entry_id not in entry_id_dict:
+                    entry_id_list.append(entry_id)
+
+            # And then get all tags for entries we haven't already done it for.
+
+            tag_query = (
+                    
+                DBSession.query(
+                    dbEntity.parent_client_id,
+                    dbEntity.parent_object_id,
+                    dbEntity.content)
+                
+                .filter(
+                    tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
+                        .in_(entry_id_list),
+                    dbEntity.field_client_id == field_client_id,
+                    dbEntity.field_object_id == field_object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True))
+
+            tag_list = []
+
+            for entry_client_id, entry_object_id, tag in tag_query.all():
+
+                entry_id = entry_client_id, entry_object_id
+                entry_id_dict[entry_id].add(tag)
+
+                if tag not in tag_dict:
+                    tag_list.append(tag)
+
+        # And now grouping lexical entries by tags.
+
+        entry_already_set = set()
+        group_list = []
+
+        for entry_id, entry_tag_set in entry_id_dict.items():
+
+            if entry_id in entry_already_set:
+                continue
+
+            entry_already_set.add(entry_id)
+
+            group_entry_id_set = set((entry_id,))
+            group_tag_set = set(entry_tag_set)
+
+            current_tag_list = entry_tag_set
+
+            # Recursively gathering grouped entries through their tags.
+
+            while current_tag_list:
+
+                tag_list = []
+
+                for current_tag in current_tag_list:
+                    for current_entry_id in tag_dict[current_tag]:
+
+                        if current_entry_id in group_entry_id_set:
+                            continue
+
+                        group_entry_id_set.add(current_entry_id)
+
+                        for tag in entry_id_dict[current_entry_id]:
+                            if tag not in group_tag_set:
+
+                                group_tag_set.add(tag)
+                                tag_list.append(tag)
+
+                current_tag_list = tag_list
+
+            # Saving entry group data.
+
+            entry_already_set.update(group_entry_id_set)
+            group_list.append(group_entry_id_set)
+
+        # Computing tag statistics for each entry group, if required.
+
+        if statistics_flag:
+
+            redundant_group_count = 0
+            redundant_tag_count = 0
+            redundant_entity_count = 0
+
+            redundant_group_tag_count = 0
+            redundant_group_entry_count = 0
+            redundant_group_entity_count = 0
+
+            delta_entity_count = 0
+
+            # Processing each entry group.
+
+            for entry_id_set in group_list:
+
+                tag_set = set.union(
+                    *(entry_id_dict[entry_id]
+                        for entry_id in entry_id_set))
+
+                tag_list = list(sorted(
+                    (tag, len(tag_dict[tag]))
+                        for tag in tag_set))
+
+                partial_tag_set = set((tag_list[0][0],))
+                partial_entry_id_set = set(tag_dict[tag_list[0][0]])
+
+                index = 1
+
+                # How many partial tag groups we need to cover the entry group completely?
+
+                while (
+                    len(partial_entry_id_set) < len(entry_id_set) and
+                    index < len(tag_list)):
+
+                    partial_tag_set.add(tag_list[index][0])
+                    partial_entry_id_set.update(tag_dict[tag_list[index][0]])
+
+                    index += 1
+
+                group_entity_count = (
+
+                    sum(len(tag_dict[tag])
+                        for tag in tag_set))
+
+                # Checking if we have some redundant partial tag groups.
+
+                if index < len(tag_list):
+
+                    redundant_group_count += 1
+                    redundant_tag_count += len(tag_list) - index
+
+                    for tag, count in tag_list[index:]:
+                        redundant_entity_count += count
+
+                    redundant_group_tag_count += len(tag_list)
+                    redundant_group_entry_count += len(entry_id_set)
+
+                    redundant_group_entity_count += group_entity_count
+
+                delta_entity_count += group_entity_count - len(entry_id_set)
+
+            # Showing gathered statistics.
+
+            log.debug(
+                '\ngroup_count: {0}/{1}, with {2} tags, {3} entries, {4} entities'
+                '\ntag_count: {5}/{6}, {5}/{7} among redundant groups'
+                '\nentity_count: {8}/{9}, {8}/{10} among redundant groups'
+                '\ndelta(entity): {11}, minimum(entity): {12}'.format(
+                    redundant_group_count, len(group_list),
+                    redundant_group_tag_count,
+                    redundant_group_entry_count,
+                    redundant_group_entity_count,
+                    redundant_tag_count, len(tag_dict),
+                    redundant_group_tag_count,
+                    redundant_entity_count,
+                    sum(len(entry_id_set)
+                        for entry_id_set in tag_dict.values()),
+                    redundant_group_entity_count,
+                    delta_entity_count,
+                    len(entry_id_dict)))
+
+        # If required, optimizing lexical entry groups by ensuring that each group has exactly one tag.
+
+        if optimize_flag:
+
+            redundant_tag_list = []
+
+            for entry_id_set in group_list:
+
+                tag_set = set.union(
+                    *(entry_id_dict[entry_id]
+                        for entry_id in entry_id_set))
+
+                count, tag = max(
+                    (len(tag_dict[tag]), tag)
+                    for tag in tag_set)
+
+                # Creating tag entities we need to link current group via selected tag.
+
+                for entry_id in entry_id_set - tag_dict[tag]:
+
+                    tag_entity = dbEntity(
+                        client_id = entry_id[0],
+                        parent_client_id = entry_id[0],
+                        parent_object_id = entry_id[1],
+                        field_client_id = field_client_id,
+                        field_object_id = field_object_id,
+                        content = tag)
+
+                    tag_entity.publishingentity.published = True
+                    tag_entity.publishingentity.accepted = True
+
+                tag_set.remove(tag)
+                redundant_tag_list.extend(tag_set)
+
+            # Removing tag entities of the redundant tags.
+
+            entity_id_query = (
+                    
+                dbEntity.__table__
+                    .update()
+                    .where(and_(
+                        dbEntity.marked_for_deletion == False,
+                        dbEntity.content.in_(redundant_tag_list),
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True))
+                    .values(marked_for_deletion = True)
+                    .returning(dbEntity.client_id, dbEntity.object_id))
+
+            entity_id_list = list(
+                entity_id_query.execute())
+
+            log.debug('entity_id_list: {0} entities\n{1}'.format(
+                len(entity_id_list), pprint.pformat(entity_id_list)))
+
+            # Optimization is not fully implemented at the moment.
+
+            raise NotImplementedError
+
+        return entry_already_set, group_list, time.time() - start_time
+
+    @staticmethod
+    def mutate(self, info, **args):
+        """
+        mutation CognateAnalysis {
+          cognate_analysis(
+            group_field_id: [66, 25],
+            perspective_info_list: [[70, 5], [66, 8]])
+          {
+            triumph
+            entity_count
+            result
+          }
+        }
+        """
+
+        group_field_cid, group_field_oid = args['group_field_id']
+
+        perspective_info_list = [
+            (tuple(perspective_id), tuple(text_field_id))
+            for perspective_id, text_field_id in args['perspective_info_list']]
+
+        try:
+
+            log.debug(
+                 'cognate_analysis:'
+                 '\ngroup field: {0}/{1}'
+                 '\nperspectives and text fields: {2}'
+                 '\ncognate_analysis_f: {3}'.format(
+                    group_field_cid, group_field_oid,
+                    perspective_info_list,
+                    repr(cognate_analysis_f)))
+
+            if cognate_analysis_f is None:
+
+                return ResponseError(message =
+                    'Analysis library is absent, please contact system administrator.')
+
+            locale_id = info.context.get('locale_id') or 2
+
+            # Gathering entry grouping data.
+
+            perspective_dict = collections.defaultdict(dict)
+
+            entry_already_set = set()
+            group_list = []
+
+            tag_dict = collections.defaultdict(set)
+            text_dict = {}
+
+            entry_already_set, group_list, group_time = (
+
+                CognateAnalysis.tag_data_aggregated(
+                    perspective_info_list, group_field_cid, group_field_oid))
+
+            log.debug(
+                'cognate_analysis: {0} entries, {1} groups, {2:.2f}s elapsed time'.format(
+                len(entry_already_set), len(group_list), group_time))
+
+            # Getting text data for each perspective.
+
+            for index, (perspective_id, text_field_id) in enumerate(perspective_info_list):
+
+                perspective = DBSession.query(dbDictionaryPerspective).filter_by(
+                    client_id = perspective_id[0], object_id = perspective_id[1]).first()
+
+                perspective_name = perspective.get_translation(locale_id)
+                dictionary_name = perspective.parent.get_translation(locale_id)
+
+                perspective_dict[perspective_id]['perspective_name'] = perspective_name
+                perspective_dict[perspective_id]['dictionary_name'] = dictionary_name
+
+                log.debug(
+                    'cognate_analysis {0}/{1}: {2} - {3}'.format(
+                    perspective_id[0], perspective_id[1],
+                    dictionary_name, perspective_name))
+
+                # Getting text data, leaving only texts belonging to lexical entries without other texts.
+
+                text_data_list = DBSession.query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id,
+                    dbEntity).filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == text_field_id[0],
+                        dbEntity.field_object_id == text_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+
+                for entry_client_id, entry_object_id, entity in text_data_list.all():
+                    
+                    entry_id = (entry_client_id, entry_object_id)
+
+                    if entry_id in text_dict:
+                        text_dict[entry_id] = (index, None)
+
+                    else:
+                        text_dict[entry_id] = (index, entity.content)
+
+            # Ok, and now we form the source data for analysis.
+
+            result_list = []
+            perspective_list = []
+
+            for perspective_id, text_field_id in perspective_info_list:
+                perspective_data = perspective_dict[perspective_id]
+
+                perspective_list.append(
+                    perspective_data['dictionary_name'] + ' - ' + 
+                    perspective_data['perspective_name'])
+
+            log.debug('\n' +
+                pprint.pformat(perspective_list, width = 108))
+
+            result_list.append(perspective_list)
+
+            # Each group of lexical entries.
+
+            non_unique_count = 0
+            not_enough_count = 0
+
+            total_text_count = 0
+
+            for entry_id_set in group_list:
+
+                text_list = [None] * len(perspective_info_list)
+                text_count = 0
+
+                for entry_id in entry_id_set:
+
+                    if entry_id not in text_dict:
+                        continue
+
+                    # Processing text data of each entry of the group.
+
+                    index, text = text_dict[entry_id]
+
+                    if text is None:
+                        continue
+
+                    if text_list[index] is None:
+
+                        text_list[index] = text.strip()
+                        text_count += 1
+
+                    else:
+
+                        text_list = None
+                        break
+
+                # Dropping groups with multiple text from the same dictionary and groups with no more than a
+                # single text.
+
+                if text_list is None:
+
+                    non_unique_count += 1
+                    continue
+
+                if text_count <= 1:
+
+                    not_enough_count += 1
+                    continue
+
+                log.debug('\n' +
+                    pprint.pformat(text_list, width = 108))
+
+                result_list.append([
+                    text or '' for text in text_list])
+
+                total_text_count += text_count
+
+            # Showing what we've gathered.
+
+            log.debug('\n' +
+                pprint.pformat(result_list, width = 108))
+
+            log.debug('cognate_analysis:'
+                '\nlen(group_list): {0}'
+                '\nlen(result_list): {1}'
+                '\nnon_unique_count: {2}'
+                '\nnot_enough_count: {3}'
+                '\ntext_count: {4}'.format(
+                    len(group_list),
+                    len(result_list),
+                    non_unique_count,
+                    not_enough_count,
+                    total_text_count))
+
+            input = ''.join(
+                ''.join(text + '\0' for text in text_list)
+                for text_list in result_list)
+
+            log.debug(
+                'cognate_analysis: input:\n{0}\n{1} columns, {2} rows'.format(
+                repr(input), len(perspective_info_list), len(result_list)))
+
+            # Checking if we have any data at all.
+
+            if len(result_list) <= 1:
+
+                return CognateAnalysis(
+                    triumph = True,
+                    dictionary_count = len(perspective_info_list),
+                    group_count = len(result_list) - 1,
+                    text_count = total_text_count,
+                    result = u'')
+
+            # Calling analysis library.
+
+            input_buffer = ctypes.create_unicode_buffer(input)
+
+            output_buffer_size = 1048576
+            output_buffer = ctypes.create_unicode_buffer(output_buffer_size)
+
+            result = cognate_analysis_f(
+                input_buffer, len(result_list), len(perspective_info_list), output_buffer)
+
+            call_count = 1
+
+            while result != 1 and call_count < 4:
+
+                output_buffer_size *= 2
+                output_buffer = ctypes.create_unicode_buffer(output_buffer_size)
+
+                result = cognate_analysis_f(
+                    input_buffer, len(result_list), len(perspective_info_list), output_buffer)
+
+                call_count += 1
+
+            # If we don't have a good result, we return an error.
+
+            log.debug('cognate_analysis: result {0}'.format(result))
+
+            if result != 1:
+
+                return ResponseError(message =
+                    'All {0} library call tries resulted in error.'.format(call_count))
+
+            output = output_buffer.value
+
+            log.debug('cognate_analysis: output:\n{0}'.format(repr(output)))
+
+            # Reflowing output.
+
+            line_list = output.split('\r\n')
+
+            text_wrapper = textwrap.TextWrapper(
+                width = 108, tabsize = 4)
+
+            reflow_list = []
+
+            for line in line_list:
+                reflow_list.extend(text_wrapper.wrap(line))
+
+            wrapped_output = '\n'.join(reflow_list)
+
+            log.debug('cognate_analysis: wrapped output:\n{0}'.format(wrapped_output))
+
+            # Returning result.
+
+            return CognateAnalysis(
+                triumph = True,
+                dictionary_count = len(perspective_info_list),
+                group_count = len(result_list) - 1,
+                text_count = total_text_count,
+                result = wrapped_output)
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug('cognate_analysis: exception')
             log.debug(traceback_string)
 
             return ResponseError(message = 'External error')
@@ -2390,6 +3233,7 @@ class MyMutations(graphene.ObjectType):
     delete_task = DeleteTask.Field()
     starling_etymology = StarlingEtymology.Field()
     phonemic_analysis = PhonemicAnalysis.Field()
+    cognate_analysis = CognateAnalysis.Field()
     phonology = Phonology.Field()
     sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
