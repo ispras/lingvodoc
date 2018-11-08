@@ -2877,7 +2877,7 @@ class CognateAnalysis(graphene.Mutation):
             line_list = output.split('\r\n')
 
             text_wrapper = textwrap.TextWrapper(
-                width = 108, tabsize = 4)
+                width = max(196, len(perspective_info_list) * 24), tabsize = 20)
 
             reflow_list = []
 
