@@ -2725,12 +2725,15 @@ class CognateAnalysis(graphene.Mutation):
                 for entry_client_id, entry_object_id, entity in text_data_list.all():
                     
                     entry_id = (entry_client_id, entry_object_id)
+                    text = entity.content.strip()
 
-                    if entry_id not in text_dict:
-                        text_dict[entry_id] = (index, [entity.content])
+                    if text:
 
-                    else:
-                        text_dict[entry_id][1].append(entity.content)
+                        if entry_id not in text_dict:
+                            text_dict[entry_id] = (index, [text])
+
+                        else:
+                            text_dict[entry_id][1].append(text)
 
             # Ok, and now we form the source data for analysis.
 
