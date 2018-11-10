@@ -1,3 +1,5 @@
+import logging
+
 import graphene
 from lingvodoc.models import (
     Language as dbLanguage,
@@ -41,6 +43,10 @@ from sqlalchemy import (
 )
 
 
+# Setting up logging.
+log = logging.getLogger(__name__)
+
+
 class Language(LingvodocObjectType):
     """
      #created_at                 | timestamp without time zone | NOT NULL
@@ -55,7 +61,13 @@ class Language(LingvodocObjectType):
      + translation
     """
     dbType = dbLanguage
-    dictionaries = graphene.List(Dictionary)
+
+    dictionaries = graphene.List(Dictionary,
+        deleted=graphene.Boolean())
+
+    languages = graphene.List('lingvodoc.schema.gql_language.Language',
+        deleted=graphene.Boolean())
+
     locale_exist = graphene.Boolean()
     dataType = graphene.String()
 
@@ -67,14 +79,41 @@ class Language(LingvodocObjectType):
         return self.dbObject.locale
 
     @fetch_object()
-    def resolve_dictionaries(self, info):
+    def resolve_dictionaries(self, info, deleted = None):
+
+        query = DBSession.query(dbDictionary).filter(
+            and_(dbDictionary.parent_object_id == self.dbObject.object_id,
+                 dbDictionary.parent_client_id == self.dbObject.client_id))
+
+        if deleted is not None:
+            query = query.filter(dbDictionary.marked_for_deletion == deleted)
+
         result = list()
-        for dictionary in DBSession.query(dbDictionary).filter(
-                and_(dbDictionary.parent_object_id == self.dbObject.object_id,
-                     dbDictionary.parent_client_id == self.dbObject.client_id)):
+
+        for dictionary in query:
             gql_dictionary = Dictionary(id=[dictionary.client_id, dictionary.object_id])
             gql_dictionary.dbObject = dictionary
             result.append(gql_dictionary)
+
+        return result
+
+    @fetch_object()
+    def resolve_languages(self, info, deleted = None):
+
+        query = DBSession.query(dbLanguage).filter(
+            and_(dbLanguage.parent_object_id == self.dbObject.object_id,
+                 dbLanguage.parent_client_id == self.dbObject.client_id))
+
+        if deleted is not None:
+            query = query.filter(dbLanguage.marked_for_deletion == deleted)
+
+        result = list()
+
+        for language in query:
+            gql_language = Language(id=[language.client_id, language.object_id])
+            gql_language.dbObject = language
+            result.append(gql_language)
+
         return result
 
 
