@@ -2105,6 +2105,7 @@ class CognateAnalysis(graphene.Mutation):
     triumph = graphene.Boolean()
     dictionary_count = graphene.Int()
     group_count = graphene.Int()
+    not_enough_count = graphene.Int()
     text_count = graphene.Int()
     result = graphene.String()
 
@@ -2700,7 +2701,7 @@ class CognateAnalysis(graphene.Mutation):
                     perspective_id[0], perspective_id[1],
                     dictionary_name, perspective_name))
 
-                # Getting text data, leaving only texts belonging to lexical entries without other texts.
+                # Getting text data.
 
                 text_data_list = DBSession.query(
                     dbLexicalEntry.client_id,
@@ -2718,16 +2719,18 @@ class CognateAnalysis(graphene.Mutation):
                         dbPublishingEntity.object_id == dbEntity.object_id,
                         dbPublishingEntity.published == True,
                         dbPublishingEntity.accepted == True)
+                
+                # Grouping text values by lexical entries.
 
                 for entry_client_id, entry_object_id, entity in text_data_list.all():
                     
                     entry_id = (entry_client_id, entry_object_id)
 
-                    if entry_id in text_dict:
-                        text_dict[entry_id] = (index, None)
+                    if entry_id not in text_dict:
+                        text_dict[entry_id] = (index, [entity.content])
 
                     else:
-                        text_dict[entry_id] = (index, entity.content)
+                        text_dict[entry_id][1].append(entity.content)
 
             # Ok, and now we form the source data for analysis.
 
@@ -2748,14 +2751,14 @@ class CognateAnalysis(graphene.Mutation):
 
             # Each group of lexical entries.
 
-            non_unique_count = 0
             not_enough_count = 0
-
             total_text_count = 0
 
             for entry_id_set in group_list:
 
-                text_list = [None] * len(perspective_info_list)
+                group_text_list = [[]
+                    for i in range(len(perspective_info_list))]
+
                 text_count = 0
 
                 for entry_id in entry_id_set:
@@ -2765,41 +2768,56 @@ class CognateAnalysis(graphene.Mutation):
 
                     # Processing text data of each entry of the group.
 
-                    index, text = text_dict[entry_id]
+                    index, entry_text_list = text_dict[entry_id]
 
-                    if text is None:
-                        continue
+                    group_text_list[index].extend(
+                        text.strip() for text in entry_text_list)
 
-                    if text_list[index] is None:
+                    text_count += len(entry_text_list)
 
-                        text_list[index] = text.strip()
-                        text_count += 1
+                # Dropping groups with texts from no more than a single dictionary.
 
-                    else:
-
-                        text_list = None
-                        break
-
-                # Dropping groups with multiple text from the same dictionary and groups with no more than a
-                # single text.
-
-                if text_list is None:
-
-                    non_unique_count += 1
-                    continue
-
-                if text_count <= 1:
+                if sum(min(1, len(text_list))
+                    for text_list in group_text_list) <= 1:
 
                     not_enough_count += 1
                     continue
 
-                log.debug('\n' +
-                    pprint.pformat(text_list, width = 108))
-
-                result_list.append([
-                    text or '' for text in text_list])
-
                 total_text_count += text_count
+
+                text_list = [None] * len(perspective_info_list)
+
+                def group_to_row(index):
+                    """
+                    Recursively compiling table rows as all combinations of texts from different
+                    dictionaries.
+                    """
+
+                    # Another combinations of texts for all dictionaries.
+
+                    if index >= len(group_text_list):
+
+                        log.debug('\n' +
+                            pprint.pformat(text_list, width = 108))
+
+                        result_list.append([
+                            text or '' for text in text_list])
+
+                    # Using all the group's texts for the current dictionary.
+
+                    elif group_text_list[index]:
+
+                        for text in group_text_list[index]:
+
+                            text_list[index] = text
+                            group_to_row(index + 1)
+
+                    # No text for the current dictionary, just going on to the next one.
+
+                    else:
+                        group_to_row(index + 1)
+
+                group_to_row(0)
 
             # Showing what we've gathered.
 
@@ -2809,12 +2827,10 @@ class CognateAnalysis(graphene.Mutation):
             log.debug('cognate_analysis:'
                 '\nlen(group_list): {0}'
                 '\nlen(result_list): {1}'
-                '\nnon_unique_count: {2}'
-                '\nnot_enough_count: {3}'
-                '\ntext_count: {4}'.format(
+                '\nnot_enough_count: {2}'
+                '\ntext_count: {3}'.format(
                     len(group_list),
                     len(result_list),
-                    non_unique_count,
                     not_enough_count,
                     total_text_count))
 
@@ -2824,7 +2840,10 @@ class CognateAnalysis(graphene.Mutation):
 
             log.debug(
                 'cognate_analysis: input:\n{0}\n{1} columns, {2} rows'.format(
-                repr(input), len(perspective_info_list), len(result_list)))
+                pprint.pformat([input[i : i + 256]
+                    for i in range(0, len(input), 256)], width = 144),
+                len(perspective_info_list),
+                len(result_list)))
 
             # Checking if we have any data at all.
 
@@ -2834,6 +2853,7 @@ class CognateAnalysis(graphene.Mutation):
                     triumph = True,
                     dictionary_count = len(perspective_info_list),
                     group_count = len(result_list) - 1,
+                    not_enough_count = not_enough_count,
                     text_count = total_text_count,
                     result = u'')
 
@@ -2870,7 +2890,10 @@ class CognateAnalysis(graphene.Mutation):
 
             output = output_buffer.value
 
-            log.debug('cognate_analysis: output:\n{0}'.format(repr(output)))
+            log.debug(
+                'cognate_analysis: output:\n{0}'.format(
+                pprint.pformat([output[i : i + 256]
+                    for i in range(0, len(output), 256)], width = 144)))
 
             # Reflowing output.
 
@@ -2894,6 +2917,7 @@ class CognateAnalysis(graphene.Mutation):
                 triumph = True,
                 dictionary_count = len(perspective_info_list),
                 group_count = len(result_list) - 1,
+                not_enough_count = not_enough_count,
                 text_count = total_text_count,
                 result = wrapped_output)
 
