@@ -348,7 +348,7 @@ class Query(graphene.ObjectType):
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(BaseGroup)
     all_data_types = graphene.List(TranslationGist)
-    all_fields = graphene.List(Field)
+    all_fields = graphene.List(Field, common=graphene.Boolean())
     common_fields = graphene.List(Field)
     all_statuses = graphene.List(TranslationGist)
     template_fields = graphene.List(Field, mode=graphene.String())
@@ -776,37 +776,31 @@ class Query(graphene.ObjectType):
             gql_statuses.append(gql_tr_gist)
         return gql_statuses
 
-    def resolve_all_fields(self, info):
-        fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
+    def resolve_all_fields(self, info, common=False):
+        fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all()
+        if common:
+            field_to_psersp_dict = collections.defaultdict(list)
+            p_to_field = DBSession.query(dbPerspectiveToField.parent_client_id,
+                                         dbPerspectiveToField.parent_object_id,
+                                         dbPerspectiveToField.field_client_id,
+                                         dbPerspectiveToField.field_object_id).filter(
+                dbPerspectiveToField.marked_for_deletion == False
+            ).all()
+
+            for perspective_client_id, perspective_object_id, field_client_id, field_object_id in p_to_field:
+                field_to_psersp_dict[(field_client_id, field_object_id)].append((perspective_client_id,
+                                                                                 perspective_object_id))
         gql_fields = list()
         for db_field in fields:
+            if common:
+                if len(field_to_psersp_dict[(db_field.client_id, db_field.object_id)]) <= 3:
+                    continue
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
             gql_field.dbObject = db_field
             gql_fields.append(gql_field)
 
         return gql_fields
 
-    def resolve_common_fields(self, info):
-        fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all()
-        gql_fields = list()
-        field_to_psersp_dict = collections.defaultdict(list)
-        p_to_field = DBSession.query(dbPerspectiveToField.parent_client_id,
-                        dbPerspectiveToField.parent_object_id,
-                        dbPerspectiveToField.field_client_id,
-                        dbPerspectiveToField.field_object_id).filter(
-            dbPerspectiveToField.marked_for_deletion==False
-        ).all()
-
-        for perspective_client_id, perspective_object_id, field_client_id, field_object_id in p_to_field:
-            field_to_psersp_dict[(field_client_id, field_object_id)].append((perspective_client_id,
-                                                                             perspective_object_id))
-        for db_field in fields:
-            if len(field_to_psersp_dict[(db_field.client_id, db_field.object_id)]) > 3:
-                gql_field = Field(id=[db_field.client_id, db_field.object_id])
-                gql_field.dbObject = db_field
-                gql_fields.append(gql_field)
-
-        return gql_fields
 
 
 
