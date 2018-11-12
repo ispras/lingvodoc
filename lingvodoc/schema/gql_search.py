@@ -207,7 +207,7 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
                     all_entity_content_filter.append(dbEntity.additional_metadata['bag_of_words'].contains(
                         [search_string["search_string"].lower()]))
                 elif search_string.get('matching_type') == "regexp":
-                    all_entity_content_filter.append.append(
+                    all_entity_content_filter.append(
                                 func.lower(dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(
                                     search_string["search_string"]))
 
