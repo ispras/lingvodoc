@@ -159,7 +159,11 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
     # get all_entity_content_filter
 
     all_entity_content_filter = list()
+    all_entity_content_filter.append(
+        tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(category_fields))
     if category == 0:
+
+
         for search_block in search_strings:
             for search_string in search_block:
                 if search_string.get('matching_type') == "substring":
@@ -221,7 +225,7 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
     if accept is not None:
         published_filter += [dbPublishingEntity.accepted == accept]
     if publish is not None:
-        published_filter += [dbPublishingEntity.accepted == publish]
+        published_filter += [dbPublishingEntity.published == publish]
     if published_filter:
         published_to_entity = [dbPublishingEntity.client_id == dbEntity.client_id,
          dbPublishingEntity.object_id == dbEntity.object_id]
@@ -231,7 +235,6 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
                                        dbEntity.parent_object_id,
                                        *select_query).filter(
                 dbEntity.marked_for_deletion == False,
-                not_(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(get_not_text_field_ids())),
                 tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id).in_(lexes),
                 *published_filter,
                 or_(*all_entity_content_filter)).cte()  # only published entities
@@ -355,7 +358,8 @@ def search_mechanism_simple(dictionaries, category, state_gist_id, limited_gist_
             filter(dbDictionaryPerspective.marked_for_deletion == False)
     lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
         .join(dbDictionaryPerspective.parent) \
-        .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
+        .filter(dbLexicalEntry.marked_for_deletion==False,
+                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
 
     if adopted is not None or etymology is not None:
         lexes.join(dbLexicalEntry.entity)
@@ -451,14 +455,14 @@ def search_mechanism_simple(dictionaries, category, state_gist_id, limited_gist_
         entities_and_publishing = {(entity[counter], entity[counter+1]) for entity in resolved_search}
         full_entities_and_publishing |= entities_and_publishing
 
-    res_entities = [graphene_entity(entity[0], entity[1]) for entity in full_entities_and_publishing]
+    # res_entities = [graphene_entity(entity[0], entity[1]) for entity in full_entities_and_publishing]
     tmp_lexical_entries = {entity[aliases_len ] for entity in resolved_search}
     res_lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in tmp_lexical_entries]
     tmp_perspectives = {entity[aliases_len + 1] for entity in resolved_search}
     res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in tmp_perspectives]
     tmp_dictionaries = {entity[aliases_len + 2] for entity in resolved_search}
     res_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
-    return res_entities, res_lexical_entries, res_perspectives, res_dictionaries
+    return [], res_lexical_entries, res_perspectives, res_dictionaries
 
 
 def dictionaries_with_audio_ids():
@@ -504,21 +508,22 @@ def get_sound_field_ids():
         FieldTranslationAtom.marked_for_deletion == False).all()
     return sound_field_id_list
 
-def get_not_text_field_ids():
-    FieldTranslationAtom = aliased(dbTranslationAtom, name='FieldTranslationAtom')
-    sound_field_id_list = DBSession.query(
-        dbField.client_id, dbField.object_id).filter(
-        dbField.marked_for_deletion == False,
-        dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-        dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
-        dbTranslationAtom.locale_id == 2,
-        dbTranslationAtom.content != "Text",
-        dbTranslationAtom.marked_for_deletion == False,
-        FieldTranslationAtom.parent_client_id == dbField.translation_gist_client_id,
-        FieldTranslationAtom.parent_object_id == dbField.translation_gist_object_id,
-        FieldTranslationAtom.locale_id == 2,
-        FieldTranslationAtom.marked_for_deletion == False).all()
-    return sound_field_id_list
+# def get_not_text_field_ids():
+#     FieldTranslationAtom = aliased(dbTranslationAtom, name='FieldTranslationAtom')
+#     sound_field_id_list = DBSession.query(
+#
+#         dbField.client_id, dbField.object_id).filter(
+#         dbField.marked_for_deletion == False,
+#         dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+#         dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+#         dbTranslationAtom.locale_id == 2,
+#         dbTranslationAtom.content != "Text",
+#         dbTranslationAtom.marked_for_deletion == False,
+#         FieldTranslationAtom.parent_client_id == dbField.translation_gist_client_id,
+#         FieldTranslationAtom.parent_object_id == dbField.translation_gist_object_id,
+#         FieldTranslationAtom.locale_id == 2,
+#         FieldTranslationAtom.marked_for_deletion == False).all()
+#     return sound_field_id_list
 
 class AdvancedSearch(LingvodocObjectType):
     entities = graphene.List(Entity)
