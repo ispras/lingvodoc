@@ -271,12 +271,12 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
                     for ss in chain.from_iterable(curr_bs_search_blocks):
                         if ss.get('matching_type') == "substring":
                             corpus_word_list = func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext)
-                            all_entity_content_filter.append(func.lower(corpus_word_list).like(ss["search_string"]))
+                            inner_and.append(func.lower(corpus_word_list).like(ss["search_string"]))
                         elif ss.get('matching_type') == "full_string":
-                            all_entity_content_filter.append(dbEntity.additional_metadata['bag_of_words'].contains(
+                            inner_and.append(dbEntity.additional_metadata['bag_of_words'].contains(
                         [ss["search_string"].lower()]))
                         elif ss.get('matching_type') == "regexp":
-                            all_entity_content_filter.append(
+                            inner_and.append(
                                 func.lower(dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(
                                     ss["search_string"]))
                 elif matching_type == 'regexp':
