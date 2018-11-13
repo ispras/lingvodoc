@@ -798,6 +798,8 @@ class Query(graphene.ObjectType):
             if common:
                 if len(field_to_psersp_dict[(db_field.client_id, db_field.object_id)]) <= 3:
                     continue
+                if db_field.data_type != "Text":
+                    continue
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
             gql_field.dbObject = db_field
             gql_fields.append(gql_field)
