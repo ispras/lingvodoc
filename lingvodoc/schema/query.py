@@ -376,7 +376,8 @@ class Query(graphene.ObjectType):
                                      etymology=graphene.Boolean(),
                                      search_strings=graphene.List(graphene.List(ObjectVal), required=True),
                                      mode=graphene.String(),
-                                     search_metadata=ObjectVal())
+                                     search_metadata=ObjectVal(),
+                                     simple=graphene.Boolean())
     advanced_search_simple = graphene.Field(AdvancedSearchSimple,
                                      languages=graphene.List(LingvodocID),
                                      dicts_to_filter=graphene.List(LingvodocID),
@@ -673,7 +674,7 @@ class Query(graphene.ObjectType):
             print(errors)
         return result
 
-    def resolve_advanced_search(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
+    def resolve_advanced_search(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published', simple=True):
 
         if mode == 'all':
             publish = None
@@ -694,10 +695,12 @@ class Query(graphene.ObjectType):
             raise ResponseError(message="mode: <all|published|not_accepted>")
         if not search_strings:
             raise ResponseError(message="search_strings is empty")
+        if simple:
+            return AdvancedSearchSimple().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology,
+                                            search_strings, publish, accept)
         return AdvancedSearch().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept, search_metadata)
 
-    def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None,
-                                category=None, adopted=None, etymology=None, mode='published'):
+    def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
 
         if mode == 'all':
             publish = None

@@ -230,13 +230,13 @@ class DictionaryPerspective(LingvodocObjectType):
 
     @fetch_object('status') # tested
     def resolve_status(self, info):
-        atom = DBSession.query(dbTranslationAtom).filter_by(
+        atom = DBSession.query(dbTranslationAtom.content).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
             locale_id=int(info.context.get('locale_id'))
         ).first()
         if atom:
-            return atom.content
+            return atom[0]
         else:
             return None
 
