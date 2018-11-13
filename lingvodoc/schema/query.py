@@ -7,6 +7,7 @@ import pprint
 import textwrap
 import time
 import traceback
+import collections
 
 import graphene
 from lingvodoc.utils.elan_functions import tgt_to_eaf
@@ -73,6 +74,7 @@ from lingvodoc.schema.gql_dictionary import (
 )
 
 from lingvodoc.schema.gql_search import AdvancedSearch
+from lingvodoc.schema.gql_search import AdvancedSearchSimple
 
 from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
@@ -353,7 +355,8 @@ class Query(graphene.ObjectType):
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(BaseGroup)
     all_data_types = graphene.List(TranslationGist)
-    all_fields = graphene.List(Field)
+    all_fields = graphene.List(Field, common=graphene.Boolean())
+    common_fields = graphene.List(Field)
     all_statuses = graphene.List(TranslationGist)
     template_fields = graphene.List(Field, mode=graphene.String())
     template_modes = graphene.List(graphene.String)
@@ -372,6 +375,17 @@ class Query(graphene.ObjectType):
     connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True),
                                      field_id=LingvodocID(required=True), mode=graphene.String())
     advanced_search = graphene.Field(AdvancedSearch,
+                                     languages=graphene.List(LingvodocID),
+                                     dicts_to_filter=graphene.List(LingvodocID),
+                                     tag_list=graphene.List(graphene.String),
+                                     category=graphene.Int(),
+                                     adopted=graphene.Boolean(),
+                                     etymology=graphene.Boolean(),
+                                     search_strings=graphene.List(graphene.List(ObjectVal), required=True),
+                                     mode=graphene.String(),
+                                     search_metadata=ObjectVal(),
+                                     simple=graphene.Boolean())
+    advanced_search_simple = graphene.Field(AdvancedSearchSimple,
                                      languages=graphene.List(LingvodocID),
                                      dicts_to_filter=graphene.List(LingvodocID),
                                      tag_list=graphene.List(graphene.String),
@@ -403,31 +417,29 @@ class Query(graphene.ObjectType):
 
 
     def resolve_select_tags_metadata(self, info):
-        def get_sorted_metadata_keys(dictionary_metadata, metadata_name):
-            authors = [x[0].get(metadata_name) for x in dictionary_metadata if x[0] != None]
-            authors_set = set()
-            for author_list in authors:
-                if author_list:
-                    for author in author_list:
-                        authors_set.add(author)
-            authors_list = sorted(list(authors_set))
-            return authors_list
+        def get_sorted_metadata_keys(metadata_name):
+            all_values = DBSession.query(dbDictionary.additional_metadata[metadata_name]) \
+                .filter(dbDictionary.additional_metadata[metadata_name] != None,
+                        dbDictionary.marked_for_deletion==False)
+            all_authors_lists = [value for value, in all_values]
+            values_iterator = itertools.chain.from_iterable(all_authors_lists)
+            uniq_values = set(values_iterator)
+            soreted_values = sorted(list(uniq_values))
+            return soreted_values
 
         menu_json_data = {}
-        dictionary_metadata = DBSession.query(dbDictionary.additional_metadata).filter(dbDictionary.marked_for_deletion==False,
-                                                                           dbDictionary.additional_metadata!={}).all()
-        authors_list = get_sorted_metadata_keys(dictionary_metadata, "authors")
-        #menu_json_data["hasAudio"] = [0,1]
+        authors_list = get_sorted_metadata_keys("authors")
+        menu_json_data["hasAudio"] = [False, True]
         menu_json_data["authors"] = authors_list
-        menu_json_data["humanSettlement"] = get_sorted_metadata_keys(dictionary_metadata, "humanSettlement")
-        menu_json_data["years"] = get_sorted_metadata_keys(dictionary_metadata, "years")
+        menu_json_data["humanSettlement"] = get_sorted_metadata_keys("humanSettlement")
+        menu_json_data["years"] = get_sorted_metadata_keys("years")
         menu_json_data["kind"] = ["Expedition", "Archive"]
         menu_json_data["nativeSpeakersCount"] = ["vulnerable",
                                                  "definitely endangerd",
-                                                 "critically endangerd", "extinct",
+                                                 "critically endangerd",
+                                                 "extinct",
                                                  "severely endangered",
                                                  "safe"]
-
         return menu_json_data
 
 
@@ -597,13 +609,18 @@ class Query(graphene.ObjectType):
         if not client_id:
             return Permissions(limited=limited, view=view, edit=list(), publish=list())
 
-        user_id = DBSession.query(Client).filter(client_id == Client.id).first().user_id
+        user = DBSession.query(Client).filter(client_id == Client.id).first()
+        if not user:
+            return None
+        user_id = user.user_id
         editor_basegroup = DBSession.query(dbBaseGroup).filter(
             and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
         editable_perspectives = DBSession.query(dbDictionaryPerspective).join(dbGroup, and_(
             dbDictionaryPerspective.client_id == dbGroup.subject_client_id,
             dbDictionaryPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
-            and_(dbUser.id == user_id, dbGroup.base_group_id == editor_basegroup.id)).all()
+            and_(dbUser.id == user_id,
+                 dbGroup.base_group_id == editor_basegroup.id,
+                 dbDictionaryPerspective.marked_for_deletion == False)).all()
         edit = list()
         for dbperspective in editable_perspectives:
             perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
@@ -664,7 +681,7 @@ class Query(graphene.ObjectType):
             print(errors)
         return result
 
-    def resolve_advanced_search(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, mode='published'):
+    def resolve_advanced_search(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published', simple=True):
 
         if mode == 'all':
             publish = None
@@ -685,7 +702,34 @@ class Query(graphene.ObjectType):
             raise ResponseError(message="mode: <all|published|not_accepted>")
         if not search_strings:
             raise ResponseError(message="search_strings is empty")
-        return AdvancedSearch().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept)
+        if simple:
+            return AdvancedSearchSimple().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology,
+                                            search_strings, publish, accept)
+        return AdvancedSearch().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept, search_metadata)
+
+    def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
+
+        if mode == 'all':
+            publish = None
+            accept = True
+        elif mode == 'published':
+            publish = True
+            accept = True
+        elif mode == 'not_accepted':
+            publish = None
+            accept = False
+        elif mode == 'deleted':
+            publish = None
+            accept = None
+        elif mode == 'all_with_deleted':
+            publish = None
+            accept = None
+        else:
+            raise ResponseError(message="mode: <all|published|not_accepted>")
+        if not search_strings:
+            raise ResponseError(message="search_strings is empty")
+        return AdvancedSearchSimple().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology,
+                                            search_strings, publish, accept)
 
     def resolve_template_modes(self, info):
         return ['corpora']
@@ -742,15 +786,33 @@ class Query(graphene.ObjectType):
             gql_statuses.append(gql_tr_gist)
         return gql_statuses
 
-    def resolve_all_fields(self, info):
-        fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all() #todo: think about desktop and sync
+    def resolve_all_fields(self, info, common=False):
+        fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all()
+        if common:
+            field_to_psersp_dict = collections.defaultdict(list)
+            p_to_field = DBSession.query(dbPerspectiveToField.parent_client_id,
+                                         dbPerspectiveToField.parent_object_id,
+                                         dbPerspectiveToField.field_client_id,
+                                         dbPerspectiveToField.field_object_id).filter(
+                dbPerspectiveToField.marked_for_deletion == False
+            ).all()
+
+            for perspective_client_id, perspective_object_id, field_client_id, field_object_id in p_to_field:
+                field_to_psersp_dict[(field_client_id, field_object_id)].append((perspective_client_id,
+                                                                                 perspective_object_id))
         gql_fields = list()
         for db_field in fields:
+            if common:
+                if len(field_to_psersp_dict[(db_field.client_id, db_field.object_id)]) <= 3:
+                    continue
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
             gql_field.dbObject = db_field
             gql_fields.append(gql_field)
 
         return gql_fields
+
+
+
 
     def resolve_all_data_types(self, info):
         response = list()

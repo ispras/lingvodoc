@@ -20,6 +20,8 @@ def get_tasks(request):
         tasks = TaskStatus.get_user_tasks(anonymous_userid(request), clear_out=True)
         return tasks
     user = Client.get_user_by_client_id(authenticated_userid(request))
+    if not user:
+        return []
     tasks = TaskStatus.get_user_tasks(user.id, clear_out=True)
     return tasks
 

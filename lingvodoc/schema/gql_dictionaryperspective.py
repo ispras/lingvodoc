@@ -86,6 +86,63 @@ parid2str = lambda x: "_".join([str(x.parent_client_id), str(x.parent_object_id)
 id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
 
 
+def entries_with_entities(lexes, accept, delete, mode, publish):
+    lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
+                            for lex in lexes.yield_per(100)]
+    entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
+                                                      publish=publish,
+                                                      accept=accept,
+                                                      delete=delete)
+
+    def graphene_entity(cur_entity, cur_publishing):
+        ent = Entity(id=(cur_entity.client_id, cur_entity.object_id))
+        ent.dbObject = cur_entity
+        ent.publishingentity = cur_publishing
+        return ent
+
+    def graphene_lex(cur_lexical_entry, cur_entities):
+        lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
+        lex.gql_Entities = cur_entities
+        lex.dbObject = cur_lexical_entry
+        return lex
+
+    if type(entities) == list:
+        entities_list = []
+    else:
+        entities_list = entities.all()
+    lexes_list = lexes.all()
+    entities_count = len(entities_list)
+    i = 0
+    # iterate over two lists
+    new_lexes = list()
+    for lex in lexes_list:
+        ids = id2str(lex)
+        my_generator = MyGen(entities_list, ids, entities_count, i)
+        cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
+        i = my_generator.get_i()
+        new_lexes.append((lex, cur_entities))
+    if mode == 'not_accepted':  # todo: rewrite
+        new_lexes_composite_list = [
+            (lex[0].client_id, lex[0].object_id, lex[0].parent_client_id, lex[0].parent_object_id)
+            for lex in new_lexes if lex[1]]
+        new_entities = dbLexicalEntry.graphene_track_multiple(new_lexes_composite_list,
+                                                              publish=None, accept=None, delete=False)
+        if type(new_entities) == list:
+            new_entities_list = new_entities
+        else:
+            new_entities_list = new_entities.all()
+        i = 0
+        new_entities_count = len(new_entities_list)
+        new_lexes = list()
+        for lex in lexes_list:
+            ids = id2str(lex)
+            my_generator = MyGen(new_entities_list, ids, new_entities_count, i)
+            cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
+            i = my_generator.get_i()
+            new_lexes.append((lex, cur_entities))
+    lexical_entries = [graphene_lex(lex[0], lex[1]) for lex in new_lexes]
+    return lexical_entries
+
 
 # class PerspectiveCounters(graphene.ObjectType):
 #     all = graphene.Int()
@@ -173,13 +230,13 @@ class DictionaryPerspective(LingvodocObjectType):
 
     @fetch_object('status') # tested
     def resolve_status(self, info):
-        atom = DBSession.query(dbTranslationAtom).filter_by(
+        atom = DBSession.query(dbTranslationAtom.content).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
             locale_id=int(info.context.get('locale_id'))
         ).first()
         if atom:
-            return atom.content
+            return atom[0]
         else:
             return None
 
@@ -336,66 +393,10 @@ class DictionaryPerspective(LingvodocObjectType):
         #     else_=dbEntity.content))) \
         #     .group_by(dbLexicalEntry)
 
-        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
-                                for lex in lexes.yield_per(100)]
-
-        entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                          publish=publish,
-                                                          accept=accept,
-                                                          delete=delete)
-
-        def graphene_entity(cur_entity, cur_publishing):
-            ent = Entity(id=(cur_entity.client_id, cur_entity.object_id))
-            ent.dbObject = cur_entity
-            ent.publishingentity = cur_publishing
-            return ent
-
-        def graphene_lex(cur_lexical_entry, cur_entities):
-            lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
-            lex.gql_Entities = cur_entities
-            lex.dbObject = cur_lexical_entry
-            return lex
-
-        if type(entities) == list:
-            entities_list = []
-        else:
-            entities_list = entities.all()
-        lexes_list = lexes.all()
-
-        entities_count = len(entities_list)
-
-        i = 0
-        # iterate over two lists
-        new_lexes = list()
-        for lex in lexes_list:
-            ids = id2str(lex)
-            my_generator = MyGen(entities_list, ids, entities_count, i)
-            cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
-            i = my_generator.get_i()
-            new_lexes.append((lex, cur_entities))
-
-        if mode == 'not_accepted':  # todo: rewrite
-            new_lexes_composite_list = [(lex[0].client_id, lex[0].object_id, lex[0].parent_client_id, lex[0].parent_object_id)
-                                for lex in new_lexes if lex[1]]
-            new_entities = dbLexicalEntry.graphene_track_multiple(new_lexes_composite_list,
-                                                   publish=None, accept=None, delete=False)
-            if type(new_entities) == list:
-                new_entities_list = new_entities
-            else:
-                new_entities_list = new_entities.all()
-            i = 0
-            new_entities_count = len(new_entities_list)
-            new_lexes = list()
-            for lex in lexes_list:
-                ids = id2str(lex)
-                my_generator = MyGen(new_entities_list, ids, new_entities_count, i)
-                cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
-                i = my_generator.get_i()
-                new_lexes.append((lex, cur_entities))
-
-        lexical_entries = [graphene_lex(lex[0], lex[1]) for lex in new_lexes]
+        lexical_entries = entries_with_entities(lexes, accept, delete, mode, publish)
 
         return lexical_entries
+
 
     @fetch_object()
     def resolve_authors(self, info):

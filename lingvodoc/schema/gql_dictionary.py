@@ -114,12 +114,14 @@ class Dictionary(LingvodocObjectType):  # tested
     @fetch_object('status')
     def resolve_status(self, info):
         context = info.context
-        atom = DBSession.query(dbTranslationAtom).filter_by(
+        atom = DBSession.query(dbTranslationAtom.content).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
+            marked_for_deletion=False,
+
             locale_id=int(context.get('locale_id'))).first()
         if atom:
-            return atom.content
+            return atom[0]
         else:
             return None
 
