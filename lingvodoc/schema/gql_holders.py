@@ -487,13 +487,14 @@ class TypeHolder(graphene.Interface):
 
 
 class TranslationHolder(graphene.Interface):
-    translation = graphene.String()
-
+    translation = graphene.String(locale_id=graphene.Int())
 
     @fetch_object("translation")
-    def resolve_translation(self, info):
-        context = info.context
-        return str(self.dbObject.get_translation(context.get('locale_id'))) # TODO: fix it
+    def resolve_translation(self, info, locale_id = None):
+
+        return str(self.dbObject.get_translation( # TODO: fix it
+            locale_id if locale_id is not None else info.context.get('locale_id')))
+
 
 # rare interfaces
 

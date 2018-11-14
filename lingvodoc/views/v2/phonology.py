@@ -3478,19 +3478,10 @@ def perform_phonology(args, task_status, storage):
     cur_time = time()
     storage_dir = path.join(storage['path'], 'phonology', str(cur_time))
 
-    # Storing file with the results.
-
     xlsx_path = path.join(storage_dir, xlsx_filename)
     csv_path = path.join(storage_dir, csv_filename)
 
-    directory = path.dirname(xlsx_path)
-
-    try:
-        makedirs(directory)
-
-    except OSError as exception:
-        if exception.errno != EEXIST:
-            raise
+    makedirs(path.dirname(xlsx_path), exist_ok = True)
 
     # If the name of the result file is too long, we try again with a shorter name.
 
@@ -3514,6 +3505,8 @@ def perform_phonology(args, task_status, storage):
 
         xlsx_path = path.join(storage_dir, xlsx_filename)
         csv_path = path.join(storage_dir, csv_filename)
+
+        workbook_stream.seek(0)
 
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
