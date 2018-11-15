@@ -239,10 +239,12 @@ try:
 
     phonemic_analysis_f = liboslon.PhonemicAnalysis_GetAllOutput
     cognate_analysis_f = liboslon.CognateAnalysis_GetAllOutput
+    cognate_acoustic_analysis_f = liboslon.CognateAcousticAnalysis_GetAllOutput
 
 except:
     phonemic_analysis_f = None
     cognate_analysis_f = None
+    cognate_acoustic_analysis_f = None
 
 
 class TierList(graphene.ObjectType):
@@ -2266,6 +2268,7 @@ class CognateAnalysis(graphene.Mutation):
         base_language_id=LingvodocID(required=True)
         group_field_id=LingvodocID(required=True)
         perspective_info_list=graphene.List(graphene.List(LingvodocID), required=True)
+        mode=graphene.String()
 
     triumph = graphene.Boolean()
     dictionary_count = graphene.Int()
@@ -2909,8 +2912,11 @@ class CognateAnalysis(graphene.Mutation):
         """
 
         base_language_id = args['base_language_id']
+
         group_field_cid, group_field_oid = args['group_field_id']
         perspective_info_list = args['perspective_info_list']
+
+        mode = args.get('mode')
 
         locale_id = info.context.get('locale_id') or 2
 
@@ -2930,17 +2936,30 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  language: {2}'
                  '\n  group field: {3}/{4}'
                  '\n  perspectives and transcription/translation fields: {5}'
-                 '\n  cognate_analysis_f: {6}'.format(
+                 '\n  mode: {6}'
+                 '\n  cognate_analysis_f: {7}'
+                 '\n  cognate_acoustic_analysis_f: {8}'.format(
                     base_language_id[0], base_language_id[1],
                     repr(language_name.strip()),
                     group_field_cid, group_field_oid,
                     perspective_info_list,
-                    repr(cognate_analysis_f)))
+                    repr(mode),
+                    repr(cognate_analysis_f),
+                    repr(cognate_acoustic_analysis_f)))
 
-            if cognate_analysis_f is None:
+            # Checking if we have analysis function ready.
+
+            analysis_f = (
+                cognate_acoustic_analysis_f if mode == 'acoustic' else
+                cognate_analysis_f)
+
+            if analysis_f is None:
 
                 return ResponseError(message =
-                    'Analysis library is absent, please contact system administrator.')
+                    'Analysis library fuction \'{0}()\' is absent, '
+                    'please contact system administrator.'.format(
+                        'CognateAcousticAnalysis_GetAllOutput' if mode == 'acoustic' else
+                        'CognateAnalysis_GetAllOutput'))
 
             perspective_info_list = [
 
@@ -3222,8 +3241,10 @@ class CognateAnalysis(graphene.Mutation):
 
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
-                '\ninput ({2} columns, {3} rows):\n{4}'.format(
+                '\nanalysis_f: {2}'
+                '\ninput ({3} columns, {4} rows):\n{5}'.format(
                     base_language_id[0], base_language_id[1],
+                    repr(analysis_f),
                     len(perspective_info_list),
                     len(result_list),
                     pprint.pformat([input[i : i + 256]
@@ -3245,7 +3266,7 @@ class CognateAnalysis(graphene.Mutation):
             # Calling analysis library, starting with getting required output buffer size and continuing
             # with analysis proper.
 
-            output_buffer_size = cognate_analysis_f(
+            output_buffer_size = analysis_f(
                 None, len(perspective_info_list), len(result_list), None, 1)
 
             log.debug(
@@ -3256,7 +3277,7 @@ class CognateAnalysis(graphene.Mutation):
             input_buffer = ctypes.create_unicode_buffer(input)
             output_buffer = ctypes.create_unicode_buffer(output_buffer_size + 256)
 
-            result = cognate_analysis_f(
+            result = analysis_f(
                 input_buffer, len(perspective_info_list), len(result_list), output_buffer, 1)
 
             # If we don't have a good result, we return an error.
@@ -3300,7 +3321,7 @@ class CognateAnalysis(graphene.Mutation):
 
             # Getting binary output for parsing and exporting.
 
-            result_binary = cognate_analysis_f(
+            result_binary = analysis_f(
                 input_buffer, len(perspective_info_list), len(result_list), output_buffer, 2)
 
             log.debug(
