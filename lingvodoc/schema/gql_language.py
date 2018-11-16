@@ -4,6 +4,7 @@ import graphene
 from lingvodoc.models import (
     Language as dbLanguage,
     Dictionary as dbDictionary,
+    DictionaryPerspective as dbPerspective,
     TranslationAtom as dbTranslationAtom,
     Client as dbClient,
     User as dbUser,
@@ -27,11 +28,15 @@ from lingvodoc.schema.gql_holders import (
 )
 from lingvodoc.schema.gql_translationgist import TranslationGistInterface
 from .gql_dictionary import Dictionary
+
 from lingvodoc.utils.creation import (
     create_dblanguage,
     create_gists_with_atoms,
     add_user_to_group, update_metadata)
+
 from lingvodoc.utils.deletion import real_delete_language
+from lingvodoc.utils.search import translation_gist_search
+
 # from lingvodoc.schema.gql_dictionary import Dictionary
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import (
@@ -63,7 +68,8 @@ class Language(LingvodocObjectType):
     dbType = dbLanguage
 
     dictionaries = graphene.List(Dictionary,
-        deleted=graphene.Boolean())
+        deleted=graphene.Boolean(),
+        published_and_limited_only=graphene.Boolean())
 
     languages = graphene.List('lingvodoc.schema.gql_language.Language',
         deleted=graphene.Boolean())
@@ -79,7 +85,7 @@ class Language(LingvodocObjectType):
         return self.dbObject.locale
 
     @fetch_object()
-    def resolve_dictionaries(self, info, deleted = None):
+    def resolve_dictionaries(self, info, deleted = None, published_and_limited_only = None):
 
         query = DBSession.query(dbDictionary).filter(
             and_(dbDictionary.parent_object_id == self.dbObject.object_id,
@@ -88,10 +94,52 @@ class Language(LingvodocObjectType):
         if deleted is not None:
             query = query.filter(dbDictionary.marked_for_deletion == deleted)
 
+        # Do we need only published and limited access dictionaries?
+
+        if published_and_limited_only:
+
+            db_published_gist = translation_gist_search('Published')
+
+            published_client_id = db_published_gist.client_id
+            published_object_id = db_published_gist.object_id
+
+            db_limited_gist = translation_gist_search('Limited access')
+
+            limited_client_id = db_limited_gist.client_id
+            limited_object_id = db_limited_gist.object_id
+
+            # Filtering dictionaries based on status.
+        
+            query = (query
+                    
+                .filter(or_(
+                    and_(dbDictionary.state_translation_gist_client_id == published_client_id,
+                        dbDictionary.state_translation_gist_object_id == published_object_id),
+                    and_(dbDictionary.state_translation_gist_client_id == limited_client_id,
+                        dbDictionary.state_translation_gist_object_id == limited_object_id)))
+                    
+                .join(dbPerspective))
+
+            if deleted is not None:
+                query = query.filter(dbPerspective.marked_for_deletion == deleted)
+
+            # Filtering dictionaries' perspectives based on status.
+
+            query = (query
+
+                .filter(or_(
+                    and_(dbPerspective.state_translation_gist_client_id == published_client_id,
+                        dbPerspective.state_translation_gist_object_id == published_object_id),
+                    and_(dbPerspective.state_translation_gist_client_id == limited_client_id,
+                        dbPerspective.state_translation_gist_object_id == limited_object_id))))
+
         result = list()
 
         for dictionary in query:
-            gql_dictionary = Dictionary(id=[dictionary.client_id, dictionary.object_id])
+
+            gql_dictionary = Dictionary(id =
+                [dictionary.client_id, dictionary.object_id])
+
             gql_dictionary.dbObject = dictionary
             result.append(gql_dictionary)
 

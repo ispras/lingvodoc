@@ -2,6 +2,8 @@ import collections
 import copy
 import ctypes
 import datetime
+import gzip
+import hashlib
 import io
 import itertools
 import logging
@@ -11,7 +13,7 @@ import shutil
 import textwrap
 import time
 import traceback
-import collections
+import urllib.parse
 
 import graphene
 from lingvodoc.utils.elan_functions import tgt_to_eaf
@@ -186,6 +188,8 @@ from sqlalchemy import (
 )
 from lingvodoc.views.v2.utils import (
     view_field_from_object,
+    storage_file,
+    as_storage_file
 )
 from sqlalchemy.orm import aliased
 
@@ -203,9 +207,17 @@ from lingvodoc.utils.phonology import (
 
 from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
+
+import lingvodoc.cache.caching as caching
 from lingvodoc.cache.caching import TaskStatus
 
-from lingvodoc.views.v2.phonology import Phonology_Parameters
+from lingvodoc.views.v2.phonology import (
+    AudioPraatLike,
+    format_textgrid_result,
+    Phonology_Parameters,
+    process_sound,
+    process_textgrid)
+
 from lingvodoc.views.v2.utils import anonymous_userid
 
 from sqlite3 import connect
@@ -224,8 +236,12 @@ from pyramid.httpexceptions import (
 from lingvodoc.scripts import elan_parser
 from lingvodoc.utils.creation import create_entity
 
-import xlsxwriter
+
+import cchardet as chardet
 import pathvalidate
+import pydub
+import pympi
+import xlsxwriter
 
 
 # Setting up logging.
@@ -2892,6 +2908,207 @@ class CognateAnalysis(graphene.Mutation):
         return workbook_stream
 
     @staticmethod
+    def acoustic_data(
+        base_language_id,
+        sound_entity_id,
+        sound_url,
+        markup_entity_id,
+        markup_url,
+        storage,
+        __debug_flag__):
+        """
+        Extracts acoustic data from a pair of sound recording and its markup, using cache in a manner
+        compatible with phonological analysis.
+        """
+
+        # Temporarily, for the current version, we do not process sound/markup data at all.
+
+        return None
+
+        log_str = (
+            'cognate_analysis {0}/{1}: sound entity {2}/{3}, markup entity {4}/{5}'.format(
+                base_language_id[0], base_language_id[1],
+                sound_entity_id[0], sound_entity_id[1],
+                markup_entity_id[0], markup_entity_id[1]))
+
+        log.debug(
+            '{0}\nsound_url: {1}\nmarkup_url: {2}'.format(
+            log_str, sound_url, markup_url))
+
+        # Checking if we have already cached sound/markup analysis result.
+
+        cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
+            sound_entity_id[0], sound_entity_id[1],
+            markup_entity_id[0], markup_entity_id[1])
+
+        cache_result = caching.CACHE.get(cache_key)
+
+        if cache_result == 'no_vowel':
+
+            log.debug('{0} [CACHE {1}]: no vowel'.format(
+                log_str, cache_key))
+
+            return None
+
+        # Cached exception result.
+
+        elif (isinstance(cache_result, tuple) and
+            cache_result[0] == 'exception'):
+
+            exception, traceback_string = cache_result[1:3]
+
+            log.debug(
+                '{0} [CACHE {1}]: exception'.format(
+                log_str, cache_key))
+
+            log.debug(traceback_string)
+
+            return None
+
+        # We have a cached analysis result.
+
+        elif cache_result:
+
+            textgrid_result_list = cache_result
+
+            log.debug(
+                '{0} [CACHE {1}]:\n{2}'.format(
+                log_str, cache_key,
+                format_textgrid_result(
+                    [None], textgrid_result_list)))
+
+        # Ok, we don't have a cached result, so we are going to perform sound/markup analysis.
+
+        else:
+
+            try:
+
+                storage_f = (
+                    as_storage_file if __debug_flag__ else storage_file)
+
+                sound_bytes = None
+
+                # Getting markup, checking if we have a tier that needs to be processed.
+
+                with storage_f(storage, markup_url) as markup_stream:
+                    markup_bytes = markup_stream.read()
+
+                try:
+                    textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+                    textgrid.from_file(
+                        io.BytesIO(markup_bytes),
+                        codec = chardet.detect(markup_bytes)['encoding'])
+
+                except:
+
+                    # If we failed to parse TextGrid markup, we assume that sound and markup files
+                    # were accidentally swapped and try again.
+
+                    sound_bytes = markup_bytes
+                    markup_url, sound_url = sound_url, markup_url
+
+                    with storage_f(storage, markup_url) as markup_stream:
+                        markup_bytes = markup_stream.read()
+
+                    textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+                    textgrid.from_file(
+                        io.BytesIO(markup_bytes),
+                        codec = chardet.detect(markup_bytes)['encoding'])
+
+                # Processing markup, getting info we need.
+
+                tier_data_list, vowel_flag = process_textgrid(textgrid)
+
+                log.debug(
+                    '{0}:\ntier_data_list:\n{1}\nvowel_flag: {2}'.format(
+                    log_str,
+                    pprint.pformat(tier_data_list, width = 144),
+                    vowel_flag))
+
+                if not vowel_flag:
+
+                    log.debug('{0}: no vowel'.format(log_str))
+                    caching.CACHE.set(cache_key, 'no_vowel')
+
+                    return None
+
+                # Ok, we have usable markup, and now we retrieve the sound file to analyze it.
+
+                extension = os.path.splitext(
+                    urllib.parse.urlparse(sound_url).path)[1]
+
+                sound = None
+                with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
+
+                    if sound_bytes is None:
+
+                        with storage_f(storage, sound_url) as sound_stream:
+                            sound_bytes = sound_stream.read()
+
+                    temp_file.write(sound_bytes)
+                    temp_file.flush()
+
+                    sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
+
+                # Analysing sound, showing and caching analysis results.
+
+                textgrid_result_list = process_sound(
+                    tier_data_list, sound)
+
+                log.debug(
+                    '{0}:\n{1}'.format(
+                    log_str,
+                    format_textgrid_result(
+                        [None], textgrid_result_list)))
+
+                caching.CACHE.set(cache_key, textgrid_result_list)
+
+            # We have exception during sound/markup analysis, we save its info in the cache.
+
+            except Exception as exception:
+
+                traceback_string = ''.join(traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1]
+
+                log.debug('{0}: exception'.format(log_str))
+                log.debug(traceback_string)
+
+                caching.CACHE.set(cache_key, ('exception', exception,
+                    traceback_string.replace('Traceback', 'CACHEd traceback')))
+
+                return None
+
+        # Ok, now we have sound/markup analysis results, we extract info of the first vowel from the first
+        # vowel-containing tier.
+
+        def f():
+
+            for tier_index, tier_name, tier_result_list in textgrid_result_list:
+
+                if (tier_result_list == 'no_vowel' or
+                    tier_result_list == 'no_vowel_selected'):
+                    continue
+
+                for tier_result in tier_result_list:
+
+                    for (interval_str, interval_r_length, f_list,
+                        sign_longest, sign_highest, source_index) in tier_result.interval_data_list:
+
+                        return [interval_str.split()[-3]] + f_list[:3]
+
+        # Showing what we've finally got and returning it.
+
+        result = f()
+
+        log.debug(
+            '{0}: {1}'.format(
+            log_str, result))
+                    
+        return result
+
+    @staticmethod
     def mutate(self, info, **args):
         """
         mutation CognateAnalysis {
@@ -2923,6 +3140,8 @@ class CognateAnalysis(graphene.Mutation):
         __debug_flag__ = False
 
         try:
+
+            storage = info.context.request.registry.settings['storage']
 
             language = DBSession.query(dbLanguage).filter_by(
                 client_id = base_language_id[0], object_id = base_language_id[1]).first()
@@ -2992,15 +3211,22 @@ class CognateAnalysis(graphene.Mutation):
 
                 # If we are in debug mode, we try to load existing tag data to reduce debugging time.
 
+                tag_data_digest = hashlib.md5(
+                        
+                    repr([group_field_cid, group_field_oid] +
+                        [perspective_info[0] for perspective_info in perspective_info_list])
+
+                        .encode('utf-8')).hexdigest()
+
                 tag_data_file_name = \
-                    '__tag_data_{0}_{1}__'.format(
-                        base_language_id[0], base_language_id[1])
+                    '__tag_data_{0}_{1}_{2}__.gz'.format(
+                        base_language_id[0], base_language_id[1], tag_data_digest)
 
                 import pickle
 
                 if os.path.exists(tag_data_file_name):
 
-                    with open(tag_data_file_name, 'rb') as tag_data_file:
+                    with gzip.open(tag_data_file_name, 'rb') as tag_data_file:
                         entry_already_set, group_list, group_time = pickle.load(tag_data_file)
 
                 else:
@@ -3012,7 +3238,7 @@ class CognateAnalysis(graphene.Mutation):
                         CognateAnalysis.tag_data_aggregated(
                             perspective_info_list, group_field_cid, group_field_oid))
 
-                    with open(tag_data_file_name, 'wb') as tag_data_file:
+                    with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
                         pickle.dump((entry_already_set, group_list, group_time), tag_data_file)
 
             log.debug(
@@ -3025,10 +3251,17 @@ class CognateAnalysis(graphene.Mutation):
             # Getting text data for each perspective.
 
             dbTranslation = aliased(dbEntity, name = 'Translation')
+            dbSound = aliased(dbEntity, name = 'Sound')
+            dbMarkup = aliased(dbEntity, name = 'Markup')
+
             dbPublishingTranslation = aliased(dbPublishingEntity, name = 'PublishingTranslation')
+            dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
+            dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
 
             for index, (perspective_id, transcription_field_id, translation_field_id) in \
                 enumerate(perspective_info_list):
+
+                # Getting and showing perspective info.
 
                 perspective = DBSession.query(dbDictionaryPerspective).filter_by(
                     client_id = perspective_id[0], object_id = perspective_id[1]).first()
@@ -3097,6 +3330,8 @@ class CognateAnalysis(graphene.Mutation):
 
                     .group_by(dbLexicalEntry)).subquery()
 
+                # Main query for transcription/translation data.
+
                 data_query = (
                     DBSession.query(transcription_query)
                     
@@ -3107,12 +3342,62 @@ class CognateAnalysis(graphene.Mutation):
                     .add_columns(
                         translation_query.c.translation))
 
+                # If we need to do an acoustic analysis, we also get sound/markup data.
+
+                if mode == 'acoustic':
+
+                    sound_markup_query = (
+                            
+                        DBSession.query(
+                            dbLexicalEntry.client_id,
+                            dbLexicalEntry.object_id).filter(
+                                dbLexicalEntry.parent_client_id == perspective_id[0],
+                                dbLexicalEntry.parent_object_id == perspective_id[1],
+                                dbLexicalEntry.marked_for_deletion == False,
+                                dbMarkup.parent_client_id == dbLexicalEntry.client_id,
+                                dbMarkup.parent_object_id == dbLexicalEntry.object_id,
+                                dbMarkup.marked_for_deletion == False,
+                                dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
+                                dbPublishingMarkup.client_id == dbMarkup.client_id,
+                                dbPublishingMarkup.object_id == dbMarkup.object_id,
+                                dbPublishingMarkup.published == True,
+                                dbPublishingMarkup.accepted == True,
+                                dbSound.client_id == dbMarkup.self_client_id,
+                                dbSound.object_id == dbMarkup.self_object_id,
+                                dbSound.marked_for_deletion == False,
+                                dbPublishingSound.client_id == dbSound.client_id,
+                                dbPublishingSound.object_id == dbSound.object_id,
+                                dbPublishingSound.published == True,
+                                dbPublishingSound.accepted == True)
+                        
+                        .add_columns(
+                            
+                            func.jsonb_agg(func.jsonb_build_array(
+                                dbSound.client_id, dbSound.object_id, dbSound.content,
+                                dbMarkup.client_id, dbMarkup.object_id, dbMarkup.content))
+                            
+                            .label('sound_markup'))
+
+                        .group_by(dbLexicalEntry)).subquery()
+
+                    # Adding sound/markup retrieval to the main query.
+
+                    data_query = (
+                        data_query
+
+                        .outerjoin(sound_markup_query, and_(
+                            transcription_query.c.client_id == sound_markup_query.c.client_id,
+                            transcription_query.c.object_id == sound_markup_query.c.object_id))
+                        
+                        .add_columns(
+                            sound_markup_query.c.sound_markup))
+
                 # Grouping transcriptions and translations by lexical entries.
 
-                for entry_client_id, entry_object_id, transcription_list, translation_list in \
-                    data_query.all():
-                    
-                    entry_id = (entry_client_id, entry_object_id)
+                for row in data_query.all():
+
+                    entry_id = tuple(row[:2])
+                    transcription_list, translation_list = row[2:4]
 
                     transcription_list = (
                         [] if not transcription_list else [
@@ -3120,15 +3405,43 @@ class CognateAnalysis(graphene.Mutation):
                             for transcription in transcription_list
                             if transcription.strip()])
 
-                    if transcription_list:
+                    # If we have no trascriptions for this lexical entry, we skip it altogether.
 
-                        translation_list = (
-                            [] if not translation_list else [
-                                translation.strip()
-                                for translation in translation_list
-                                if translation.strip()])
+                    if not transcription_list:
+                        continue
 
-                        text_dict[entry_id] = (index, transcription_list, translation_list)
+                    translation_list = (
+                        [] if not translation_list else [
+                            translation.strip()
+                            for translation in translation_list
+                            if translation.strip()])
+
+                    # If we are fetching additional acoustic data, it's possible we have to process
+                    # sound recordings and markup this lexical entry has.
+
+                    if len(row) > 4 and row[4]:
+
+                        row_list = row[4][0]
+
+                        result = (
+                            CognateAnalysis.acoustic_data(
+                                base_language_id,
+                                tuple(row_list[0:2]), row_list[2],
+                                tuple(row_list[3:5]), row_list[5],
+                                storage,
+                                __debug_flag__))
+
+                        entry_data_list = (index,
+                            transcription_list,
+                            translation_list,
+                            result)
+
+                    # No additional acoustic data.
+
+                    else:
+                        entry_data_list = (index, transcription_list, translation_list)
+
+                    text_dict[entry_id] = entry_data_list
 
             # Ok, and now we form the source data for analysis.
 
@@ -3164,6 +3477,9 @@ class CognateAnalysis(graphene.Mutation):
                 group_translation_list = [[]
                     for i in range(len(perspective_info_list))]
 
+                group_acoustic_list = [None
+                    for i in range(len(perspective_info_list))]
+
                 transcription_count = 0
                 translation_count = 0
 
@@ -3174,13 +3490,20 @@ class CognateAnalysis(graphene.Mutation):
 
                     # Processing text data of each entry of the group.
 
-                    index, transcription_list, translation_list = text_dict[entry_id]
+                    entry_data_list = text_dict[entry_id]
+                    index, transcription_list, translation_list = entry_data_list[:3]
 
                     group_transcription_list[index].extend(transcription_list)
                     group_translation_list[index].extend(translation_list)
 
                     transcription_count += len(transcription_list)
                     translation_count += len(translation_list)
+
+                    if (len(entry_data_list) > 3 and
+                        entry_data_list[3] and
+                        group_acoustic_list[index] is None):
+
+                        group_acoustic_list[index] = entry_data_list[3]
 
                 # Dropping groups with transcriptions from no more than a single dictionary.
 
@@ -3195,11 +3518,17 @@ class CognateAnalysis(graphene.Mutation):
 
                 result_list.append([])
 
-                for transcription_list, translation_list in zip(
-                    group_transcription_list, group_translation_list):
+                group_zipper = zip(
+                    group_transcription_list,
+                    group_translation_list,
+                    group_acoustic_list)
+
+                for transcription_list, translation_list, acoustic_list in group_zipper:
 
                     result_list[-1].append('|'.join(transcription_list))
                     result_list[-1].append('|'.join(translation_list))
+
+                    result_list[-1].extend(acoustic_list or ['', '', '', ''])
 
             # Showing what we've gathered.
 
@@ -3255,7 +3584,8 @@ class CognateAnalysis(graphene.Mutation):
             if __debug_flag__:
 
                 input_file_name = (
-                    'input cognate {0} {1} {2}.utf16'.format(
+                    'input cognate{0} {1} {2} {3}.utf16'.format(
+                    ' acoustic' if mode == 'acoustic' else '',
                     language_name.strip(),
                     len(perspective_info_list),
                     len(result_list)))
@@ -3305,7 +3635,7 @@ class CognateAnalysis(graphene.Mutation):
             line_list = output.split('\r\n')
 
             text_wrapper = textwrap.TextWrapper(
-                width = max(196, len(perspective_info_list) * 24), tabsize = 20)
+                width = max(196, len(perspective_info_list) * 40), tabsize = 20)
 
             reflow_list = []
 
@@ -3350,15 +3680,15 @@ class CognateAnalysis(graphene.Mutation):
             current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
             xlsx_filename = pathvalidate.sanitize_filename(
-                '{0} - {1:04d}.{2:02d}.{3:02d}.xlsx'.format(
+                '{0} cognate{1} analysis - {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
                     language_name[:64],
+                    ' acoustic' if mode == 'acoustic' else '',
                     current_datetime.year,
                     current_datetime.month,
                     current_datetime.day))
 
             cur_time = time.time()
 
-            storage = info.context.request.registry.settings['storage']
             storage_dir = os.path.join(storage['path'], 'cognate', str(cur_time))
 
             # Storing Excel file with the results.
@@ -3392,7 +3722,10 @@ class CognateAnalysis(graphene.Mutation):
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug('cognate_analysis: exception')
+            log.debug(
+                'cognate_analysis {0}/{1}: exception'.format(
+                *base_language_id))
+
             log.debug(traceback_string)
 
             return ResponseError(message =

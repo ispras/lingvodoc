@@ -879,7 +879,11 @@ def escape_character(string):
     return escape_character_re.sub(lambda match: escape_character_dict[match.group(0)], string)
 
 
-def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
+def process_textgrid(
+    textgrid,
+    unusual_f = None,
+    no_vowel_f = None,
+    no_vowel_selected_f = None):
     """
     Processes TextGrid markup, checking for each tier if it should be analyzed.
     """
@@ -961,14 +965,18 @@ def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
         # If we have intervals with unusual markup, we report them.
 
         if unusual_markup_flag:
-            unusual_f(tier_number, tier_name, transcription, dict(unusual_markup_list))
+
+            if unusual_f is not None:
+              unusual_f(tier_number, tier_name, transcription, dict(unusual_markup_list))
 
         # If the markup does not have any vowels, we note it and also report it.
 
         if all(character not in vowel_set for character in transcription):
 
             tier_data_list.append((tier_number, tier_name, 'no_vowel'))
-            no_vowel_f(tier_number, tier_name, transcription_list)
+
+            if no_vowel_f is not None:
+              no_vowel_f(tier_number, tier_name, transcription_list)
 
         # It is also possible that while full transcription has vowels, intervals selected for
         # analysis do not. In that case we also note it and report it.
@@ -976,7 +984,9 @@ def process_textgrid(textgrid, unusual_f, no_vowel_f, no_vowel_selected_f):
         elif not any(character in vowel_set for character in selected):
 
             tier_data_list.append((tier_number, tier_name, 'no_vowel_selected'))
-            no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list)
+
+            if no_vowel_selected_f is not None:
+              no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list)
 
         # Otherwise we store tier data to be used during processing of the sound file.
 
