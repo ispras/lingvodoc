@@ -3528,7 +3528,8 @@ class CognateAnalysis(graphene.Mutation):
                     result_list[-1].append('|'.join(transcription_list))
                     result_list[-1].append('|'.join(translation_list))
 
-                    result_list[-1].extend(acoustic_list or ['', '', '', ''])
+                    if mode == 'acoustic':
+                        result_list[-1].extend(acoustic_list or ['', '', '', ''])
 
             # Showing what we've gathered.
 
