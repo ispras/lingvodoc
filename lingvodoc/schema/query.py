@@ -7,6 +7,7 @@ import hashlib
 import io
 import itertools
 import logging
+import math
 import os.path
 import pprint
 import shutil
@@ -184,7 +185,8 @@ from sqlalchemy import (
     func,
     and_,
     or_,
-    tuple_
+    tuple_,
+    create_engine
 )
 from lingvodoc.views.v2.utils import (
     view_field_from_object,
@@ -209,7 +211,7 @@ from lingvodoc.utils import starling_converter
 from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
 
 import lingvodoc.cache.caching as caching
-from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
 from lingvodoc.views.v2.phonology import (
     AudioPraatLike,
@@ -230,22 +232,34 @@ RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
 from pyramid.httpexceptions import (
-    HTTPError
+    HTTPError,
+    HTTPOk
 )
 
 from lingvodoc.scripts import elan_parser
 from lingvodoc.utils.creation import create_entity
 
+from lingvodoc.queue.celery import celery
+
 
 import cchardet as chardet
+
+from celery.utils.log import get_task_logger
+
 import pathvalidate
 import pydub
 import pympi
+import transaction
 import xlsxwriter
 
 
 # Setting up logging.
 log = logging.getLogger(__name__)
+
+
+# Trying to set up celery logging.
+celery_log = get_task_logger(__name__)
+celery_log.setLevel(logging.DEBUG)
 
 
 # Mikhail Oslon's analysis functions.
@@ -2278,6 +2292,71 @@ class PhonemicAnalysis(graphene.Mutation):
                 'Exception:\n' + traceback_string)
 
 
+@celery.task
+def async_cognate_analysis(
+    base_language_id,
+    language_name,
+    group_field_id,
+    perspective_info_list,
+    mode,
+    locale_id,
+    storage,
+    task_key,
+    cache_kwargs,
+    sqlalchemy_url,
+    __debug_flag__):
+    """
+    Sets up and launches cognate analysis in asynchronous mode.
+    """
+
+    # NOTE: copied from phonology.
+    #
+    # This is a no-op with current settings, we use it to enable logging inside celery tasks, because
+    # somehow this does it, and otherwise we couldn't set it up.
+
+    logging.debug('async_cognate_analysis')
+
+    # Ok, and now we go on with task execution.
+
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind = engine)
+    initialize_cache(cache_kwargs)
+
+    task_status = TaskStatus.get_from_cache(task_key)
+
+    with transaction.manager:
+
+        try:
+            CognateAnalysis.perform_cognate_analysis(
+                base_language_id,
+                language_name,
+                group_field_id,
+                perspective_info_list,
+                mode,
+                locale_id,
+                storage,
+                task_status,
+                __debug_flag__)
+
+        # Some unknown external exception.
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug(
+                'cognate_analysis {0}/{1}: exception'.format(
+                *base_language_id))
+
+            log.debug(traceback_string)
+
+            if task_status is not None:
+
+                task_status.set(5, 100,
+                    'Finished (ERROR), exception:\n' + traceback_string)
+
+
 class CognateAnalysis(graphene.Mutation):
 
     class Arguments:
@@ -2501,8 +2580,7 @@ class CognateAnalysis(graphene.Mutation):
     @staticmethod
     def tag_data_aggregated(
         perspective_info_list,
-        field_client_id,
-        field_object_id,
+        tag_field_id,
         statistics_flag = False,
         optimize_flag = False):
         """
@@ -2533,8 +2611,8 @@ class CognateAnalysis(graphene.Mutation):
                     dbLexicalEntry.marked_for_deletion == False,
                     dbEntity.parent_client_id == dbLexicalEntry.client_id,
                     dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                    dbEntity.field_client_id == field_client_id,
-                    dbEntity.field_object_id == field_object_id,
+                    dbEntity.field_client_id == tag_field_id[0],
+                    dbEntity.field_object_id == tag_field_id[1],
                     dbEntity.marked_for_deletion == False,
                     dbPublishingEntity.client_id == dbEntity.client_id,
                     dbPublishingEntity.object_id == dbEntity.object_id,
@@ -2564,8 +2642,8 @@ class CognateAnalysis(graphene.Mutation):
                     dbLexicalEntry.marked_for_deletion == False,
                     dbEntity.parent_client_id == dbLexicalEntry.client_id,
                     dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                    dbEntity.field_client_id == field_client_id,
-                    dbEntity.field_object_id == field_object_id,
+                    dbEntity.field_client_id == tag_field_id[0],
+                    dbEntity.field_object_id == tag_field_id[1],
                     dbEntity.marked_for_deletion == False,
                     dbEntity.content.in_(tag_list),
                     dbPublishingEntity.client_id == dbEntity.client_id,
@@ -2604,8 +2682,8 @@ class CognateAnalysis(graphene.Mutation):
                     .filter(
                         tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
                             .in_(entry_id_list[i * 16384 : (i + 1) * 16384]),
-                        dbEntity.field_client_id == field_client_id,
-                        dbEntity.field_object_id == field_object_id,
+                        dbEntity.field_client_id == tag_field_id[0],
+                        dbEntity.field_object_id == tag_field_id[1],
                         dbEntity.marked_for_deletion == False,
                         dbPublishingEntity.client_id == dbEntity.client_id,
                         dbPublishingEntity.object_id == dbEntity.object_id,
@@ -2772,8 +2850,8 @@ class CognateAnalysis(graphene.Mutation):
                         client_id = entry_id[0],
                         parent_client_id = entry_id[0],
                         parent_object_id = entry_id[1],
-                        field_client_id = field_client_id,
-                        field_object_id = field_object_id,
+                        field_client_id = tag_field_id[0],
+                        field_object_id = tag_field_id[1],
                         content = tag)
 
                     tag_entity.publishingentity.published = True
@@ -2811,9 +2889,13 @@ class CognateAnalysis(graphene.Mutation):
         return entry_already_set, group_list, time.time() - start_time
 
     @staticmethod
-    def export_excel(base_language_id, output_str, __debug_flag__ = False):
+    def export_xlsx(
+        base_language_id,
+        mode,
+        output_str,
+        __debug_flag__ = False):
         """
-        Parses results of the cognate analysis and exports them as an Excel file.
+        Parses results of the cognate analysis and exports them as an XLSX file.
         """
 
         workbook_stream = io.BytesIO()
@@ -2897,8 +2979,11 @@ class CognateAnalysis(graphene.Mutation):
             language = DBSession.query(dbLanguage).filter_by(
                 client_id = base_language_id[0], object_id = base_language_id[1]).first()
 
-            xlsx_file_name = 'cognate {0} {1} {2}.xlsx'.format(
-                base_language_id[0], base_language_id[1], language.get_translation(2))
+            xlsx_file_name = (
+                'cognate{0} {1} {2}/{3}.xlsx'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language.get_translation(2),
+                *base_language_id))
 
             workbook_stream.seek(0)
 
@@ -2920,10 +3005,6 @@ class CognateAnalysis(graphene.Mutation):
         Extracts acoustic data from a pair of sound recording and its markup, using cache in a manner
         compatible with phonological analysis.
         """
-
-        # Temporarily, for the current version, we do not process sound/markup data at all.
-
-        return None
 
         log_str = (
             'cognate_analysis {0}/{1}: sound entity {2}/{3}, markup entity {4}/{5}'.format(
@@ -3096,7 +3177,9 @@ class CognateAnalysis(graphene.Mutation):
                     for (interval_str, interval_r_length, f_list,
                         sign_longest, sign_highest, source_index) in tier_result.interval_data_list:
 
-                        return [interval_str.split()[-3]] + f_list[:3]
+                        interval_str_list = interval_str.split()
+
+                        return [interval_str.split()[0], interval_str.split()[-3]] + f_list[:3]
 
         # Showing what we've finally got and returning it.
 
@@ -3107,6 +3190,603 @@ class CognateAnalysis(graphene.Mutation):
             log_str, result))
                     
         return result
+
+    @staticmethod
+    def perform_cognate_analysis(
+        base_language_id,
+        language_name,
+        group_field_id,
+        perspective_info_list,
+        mode,
+        locale_id,
+        storage,
+        task_status = None,
+        __debug_flag__ = False):
+        """
+        Performs cognate analysis in either synchronous or asynchronous mode.
+        """
+
+        if task_status is not None:
+            task_status.set(1, 0, 'Gathering grouping data')
+
+        # Gathering entry grouping data.
+
+        perspective_dict = collections.defaultdict(dict)
+
+        entry_already_set = set()
+        group_list = []
+
+        tag_dict = collections.defaultdict(set)
+        text_dict = {}
+
+        if not __debug_flag__:
+
+            entry_already_set, group_list, group_time = (
+
+                CognateAnalysis.tag_data_aggregated(
+                    perspective_info_list, group_field_id))
+
+        else:
+
+            # If we are in debug mode, we try to load existing tag data to reduce debugging time.
+
+            tag_data_digest = hashlib.md5(
+                    
+                repr(list(group_field_id) +
+                    [perspective_info[0] for perspective_info in perspective_info_list])
+
+                    .encode('utf-8')).hexdigest()
+
+            tag_data_file_name = \
+                '__tag_data_{0}_{1}_{2}__.gz'.format(
+                    base_language_id[0], base_language_id[1], tag_data_digest)
+
+            import pickle
+
+            if os.path.exists(tag_data_file_name):
+
+                with gzip.open(tag_data_file_name, 'rb') as tag_data_file:
+                    entry_already_set, group_list, group_time = pickle.load(tag_data_file)
+
+            else:
+
+                # Don't have existing data, so we gather it and then save it for later use.
+
+                entry_already_set, group_list, group_time = (
+
+                    CognateAnalysis.tag_data_aggregated(
+                        perspective_info_list, group_field_id))
+
+                with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
+                    pickle.dump((entry_already_set, group_list, group_time), tag_data_file)
+
+        log.debug(
+            'cognate_analysis {0}/{1}: {2} entries, {3} groups, {4:.2f}s elapsed time'.format(
+            base_language_id[0], base_language_id[1],
+            len(entry_already_set),
+            len(group_list),
+            group_time))
+
+        if task_status is not None:
+            task_status.set(2, 5, 'Gathering analysis source data')
+
+        # Getting text data for each perspective.
+
+        dbTranslation = aliased(dbEntity, name = 'Translation')
+        dbSound = aliased(dbEntity, name = 'Sound')
+        dbMarkup = aliased(dbEntity, name = 'Markup')
+
+        dbPublishingTranslation = aliased(dbPublishingEntity, name = 'PublishingTranslation')
+        dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
+        dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
+
+        for index, (perspective_id, transcription_field_id, translation_field_id) in \
+            enumerate(perspective_info_list):
+
+            # Getting and showing perspective info.
+
+            perspective = DBSession.query(dbDictionaryPerspective).filter_by(
+                client_id = perspective_id[0], object_id = perspective_id[1]).first()
+
+            perspective_name = perspective.get_translation(locale_id)
+            dictionary_name = perspective.parent.get_translation(locale_id)
+
+            perspective_dict[perspective_id]['perspective_name'] = perspective_name
+            perspective_dict[perspective_id]['dictionary_name'] = dictionary_name
+
+            log.debug(
+                '\ncognate_analysis {0}/{1}:'
+                '\n  dictionary {2}/{3}: {4}'
+                '\n  perspective {5}/{6}: {7}'.format(
+                base_language_id[0], base_language_id[1],
+                perspective.parent_client_id, perspective.parent_object_id,
+                repr(dictionary_name.strip()),
+                perspective_id[0], perspective_id[1],
+                repr(perspective_name.strip())))
+
+            # Getting text data.
+
+            transcription_query = (
+                    
+                DBSession.query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id).filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == transcription_field_id[0],
+                        dbEntity.field_object_id == transcription_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+
+                .add_columns(
+                    func.array_agg(dbEntity.content).label('transcription'))
+
+                .group_by(dbLexicalEntry)).subquery()
+
+            translation_query = (
+                    
+                DBSession.query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id).filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == translation_field_id[0],
+                        dbEntity.field_object_id == translation_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+
+                .add_columns(
+                    func.array_agg(dbEntity.content).label('translation'))
+
+                .group_by(dbLexicalEntry)).subquery()
+
+            # Main query for transcription/translation data.
+
+            data_query = (
+                DBSession.query(transcription_query)
+                
+                .outerjoin(translation_query, and_(
+                    transcription_query.c.client_id == translation_query.c.client_id,
+                    transcription_query.c.object_id == translation_query.c.object_id))
+                
+                .add_columns(
+                    translation_query.c.translation))
+
+            # If we need to do an acoustic analysis, we also get sound/markup data.
+
+            if mode == 'acoustic':
+
+                sound_markup_query = (
+                        
+                    DBSession.query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id).filter(
+                            dbLexicalEntry.parent_client_id == perspective_id[0],
+                            dbLexicalEntry.parent_object_id == perspective_id[1],
+                            dbLexicalEntry.marked_for_deletion == False,
+                            dbMarkup.parent_client_id == dbLexicalEntry.client_id,
+                            dbMarkup.parent_object_id == dbLexicalEntry.object_id,
+                            dbMarkup.marked_for_deletion == False,
+                            dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
+                            dbPublishingMarkup.client_id == dbMarkup.client_id,
+                            dbPublishingMarkup.object_id == dbMarkup.object_id,
+                            dbPublishingMarkup.published == True,
+                            dbPublishingMarkup.accepted == True,
+                            dbSound.client_id == dbMarkup.self_client_id,
+                            dbSound.object_id == dbMarkup.self_object_id,
+                            dbSound.marked_for_deletion == False,
+                            dbPublishingSound.client_id == dbSound.client_id,
+                            dbPublishingSound.object_id == dbSound.object_id,
+                            dbPublishingSound.published == True,
+                            dbPublishingSound.accepted == True)
+                    
+                    .add_columns(
+                        
+                        func.jsonb_agg(func.jsonb_build_array(
+                            dbSound.client_id, dbSound.object_id, dbSound.content,
+                            dbMarkup.client_id, dbMarkup.object_id, dbMarkup.content))
+                        
+                        .label('sound_markup'))
+
+                    .group_by(dbLexicalEntry)).subquery()
+
+                # Adding sound/markup retrieval to the main query.
+
+                data_query = (
+                    data_query
+
+                    .outerjoin(sound_markup_query, and_(
+                        transcription_query.c.client_id == sound_markup_query.c.client_id,
+                        transcription_query.c.object_id == sound_markup_query.c.object_id))
+                    
+                    .add_columns(
+                        sound_markup_query.c.sound_markup))
+
+            # If we are in asynchronous mode, we need to look up how many data rows we need
+            # to process for this perspective.
+
+            if task_status is not None:
+
+                row_count = data_query.count()
+
+                log.debug(
+                    'cognate_analysis {0}/{1}: perspective {2}/{3}: {4} data rows'.format(
+                    base_language_id[0], base_language_id[1],
+                    perspective_id[0], perspective_id[1],
+                    row_count))
+
+            # Grouping transcriptions and translations by lexical entries.
+
+            for row_index, row in enumerate(data_query.all()):
+
+                entry_id = tuple(row[:2])
+                transcription_list, translation_list = row[2:4]
+
+                transcription_list = (
+                    [] if not transcription_list else [
+                        transcription.strip()
+                        for transcription in transcription_list
+                        if transcription.strip()])
+
+                # If we have no trascriptions for this lexical entry, we skip it altogether.
+
+                if not transcription_list:
+                    continue
+
+                translation_list = (
+                    [] if not translation_list else [
+                        translation.strip()
+                        for translation in translation_list
+                        if translation.strip()])
+
+                # If we are fetching additional acoustic data, it's possible we have to process
+                # sound recordings and markup this lexical entry has.
+
+                if len(row) > 4 and row[4]:
+
+                    row_list = row[4][0]
+
+                    result = (
+                        CognateAnalysis.acoustic_data(
+                            base_language_id,
+                            tuple(row_list[0:2]), row_list[2],
+                            tuple(row_list[3:5]), row_list[5],
+                            storage,
+                            __debug_flag__))
+
+                    # Updating task progress, if required.
+
+                    if task_status is not None:
+
+                        percent = int(math.floor(90.0 *
+                            (index + float(row_index + 1) / row_count) /
+                            len(perspective_info_list)))
+                        
+                        task_status.set(2, 5 + percent, 'Gathering analysis source data')
+
+                    entry_data_list = (index,
+                        transcription_list,
+                        translation_list,
+                        result)
+
+                # No additional acoustic data.
+
+                else:
+                    entry_data_list = (index, transcription_list, translation_list)
+
+                text_dict[entry_id] = entry_data_list
+
+        if task_status is not None:
+            task_status.set(3, 95, 'Performing analysis')
+
+        # Ok, and now we form the source data for analysis.
+
+        result_list = [[]]
+        perspective_list = []
+
+        for perspective_id, transcription_field_id, translation_field_id in perspective_info_list:
+
+            perspective_data = perspective_dict[perspective_id]
+
+            perspective_str = '{0} - {1}'.format(
+                perspective_data['dictionary_name'],
+                perspective_data['perspective_name'])
+
+            perspective_list.append(perspective_str)
+            result_list[0].extend([perspective_str, ''])
+
+        log.debug('\n' +
+            pprint.pformat(perspective_list, width = 108))
+
+        # Each group of lexical entries.
+
+        not_enough_count = 0
+
+        total_transcription_count = 0
+        total_translation_count = 0
+
+        for entry_id_set in group_list:
+
+            group_transcription_list = [[]
+                for i in range(len(perspective_info_list))]
+
+            group_translation_list = [[]
+                for i in range(len(perspective_info_list))]
+
+            group_acoustic_list = [None
+                for i in range(len(perspective_info_list))]
+
+            transcription_count = 0
+            translation_count = 0
+
+            for entry_id in entry_id_set:
+
+                if entry_id not in text_dict:
+                    continue
+
+                # Processing text data of each entry of the group.
+
+                entry_data_list = text_dict[entry_id]
+                index, transcription_list, translation_list = entry_data_list[:3]
+
+                group_transcription_list[index].extend(transcription_list)
+                group_translation_list[index].extend(translation_list)
+
+                transcription_count += len(transcription_list)
+                translation_count += len(translation_list)
+
+                if (len(entry_data_list) > 3 and
+                    entry_data_list[3] and
+                    group_acoustic_list[index] is None):
+
+                    group_acoustic_list[index] = entry_data_list[3]
+
+            # Dropping groups with transcriptions from no more than a single dictionary.
+
+            if sum(min(1, len(transcription_list))
+                for transcription_list in group_transcription_list) <= 1:
+
+                not_enough_count += 1
+                continue
+
+            total_transcription_count += transcription_count
+            total_translation_count += translation_count
+
+            result_list.append([])
+
+            group_zipper = zip(
+                group_transcription_list,
+                group_translation_list,
+                group_acoustic_list)
+
+            for transcription_list, translation_list, acoustic_list in group_zipper:
+
+                result_list[-1].append('|'.join(transcription_list))
+                result_list[-1].append('|'.join(translation_list))
+
+                if mode == 'acoustic':
+                    result_list[-1].extend(acoustic_list or ['', '', '', '', ''])
+
+        # Showing what we've gathered.
+
+        log.debug(
+            '\ncognate_analysis {0}/{1}:'
+            '\n  len(group_list): {2}'
+            '\n  len(result_list): {3}'
+            '\n  not_enough_count: {4}'
+            '\n  transcription_count: {5}'
+            '\n  translation_count: {6}'
+            '\n  result_list:\n{7}'.format(
+                base_language_id[0], base_language_id[1],
+                len(group_list),
+                len(result_list),
+                not_enough_count,
+                total_transcription_count,
+                total_translation_count,
+                pprint.pformat(result_list, width = 108)))
+
+        # If we have no data at all, we return empty result.
+
+        if len(result_list) <= 1:
+
+            return CognateAnalysis(
+                triumph = True,
+                dictionary_count = len(perspective_info_list),
+                group_count = len(group_list),
+                not_enough_count = not_enough_count,
+                transcription_count = total_transcription_count,
+                translation_count = total_translation_count,
+                result = '',
+                xlsx_url = '')
+
+        analysis_f = (
+            cognate_acoustic_analysis_f if mode == 'acoustic' else
+            cognate_analysis_f)
+
+        # Preparing analysis input.
+
+        input = ''.join(
+            ''.join(text + '\0' for text in text_list)
+            for text_list in result_list)
+
+        log.debug(
+            '\ncognate_analysis {0}/{1}:'
+            '\nanalysis_f: {2}'
+            '\ninput ({3} columns, {4} rows):\n{5}'.format(
+                base_language_id[0], base_language_id[1],
+                repr(analysis_f),
+                len(perspective_info_list),
+                len(result_list),
+                pprint.pformat([input[i : i + 256]
+                    for i in range(0, len(input), 256)], width = 144)))
+
+        # Saving input to a file, if required.
+
+        if __debug_flag__:
+
+            input_file_name = (
+                'input cognate{0} {1} {2} {3}.utf16'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language_name.strip(),
+                len(perspective_info_list),
+                len(result_list)))
+
+            with open(input_file_name, 'wb') as input_file:
+                input_file.write(input.encode('utf-16'))
+
+        # Calling analysis library, starting with getting required output buffer size and continuing
+        # with analysis proper.
+
+        output_buffer_size = analysis_f(
+            None, len(perspective_info_list), len(result_list), None, 1)
+
+        log.debug(
+            'cognate_analysis {0}/{1}: output buffer size {2}'.format(
+            base_language_id[0], base_language_id[1],
+            output_buffer_size))
+
+        input_buffer = ctypes.create_unicode_buffer(input)
+        output_buffer = ctypes.create_unicode_buffer(output_buffer_size + 256)
+
+        result = analysis_f(
+            input_buffer, len(perspective_info_list), len(result_list), output_buffer, 1)
+
+        # If we don't have a good result, we return an error.
+
+        log.debug(
+            'cognate_analysis {0}/{1}: result {2}'.format(
+            base_language_id[0], base_language_id[1],
+            result))
+
+        if result <= 0:
+
+            if task_status is not None:
+
+                task_status.set(5, 100,
+                    'Finished (ERROR): library call error {0}'.format(result))
+
+            return ResponseError(message =
+                'Cognate analysis library call error {0}'.format(result))
+
+        output = output_buffer.value
+
+        log.debug(
+            'cognate_analysis {0}/{1}:\noutput:\n{2}'.format(
+            base_language_id[0], base_language_id[1],
+            pprint.pformat([output[i : i + 256]
+                for i in range(0, len(output), 256)], width = 144)))
+
+        # Reflowing output.
+
+        line_list = output.split('\r\n')
+
+        text_wrapper = textwrap.TextWrapper(
+            width = max(196, len(perspective_info_list) * 40), tabsize = 20)
+
+        reflow_list = []
+
+        for line in line_list:
+            reflow_list.extend(text_wrapper.wrap(line))
+
+        wrapped_output = '\n'.join(reflow_list)
+
+        log.debug(
+            'cognate_analysis {0}/{1}:\nwrapped output:\n{2}'.format(
+            base_language_id[0], base_language_id[1],
+            wrapped_output))
+
+        # Getting binary output for parsing and exporting.
+
+        result_binary = analysis_f(
+            input_buffer, len(perspective_info_list), len(result_list), output_buffer, 2)
+
+        log.debug(
+            'cognate_analysis {0}/{1}: result_binary {2}'.format(
+            base_language_id[0], base_language_id[1],
+            result_binary))
+
+        if result <= 0:
+
+            if task_status is not None:
+
+                task_status.set(5, 100,
+                    'Finished (ERROR): library call (binary) error {0}'.format(result_binary))
+
+            return ResponseError(message =
+                'Cognate analysis library call (binary) error {0}'.format(result_binary))
+
+        # Showing what we've got from the binary output call, indicating task's final stage, if required.
+
+        output_binary = output_buffer[:result_binary]
+
+        log.debug(
+            'cognate_analysis {0}/{1}:\noutput_binary:\n{2}'.format(
+            base_language_id[0], base_language_id[1],
+            pprint.pformat([output_binary[i : i + 256]
+                for i in range(0, len(output_binary), 256)], width = 144)))
+
+        if task_status is not None:
+            task_status.set(4, 99, 'Exporting analysis results to XLSX')
+
+        # Parsing analysis results and exporting them as an Excel file.
+
+        workbook_stream = CognateAnalysis.export_xlsx(
+            base_language_id, mode, output_binary, __debug_flag__)
+
+        current_datetime = datetime.datetime.now(datetime.timezone.utc)
+
+        xlsx_filename = pathvalidate.sanitize_filename(
+            '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+                language_name[:64],
+                ' acoustic' if mode == 'acoustic' else '',
+                current_datetime.year,
+                current_datetime.month,
+                current_datetime.day))
+
+        cur_time = time.time()
+
+        storage_dir = os.path.join(storage['path'], 'cognate', str(cur_time))
+
+        # Storing Excel file with the results.
+
+        xlsx_path = os.path.join(storage_dir, xlsx_filename)
+        os.makedirs(os.path.dirname(xlsx_path), exist_ok = True)
+
+        workbook_stream.seek(0)
+
+        with open(xlsx_path, 'wb') as xlsx_file:
+            shutil.copyfileobj(workbook_stream, xlsx_file)
+
+        xlsx_url = ''.join([
+            storage['prefix'], storage['static_route'],
+            'cognate', '/', str(cur_time), '/', xlsx_filename])
+
+        if task_status is not None:
+            task_status.set(5, 100, 'Finished', result_link = xlsx_url)
+
+        # Returning result.
+
+        return CognateAnalysis(
+            triumph = True,
+            dictionary_count = len(perspective_info_list),
+            group_count = len(group_list),
+            not_enough_count = not_enough_count,
+            transcription_count = total_transcription_count,
+            translation_count = total_translation_count,
+            result = wrapped_output,
+            xlsx_url = xlsx_url)
 
     @staticmethod
     def mutate(self, info, **args):
@@ -3130,23 +3810,26 @@ class CognateAnalysis(graphene.Mutation):
 
         base_language_id = args['base_language_id']
 
-        group_field_cid, group_field_oid = args['group_field_id']
+        group_field_id = args['group_field_id']
         perspective_info_list = args['perspective_info_list']
 
         mode = args.get('mode')
-
-        locale_id = info.context.get('locale_id') or 2
 
         __debug_flag__ = False
 
         try:
 
-            storage = info.context.request.registry.settings['storage']
+            # Getting base language info.
+
+            locale_id = info.context.get('locale_id') or 2
 
             language = DBSession.query(dbLanguage).filter_by(
                 client_id = base_language_id[0], object_id = base_language_id[1]).first()
 
             language_name = language.get_translation(locale_id)
+
+            request = info.context.request
+            storage = request.registry.settings['storage']
 
             # Showing cognate analysis info, checking cognate analysis library presence.
 
@@ -3160,7 +3843,7 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  cognate_acoustic_analysis_f: {8}'.format(
                     base_language_id[0], base_language_id[1],
                     repr(language_name.strip()),
-                    group_field_cid, group_field_oid,
+                    group_field_id[0], group_field_id[1],
                     perspective_info_list,
                     repr(mode),
                     repr(cognate_analysis_f),
@@ -3190,533 +3873,56 @@ class CognateAnalysis(graphene.Mutation):
                     transcription_field_id,
                     translation_field_id in perspective_info_list]
 
-            # Gathering entry grouping data.
+            # If we are to use acoustic data, we will launch cognate analysis in asynchronous mode.
 
-            perspective_dict = collections.defaultdict(dict)
+            if mode == 'acoustic':
 
-            entry_already_set = set()
-            group_list = []
+                client_id = request.authenticated_userid
 
-            tag_dict = collections.defaultdict(set)
-            text_dict = {}
+                user_id = (
+                    Client.get_user_by_client_id(client_id).id
+                        if client_id else anonymous_userid(request))
 
-            if not __debug_flag__:
+                task_status = TaskStatus(
+                    user_id, 'Cognate acoustic analysis', language_name, 5)
 
-                entry_already_set, group_list, group_time = (
+                # Launching cognate acoustic analysis asynchronously.
 
-                    CognateAnalysis.tag_data_aggregated(
-                        perspective_info_list, group_field_cid, group_field_oid))
+                request.response.status = HTTPOk.code
+
+                async_cognate_analysis.delay(
+                    base_language_id,
+                    language_name,
+                    group_field_id,
+                    perspective_info_list,
+                    mode,
+                    locale_id,
+                    storage,
+                    task_status.key,
+                    request.registry.settings['cache_kwargs'],
+                    request.registry.settings['sqlalchemy.url'],
+                    __debug_flag__)
+
+                # Signifying that we've successfully launched asynchronous cognate acoustic analysis.
+
+                return CognateAnalysis(triumph = True)
+
+            # We do not use acoustic data, so we perform cognate analysis synchronously.
 
             else:
 
-                # If we are in debug mode, we try to load existing tag data to reduce debugging time.
-
-                tag_data_digest = hashlib.md5(
-                        
-                    repr([group_field_cid, group_field_oid] +
-                        [perspective_info[0] for perspective_info in perspective_info_list])
-
-                        .encode('utf-8')).hexdigest()
-
-                tag_data_file_name = \
-                    '__tag_data_{0}_{1}_{2}__.gz'.format(
-                        base_language_id[0], base_language_id[1], tag_data_digest)
-
-                import pickle
-
-                if os.path.exists(tag_data_file_name):
-
-                    with gzip.open(tag_data_file_name, 'rb') as tag_data_file:
-                        entry_already_set, group_list, group_time = pickle.load(tag_data_file)
-
-                else:
-
-                    # Don't have existing data, so we gather it and then save it for later use.
-
-                    entry_already_set, group_list, group_time = (
-
-                        CognateAnalysis.tag_data_aggregated(
-                            perspective_info_list, group_field_cid, group_field_oid))
-
-                    with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
-                        pickle.dump((entry_already_set, group_list, group_time), tag_data_file)
-
-            log.debug(
-                'cognate_analysis {0}/{1}: {2} entries, {3} groups, {4:.2f}s elapsed time'.format(
-                base_language_id[0], base_language_id[1],
-                len(entry_already_set),
-                len(group_list),
-                group_time))
-
-            # Getting text data for each perspective.
-
-            dbTranslation = aliased(dbEntity, name = 'Translation')
-            dbSound = aliased(dbEntity, name = 'Sound')
-            dbMarkup = aliased(dbEntity, name = 'Markup')
-
-            dbPublishingTranslation = aliased(dbPublishingEntity, name = 'PublishingTranslation')
-            dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
-            dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
-
-            for index, (perspective_id, transcription_field_id, translation_field_id) in \
-                enumerate(perspective_info_list):
-
-                # Getting and showing perspective info.
-
-                perspective = DBSession.query(dbDictionaryPerspective).filter_by(
-                    client_id = perspective_id[0], object_id = perspective_id[1]).first()
-
-                perspective_name = perspective.get_translation(locale_id)
-                dictionary_name = perspective.parent.get_translation(locale_id)
-
-                perspective_dict[perspective_id]['perspective_name'] = perspective_name
-                perspective_dict[perspective_id]['dictionary_name'] = dictionary_name
-
-                log.debug(
-                    '\ncognate_analysis {0}/{1}:'
-                    '\n  dictionary {2}/{3}: {4}'
-                    '\n  perspective {5}/{6}: {7}'.format(
-                    base_language_id[0], base_language_id[1],
-                    perspective.parent_client_id, perspective.parent_object_id,
-                    repr(dictionary_name.strip()),
-                    perspective_id[0], perspective_id[1],
-                    repr(perspective_name.strip())))
-
-                # Getting text data.
-
-                transcription_query = (
-                        
-                    DBSession.query(
-                        dbLexicalEntry.client_id,
-                        dbLexicalEntry.object_id).filter(
-                            dbLexicalEntry.parent_client_id == perspective_id[0],
-                            dbLexicalEntry.parent_object_id == perspective_id[1],
-                            dbLexicalEntry.marked_for_deletion == False,
-                            dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                            dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                            dbEntity.field_client_id == transcription_field_id[0],
-                            dbEntity.field_object_id == transcription_field_id[1],
-                            dbEntity.marked_for_deletion == False,
-                            dbPublishingEntity.client_id == dbEntity.client_id,
-                            dbPublishingEntity.object_id == dbEntity.object_id,
-                            dbPublishingEntity.published == True,
-                            dbPublishingEntity.accepted == True)
-
-                    .add_columns(
-                        func.array_agg(dbEntity.content).label('transcription'))
-
-                    .group_by(dbLexicalEntry)).subquery()
-
-                translation_query = (
-                        
-                    DBSession.query(
-                        dbLexicalEntry.client_id,
-                        dbLexicalEntry.object_id).filter(
-                            dbLexicalEntry.parent_client_id == perspective_id[0],
-                            dbLexicalEntry.parent_object_id == perspective_id[1],
-                            dbLexicalEntry.marked_for_deletion == False,
-                            dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                            dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                            dbEntity.field_client_id == translation_field_id[0],
-                            dbEntity.field_object_id == translation_field_id[1],
-                            dbEntity.marked_for_deletion == False,
-                            dbPublishingEntity.client_id == dbEntity.client_id,
-                            dbPublishingEntity.object_id == dbEntity.object_id,
-                            dbPublishingEntity.published == True,
-                            dbPublishingEntity.accepted == True)
-
-                    .add_columns(
-                        func.array_agg(dbEntity.content).label('translation'))
-
-                    .group_by(dbLexicalEntry)).subquery()
-
-                # Main query for transcription/translation data.
-
-                data_query = (
-                    DBSession.query(transcription_query)
-                    
-                    .outerjoin(translation_query, and_(
-                        transcription_query.c.client_id == translation_query.c.client_id,
-                        transcription_query.c.object_id == translation_query.c.object_id))
-                    
-                    .add_columns(
-                        translation_query.c.translation))
-
-                # If we need to do an acoustic analysis, we also get sound/markup data.
-
-                if mode == 'acoustic':
-
-                    sound_markup_query = (
-                            
-                        DBSession.query(
-                            dbLexicalEntry.client_id,
-                            dbLexicalEntry.object_id).filter(
-                                dbLexicalEntry.parent_client_id == perspective_id[0],
-                                dbLexicalEntry.parent_object_id == perspective_id[1],
-                                dbLexicalEntry.marked_for_deletion == False,
-                                dbMarkup.parent_client_id == dbLexicalEntry.client_id,
-                                dbMarkup.parent_object_id == dbLexicalEntry.object_id,
-                                dbMarkup.marked_for_deletion == False,
-                                dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
-                                dbPublishingMarkup.client_id == dbMarkup.client_id,
-                                dbPublishingMarkup.object_id == dbMarkup.object_id,
-                                dbPublishingMarkup.published == True,
-                                dbPublishingMarkup.accepted == True,
-                                dbSound.client_id == dbMarkup.self_client_id,
-                                dbSound.object_id == dbMarkup.self_object_id,
-                                dbSound.marked_for_deletion == False,
-                                dbPublishingSound.client_id == dbSound.client_id,
-                                dbPublishingSound.object_id == dbSound.object_id,
-                                dbPublishingSound.published == True,
-                                dbPublishingSound.accepted == True)
-                        
-                        .add_columns(
-                            
-                            func.jsonb_agg(func.jsonb_build_array(
-                                dbSound.client_id, dbSound.object_id, dbSound.content,
-                                dbMarkup.client_id, dbMarkup.object_id, dbMarkup.content))
-                            
-                            .label('sound_markup'))
-
-                        .group_by(dbLexicalEntry)).subquery()
-
-                    # Adding sound/markup retrieval to the main query.
-
-                    data_query = (
-                        data_query
-
-                        .outerjoin(sound_markup_query, and_(
-                            transcription_query.c.client_id == sound_markup_query.c.client_id,
-                            transcription_query.c.object_id == sound_markup_query.c.object_id))
-                        
-                        .add_columns(
-                            sound_markup_query.c.sound_markup))
-
-                # Grouping transcriptions and translations by lexical entries.
-
-                for row in data_query.all():
-
-                    entry_id = tuple(row[:2])
-                    transcription_list, translation_list = row[2:4]
-
-                    transcription_list = (
-                        [] if not transcription_list else [
-                            transcription.strip()
-                            for transcription in transcription_list
-                            if transcription.strip()])
-
-                    # If we have no trascriptions for this lexical entry, we skip it altogether.
-
-                    if not transcription_list:
-                        continue
-
-                    translation_list = (
-                        [] if not translation_list else [
-                            translation.strip()
-                            for translation in translation_list
-                            if translation.strip()])
-
-                    # If we are fetching additional acoustic data, it's possible we have to process
-                    # sound recordings and markup this lexical entry has.
-
-                    if len(row) > 4 and row[4]:
-
-                        row_list = row[4][0]
-
-                        result = (
-                            CognateAnalysis.acoustic_data(
-                                base_language_id,
-                                tuple(row_list[0:2]), row_list[2],
-                                tuple(row_list[3:5]), row_list[5],
-                                storage,
-                                __debug_flag__))
-
-                        entry_data_list = (index,
-                            transcription_list,
-                            translation_list,
-                            result)
-
-                    # No additional acoustic data.
-
-                    else:
-                        entry_data_list = (index, transcription_list, translation_list)
-
-                    text_dict[entry_id] = entry_data_list
-
-            # Ok, and now we form the source data for analysis.
-
-            result_list = [[]]
-            perspective_list = []
-
-            for perspective_id, transcription_field_id, translation_field_id in perspective_info_list:
-
-                perspective_data = perspective_dict[perspective_id]
-
-                perspective_str = '{0} - {1}'.format(
-                    perspective_data['dictionary_name'],
-                    perspective_data['perspective_name'])
-
-                perspective_list.append(perspective_str)
-                result_list[0].extend([perspective_str, ''])
-
-            log.debug('\n' +
-                pprint.pformat(perspective_list, width = 108))
-
-            # Each group of lexical entries.
-
-            not_enough_count = 0
-
-            total_transcription_count = 0
-            total_translation_count = 0
-
-            for entry_id_set in group_list:
-
-                group_transcription_list = [[]
-                    for i in range(len(perspective_info_list))]
-
-                group_translation_list = [[]
-                    for i in range(len(perspective_info_list))]
-
-                group_acoustic_list = [None
-                    for i in range(len(perspective_info_list))]
-
-                transcription_count = 0
-                translation_count = 0
-
-                for entry_id in entry_id_set:
-
-                    if entry_id not in text_dict:
-                        continue
-
-                    # Processing text data of each entry of the group.
-
-                    entry_data_list = text_dict[entry_id]
-                    index, transcription_list, translation_list = entry_data_list[:3]
-
-                    group_transcription_list[index].extend(transcription_list)
-                    group_translation_list[index].extend(translation_list)
-
-                    transcription_count += len(transcription_list)
-                    translation_count += len(translation_list)
-
-                    if (len(entry_data_list) > 3 and
-                        entry_data_list[3] and
-                        group_acoustic_list[index] is None):
-
-                        group_acoustic_list[index] = entry_data_list[3]
-
-                # Dropping groups with transcriptions from no more than a single dictionary.
-
-                if sum(min(1, len(transcription_list))
-                    for transcription_list in group_transcription_list) <= 1:
-
-                    not_enough_count += 1
-                    continue
-
-                total_transcription_count += transcription_count
-                total_translation_count += translation_count
-
-                result_list.append([])
-
-                group_zipper = zip(
-                    group_transcription_list,
-                    group_translation_list,
-                    group_acoustic_list)
-
-                for transcription_list, translation_list, acoustic_list in group_zipper:
-
-                    result_list[-1].append('|'.join(transcription_list))
-                    result_list[-1].append('|'.join(translation_list))
-
-                    if mode == 'acoustic':
-                        result_list[-1].extend(acoustic_list or ['', '', '', ''])
-
-            # Showing what we've gathered.
-
-            log.debug(
-                '\ncognate_analysis {0}/{1}:'
-                '\n  len(group_list): {2}'
-                '\n  len(result_list): {3}'
-                '\n  not_enough_count: {4}'
-                '\n  transcription_count: {5}'
-                '\n  translation_count: {6}'
-                '\n  result_list:\n{7}'.format(
-                    base_language_id[0], base_language_id[1],
-                    len(group_list),
-                    len(result_list),
-                    not_enough_count,
-                    total_transcription_count,
-                    total_translation_count,
-                    pprint.pformat(result_list, width = 108)))
-
-            # If we have no data at all, we return empty result.
-
-            if len(result_list) <= 1:
-
-                return CognateAnalysis(
-                    triumph = True,
-                    dictionary_count = len(perspective_info_list),
-                    group_count = len(group_list),
-                    not_enough_count = not_enough_count,
-                    transcription_count = total_transcription_count,
-                    translation_count = total_translation_count,
-                    result = '',
-                    xlsx_url = '')
-
-            # Preparing analysis input.
-
-            input = ''.join(
-                ''.join(text + '\0' for text in text_list)
-                for text_list in result_list)
-
-            log.debug(
-                '\ncognate_analysis {0}/{1}:'
-                '\nanalysis_f: {2}'
-                '\ninput ({3} columns, {4} rows):\n{5}'.format(
-                    base_language_id[0], base_language_id[1],
-                    repr(analysis_f),
-                    len(perspective_info_list),
-                    len(result_list),
-                    pprint.pformat([input[i : i + 256]
-                        for i in range(0, len(input), 256)], width = 144)))
-
-            # Saving input to a file, if required.
-
-            if __debug_flag__:
-
-                input_file_name = (
-                    'input cognate{0} {1} {2} {3}.utf16'.format(
-                    ' acoustic' if mode == 'acoustic' else '',
-                    language_name.strip(),
-                    len(perspective_info_list),
-                    len(result_list)))
-
-                with open(input_file_name, 'wb') as input_file:
-                    input_file.write(input.encode('utf-16'))
-
-            # Calling analysis library, starting with getting required output buffer size and continuing
-            # with analysis proper.
-
-            output_buffer_size = analysis_f(
-                None, len(perspective_info_list), len(result_list), None, 1)
-
-            log.debug(
-                'cognate_analysis {0}/{1}: output buffer size {2}'.format(
-                base_language_id[0], base_language_id[1],
-                output_buffer_size))
-
-            input_buffer = ctypes.create_unicode_buffer(input)
-            output_buffer = ctypes.create_unicode_buffer(output_buffer_size + 256)
-
-            result = analysis_f(
-                input_buffer, len(perspective_info_list), len(result_list), output_buffer, 1)
-
-            # If we don't have a good result, we return an error.
-
-            log.debug(
-                'cognate_analysis {0}/{1}: result {2}'.format(
-                base_language_id[0], base_language_id[1],
-                result))
-
-            if result <= 0:
-
-                return ResponseError(message =
-                    'Cognate analysis library call error {0}'.format(result))
-
-            output = output_buffer.value
-
-            log.debug(
-                'cognate_analysis {0}/{1}:\noutput:\n{2}'.format(
-                base_language_id[0], base_language_id[1],
-                pprint.pformat([output[i : i + 256]
-                    for i in range(0, len(output), 256)], width = 144)))
-
-            # Reflowing output.
-
-            line_list = output.split('\r\n')
-
-            text_wrapper = textwrap.TextWrapper(
-                width = max(196, len(perspective_info_list) * 40), tabsize = 20)
-
-            reflow_list = []
-
-            for line in line_list:
-                reflow_list.extend(text_wrapper.wrap(line))
-
-            wrapped_output = '\n'.join(reflow_list)
-
-            log.debug(
-                'cognate_analysis {0}/{1}:\nwrapped output:\n{2}'.format(
-                base_language_id[0], base_language_id[1],
-                wrapped_output))
-
-            # Getting binary output for parsing and exporting.
-
-            result_binary = analysis_f(
-                input_buffer, len(perspective_info_list), len(result_list), output_buffer, 2)
-
-            log.debug(
-                'cognate_analysis {0}/{1}: result_binary {2}'.format(
-                base_language_id[0], base_language_id[1],
-                result_binary))
-
-            if result <= 0:
-
-                return ResponseError(message =
-                    'Cognate analysis library call (binary) error {0}'.format(result_binary))
-
-            output_binary = output_buffer[:result_binary]
-
-            log.debug(
-                'cognate_analysis {0}/{1}:\noutput_binary:\n{2}'.format(
-                base_language_id[0], base_language_id[1],
-                pprint.pformat([output_binary[i : i + 256]
-                    for i in range(0, len(output_binary), 256)], width = 144)))
-
-            # Parsing analysis results and exporting them as an Excel file.
-
-            workbook_stream = CognateAnalysis.export_excel(
-                base_language_id, output_binary, __debug_flag__)
-
-            current_datetime = datetime.datetime.now(datetime.timezone.utc)
-
-            xlsx_filename = pathvalidate.sanitize_filename(
-                '{0} cognate{1} analysis - {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
-                    language_name[:64],
-                    ' acoustic' if mode == 'acoustic' else '',
-                    current_datetime.year,
-                    current_datetime.month,
-                    current_datetime.day))
-
-            cur_time = time.time()
-
-            storage_dir = os.path.join(storage['path'], 'cognate', str(cur_time))
-
-            # Storing Excel file with the results.
-
-            xlsx_path = os.path.join(storage_dir, xlsx_filename)
-            os.makedirs(os.path.dirname(xlsx_path), exist_ok = True)
-
-            workbook_stream.seek(0)
-
-            with open(xlsx_path, 'wb') as xlsx_file:
-                shutil.copyfileobj(workbook_stream, xlsx_file)
-
-            xlsx_url = ''.join([
-                storage['prefix'], storage['static_route'],
-                'cognate', '/', str(cur_time), '/', xlsx_filename])
-
-            # Returning result.
-
-            return CognateAnalysis(
-                triumph = True,
-                dictionary_count = len(perspective_info_list),
-                group_count = len(group_list),
-                not_enough_count = not_enough_count,
-                transcription_count = total_transcription_count,
-                translation_count = total_translation_count,
-                result = wrapped_output,
-                xlsx_url = xlsx_url)
+                return CognateAnalysis.perform_cognate_analysis(
+                    base_language_id,
+                    language_name,
+                    group_field_id,
+                    perspective_info_list,
+                    mode,
+                    locale_id,
+                    storage,
+                    None,
+                    __debug_flag__)
+
+        # Exception occured while we tried to perform cognate analysis.
 
         except Exception as exception:
 
