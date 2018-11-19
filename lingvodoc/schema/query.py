@@ -473,12 +473,12 @@ class Query(graphene.ObjectType):
         menu_json_data["humanSettlement"] = get_sorted_metadata_keys("humanSettlement")
         menu_json_data["years"] = get_sorted_metadata_keys("years")
         menu_json_data["kind"] = ["Expedition", "Archive"]
-        menu_json_data["nativeSpeakersCount"] = ["vulnerable",
-                                                 "definitely endangerd",
-                                                 "critically endangerd",
-                                                 "extinct",
-                                                 "severely endangered",
-                                                 "safe"]
+        menu_json_data["nativeSpeakersCount"] = ["Vulnerable",
+                                                 "Definitely endangered",
+                                                 "Critically endangered",
+                                                 "Extinct",
+                                                 "Severely endangered",
+                                                 "Safe"]
         return menu_json_data
 
 
@@ -2097,7 +2097,7 @@ class PhonemicAnalysis(graphene.Mutation):
             dbPublishingTranslation = aliased(dbPublishingEntity, name = 'PublishingTranslation')
 
             data_query = (
-            
+
                 DBSession.query(dbEntity).filter(
                     dbLexicalEntry.parent_client_id == perspective_cid,
                     dbLexicalEntry.parent_object_id == perspective_oid,
@@ -2150,7 +2150,7 @@ class PhonemicAnalysis(graphene.Mutation):
             # Otherwise we are going to perform phonemic analysis.
 
             data_list = [
-                    
+
                 (entity.content,
                     translation_list[0] if translation_list else '')
 
@@ -2389,7 +2389,7 @@ class CognateAnalysis(graphene.Mutation):
 
         tag_data_list = (DBSession.query(
             dbLexicalEntry, func.count('*'))
-            
+
             .filter(
                 dbLexicalEntry.parent_client_id == perspective_id[0],
                 dbLexicalEntry.parent_object_id == perspective_id[1],
@@ -2444,10 +2444,10 @@ class CognateAnalysis(graphene.Mutation):
             (entry_client_id, entry_object_id),))
 
         tag_query = (
-                
+
             DBSession.query(
                 dbEntity.content)
-            
+
             .filter(
                 dbEntity.parent_client_id == entry_client_id,
                 dbEntity.parent_object_id == entry_object_id,
@@ -2468,11 +2468,11 @@ class CognateAnalysis(graphene.Mutation):
         while tag_list:
 
             entry_id_query = (
-                    
+
                 DBSession.query(
                     dbLexicalEntry.client_id,
                     dbLexicalEntry.object_id)
-                
+
                 .filter(
                     dbLexicalEntry.marked_for_deletion == False,
                     dbEntity.parent_client_id == dbLexicalEntry.client_id,
@@ -2497,10 +2497,10 @@ class CognateAnalysis(graphene.Mutation):
             # And then get all tags for entries we haven't already done it for.
 
             tag_query = (
-                    
+
                 DBSession.query(
                     dbEntity.content)
-                
+
                 .filter(
                     tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
                         .in_(entry_id_list),
@@ -2537,12 +2537,12 @@ class CognateAnalysis(graphene.Mutation):
         start_time = time.time()
 
         tag_data_list = (
-                
+
             DBSession.query(
                 dbLexicalEntry.client_id,
                 dbLexicalEntry.object_id,
                 func.count('*'))
-            
+
             .filter(
                 dbLexicalEntry.parent_client_id == perspective_id[0],
                 dbLexicalEntry.parent_object_id == perspective_id[1],
@@ -2599,12 +2599,12 @@ class CognateAnalysis(graphene.Mutation):
         for perspective_id, transcription_field_id, translation_field_id in perspective_info_list:
 
             tag_query = (
-                    
+
                 DBSession.query(
                     dbEntity.parent_client_id,
                     dbEntity.parent_object_id,
                     dbEntity.content)
-                
+
                 .filter(
                     dbLexicalEntry.parent_client_id == perspective_id[0],
                     dbLexicalEntry.parent_object_id == perspective_id[1],
@@ -2632,12 +2632,12 @@ class CognateAnalysis(graphene.Mutation):
         while tag_list:
 
             entry_id_query = (
-                    
+
                 DBSession.query(
                     dbEntity.parent_client_id,
                     dbEntity.parent_object_id,
                     dbEntity.content)
-                
+
                 .filter(
                     dbLexicalEntry.marked_for_deletion == False,
                     dbEntity.parent_client_id == dbLexicalEntry.client_id,
@@ -2671,14 +2671,14 @@ class CognateAnalysis(graphene.Mutation):
             for i in range((len(entry_id_list) + 16383) // 16384):
 
                 tag_query = (
-                        
+
                     DBSession.query(
                         dbEntity.parent_client_id,
                         dbEntity.parent_object_id,
                         dbEntity.content)
 
                     # We have to split entries into parts due to the danger of stack overflow in Postgres.
-                    
+
                     .filter(
                         tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
                             .in_(entry_id_list[i * 16384 : (i + 1) * 16384]),
@@ -2863,7 +2863,7 @@ class CognateAnalysis(graphene.Mutation):
             # Removing tag entities of the redundant tags.
 
             entity_id_query = (
-                    
+
                 dbEntity.__table__
                     .update()
                     .where(and_(
@@ -2899,7 +2899,7 @@ class CognateAnalysis(graphene.Mutation):
         """
 
         workbook_stream = io.BytesIO()
-        
+
         workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
         worksheet = workbook.add_worksheet()
 
@@ -3188,7 +3188,7 @@ class CognateAnalysis(graphene.Mutation):
         log.debug(
             '{0}: {1}'.format(
             log_str, result))
-                    
+
         return result
 
     @staticmethod
@@ -3231,7 +3231,7 @@ class CognateAnalysis(graphene.Mutation):
             # If we are in debug mode, we try to load existing tag data to reduce debugging time.
 
             tag_data_digest = hashlib.md5(
-                    
+
                 repr(list(group_field_id) +
                     [perspective_info[0] for perspective_info in perspective_info_list])
 
@@ -3307,7 +3307,7 @@ class CognateAnalysis(graphene.Mutation):
             # Getting text data.
 
             transcription_query = (
-                    
+
                 DBSession.query(
                     dbLexicalEntry.client_id,
                     dbLexicalEntry.object_id).filter(
@@ -3330,7 +3330,7 @@ class CognateAnalysis(graphene.Mutation):
                 .group_by(dbLexicalEntry)).subquery()
 
             translation_query = (
-                    
+
                 DBSession.query(
                     dbLexicalEntry.client_id,
                     dbLexicalEntry.object_id).filter(
@@ -3356,11 +3356,11 @@ class CognateAnalysis(graphene.Mutation):
 
             data_query = (
                 DBSession.query(transcription_query)
-                
+
                 .outerjoin(translation_query, and_(
                     transcription_query.c.client_id == translation_query.c.client_id,
                     transcription_query.c.object_id == translation_query.c.object_id))
-                
+
                 .add_columns(
                     translation_query.c.translation))
 
@@ -3369,7 +3369,7 @@ class CognateAnalysis(graphene.Mutation):
             if mode == 'acoustic':
 
                 sound_markup_query = (
-                        
+
                     DBSession.query(
                         dbLexicalEntry.client_id,
                         dbLexicalEntry.object_id).filter(
@@ -3391,13 +3391,13 @@ class CognateAnalysis(graphene.Mutation):
                             dbPublishingSound.object_id == dbSound.object_id,
                             dbPublishingSound.published == True,
                             dbPublishingSound.accepted == True)
-                    
+
                     .add_columns(
-                        
+
                         func.jsonb_agg(func.jsonb_build_array(
                             dbSound.client_id, dbSound.object_id, dbSound.content,
                             dbMarkup.client_id, dbMarkup.object_id, dbMarkup.content))
-                        
+
                         .label('sound_markup'))
 
                     .group_by(dbLexicalEntry)).subquery()
@@ -3410,7 +3410,7 @@ class CognateAnalysis(graphene.Mutation):
                     .outerjoin(sound_markup_query, and_(
                         transcription_query.c.client_id == sound_markup_query.c.client_id,
                         transcription_query.c.object_id == sound_markup_query.c.object_id))
-                    
+
                     .add_columns(
                         sound_markup_query.c.sound_markup))
 
@@ -3473,7 +3473,7 @@ class CognateAnalysis(graphene.Mutation):
                         percent = int(math.floor(90.0 *
                             (index + float(row_index + 1) / row_count) /
                             len(perspective_info_list)))
-                        
+
                         task_status.set(2, 5 + percent, 'Gathering analysis source data')
 
                     entry_data_list = (index,
