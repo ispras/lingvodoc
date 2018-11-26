@@ -72,7 +72,7 @@ def add_as_like(elem):
 
 def boolean_search(test_string,  exclude_char = '-'):
     regex = '(-?"[^\n\r]+?"|[^\s\n\r]+)'
-    and_blocks_strings = test_string.split(" OR ")
+    and_blocks_strings = test_string.split(" | ")
     and_blocks_strings = [x.lower() for x in and_blocks_strings]
     #print(and_blocks_strings)
     and_blocks = []
