@@ -1,6 +1,8 @@
 import logging
 
 import graphene
+
+from lingvodoc.cache.caching import CACHE
 from lingvodoc.models import (
     Language as dbLanguage,
     Dictionary as dbDictionary,
@@ -109,15 +111,15 @@ class Language(LingvodocObjectType):
             limited_object_id = db_limited_gist.object_id
 
             # Filtering dictionaries based on status.
-        
+
             query = (query
-                    
+
                 .filter(or_(
                     and_(dbDictionary.state_translation_gist_client_id == published_client_id,
                         dbDictionary.state_translation_gist_object_id == published_object_id),
                     and_(dbDictionary.state_translation_gist_client_id == limited_client_id,
                         dbDictionary.state_translation_gist_object_id == limited_object_id)))
-                    
+
                 .join(dbPerspective))
 
             if deleted is not None:
@@ -410,6 +412,85 @@ class UpdateLanguage(graphene.Mutation):
         language.dbObject = dblanguage
         return UpdateLanguage(language=language, triumph=True)
 
+
+class UpdateLanguageAtom(graphene.Mutation):
+    """
+    example:
+    mutation up{
+        update_language_atom(id: [2138, 6], locale_id: 2, content: "test6"){
+            triumph
+        }
+
+    }
+
+        now returns:
+
+    {
+        "data": {
+            "update_language_atom": {
+                "triumph": true
+            }
+        }
+    }
+    """
+
+    class Arguments:
+        id = LingvodocID(required=True)
+        content = graphene.String()
+        locale_id = graphene.Int()
+        atom_id = LingvodocID()
+
+    #translationatom = graphene.Field(TranslationAtom)
+    triumph = graphene.Boolean()
+    language = graphene.Field(Language)
+
+    @staticmethod
+    @acl_check_by_id('edit', 'language')
+    #@client_id_check()
+    def mutate(root, info, **args):
+        content = args.get('content')
+        client_id, object_id = args.get('id')
+        dblanguage = DBSession.query(dbLanguage).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dblanguage:
+            raise ResponseError(message="No such perspective in the system")
+        locale_id = args.get("locale_id")
+
+
+        dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dblanguage.translation_gist_client_id,
+                                                            parent_object_id=dblanguage.translation_gist_object_id,
+                                                            locale_id=locale_id).first()
+        if dbtranslationatom:
+            if dbtranslationatom.locale_id == locale_id:
+                key = "translation:%s:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id),
+                    str(dbtranslationatom.locale_id))
+                CACHE.rem(key)
+                if content:
+                    dbtranslationatom.content = content
+            else:
+                if args.get('atom_id'):
+                    atom_client_id, atom_object_id = args.get('atom_id')
+                else:
+                    raise ResponseError(message="atom field is empty")
+                args_atom = DBSession.query(dbTranslationAtom).filter_by(client_id=atom_client_id,
+                                                                         object_id=atom_object_id).first()
+                if not args_atom:
+                    raise ResponseError(message="No such dictionary in the system")
+                dbtranslationatom.locale_id = locale_id
+        else:
+            dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                object_id=None,
+                                                parent_client_id=dblanguage.translation_gist_client_id,
+                                                parent_object_id=dblanguage.translation_gist_object_id,
+                                                locale_id=locale_id,
+                                                content=content)
+            DBSession.add(dbtranslationatom)
+            DBSession.flush()
+
+        language = Language(id=[dblanguage.client_id, dblanguage.object_id])
+        language.dbObject = dbLanguage
+        return UpdateLanguageAtom(language=language, triumph=True)
 
 # class MoveLanguage(graphene.Mutation):
 #     """

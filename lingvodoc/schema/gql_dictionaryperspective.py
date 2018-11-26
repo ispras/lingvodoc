@@ -1,6 +1,8 @@
 import graphene
 from collections import  defaultdict
 from sqlalchemy import and_
+
+from lingvodoc.cache.caching import CACHE
 from lingvodoc.models import (
     DictionaryPerspective as dbPerspective,
     Dictionary as dbDictionary,
@@ -18,8 +20,7 @@ from lingvodoc.models import (
     DBSession,
     DictionaryPerspectiveToField as dbColumn,
     PublishingEntity as dbPublishingEntity,
-
-)
+    )
 
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
@@ -725,6 +726,86 @@ class DeletePerspectiveRoles(graphene.Mutation):
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return DeletePerspectiveRoles(perspective=perspective, triumph=True)
+
+
+class UpdatePerspectiveAtom(graphene.Mutation):
+    """
+    example:
+mutation up{
+	update_perspective_atom(id: [2138, 6], locale_id: 2, content: "test6"){
+		triumph
+	}
+
+}
+
+    now returns:
+
+{
+	"data": {
+		"update_perspective_atom": {
+			"triumph": true
+		}
+	}
+}
+    """
+
+    class Arguments:
+        id = LingvodocID(required=True)
+        content = graphene.String()
+        locale_id = graphene.Int()
+        atom_id = LingvodocID()
+
+    #translationatom = graphene.Field(TranslationAtom)
+    triumph = graphene.Boolean()
+    locale_id = graphene.Int()
+    perspective = graphene.Field(DictionaryPerspective)
+
+    @staticmethod
+    @acl_check_by_id('edit', 'perspective')
+    def mutate(root, info, **args):
+        content = args.get('content')
+        client_id, object_id = args.get('id')
+        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbperspective:
+            raise ResponseError(message="No such perspective in the system")
+        locale_id = args.get("locale_id")
+
+
+        dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbperspective.translation_gist_client_id,
+                                                            parent_object_id=dbperspective.translation_gist_object_id,
+                                                            locale_id=locale_id).first()
+        if dbtranslationatom:
+            if dbtranslationatom.locale_id == locale_id:
+                key = "translation:%s:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id),
+                    str(dbtranslationatom.locale_id))
+                CACHE.rem(key)
+                if content:
+                    dbtranslationatom.content = content
+            else:
+                if args.get('atom_id'):
+                    atom_client_id, atom_object_id = args.get('atom_id')
+                else:
+                    raise ResponseError(message="atom field is empty")
+                args_atom = DBSession.query(dbTranslationAtom).filter_by(client_id=atom_client_id,
+                                                                         object_id=atom_object_id).first()
+                if not args_atom:
+                    raise ResponseError(message="No such dictionary in the system")
+                dbtranslationatom.locale_id = locale_id
+        else:
+            dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                object_id=None,
+                                                parent_client_id=dbperspective.translation_gist_client_id,
+                                                parent_object_id=dbperspective.translation_gist_object_id,
+                                                locale_id=locale_id,
+                                                content=content)
+            DBSession.add(dbtranslationatom)
+            DBSession.flush()
+
+        perspective = DictionaryPerspective(id=[dbPerspective.client_id, dbPerspective.object_id])
+        perspective.dbObject = dbPerspective
+        return UpdatePerspectiveAtom(perspective=perspective, triumph=True)
 
 class DeleteDictionaryPerspective(graphene.Mutation):
     """

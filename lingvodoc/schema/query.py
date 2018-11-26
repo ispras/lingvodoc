@@ -77,8 +77,8 @@ from lingvodoc.schema.gql_dictionary import (
     UpdateDictionaryStatus,
     AddDictionaryRoles,
     DeleteDictionaryRoles,
-    DeleteDictionary
-)
+    DeleteDictionary,
+    UpdateDictionaryAtom)
 
 from lingvodoc.schema.gql_search import AdvancedSearch
 from lingvodoc.schema.gql_search import AdvancedSearchSimple
@@ -98,8 +98,8 @@ from lingvodoc.schema.gql_language import (
     CreateLanguage,
     UpdateLanguage,
     DeleteLanguage,
-    MoveLanguage
-)
+    MoveLanguage,
+    UpdateLanguageAtom)
 from lingvodoc.schema.gql_merge import MergeBulk
 from lingvodoc.schema.gql_dictionaryperspective import (
     DictionaryPerspective,
@@ -109,7 +109,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     AddPerspectiveRoles,
     DeletePerspectiveRoles,
     DeleteDictionaryPerspective,
-)
+    UpdatePerspectiveAtom)
 from lingvodoc.schema.gql_user import (
     User,
     CreateUser,
@@ -4406,12 +4406,13 @@ class MyMutations(graphene.ObjectType):
     activate_deactivate_user = ActivateDeactivateUser.Field();
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
+    update_language_atom = UpdateLanguageAtom.Field()
     move_language = MoveLanguage.Field()
     delete_language = DeleteLanguage.Field()
     create_dictionary = CreateDictionary.Field()
     update_dictionary = UpdateDictionary.Field()
     update_dictionary_status = UpdateDictionaryStatus.Field()
-    #update_dictionary_roles = UpdateDictionaryRoles.Field()
+    update_dictionary_atom = UpdateDictionaryAtom.Field()
     add_dictionary_roles = AddDictionaryRoles.Field()
     delete_dictionary_roles = DeleteDictionaryRoles.Field()
     delete_dictionary = DeleteDictionary.Field()
@@ -4432,6 +4433,7 @@ class MyMutations(graphene.ObjectType):
     create_perspective = CreateDictionaryPerspective.Field()
     update_perspective = UpdateDictionaryPerspective.Field()
     update_perspective_status = UpdatePerspectiveStatus.Field()
+    update_perspective_atom = UpdatePerspectiveAtom.Field()
     add_perspective_roles = AddPerspectiveRoles.Field()
     delete_perspective_roles = DeletePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()

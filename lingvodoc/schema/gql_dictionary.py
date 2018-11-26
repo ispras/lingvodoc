@@ -2,6 +2,8 @@ import datetime
 from collections import defaultdict
 from itertools import chain
 import graphene
+
+from lingvodoc.cache.caching import CACHE
 from lingvodoc.models import (
     Dictionary as dbDictionary,
     TranslationAtom as dbTranslationAtom,
@@ -16,7 +18,7 @@ from lingvodoc.models import (
     Group as dbGroup,
     Organization as dbOrganization,
     Grant as dbGrant
-)
+    )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
@@ -644,6 +646,87 @@ class UpdateDictionaryStatus(graphene.Mutation):
             dictionary.dbObject = dbdictionary
             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
         raise ResponseError(message="No such dictionary in the system")
+
+
+class UpdateDictionaryAtom(graphene.Mutation):
+    """
+    example:
+mutation up{
+	update_dictionary_atom(id: [2138, 5], locale_id: 2, content: "test6"){
+		triumph
+	}
+
+}
+
+    now returns:
+
+    {
+        "data": {
+            "update_dictionary_atom": {
+                "triumph": true
+            }
+        }
+    }
+    """
+
+    class Arguments:
+        id = LingvodocID(required=True)
+        content = graphene.String()
+        locale_id = graphene.Int()
+        atom_id = LingvodocID()
+
+    #translationatom = graphene.Field(TranslationAtom)
+    triumph = graphene.Boolean()
+    dictionary = graphene.Field(Dictionary)
+
+    @staticmethod
+    @acl_check_by_id('edit', 'dictionary')  # tested
+    def mutate(root, info, **args):
+        content = args.get('content')
+        client_id, object_id = args.get('id')
+
+
+        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbdictionary:
+            raise ResponseError(message="No such dictionary in the system")
+        locale_id = args.get("locale_id")
+
+
+        dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbdictionary.translation_gist_client_id,
+                                                            parent_object_id=dbdictionary.translation_gist_object_id,
+                                                            locale_id=locale_id).first()
+        if dbtranslationatom:
+            if dbtranslationatom.locale_id == locale_id:
+                key = "translation:%s:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id),
+                    str(dbtranslationatom.locale_id))
+                CACHE.rem(key)
+                if content:
+                    dbtranslationatom.content = content
+            else:
+                if args.get('atom_id'):
+                    atom_client_id, atom_object_id = args.get('atom_id')
+                else:
+                    raise ResponseError(message="No such dictionary in the system")
+                args_atom = DBSession.query(dbTranslationAtom).filter_by(client_id=atom_client_id,
+                                                                         object_id=atom_object_id).first()
+                if not args_atom:
+                    raise ResponseError(message="No such dictionary in the system")
+                dbtranslationatom.locale_id = locale_id
+        else:
+            dbtranslationatom = dbTranslationAtom(client_id=client_id,
+                                                object_id=None,
+                                                parent_client_id=dbdictionary.translation_gist_client_id,
+                                                parent_object_id=dbdictionary.translation_gist_object_id,
+                                                locale_id=locale_id,
+                                                content=content)
+            DBSession.add(dbtranslationatom)
+            DBSession.flush()
+
+        dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
+        dictionary.dbObject = dbdictionary
+        return UpdateDictionaryAtom(dictionary=dictionary, triumph=True)
 
 class AddDictionaryRoles(graphene.Mutation):
     """
