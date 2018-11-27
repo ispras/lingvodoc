@@ -67,7 +67,7 @@ from copy import deepcopy
 if sys.platform == 'darwin':
     multiprocessing.set_start_method('spawn')
 import os
-from lingvodoc.utils.creation import translationgist_contents
+from lingvodoc.utils.creation import translationgist_contents, add_user_to_group
 from hashlib import sha224
 from base64 import urlsafe_b64decode
 from sqlalchemy.orm.attributes import flag_modified
@@ -280,17 +280,63 @@ from lingvodoc.utils.creation import update_metadata
 def testing(request):
     # Hello, testing, my old friend
     # I've come to use you once again
-    all_dictionaries = DBSession.query(Dictionary).filter(Dictionary.marked_for_deletion==False).all()
-    for dictionary in all_dictionaries:
-        old_metadata = dictionary.additional_metadata
-        if old_metadata:
-            if "authors" in old_metadata:
-                old_authors_string = old_metadata.get("authors")
-                if old_authors_string:
-                    list_from_string = old_authors_string.split(",")
-                    list_from_string = sorted(list_from_string)
-                    list_from_string = [x.strip() for x in list_from_string]
-                    update_metadata(dictionary, {"authors": list_from_string})
+    #users = [64, 1, 2, 3, 100, 5, 103, 73, 11, 44, 79, 83, 53, 54, 60]
+    languages = DBSession.query(Language).filter_by(marked_for_deletion=False).all()
+    lang_ids = [(x.client_id, x.object_id) for x in languages]
+    base = DBSession.query(BaseGroup).filter_by(name="Can edit languages").first() #
+    all_groups = DBSession.query(Group).filter(tuple_(Group.subject_client_id, Group.subject_object_id).in_(lang_ids)).all()
+    users = set()
+    for language in languages:
+        client = DBSession.query(Client).filter_by(id=language.client_id).first()
+        user = client.user
+        #DBSession.query(User)
+        basegroups = []
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
+        groups = []
+        for base in basegroups:
+            group = DBSession.query(Group).filter_by(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base).first()
+            if not group:
+                print("not group")
+                print(user, user.name)
+                users.add(user.name)
+                basegroups = []
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
+                groups = []
+                for base in basegroups:
+                    group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
+                    groups += [group]
+                for group in groups:
+                    add_user_to_group(user, group)
+                    for adm in [DBSession.query(User).filter_by(id=1).first(),
+                                DBSession.query(User).filter_by(id=5).first()]:
+                        if not adm in group.users:
+                            add_user_to_group(adm, group)
+                            print(adm, group)
+                DBSession.add(group)
+                DBSession.flush()
+                continue
+            if not user.id in [x.id for x in list(group.users)]:
+                basegroups = []
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
+                groups = []
+                for base in basegroups:
+                    group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
+                    groups += [group]
+                for group in groups:
+                    add_user_to_group(user, group)
+                    for adm in [DBSession.query(User).filter_by(id=1).first(),
+                                DBSession.query(User).filter_by(id=5).first()]:
+                        if not adm in group.users:
+                            add_user_to_group(adm, group)
+                            print(adm, group)
+                            users.add(adm.name)
+                DBSession.flush()
+    return list(users)
+
+
 
 @view_config(route_name='garbage_collector', renderer='json', permission='admin')
 def garbage_collector(request):
@@ -769,32 +815,32 @@ def graphql(request):
     #####################
     ### application/json
     #####################
-    
+
     {"variables": {}, "query": "query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"}
-    
+
     or a batch of queries:
-    
+
     [
         {"variables": {}, "query": "query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"},
         {"variables": {}, "query": "query myQuery{ entity(id:[ 742, 5494, ] ) { id}}"}
     ]
-    
+
     #####################
     ### application/graphql
     #####################
-    
+
     query perspective{ perspective(id: [630,9]) {id translation tree{id} fields{id} }}"
-    
+
     #####################
     ### application/multipart/form-data
     #####################
-    
+
     MultiDict([
     ('graphql', "mutation create_entity..."),
      ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
      ('blob', FieldStorage('blob', 'PA_1313_lapetkatpuwel (1).wav')),
      ])
-    
+
     """
     # TODO: rewrite this footwrap
     sp = request.tm.savepoint()
@@ -847,13 +893,13 @@ def graphql(request):
 
             '''
         elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
-            request_string = request.body.decode("utf-8") 
+            request_string = request.body.decode("utf-8")
         elif request.content_type == "application/json" and type(request.POST) == NoVars:
             body = request.body.decode('utf-8')
             json_req = json.loads(body)
             if type(json_req) is list:
                 batch = True
-            if not batch:   
+            if not batch:
                 if "query" not in json_req:
                     return {'errors': [{"message": 'query key not nound'}]}
                 request_string = json_req["query"]

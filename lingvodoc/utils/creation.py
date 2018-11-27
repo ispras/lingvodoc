@@ -6,6 +6,7 @@ import time
 import random
 import string
 
+
 from pathvalidate import sanitize_filename
 from sqlalchemy import (
     and_,
@@ -234,6 +235,28 @@ def create_dblanguage(id=None,
     if prev_sibling and prev_sibling.additional_metadata:
         dblanguage.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
         dblanguage.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
+
+    # if not object_id:
+    #     for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+    #         new_group = Group(parent=base,
+    #                           subject_object_id=dblanguage.object_id,
+    #                           subject_client_id=dblanguage.client_id)
+    #         if user not in new_group.users:
+    #             new_group.users.append(user)
+    #         DBSession.add(new_group)
+    #         DBSession.flush()
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    user = client.user
+    basegroups = []
+    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
+    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
+    if not object_id:
+        groups = []
+        for base in basegroups:
+            group = Group(subject_client_id=dblanguage.client_id, subject_object_id=dblanguage.object_id, parent=base)
+            groups += [group]
+        for group in groups:
+            add_user_to_group(user, group)
 
     DBSession.flush()
     return dblanguage
