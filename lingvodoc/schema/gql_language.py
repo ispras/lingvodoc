@@ -225,9 +225,11 @@ class CreateLanguage(graphene.Mutation):
                               [client_id,object_id],
                               gist_type="Language"
                               )
+
         dblanguage = create_dblanguage(id=id,
                                                       parent_id=parent_id,
                                                       translation_gist_id=translation_gist_id)
+
         language = Language(id=[dblanguage.client_id, dblanguage.object_id])
         language.dbObject = dblanguage
         return CreateLanguage(language=language, triumph=True)

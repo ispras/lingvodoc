@@ -715,6 +715,8 @@ mutation up{
                     raise ResponseError(message="No such dictionary in the system")
                 dbtranslationatom.locale_id = locale_id
         else:
+            client = DBSession.query(dbClient).filter_by(id=client_id).first()
+            user = client.user
             dbtranslationatom = dbTranslationAtom(client_id=client_id,
                                                 object_id=None,
                                                 parent_client_id=dbdictionary.translation_gist_client_id,
@@ -723,6 +725,18 @@ mutation up{
                                                 content=content)
             DBSession.add(dbtranslationatom)
             DBSession.flush()
+            if not object_id:
+                basegroups = []
+                basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
+                if not object_id:
+                    groups = []
+                    for base in basegroups:
+                        group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                        subject_object_id=dbtranslationatom.object_id,
+                                        parent=base)
+                        groups += [group]
+                    for group in groups:
+                        add_user_to_group(user, group)
 
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
