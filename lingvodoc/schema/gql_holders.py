@@ -491,9 +491,9 @@ class TranslationHolder(graphene.Interface):
 
     @fetch_object("translation")
     def resolve_translation(self, info, locale_id = None):
-
-        return str(self.dbObject.get_translation( # TODO: fix it
-            locale_id if locale_id is not None else info.context.get('locale_id')))
+        if self.dbObject:
+            return str(self.dbObject.get_translation( # TODO: fix it
+                locale_id if locale_id is not None else info.context.get('locale_id')))
 
 
 # rare interfaces
