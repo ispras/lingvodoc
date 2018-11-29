@@ -122,22 +122,6 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
     """
     # 1) old filter
 
-    state_translation_gist_client_id, state_translation_gist_object_id = state_gist_id
-    limited_client_id, limited_object_id = limited_gist_id
-    dictionaries = dictionaries.filter(dbDictionary.category == category)
-    if publish:
-        dictionaries = dictionaries.filter(dbDictionary.marked_for_deletion == False).filter(
-            or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                     dbDictionary.state_translation_gist_client_id == limited_client_id))). \
-            join(dbDictionaryPerspective) \
-            .filter(or_(
-            and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                 dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-            and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                 dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
-            filter(dbDictionaryPerspective.marked_for_deletion == False)
     lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
         .join(dbDictionaryPerspective.parent) \
         .filter(dbLexicalEntry.marked_for_deletion==False,
@@ -544,7 +528,24 @@ class AdvancedSearch(LingvodocObjectType):
                 tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
-
+        if publish:
+            db_published_gist = translation_gist_search('Published')
+            state_translation_gist_client_id = db_published_gist.client_id
+            state_translation_gist_object_id = db_published_gist.object_id
+            db_la_gist = translation_gist_search('Limited access')
+            limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+            dictionaries = dictionaries.filter(dbDictionary.marked_for_deletion == False).filter(
+                or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                         dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                    and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
+                         dbDictionary.state_translation_gist_client_id == limited_client_id))). \
+                join(dbDictionaryPerspective) \
+                .filter(or_(
+                and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                     dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                     dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
+                filter(dbDictionaryPerspective.marked_for_deletion == False)
 
         if search_metadata:
             if "kind" in search_metadata:
@@ -600,11 +601,7 @@ class AdvancedSearch(LingvodocObjectType):
 
             return cls(entities=[], lexical_entries=[], perspectives=res_perspectives, dictionaries=res_dictionaries)
 
-        db_published_gist = translation_gist_search('Published')
-        state_translation_gist_client_id = db_published_gist.client_id
-        state_translation_gist_object_id = db_published_gist.object_id
-        db_la_gist = translation_gist_search('Limited access')
-        limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+
 
         text_data_type = translation_gist_search('Text')
         text_fields = DBSession.query(dbField.client_id, dbField.object_id).\
