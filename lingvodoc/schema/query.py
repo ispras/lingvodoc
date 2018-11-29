@@ -431,7 +431,7 @@ class Query(graphene.ObjectType):
                                      category=graphene.Int(),
                                      adopted=graphene.Boolean(),
                                      etymology=graphene.Boolean(),
-                                     search_strings=graphene.List(graphene.List(ObjectVal), required=True),
+                                     search_strings=graphene.List(graphene.List(ObjectVal)),
                                      mode=graphene.String())
     search_strings = graphene.List(graphene.List(ObjectVal))
     convert_markup = graphene.Field(
@@ -720,7 +720,7 @@ class Query(graphene.ObjectType):
             print(errors)
         return result
 
-    def resolve_advanced_search(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published', simple=True):
+    def resolve_advanced_search(self, info, search_strings=None, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published', simple=True):
 
         if mode == 'all':
             publish = None
@@ -739,8 +739,8 @@ class Query(graphene.ObjectType):
             accept = None
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
-        if not search_strings:
-            raise ResponseError(message="search_strings is empty")
+        # if not search_strings:
+        #     raise ResponseError(message="search_strings is empty")
         if simple:
             return AdvancedSearchSimple().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology,
                                             search_strings, publish, accept)

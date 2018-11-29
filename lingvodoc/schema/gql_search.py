@@ -53,7 +53,10 @@ from itertools import chain
 import re
 
 
-
+def graphene_obj(dbobj, cur_cls):
+    obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
+    obj.dbObject = dbobj
+    return obj
 
 def has_wildcard(elem):
     wild_cards = {'@', '?'}
@@ -445,10 +448,7 @@ def search_mechanism_simple(dictionaries, category, state_gist_id, limited_gist_
         ent.publishingentity = publishing
         return ent
 
-    def graphene_obj(dbobj, cur_cls):
-        obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-        obj.dbObject = dbobj
-        return obj
+
     full_entities_and_publishing = set()
     for i in range(int(aliases_len / 2)):
         counter = i * 2
@@ -546,7 +546,6 @@ class AdvancedSearch(LingvodocObjectType):
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
 
 
-
         if search_metadata:
             if "kind" in search_metadata:
                 kind = search_metadata.get("kind")
@@ -588,6 +587,18 @@ class AdvancedSearch(LingvodocObjectType):
         res_lexical_entries = list()
         res_perspectives = list()
         res_dictionaries = list()
+        if not search_strings:
+            res_dictionaries = [
+                graphene_obj(
+                    DBSession.query(dbDictionary).filter(tuple_(dbDictionary.client_id, dbDictionary.object_id) == x).first(),
+                    Dictionary) for x in dictionaries]
+            perspective_objects = DBSession.query(dbDictionaryPerspective).filter(
+                dbDictionaryPerspective.marked_for_deletion==False,
+                tuple_(dbDictionaryPerspective.parent_client_id,
+                dbDictionaryPerspective.parent_object_id).in_([(x.dbObject.client_id, x.dbObject.object_id) for x in res_dictionaries])).all()
+            res_perspectives = [graphene_obj(x, DictionaryPerspective) for x in perspective_objects]
+
+            return cls(entities=[], lexical_entries=[], perspectives=res_perspectives, dictionaries=res_dictionaries)
 
         db_published_gist = translation_gist_search('Published')
         state_translation_gist_client_id = db_published_gist.client_id
