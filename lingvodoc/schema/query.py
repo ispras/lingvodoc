@@ -3843,6 +3843,21 @@ class CognateAnalysis(graphene.Mutation):
             output_buffer_size))
 
         input_buffer = ctypes.create_unicode_buffer(input)
+
+        # Saving input buffer to a file, if required.
+
+        if __debug_flag__:
+
+            input_file_name = (
+                'input cognate{0} {1} {2} {3}.buffer'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language_name.strip(),
+                len(perspective_info_list),
+                len(result_list)))
+
+            with open(input_file_name, 'wb') as input_file:
+                input_file.write(bytes(input_buffer))
+
         output_buffer = ctypes.create_unicode_buffer(output_buffer_size + 256)
 
         result = analysis_f(
@@ -3872,6 +3887,30 @@ class CognateAnalysis(graphene.Mutation):
             base_language_id[0], base_language_id[1],
             pprint.pformat([output[i : i + 256]
                 for i in range(0, len(output), 256)], width = 144)))
+
+        # Saving output buffer and output to files, if required.
+
+        if __debug_flag__:
+
+            output_file_name = (
+                'output cognate{0} {1} {2} {3}.buffer'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language_name.strip(),
+                len(perspective_info_list),
+                len(result_list)))
+
+            with open(output_file_name, 'wb') as output_file:
+                output_file.write(bytes(output_buffer))
+
+            output_file_name = (
+                'output cognate{0} {1} {2} {3}.utf16'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language_name.strip(),
+                len(perspective_info_list),
+                len(result_list)))
+
+            with open(output_file_name, 'wb') as output_file:
+                output_file.write(output.encode('utf-16'))
 
         # Reflowing output.
 
@@ -3978,9 +4017,12 @@ class CognateAnalysis(graphene.Mutation):
         """
         mutation CognateAnalysis {
           cognate_analysis(
-            base_language_id: [],
+            base_language_id: [508, 41],
             group_field_id: [66, 25],
-            perspective_info_list: [[[70, 5], [66, 8]]])
+            perspective_info_list: [
+              [[425, 4], [66, 8], [66, 10]],
+              [[1552, 1759], [66, 8], [66, 10]],
+              [[418, 4], [66, 8], [66, 10]]])
           {
             triumph
             entity_count
