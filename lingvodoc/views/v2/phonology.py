@@ -1297,9 +1297,9 @@ def sigma_inverse(sigma):
     singular_flag = False
 
     for i in range(len(w)):
-        if abs(w[i]) <= 1e-6:
+        if abs(w[i]) <= 625.0:
 
-            w[i] = w_max / 256
+            w[i] = max(w_max / 256, 625.0)
             singular_flag = True
 
     if singular_flag:
@@ -1308,6 +1308,7 @@ def sigma_inverse(sigma):
         sigma = (sx + sx.T) / 2
 
     inverse = numpy.linalg.inv(sigma)
+
     return sigma, inverse
 
 
