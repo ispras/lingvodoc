@@ -59,6 +59,8 @@ from lingvodoc.models import (
     user_to_organization_association
 )
 
+from lingvodoc.utils.static_fields import fields_static
+
 from lingvodoc.queue.celery import celery
 
 from lingvodoc.views.v2.utils import (
@@ -620,18 +622,50 @@ def match_simple(entry_data_list, entity_type_primary, entity_type_secondary, th
     Matching result is a list of all similar enough pairs of lexical entries with their matching degrees.
     """
 
+    # Checking if we need to adjust entity filtering.
+
+    if entity_type_primary in fields_static:
+
+        primary_client_id, primary_object_id = fields_static[entity_type_primary]
+
+        primary_filter = (lambda entity_data:
+            entity_data['field_client_id'] == primary_client_id and 
+            entity_data['field_object_id'] == primary_object_id and
+            not entity_data['marked_for_deletion'])
+
+    else:
+
+        primary_filter = (lambda entity_data:
+            entity_data['entity_type'] == entity_type_primary and
+            not entity_data['marked_for_deletion'])
+
+    if entity_type_secondary in fields_static:
+
+        secondary_client_id, secondary_object_id = fields_static[entity_type_secondary]
+
+        secondary_filter = (lambda entity_data:
+            entity_data['field_client_id'] == secondary_client_id and 
+            entity_data['field_object_id'] == secondary_object_id and
+            not entity_data['marked_for_deletion'])
+
+    else:
+
+        secondary_filter = (lambda entity_data:
+            entity_data['entity_type'] == entity_type_secondary and
+            not entity_data['marked_for_deletion'])
+
     def parse_response(entry_data):
         """
         Contructs description of a lexical entry to be used for matching.
         """
 
-        word_list = map(lambda x: x.get('content', ''), filter(
-            lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'],
-            entry_data['contains']))
+        word_list = map(
+            lambda x: x.get('content', ''),
+            filter(primary_filter, entry_data['contains']))
 
-        translation_list = map(lambda x: x.get('content', ''), filter(
-            lambda x: x['entity_type'] == entity_type_secondary and not x['marked_for_deletion'],
-            entry_data['contains']))
+        translation_list = map(
+            lambda x: x.get('content', ''),
+            filter(secondary_filter, entry_data['contains']))
 
         return [
             (word, translation, (entry_data['client_id'], entry_data['object_id']))
