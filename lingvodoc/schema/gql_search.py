@@ -123,9 +123,12 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
     # 1) old filter
 
     lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
-        .join(dbDictionaryPerspective.parent) \
-        .filter(dbLexicalEntry.marked_for_deletion==False,
-                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
+        .join(dbDictionaryPerspective.parent).filter(
+        dbLexicalEntry.parent_client_id==dbDictionaryPerspective.client_id,
+        dbLexicalEntry.parent_object_id==dbDictionaryPerspective.object_id,
+        dbDictionaryPerspective.marked_for_deletion==False,
+        dbLexicalEntry.marked_for_deletion==False,
+        tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
 
     if adopted is not None or etymology is not None:
         lexes.join(dbLexicalEntry.entity)
@@ -143,16 +146,22 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
             else:
                 lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
 
+    lexes = lexes.all()
+    lexes = set([tuple(x) for x in lexes])
+
     # get all_entity_content_filter
 
     all_entity_content_filter = list()
-    all_entity_content_filter.append(
-        tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(category_fields))
+    all_block_fields = list()
+    fields_flag = True
     if category == 0:
-
-
         for search_block in search_strings:
+            all_block_fields+=[tuple(sb.get("field_id")) for sb in search_block if
+                            sb.get("field_id") and tuple(sb.get("field_id")) in category_fields]
             for search_string in search_block:
+                if not search_string.get("field_id"):
+                    fields_flag = False
+
                 if search_string.get('matching_type') == "substring":
                     curr_bs_search_blocks = boolean_search(search_string["search_string"])
                     for ss in chain.from_iterable(curr_bs_search_blocks):
@@ -176,6 +185,8 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
     elif category == 1:
         for search_block in search_strings:
             for search_string in search_block:
+                if not search_string.get("field_id"):
+                    fields_flag = False
                 if search_string.get('matching_type') == "substring":
                     curr_bs_search_blocks = boolean_search(search_string["search_string"])
                     for ss in chain.from_iterable(curr_bs_search_blocks):
@@ -198,6 +209,18 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
                                 func.lower(dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(
                                     search_string["search_string"]))
 
+    # all_entity_content_filter = and_(or_(*all_entity_content_filter))
+
+    if fields_flag and category==0:
+
+        all_entity_content_filter=and_(or_(*all_entity_content_filter),
+
+            tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(all_block_fields)
+        )
+    else:
+        all_entity_content_filter=and_(or_(*all_entity_content_filter),
+            tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(category_fields)
+        )
 
     # filter unused entitities
     field_filter = True
@@ -218,16 +241,16 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
          dbPublishingEntity.object_id == dbEntity.object_id]
         published_filter = published_to_entity + published_filter
 
-    all_entities_cte = DBSession.query(dbEntity.parent_client_id,
+        all_entities_cte = DBSession.query(dbEntity.parent_client_id,
                                        dbEntity.parent_object_id,
                                        *select_query).filter(
                 dbEntity.marked_for_deletion == False,
-                tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id).in_(lexes),
+                #tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id).in_(lexes),
                 *published_filter,
-                or_(*all_entity_content_filter)).cte()  # only published entities
+                all_entity_content_filter).cte()  # only published entities
 
-    # dictionary filter
-    DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent_client_id, dbLexicalEntry.parent_object_id)
+    # persp filter
+    #DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent_client_id, dbLexicalEntry.parent_object_id)
 
 
 
@@ -235,8 +258,9 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
     full_or_block = list()
 
     for search_block in search_strings:
-        inner_and = list()
+        and_lexes_sum = list()
         for search_string in search_block:
+            inner_and = list()
             cur_dbEntity = all_entities_cte.c
             if 'field_id' in search_string:
                 inner_and.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
@@ -291,26 +315,26 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
                     inner_and.append(or_(*bs_or_block_list))
                 elif matching_type == 'regexp':
                     inner_and.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
+            and_lexes = DBSession.query(all_entities_cte.c.parent_client_id,
+                                all_entities_cte.c.parent_object_id)\
+                                .filter(and_(*inner_and).self_group())\
+                                .yield_per(yield_batch_count).distinct().all()
+            and_lexes_sum.append(set([tuple(x) for x in and_lexes if tuple(x) in lexes]))
 
 
-        inner_and_block = and_(*inner_and)
-        full_or_block.append(inner_and_block)
+        and_lexes_inter = set.intersection(*[x for x in and_lexes_sum])
+        full_or_block.append(and_lexes_inter)
 
     all_results = set()
     for or_element in full_or_block:
-        result_and_block = or_element
-        query = DBSession.query(all_entities_cte.c.parent_client_id,
-                                all_entities_cte.c.parent_object_id)\
-                                .filter(result_and_block)\
-                                .yield_per(yield_batch_count)
-        all_results = all_results.union(query.distinct().all())
+        all_results = all_results.union(or_element)
 
     if not all_results:
         return [], [], [], []
     resolved_search = DBSession.query(dbLexicalEntry)\
         .filter(dbLexicalEntry.marked_for_deletion==False,
                 tuple_(dbLexicalEntry.client_id,
-                       dbLexicalEntry.object_id).in_(list(all_results)))
+                       dbLexicalEntry.object_id).in_(list(all_results )))
     result_lexical_entries = entries_with_entities(resolved_search, accept=True, delete=False, mode=None, publish=True)
 
     def graphene_obj(dbobj, cur_cls):
