@@ -239,20 +239,33 @@ class CreateEntity(graphene.Mutation):
                         locale_id=locale_id,
                         additional_metadata=additional_metadata,
                         parent=parent)
-        group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                                              dbGroup.subject_client_id == dbentity.parent.parent.client_id,
-                                                              dbGroup.subject_object_id == dbentity.parent.parent.object_id,
-                                                              dbBaseGroup.action == 'create').one()
 
-        override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-            dbBaseGroup.subject == 'lexical_entries_and_entities',
-            dbGroup.subject_override == True,
-            dbBaseGroup.action == 'create').one()
+        # Acception override check.
+        # Currently disabled.
+
+        #group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+        #                                                      dbGroup.subject_client_id == dbentity.parent.parent.client_id,
+        #                                                      dbGroup.subject_object_id == dbentity.parent.parent.object_id,
+        #                                                      dbBaseGroup.action == 'create').one()
+
+        #override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+        #    dbBaseGroup.subject == 'lexical_entries_and_entities',
+        #    dbGroup.subject_override == True,
+        #    dbBaseGroup.action == 'create').one()
+
         #if user in group.users or user in override_group.users:
         #    dbentity.publishingentity.accepted = True
+
         if upper_level:
             dbentity.upper_level = upper_level
+
         dbentity.publishingentity.accepted = True
+
+        # If the entity is being created by the admin, we automatically publish it.
+
+        if user.id == 1:
+          dbentity.publishingentity.published = True
+
         filename = args.get('filename')
         real_location = None
         url = None
