@@ -238,7 +238,7 @@ from pyramid.httpexceptions import (
 )
 
 from lingvodoc.scripts import elan_parser
-from lingvodoc.utils.creation import create_entity
+from lingvodoc.utils.creation import create_entity, edit_role
 
 from lingvodoc.queue.celery import celery
 
@@ -4422,6 +4422,129 @@ class MoveColumn(graphene.Mutation):
 
         return MoveColumn(triumph=True)
 
+class AddRolesBulk(graphene.Mutation):
+    """
+    Adds specified roles for a specified user for all dictionaries and perspectives of a specified language,
+    maybe with all its descendants.
+
+    mutation addRolesBulk {
+      add_roles_bulk(user_id: 5, language_id: [508, 36]) {
+        triumph } }
+    """
+    
+    class Arguments:
+        user_id = graphene.Int(required=True)
+        language_id = LingvodocID(required=True)
+
+    language_count = graphene.Int()
+    dictionary_count = graphene.Int()
+    perspective_count = graphene.Int()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        user_id = args.get('user_id')
+        language_id = args.get('language_id')
+
+        request_client_id = info.context.get('client_id')
+        request_user = Client.get_user_by_client_id(request_client_id)
+
+        if request_user.id != 1:
+            raise ResponseError('Only administrator can perform bulk roles additions.')
+
+        user = DBSession.query(dbUser).filter_by(id = user_id).first()
+
+        if not user:
+            raise RespenseError('No user with id {0}'.format(user_id))
+
+        # Getting permission groups info.
+
+        dictionary_group_list = [row[0] for row in DBSession.query(
+            dbBaseGroup.id).filter_by(dictionary_default = True).all()]
+
+        perspective_group_list = [row[0] for row in DBSession.query(
+            dbBaseGroup.id).filter_by(perspective_default = True).all()]
+
+        log.debug(
+            'add_roles_bulk (user_id: {0}, language_id: {1}/{2}):'
+            '\ndictionary_group_list: {3}\nperspective_group_list: {4}'.format(
+                user_id,
+                language_id[0], language_id[1],
+                dictionary_group_list,
+                perspective_group_list))
+
+        def process_language(language):
+            """
+            Recursively adds required permissions for a specified user for all dictionaries and perspectives
+            of a given language and its descendants.
+            """
+
+            dictionary_list = DBSession.query(dbDictionary).filter_by(
+                parent_client_id = language.client_id,
+                parent_object_id = language.object_id,
+                marked_for_deletion = False).all()
+
+            language_count = 1
+            dictionary_count = len(dictionary_list)
+            perspective_count = 0
+
+            # All dictionaries of the language.
+
+            for dictionary in dictionary_list:
+
+                for basegroup_id in dictionary_group_list:
+
+                    edit_role(dictionary, user_id, basegroup_id, request_client_id,
+                        dictionary_default = True, action = 'add')
+
+                perspective_list = DBSession.query(dbDictionaryPerspective).filter_by(
+                    parent_client_id = dictionary.client_id,
+                    parent_object_id = dictionary.object_id,
+                    marked_for_deletion = False).all()
+
+                perspective_count += len(perspective_list)
+
+                # All perspectives of each dictionary.
+
+                for perspective in perspective_list:
+
+                    for basegroup_id in perspective_group_list:
+
+                        edit_role(perspective, user_id, basegroup_id, request_client_id,
+                            perspective_default = True, action = 'add')
+
+            language_list = DBSession.query(dbLanguage).filter_by(
+                parent_client_id = language.client_id,
+                parent_object_id = language.object_id,
+                marked_for_deletion = False).all()
+
+            # All child languages.
+
+            for child_language in language_list:
+                l_count, d_count, p_count = process_language(child_language)
+
+                language_count += l_count
+                dictionary_count += d_count
+                perspective_count += p_count
+
+            return language_count, dictionary_count, perspective_count
+
+        # Adding required permissions.
+
+        language = DBSession.query(dbLanguage).filter_by(
+            marked_for_deletion = False,
+            client_id = language_id[0],
+            object_id = language_id[1]).first()
+
+        if not language:
+            raise ResponseError('Language {0}/{1} not found'.format(*language_id))
+
+        language_count, dictionary_count, perspective_count = process_language(language)
+
+        return AddRolesBulk(
+            language_count = language_count,
+            dictionary_count = dictionary_count,
+            perspective_count = perspective_count)
 
 
 class MyMutations(graphene.ObjectType):
@@ -4506,6 +4629,7 @@ class MyMutations(graphene.ObjectType):
     sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
     move_column = MoveColumn.Field()
+    add_roles_bulk = AddRolesBulk.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

@@ -588,9 +588,12 @@ def edit_role(dict_or_persp, user_id, role_id, client_id, organization=False, di
             raise ResponseError(message="No such group in the system")
 
         client = DBSession.query(Client).filter_by(id=client_id).first()
-
         userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
-        permitted = False
+
+        # Administrator can do everything.
+
+        permitted = userlogged and userlogged.id == 1
+
         if userlogged in group.users:
             permitted = True
         if not permitted:
