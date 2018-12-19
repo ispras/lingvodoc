@@ -6,7 +6,8 @@ from lingvodoc.models import (
     Dictionary,
     DictionaryPerspective,
     LexicalEntry,
-    TranslationGist
+    TranslationGist,
+    Entity
 )
 
 
@@ -75,6 +76,25 @@ def get_useless_dictionaries():
 
 
     return empty_dictionaries, no_content_dictionaries, useful_dictionaries
+
+
+def get_null_entities():
+    """
+    This function detects entities that have null content and are not links or self links
+    :return: list
+    """
+    # NOTE: don't listen to PyCharm; here we must use '==' comparison instead of 'is'
+    return DBSession.query(Entity).filter(and_(Entity.content == None,
+                                              Entity.self_client_id == None,
+                                              Entity.link_client_id == None))
+
+
+def get_empty_entities():
+    """
+    This function detects entities that have empty string content
+    :return: list
+    """
+    return DBSession.query(Entity).filter(Entity.content == '')
 
 
 def get_empty_lexical_entries():
