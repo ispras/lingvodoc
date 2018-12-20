@@ -674,9 +674,10 @@ class UpdateEntityContent(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
         # delete
-        client_id, object_id = args.get('id')
+        old_client_id, object_id = args.get('id')
+        client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
         content = args.get("content")
-        dbentity_old = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_client_id, object_id=object_id).first()
         if not dbentity_old or dbentity_old.marked_for_deletion:
             raise ResponseError(message="No such entity in the system")
         if dbentity_old.field.data_type != "Text":
