@@ -1,3 +1,5 @@
+import itertools
+
 import graphene
 from collections import  defaultdict
 from sqlalchemy import and_
@@ -67,90 +69,43 @@ from sqlalchemy import (
 
 from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
-
-class MyGen:  # used in resolve_lexical_entries to go through entities once
-    def __init__(self, iterable, stop, max_count, i=0):
-        self.i = i
-        self.stop = stop
-        self.iterable = iterable
-        self.max_count = max_count
-
-    def __iter__(self):
-        while self.i < self.max_count and parid2str(self.iterable[self.i][0]) == self.stop:
-            yield self.iterable[self.i]
-            self.i += 1
-
-    def get_i(self):
-        return self.i
-
-parid2str = lambda x: "_".join([str(x.parent_client_id), str(x.parent_object_id)])
-id2str = lambda x: "_".join([str(x.client_id), str(x.object_id)])
-
+def group_by_lex(entity_with_published):
+    entity = entity_with_published[0]
+    return (entity.parent_client_id, entity.parent_object_id)
 
 def entries_with_entities(lexes, accept, delete, mode, publish):
-    lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
-                            for lex in lexes.yield_per(100)]
-    entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                      publish=publish,
-                                                      accept=accept,
-                                                      delete=delete)
 
-    def graphene_entity(cur_entity, cur_publishing):
+    def gql_entity_with_published(cur_entity, cur_publishing):
         ent = Entity(id=(cur_entity.client_id, cur_entity.object_id))
         ent.dbObject = cur_entity
         ent.publishingentity = cur_publishing
         return ent
 
-    def graphene_lex(cur_lexical_entry, cur_entities):
+    def gql_lexicalentry(cur_lexical_entry, cur_entities):
         lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
         lex.gql_Entities = cur_entities
         lex.dbObject = cur_lexical_entry
         return lex
 
-    if type(entities) == list:
-        entities_list = []
-    else:
-        entities_list = entities.all()
-    lexes_list = lexes.all()
-    entities_count = len(entities_list)
-    i = 0
-    # iterate over two lists
-    new_lexes = list()
-    for lex in lexes_list:
-        ids = id2str(lex)
-        my_generator = MyGen(entities_list, ids, entities_count, i)
-        cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
-        i = my_generator.get_i()
-        new_lexes.append((lex, cur_entities))
-    if mode == 'not_accepted':  # todo: rewrite
-        new_lexes_composite_list = [
-            (lex[0].client_id, lex[0].object_id, lex[0].parent_client_id, lex[0].parent_object_id)
-            for lex in new_lexes if lex[1]]
-        new_entities = dbLexicalEntry.graphene_track_multiple(new_lexes_composite_list,
-                                                              publish=None, accept=None, delete=False)
-        if type(new_entities) == list:
-            new_entities_list = new_entities
-        else:
-            new_entities_list = new_entities.all()
-        i = 0
-        new_entities_count = len(new_entities_list)
-        new_lexes = list()
-        for lex in lexes_list:
-            ids = id2str(lex)
-            my_generator = MyGen(new_entities_list, ids, new_entities_count, i)
-            cur_entities = [graphene_entity(x[0], x[1]) for x in my_generator]
-            i = my_generator.get_i()
-            new_lexes.append((lex, cur_entities))
-    lexical_entries = [graphene_lex(lex[0], lex[1]) for lex in new_lexes]
+    lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
+                            for lex in lexes.yield_per(100)]
+    if mode == 'not_accepted':
+        accept = False
+        delete = False
+    entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
+                                                      publish=publish,
+                                                      accept=accept,
+                                                      delete=delete)
+    ent_iter = itertools.chain(entities)
+    lex_iterator = itertools.chain(lexes)
+    result_lexes = list()
+    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key=group_by_lex):
+        gql_entities_list = [gql_entity_with_published(x[0], x[1]) for x in entity_with_published]
+        lexical_entry = next(lex_iterator)
+        if (lexical_entry.client_id, lexical_entry.object_id) == lex_ids:
+            result_lexes.append((lexical_entry, gql_entities_list))
+    lexical_entries = [gql_lexicalentry(lex[0], lex[1]) for lex in result_lexes]
     return lexical_entries
-
-
-# class PerspectiveCounters(graphene.ObjectType):
-#     all = graphene.Int()
-#     published = graphene.Int()
-#     not_accepted = graphene.Int()
-#     # deleted = graphene.Int()
-#     all_with_deleted = graphene.Int()
 
 class DictionaryPerspective(LingvodocObjectType):
     """
@@ -358,10 +313,11 @@ class DictionaryPerspective(LingvodocObjectType):
         #                                                self_object_id=None).first()
 
         lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
-        if authors or start_date or end_date:
-            lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
         if ids is not None:
             lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids))
+        if authors or start_date or end_date:
+            lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
+
         # if publish is not None:
         #     lexes = lexes.filter(dbPublishingEntity.published == publish)
         # if accept is not None:
@@ -393,9 +349,7 @@ class DictionaryPerspective(LingvodocObjectType):
         #       'яяяяяя')],
         #     else_=dbEntity.content))) \
         #     .group_by(dbLexicalEntry)
-
         lexical_entries = entries_with_entities(lexes, accept, delete, mode, publish)
-
         return lexical_entries
 
 
