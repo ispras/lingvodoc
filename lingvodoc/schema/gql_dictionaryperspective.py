@@ -73,22 +73,25 @@ def group_by_lex(entity_with_published):
     entity = entity_with_published[0]
     return (entity.parent_client_id, entity.parent_object_id)
 
+
+def gql_entity_with_published(cur_entity, cur_publishing):
+    ent = Entity(id=(cur_entity.client_id, cur_entity.object_id))
+    ent.dbObject = cur_entity
+    ent.publishingentity = cur_publishing
+    return ent
+
+def gql_lexicalentry(cur_lexical_entry, cur_entities):
+    lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
+    lex.gql_Entities = cur_entities
+    lex.dbObject = cur_lexical_entry
+    return lex
+
 def entries_with_entities(lexes, accept, delete, mode, publish):
-
-    def gql_entity_with_published(cur_entity, cur_publishing):
-        ent = Entity(id=(cur_entity.client_id, cur_entity.object_id))
-        ent.dbObject = cur_entity
-        ent.publishingentity = cur_publishing
-        return ent
-
-    def gql_lexicalentry(cur_lexical_entry, cur_entities):
-        lex = LexicalEntry(id=(cur_lexical_entry.client_id, cur_lexical_entry.object_id))
-        lex.gql_Entities = cur_entities
-        lex.dbObject = cur_lexical_entry
-        return lex
+    if mode == 'debug':
+        return [gql_lexicalentry(lex, None) for lex in lexes]
     lex_id_to_obj = dict()
     lexes_composite_list = list()
-    for lex_obj in lexes.yield_per(100):
+    for lex_obj in lexes.yield_per(100).all():
         lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
                                     lex_obj.parent_client_id, lex_obj.parent_object_id))
         lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
@@ -96,22 +99,22 @@ def entries_with_entities(lexes, accept, delete, mode, publish):
     if mode == 'not_accepted':
         accept = False
         delete = False
-    lexes_composite_list = []
+
     entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                       publish=publish,
                                                       accept=accept,
                                                       delete=delete)
-    ent_iter = itertools.chain(entities.all())
-    #lex_iterator = itertools.chain(lexes)
-
-
+    entities_list = list([x for x in entities])
+    ent_iter = itertools.chain(entities_list)
     result_lexes = list()
     for lex_ids, entity_with_published in itertools.groupby(ent_iter, key=group_by_lex):
-        gql_entities_list = [gql_entity_with_published(x[0], x[1]) for x in entity_with_published]
-        lexical_entry = lex_id_to_obj[lex_ids] #next(lex_iterator)
+        gql_entities_list = [gql_entity_with_published(cur_entity=x[0], cur_publishing=x[1])
+                             for x in entity_with_published]
+        lexical_entry = lex_id_to_obj[lex_ids]
         if (lexical_entry.client_id, lexical_entry.object_id) == lex_ids:
             result_lexes.append((lexical_entry, gql_entities_list))
-    lexical_entries = [gql_lexicalentry(lex[0], lex[1]) for lex in result_lexes]
+    lexical_entries = [gql_lexicalentry(cur_lexical_entry=lex[0], cur_entities=lex[1]) for lex in result_lexes]
+
     return lexical_entries
 
 class DictionaryPerspective(LingvodocObjectType):
@@ -310,6 +313,12 @@ class DictionaryPerspective(LingvodocObjectType):
             delete = None
             info.context.acl_check('view', 'lexical_entries_and_entities',
                                    (self.dbObject.client_id, self.dbObject.object_id))
+        elif mode == 'debug':
+            publish = None
+            accept = True
+            delete = False
+            info.context.acl_check('view', 'lexical_entries_and_entities',
+                                   (self.dbObject.client_id, self.dbObject.object_id))
         else:
             raise ResponseError(message="mode: <all|published|not_accepted|deleted|all_with_deleted>")
 
@@ -318,10 +327,9 @@ class DictionaryPerspective(LingvodocObjectType):
         # if not dbcolumn:
         #     dbcolumn = DBSession.query(dbColumn).filter_by(parent=self.dbObject, self_client_id=None,
         #                                                self_object_id=None).first()
-
-        filter_list = list()
         lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
         if ids is not None:
+            ids = list(ids)
             lexes = lexes.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids))
         if authors or start_date or end_date:
             lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
