@@ -264,7 +264,7 @@ def del_object(tmp_object):
             gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
                                                          object_id=tmp_object.translation_gist_object_id,
                                                                 marked_for_deletion=False).first()
-            if gist and gist.type != "Perspectove":
+            if gist and gist.type != "Perspective":
                     atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
                                                                          marked_for_deletion=False).all()
                     for dbtranslationatom in atoms:
