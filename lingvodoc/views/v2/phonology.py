@@ -1277,6 +1277,320 @@ def formant_reference(f1, f2):
     return vowel_list
 
 
+def sigma_inverse(sigma):
+    """
+    Inverts covariance matrix, suitably modifying it, if it's singular.
+    """
+
+    for i in range(len(sigma)):
+        if numpy.isnan(sigma[i, i]):
+            sigma[i, i] = 625.0
+
+    sigma[numpy.isnan(sigma)] = 0.0
+
+    w, v = numpy.linalg.eigh(sigma)
+    w_max = max(w)
+
+    # Checking if covariance matrix is singular (i.e., one of axes of its corresponding ellipsoid is too
+    # small, i.e. corresponding eigenvalue is too small), fixing it if it is.
+
+    singular_flag = False
+
+    for i in range(len(w)):
+        if abs(w[i]) <= 625.0:
+
+            w[i] = max(w_max / 256, 625.0)
+            singular_flag = True
+
+    if singular_flag:
+
+        sx = numpy.matmul(numpy.matmul(v, numpy.diag(w)), v.T)
+        sigma = (sx + sx.T) / 2
+
+    inverse = numpy.linalg.inv(sigma)
+
+    return sigma, inverse
+
+
+def chart_data(f_2d_list, f_3d_list):
+    """
+    Generates formant chart data given formant series.
+    """
+
+    # Computing means and standard deviation matrices.
+
+    mean_2d = sum(f_2d_list) / len(f_2d_list)
+
+    sigma_2d = \
+        numpy.cov(numpy.array(f_2d_list).T) if len(f_2d_list) > 1 else \
+        numpy.array([[625.0, 0.0], [0.0, 625.0]])
+
+    sigma_2d, inverse_2d = sigma_inverse(sigma_2d)
+
+    mean_3d = sum(f_3d_list) / len(f_3d_list)
+
+    sigma_3d = \
+        numpy.cov(numpy.array(f_3d_list).T) if len(f_3d_list) > 1 else \
+        numpy.array([[625.0, 0.0, 0.0], [0.0, 625.0, 0.0], [0.0, 0.0, 625.0]])
+
+    sigma_3d, inverse_3d = sigma_inverse(sigma_3d)
+
+    # Calculation of squared Mahalanobis distance inspired by the StackOverflow answer
+    # http://stackoverflow.com/q/27686240/2016856.
+
+    distance_2d_list = []
+    distance_3d_list = []
+
+    for f_2d in f_2d_list:
+
+        delta_2d = f_2d - mean_2d
+        distance_2d_list.append((numpy.einsum('n,nk,k->', delta_2d, inverse_2d, delta_2d), f_2d))
+
+    for f_3d in f_3d_list:
+
+        delta_3d = f_3d - mean_3d
+        distance_3d_list.append((numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d), f_3d))
+
+    distance_2d_list.sort(key = lambda df: df[0])
+    distance_3d_list.sort(key = lambda df: df[0])
+
+    # Trying to produce one standard deviation ellipse for F1/F2 2-vectors.
+
+    sigma_one_two = scipy.linalg.sqrtm(sigma_2d)
+    ellipse_list = []
+
+    for i in range(64 + 1):
+        phi = 2 * math.pi * i / 64
+
+        ellipse_list.append(
+            mean_2d + numpy.dot(numpy.array([math.cos(phi), math.sin(phi)]), sigma_one_two))
+
+    # Splitting F1/F2 2-vectors into these that are close enough to the mean, and the outliers.
+
+    filtered_2d_list = []
+    outlier_2d_list = []
+
+    for distance_squared, f_2d in distance_2d_list:
+        if distance_squared <= 2:
+            filtered_2d_list.append(f_2d)
+        else:
+            outlier_2d_list.append(f_2d)
+
+    if len(filtered_2d_list) < (len(distance_2d_list) + 1) // 2:
+        sorted_list = [f_2d for distance_squared, f_2d in distance_2d_list]
+
+        filtered_2d_list = sorted_list[:(len(distance_2d_list) + 1) // 2]
+        outlier_2d_list = sorted_list[(len(distance_2d_list) + 1) // 2:]
+
+    # The same for F1/F2/F3 3-vectors.
+
+    filtered_3d_list = []
+    outlier_3d_list = []
+
+    for distance_squared, f_3d in distance_3d_list:
+        if distance_squared <= 2:
+            filtered_3d_list.append(f_3d)
+        else:
+            outlier_3d_list.append(f_3d)
+
+    if len(filtered_3d_list) < (len(distance_3d_list) + 1) // 2:
+        sorted_list = [f_3d for distance_squared, f_3d in distance_3d_list]
+
+        filtered_3d_list = sorted_list[:(len(distance_3d_list) + 1) // 2]
+        outlier_3d_list = sorted_list[(len(distance_3d_list) + 1) // 2:]
+
+    # Returning computed chart data.
+
+    return (
+        filtered_2d_list, outlier_2d_list, mean_2d, ellipse_list,
+        filtered_3d_list, outlier_3d_list, mean_3d, sigma_3d, inverse_3d)
+
+
+def chart_definition_list(
+    chart_data_2d_list,
+    worksheet_table_2d,
+    min_2d_f1,
+    max_2d_f1,
+    min_2d_f2,
+    max_2d_f2,
+    group_name_string = '',
+    row_index = 0):
+    """
+    Compiles definitions of chart series given chart series data and where to write it out to.
+    """
+
+    column_list = list(string.ascii_uppercase) + [c1 + c2
+        for c1 in string.ascii_uppercase
+        for c2 in string.ascii_uppercase]
+
+    shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle',
+        'plus']
+
+    color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red', 'orange', 'gray',
+        'cyan', 'lime', 'magenta', 'silver', 'yellow']
+
+    chart_dict_list = []
+
+    # Starting with data column headers.
+
+    max_f_2d_list_length = max(len(f_2d_list)
+        for c, tc, v, f_2d_list, o_list, m, e_list in chart_data_2d_list)
+
+    heading_list = []
+    for c, tc, vowel, f_list, o_list, m, e_list in chart_data_2d_list:
+        heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
+
+    worksheet_table_2d.write_row(
+        'A{0}'.format(row_index + 1), heading_list)
+
+    worksheet_table_2d.write_row(
+        'A{0}'.format(row_index + 2), ['main part', ''] * len(chart_data_2d_list))
+
+    # Removing outliers that outlie too much.
+
+    f1_limit = max_2d_f1 + min_2d_f1 / 2
+    f2_limit = max_2d_f2 + min_2d_f2 / 2
+
+    for i in range(len(chart_data_2d_list)):
+        chart_data_2d_list[i] = list(chart_data_2d_list[i])
+
+        chart_data_2d_list[i][4] = list(filter(
+            lambda f_2d: f_2d[0] <= f1_limit and f_2d[1] <= f2_limit,
+            chart_data_2d_list[i][4]))
+
+    max_outlier_list_length = max(len(outlier_list)
+        for c, tc, v, f_list, outlier_list, m, e_list in chart_data_2d_list)
+
+    # Writing out chart data and compiling chart data series info.
+
+    for index, (count, total_count, vowel,
+        f_2d_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_2d_list):
+
+        f1_list, f2_list = zip(*f_2d_list)
+
+        f1_outlier_list, f2_outlier_list = \
+            zip(*outlier_list) if outlier_list else ([], [])
+
+        x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
+
+        f1_column = column_list[index * 2]
+        f2_column = column_list[index * 2 + 1]
+
+        # Writing out formant data.
+
+        worksheet_table_2d.write(
+            f1_column + str(row_index + 3),
+            '{0}/{1} ({2:.1f}%) points'.format(
+                count, total_count, 100.0 * count / total_count))
+
+        worksheet_table_2d.write_column(
+            f1_column + str(row_index + 4),
+            list(f1_list) +
+                [''] * (max_f_2d_list_length - len(f1_list)) +
+                [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
+                    len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
+                list(f1_outlier_list) +
+                [''] * (max_outlier_list_length - len(f1_outlier_list)) +
+                [vowel + ' mean', mean[0], vowel + ' stdev ellipse'] +
+                list(x1_ellipse_list))
+
+        worksheet_table_2d.write_column(
+            f2_column + str(row_index + 4),
+            list(f2_list) +
+                [''] * (max_f_2d_list_length - len(f2_list)) +
+                ['', ''] + list(f2_outlier_list) +
+                [''] * (max_outlier_list_length - len(f2_outlier_list)) +
+                ['', mean[1], ''] + list(x2_ellipse_list))
+
+        worksheet_table_2d.set_column(index * 2, index * 2 + 1, 11)
+
+        # Compiling and saving chart data series info.
+
+        color = color_list[index % len(color_list)]
+
+        chart_dict_list.append({
+            'name': vowel,
+            'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f2_column,
+                row_index + 4,
+                row_index + len(f2_list) + 3),
+            'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f1_column,
+                row_index + 4,
+                row_index + len(f1_list) + 3),
+            'marker': {
+                'type': 'circle',
+                'size': 5,
+                'border': {'color': color},
+                'fill': {'color': color}}})
+
+        # And additional outliers data series.
+
+        chart_dict_list.append({
+            'name': vowel + ' outliers',
+            'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f2_column,
+                row_index + max_f_2d_list_length + 6,
+                row_index + max_f_2d_list_length + len(f2_outlier_list) + 5),
+            'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f1_column,
+                row_index + max_f_2d_list_length + 6,
+                row_index + max_f_2d_list_length + len(f1_outlier_list) + 5),
+            'marker': {
+                'type': 'circle',
+                'size': 2,
+                'border': {'color': color},
+                'fill': {'color': color}}})
+
+        # Mean data point.
+
+        shift = max_f_2d_list_length + max_outlier_list_length
+
+        chart_dict_list.append({
+            'name': vowel + ' mean',
+            'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f2_column,
+                row_index + shift + 7,
+                row_index + shift + 7),
+            'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f1_column,
+                row_index + shift + 7,
+                row_index + shift + 7),
+            'marker': {
+                'type': 'x',
+                'size': 12,
+                'border': {'color': color},
+                'fill': {'color': color}}})
+
+        # Finally, one standard deviation ellipse data series.
+
+        chart_dict_list.append({
+            'name': vowel + ' stdev ellipse',
+            'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f2_column,
+                row_index + shift + 9,
+                row_index + shift + len(x2_ellipse_list) + 8),
+            'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
+                group_name_string,
+                f1_column,
+                row_index + shift + 9,
+                row_index + shift + len(x1_ellipse_list) + 8),
+            'marker': {'type': 'none'},
+            'line': {'color': color, 'width': 0.5},
+            'smooth': True})
+
+    # Returning compiled chart series definitions.
+
+    return chart_dict_list, row_index + shift + len(x1_ellipse_list) + 9
+
+
 def compile_workbook(
     args,
     source_entry_id_set,
@@ -1560,39 +1874,6 @@ def compile_workbook(
         for link_entry_id in sorted(result_dict[source_entry_id][2]):
             fill_analysis_results(link_entry_id)
 
-    def sigma_inverse(sigma):
-        """
-        Inverts covariance matrix, suitably modifying it, if it's singular.
-        """
-
-        for i in range(len(sigma)):
-            if numpy.isnan(sigma[i, i]):
-                sigma[i, i] = 625.0
-
-        sigma[numpy.isnan(sigma)] = 0.0
-
-        w, v = numpy.linalg.eigh(sigma)
-        w_max = max(w)
-
-        # Checking if covariance matrix is singular (i.e., one of axes of its corresponding ellipsoid is too
-        # small, i.e. corresponding eigenvalue is too small), fixing it if it is.
-
-        singular_flag = False
-
-        for i in range(len(w)):
-            if abs(w[i]) <= 1e-6:
-
-                w[i] = w_max / 256
-                singular_flag = True
-
-        if singular_flag:
-
-            sx = numpy.matmul(numpy.matmul(v, numpy.diag(w)), v.T)
-            sigma = (sx + sx.T) / 2
-
-        inverse = numpy.linalg.inv(sigma)
-        return sigma, inverse
-
     # And now we will produce 2d F1/F2 and 3d F1/F2/F3 scatter charts for all analysed and sufficiently
     # frequent vowels of all result groups.
 
@@ -1628,89 +1909,16 @@ def compile_workbook(
 
         for index, (vowel, f_2d_list, f_3d_list) in enumerate(vowel_formant_list):
 
-            mean_2d = sum(f_2d_list) / len(f_2d_list)
+            # Getting formant chart data.
 
-            sigma_2d = \
-                numpy.cov(numpy.array(f_2d_list).T) if len(f_2d_list) > 1 else \
-                numpy.array([[625.0, 0.0], [0.0, 625.0]])
+            (filtered_2d_list, outlier_2d_list, mean_2d, ellipse_list,
+                filtered_3d_list, outlier_3d_list, mean_3d, sigma_3d, inverse_3d) = (
 
-            sigma_2d, inverse_2d = sigma_inverse(sigma_2d)
-
-            mean_3d = sum(f_3d_list) / len(f_3d_list)
-
-            sigma_3d = \
-                numpy.cov(numpy.array(f_3d_list).T) if len(f_3d_list) > 1 else \
-                numpy.array([[625.0, 0.0, 0.0], [0.0, 625.0, 0.0], [0.0, 0.0, 625.0]])
-
-            sigma_3d, inverse_3d = sigma_inverse(sigma_3d)
-
-            # Calculation of squared Mahalanobis distance inspired by the StackOverflow answer
-            # http://stackoverflow.com/q/27686240/2016856.
-
-            distance_2d_list = []
-            distance_3d_list = []
-
-            for f_2d in f_2d_list:
-
-                delta_2d = f_2d - mean_2d
-                distance_2d_list.append((numpy.einsum('n,nk,k->', delta_2d, inverse_2d, delta_2d), f_2d))
-
-            for f_3d in f_3d_list:
-
-                delta_3d = f_3d - mean_3d
-                distance_3d_list.append((numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d), f_3d))
-
-            distance_2d_list.sort(key = lambda df: df[0])
-            distance_3d_list.sort(key = lambda df: df[0])
-
-            # Trying to produce one standard deviation ellipse for F1/F2 2-vectors.
-
-            sigma_one_two = scipy.linalg.sqrtm(sigma_2d)
-            ellipse_list = []
-
-            for i in range(64 + 1):
-                phi = 2 * math.pi * i / 64
-
-                ellipse_list.append(
-                    mean_2d + numpy.dot(numpy.array([math.cos(phi), math.sin(phi)]), sigma_one_two))
-
-            # Splitting F1/F2 2-vectors into these that are close enough to the mean, and the outliers.
-
-            filtered_2d_list = []
-            outlier_2d_list = []
-
-            for distance_squared, f_2d in distance_2d_list:
-                if distance_squared <= 2:
-                    filtered_2d_list.append(f_2d)
-                else:
-                    outlier_2d_list.append(f_2d)
-
-            if len(filtered_2d_list) < (len(distance_2d_list) + 1) // 2:
-                sorted_list = [f_2d for distance_squared, f_2d in distance_2d_list]
-
-                filtered_2d_list = sorted_list[:(len(distance_2d_list) + 1) // 2]
-                outlier_2d_list = sorted_list[(len(distance_2d_list) + 1) // 2:]
+                chart_data(f_2d_list, f_3d_list))
 
             chart_data_2d_list.append((
                 len(filtered_2d_list), len(f_2d_list), vowel,
                 filtered_2d_list, outlier_2d_list, mean_2d, ellipse_list))
-
-            # The same for F1/F2/F3 3-vectors.
-
-            filtered_3d_list = []
-            outlier_3d_list = []
-
-            for distance_squared, f_3d in distance_3d_list:
-                if distance_squared <= 2:
-                    filtered_3d_list.append(f_3d)
-                else:
-                    outlier_3d_list.append(f_3d)
-
-            if len(filtered_3d_list) < (len(distance_3d_list) + 1) // 2:
-                sorted_list = [f_3d for distance_squared, f_3d in distance_3d_list]
-
-                filtered_3d_list = sorted_list[:(len(distance_3d_list) + 1) // 2]
-                outlier_3d_list = sorted_list[(len(distance_3d_list) + 1) // 2:]
 
             chart_data_3d_list.append((
                 len(filtered_3d_list), len(f_3d_list), vowel,
@@ -1766,147 +1974,18 @@ def compile_workbook(
         if len(chart_data_2d_list) > 0:
             chart_dict_list = []
 
-            column_list = list(string.ascii_uppercase) + [c1 + c2
-                for c1 in string.ascii_uppercase
-                for c2 in string.ascii_uppercase]
-
-            shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle',
-                'plus']
-
-            color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red', 'orange', 'gray',
-                'cyan', 'lime', 'magenta', 'silver', 'yellow']
-
             # It seems that we have to plot data in order of its size, from vowels with least number of
             # F1/F2 points to vowels with the most number of F1/F2 points, otherwise scatter chart fails to
             # generate properly.
 
             chart_data_2d_list.sort(reverse = True)
 
-            max_f_2d_list_length = max(len(f_2d_list)
-                for c, tc, v, f_2d_list, o_list, m, e_list in chart_data_2d_list)
-
-            heading_list = []
-            for c, tc, vowel, f_list, o_list, m, e_list in chart_data_2d_list:
-                heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
-
-            worksheet_table_2d.write_row('A1', heading_list)
-            worksheet_table_2d.write_row('A2', ['main part', ''] * len(chart_data_2d_list))
-
-            # Removing outliers that outlie too much.
-
-            f1_limit = max_2d_f1 + min_2d_f1 / 2
-            f2_limit = max_2d_f2 + min_2d_f2 / 2
-
-            for i in range(len(chart_data_2d_list)):
-                chart_data_2d_list[i] = list(chart_data_2d_list[i])
-
-                chart_data_2d_list[i][4] = list(filter(
-                    lambda f_2d: f_2d[0] <= f1_limit and f_2d[1] <= f2_limit,
-                    chart_data_2d_list[i][4]))
-
-            max_outlier_list_length = max(len(outlier_list)
-                for c, tc, v, f_list, outlier_list, m, e_list in chart_data_2d_list)
-
-            # Writing out chart data and compiling chart data series info.
-
-            for index, (count, total_count, vowel,
-                f_2d_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_2d_list):
-
-                f1_list, f2_list = zip(*f_2d_list)
-
-                f1_outlier_list, f2_outlier_list = \
-                    zip(*outlier_list) if outlier_list else ([], [])
-
-                x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
-
-                f1_column = column_list[index * 2]
-                f2_column = column_list[index * 2 + 1]
-
-                # Writing out formant data.
-
-                worksheet_table_2d.write(f1_column + '3',
-                    '{0}/{1} ({2:.1f}%) points'.format(
-                        count, total_count, 100.0 * count / total_count))
-
-                worksheet_table_2d.write_column(f1_column + '4',
-                    list(f1_list) +
-                    [''] * (max_f_2d_list_length - len(f1_list)) +
-                    [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
-                        len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
-                    list(f1_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f1_outlier_list)) +
-                    [vowel + ' mean', mean[0], vowel + ' stdev ellipse'] +
-                    list(x1_ellipse_list))
-
-                worksheet_table_2d.write_column(f2_column + '4',
-                    list(f2_list) +
-                    [''] * (max_f_2d_list_length - len(f2_list)) +
-                    ['', ''] + list(f2_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f2_outlier_list)) +
-                    ['', mean[1], ''] + list(x2_ellipse_list))
-
-                worksheet_table_2d.set_column(index * 2, index * 2 + 1, 11)
-
-                # Compiling and saving chart data series info.
-
-                group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
-                color = color_list[index % len(color_list)]
-
-                chart_dict_list.append({
-                    'name': vowel,
-                    'categories': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
-                        group_name_string, f2_column, len(f2_list) + 3),
-                    'values': '=\'F-table{0}\'!${1}$4:${1}${2}'.format(
-                        group_name_string, f1_column, len(f1_list) + 3),
-                    'marker': {
-                        'type': 'circle',
-                        'size': 5,
-                        'border': {'color': color},
-                        'fill': {'color': color}}})
-
-                # And additional outliers data series.
-
-                chart_dict_list.append({
-                    'name': vowel + ' outliers',
-                    'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                        group_name_string, f2_column,
-                        max_f_2d_list_length + 6, max_f_2d_list_length + len(f2_outlier_list) + 5),
-                    'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                        group_name_string, f1_column,
-                        max_f_2d_list_length + 6, max_f_2d_list_length + len(f1_outlier_list) + 5),
-                    'marker': {
-                        'type': 'circle',
-                        'size': 2,
-                        'border': {'color': color},
-                        'fill': {'color': color}}})
-
-                # Mean data point.
-
-                shift = max_f_2d_list_length + max_outlier_list_length
-
-                chart_dict_list.append({
-                    'name': vowel + ' mean',
-                    'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                        group_name_string, f2_column, shift + 7, shift + 7),
-                    'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                        group_name_string, f1_column, shift + 7, shift + 7),
-                    'marker': {
-                        'type': 'x',
-                        'size': 12,
-                        'border': {'color': color},
-                        'fill': {'color': color}}})
-
-                # Finally, one standard deviation ellipse data series.
-
-                chart_dict_list.append({
-                    'name': vowel + ' stdev ellipse',
-                    'categories': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                        group_name_string, f2_column, shift + 9, shift + len(x2_ellipse_list) + 8),
-                    'values': '=\'F-table{0}\'!${1}${2}:${1}${3}'.format(
-                        group_name_string, f1_column, shift + 9, shift + len(x1_ellipse_list) + 8),
-                    'marker': {'type': 'none'},
-                    'line': {'color': color, 'width': 0.5},
-                    'smooth': True})
+            chart_dict_list, table_2d_row_index = (
+                    
+                chart_definition_list(
+                    chart_data_2d_list, worksheet_table_2d,
+                    min_2d_f1, max_2d_f1, min_2d_f2, max_2d_f2,
+                    '' if group == None else ' (group {0})'.format(group_string_dict[group])))
 
             # Generating formant chart, if we have any data.
 

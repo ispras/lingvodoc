@@ -1,8 +1,9 @@
+import logging
 import os
 import shutil
 from pathvalidate import sanitize_filename
 import graphene
-from sqlalchemy import and_, tuple_
+from sqlalchemy import and_, or_, tuple_
 from lingvodoc.models import DBSession
 from lingvodoc.schema.gql_holders import (
     fetch_object,
@@ -13,6 +14,8 @@ from lingvodoc.models import (
     Client,
     User as dbUser,
     DBSession,
+    Dictionary as dbDictionary,
+    Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
@@ -61,6 +64,10 @@ from lingvodoc.utils.deletion import real_delete_entity
 from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
 
 from lingvodoc.utils.elan_functions import eaf_wordlist
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
@@ -239,20 +246,33 @@ class CreateEntity(graphene.Mutation):
                         locale_id=locale_id,
                         additional_metadata=additional_metadata,
                         parent=parent)
-        group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                                              dbGroup.subject_client_id == dbentity.parent.parent.client_id,
-                                                              dbGroup.subject_object_id == dbentity.parent.parent.object_id,
-                                                              dbBaseGroup.action == 'create').one()
 
-        override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-            dbBaseGroup.subject == 'lexical_entries_and_entities',
-            dbGroup.subject_override == True,
-            dbBaseGroup.action == 'create').one()
+        # Acception override check.
+        # Currently disabled.
+
+        #group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+        #                                                      dbGroup.subject_client_id == dbentity.parent.parent.client_id,
+        #                                                      dbGroup.subject_object_id == dbentity.parent.parent.object_id,
+        #                                                      dbBaseGroup.action == 'create').one()
+
+        #override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+        #    dbBaseGroup.subject == 'lexical_entries_and_entities',
+        #    dbGroup.subject_override == True,
+        #    dbBaseGroup.action == 'create').one()
+
         #if user in group.users or user in override_group.users:
         #    dbentity.publishingentity.accepted = True
+
         if upper_level:
             dbentity.upper_level = upper_level
+
         dbentity.publishingentity.accepted = True
+
+        # If the entity is being created by the admin, we automatically publish it.
+
+        if user.id == 1:
+          dbentity.publishingentity.published = True
+
         filename = args.get('filename')
         real_location = None
         url = None
@@ -465,79 +485,240 @@ class ApproveAllForUser(graphene.Mutation):
         published = graphene.Boolean()
         accepted = graphene.Boolean()
         field_ids = graphene.List(LingvodocID)
-        perspective_id = LingvodocID(required=True)
+        skip_deleted_entities = graphene.Boolean()
+        perspective_id = LingvodocID()
+        language_id = LingvodocID()
+        language_recursive = graphene.Boolean()
 
     #entity = graphene.Field(Entity)
     triumph = graphene.Boolean()
+    update_count = graphene.Int()
 
     @staticmethod
     def mutate(root, info, **args):
+
         user_id = args.get('user_id')
         published = args.get('published')
         accepted = args.get('accepted')
+
         field_ids = args.get('field_ids')
+        skip_deleted_entities = args.get('skip_deleted_entities')
+
         perspective_id = args.get('perspective_id')
 
-        given_perspective = DBSession.query(dbDictionaryPerspective).filter_by(marked_for_deletion=False,
-                                                                               client_id = perspective_id[0],
-                                                                               object_id = perspective_id[1]).first()
-        if not given_perspective:
-            raise ResponseError("Perspective Not found")
-        if published is not None:
-            info.context.acl_check('create', 'approve_entities',
-                                   (perspective_id[0], perspective_id[1]))
+        language_id = args.get('language_id')
+        language_recursive = args.get('language_recursive', False)
 
-        if published is not None:
-            info.context.acl_check('delete', 'approve_entities',
-                                   (perspective_id[0], perspective_id[1]))
+        request_client_id = info.context.request.authenticated_userid
+        request_user = Client.get_user_by_client_id(request_client_id)
 
-        if accepted is not None:
-            info.context.acl_check('create', 'lexical_entries_and_entities',
-                                   (perspective_id[0], perspective_id[1]))
+        if not perspective_id and not language_id:
+            raise ResponseError('Please specify either a perspective or a language.')
 
-        # query(dbEntity).join(dbEntity.parent).join(dbEntity.publishingentity).filter(
-        #     dbPublishingEntity.accepted == false, dbLexicalEntry.parent == given_perspective,
-        #     dbEntity.client_id.in_(list_of_clients_of_given_user, dbEntity.field.in_(list_of_fields))).all()
+        if language_id and request_user.id != 1:
+            raise ResponseError('Only administrator can perform bulk approve for languages.')
 
+        if user_id is None and request_user.id != 1:
+            raise ResponseError('Only administrator can perform bulk approve for all users.')
 
+        # Entity selection condition.
 
-        list_of_clients_of_given_user = [x[0] for x in DBSession.query(Client.id).filter_by(user_id=user_id).all()]
+        if published and accepted:
+
+            entity_select_condition = or_(
+                dbPublishingEntity.published == False,
+                dbPublishingEntity.accepted == False)
+
+        elif published:
+            entity_select_condition = dbPublishingEntity.published == False
+
+        elif accepted:
+            entity_select_condition = dbPublishingEntity.accepted == False
+
+        else:
+            raise ResponseError('Neither publish nor accept action is specified.')
+
+        # Filtering by user id, if required.
+
+        if user_id is not None:
+            
+            list_of_clients_of_given_user = [
+                x[0] for x in DBSession.query(Client.id).filter_by(user_id=user_id).all()]
+
+            entity_select_condition = and_(
+                entity_select_condition,
+                dbEntity.client_id.in_(list_of_clients_of_given_user))
+
+        # If have any specified fields, checking their info and updating selection condition.
+
         list_of_fields = list()
-        for field_id in field_ids:
-            field = DBSession.query(dbField).filter_by(client_id=field_id[0], object_id=field_id[1]).first()
-            if not field:
-                raise ResponseError("field not found")
-            list_of_fields.append((field.client_id, field.object_id))
+
+        if field_ids:
+
+            for field_id in field_ids:
+                field = DBSession.query(dbField).filter_by(client_id=field_id[0], object_id=field_id[1]).first()
+                if not field:
+                    raise ResponseError("field not found")
+                list_of_fields.append((field.client_id, field.object_id))
+
         field_id_list = tuple(list_of_fields)
-        pub_entities = None
-        if published:
-            pub_entities = DBSession.query(dbPublishingEntity).join(dbEntity.parent).join(dbEntity.publishingentity).filter(
-                dbPublishingEntity.published==False,
-                dbLexicalEntry.parent==given_perspective,
-                tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(field_id_list),
-                dbEntity.client_id.in_(list_of_clients_of_given_user)
-            ).all()
-        if accepted:
-            pub_entities = DBSession.query(dbPublishingEntity).join(dbEntity.parent).join(dbEntity.publishingentity).filter(
-                dbPublishingEntity.accepted==False,
-                dbLexicalEntry.parent==given_perspective,
-                tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(field_id_list),
-                dbEntity.client_id.in_(list_of_clients_of_given_user)
-            ).all()
-        for pub_entity in pub_entities:
+
+        if field_ids is not None:
+
+            entity_select_condition = and_(
+                entity_select_condition,
+                tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(field_id_list))
+
+        # Checking if we should or should not update status of deleted entities.
+
+        if skip_deleted_entities:
+
+            entity_select_condition = and_(
+                entity_select_condition,
+                dbEntity.marked_for_deletion == False)
+
+        # Bulk approve for a single perspective.
+
+        if perspective_id:
+
+            given_perspective = DBSession.query(dbDictionaryPerspective).filter_by(marked_for_deletion=False,
+                                                                                   client_id = perspective_id[0],
+                                                                                   object_id = perspective_id[1]).first()
+            if not given_perspective:
+                raise ResponseError("Perspective not found")
+
+            # Currently bulk approve can only give published/accepted status and can't remove it, so we
+            # don't check for 'delete' permissions.
+            #
+            # We also do not check permissions if the request is from the administrator.
+
+            if published is not None and request_user.id != 1:
+
+                info.context.acl_check('create', 'approve_entities',
+                                       (perspective_id[0], perspective_id[1]))
+
+            if accepted is not None and request_user.id != 1:
+
+                info.context.acl_check('create', 'lexical_entries_and_entities',
+                                       (perspective_id[0], perspective_id[1]))
+
+            # Performing bulk approve.
+
+            entities = (
+
+                DBSession.query(dbPublishingEntity)
+                    .join(dbEntity.parent)
+                    .join(dbEntity.publishingentity)
+
+                    .filter(
+                        dbLexicalEntry.parent_client_id == given_perspective.client_id,
+                        dbLexicalEntry.parent_object_id == given_perspective.object_id,
+                        entity_select_condition)
+                    
+                    .all())
+
+            for entity in entities:
+
+                if published:
+                    entity.published = True
+
+                if accepted:
+                    entity.accepted = True
+
+            update_count = len(entities)
+
+            log.debug(
+                'approve_all_for_user (perspective {0}/{1}): updated {2} entit{3}'.format(
+                perspective_id[0], perspective_id[1],
+                update_count,
+                'y' if update_count == 1 else 'ies'))
+
+        # Bulk approve for a language.
+
+        if language_id:
+
+            language = DBSession.query(dbLanguage).filter_by(
+                marked_for_deletion = False,
+                client_id = language_id[0],
+                object_id = language_id[1]).first()
+
+            if not language:
+                raise ResponseError('Language {0}/{1} not found'.format(*language_id))
+
+            language_id_list = [
+                (language.client_id, language.object_id)]
+
+            # Getting all child languages, if required.
+
+            if language_recursive:
+
+                parent_id_list = language_id_list
+
+                while parent_id_list:
+
+                    language_list = DBSession.query(dbLanguage).filter(
+                        dbLanguage.marked_for_deletion == False,
+                        tuple_(dbLanguage.parent_client_id, dbLanguage.parent_object_id).in_(
+                            parent_id_list)).all()
+
+                    parent_id_list = [
+                        (language.client_id, language.object_id)
+                        for language in language_list]
+
+                    language_id_list.extend(parent_id_list)
+
+            log.debug(
+                'approve_all_for_user (language {0}/{1}{2}):\nlanguage_id_list: {3}'.format(
+                language_id[0], language_id[1],
+                ', recursive' if language_recursive else '',
+                language_id_list))
+
+            # Performing bulk approve of entities for all non-deleted lexical entries from all non-deleted
+            # perspectives of all non-deleted dictionaries of specified languages.
+
+            update_dict = {}
+
             if published:
-                pub_entity.published = True
+                update_dict['published'] = True
+
             if accepted:
-                pub_entity.accepted = True
+                update_dict['accepted'] = True
+
+            update_query = (
+
+                dbPublishingEntity.__table__
+                    .update()
+
+                    .where(and_(
+                        tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(
+                            language_id_list),
+                        dbDictionary.marked_for_deletion == False,
+                        dbDictionaryPerspective.parent_client_id == dbDictionary.client_id,
+                        dbDictionaryPerspective.parent_object_id == dbDictionary.object_id,
+                        dbDictionaryPerspective.marked_for_deletion == False,
+                        dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
+                        dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        entity_select_condition))
+
+                    .values(**update_dict))
+
+            update_result = update_query.execute()
+            update_count = update_result.rowcount
+
+            log.debug(
+                'approve_all_for_user (language {0}/{1}{2}): updated {3} entit{4}'.format(
+                language_id[0], language_id[1],
+                ', recursive' if language_recursive else '',
+                update_count,
+                'y' if update_count == 1 else 'ies'))
+
         DBSession.flush()
-        # if accepted is not None and not accepted and dbpublishingentity.accepted:
-        #     raise ResponseError(message="Not allowed action")
-
-        # client_id = id[0] if id else info.context["client_id"]
-        # object_id = id[1] if id else None
-
-        return ApproveAllForUser( triumph=True)
-
+        return ApproveAllForUser(triumph = True, update_count = update_count)
 
 
 class DeleteEntity(graphene.Mutation):

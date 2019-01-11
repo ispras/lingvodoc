@@ -346,8 +346,22 @@ def garbage_collector(request):
     :return:
     """
     from lingvodoc.utils import garbage_collector
-    empty_dictionaries, no_content_dictionaries, useful_dictionaries = garbage_collector.get_useless_dictionaries()
     collection_time = datetime.datetime.utcnow()
+    null_entities = garbage_collector.get_null_entities()
+    empty_entities = garbage_collector.get_empty_entities()
+    entities_deleted = 0
+    for entity in null_entities:
+        entity.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                         "Entity with null content (not link)",
+                                                         entity))
+        entities_deleted += 1
+    for entity in empty_entities:
+        entity.mark_deleted(garbage_collector.gc_message(collection_time,
+                                                         "Entity with empty string content",
+                                                         entity))
+        entities_deleted += 1
+
+    empty_dictionaries, no_content_dictionaries, useful_dictionaries = garbage_collector.get_useless_dictionaries()
     dicts_deleted = 0
     perps_deleted = 0
     gists_deleted = 0
@@ -391,7 +405,8 @@ def garbage_collector(request):
             perps_deleted += 1
             gists_deleted += 1
 
-    return {"dictionaries_deleted": dicts_deleted,
+    return {"entities_deleted": entities_deleted,
+            "dictionaries_deleted": dicts_deleted,
             "perspectives_deleted": perps_deleted,
             "gists_deleted": gists_deleted}
 

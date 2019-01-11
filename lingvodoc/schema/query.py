@@ -213,6 +213,7 @@ from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_
 import lingvodoc.cache.caching as caching
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
 
+import lingvodoc.views.v2.phonology as phonology
 from lingvodoc.views.v2.phonology import (
     AudioPraatLike,
     format_textgrid_result,
@@ -237,7 +238,7 @@ from pyramid.httpexceptions import (
 )
 
 from lingvodoc.scripts import elan_parser
-from lingvodoc.utils.creation import create_entity
+from lingvodoc.utils.creation import create_entity, edit_role
 
 from lingvodoc.queue.celery import celery
 
@@ -246,6 +247,7 @@ import cchardet as chardet
 
 from celery.utils.log import get_task_logger
 
+import numpy
 import pathvalidate
 import pydub
 import pympi
@@ -2901,7 +2903,7 @@ class CognateAnalysis(graphene.Mutation):
         workbook_stream = io.BytesIO()
 
         workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
-        worksheet = workbook.add_worksheet()
+        worksheet_results = workbook.add_worksheet('Results')
 
         index = output_str.find('\0')
         size_list = list(map(int, output_str[:index].split(',')))
@@ -2911,14 +2913,24 @@ class CognateAnalysis(graphene.Mutation):
             base_language_id[0], base_language_id[1],
             size_list))
 
-        # Getting analysis result info, exporting it to the Excel workbook.
-
+        max_width = 0
         row_count = 0
 
-        for table_index, howmany in enumerate(range(len(size_list) // 2)):
+        def export_table(table_index, table_str, n_col, n_row):
+            """
+            Parses from the binary output and exports to the XLSX workbook a table with specified width and
+            height.
+            """
 
-            n_col, n_row = size_list[howmany * 2 : howmany * 2 + 2]
-            worksheet.set_column(0, n_col - 1, 16)
+            nonlocal index
+
+            nonlocal max_width
+            nonlocal row_count
+
+            if n_col > max_width:
+
+                max_width = n_col
+                worksheet_results.set_column(0, max_width - 1, 16)
 
             row_list = []
 
@@ -2951,7 +2963,7 @@ class CognateAnalysis(graphene.Mutation):
 
                     row_list.append(item_list)
 
-                    worksheet.write_row(
+                    worksheet_results.write_row(
                         'A{0}'.format(row_count + 1),
                         item_list)
 
@@ -2965,10 +2977,183 @@ class CognateAnalysis(graphene.Mutation):
                 index += 1
 
             log.debug(
-                'cognate_analysis {0}/{1}: result table {2}:\n{3}'.format(
+                'cognate_analysis {0}/{1}: {2} table {3}:\n{4}'.format(
                 base_language_id[0], base_language_id[1],
-                table_index,
+                table_str, table_index,
                 pprint.pformat(row_list, width = 144)))
+
+            # Returning table data.
+
+            return row_list
+
+        # Getting analysis result info, exporting it to the XLSX workbook.
+
+        for table_index, howmany in enumerate(range(len(size_list) // 2)):
+
+            n_col, n_row = size_list[howmany * 2 : howmany * 2 + 2]
+            export_table(table_index, 'result', n_col, n_row)
+
+        # And now we parse formant plot data, if we have any.
+
+        if len(output_str) > index + 1:
+
+            if output_str[index + 1] != '\0':
+                raise NotImplementedError
+
+            index += 1
+            index_next = output_str.find('\0', index + 1)
+
+            size_list = list(map(int,
+                output_str[index + 1 : index_next].split(',')))
+
+            index = index_next
+
+            log.debug(
+                'cognate_analysis {0}/{1}: plot table size {2}'.format(
+                base_language_id[0], base_language_id[1],
+                size_list))
+
+            # Getting plot info, exporting it to the XLSX workbook, generating plots.
+        
+            worksheet_table_2d = workbook.add_worksheet('F-table')
+            worksheet_chart = workbook.add_worksheet('F-chart')
+
+            table_2d_row_index = 0
+            chart_2d_count = 0
+
+            for table_index, howmany in enumerate(range(len(size_list) // 2)):
+
+                n_col, n_row = size_list[howmany * 2 : howmany * 2 + 2]
+
+                row_list = export_table(
+                    table_index, 'plot', n_col, n_row)
+
+                plot_title = row_list[0][0]
+                
+                if not plot_title:
+                    continue
+
+                # Getting formant series info.
+
+                series_title_list = []
+                series_data_list = []
+
+                for row in row_list[1:]:
+
+                    if not row[0]:
+                        continue
+
+                    elif not row[1]:
+
+                        series_title_list.append(row[0])
+                        series_data_list.append([])
+
+                    else:
+
+                        series_data_list[-1].append(
+                            tuple(map(float, row[1:])))
+
+                log.debug(
+                    'cognate_analysis {0}/{1}: plot data {2}:\n{3}\n{4}\n{5}'.format(
+                    base_language_id[0], base_language_id[1],
+                    table_index,
+                    repr(plot_title),
+                    pprint.pformat(series_title_list, width = 144),
+                    pprint.pformat(series_data_list, width = 144)))
+
+                # Proceeding with plot generation only if we have enough data.
+
+                if sum(map(len, series_data_list)) <= 1:
+                    continue
+
+                chart_data_2d_list = []
+
+                min_2d_f1, max_2d_f1 = None, None
+                min_2d_f2, max_2d_f2 = None, None
+
+                # Generating plot data.
+
+                for series_index, (series_title, series_data) in enumerate(
+                    zip(series_title_list, series_data_list)):
+
+                    f_2d_list = list(map(
+                        lambda f_tuple: numpy.array(f_tuple[:2]), series_data))
+
+                    f_3d_list = list(map(
+                        numpy.array, series_data))
+
+                    if len(f_2d_list) <= 0:
+                        continue
+
+                    (filtered_2d_list, outlier_2d_list, mean_2d, ellipse_list,
+                        filtered_3d_list, outlier_3d_list, mean_3d, sigma_2d, inverse_3d) = (
+
+                        phonology.chart_data(f_2d_list, f_3d_list))
+
+                    chart_data_2d_list.append((
+                        len(filtered_2d_list), len(f_2d_list), series_title,
+                        filtered_2d_list, outlier_2d_list, mean_2d, ellipse_list))
+
+                    # Updating F1/F2 maximum/minimum info.
+
+                    f1_list, f2_list = zip(*filtered_2d_list)
+
+                    min_f1_list, max_f1_list = min(f1_list), max(f1_list)
+                    min_f2_list, max_f2_list = min(f2_list), max(f2_list)
+
+                    if min_2d_f1 == None or min_f1_list < min_2d_f1:
+                        min_2d_f1 = min_f1_list
+
+                    if max_2d_f1 == None or max_f1_list > max_2d_f1:
+                        max_2d_f1 = max_f1_list
+
+                    if min_2d_f2 == None or min_f2_list < min_2d_f2:
+                        min_2d_f2 = min_f2_list
+
+                    if max_2d_f2 == None or max_f2_list > max_2d_f2:
+                        max_2d_f2 = max_f2_list
+
+                # Compiling info of the formant scatter chart data series.
+
+                chart_dict_list, table_2d_row_index = (
+                    
+                    phonology.chart_definition_list(
+                        chart_data_2d_list, worksheet_table_2d,
+                        min_2d_f1, max_2d_f1, min_2d_f2, max_2d_f2,
+                        row_index = table_2d_row_index))
+
+                if chart_dict_list:
+
+                    # Generating the chart, if we have any data.
+
+                    chart = workbook.add_chart({'type': 'scatter'})
+
+                    chart.set_title({
+                        'name': plot_title})
+
+                    chart.set_x_axis({
+                        'major_gridlines': {'visible': True},
+                        'name': 'F2 (Hz)',
+                        'reverse': True})
+
+                    chart.set_y_axis({
+                        'major_gridlines': {'visible': True},
+                        'name': 'F1 (Hz)',
+                        'reverse': True})
+
+                    chart.set_legend({
+                        'position': 'top'})
+
+                    for chart_dict in chart_dict_list:
+                        chart.add_series(chart_dict)
+
+                    chart.set_style(11)
+                    chart.set_size({'width': 1024, 'height': 768})
+
+                    worksheet_chart.insert_chart(
+                        'A{0}'.format(chart_2d_count * 40 + 1), chart)
+
+                    chart_2d_count += 1
 
         workbook.close()
 
@@ -2980,7 +3165,7 @@ class CognateAnalysis(graphene.Mutation):
                 client_id = base_language_id[0], object_id = base_language_id[1]).first()
 
             xlsx_file_name = (
-                'cognate{0} {1} {2}/{3}.xlsx'.format(
+                'cognate{0} {1} {2} {3}.xlsx'.format(
                 ' acoustic' if mode == 'acoustic' else '',
                 language.get_translation(2),
                 *base_language_id))
@@ -3658,6 +3843,21 @@ class CognateAnalysis(graphene.Mutation):
             output_buffer_size))
 
         input_buffer = ctypes.create_unicode_buffer(input)
+
+        # Saving input buffer to a file, if required.
+
+        if __debug_flag__:
+
+            input_file_name = (
+                'input cognate{0} {1} {2} {3}.buffer'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language_name.strip(),
+                len(perspective_info_list),
+                len(result_list)))
+
+            with open(input_file_name, 'wb') as input_file:
+                input_file.write(bytes(input_buffer))
+
         output_buffer = ctypes.create_unicode_buffer(output_buffer_size + 256)
 
         result = analysis_f(
@@ -3687,6 +3887,30 @@ class CognateAnalysis(graphene.Mutation):
             base_language_id[0], base_language_id[1],
             pprint.pformat([output[i : i + 256]
                 for i in range(0, len(output), 256)], width = 144)))
+
+        # Saving output buffer and output to files, if required.
+
+        if __debug_flag__:
+
+            output_file_name = (
+                'output cognate{0} {1} {2} {3}.buffer'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language_name.strip(),
+                len(perspective_info_list),
+                len(result_list)))
+
+            with open(output_file_name, 'wb') as output_file:
+                output_file.write(bytes(output_buffer))
+
+            output_file_name = (
+                'output cognate{0} {1} {2} {3}.utf16'.format(
+                ' acoustic' if mode == 'acoustic' else '',
+                language_name.strip(),
+                len(perspective_info_list),
+                len(result_list)))
+
+            with open(output_file_name, 'wb') as output_file:
+                output_file.write(output.encode('utf-16'))
 
         # Reflowing output.
 
@@ -3793,9 +4017,12 @@ class CognateAnalysis(graphene.Mutation):
         """
         mutation CognateAnalysis {
           cognate_analysis(
-            base_language_id: [],
+            base_language_id: [508, 41],
             group_field_id: [66, 25],
-            perspective_info_list: [[[70, 5], [66, 8]]])
+            perspective_info_list: [
+              [[425, 4], [66, 8], [66, 10]],
+              [[1552, 1759], [66, 8], [66, 10]],
+              [[418, 4], [66, 8], [66, 10]]])
           {
             triumph
             entity_count
@@ -4195,6 +4422,129 @@ class MoveColumn(graphene.Mutation):
 
         return MoveColumn(triumph=True)
 
+class AddRolesBulk(graphene.Mutation):
+    """
+    Adds specified roles for a specified user for all dictionaries and perspectives of a specified language,
+    maybe with all its descendants.
+
+    mutation addRolesBulk {
+      add_roles_bulk(user_id: 5, language_id: [508, 36]) {
+        triumph } }
+    """
+    
+    class Arguments:
+        user_id = graphene.Int(required=True)
+        language_id = LingvodocID(required=True)
+
+    language_count = graphene.Int()
+    dictionary_count = graphene.Int()
+    perspective_count = graphene.Int()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        user_id = args.get('user_id')
+        language_id = args.get('language_id')
+
+        request_client_id = info.context.get('client_id')
+        request_user = Client.get_user_by_client_id(request_client_id)
+
+        if request_user.id != 1:
+            raise ResponseError('Only administrator can perform bulk roles additions.')
+
+        user = DBSession.query(dbUser).filter_by(id = user_id).first()
+
+        if not user:
+            raise RespenseError('No user with id {0}'.format(user_id))
+
+        # Getting permission groups info.
+
+        dictionary_group_list = [row[0] for row in DBSession.query(
+            dbBaseGroup.id).filter_by(dictionary_default = True).all()]
+
+        perspective_group_list = [row[0] for row in DBSession.query(
+            dbBaseGroup.id).filter_by(perspective_default = True).all()]
+
+        log.debug(
+            'add_roles_bulk (user_id: {0}, language_id: {1}/{2}):'
+            '\ndictionary_group_list: {3}\nperspective_group_list: {4}'.format(
+                user_id,
+                language_id[0], language_id[1],
+                dictionary_group_list,
+                perspective_group_list))
+
+        def process_language(language):
+            """
+            Recursively adds required permissions for a specified user for all dictionaries and perspectives
+            of a given language and its descendants.
+            """
+
+            dictionary_list = DBSession.query(dbDictionary).filter_by(
+                parent_client_id = language.client_id,
+                parent_object_id = language.object_id,
+                marked_for_deletion = False).all()
+
+            language_count = 1
+            dictionary_count = len(dictionary_list)
+            perspective_count = 0
+
+            # All dictionaries of the language.
+
+            for dictionary in dictionary_list:
+
+                for basegroup_id in dictionary_group_list:
+
+                    edit_role(dictionary, user_id, basegroup_id, request_client_id,
+                        dictionary_default = True, action = 'add')
+
+                perspective_list = DBSession.query(dbDictionaryPerspective).filter_by(
+                    parent_client_id = dictionary.client_id,
+                    parent_object_id = dictionary.object_id,
+                    marked_for_deletion = False).all()
+
+                perspective_count += len(perspective_list)
+
+                # All perspectives of each dictionary.
+
+                for perspective in perspective_list:
+
+                    for basegroup_id in perspective_group_list:
+
+                        edit_role(perspective, user_id, basegroup_id, request_client_id,
+                            perspective_default = True, action = 'add')
+
+            language_list = DBSession.query(dbLanguage).filter_by(
+                parent_client_id = language.client_id,
+                parent_object_id = language.object_id,
+                marked_for_deletion = False).all()
+
+            # All child languages.
+
+            for child_language in language_list:
+                l_count, d_count, p_count = process_language(child_language)
+
+                language_count += l_count
+                dictionary_count += d_count
+                perspective_count += p_count
+
+            return language_count, dictionary_count, perspective_count
+
+        # Adding required permissions.
+
+        language = DBSession.query(dbLanguage).filter_by(
+            marked_for_deletion = False,
+            client_id = language_id[0],
+            object_id = language_id[1]).first()
+
+        if not language:
+            raise ResponseError('Language {0}/{1} not found'.format(*language_id))
+
+        language_count, dictionary_count, perspective_count = process_language(language)
+
+        return AddRolesBulk(
+            language_count = language_count,
+            dictionary_count = dictionary_count,
+            perspective_count = perspective_count)
 
 
 class MyMutations(graphene.ObjectType):
@@ -4279,6 +4629,7 @@ class MyMutations(graphene.ObjectType):
     sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
     move_column = MoveColumn.Field()
+    add_roles_bulk = AddRolesBulk.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
