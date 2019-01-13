@@ -226,6 +226,8 @@ from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
 from lingvodoc.utils.merge import merge_suggestions
 import tempfile
+
+from lingvodoc.scripts.save_dictionary import save_dictionary as sync_save_dictionary
 from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
 import json
 
@@ -425,7 +427,8 @@ class Query(graphene.ObjectType):
                                      search_strings=graphene.List(graphene.List(ObjectVal), required=True),
                                      mode=graphene.String(),
                                      search_metadata=ObjectVal(),
-                                     simple=graphene.Boolean())
+                                     simple=graphene.Boolean(),
+                                     xlsx_export=graphene.Boolean())
     advanced_search_simple = graphene.Field(AdvancedSearchSimple,
                                      languages=graphene.List(LingvodocID),
                                      dicts_to_filter=graphene.List(LingvodocID),
@@ -722,7 +725,20 @@ class Query(graphene.ObjectType):
             print(errors)
         return result
 
-    def resolve_advanced_search(self, info, search_strings=None, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published', simple=True):
+    def resolve_advanced_search(
+        self,
+        info,
+        search_strings=None,
+        languages=None,
+        dicts_to_filter=None,
+        tag_list=None,
+        category=None,
+        adopted=None,
+        etymology=None,
+        search_metadata=None,
+        mode='published',
+        simple=True,
+        xlsx_export=False):
 
         if mode == 'all':
             publish = None
@@ -741,12 +757,19 @@ class Query(graphene.ObjectType):
             accept = None
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
+
         # if not search_strings:
         #     raise ResponseError(message="search_strings is empty")
+
         if simple:
-            return AdvancedSearchSimple().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology,
-                                            search_strings, publish, accept)
-        return AdvancedSearch().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept, search_metadata)
+
+            return AdvancedSearchSimple().constructor(
+                info, languages, dicts_to_filter, tag_list, category, adopted,
+                etymology, search_strings, publish, accept, xlsx_export)
+
+        return AdvancedSearch().constructor(
+            info, languages, dicts_to_filter, tag_list, category, adopted, etymology,
+            search_strings, publish, accept, search_metadata, xlsx_export)
 
     def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
 
@@ -769,8 +792,10 @@ class Query(graphene.ObjectType):
             raise ResponseError(message="mode: <all|published|not_accepted>")
         if not search_strings:
             raise ResponseError(message="search_strings is empty")
-        return AdvancedSearchSimple().constructor(languages, dicts_to_filter, tag_list, category, adopted, etymology,
-                                            search_strings, publish, accept)
+
+        return AdvancedSearchSimple().constructor(
+            info, languages, dicts_to_filter, tag_list, category, adopted, etymology,
+            search_strings, publish, accept)
 
     def resolve_template_modes(self, info):
         return ['corpora']
@@ -4239,7 +4264,9 @@ class SoundAndMarkup(graphene.Mutation):
         return SoundAndMarkup(triumph = True)
 
 
-def save_dictionary(dict_id, request, user_id, locale_id, publish):
+def save_dictionary(
+    dict_id, request, user_id, locale_id, publish, synchronous):
+
     my_args = dict()
     my_args["client_id"] = dict_id[0]
     my_args["object_id"] = dict_id[1]
@@ -4253,15 +4280,18 @@ def save_dictionary(dict_id, request, user_id, locale_id, publish):
             filter_by(client_id=dictionary_obj.translation_gist_client_id,
                       object_id=dictionary_obj.translation_gist_object_id).first()
         dict_name = gist.get_translation(locale_id)
-        task = TaskStatus(user_id, "Saving dictionary", dict_name, 4)
+
+        if not synchronous:
+            task = TaskStatus(user_id, "Saving dictionary", dict_name, 4)
+
     except:
         raise ResponseError('bad request')
     my_args['dict_name'] = dict_name
-    my_args["task_key"] = task.key
+    my_args["task_key"] = task.key if not synchronous else None
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     my_args["published"] = publish
-    res = async_save_dictionary.delay(**my_args)
-    return
+
+    res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
 
 
 class SaveDictionary(graphene.Mutation):
@@ -4269,6 +4299,7 @@ class SaveDictionary(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         mode = graphene.String(required=True)
+        synchronous = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -4298,7 +4329,9 @@ class SaveDictionary(graphene.Mutation):
                 info.context.acl_check('view', 'lexical_entries_and_entities',
                                    (persp.client_id, persp.object_id))
 
-        save_dictionary(dict_id, request, user_id, locale_id, publish)
+        save_dictionary(
+            dict_id, request, user_id, locale_id, publish,
+            args.get('synchronous'))
 
         return DownloadDictionary(triumph=True)
 
