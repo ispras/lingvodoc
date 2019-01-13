@@ -1,6 +1,16 @@
+import collections
+import datetime
+import io
 import itertools
+import logging
+import os
+import os.path
+import pprint
+import shutil
 
 import graphene
+import xlsxwriter
+
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CreatedAt,
@@ -35,6 +45,7 @@ from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.schema.gql_dictionary import Dictionary
 from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective, entries_with_entities
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
+from lingvodoc.scripts.save_dictionary import Save_Context
 from lingvodoc.utils.search import translation_gist_search
 
 from sqlalchemy import (
@@ -51,6 +62,10 @@ from itertools import chain
 
 
 import re
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 
 def graphene_obj(dbobj, cur_cls):
@@ -110,9 +125,54 @@ def boolean_search(test_string,  exclude_char = '-'):
                                           "search_string": query})
     return and_blocks_queries
 
-def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, search_strings, publish, accept, adopted,
-                     etymology, yield_batch_count, category_fields):
 
+def save_xlsx_data(
+    xlsx_context,
+    dictionary_list,
+    perspective_list,
+    lexical_entry_list):
+
+    perspective_dict = collections.defaultdict(list)
+    lexical_entry_dict = collections.defaultdict(list)
+
+    for perspective in perspective_list:
+
+        parent = perspective.parent
+        perspective_dict[(parent.client_id, parent.object_id)].append(perspective)
+
+    for lexical_entry in lexical_entry_list:
+
+        parent = lexical_entry.parent
+        lexical_entry_dict[(parent.client_id, parent.object_id)].append(lexical_entry)
+
+    # Saving data of all found lexical entries, see functions save() and compile_workbook() in
+    # scripts.save_dictionary.
+
+    for dictionary in dictionary_list:
+
+        for perspective in perspective_dict[
+            (dictionary.client_id, dictionary.object_id)]:
+
+            xlsx_context.ready_perspective(perspective)
+
+            for lexical_entry in lexical_entry_dict[
+                (perspective.client_id, perspective.object_id)]:
+
+                xlsx_context.save_lexical_entry(lexical_entry, published = True, accepted = True)
+
+def search_mechanism(
+    dictionaries,
+    category,
+    state_gist_id,
+    limited_gist_id,
+    search_strings,
+    publish,
+    accept,
+    adopted,
+    etymology,
+    yield_batch_count,
+    category_fields,
+    xlsx_context = None):
 
     """
     1) published dictionaries
@@ -347,10 +407,33 @@ def search_mechanism(dictionaries, category, state_gist_id, limited_gist_id, sea
     res_perspectives = [graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in tmp_perspectives]
     tmp_dictionaries = set([le.dbObject.parent for le in res_perspectives])
     res_dictionaries = [graphene_obj(dbdict, Dictionary) for dbdict in tmp_dictionaries]
+
+    # Exporting search results as an XLSX data, if required.
+
+    if xlsx_context is not None:
+
+        save_xlsx_data(
+            xlsx_context,
+            tmp_dictionaries,
+            tmp_perspectives,
+            [lexical_entry.dbObject for lexical_entry in result_lexical_entries])
+
     return [], result_lexical_entries, res_perspectives , res_dictionaries
 
-def search_mechanism_simple(dictionaries, category, state_gist_id, limited_gist_id, search_strings, publish, accept, adopted,
-                     etymology, yield_batch_count, category_fields):
+def search_mechanism_simple(
+    dictionaries,
+    category,
+    state_gist_id,
+    limited_gist_id,
+    search_strings,
+    publish,
+    accept,
+    adopted,
+    etymology,
+    yield_batch_count,
+    category_fields,
+    xlsx_context = None):
+
     state_translation_gist_client_id, state_translation_gist_object_id = state_gist_id
     limited_client_id, limited_object_id = limited_gist_id
     dictionaries = dictionaries.filter(dbDictionary.category == category)
@@ -470,6 +553,17 @@ def search_mechanism_simple(dictionaries, category, state_gist_id, limited_gist_
     res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in tmp_perspectives]
     tmp_dictionaries = {entity[aliases_len + 2] for entity in resolved_search}
     res_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
+
+    # Exporting search results as an XLSX data, if required.
+
+    if xlsx_context is not None:
+
+        save_xlsx_data(
+            xlsx_context,
+            tmp_dictionaries,
+            tmp_perspectives,
+            tmp_lexical_entries)
+
     return [], res_lexical_entries, res_perspectives, res_dictionaries
 
 
@@ -533,14 +627,56 @@ def get_sound_field_ids():
 #         FieldTranslationAtom.marked_for_deletion == False).all()
 #     return sound_field_id_list
 
+
+def save_xlsx(info, xlsx_context):
+
+    xlsx_context.workbook.close()
+
+    storage = info.context.request.registry.settings['storage']
+    storage_dir = os.path.join(storage['path'], 'map_search')
+
+    os.makedirs(storage_dir, exist_ok = True)
+
+    xlsx_filename = '{0:.6f}.xlsx'.format(
+        datetime.datetime.now(datetime.timezone.utc).timestamp())
+
+    xlsx_path = os.path.join(storage_dir, xlsx_filename)
+
+    with open(xlsx_path, 'wb') as xlsx_file:
+
+        xlsx_context.stream.seek(0)
+        shutil.copyfileobj(xlsx_context.stream, xlsx_file)
+
+    return ''.join([
+        storage['prefix'],
+        storage['static_route'],
+        'map_search', '/',
+        xlsx_filename])
+
+
 class AdvancedSearch(LingvodocObjectType):
     entities = graphene.List(Entity)
     lexical_entries = graphene.List(LexicalEntry)
     perspectives = graphene.List(DictionaryPerspective)
     dictionaries = graphene.List(Dictionary)
+    xlsx_url = graphene.String()
 
     @classmethod
-    def constructor(cls, languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept, search_metadata):
+    def constructor(
+        cls,
+        info,
+        languages,
+        dicts_to_filter,
+        tag_list,
+        category,
+        adopted,
+        etymology,
+        search_strings,
+        publish,
+        accept,
+        search_metadata,
+        xlsx_export = False):
+
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
@@ -637,6 +773,12 @@ class AdvancedSearch(LingvodocObjectType):
             filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
                    dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()
 
+        # Setting up export to an XLSX file, if required.
+
+        xlsx_context = (
+            None if not xlsx_export else
+                Save_Context(info.context.get('locale_id'), DBSession))
+
         # normal dictionaries
         if category != 1:
             res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
@@ -651,7 +793,8 @@ class AdvancedSearch(LingvodocObjectType):
                 adopted=adopted,
                 etymology=etymology,
                 category_fields=text_fields,
-                yield_batch_count=yield_batch_count
+                yield_batch_count=yield_batch_count,
+                xlsx_context=xlsx_context
             )
 
 
@@ -670,14 +813,26 @@ class AdvancedSearch(LingvodocObjectType):
                 adopted=adopted,
                 etymology=etymology,
                 category_fields=markup_fields,
-                yield_batch_count=yield_batch_count
+                yield_batch_count=yield_batch_count,
+                xlsx_context=xlsx_context
             )
             res_entities += tmp_entities
             res_lexical_entries += tmp_lexical_entries
             res_perspectives += tmp_perspectives
             res_dictionaries += tmp_dictionaries
 
-        return cls(entities=res_entities, lexical_entries=res_lexical_entries, perspectives=res_perspectives, dictionaries=res_dictionaries)
+        # Saving XLSX-exported search results, if required.
+
+        xlsx_url = (
+            None if not xlsx_export else
+                save_xlsx(info, xlsx_context))
+
+        return cls(
+            entities=res_entities,
+            lexical_entries=res_lexical_entries,
+            perspectives=res_perspectives,
+            dictionaries=res_dictionaries,
+            xlsx_url=xlsx_url)
 
 
 class AdvancedSearchSimple(LingvodocObjectType):
@@ -685,9 +840,23 @@ class AdvancedSearchSimple(LingvodocObjectType):
     lexical_entries = graphene.List(LexicalEntry)
     perspectives = graphene.List(DictionaryPerspective)
     dictionaries = graphene.List(Dictionary)
+    xlsx_url = graphene.String()
 
     @classmethod
-    def constructor(cls, languages, dicts_to_filter, tag_list, category, adopted, etymology, search_strings, publish, accept):
+    def constructor(
+        cls,
+        info,
+        languages,
+        dicts_to_filter,
+        tag_list,
+        category,
+        adopted,
+        etymology,
+        search_strings,
+        publish,
+        accept,
+        xlsx_export = False):
+
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
@@ -721,6 +890,12 @@ class AdvancedSearchSimple(LingvodocObjectType):
             filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
                    dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()
 
+        # Setting up export to an XLSX file, if required.
+
+        xlsx_context = (
+            None if not xlsx_export else
+                Save_Context(info.context.get('locale_id'), DBSession))
+
         # normal dictionaries
         if category != 1:
             res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism_simple(
@@ -735,7 +910,8 @@ class AdvancedSearchSimple(LingvodocObjectType):
                 adopted=adopted,
                 etymology=etymology,
                 category_fields=text_fields,
-                yield_batch_count=yield_batch_count
+                yield_batch_count=yield_batch_count,
+                xlsx_context=xlsx_context
             )
 
 
@@ -754,11 +930,24 @@ class AdvancedSearchSimple(LingvodocObjectType):
                 adopted=adopted,
                 etymology=etymology,
                 category_fields=markup_fields,
-                yield_batch_count=yield_batch_count
+                yield_batch_count=yield_batch_count,
+                xlsx_context=xlsx_context
             )
             res_entities += tmp_entities
             res_lexical_entries += tmp_lexical_entries
             res_perspectives += tmp_perspectives
             res_dictionaries += tmp_dictionaries
 
-        return cls(entities=res_entities, lexical_entries=res_lexical_entries, perspectives=res_perspectives, dictionaries=res_dictionaries)
+        # Saving XLSX-exported search results, if required.
+
+        xlsx_url = (
+            None if not xlsx_export else
+                save_xlsx(info, xlsx_context))
+
+        return cls(
+            entities=res_entities,
+            lexical_entries=res_lexical_entries,
+            perspectives=res_perspectives,
+            dictionaries=res_dictionaries,
+            xlsx_url=xlsx_url)
+

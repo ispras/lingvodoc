@@ -137,58 +137,156 @@ def generate_massive_cell(tag, session, text_fields, published):
         return ""
 
 
-def compile_workbook(client_id, object_id, workbook_stream, session, locale_id, published):
+class Save_Context(object):
+    """
+    Holds data of the saving of dictionary/dictionaries into an XLSX workbook.
+
+    Also used in advanced_search.
+    """
+
+    def __init__(self, locale_id, session):
+
+        self.locale_id = locale_id
+        self.session = session
+
+        self.stream = io.BytesIO()
+        self.workbook = xlsxwriter.Workbook(self.stream, {'in_memory': True})
+
+        self.text_fields = (
+            session.query(Field.client_id, Field.object_id).filter_by(
+                data_type_translation_gist_client_id = 1,
+                data_type_translation_gist_object_id = 47).all())
+
+    def ready_perspective(self, perspective):
+        """
+        Prepares for saving data of lexical entries of another perspective.
+        """
+
+        perspective_name = perspective.get_translation(self.locale_id, self.session)
+
+        for c in u"[]:?/*\x00":
+            perspective_name = perspective_name.replace(c, "")
+
+        worksheet_name = '{0}_{1}_{2}'.format(
+            perspective_name, perspective.client_id, perspective.object_id)
+
+        if len(worksheet_name) >= 31:
+
+            worksheet_name = '{0}_{1}_{2}'.format(
+                    perspective_name[:20], perspective.client_id, perspective.object_id)
+
+        if len(perspective_name) >= 31:
+
+            worksheet_name = '{0}_{1}_{2}'.format(
+                    perspective_name[:10], perspective.client_id, perspective.object_id)
+
+        self.worksheet = self.workbook.add_worksheet(name = worksheet_name)
+
+        self.fields = (
+                
+            self.session
+                .query(DictionaryPerspectiveToField)
+
+                .filter_by(
+                    parent_client_id=perspective.client_id,
+                    parent_object_id=perspective.object_id,
+                    marked_for_deletion=False)
+                
+                .filter(tuple_(
+                    DictionaryPerspectiveToField.field_client_id,
+                    DictionaryPerspectiveToField.field_object_id)
+                        .in_(self.text_fields))
+
+                .order_by(DictionaryPerspectiveToField.position).all())
+
+        self.etymology_field = (
+            self.session.query(DictionaryPerspectiveToField).filter_by(
+                parent_client_id=perspective.client_id,
+                parent_object_id=perspective.object_id,
+                marked_for_deletion=False,
+                field_client_id=66,
+                field_object_id=25).first())
+
+        self.field_to_column = {
+            field_ids_to_str(field): counter
+            for counter, field in enumerate(self.fields)}
+
+        self.row = 1
+        column = 0
+
+        for field in self.fields:
+
+            self.worksheet.write(0, column,
+                field.field.get_translation(self.locale_id, self.session))
+
+            column += 1
+
+        if self.etymology_field:
+
+            self.worksheet.write(0, column,
+                self.etymology_field.field.get_translation(self.locale_id, self.session))
+
+    def save_lexical_entry(self, entry, published = None, accepted = True):
+        """
+        Save data of a lexical entry of the current perspective.
+        """
+
+        row_to_write = ["" for field in self.fields]
+
+        entities = (
+            self.session.query(Entity).filter(
+                Entity.parent_client_id == entry.client_id,
+                Entity.parent_object_id == entry.object_id,
+                Entity.marked_for_deletion == False))
+
+        if published is not None or accepted is not None:
+
+            entities = entities.join(PublishingEntity)
+
+            if published is not None:
+                entities = entities.filter(PublishingEntity.published == published)
+
+            if accepted is not None:
+                entities = entities.filter(PublishingEntity.accepted == accepted)
+
+        for entity in entities:
+            ent_field_ids = field_ids_to_str(entity)
+
+            if ent_field_ids in self.field_to_column:
+
+                if row_to_write[self.field_to_column[ent_field_ids]] == "":
+                    row_to_write[self.field_to_column[ent_field_ids]] = entity.content
+
+                else:
+                    row_to_write[self.field_to_column[ent_field_ids]] += "\n" + entity.content
+
+            if (self.etymology_field and
+                len(row_to_write) == len(self.fields) and
+                ent_field_ids == "66_25"):
+
+                row_to_write.append(generate_massive_cell(
+                    entity.content, self.session, self.text_fields, published))
+
+        if not is_empty(row_to_write):
+
+            self.worksheet.write_row(self.row, 0, row_to_write)
+            self.row += 1
+
+
+def compile_workbook(context, client_id, object_id, session, locale_id, published):
     """
     Compiles analysis results into an Excel workbook.
     """
 
-    workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
-
     dictionary = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id,
                                                      marked_for_deletion=False).one()
 
-    text_fields = session.query(Field.client_id, Field.object_id) \
-        .filter_by(data_type_translation_gist_client_id=1,
-                   data_type_translation_gist_object_id=47).all()
     perspectives = session.query(DictionaryPerspective).filter_by(parent_client_id=client_id,
                                                                   parent_object_id=object_id,
                                                                   marked_for_deletion=False).all()
     for perspective in perspectives:
-        perspective_name = perspective.get_translation(client_id, session) + "_" + str(
-            perspective.client_id) + "_" + str(perspective.object_id)
-        for c in u"[]:?/*\x00":
-            perspective_name = perspective_name.replace(c, "")
-        if len(perspective_name) >= 31:
-            perspective_name = perspective_name[:20] + "_" + str(perspective.client_id) + "_" + str(
-                perspective.object_id)
-        if len(perspective_name) >= 31:
-            perspective_name = perspective_name[:10] + "_" + str(perspective.client_id) + "_" + str(
-                perspective.object_id)
-        worksheet = workbook.add_worksheet(name=perspective_name)
-        fields = session.query(DictionaryPerspectiveToField).filter_by(parent_client_id=perspective.client_id,
-                                                                       parent_object_id=perspective.object_id,
-                                                                       marked_for_deletion=False,
-                                                                       ).filter(
-            tuple_(DictionaryPerspectiveToField.field_client_id, DictionaryPerspectiveToField.field_object_id).in_(
-                text_fields)
-        ).order_by(DictionaryPerspectiveToField.position).all()
-        etymology_field = session.query(DictionaryPerspectiveToField).filter_by(parent_client_id=perspective.client_id,
-                                                                                parent_object_id=perspective.object_id,
-                                                                                marked_for_deletion=False,
-                                                                                field_client_id=66,
-                                                                                field_object_id=25
-                                                                                ).first()
 
-        field_to_column = {field_ids_to_str(field): counter for counter, field in
-                           enumerate(fields)}
-        row = 1
-        column = 0
-        for field in fields:
-            worksheet.write(0, column, field.field.get_translation(locale_id, session))
-            column += 1
-
-        if etymology_field:
-            worksheet.write(0, column, etymology_field.field.get_translation(locale_id, session))
+        context.ready_perspective(perspective)
 
         lexical_entries = session.query(LexicalEntry).join(Entity).join(PublishingEntity) \
             .filter(LexicalEntry.parent_client_id == perspective.client_id,
@@ -198,28 +296,11 @@ def compile_workbook(client_id, object_id, workbook_stream, session, locale_id, 
                     PublishingEntity.accepted == True)
         if published is not None:
             lexical_entries = lexical_entries.filter(PublishingEntity.published == published)
+
         for lex in lexical_entries:
-            row_to_write = ["" for field in fields]
-            entities = session.query(Entity).join(PublishingEntity) \
-                .filter(Entity.parent_client_id == lex.client_id,
-                        Entity.parent_object_id == lex.object_id,
-                        Entity.marked_for_deletion == False,
-                        PublishingEntity.accepted == True)
-            if published is not None:
-                entities = entities.filter(PublishingEntity.published == published)
-            for entity in entities:
-                ent_field_ids = field_ids_to_str(entity)
-                if ent_field_ids in field_to_column:
-                    if row_to_write[field_to_column[ent_field_ids]] == "":
-                        row_to_write[field_to_column[ent_field_ids]] = entity.content
-                    else:
-                        row_to_write[field_to_column[ent_field_ids]] += "\n" + entity.content
-                if etymology_field and len(row_to_write) == len(fields) and ent_field_ids == "66_25":
-                    row_to_write.append(generate_massive_cell(entity.content, session, text_fields, published))
-            if not is_empty(row_to_write):
-                worksheet.write_row(row, 0, row_to_write)
-                row += 1
-    return
+            context.save_lexical_entry(lex, published)
+
+    context.workbook.close()
 
 
 # @profile()
@@ -235,22 +316,24 @@ def save(
         published
 ):  # :(
 
+    __debug_flag__ = False
+
     initialize_cache(cache_kwargs)
-    task_status = TaskStatus.get_from_cache(task_key)
+    task_status = TaskStatus.get_from_cache(task_key) if task_key else None
 
     engine = create_engine(sqlalchemy_url)
     register_after_fork(engine, engine.dispose)
     log = logging.getLogger(__name__)
     Session = sessionmaker(bind=engine)
     session = Session()
-    task_status.set(3, 20, 'Running async process')
 
-    workbook_stream = io.BytesIO()
+    if task_status:
+        task_status.set(3, 20, 'Running async process')
+
+    save_context = Save_Context(locale_id, session)
 
     try:
-        compile_workbook(client_id, object_id, workbook_stream, session, locale_id, published)
-
-        workbook_stream.seek(0)
+        compile_workbook(save_context, client_id, object_id, session, locale_id, published)
 
     except Exception as exception:
 
@@ -262,8 +345,8 @@ def save(
 
         # If we failed to create an Excel file, we terminate with error.
 
-        task_status.set(4, 100,
-                        'Finished (ERROR), result compilation error')
+        if task_status:
+            task_status.set(4, 100, 'Finished (ERROR), result compilation error')
 
         return {'error': 'result compilation error'}
 
@@ -316,7 +399,9 @@ def save(
 
     try:
         with open(storage_path, 'wb+') as workbook_file:
-            copyfileobj(workbook_stream, workbook_file)
+
+            save_context.stream.seek(0)
+            copyfileobj(save_context.stream, workbook_file)
 
     except OSError as os_error:
 
@@ -333,7 +418,16 @@ def save(
         storage_path = path.join(storage_dir, table_filename)
 
         with open(storage_path, 'wb+') as workbook_file:
-            copyfileobj(workbook_stream, workbook_file)
+
+            save_context.stream.seek(0)
+            copyfileobj(save_context.stream, workbook_file)
+
+    if __debug_flag__:
+
+        with open(table_filename, 'wb') as xlsx_file:
+
+            save_context.stream.seek(0)
+            copyfileobj(save_context.stream, xlsx_file)
 
     # Successfully compiled phonology, finishing and returning links to files with results.
 
@@ -349,11 +443,11 @@ def save(
 
         for filename in [table_filename]]
 
-    task_status.set(4, 100, 'Finished', result_link_list=url_list)
+    if task_status:
+        task_status.set(4, 100, 'Finished', result_link_list=url_list)
 
     session.commit()
     engine.dispose()
-    return
 
 
 def save_dictionary(
