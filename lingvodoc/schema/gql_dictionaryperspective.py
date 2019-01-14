@@ -111,8 +111,11 @@ def entries_with_entities(lexes, accept, delete, mode, publish):
         gql_entities_list = [gql_entity_with_published(cur_entity=x[0], cur_publishing=x[1])
                              for x in entity_with_published]
         lexical_entry = lex_id_to_obj[lex_ids]
+        del lex_id_to_obj[lex_ids]
         if (lexical_entry.client_id, lexical_entry.object_id) == lex_ids:
             result_lexes.append((lexical_entry, gql_entities_list))
+    for new_lex in lex_id_to_obj:
+        result_lexes.append((lex_id_to_obj[new_lex], None))
     lexical_entries = [gql_lexicalentry(cur_lexical_entry=lex[0], cur_entities=lex[1]) for lex in result_lexes]
 
     return lexical_entries
