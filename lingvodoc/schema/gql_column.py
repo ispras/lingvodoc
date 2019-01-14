@@ -267,12 +267,13 @@ class DeleteColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get('id')
         client_id, object_id = id
         column_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
                                                                                  object_id=object_id).first()
+        perspective_ids = (column_object.parent_client_id, column_object.parent_object_id)
+        info.context.acl_check('edit', 'perspective', perspective_ids)
         if not column_object or column_object.marked_for_deletion:
             raise ResponseError(message="No such column object in the system")
         del_object(column_object)
