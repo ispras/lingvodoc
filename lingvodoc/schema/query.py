@@ -249,10 +249,24 @@ import cchardet as chardet
 
 from celery.utils.log import get_task_logger
 
+# So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
+# stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
+import matplotlib
+matplotlib.use('Agg', warn = False)
+
+from matplotlib.collections import LineCollection
+from matplotlib import pyplot
+
 import numpy
 import pathvalidate
 import pydub
 import pympi
+import scipy.sparse.csgraph
+
+import sklearn.decomposition
+import sklearn.manifold
+import sklearn.metrics
+
 import transaction
 import xlsxwriter
 
@@ -269,16 +283,22 @@ celery_log.setLevel(logging.DEBUG)
 # Mikhail Oslon's analysis functions.
 
 try:
+
     liboslon = ctypes.CDLL('liboslon.so')
 
     phonemic_analysis_f = liboslon.PhonemicAnalysis_GetAllOutput
+
     cognate_analysis_f = liboslon.CognateAnalysis_GetAllOutput
     cognate_acoustic_analysis_f = liboslon.CognateAcousticAnalysis_GetAllOutput
+    cognate_distance_analysis_f = liboslon.CognateDistanceAnalysis_GetAllOutput
 
 except:
+
     phonemic_analysis_f = None
+
     cognate_analysis_f = None
     cognate_acoustic_analysis_f = None
+    cognate_distance_analysis_f = None
 
 
 class TierList(graphene.ObjectType):
@@ -2084,7 +2104,7 @@ class PhonemicAnalysis(graphene.Mutation):
 
         locale_id = info.context.get('locale_id') or 2
 
-        __debug_flag__ = False
+        __debug_flag__ = True
 
         try:
 
@@ -2326,6 +2346,11 @@ def async_cognate_analysis(
     group_field_id,
     perspective_info_list,
     mode,
+    distance_flag,
+    reference_perspective_id,
+    figure_flag,
+    distance_vowel_flag,
+    distance_consonant_flag,
     locale_id,
     storage,
     task_key,
@@ -2391,6 +2416,11 @@ class CognateAnalysis(graphene.Mutation):
         group_field_id=LingvodocID(required=True)
         perspective_info_list=graphene.List(graphene.List(LingvodocID), required=True)
         mode=graphene.String()
+        distance_flag=graphene.Boolean()
+        reference_perspective_id=LingvodocID()
+        figure_flag=graphene.Boolean()
+        distance_vowel_flag=graphene.Boolean()
+        distance_consonant_flag=graphene.Boolean()
 
     triumph = graphene.Boolean()
     dictionary_count = graphene.Int()
@@ -2400,6 +2430,8 @@ class CognateAnalysis(graphene.Mutation):
     translation_count = graphene.Int()
     result = graphene.String()
     xlsx_url = graphene.String()
+    distance_list = graphene.Field(ObjectVal)
+    figure_url = graphene.String()
 
     @staticmethod
     def tag_data_std(
@@ -2920,6 +2952,8 @@ class CognateAnalysis(graphene.Mutation):
         base_language_id,
         mode,
         output_str,
+        d_output_str,
+        perspective_count,
         __debug_flag__ = False):
         """
         Parses results of the cognate analysis and exports them as an XLSX file.
@@ -2941,7 +2975,7 @@ class CognateAnalysis(graphene.Mutation):
         max_width = 0
         row_count = 0
 
-        def export_table(table_index, table_str, n_col, n_row):
+        def export_table(table_index, table_str, n_col, n_row, source_str):
             """
             Parses from the binary output and exports to the XLSX workbook a table with specified width and
             height.
@@ -2967,8 +3001,8 @@ class CognateAnalysis(graphene.Mutation):
 
                 for j in range(n_col):
 
-                    index_next = output_str.find('\0', index + 1)
-                    value = output_str[index + 1 : index_next]
+                    index_next = source_str.find('\0', index + 1)
+                    value = source_str[index + 1 : index_next]
 
                     value_list.append(value)
                     index = index_next
@@ -2996,7 +3030,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 # Going on another row of analysis results.
 
-                if output_str[index + 1] != '\0':
+                if source_str[index + 1] != '\0':
                     raise NotImplementedError
 
                 index += 1
@@ -3016,7 +3050,7 @@ class CognateAnalysis(graphene.Mutation):
         for table_index, howmany in enumerate(range(len(size_list) // 2)):
 
             n_col, n_row = size_list[howmany * 2 : howmany * 2 + 2]
-            export_table(table_index, 'result', n_col, n_row)
+            export_table(table_index, 'result', n_col, n_row, output_str)
 
         # And now we parse formant plot data, if we have any.
 
@@ -3051,7 +3085,7 @@ class CognateAnalysis(graphene.Mutation):
                 n_col, n_row = size_list[howmany * 2 : howmany * 2 + 2]
 
                 row_list = export_table(
-                    table_index, 'plot', n_col, n_row)
+                    table_index, 'plot', n_col, n_row, output_str)
 
                 plot_title = row_list[0][0]
                 
@@ -3180,6 +3214,61 @@ class CognateAnalysis(graphene.Mutation):
 
                     chart_2d_count += 1
 
+        # If we have distance matrix data, we also parse and export it.
+
+        matrix_info_list = None
+
+        if d_output_str != None:
+
+            index = d_output_str.find('\0')
+            size_list = list(map(int, d_output_str[:index].split(',')))
+
+            log.debug(
+                'cognate_analysis {0}/{1}: distance result table size {2}'.format(
+                base_language_id[0], base_language_id[1],
+                size_list))
+
+            matrix_info_list = []
+
+            # Parsing and exporting each distance matrix.
+
+            for table_index, howmany in enumerate(range(len(size_list) // 2)):
+
+                n_col, n_row = size_list[howmany * 2 : howmany * 2 + 2]
+
+                row_list = export_table(
+                    table_index, 'distance result', n_col, n_row, d_output_str)
+
+                matrix_title = row_list[0][0]
+                
+                if not matrix_title:
+                    continue
+
+                # Getting distance matrix info.
+
+                matrix_header_list = []
+                matrix_data_list = []
+
+                for row in row_list[1:]:
+
+                    if row[0]:
+
+                        matrix_header_list.append(row[0])
+                        matrix_data_list.append(row[1 : 1 + perspective_count])
+
+                matrix_info_list.append((
+                    matrix_title, matrix_header_list, matrix_data_list))
+
+                # Showing info of the matrix we've got.
+
+                log.debug(
+                    'cognate_analysis {0}/{1}: distance data {2}:\n{3}\n{4}\n{5}'.format(
+                    base_language_id[0], base_language_id[1],
+                    table_index,
+                    repr(matrix_title),
+                    pprint.pformat(matrix_header_list, width = 144),
+                    pprint.pformat(matrix_data_list, width = 144)))
+
         workbook.close()
 
         # Saving resulting Excel workbook for debug purposes, if required.
@@ -3200,7 +3289,9 @@ class CognateAnalysis(graphene.Mutation):
             with open(xlsx_file_name, 'wb') as xlsx_file:
                 shutil.copyfileobj(workbook_stream, xlsx_file)
 
-        return workbook_stream
+        # Returning exported XLSX data as a binary stream and any parsed distance matrix info.
+
+        return workbook_stream, matrix_info_list
 
     @staticmethod
     def acoustic_data(
@@ -3408,6 +3499,11 @@ class CognateAnalysis(graphene.Mutation):
         group_field_id,
         perspective_info_list,
         mode,
+        distance_flag,
+        reference_perspective_id,
+        figure_flag,
+        distance_vowel_flag,
+        distance_consonant_flag,
         locale_id,
         storage,
         task_status = None,
@@ -3450,6 +3546,8 @@ class CognateAnalysis(graphene.Mutation):
             tag_data_file_name = \
                 '__tag_data_{0}_{1}_{2}__.gz'.format(
                     base_language_id[0], base_language_id[1], tag_data_digest)
+
+            # Checking if we have saved data.
 
             import pickle
 
@@ -3704,21 +3802,26 @@ class CognateAnalysis(graphene.Mutation):
         # Ok, and now we form the source data for analysis.
 
         result_list = [[]]
-        perspective_list = []
+
+        perspective_id_list = []
+        perspective_name_list = []
 
         for perspective_id, transcription_field_id, translation_field_id in perspective_info_list:
 
+            perspective_id_list.append(perspective_id)
             perspective_data = perspective_dict[perspective_id]
 
             perspective_str = '{0} - {1}'.format(
                 perspective_data['dictionary_name'],
                 perspective_data['perspective_name'])
 
-            perspective_list.append(perspective_str)
+            perspective_name_list.append(perspective_str)
             result_list[0].extend([perspective_str, ''])
 
-        log.debug('\n' +
-            pprint.pformat(perspective_list, width = 108))
+        log.debug(
+            '\ncognate_analysis {0}/{1}:\nperspective_list:\n{2}'.format(
+            base_language_id[0], base_language_id[1],
+            pprint.pformat(perspective_name_list, width = 108)))
 
         # Each group of lexical entries.
 
@@ -3819,7 +3922,9 @@ class CognateAnalysis(graphene.Mutation):
                 transcription_count = total_transcription_count,
                 translation_count = total_translation_count,
                 result = '',
-                xlsx_url = '')
+                xlsx_url = '',
+                distance_list = [],
+                figure_url = '')
 
         analysis_f = (
             cognate_acoustic_analysis_f if mode == 'acoustic' else
@@ -3966,7 +4071,7 @@ class CognateAnalysis(graphene.Mutation):
             base_language_id[0], base_language_id[1],
             result_binary))
 
-        if result <= 0:
+        if result_binary <= 0:
 
             if task_status is not None:
 
@@ -3976,7 +4081,7 @@ class CognateAnalysis(graphene.Mutation):
             return ResponseError(message =
                 'Cognate analysis library call (binary) error {0}'.format(result_binary))
 
-        # Showing what we've got from the binary output call, indicating task's final stage, if required.
+        # Showing what we've got from the binary output call.
 
         output_binary = output_buffer[:result_binary]
 
@@ -3986,13 +4091,121 @@ class CognateAnalysis(graphene.Mutation):
             pprint.pformat([output_binary[i : i + 256]
                 for i in range(0, len(output_binary), 256)], width = 144)))
 
+        # Performing etymological distance analysis, if required.
+
+        d_output = None
+        d_output_binary = None
+
+        if distance_flag or figure_flag:
+
+            d_output_buffer_size = cognate_distance_analysis_f(
+                None, len(perspective_info_list), len(result_list), None, 1)
+
+            log.debug(
+                'cognate_analysis {0}/{1}: distance output buffer size {2}'.format(
+                base_language_id[0], base_language_id[1],
+                d_output_buffer_size))
+
+            d_output_buffer = ctypes.create_unicode_buffer(d_output_buffer_size + 256)
+
+            d_result = cognate_distance_analysis_f(
+                input_buffer, len(perspective_info_list), len(result_list), d_output_buffer, 1)
+
+            # If we don't have a good result, we return an error.
+
+            log.debug(
+                'cognate_analysis {0}/{1}: distance result {2}'.format(
+                base_language_id[0], base_language_id[1],
+                d_result))
+
+            if d_result <= 0:
+
+                if task_status is not None:
+
+                    task_status.set(5, 100,
+                        'Finished (ERROR): library call error {0}'.format(d_result))
+
+                return ResponseError(message =
+                    'Cognate analysis library call error {0}'.format(d_result))
+
+            # Showing what we've got.
+
+            d_output = d_output_buffer.value
+
+            log.debug(
+                'cognate_analysis {0}/{1}:\ndistance output:\n{2}'.format(
+                base_language_id[0], base_language_id[1],
+                pprint.pformat([d_output[i : i + 256]
+                    for i in range(0, len(d_output), 256)], width = 144)))
+
+            # Saving distance output buffer and distance output to files, if required.
+
+            if __debug_flag__:
+
+                d_output_file_name = (
+                    'output cognate distance {0} {1} {2}.buffer'.format(
+                    language_name.strip(),
+                    len(perspective_info_list),
+                    len(result_list)))
+
+                with open(d_output_file_name, 'wb') as d_output_file:
+                    d_output_file.write(bytes(d_output_buffer))
+
+                d_output_file_name = (
+                    'output cognate distance {0} {1} {2}.utf16'.format(
+                    language_name.strip(),
+                    len(perspective_info_list),
+                    len(result_list)))
+
+                with open(d_output_file_name, 'wb') as d_output_file:
+                    d_output_file.write(d_output.encode('utf-16'))
+
+            # Getting binary output for parsing and exporting.
+
+            d_result_binary = cognate_distance_analysis_f(
+                input_buffer, len(perspective_info_list), len(result_list), d_output_buffer, 2)
+
+            log.debug(
+                'cognate_analysis {0}/{1}: distance result_binary {2}'.format(
+                base_language_id[0], base_language_id[1],
+                d_result_binary))
+
+            if d_result_binary <= 0:
+
+                if task_status is not None:
+
+                    task_status.set(5, 100,
+                        'Finished (ERROR): library call (binary) error {0}'.format(d_result_binary))
+
+                return ResponseError(message =
+                    'Cognate analysis library call (binary) error {0}'.format(d_result_binary))
+
+            # Showing what we've got from the binary output call.
+
+            d_output_binary = d_output_buffer[:d_result_binary]
+
+            log.debug(
+                'cognate_analysis {0}/{1}:\ndistance output_binary:\n{2}'.format(
+                base_language_id[0], base_language_id[1],
+                pprint.pformat([d_output_binary[i : i + 256]
+                    for i in range(0, len(d_output_binary), 256)], width = 144)))
+        
+        # Indicating task's final stage, if required.
+
         if task_status is not None:
             task_status.set(4, 99, 'Exporting analysis results to XLSX')
 
         # Parsing analysis results and exporting them as an Excel file.
 
-        workbook_stream = CognateAnalysis.export_xlsx(
-            base_language_id, mode, output_binary, __debug_flag__)
+        workbook_stream, distance_matrix_list = (
+                
+            CognateAnalysis.export_xlsx(
+                base_language_id,
+                mode,
+                output_binary,
+                d_output_binary,
+                len(perspective_info_list),
+                __debug_flag__))
 
         current_datetime = datetime.datetime.now(datetime.timezone.utc)
 
@@ -4022,10 +4235,264 @@ class CognateAnalysis(graphene.Mutation):
             storage['prefix'], storage['static_route'],
             'cognate', '/', str(cur_time), '/', xlsx_filename])
 
-        if task_status is not None:
-            task_status.set(5, 100, 'Finished', result_link = xlsx_url)
+        # Selecting one of the distance matrices, if we have any.
 
-        # Returning result.
+        if distance_matrix_list is not None:
+
+            matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[-1]
+
+            if distance_vowel_flag and distance_consonant_flag:
+                matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[2]
+
+            elif distance_vowel_flag:
+                matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[0]
+
+            elif distance_consonant_flag:
+                matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[1]            
+
+        # Generating list of etymological distances to the reference perspective, if required.
+
+        distance_list = None
+
+        if distance_flag and reference_perspective_id is not None:
+
+            reference_index = None
+
+            for index, perspective_id in enumerate(perspective_id_list):
+                if perspective_id == reference_perspective_id:
+
+                    reference_index = index
+                    break
+
+            if reference_index is not None:
+
+                distance_value_list = list(map(
+                    float, matrix_data_list[reference_index]))
+
+                max_distance = float(max(distance_value_list))
+
+                # Compiling and showing relative distance list.
+
+                distance_list = [
+
+                    (perspective_id, distance / max_distance)
+
+                    for perspective_id, distance in zip(
+                        perspective_id_list, distance_value_list)]
+
+                log.debug(
+                    '\ncognate_analysis {0}/{1}:'
+                    '\n  perspective_id_list: {2}'
+                    '\n  perspective_name_list:\n{3}'
+                    '\n  reference_perspective_id: {4}'
+                    '\n  reference_index: {5}'
+                    '\n  distance_value_list: {6}'
+                    '\n  max_distance: {7}'
+                    '\n  distance_list: {8}'.format(
+                    base_language_id[0], base_language_id[1],
+                    perspective_id_list,
+                    pprint.pformat(perspective_name_list, width = 144),
+                    reference_perspective_id,
+                    reference_index,
+                    distance_value_list,
+                    max_distance,
+                    distance_list))
+
+        # Generating distance graph, if required.
+
+        figure_url = None
+
+        if figure_flag:
+
+            d_ij = numpy.array([
+                tuple(map(float, value_list))
+                for value_list in matrix_data_list])
+
+            log.debug(
+                '\ncognate_analysis {0}/{1}:'
+                '\ndistance_matrix:\n{2}'.format(
+                base_language_id[0], base_language_id[1],
+                d_ij))
+
+            # Projecting the graph into a 2d plane via multidimensional scaling, using PCA to orient it
+            # left-right.
+
+            mds = sklearn.manifold.MDS(
+                dissimilarity = 'precomputed',
+                random_state = 17,
+                eps = 1e-6)
+
+            pca = sklearn.decomposition.PCA(n_components = 2)
+
+            result_x = pca.fit_transform(mds.fit(d_ij).embedding_)
+            result_d = sklearn.metrics.euclidean_distances(result_x)
+            
+            log.debug(
+                '\ncognate_analysis {0}/{1}:'
+                '\nembedding:\n{2}'
+                '\nstrain:\n{3}'
+                '\ndistances:\n{4}'.format(
+                base_language_id[0], base_language_id[1],
+                result_x,
+                mds.fit(d_ij).stress_,
+                result_d))
+
+            # Computing minimum spanning tree, plotting with matplotlib.
+
+            mst = scipy.sparse.csgraph.minimum_spanning_tree(d_ij + numpy.ones(d_ij.shape))
+            mst_2d = scipy.sparse.csgraph.minimum_spanning_tree(result_d + numpy.ones(result_d.shape))
+
+            log.debug(
+                '\ncognate_analysis {0}/{1}:'
+                '\nminimum spanning tree:\n{2}'
+                '\nminimum spanning tree (2d embedding):\n{3}'.format(
+                base_language_id[0], base_language_id[1],
+                mst,
+                mst_2d))
+
+            figure = pyplot.figure(figsize = (10, 10))
+
+            axes_a = figure.add_subplot(211)
+            axes_a.set_title('Etymological distance tree', fontsize = 14, family = 'Gentium')
+
+            axes_a.axis('equal')
+            axes_a.axis('off')
+            axes_a.autoscale()
+
+            axes_b = figure.add_subplot(212)
+            axes_b.set_title('2D embedding distance tree', fontsize = 14, family = 'Gentium')
+
+            axes_b.axis('equal')
+            axes_b.axis('off')
+            axes_b.autoscale()
+
+            # Plotting positions.
+
+            x_delta = max(result_x[:, 0]) - min(result_x[:, 0])
+            y_delta = max(result_x[:, 1]) - min(result_x[:, 1])
+
+            result_x /= max(x_delta, y_delta)
+
+            for index, (position, name) in enumerate(
+                zip(result_x, perspective_name_list)):
+
+                color = matplotlib.colors.hsv_to_rgb(
+                    [index * 1.0 / len(perspective_name_list), 0.5, 0.75])
+
+                # Checking if any of the previous perspectives are already in this perspective's position.
+
+                same_position_index = None
+
+                for i, p in enumerate(result_x[:index]):
+                    if numpy.linalg.norm(position - p) <= 1e-3:
+
+                        same_position_index = i
+                        break
+
+                label_same_str = (
+                    '' if same_position_index is None else
+                    ' (same as {0})'.format(same_position_index + 1))
+
+                for axes in axes_a, axes_b:
+
+                    axes.scatter(
+                        position[0], position[1],
+                        s = 35, color = color,
+                        label = '{0}) {1}{2}'.format(index + 1, name, label_same_str))
+
+                # Annotating position with its number, but only if we hadn't already annotated nearby.
+
+                if same_position_index is None:
+
+                    for axes in axes_a, axes_b:
+
+                        axes.annotate(str(index + 1),
+                            (position[0] + 0.01, position[1] - 0.005),
+                            fontsize = 14)
+
+            # Plotting minimum spanning trees.
+
+            for axes, mst in zip([axes_a, axes_b], [mst, mst_2d]):
+
+                mst_c = mst.tocoo()
+
+                line_list = [
+                    (result_x[i], result_x[j])
+                    for i, j in zip(mst_c.row, mst_c.col)]
+
+                line_collection = LineCollection(line_list, zorder = 0, color = 'gray')
+                axes.add_collection(line_collection)
+
+            pyplot.setp(axes_a.texts, family = 'Gentium')
+            pyplot.setp(axes_b.texts, family = 'Gentium')
+
+            pyplot.tight_layout()
+
+            legend = axes_b.legend(
+                scatterpoints = 1,
+                loc = 'upper center',
+                bbox_to_anchor = (0.5, -0.05),
+                frameon = False,
+                handlelength = 0.5,
+                handletextpad = 0.75,
+                fontsize = 14)
+
+            pyplot.setp(legend.texts, family = 'Gentium')
+
+            axes_a.autoscale_view()
+            axes_b.autoscale_view()
+
+            # Saving generated figure for debug purposes, if required.
+
+            if __debug_flag__:
+
+                figure_file_name = (
+                    'figure cognate distance {0} {1} {2}.png'.format(
+                    language_name.strip(),
+                    len(perspective_info_list),
+                    len(result_list)))
+
+                with open(figure_file_name, 'wb') as figure_file:
+
+                    pyplot.savefig(
+                        figure_file,
+                        bbox_extra_artists = (legend,),
+                        bbox_inches = 'tight',
+                        pad_inches = 0.25,
+                        format = 'png')
+
+            # Storing generated figure as a PNG image.
+
+            figure_filename = pathvalidate.sanitize_filename(
+                '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
+                    language_name[:64],
+                    ' acoustic' if mode == 'acoustic' else '',
+                    current_datetime.year,
+                    current_datetime.month,
+                    current_datetime.day))
+
+            figure_path = os.path.join(storage_dir, figure_filename)
+            os.makedirs(os.path.dirname(figure_path), exist_ok = True)
+
+            with open(figure_path, 'wb') as figure_file:
+
+                pyplot.savefig(
+                    figure_file,
+                    bbox_extra_artists = (legend,),
+                    bbox_inches = 'tight',
+                    pad_inches = 0.25,
+                    format = 'png')
+
+            figure_url = ''.join([
+                storage['prefix'], storage['static_route'],
+                'cognate', '/', str(cur_time), '/', figure_filename])
+
+        # Finalizing task status, if required, returning result.
+
+        if task_status is not None:
+
+            task_status.set(5, 100, 'Finished', result_link_list =
+                [xlsx_url] + ([] if figure_url is None else [figure_url]))
 
         return CognateAnalysis(
             triumph = True,
@@ -4035,7 +4502,9 @@ class CognateAnalysis(graphene.Mutation):
             transcription_count = total_transcription_count,
             translation_count = total_translation_count,
             result = wrapped_output,
-            xlsx_url = xlsx_url)
+            xlsx_url = xlsx_url,
+            distance_list = distance_list,
+            figure_url = figure_url)
 
     @staticmethod
     def mutate(self, info, **args):
@@ -4067,6 +4536,13 @@ class CognateAnalysis(graphene.Mutation):
 
         mode = args.get('mode')
 
+        distance_flag = args.get('distance_flag')
+        reference_perspective_id = args.get('reference_perspective_id')
+
+        figure_flag = args.get('figure_flag')
+        distance_vowel_flag = args.get('distance_vowel_flag')
+        distance_consonant_flag = args.get('distance_consonant_flag')
+
         __debug_flag__ = False
 
         try:
@@ -4091,15 +4567,27 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  group field: {3}/{4}'
                  '\n  perspectives and transcription/translation fields: {5}'
                  '\n  mode: {6}'
-                 '\n  cognate_analysis_f: {7}'
-                 '\n  cognate_acoustic_analysis_f: {8}'.format(
+                 '\n  distance_flag: {7}'
+                 '\n  reference_perspective_id: {8}'
+                 '\n  figure_flag: {9}'
+                 '\n  distance_vowel_flag: {10}'
+                 '\n  distance_consonant_flag: {11}'
+                 '\n  cognate_analysis_f: {12}'
+                 '\n  cognate_acoustic_analysis_f: {13}'
+                 '\n  cognate_distance_analysis_f: {14}'.format(
                     base_language_id[0], base_language_id[1],
                     repr(language_name.strip()),
                     group_field_id[0], group_field_id[1],
                     perspective_info_list,
                     repr(mode),
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
                     repr(cognate_analysis_f),
-                    repr(cognate_acoustic_analysis_f)))
+                    repr(cognate_acoustic_analysis_f),
+                    repr(cognate_distance_analysis_f)))
 
             # Checking if we have analysis function ready.
 
@@ -4115,6 +4603,8 @@ class CognateAnalysis(graphene.Mutation):
                         'CognateAcousticAnalysis_GetAllOutput' if mode == 'acoustic' else
                         'CognateAnalysis_GetAllOutput'))
 
+            # Transforming client/object pair ids from lists to 2-tuples.
+
             perspective_info_list = [
 
                 (tuple(perspective_id),
@@ -4124,6 +4614,9 @@ class CognateAnalysis(graphene.Mutation):
                 for perspective_id,
                     transcription_field_id,
                     translation_field_id in perspective_info_list]
+
+            if reference_perspective_id is not None:
+                reference_perspective_id = tuple(reference_perspective_id)
 
             # If we are to use acoustic data, we will launch cognate analysis in asynchronous mode.
 
@@ -4148,6 +4641,11 @@ class CognateAnalysis(graphene.Mutation):
                     group_field_id,
                     perspective_info_list,
                     mode,
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
                     locale_id,
                     storage,
                     task_status.key,
@@ -4169,6 +4667,11 @@ class CognateAnalysis(graphene.Mutation):
                     group_field_id,
                     perspective_info_list,
                     mode,
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
                     locale_id,
                     storage,
                     None,
