@@ -322,9 +322,7 @@ class ConnectLexicalEntries(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, info, **args):
-        request = info.context.request
-        variables = {'auth': authenticated_userid(request)}
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         tags = list()
         tag = args.get('id')

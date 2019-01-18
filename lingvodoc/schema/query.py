@@ -35,7 +35,8 @@ from lingvodoc.schema.gql_column import (
 )
 from lingvodoc.schema.gql_basegroup import (
     BaseGroup,
-)
+    CreateBasegroup,
+    AddUserToBasegroup)
 from lingvodoc.schema.gql_group import (
     Group
 )
@@ -455,7 +456,26 @@ class Query(graphene.ObjectType):
                                        threshold=graphene.Float(),
                                        field_selection_list=graphene.List(ObjectVal), )
     select_tags_metadata = ObjectVal()
+    get_user_groups = graphene.Field(
+        graphene.List(graphene.String), id=graphene.Int(required=False))
 
+
+    def resolve_get_user_groups(self, info, id=None):
+        if id:
+            user = DBSession.query(dbUser).filter(dbUser.id == id).first()
+        else:
+            client_id = info.context.get('client_id')
+            user = Client.get_user_by_client_id(client_id)
+        if not user:
+            return None
+        all_basegroups = DBSession.query(dbBaseGroup).all()
+        user_groups = list()
+        for base in all_basegroups:
+            group = DBSession.query(dbGroup).filter(dbGroup.base_group_id==base.id).first()
+            if group:
+                if user in group.users:
+                    user_groups.append(base.name)
+        return user_groups
 
     def resolve_select_tags_metadata(self, info):
         def get_sorted_metadata_keys(metadata_name):
@@ -3014,7 +3034,7 @@ class CognateAnalysis(graphene.Mutation):
                 size_list))
 
             # Getting plot info, exporting it to the XLSX workbook, generating plots.
-        
+
             worksheet_table_2d = workbook.add_worksheet('F-table')
             worksheet_chart = workbook.add_worksheet('F-chart')
 
@@ -3029,7 +3049,7 @@ class CognateAnalysis(graphene.Mutation):
                     table_index, 'plot', n_col, n_row)
 
                 plot_title = row_list[0][0]
-                
+
                 if not plot_title:
                     continue
 
@@ -3116,7 +3136,7 @@ class CognateAnalysis(graphene.Mutation):
                 # Compiling info of the formant scatter chart data series.
 
                 chart_dict_list, table_2d_row_index = (
-                    
+
                     phonology.chart_definition_list(
                         chart_data_2d_list, worksheet_table_2d,
                         min_2d_f1, max_2d_f1, min_2d_f2, max_2d_f2,
@@ -4431,7 +4451,7 @@ class AddRolesBulk(graphene.Mutation):
       add_roles_bulk(user_id: 5, language_id: [508, 36]) {
         triumph } }
     """
-    
+
     class Arguments:
         user_id = graphene.Int(required=True)
         language_id = LingvodocID(required=True)
@@ -4630,6 +4650,8 @@ class MyMutations(graphene.ObjectType):
     merge_bulk = MergeBulk.Field()
     move_column = MoveColumn.Field()
     add_roles_bulk = AddRolesBulk.Field()
+    create_basegroup = CreateBasegroup.Field()
+    add_user_to_basegroup = AddUserToBasegroup.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

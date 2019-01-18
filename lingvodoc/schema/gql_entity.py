@@ -4,7 +4,6 @@ import shutil
 from pathvalidate import sanitize_filename
 import graphene
 from sqlalchemy import and_, or_, tuple_
-from lingvodoc.models import DBSession
 from lingvodoc.schema.gql_holders import (
     fetch_object,
     ObjectVal,
@@ -541,7 +540,7 @@ class ApproveAllForUser(graphene.Mutation):
         # Filtering by user id, if required.
 
         if user_id is not None:
-            
+
             list_of_clients_of_given_user = [
                 x[0] for x in DBSession.query(Client.id).filter_by(user_id=user_id).all()]
 
@@ -614,7 +613,7 @@ class ApproveAllForUser(graphene.Mutation):
                         dbLexicalEntry.parent_client_id == given_perspective.client_id,
                         dbLexicalEntry.parent_object_id == given_perspective.object_id,
                         entity_select_condition)
-                    
+
                     .all())
 
             for entity in entities:
