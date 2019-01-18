@@ -481,7 +481,50 @@ class Query(graphene.ObjectType):
     select_tags_metadata = ObjectVal()
     get_user_groups = graphene.Field(
         graphene.List(graphene.String), id=graphene.Int(required=False))
+    perspectives_fields_intersection = graphene.Field(
+        graphene.List(Field), perspectives=graphene.List(LingvodocID),)
 
+    def resolve_perspectives_fields_intersection(self, info, perspectives=None):
+        """
+        query qwe($perspective_list: [LingvodocID] ){
+        perspective_fields_intersection(perspectives: $perspective_list){
+            id
+            data_type
+            translation
+        }
+        }
+
+
+        {
+            "perspective_list": [
+                [
+                    504,
+                    5
+                ],
+                [
+                    743,
+                    127939
+                ]
+            ]
+        }
+        """
+
+        field_ids_cte = DBSession.query(
+            dbPerspectiveToField.field_client_id, dbPerspectiveToField.field_object_id).filter(
+            tuple_(dbPerspectiveToField.parent_client_id, dbPerspectiveToField.parent_object_id).in_(perspectives)).distinct().cte()
+        field_objects = DBSession.query(dbField).join(field_ids_cte).filter(dbField.client_id==field_ids_cte.c.field_client_id,
+                                                                            dbField.object_id==field_ids_cte.c.field_object_id,
+                                                                            ).distinct()
+
+
+        gql_fields = list()
+        for db_field in field_objects:
+            if db_field.data_type == "Text":
+                gql_field = Field()
+                gql_field.dbObject = db_field
+                gql_fields.append(gql_field)
+
+        return gql_fields
 
     def resolve_get_user_groups(self, info, id=None):
         if id:
