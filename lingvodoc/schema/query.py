@@ -2167,7 +2167,7 @@ class PhonemicAnalysis(graphene.Mutation):
 
         locale_id = info.context.get('locale_id') or 2
 
-        __debug_flag__ = True
+        __debug_flag__ = False
 
         try:
 
