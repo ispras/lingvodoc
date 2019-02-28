@@ -189,7 +189,20 @@ def check_direct(client_id, request, action, subject, subject_id):
     client_id = get_effective_client_id(client_id, request)
 
     if not client_id:
-        return False
+
+        # Special case for perspective, we allow anonymous view access based on perspective state.
+
+        if not isinstance(subject_id, (list, tuple)):
+            return False
+
+        subject_client_id, subject_object_id = subject_id[:2]
+
+        perspective = DBSession.query(DictionaryPerspective).filter_by(
+            client_id = subject_client_id, object_id = subject_object_id).first()
+
+        return (perspective and
+            (perspective.state == 'Published' or perspective.state == 'Limited access') and
+            (action == 'view' or action == 'preview'))
 
     try:
         user = Client.get_user_by_client_id(client_id)
@@ -323,7 +336,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         return False
 
-    # Ok, we have a subject we do not know hot to process, so we terminate with error.
+    # Ok, we have a subject we do not know how to process, so we terminate with error.
     # 
     # In the normal course of operation we shouldn't ever be able to reach this code, but if we somehow do,
     # we at least should know that something is not right.
