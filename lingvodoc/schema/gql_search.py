@@ -544,22 +544,15 @@ class AdvancedSearch(LingvodocObjectType):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
-
-
         d_filter = []
         if dicts_to_filter:
             d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
-            # dictionaries = dictionaries.filter(
-            #     tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
         if languages:
             if dicts_to_filter:
                 d_filter.append(
                     tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
                 )
         dictionaries = dictionaries.filter(or_(*d_filter))
-
-                # dictionaries = dictionaries._or(lang_dicts)
-
 
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
@@ -701,17 +694,15 @@ class AdvancedSearchSimple(LingvodocObjectType):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
+        d_filter = []
         if dicts_to_filter:
-            dictionaries = dictionaries.filter(
-                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+            d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
         if languages:
             if dicts_to_filter:
-                lang_dicts = dictionaries.join(dbDictionary.parent).filter(
-                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
-                dictionaries = dictionaries._or(lang_dicts)
-            else:
-                dictionaries = dictionaries.join(dbDictionary.parent).filter(
-                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
+                d_filter.append(
+                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
+                )
+        dictionaries = dictionaries.filter(or_(*d_filter))
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
 
