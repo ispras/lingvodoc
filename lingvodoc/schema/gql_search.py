@@ -544,12 +544,13 @@ class AdvancedSearch(LingvodocObjectType):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
-        if languages:
-            dictionaries = dictionaries.join(dbDictionary.parent).filter(
-                tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
         if dicts_to_filter:
             dictionaries = dictionaries.filter(
                 tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+        if languages:
+            lang_dicts = dictionaries.join(dbDictionary.parent).filter(
+                tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
+            dictionaries = dictionaries.union(lang_dicts)
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
         if publish:
@@ -691,12 +692,13 @@ class AdvancedSearchSimple(LingvodocObjectType):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
-        if languages:
-            dictionaries = dictionaries.join(dbDictionary.parent).filter(
-                tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
         if dicts_to_filter:
             dictionaries = dictionaries.filter(
                 tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+        if languages:
+            lang_dicts = dictionaries.join(dbDictionary.parent).filter(
+                tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
+            dictionaries = dictionaries.union(lang_dicts)
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
 
