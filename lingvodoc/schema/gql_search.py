@@ -544,13 +544,23 @@ class AdvancedSearch(LingvodocObjectType):
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
             marked_for_deletion=False)
+
+
+        d_filter = []
         if dicts_to_filter:
-            dictionaries = dictionaries.filter(
-                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+            d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+            # dictionaries = dictionaries.filter(
+            #     tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
         if languages:
-            lang_dicts = dictionaries.join(dbDictionary.parent).filter(
-                tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
-            dictionaries = dictionaries.union(lang_dicts)
+            if dicts_to_filter:
+                d_filter.append(
+                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
+                )
+        dictionaries = dictionaries.filter(or_(*d_filter))
+
+                # dictionaries = dictionaries._or(lang_dicts)
+
+
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
         if publish:
@@ -571,7 +581,6 @@ class AdvancedSearch(LingvodocObjectType):
                 and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
                      dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
                 filter(dbDictionaryPerspective.marked_for_deletion == False)
-
         if search_metadata:
             if "kind" in search_metadata:
                 kind = search_metadata.get("kind")
@@ -619,9 +628,9 @@ class AdvancedSearch(LingvodocObjectType):
                     DBSession.query(dbDictionary).filter(tuple_(dbDictionary.client_id, dbDictionary.object_id) == x).first(),
                     Dictionary) for x in dictionaries]
             perspective_objects = DBSession.query(dbDictionaryPerspective).filter(
-                dbDictionaryPerspective.marked_for_deletion==False,
-                tuple_(dbDictionaryPerspective.parent_client_id,
-                dbDictionaryPerspective.parent_object_id).in_([(x.dbObject.client_id, x.dbObject.object_id) for x in res_dictionaries])).all()
+               dbDictionaryPerspective.marked_for_deletion==False,
+               tuple_(dbDictionaryPerspective.parent_client_id,
+               dbDictionaryPerspective.parent_object_id).in_([(x.dbObject.client_id, x.dbObject.object_id) for x in res_dictionaries])).all()
             res_perspectives = [graphene_obj(x, DictionaryPerspective) for x in perspective_objects]
 
             return cls(entities=[], lexical_entries=[], perspectives=res_perspectives, dictionaries=res_dictionaries)
@@ -696,9 +705,13 @@ class AdvancedSearchSimple(LingvodocObjectType):
             dictionaries = dictionaries.filter(
                 tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
         if languages:
-            lang_dicts = dictionaries.join(dbDictionary.parent).filter(
-                tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
-            dictionaries = dictionaries.union(lang_dicts)
+            if dicts_to_filter:
+                lang_dicts = dictionaries.join(dbDictionary.parent).filter(
+                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
+                dictionaries = dictionaries._or(lang_dicts)
+            else:
+                dictionaries = dictionaries.join(dbDictionary.parent).filter(
+                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages))
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
 
