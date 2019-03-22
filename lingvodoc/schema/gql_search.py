@@ -688,7 +688,7 @@ class AdvancedSearch(LingvodocObjectType):
                 d_filter.append(
                     tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
                 )
-        dictionaries = dictionaries.filter(or_(*d_filter))
+        dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
 
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
@@ -871,7 +871,7 @@ class AdvancedSearchSimple(LingvodocObjectType):
                 d_filter.append(
                     tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
                 )
-        dictionaries = dictionaries.filter(or_(*d_filter))
+        dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
         if tag_list:
             dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
 
