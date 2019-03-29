@@ -2448,6 +2448,11 @@ def async_cognate_analysis(
                 group_field_id,
                 perspective_info_list,
                 mode,
+                None,
+                None,
+                None,
+                None,
+                None,
                 locale_id,
                 storage,
                 task_status,
@@ -3319,18 +3324,66 @@ class CognateAnalysis(graphene.Mutation):
                         matrix_header_list.append(row[0])
                         matrix_data_list.append(row[1 : 1 + perspective_count])
 
-                matrix_info_list.append((
-                    matrix_title, matrix_header_list, matrix_data_list))
+                # Getting distance matrix array, checking if we need to filter its parts.
+
+                matrix_header_array = numpy.array(matrix_header_list)
+
+                matrix_data_array = numpy.array([
+                    tuple(map(float, value_list))
+                    for value_list in matrix_data_list])
+
+                log.debug(matrix_header_array)
+                log.debug(matrix_data_array)
+
+                where = matrix_data_array[:,0] >= 0
+
+                if not all(where):
+
+                    matrix_header_array = matrix_header_array[where]
+                    matrix_data_array = matrix_data_array[where, :][:, where]
+
+                    # If we do, we also export filtered version.
+
+                    worksheet_results.write(
+                        'A{0}'.format(row_count + 1), 'Filtered:')
+
+                    row_count += 2
+
+                    worksheet_results.write_row(
+                        'A{0}'.format(row_count + 1),
+                        [''] + list(matrix_header_array))
+
+                    row_count += 1
+
+                    for i, header in enumerate(matrix_header_array):
+
+                        worksheet_results.write_row(
+                            'A{0}'.format(row_count + 1),
+                            [header] + [round(value) for value in matrix_data_array[i]])
+
+                        row_count += 1
 
                 # Showing info of the matrix we've got.
 
+                matrix_info_list.append((
+                    matrix_title,
+                    matrix_header_list,
+                    matrix_data_list,
+                    matrix_header_array,
+                    matrix_data_array))
+
                 log.debug(
-                    'cognate_analysis {0}/{1}: distance data {2}:\n{3}\n{4}\n{5}'.format(
+                    'cognate_analysis {0}/{1}: distance data {2}:'
+                    '\n{3}\n{4}\n{5}'
+                    '\nmatrix_header_array:\n{6}'
+                    '\nmatrix_data_array:\n{7}'.format(
                     base_language_id[0], base_language_id[1],
                     table_index,
                     repr(matrix_title),
                     pprint.pformat(matrix_header_list, width = 144),
-                    pprint.pformat(matrix_data_list, width = 144)))
+                    pprint.pformat(matrix_data_list, width = 144),
+                    matrix_header_array,
+                    matrix_data_array))
 
         workbook.close()
 
@@ -4302,16 +4355,22 @@ class CognateAnalysis(graphene.Mutation):
 
         if distance_matrix_list is not None:
 
-            matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[-1]
+            distance_matrix = distance_matrix_list[-1]
 
             if distance_vowel_flag and distance_consonant_flag:
-                matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[2]
+                pass
 
             elif distance_vowel_flag:
-                matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[0]
+                distance_matrix = distance_matrix_list[0]
 
             elif distance_consonant_flag:
-                matrix_title, matrix_header_list, matrix_data_list = distance_matrix_list[1]            
+                distance_matrix = distance_matrix_list[1]
+
+            (distance_title,
+                distance_header_list,
+                distance_data_list,
+                distance_header_array,
+                distance_data_array) = distance_matrix
 
         # Generating list of etymological distances to the reference perspective, if required.
 
@@ -4330,7 +4389,7 @@ class CognateAnalysis(graphene.Mutation):
             if reference_index is not None:
 
                 distance_value_list = list(map(
-                    float, matrix_data_list[reference_index]))
+                    float, distance_data_list[reference_index]))
 
                 max_distance = float(max(distance_value_list))
 
@@ -4367,15 +4426,15 @@ class CognateAnalysis(graphene.Mutation):
 
         if figure_flag:
 
-            d_ij = numpy.array([
-                tuple(map(float, value_list))
-                for value_list in matrix_data_list])
-
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
-                '\ndistance_matrix:\n{2}'.format(
+                '\ndistance_header_array:\n{2}'
+                '\ndistance_data_array:\n{3}'.format(
                 base_language_id[0], base_language_id[1],
-                d_ij))
+                distance_header_array,
+                distance_data_array))
+
+            d_ij = distance_data_array
 
             # Projecting the graph into a 2d plane via multidimensional scaling, using PCA to orient it
             # left-right.
@@ -4403,31 +4462,21 @@ class CognateAnalysis(graphene.Mutation):
             # Computing minimum spanning tree, plotting with matplotlib.
 
             mst = scipy.sparse.csgraph.minimum_spanning_tree(d_ij + numpy.ones(d_ij.shape))
-            mst_2d = scipy.sparse.csgraph.minimum_spanning_tree(result_d + numpy.ones(result_d.shape))
 
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
-                '\nminimum spanning tree:\n{2}'
-                '\nminimum spanning tree (2d embedding):\n{3}'.format(
+                '\nminimum spanning tree:\n{2}'.format(
                 base_language_id[0], base_language_id[1],
-                mst,
-                mst_2d))
+                mst))
 
             figure = pyplot.figure(figsize = (10, 10))
 
-            axes_a = figure.add_subplot(211)
-            axes_a.set_title('Etymological distance tree', fontsize = 14, family = 'Gentium')
+            axes = figure.add_subplot(211)
+            axes.set_title('Etymological distance tree', fontsize = 14, family = 'Gentium')
 
-            axes_a.axis('equal')
-            axes_a.axis('off')
-            axes_a.autoscale()
-
-            axes_b = figure.add_subplot(212)
-            axes_b.set_title('2D embedding distance tree', fontsize = 14, family = 'Gentium')
-
-            axes_b.axis('equal')
-            axes_b.axis('off')
-            axes_b.autoscale()
+            axes.axis('equal')
+            axes.axis('off')
+            axes.autoscale()
 
             # Plotting positions.
 
@@ -4437,10 +4486,7 @@ class CognateAnalysis(graphene.Mutation):
             result_x /= max(x_delta, y_delta)
 
             for index, (position, name) in enumerate(
-                zip(result_x, perspective_name_list)):
-
-                color = matplotlib.colors.hsv_to_rgb(
-                    [index * 1.0 / len(perspective_name_list), 0.5, 0.75])
+                zip(result_x, distance_header_array)):
 
                 # Checking if any of the previous perspectives are already in this perspective's position.
 
@@ -4452,46 +4498,41 @@ class CognateAnalysis(graphene.Mutation):
                         same_position_index = i
                         break
 
+                color = matplotlib.colors.hsv_to_rgb(
+                    [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
+
                 label_same_str = (
                     '' if same_position_index is None else
                     ' (same as {0})'.format(same_position_index + 1))
 
-                for axes in axes_a, axes_b:
-
-                    axes.scatter(
-                        position[0], position[1],
-                        s = 35, color = color,
-                        label = '{0}) {1}{2}'.format(index + 1, name, label_same_str))
+                axes.scatter(
+                    position[0], position[1],
+                    s = 35, color = color,
+                    label = '{0}) {1}{2}'.format(index + 1, name, label_same_str))
 
                 # Annotating position with its number, but only if we hadn't already annotated nearby.
 
                 if same_position_index is None:
 
-                    for axes in axes_a, axes_b:
-
-                        axes.annotate(str(index + 1),
-                            (position[0] + 0.01, position[1] - 0.005),
-                            fontsize = 14)
+                    axes.annotate(str(index + 1),
+                        (position[0] + 0.01, position[1] - 0.005),
+                        fontsize = 14)
 
             # Plotting minimum spanning trees.
 
-            for axes, mst in zip([axes_a, axes_b], [mst, mst_2d]):
+            mst_c = mst.tocoo()
 
-                mst_c = mst.tocoo()
+            line_list = [
+                (result_x[i], result_x[j])
+                for i, j in zip(mst_c.row, mst_c.col)]
 
-                line_list = [
-                    (result_x[i], result_x[j])
-                    for i, j in zip(mst_c.row, mst_c.col)]
+            line_collection = LineCollection(line_list, zorder = 0, color = 'gray')
+            axes.add_collection(line_collection)
 
-                line_collection = LineCollection(line_list, zorder = 0, color = 'gray')
-                axes.add_collection(line_collection)
-
-            pyplot.setp(axes_a.texts, family = 'Gentium')
-            pyplot.setp(axes_b.texts, family = 'Gentium')
-
+            pyplot.setp(axes.texts, family = 'Gentium')
             pyplot.tight_layout()
 
-            legend = axes_b.legend(
+            legend = axes.legend(
                 scatterpoints = 1,
                 loc = 'upper center',
                 bbox_to_anchor = (0.5, -0.05),
@@ -4502,8 +4543,7 @@ class CognateAnalysis(graphene.Mutation):
 
             pyplot.setp(legend.texts, family = 'Gentium')
 
-            axes_a.autoscale_view()
-            axes_b.autoscale_view()
+            axes.autoscale_view()
 
             # Saving generated figure for debug purposes, if required.
 
