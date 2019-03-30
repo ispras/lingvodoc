@@ -262,6 +262,8 @@ import numpy
 import pathvalidate
 import pydub
 import pympi
+
+import scipy.optimize
 import scipy.sparse.csgraph
 
 import sklearn.decomposition
@@ -3332,9 +3334,6 @@ class CognateAnalysis(graphene.Mutation):
                     tuple(map(float, value_list))
                     for value_list in matrix_data_list])
 
-                log.debug(matrix_header_array)
-                log.debug(matrix_data_array)
-
                 where = matrix_data_array[:,0] >= 0
 
                 if not all(where):
@@ -3607,6 +3606,128 @@ class CognateAnalysis(graphene.Mutation):
             log_str, result))
 
         return result
+
+    @staticmethod
+    def graph_2d_embedding(d_ij, verbose = False):
+        """
+        Computes 2d embedding of a graph specified by non-negative simmetrix distance matrix via stress
+        minimization.
+
+        Stress is based on relative strain for non-zero distances and absolute strain for zero distances.
+
+        Let S_ij be source distances, D_ij be 2d distances, then stress is
+
+          Sum[D_ij^2] for S_ij == 0 +
+          Sum[D_ij^2 / S_ij^2 + S_ij^2 / D_ij^2] for S_ij > 0.
+
+        Given D_ij^2 = (x_i - x_j)^2 + (y_i - y_j)^2, xy-gradient used for minimization can be computed
+        using following:
+
+          d[D_ij^2, x_i] = 2 (x_i - x_j)
+          d[D_ij^2, x_j] = -2 (x_i - x_j)
+          d[D_ij^2, y_i] = 2 (y_i - y_j)
+          d[D_ij^2, y_j] = -2 (y_i - y_j)
+
+        Obviously, d[D_ij^2 / S_ij^2, x_i] = 2 (x_i - x_j) / S_ij^2, and so on.
+
+        And, with checking via WolframAlpha,
+
+          d[S_ij^2 / D_ij^2, x_i] = -2 S_ij^2 (x_i - x_j) / D_ij^4, and so on.
+
+        """
+
+        N = numpy.size(d_ij, 0)
+
+        def f(xy):
+            """
+            Computes stress given xy-coordinates.
+            """
+
+            x = xy[:N]
+            y = xy[N:]
+
+            result = 0.0
+
+            for i in range(1, N):
+                for j in range(i):
+
+                    dr2 = (x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2
+
+                    if d_ij[i,j] <= 0:
+                        result += dr2
+
+                    else:
+                        d2_ij = d_ij[i,j] ** 2
+                        result += dr2 / d2_ij + d2_ij / dr2
+
+            return result
+
+        def df(xy):
+            """
+            Computes gradient at the given xy-coordinates.
+            """
+
+            x = xy[:N]
+            y = xy[N:]
+
+            df_x = numpy.zeros(N)
+            df_y = numpy.zeros(N)
+
+            for i in range(1, N):
+                for j in range(i):
+
+                    dx = x[i] - x[j]
+                    dy = y[i] - y[j]
+
+                    dr2 = dx ** 2 + dy ** 2
+
+                    if d_ij[i,j] <= 0:
+
+                        df_x[i] += dx
+                        df_x[j] -= dx
+
+                        df_y[i] += dy
+                        df_y[j] -= dy
+
+                    else:
+
+                        d2_ij = d_ij[i,j] ** 2
+                        factor = (1 / d2_ij - d2_ij / dr2 ** 2)
+
+                        df_x[i] += dx * factor
+                        df_x[j] -= dx * factor
+
+                        df_y[i] += dy * factor
+                        df_y[j] -= dy * factor
+
+            return numpy.concatenate((df_x, df_y))
+
+        iter_count = 0
+
+        def f_callback(xy):
+            """
+            Shows minimization progress, if enabled.
+            """
+
+            nonlocal iter_count
+
+            log.debug(
+                '\niteration {0}:\nxy:\n{1}\nf:\n{2}\ndf:\n{3}'.format(
+                iter_count, xy, f(xy), df(xy)))
+
+            iter_count += 1
+
+        # Performing minization, returning minimization results.
+
+        result = scipy.optimize.minimize(f,
+            numpy.random.rand(N * 2),
+            jac = df,
+            callback = f_callback if verbose else None,
+            options = {'disp': verbose})
+
+        result_x = numpy.stack((result.x[:N], result.x[N:])).T
+
+        return result_x, f(result.x)
 
     @staticmethod
     def perform_cognate_analysis(
@@ -4426,16 +4547,18 @@ class CognateAnalysis(graphene.Mutation):
 
         if figure_flag:
 
+            d_ij = (distance_data_array + distance_data_array.T) / 2
+
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
                 '\ndistance_header_array:\n{2}'
-                '\ndistance_data_array:\n{3}'.format(
+                '\ndistance_data_array:\n{3}'
+                '\nd_ij:\n{4}'.format(
                 base_language_id[0], base_language_id[1],
                 distance_header_array,
-                distance_data_array))
-
-            d_ij = distance_data_array
-
+                distance_data_array,
+                d_ij))
+            
             # Projecting the graph into a 2d plane via multidimensional scaling, using PCA to orient it
             # left-right.
 
@@ -4459,9 +4582,27 @@ class CognateAnalysis(graphene.Mutation):
                 mds.fit(d_ij).stress_,
                 result_d))
 
-            # Computing minimum spanning tree, plotting with matplotlib.
+            # Trying direct optimization with relative distances.
+
+            rel_embedding, rel_strain = CognateAnalysis.graph_2d_embedding(d_ij, verbose = __debug_flag__)
+
+            result2_x = pca.fit_transform(rel_embedding)
+            result2_d = sklearn.metrics.euclidean_distances(result2_x)
+            
+            log.debug(
+                '\ncognate_analysis {0}/{1}:'
+                '\nembedding (rel):\n{2}'
+                '\nstrain (rel):\n{3}'
+                '\ndistances (rel):\n{4}'.format(
+                base_language_id[0], base_language_id[1],
+                result2_x,
+                rel_strain,
+                result2_d))
+
+            # Computing minimum spanning tree.
 
             mst = scipy.sparse.csgraph.minimum_spanning_tree(d_ij + numpy.ones(d_ij.shape))
+            mst_c = mst.tocoo()
 
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
@@ -4469,70 +4610,89 @@ class CognateAnalysis(graphene.Mutation):
                 base_language_id[0], base_language_id[1],
                 mst))
 
+            # Plotting with matplotlib.
+
             figure = pyplot.figure(figsize = (10, 10))
 
-            axes = figure.add_subplot(211)
-            axes.set_title('Etymological distance tree', fontsize = 14, family = 'Gentium')
+            axes_a = figure.add_subplot(211)
+            axes_a.set_title('Etymological distance tree (MDS embedding)', fontsize = 14, family = 'Gentium')
 
-            axes.axis('equal')
-            axes.axis('off')
-            axes.autoscale()
+            axes_a.axis('equal')
+            axes_a.axis('off')
+            axes_a.autoscale()
 
-            # Plotting positions.
+            axes_b = figure.add_subplot(212)
+            axes_b.set_title('Etymological distance tree (RD embedding)', fontsize = 14, family = 'Gentium')
 
-            x_delta = max(result_x[:, 0]) - min(result_x[:, 0])
-            y_delta = max(result_x[:, 1]) - min(result_x[:, 1])
+            axes_b.axis('equal')
+            axes_b.axis('off')
+            axes_b.autoscale()
 
-            result_x /= max(x_delta, y_delta)
+            def f(axes, result_x):
+                """
+                Plots specified graph embedding on a given axis.
+                """
 
-            for index, (position, name) in enumerate(
-                zip(result_x, distance_header_array)):
+                # Plotting positions.
 
-                # Checking if any of the previous perspectives are already in this perspective's position.
+                x_delta = max(result_x[:, 0]) - min(result_x[:, 0])
+                y_delta = max(result_x[:, 1]) - min(result_x[:, 1])
 
-                same_position_index = None
+                result_x /= max(x_delta, y_delta)
 
-                for i, p in enumerate(result_x[:index]):
-                    if numpy.linalg.norm(position - p) <= 1e-3:
+                for index, (position, name) in enumerate(
+                    zip(result_x, distance_header_array)):
 
-                        same_position_index = i
-                        break
+                    # Checking if any of the previous perspectives are already in this perspective's
+                    # position.
 
-                color = matplotlib.colors.hsv_to_rgb(
-                    [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
+                    same_position_index = None
 
-                label_same_str = (
-                    '' if same_position_index is None else
-                    ' (same as {0})'.format(same_position_index + 1))
+                    for i, p in enumerate(result_x[:index]):
+                        if numpy.linalg.norm(position - p) <= 1e-3:
 
-                axes.scatter(
-                    position[0], position[1],
-                    s = 35, color = color,
-                    label = '{0}) {1}{2}'.format(index + 1, name, label_same_str))
+                            same_position_index = i
+                            break
 
-                # Annotating position with its number, but only if we hadn't already annotated nearby.
+                    color = matplotlib.colors.hsv_to_rgb(
+                        [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
 
-                if same_position_index is None:
+                    label_same_str = (
+                        '' if same_position_index is None else
+                        ' (same as {0})'.format(same_position_index + 1))
 
-                    axes.annotate(str(index + 1),
-                        (position[0] + 0.01, position[1] - 0.005),
-                        fontsize = 14)
+                    axes.scatter(
+                        position[0], position[1],
+                        s = 35, color = color,
+                        label = '{0}) {1}{2}'.format(index + 1, name, label_same_str))
 
-            # Plotting minimum spanning trees.
+                    # Annotating position with its number, but only if we hadn't already annotated nearby.
 
-            mst_c = mst.tocoo()
+                    if same_position_index is None:
 
-            line_list = [
-                (result_x[i], result_x[j])
-                for i, j in zip(mst_c.row, mst_c.col)]
+                        axes.annotate(str(index + 1),
+                            (position[0] + 0.01, position[1] - 0.005),
+                            fontsize = 14)
 
-            line_collection = LineCollection(line_list, zorder = 0, color = 'gray')
-            axes.add_collection(line_collection)
+                # Plotting minimum spanning trees.
 
-            pyplot.setp(axes.texts, family = 'Gentium')
+                line_list = [
+                    (result_x[i], result_x[j])
+                    for i, j in zip(mst_c.row, mst_c.col)]
+
+                line_collection = LineCollection(line_list, zorder = 0, color = 'gray')
+                axes.add_collection(line_collection)
+
+                pyplot.setp(axes.texts, family = 'Gentium')
+
+            # Plotting our two embeddings, creating the legend.
+
+            f(axes_a, result_x)
+            f(axes_b, result2_x)
+
             pyplot.tight_layout()
 
-            legend = axes.legend(
+            legend = axes_b.legend(
                 scatterpoints = 1,
                 loc = 'upper center',
                 bbox_to_anchor = (0.5, -0.05),
@@ -4543,7 +4703,8 @@ class CognateAnalysis(graphene.Mutation):
 
             pyplot.setp(legend.texts, family = 'Gentium')
 
-            axes.autoscale_view()
+            axes_a.autoscale_view()
+            axes_b.autoscale_view()
 
             # Saving generated figure for debug purposes, if required.
 
