@@ -1,3 +1,4 @@
+import base64
 import collections
 import copy
 import ctypes
@@ -9,6 +10,7 @@ import itertools
 import logging
 import math
 import os.path
+import pickle
 import pprint
 import shutil
 import textwrap
@@ -218,8 +220,10 @@ import lingvodoc.views.v2.phonology as phonology
 from lingvodoc.views.v2.phonology import (
     AudioPraatLike,
     format_textgrid_result,
+    get_vowel_class,
     Phonology_Parameters,
     process_sound,
+    process_sound_markup,
     process_textgrid)
 
 from lingvodoc.views.v2.utils import anonymous_userid
@@ -258,9 +262,15 @@ matplotlib.use('Agg', warn = False)
 from matplotlib.collections import LineCollection
 from matplotlib import pyplot
 
+from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import proj3d
+
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
 import numpy
 import pathvalidate
 import pydub
+import pylab
 import pympi
 
 import scipy.optimize
@@ -269,6 +279,7 @@ import scipy.sparse.csgraph
 import sklearn.decomposition
 import sklearn.manifold
 import sklearn.metrics
+import sklearn.mixture
 
 import transaction
 import xlsxwriter
@@ -3416,7 +3427,7 @@ class CognateAnalysis(graphene.Mutation):
         markup_entity_id,
         markup_url,
         storage,
-        __debug_flag__):
+        __debug_flag__ = False):
         """
         Extracts acoustic data from a pair of sound recording and its markup, using cache in a manner
         compatible with phonological analysis.
@@ -3428,157 +3439,22 @@ class CognateAnalysis(graphene.Mutation):
                 sound_entity_id[0], sound_entity_id[1],
                 markup_entity_id[0], markup_entity_id[1]))
 
-        log.debug(
-            '{0}\nsound_url: {1}\nmarkup_url: {2}'.format(
-            log_str, sound_url, markup_url))
+        textgrid_result_list = (
 
-        # Checking if we have already cached sound/markup analysis result.
+            process_sound_markup(
+                log_str,
+                sound_entity_id,
+                sound_url,
+                markup_entity_id,
+                markup_url,
+                storage,
+                __debug_flag__))
 
-        cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
-            sound_entity_id[0], sound_entity_id[1],
-            markup_entity_id[0], markup_entity_id[1])
-
-        cache_result = caching.CACHE.get(cache_key)
-
-        if cache_result == 'no_vowel':
-
-            log.debug('{0} [CACHE {1}]: no vowel'.format(
-                log_str, cache_key))
-
+        if textgrid_result_list is None:
             return None
 
-        # Cached exception result.
-
-        elif (isinstance(cache_result, tuple) and
-            cache_result[0] == 'exception'):
-
-            exception, traceback_string = cache_result[1:3]
-
-            log.debug(
-                '{0} [CACHE {1}]: exception'.format(
-                log_str, cache_key))
-
-            log.debug(traceback_string)
-
-            return None
-
-        # We have a cached analysis result.
-
-        elif cache_result:
-
-            textgrid_result_list = cache_result
-
-            log.debug(
-                '{0} [CACHE {1}]:\n{2}'.format(
-                log_str, cache_key,
-                format_textgrid_result(
-                    [None], textgrid_result_list)))
-
-        # Ok, we don't have a cached result, so we are going to perform sound/markup analysis.
-
-        else:
-
-            try:
-
-                storage_f = (
-                    as_storage_file if __debug_flag__ else storage_file)
-
-                sound_bytes = None
-
-                # Getting markup, checking if we have a tier that needs to be processed.
-
-                with storage_f(storage, markup_url) as markup_stream:
-                    markup_bytes = markup_stream.read()
-
-                try:
-                    textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-                    textgrid.from_file(
-                        io.BytesIO(markup_bytes),
-                        codec = chardet.detect(markup_bytes)['encoding'])
-
-                except:
-
-                    # If we failed to parse TextGrid markup, we assume that sound and markup files
-                    # were accidentally swapped and try again.
-
-                    sound_bytes = markup_bytes
-                    markup_url, sound_url = sound_url, markup_url
-
-                    with storage_f(storage, markup_url) as markup_stream:
-                        markup_bytes = markup_stream.read()
-
-                    textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-                    textgrid.from_file(
-                        io.BytesIO(markup_bytes),
-                        codec = chardet.detect(markup_bytes)['encoding'])
-
-                # Processing markup, getting info we need.
-
-                tier_data_list, vowel_flag = process_textgrid(textgrid)
-
-                log.debug(
-                    '{0}:\ntier_data_list:\n{1}\nvowel_flag: {2}'.format(
-                    log_str,
-                    pprint.pformat(tier_data_list, width = 144),
-                    vowel_flag))
-
-                if not vowel_flag:
-
-                    log.debug('{0}: no vowel'.format(log_str))
-                    caching.CACHE.set(cache_key, 'no_vowel')
-
-                    return None
-
-                # Ok, we have usable markup, and now we retrieve the sound file to analyze it.
-
-                extension = os.path.splitext(
-                    urllib.parse.urlparse(sound_url).path)[1]
-
-                sound = None
-                with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
-
-                    if sound_bytes is None:
-
-                        with storage_f(storage, sound_url) as sound_stream:
-                            sound_bytes = sound_stream.read()
-
-                    temp_file.write(sound_bytes)
-                    temp_file.flush()
-
-                    sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
-
-                # Analysing sound, showing and caching analysis results.
-
-                textgrid_result_list = process_sound(
-                    tier_data_list, sound)
-
-                log.debug(
-                    '{0}:\n{1}'.format(
-                    log_str,
-                    format_textgrid_result(
-                        [None], textgrid_result_list)))
-
-                caching.CACHE.set(cache_key, textgrid_result_list)
-
-            # We have exception during sound/markup analysis, we save its info in the cache.
-
-            except Exception as exception:
-
-                traceback_string = ''.join(traceback.format_exception(
-                    exception, exception, exception.__traceback__))[:-1]
-
-                log.debug('{0}: exception'.format(log_str))
-                log.debug(traceback_string)
-
-                caching.CACHE.set(cache_key, ('exception', exception,
-                    traceback_string.replace('Traceback', 'CACHEd traceback')))
-
-                return None
-
-        # Ok, now we have sound/markup analysis results, we extract info of the first vowel from the first
-        # vowel-containing tier.
+        # Extracting info of the first vowel from the first vowel-containing tier of the sound/markup
+        # analysis results.
 
         def f():
 
@@ -3730,6 +3606,122 @@ class CognateAnalysis(graphene.Mutation):
         return result_x, f(result.x)
 
     @staticmethod
+    def graph_3d_embedding(d_ij, verbose = False):
+        """
+        Computes 3d embedding of a graph specified by non-negative simmetrix distance matrix via stress
+        minimization.
+
+        The same as with 2d embedding, see graph_2d_embedding.
+        """
+
+        N = numpy.size(d_ij, 0)
+        N2 = N * 2
+
+        def f(xyz):
+            """
+            Computes stress given xyz-coordinates.
+            """
+
+            x = xyz[:N]
+            y = xyz[N:N2]
+            z = xyz[N2:]
+
+            result = 0.0
+
+            for i in range(1, N):
+                for j in range(i):
+
+                    dr2 = (x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2 + (z[i] - z[j]) ** 2
+
+                    if d_ij[i,j] <= 0:
+                        result += dr2
+
+                    else:
+                        d2_ij = d_ij[i,j] ** 2
+                        result += dr2 / d2_ij + d2_ij / dr2
+
+            return result
+
+        def df(xyz):
+            """
+            Computes gradient at a given xyz-coordinates.
+            """
+
+            x = xyz[:N]
+            y = xyz[N:N2]
+            z = xyz[N2:]
+
+            df_x = numpy.zeros(N)
+            df_y = numpy.zeros(N)
+            df_z = numpy.zeros(N)
+
+            for i in range(1, N):
+                for j in range(i):
+
+                    dx = x[i] - x[j]
+                    dy = y[i] - y[j]
+                    dz = z[i] - z[j]
+
+                    dr2 = dx ** 2 + dy ** 2 + dz ** 2
+
+                    if d_ij[i,j] <= 0:
+
+                        df_x[i] += dx
+                        df_x[j] -= dx
+
+                        df_y[i] += dy
+                        df_y[j] -= dy
+
+                        df_z[i] += dz
+                        df_z[j] -= dz
+
+                    else:
+
+                        d2_ij = d_ij[i,j] ** 2
+                        factor = (1 / d2_ij - d2_ij / dr2 ** 2)
+
+                        df_x[i] += dx * factor
+                        df_x[j] -= dx * factor
+
+                        df_y[i] += dy * factor
+                        df_y[j] -= dy * factor
+
+                        df_z[i] += dz * factor
+                        df_z[j] -= dz * factor
+
+            return numpy.concatenate((df_x, df_y, df_z))
+
+        iter_count = 0
+
+        def f_callback(xyz):
+            """
+            Shows minimization progress, if enabled.
+            """
+
+            nonlocal iter_count
+
+            log.debug(
+                '\niteration {0}:\nxyz:\n{1}\nf:\n{2}\ndf:\n{3}'.format(
+                iter_count,
+                numpy.stack((xyz[:N], xyz[N:N2], xyz[N2:])).T,
+                f(xyz),
+                df(xyz)))
+
+            iter_count += 1
+
+        # Performing minization, returning minimization results.
+
+        result = scipy.optimize.minimize(f,
+            numpy.random.rand(N * 3),
+            jac = df,
+            callback = f_callback if verbose else None,
+            options = {'disp': verbose})
+
+        result_x = numpy.stack((result.x[:N], result.x[N:N2], result.x[N2:])).T
+
+        return result_x, f(result.x)
+
+    @staticmethod
     def perform_cognate_analysis(
         base_language_id,
         language_name,
@@ -3785,8 +3777,6 @@ class CognateAnalysis(graphene.Mutation):
                     base_language_id[0], base_language_id[1], tag_data_digest)
 
             # Checking if we have saved data.
-
-            import pickle
 
             if os.path.exists(tag_data_file_name):
 
@@ -4004,7 +3994,7 @@ class CognateAnalysis(graphene.Mutation):
                     row_list = row[4][0]
 
                     result = (
-                        CognateAnalysis.acoustic_data(
+                        acoustic_data(
                             base_language_id,
                             tuple(row_list[0:2]), row_list[2],
                             tuple(row_list[3:5]), row_list[5],
@@ -4599,6 +4589,26 @@ class CognateAnalysis(graphene.Mutation):
                 rel_strain,
                 result2_d))
 
+            # And now the same with 3d embedding.
+
+            rel_embedding_3d, rel_strain_3d = (
+                CognateAnalysis.graph_3d_embedding(d_ij, verbose = __debug_flag__))
+
+            result_3d_x = sklearn.decomposition.PCA(n_components = 3).fit_transform(rel_embedding_3d)
+            result_3d_d = sklearn.metrics.euclidean_distances(result_3d_x)
+            
+            log.debug(
+                '\ncognate_analysis {0}/{1}:'
+                '\nembedding 3d (raw):\n{2}'
+                '\nembedding 3d (PCA-fixed):\n{3}'
+                '\nstrain 3d:\n{4}'
+                '\ndistances 3d:\n{5}'.format(
+                base_language_id[0], base_language_id[1],
+                rel_embedding_3d,
+                result_3d_x,
+                rel_strain_3d,
+                result_3d_d))
+
             # Computing minimum spanning tree.
 
             mst = scipy.sparse.csgraph.minimum_spanning_tree(d_ij + numpy.ones(d_ij.shape))
@@ -4633,12 +4643,15 @@ class CognateAnalysis(graphene.Mutation):
                 Plots specified graph embedding on a given axis.
                 """
 
+                flag_3d = numpy.size(result_x, 1) > 2
+
                 # Plotting positions.
 
                 x_delta = max(result_x[:, 0]) - min(result_x[:, 0])
                 y_delta = max(result_x[:, 1]) - min(result_x[:, 1])
+                z_delta = max(result_x[:, 2]) - min(result_x[:, 2]) if flag_3d else 0
 
-                result_x /= max(x_delta, y_delta)
+                result_x /= max(x_delta, y_delta, z_delta)
 
                 for index, (position, name) in enumerate(
                     zip(result_x, distance_header_array)):
@@ -4661,18 +4674,29 @@ class CognateAnalysis(graphene.Mutation):
                         '' if same_position_index is None else
                         ' (same as {0})'.format(same_position_index + 1))
 
-                    axes.scatter(
-                        position[0], position[1],
-                        s = 35, color = color,
-                        label = '{0}) {1}{2}'.format(index + 1, name, label_same_str))
+                    kwargs = {
+                        's': 35,
+                        'color': color,
+                        'label': '{0}) {1}{2}'.format(index + 1, name, label_same_str)}
+
+                    axes.scatter(*position, **kwargs)
 
                     # Annotating position with its number, but only if we hadn't already annotated nearby.
 
                     if same_position_index is None:
 
-                        axes.annotate(str(index + 1),
-                            (position[0] + 0.01, position[1] - 0.005),
-                            fontsize = 14)
+                        if flag_3d:
+
+                            axes.text(
+                                position[0] + 0.01, position[1], position[2] + 0.01,
+                                str(index + 1), None, fontsize = 14)
+
+                        else:
+
+                            axes.annotate(
+                                str(index + 1),
+                                (position[0] + 0.01, position[1] - 0.005),
+                                fontsize = 14)
 
                 # Plotting minimum spanning trees.
 
@@ -4680,7 +4704,10 @@ class CognateAnalysis(graphene.Mutation):
                     (result_x[i], result_x[j])
                     for i, j in zip(mst_c.row, mst_c.col)]
 
-                line_collection = LineCollection(line_list, zorder = 0, color = 'gray')
+                line_collection = (
+                    Line3DCollection if flag_3d else LineCollection)(
+                        line_list, zorder = 0, color = 'gray')
+
                 axes.add_collection(line_collection)
 
                 pyplot.setp(axes.texts, family = 'Gentium')
@@ -4725,6 +4752,77 @@ class CognateAnalysis(graphene.Mutation):
                         pad_inches = 0.25,
                         format = 'png')
 
+                # Also generating 3d embedding figure.
+
+                figure_3d = pyplot.figure()
+                figure_3d.set_size_inches(16, 10)
+
+                axes_3d = figure_3d.add_subplot(111, projection = '3d')
+
+                axes_3d.axis('equal')
+                axes_3d.view_init(elev = 30, azim = -75)
+
+                f(axes_3d, result_3d_x)
+
+                axes_3d.set_xlabel('X')
+                axes_3d.set_ylabel('Y')
+                axes_3d.set_zlabel('Z')
+
+                legend_3d = axes_3d.legend(
+                    scatterpoints = 1,
+                    loc = 'upper center',
+                    bbox_to_anchor = (0.5, -0.05),
+                    frameon = False,
+                    handlelength = 0.5,
+                    handletextpad = 0.75,
+                    fontsize = 14)
+
+                pyplot.setp(legend_3d.texts, family = 'Gentium')
+
+                # Fake cubic bounding box to force axis aspect ratios, see
+                # https://stackoverflow.com/a/13701747/2016856.
+
+                X = result_3d_x[:,0]
+                Y = result_3d_x[:,1]
+                Z = result_3d_x[:,2]
+
+                max_range = numpy.array([
+                    X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
+
+                Xb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() +
+                    0.5 * (X.max() + X.min()))
+
+                Yb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() +
+                    0.5 * (Y.max() + Y.min()))
+
+                Zb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() +
+                    0.5 * (Z.max() + Z.min()))
+
+                for xb, yb, zb in zip(Xb, Yb, Zb):
+                   axes_3d.plot([xb], [yb], [zb], 'w')
+
+                axes_3d.autoscale_view()
+
+                # And saving it.
+
+                figure_3d_file_name = (
+                    'figure 3d cognate distance {0} {1} {2}.png'.format(
+                    language_name.strip(),
+                    len(perspective_info_list),
+                    len(result_list)))
+
+                with open(figure_3d_file_name, 'wb') as figure_3d_file:
+
+                    figure_3d.savefig(
+                        figure_3d_file,
+                        bbox_extra_artists = (legend_3d,),
+                        bbox_inches = 'tight',
+                        pad_inches = 0.25,
+                        format = 'png')
+
             # Storing generated figure as a PNG image.
 
             figure_filename = pathvalidate.sanitize_filename(
@@ -4740,7 +4838,7 @@ class CognateAnalysis(graphene.Mutation):
 
             with open(figure_path, 'wb') as figure_file:
 
-                pyplot.savefig(
+                figure.savefig(
                     figure_file,
                     bbox_extra_artists = (legend,),
                     bbox_inches = 'tight',
@@ -5005,6 +5103,811 @@ class Phonology(graphene.Mutation):
         utils_phonology(request, locale_id, parameters)
 
         return Phonology(triumph=True)
+
+
+@celery.task
+def async_phonological_statistical_distance(
+    id_list,
+    vowel_selection,
+    chart_threshold,
+    locale_id,
+    storage,
+    task_key,
+    cache_kwargs,
+    sqlalchemy_url,
+    __debug_flag__):
+    """
+    Sets up and launches cognate analysis in asynchronous mode.
+    """
+
+    # NOTE: copied from phonology.
+    #
+    # As far as we know, this is a no-op with current settings, we use it to enable logging inside celery
+    # tasks, because somehow this does it, and otherwise we couldn't set it up.
+
+    logging.debug('async_phonological_statistical_distance')
+
+    # Ok, and now we go on with task execution.
+
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind = engine)
+    initialize_cache(cache_kwargs)
+
+    task_status = TaskStatus.get_from_cache(task_key)
+
+    with transaction.manager:
+
+        try:
+            PhonologicalStatisticalDistance.perform_phonological_statistical_distance(
+                id_list,
+                vowel_selection,
+                chart_threshold,
+                locale_id,
+                storage,
+                task_status,
+                __debug_flag__)
+
+        # Some unknown external exception.
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug('phonological_statistical_distance: exception')
+            log.debug(traceback_string)
+
+            if task_status is not None:
+
+                task_status.set(1, 100,
+                    'Finished (ERROR), exception:\n' + traceback_string)
+
+
+class PhonologicalStatisticalDistance(graphene.Mutation):
+
+    class Arguments:
+        id_list = graphene.List(LingvodocID, required = True)
+        vowel_selection = graphene.Boolean(required = True)
+        chart_threshold = graphene.Int()
+        synchronous = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    def perform_phonological_statistical_distance(
+        id_list,
+        vowel_selection,
+        chart_threshold,
+        locale_id,
+        storage,
+        task_status,
+        __debug_flag__):
+        """
+        Performs phonological statistical distance computation in either synchronous or asynchronous mode.
+        """
+
+        Markup = aliased(dbEntity, name = 'Markup')
+        Sound = aliased(dbEntity, name = 'Sound')
+
+        PublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
+        PublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
+
+        info_list = []
+        total_count = 0
+
+        # Getting preliminary perspective info.
+
+        for perspective_id in id_list:
+
+            perspective = DBSession.query(dbDictionaryPerspective).filter_by(
+                client_id = perspective_id[0], object_id = perspective_id[1]).first()
+
+            dictionary = perspective.parent
+
+            name = '{0} - {1}'.format(
+                dictionary.get_translation(locale_id),
+                perspective.get_translation(locale_id))
+
+            query = DBSession.query(
+                Markup, Sound).filter(
+                    dbLexicalEntry.parent_client_id == perspective_id[0],
+                    dbLexicalEntry.parent_object_id == perspective_id[1],
+                    dbLexicalEntry.marked_for_deletion == False,
+                    Markup.parent_client_id == dbLexicalEntry.client_id,
+                    Markup.parent_object_id == dbLexicalEntry.object_id,
+                    Markup.marked_for_deletion == False,
+                    Markup.additional_metadata.contains({'data_type': 'praat markup'}),
+                    PublishingMarkup.client_id == Markup.client_id,
+                    PublishingMarkup.object_id == Markup.object_id,
+                    PublishingMarkup.published == True,
+                    PublishingMarkup.accepted == True,
+                    Sound.client_id == Markup.self_client_id,
+                    Sound.object_id == Markup.self_object_id,
+                    Sound.marked_for_deletion == False,
+                    PublishingSound.client_id == Sound.client_id,
+                    PublishingSound.object_id == Sound.object_id,
+                    PublishingSound.published == True,
+                    PublishingSound.accepted == True)
+
+            count = query.count()
+
+            info_list.append((perspective, dictionary, name, query, count))
+            total_count += count
+
+        # Showing what we've got.
+
+        log.debug(
+            'phonological_statistical_distance ({0} perspectives): {1} sound/markup pairs\n{2}'.format(
+            len(id_list),
+            total_count,
+            '\n'.join('{0}: {1} sound/markup pairs'.format(name, count)
+                for p, d, name, q, count in info_list)))
+
+        # And now we are going to gather formant distribution data.
+
+        formant_data_list = []
+        row_count = 0
+
+        x_min, x_max = None, None
+        y_min, y_max = None, None
+
+        for perspective_index, (perspective, dictionary, name, query, count) in enumerate(info_list):
+
+            formant_list = []
+            vowel_counter = collections.Counter()
+
+            for row_index, row in enumerate(query.yield_per(100)):
+
+                # Showing what sound/markup pair we are to process.
+
+                sound_id = (row.Sound.client_id, row.Sound.object_id)
+                sound_url = row.Sound.content
+
+                markup_id = (row.Markup.client_id, row.Markup.object_id)
+                markup_url = row.Markup.content
+
+                log_str = (
+                    '\nphonological_statistical_distance ({0}, {1}): '
+                    'sound entity {2}/{3}, markup entity {4}/{5}'.format(
+                        perspective_index, row_index,
+                        sound_id[0], sound_id[1],
+                        markup_id[0], markup_id[1]))
+
+                # Getting phonology data of another sound/markup pair.
+
+                textgrid_result_list = (
+
+                    process_sound_markup(
+                        log_str,
+                        sound_id,
+                        sound_url,
+                        markup_id,
+                        markup_url,
+                        storage,
+                        __debug_flag__))
+
+                row_count += 1
+
+                if task_status is not None:
+
+                    task_status.set(1,
+                        int(math.floor(95.0 * row_count / total_count)),
+                        'Gathering formant distribution data')
+
+                # Extracting F1/F2 formant data.
+
+                if textgrid_result_list is None:
+                    continue
+
+                for tier_number, tier_name, tier_result_list in textgrid_result_list:
+
+                    if tier_result_list == 'no_vowel' or tier_result_list == 'no_vowel_selected':
+                        continue
+
+                    for tier_result in tier_result_list:
+
+                        if vowel_selection:
+
+                            # Either only for longest interval and interval with highest intensity, or...
+
+                            f_list_a = tuple(map(float, tier_result.max_length_f_list[:2]))
+                            f_list_b = tuple(map(float, tier_result.max_intensity_f_list[:2]))
+
+                            text_a_list = tier_result.max_length_str.split()
+                            text_b_list = tier_result.max_intensity_str.split()
+
+                            vowel_a = get_vowel_class(
+                                tier_result.max_length_source_index, tier_result.source_interval_list)
+
+                            vowel_b = get_vowel_class(
+                                tier_result.max_intensity_source_index, tier_result.source_interval_list)
+
+                            formant_list.append(f_list_a)
+                            vowel_counter[vowel_a] += 1
+
+                            if text_b_list[2] != text_a_list[2]:
+
+                                formant_list.append(f_list_b)
+                                vowel_counter[vowel_b] += 1
+
+                        else:
+
+                            # ...for all intervals.
+
+                            for (interval_str, interval_r_length, f_list,
+                                sign_longest, sign_highest, source_index) in tier_result.interval_data_list:
+
+                                formant_list.append(tuple(map(float, f_list[:2])))
+
+                                vowel_counter[get_vowel_class(
+                                    source_index, tier_result.source_interval_list)] += 1
+
+            # And now we are going to model the distribution as a gaussian mixture.
+
+            formant_array = numpy.array(formant_list)
+            n_components = len(vowel_counter) * 2
+
+            mixture_kwargs = {
+                'n_components': n_components,
+                'weight_concentration_prior_type': 'dirichlet_distribution',
+                'weight_concentration_prior': 1.0,
+                'reg_covar': 1e-9,
+                'max_iter': 1024}
+
+            cache_key = 'psd.' + (
+                base64.b85encode(hashlib.md5(pickle.dumps(
+                    (formant_array, mixture_kwargs)))
+                        .digest()).decode('ascii'))
+
+            cache_result = caching.CACHE.get(cache_key)
+
+            # If we have cached model, we use it, otherwise we build it anew.
+
+            if cache_result:
+
+                mixture, component_count = cache_result
+
+            else:
+
+                mixture = sklearn.mixture.BayesianGaussianMixture(
+                    verbose = 2 if __debug_flag__ else 0,
+                    **mixture_kwargs)
+
+                mixture.fit(formant_array)
+
+                min_weight = min(mixture.weights_)
+
+                component_where = mixture.weights_ > min_weight
+                component_count = component_where.sum()
+
+                # Removing any non-significant components, if required.
+
+                if component_count < n_components - 2:
+
+                    for name in [
+                        'weights_',
+                        'weight_concentration_',
+                        'means_',
+                        'covariances_',
+                        'precisions_cholesky_',
+                        'degrees_of_freedom_',
+                        'mean_precision_']:
+
+                        setattr(mixture, name,
+                            getattr(mixture, name)[component_where])
+
+                    mixture.weights_ /= sum(mixture.weights_)
+
+                # Caching newly built model.
+
+                caching.CACHE.set(cache_key,
+                    (mixture, component_count))
+
+            # Updating distribution data.
+
+            if perspective_index <= 0:
+
+                x_min, x_max = formant_array[:,0].min(), formant_array[:,0].max()
+                y_min, y_max = formant_array[:,1].min(), formant_array[:,1].max()
+
+            else:
+
+                x_min = min(x_min, formant_array[:,0].min())
+                x_max = max(x_max, formant_array[:,0].max())
+
+                y_min = min(y_min, formant_array[:,0].min())
+                y_max = max(y_max, formant_array[:,0].max())
+
+            formant_data_list.append((vowel_counter, formant_array, mixture))
+
+            # Another distribution of F1/F2 formant vectors we've got.
+
+            log.debug(
+                '\nphonological_statistical_distance:'
+                '\nperspective {0} ({1}, {2}/{3}):'
+                '\n{4} vowels, {5} formant vectors'
+                '\n{6}'
+                '\n{7}model with {8} / {9} significant components'.format(
+                perspective_index,
+                name,
+                perspective.client_id,
+                perspective.object_id,
+                len(vowel_counter),
+                len(formant_list),
+                pprint.pformat(vowel_counter, width = 144),
+                'CACHEd ' if cache_result else '',
+                component_count if component_count <= n_components - 2 else n_components,
+                n_components))
+
+            if task_status is not None:
+
+                task_status.set(1,
+                    int(math.floor(95.0 + 2.0 * (perspective_index + 1) / len(info_list))),
+                    'Creating formant distribution models')
+
+        # Preparing for compilation of modelling results.
+
+        workbook_stream = io.BytesIO()
+
+        workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
+        worksheet_distance = workbook.add_worksheet('Distance')
+
+        worksheet_list = [
+            workbook.add_worksheet('Figure {0}'.format(i + 1))
+            for i in range(len(info_list))]
+
+        name_list = [name for p, d, name, q, c in info_list]
+
+        worksheet_distance.set_column(0, 0, 64)
+
+        worksheet_distance.write_row('B1', name_list)
+        worksheet_distance.write_column('A2', name_list)
+
+        # Getting integrable density grids for each distribution model.
+
+        x_low = max(0, x_min - (x_max - x_min) * 0.25)
+        x_high = x_max + (x_max - x_min) * 0.25
+
+        y_low = max(0, y_min - (y_max - y_min) * 0.25)
+        y_high = y_max + (y_max - y_min) * 0.25
+
+        n_step = 1024
+
+        x, y = pylab.meshgrid(
+            numpy.linspace(x_low, x_high, n_step),
+            numpy.linspace(y_low, y_high, n_step))
+
+        # Showing grid parameters.
+
+        log.debug(
+            '\nphonological_statistical_distance: '
+            '\nmin/max: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}'
+            '\nlow/high: {4:.3f}, {5:.3f}, {6:.3f}, {7:.3f}'
+            '\n{8} steps'.format(
+            x_min, x_max, y_min, y_max,
+            x_low, x_high, y_low, y_high,
+            n_step))
+
+        grid_data_list = []
+
+        for perspective_index, (
+            (perspective, dictionary, name, query, count),
+            (vowel_counter, formant_array, mixture)) in (
+
+            enumerate(zip(info_list, formant_data_list))):
+
+            z = None
+
+            # If we are in debug mode, we try to load saved grid data we might have.
+
+            if __debug_flag__:
+
+                z_digest = (
+                    hashlib.md5(pickle.dumps(
+                        (formant_array, mixture_kwargs, x_low, x_high, y_low, y_high, n_step)))
+                            .hexdigest())
+
+                z_file_name = (
+                    '__grid_data_{0}_{1}_{2}__.gz'.format(
+                        perspective.client_id, perspective.object_id, z_digest))
+
+                if os.path.exists(z_file_name):
+
+                    with gzip.open(z_file_name, 'rb') as z_file:
+                        z, elapsed_time, integral, check = pickle.load(z_file)
+
+            # Computing density grid data.
+
+            if z is None:
+
+                x.shape = (n_step ** 2,)
+                y.shape = (n_step ** 2,)
+
+                start_time = time.time()
+
+                z = numpy.exp(mixture.score_samples(numpy.stack((x, y), 1)))
+                z.shape = (n_step, n_step)
+
+                elapsed_time = time.time() - start_time
+
+                x.shape = (n_step, n_step)
+                y.shape = (n_step, n_step)
+
+                # Integrating its interpolation via Simpson's rule, normalizing if required.
+
+                integral = scipy.integrate.simps(scipy.integrate.simps(z, x), y[:,0])
+                z /= integral
+
+                check = scipy.integrate.simps(scipy.integrate.simps(z, x), y[:,0])
+
+                if __debug_flag__:
+
+                    with gzip.open(z_file_name, 'wb') as z_file:
+                        pickle.dump((z, elapsed_time, integral, check), z_file)
+
+            # And we have another density grid data.
+
+            log.debug(
+                '\nphonological_statistical_distance:'
+                '\nperspective {0} ({1}, {2}/{3}):'
+                '\n{4} components, {5} ** 2 ({6}) samples in {7:.3f}s'
+                '\nintegral of interpolation {8:.6f}, {8:.6f} after normalization'.format(
+                perspective_index, name, perspective.client_id, perspective.object_id,
+                len(mixture.weights_), n_step, n_step ** 2, elapsed_time,
+                integral, check))
+
+            grid_data_list.append(z)
+
+            # Preparing figures with modelling results.
+
+            figure = pyplot.figure(figsize = (16, 10))
+
+            axes = figure.add_subplot(111)
+            axes.set_title(name, fontsize = 14, family = 'Gentium')
+
+            axes.invert_xaxis()
+            axes.invert_yaxis()
+
+            # F1/F2 formant data points.
+
+            axes.scatter(
+                formant_array[:,1],
+                formant_array[:,0],
+                marker = 'o', color = 'black', s = 4)
+
+            x_lim = axes.get_xlim()
+            y_lim = axes.get_ylim()
+
+            x_lim = (min(x_lim[0], y_high), max(x_lim[1], y_low))
+            y_lim = (min(y_lim[0], x_high), max(y_lim[1], x_low))
+
+            # Probability density heat map.
+
+            axes.imshow(z.T[::-1,:],
+                aspect = 'auto',
+                extent = (y_low, y_high, x_low, x_high),
+                cmap = 'YlOrRd',
+                alpha = 0.5)
+
+            axes.set_xlim(x_lim)
+            axes.set_ylim(y_lim)
+
+            # Plotting standard deviation ellipses, see
+            # https://scikit-learn.org/stable/auto_examples/mixture/plot_concentration_prior.html.
+
+            for n in range(mixture.means_.shape[0]):
+
+                eig_vals, eig_vecs = numpy.linalg.eigh(mixture.covariances_[n])
+                unit_eig_vec = eig_vecs[0] / numpy.linalg.norm(eig_vecs[0])
+
+                angle = numpy.arctan2(unit_eig_vec[1], unit_eig_vec[0])
+                angle = 180 * angle / numpy.pi
+
+                eig_vals = 2 * numpy.sqrt(2) * numpy.sqrt(eig_vals)
+
+                ellipse = (
+                    matplotlib.patches.Ellipse(
+                        mixture.means_[n][::-1],
+                        eig_vals[1],
+                        eig_vals[0],
+                        180 - angle,
+                        edgecolor = 'black'))
+
+                ellipse.set_alpha(max(mixture.weights_[n], 0.0625))
+                ellipse.set_facecolor('#E0E0E0')
+
+                axes.add_artist(ellipse)
+
+            # Saving figure as a PNG stream.
+
+            pyplot.setp(axes.texts, family = 'Gentium')
+
+            pyplot.xticks(fontsize = 14, family = 'Gentium')
+            pyplot.yticks(fontsize = 14, family = 'Gentium')
+
+            figure_stream = io.BytesIO()
+
+            figure.savefig(
+                figure_stream,
+                bbox_inches = 'tight',
+                pad_inches = 0.25,
+                format = 'png')
+
+            # Adding figure to the workbook.
+
+            figure_file_name = (
+                'figure phonology distribution 2d {0} {1}.png'.format(
+                perspective.client_id,
+                perspective.object_id))
+
+            worksheet_list[perspective_index].insert_image(
+                'A1', figure_file_name, {'image_data': figure_stream})
+
+            if __debug_flag__:
+
+                figure_stream.seek(0)
+
+                with open(figure_file_name, 'wb') as figure_file:
+                    shutil.copyfileobj(figure_stream, figure_file)
+
+            # And now 3d with the density plot.
+
+            figure_3d = pyplot.figure()
+            figure_3d.set_size_inches(16, 10)
+
+            axes_3d = figure_3d.add_subplot(111, projection = '3d')
+            axes_3d.set_title(name, fontsize = 14, family = 'Gentium')
+
+            axes_3d.autoscale(tight = True)
+            axes_3d.autoscale_view(tight = True)
+
+            axes_3d.invert_xaxis()
+            axes_3d.view_init(elev = 40, azim = -165)
+
+            axes_3d.scatter(
+                formant_array[:,0],
+                formant_array[:,1],
+                numpy.zeros(formant_array.shape[0]),
+                color = 'black', s = 4, depthshade = False)
+
+            # Plotting density.
+
+            x_where = numpy.logical_and(x[0,:] >= y_lim[1], x[0,:] <= y_lim[0])
+            y_where = numpy.logical_and(y[:,0] >= x_lim[1], y[:,0] <= x_lim[0])
+
+            axes_3d.plot_surface(
+                x[:,x_where][y_where,:],
+                y[:,x_where][y_where,:],
+                z[:,x_where][y_where,:],
+                rstride = 8, cstride = 8,
+                color = '#56B4E9', alpha = 0.5)
+
+            axes_3d.set_xlim(y_lim)
+            axes_3d.set_ylim((x_lim[1], x_lim[0]))
+
+            grid_sum = z.sum() * (x_high - x_low) * (y_high - y_low) / n_step ** 2
+
+            log.debug('\ndensity grid sum: {0:.6f}'.format(grid_sum))
+
+            # Saving 3d modelling figure as a PNG stream.
+
+            pyplot.setp(axes_3d.texts, family = 'Gentium')
+
+            pyplot.xticks(fontsize = 14, family = 'Gentium')
+            pyplot.yticks(fontsize = 14, family = 'Gentium')
+
+            for label in axes_3d.get_zticklabels():
+
+                label.set_fontsize(14)
+                label.set_family('Gentium')
+
+            figure_3d_stream = io.BytesIO()
+
+            figure_3d.savefig(
+                figure_3d_stream,
+                bbox_inches = 'tight',
+                pad_inches = 0.25,
+                format = 'png')
+
+            # Adding figure to the workbook.
+
+            figure_3d_file_name = (
+                'figure phonology distribution 3d {0} {1}.png'.format(
+                perspective.client_id,
+                perspective.object_id))
+
+            worksheet_list[perspective_index].insert_image(
+                'A44', figure_3d_file_name, {'image_data': figure_3d_stream})
+
+            if __debug_flag__:
+
+                figure_3d_stream.seek(0)
+
+                with open(figure_3d_file_name, 'wb') as figure_3d_file:
+                    shutil.copyfileobj(figure_3d_stream, figure_3d_file)
+
+            # Updating task status, if required.
+
+            if task_status is not None:
+
+                task_status.set(1,
+                    int(math.floor(97.0 + 2.0 * (perspective_index + 1) / len(info_list))),
+                    'Computing formant distribution density data')
+
+        # And now we should compute pairwise total variation statistical distances between computed
+        # approximations of formant distributions.
+
+        d_ij = numpy.zeros((len(info_list), len(info_list)))
+
+        for i in range(len(info_list) - 1):
+            for j in range(i + 1, len(info_list)):
+
+                perspective_i, name_i = info_list[i][0], info_list[i][2]
+                perspective_j, name_j = info_list[j][0], info_list[j][2]
+
+                z_i = grid_data_list[i]
+                z_j = grid_data_list[j]
+
+                delta_abs = numpy.abs(z_i - z_j)
+
+                d_value = (0.5 *
+                    scipy.integrate.simps(
+                        scipy.integrate.simps(delta_abs, x), y[:,0]))
+
+                # Saving and showing another statistical distance.
+
+                d_ij[i,j] = d_value
+                d_ij[j,i] = d_value
+
+                log.debug(
+                    '\nphonological_statistical_distance:'
+                    '\nperspective {0} ({1}, {2}/{3}),'
+                    '\nperspective {4} ({5}, {6}/{7}):'
+                    '\ntotal variation distance {8:.6f}'.format(
+                    i, name_i, perspective_i.client_id, perspective_i.object_id,
+                    j, name_j, perspective_j.client_id, perspective_j.object_id,
+                    d_value))
+
+        # Adding distance data to the workbook.
+
+        for i in range(len(info_list)):
+
+            worksheet_distance.write_row(
+                'B{0}'.format(i + 2),
+                [round(value, 4) for value in d_ij[i,:]])
+
+        workbook.close()
+
+        xlsx_file_name = (
+            'Phonological statistical distance ({0} perspectives).xlsx'.format(len(info_list)))
+
+        if __debug_flag__:
+
+            workbook_stream.seek(0)
+
+            with open(xlsx_file_name, 'wb') as xlsx_file:
+                shutil.copyfileobj(workbook_stream, xlsx_file)
+
+        # Storing XLSX file with distribution comparison results.
+
+        cur_time = time.time()
+
+        storage_dir = os.path.join(storage['path'], 'psd', str(cur_time))
+
+        xlsx_path = os.path.join(storage_dir, xlsx_file_name)
+        os.makedirs(os.path.dirname(xlsx_path), exist_ok = True)
+
+        workbook_stream.seek(0)
+
+        with open(xlsx_path, 'wb') as xlsx_file:
+            shutil.copyfileobj(workbook_stream, xlsx_file)
+
+        xlsx_url = ''.join([
+            storage['prefix'], storage['static_route'],
+            'psd', '/', str(cur_time), '/', xlsx_file_name])
+
+        # Finalizing task status, if required.
+
+        if task_status is not None:
+            task_status.set(1, 100, 'Finished', result_link = xlsx_url)
+
+        return PhonologicalStatisticalDistance(triumph = True)
+
+    @staticmethod
+    def mutate(self, info, **args):
+        """
+        query MyQuery {
+          phonological_statistical_distance(
+            id_list: [[656, 3]],
+            vowel_selection: false,
+            chart_threshold: 1)
+        }
+        """
+
+        id_list = args['id_list']
+        vowel_selection = args['vowel_selection']
+        chart_threshold = args['chart_threshold']
+
+        synchronous = args.get('synchronous')
+
+        __debug_flag__ = False
+
+        try:
+
+            # Showing our arguments.
+
+            log.debug(
+                'phonological_statistical_distance ({0} perspectives):\n'
+                'id_list: {1}\n'
+                'vowel_selection: {2}\n'
+                'chart_threshold: {3}\n'
+                'synchronous: {4}'.format(
+                len(id_list),
+                id_list,
+                vowel_selection,
+                chart_threshold,
+                synchronous))
+
+            locale_id = info.context.get('locale_id')
+
+            request = info.context.get('request')
+            storage = request.registry.settings['storage']
+
+            # Simple synchronous phonological statistical distance computation.
+
+            if synchronous:
+
+                return PhonologicalStatisticalDistance.perform_phonological_statistical_distance(
+                    id_list,
+                    vowel_selection,
+                    chart_threshold,
+                    locale_id,
+                    storage,
+                    None,
+                    __debug_flag__)
+
+            # Asynchronous phonological statistical distance computation with task status setup.
+
+            client_id = request.authenticated_userid
+
+            user_id = (
+                Client.get_user_by_client_id(client_id).id
+                    if client_id else anonymous_userid(request))
+
+            task_status = TaskStatus(
+                user_id,
+                'Phonological statistical distance computation',
+                '{0} perspectives'.format(len(id_list)),
+                1)
+
+            # Launching asynchronous phonological statistical distance computation.
+
+            request.response.status = HTTPOk.code
+
+            async_phonological_statistical_distance.delay(
+                id_list,
+                vowel_selection,
+                chart_threshold,
+                locale_id,
+                storage,
+                task_status.key,
+                request.registry.settings['cache_kwargs'],
+                request.registry.settings['sqlalchemy.url'],
+                __debug_flag__)
+
+            return PhonologicalStatisticalDistance(triumph = True)
+
+        # Some unknown external exception.
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug('phonological_statistical_distance: exception')
+            log.debug(traceback_string)
+
+            return ResponseError(message =
+                'Exception:\n' + traceback_string)
 
 
 class SoundAndMarkup(graphene.Mutation):
@@ -5426,6 +6329,7 @@ class MyMutations(graphene.ObjectType):
     phonemic_analysis = PhonemicAnalysis.Field()
     cognate_analysis = CognateAnalysis.Field()
     phonology = Phonology.Field()
+    phonological_statistical_distance = PhonologicalStatisticalDistance.Field()
     sound_and_markup = SoundAndMarkup.Field()
     merge_bulk = MergeBulk.Field()
     move_column = MoveColumn.Field()

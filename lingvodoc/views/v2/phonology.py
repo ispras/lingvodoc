@@ -89,7 +89,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.queue.celery import celery
-from lingvodoc.views.v2.utils import anonymous_userid, message, storage_file, unimplemented
+from lingvodoc.views.v2.utils import anonymous_userid, as_storage_file, message, storage_file, unimplemented
 
 
 # Setting up logging.
@@ -893,8 +893,14 @@ def process_textgrid(
 
     for tier_number, tier_name in textgrid.get_tier_name_num():
 
-        raw_interval_list = [(begin, end, character_escape(text))
-            for begin, end, text in textgrid.get_tier(tier_number).get_all_intervals()]
+        try:
+
+            raw_interval_list = [(begin, end, character_escape(text))
+                for begin, end, text in textgrid.get_tier(tier_number).get_all_intervals()]
+
+        except ValueError:
+
+            continue
 
         raw_interval_seq_list = [[]]
 
@@ -1074,7 +1080,7 @@ class Tier_Result(object):
             width = 192)
 
 
-def before_after_text(join_set, index, interval_list):
+def before_after_text(index, interval_list, join_set = None):
     """
     Extracts any preceeding or following markup to be joined to an interval's text.
     """
@@ -1220,6 +1226,173 @@ def process_sound(tier_data_list, sound):
                 source_interval_list))
 
     # Returning analysis results.
+
+    return textgrid_result_list
+
+
+def process_sound_markup(
+    log_str,
+    sound_entity_id,
+    sound_url,
+    markup_entity_id,
+    markup_url,
+    storage,
+    __debug_flag__ = False):
+    """
+    Extracts phonology data from a pair of sound recording and its markup, using cache in a manner
+    compatible with phonological analysis.
+    """
+
+    log.debug(
+        '{0}\nsound_url: {1}\nmarkup_url: {2}'.format(
+        log_str, sound_url, markup_url))
+
+    # Checking if we have already cached sound/markup analysis result.
+
+    cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
+        sound_entity_id[0], sound_entity_id[1],
+        markup_entity_id[0], markup_entity_id[1])
+
+    cache_result = caching.CACHE.get(cache_key)
+
+    if cache_result == 'no_vowel':
+
+        log.debug('{0} [CACHE {1}]: no vowel'.format(
+            log_str, cache_key))
+
+        return None
+
+    # Cached exception result.
+
+    elif (isinstance(cache_result, tuple) and
+        cache_result[0] == 'exception'):
+
+        exception, traceback_string = cache_result[1:3]
+
+        log.debug(
+            '{0} [CACHE {1}]: exception'.format(
+            log_str, cache_key))
+
+        log.debug(traceback_string)
+
+        return None
+
+    # We have a cached analysis result.
+
+    elif cache_result:
+
+        textgrid_result_list = cache_result
+
+        log.debug(
+            '{0} [CACHE {1}]:\n{2}'.format(
+            log_str, cache_key,
+            format_textgrid_result(
+                [None], textgrid_result_list)))
+
+    # Ok, we don't have a cached result, so we are going to perform sound/markup analysis.
+
+    else:
+
+        try:
+
+            storage_f = (
+                as_storage_file if __debug_flag__ else storage_file)
+
+            sound_bytes = None
+
+            # Getting markup, checking if we have a tier that needs to be processed.
+
+            with storage_f(storage, markup_url) as markup_stream:
+                markup_bytes = markup_stream.read()
+
+            try:
+                textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+                textgrid.from_file(
+                    io.BytesIO(markup_bytes),
+                    codec = chardet.detect(markup_bytes)['encoding'])
+
+            except:
+
+                # If we failed to parse TextGrid markup, we assume that sound and markup files
+                # were accidentally swapped and try again.
+
+                sound_bytes = markup_bytes
+                markup_url, sound_url = sound_url, markup_url
+
+                with storage_f(storage, markup_url) as markup_stream:
+                    markup_bytes = markup_stream.read()
+
+                textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+                textgrid.from_file(
+                    io.BytesIO(markup_bytes),
+                    codec = chardet.detect(markup_bytes)['encoding'])
+
+            # Processing markup, getting info we need.
+
+            tier_data_list, vowel_flag = process_textgrid(textgrid)
+
+            log.debug(
+                '{0}:\ntier_data_list:\n{1}\nvowel_flag: {2}'.format(
+                log_str,
+                pprint.pformat(tier_data_list, width = 144),
+                vowel_flag))
+
+            if not vowel_flag:
+
+                log.debug('{0}: no vowel'.format(log_str))
+                caching.CACHE.set(cache_key, 'no_vowel')
+
+                return None
+
+            # Ok, we have usable markup, and now we retrieve the sound file to analyze it.
+
+            extension = path.splitext(
+                urllib.parse.urlparse(sound_url).path)[1]
+
+            sound = None
+            with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
+
+                if sound_bytes is None:
+
+                    with storage_f(storage, sound_url) as sound_stream:
+                        sound_bytes = sound_stream.read()
+
+                temp_file.write(sound_bytes)
+                temp_file.flush()
+
+                sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
+
+            # Analysing sound, showing and caching analysis results.
+
+            textgrid_result_list = process_sound(
+                tier_data_list, sound)
+
+            log.debug(
+                '{0}:\n{1}'.format(
+                log_str,
+                format_textgrid_result(
+                    [None], textgrid_result_list)))
+
+            caching.CACHE.set(cache_key, textgrid_result_list)
+
+        # We have exception during sound/markup analysis, we save its info in the cache.
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.debug('{0}: exception'.format(log_str))
+            log.debug(traceback_string)
+
+            caching.CACHE.set(cache_key, ('exception', exception,
+                traceback_string.replace('Traceback', 'CACHEd traceback')))
+
+            return None
+
+    # Ok, we have our result.
 
     return textgrid_result_list
 
@@ -1591,6 +1764,20 @@ def chart_definition_list(
     return chart_dict_list, row_index + shift + len(x1_ellipse_list) + 9
 
 
+def get_vowel_class(index, interval_list, keep_set = None, join_set = None):
+    """
+    Extracts vowel class label given vowel's interval index and markup interval info.
+    """
+
+    interval_text = ''.join(character
+        for character in interval_list[index][2]
+        if character in vowel_set or keep_set and character in keep_set)
+
+    before_text, after_text = before_after_text(index, interval_list, join_set)
+
+    return before_text + interval_text + after_text
+
+
 def compile_workbook(
     args,
     source_entry_id_set,
@@ -1685,19 +1872,6 @@ def compile_workbook(
     vowel_formant_dict = {group: collections.defaultdict(list) for group in result_group_set}
     already_set = set()
 
-    def get_vowel_class(index, interval_list):
-        """
-        Extracts vowel class label given vowel's interval index and markup interval info.
-        """
-
-        interval_text = ''.join(character
-            for character in interval_list[index][2]
-            if character in vowel_set or character in args.keep_set)
-
-        before_text, after_text = before_after_text(args.join_set, index, interval_list)
-
-        return before_text + interval_text + after_text
-
     def fill_analysis_results(entry_id):
         """
         Writes out to the Excel file resuls of formant analysis of sound/markup pairs of the specified
@@ -1755,10 +1929,16 @@ def compile_workbook(
                         text_b_list = tier_result.max_intensity_str.split()
 
                         vowel_a = get_vowel_class(
-                            tier_result.max_length_source_index, tier_result.source_interval_list)
+                            tier_result.max_length_source_index,
+                            tier_result.source_interval_list,
+                            args.keep_set,
+                            args.join_set)
 
                         vowel_b = get_vowel_class(
-                            tier_result.max_intensity_source_index, tier_result.source_interval_list)
+                            tier_result.max_intensity_source_index,
+                            tier_result.source_interval_list,
+                            args.keep_set,
+                            args.join_set)
 
                         # Writing out interval data and any additional texts.
 
@@ -1814,7 +1994,10 @@ def compile_workbook(
                             enumerate(tier_result.interval_data_list):
 
                             vowel = get_vowel_class(
-                                source_index, tier_result.source_interval_list)
+                                source_index,
+                                tier_result.source_interval_list,
+                                args.keep_set,
+                                args.join_set)
 
                             f_list = list(map(float, f_list[:3]))
 
@@ -2832,7 +3015,7 @@ def analyze_sound_markup(
                 io.BytesIO(markup_bytes),
                 codec = chardet.detect(markup_bytes)['encoding'])
 
-        # Some helper functionis.
+        # Some helper functions.
 
         def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
 
