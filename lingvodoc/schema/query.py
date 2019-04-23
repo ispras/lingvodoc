@@ -398,7 +398,9 @@ class Query(graphene.ObjectType):
                                  category=graphene.Int(),
                                  proxy=graphene.Boolean())
     dictionary = graphene.Field(Dictionary, id=LingvodocID())
-    perspectives = graphene.List(DictionaryPerspective, published=graphene.Boolean())
+    perspectives = graphene.List(DictionaryPerspective,
+        published=graphene.Boolean(),
+        only_with_phonology_data=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
     entity = graphene.Field(Entity, id=LingvodocID())
     language = graphene.Field(Language, id=LingvodocID())
@@ -1095,7 +1097,7 @@ class Query(graphene.ObjectType):
     def resolve_dictionary(self, info, id):
         return Dictionary(id=id)
 
-    def resolve_perspectives(self,info, published=None):
+    def resolve_perspectives(self, info, published = None, only_with_phonology_data = None):
         """
         example:
 
@@ -1111,8 +1113,13 @@ class Query(graphene.ObjectType):
             }
         }
         """
-        context = info.context
+
+        perspective_query = (
+            DBSession.query(dbPerspective).filter(
+                dbPerspective.marked_for_deletion == False))
+
         if published:
+
             db_published_gist = translation_gist_search('Published')
             state_translation_gist_client_id = db_published_gist.client_id
             state_translation_gist_object_id = db_published_gist.object_id
@@ -1129,22 +1136,54 @@ class Query(graphene.ObjectType):
                                               "No translation for your locale available").label("Translation")
                                      ).filter(dbPerspective.marked_for_deletion == False)
             """
-            persps = DBSession.query(dbPerspective).filter(
+
+            perspective_query = perspective_query.filter(
                 or_(and_(dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
                          dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
                     and_(dbPerspective.state_translation_gist_object_id == limited_object_id,
-                         dbDictionary.state_translation_gist_client_id == limited_client_id))). \
-                filter(dbPerspective.marked_for_deletion == False).all()
-        else:
-            persps = DBSession.query(dbPerspective).filter(dbPerspective.marked_for_deletion == False).all()
+                         dbPerspective.state_translation_gist_client_id == limited_client_id)))
 
+        # If required, filtering out pespectives without phonology data.
+
+        if only_with_phonology_data:
+
+            dbMarkup = aliased(dbEntity, name = 'Markup')
+            dbSound = aliased(dbEntity, name = 'Sound')
+
+            dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
+            dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
+
+            phonology_query = DBSession.query(
+                dbPerspective, dbLexicalEntry, dbMarkup, dbSound).filter(
+                    dbLexicalEntry.parent_client_id == dbPerspective.client_id,
+                    dbLexicalEntry.parent_object_id == dbPerspective.object_id,
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbMarkup.parent_client_id == dbLexicalEntry.client_id,
+                    dbMarkup.parent_object_id == dbLexicalEntry.object_id,
+                    dbMarkup.marked_for_deletion == False,
+                    dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
+                    dbPublishingMarkup.client_id == dbMarkup.client_id,
+                    dbPublishingMarkup.object_id == dbMarkup.object_id,
+                    dbPublishingMarkup.published == True,
+                    dbPublishingMarkup.accepted == True,
+                    dbSound.client_id == dbMarkup.self_client_id,
+                    dbSound.object_id == dbMarkup.self_object_id,
+                    dbSound.marked_for_deletion == False,
+                    dbPublishingSound.client_id == dbSound.client_id,
+                    dbPublishingSound.object_id == dbSound.object_id,
+                    dbPublishingSound.published == True,
+                    dbPublishingSound.accepted == True)
+
+            perspective_query = perspective_query.filter(phonology_query.exists())
 
         perspectives_list = []
 
-        for db_persp in persps:
-            gql_persp =  DictionaryPerspective(id=[db_persp.client_id, db_persp.object_id])
+        for db_persp in perspective_query.all():
+
+            gql_persp = DictionaryPerspective(id=[db_persp.client_id, db_persp.object_id])
             gql_persp.dbObject = db_persp
             perspectives_list.append(gql_persp)
+
         return perspectives_list
 
 
@@ -5250,6 +5289,9 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
         x_min, x_max = None, None
         y_min, y_max = None, None
 
+        no_index_list = []
+        yes_index_list = []
+
         for perspective_index, (perspective, dictionary, name, query, count) in enumerate(info_list):
 
             formant_list = []
@@ -5341,10 +5383,33 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                                 vowel_counter[get_vowel_class(
                                     source_index, tier_result.source_interval_list)] += 1
 
+            # If we do not have enough formant data, we skip modelling of this perspective.
+
+            if len(formant_list) < 2:
+
+                formant_data_list.append((vowel_counter, formant_list, None))
+                no_index_list.append(perspective_index)
+
+                log.debug(
+                    '\nphonological_statistical_distance:'
+                    '\nperspective {0} ({1}, {2}/{3}):'
+                    '\n{4} vowels, {5} formant vectors'
+                    '\nno model, not enough data'.format(
+                    perspective_index,
+                    name,
+                    perspective.client_id,
+                    perspective.object_id,
+                    len(vowel_counter),
+                    len(formant_list)))
+
+                continue
+
+            yes_index_list.append(perspective_index)
+
             # And now we are going to model the distribution as a gaussian mixture.
 
             formant_array = numpy.array(formant_list)
-            n_components = len(vowel_counter) * 2
+            n_components = min(len(vowel_counter) * 2, len(formant_list))
 
             mixture_kwargs = {
                 'n_components': n_components,
@@ -5451,16 +5516,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
         workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
         worksheet_distance = workbook.add_worksheet('Distance')
 
-        worksheet_list = [
-            workbook.add_worksheet('Figure {0}'.format(i + 1))
-            for i in range(len(info_list))]
-
-        name_list = [name for p, d, name, q, c in info_list]
-
-        worksheet_distance.set_column(0, 0, 64)
-
-        worksheet_distance.write_row('B1', name_list)
-        worksheet_distance.write_column('A2', name_list)
+        worksheet_list = []
 
         # Getting integrable density grids for each distribution model.
 
@@ -5495,7 +5551,17 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
             enumerate(zip(info_list, formant_data_list))):
 
+            # Checking if we have no data for this perspective.
+
+            if mixture is None:
+
+                grid_data_list.append(None)
+                continue
+
             z = None
+
+            worksheet_list.append(
+                workbook.add_worksheet('Figure {0}'.format(len(worksheet_list) + 1)))
 
             # If we are in debug mode, we try to load saved grid data we might have.
 
@@ -5639,7 +5705,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 perspective.client_id,
                 perspective.object_id))
 
-            worksheet_list[perspective_index].insert_image(
+            worksheet_list[-1].insert_image(
                 'A1', figure_file_name, {'image_data': figure_stream})
 
             if __debug_flag__:
@@ -5715,7 +5781,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 perspective.client_id,
                 perspective.object_id))
 
-            worksheet_list[perspective_index].insert_image(
+            worksheet_list[-1].insert_image(
                 'A44', figure_3d_file_name, {'image_data': figure_3d_stream})
 
             if __debug_flag__:
@@ -5736,16 +5802,19 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
         # And now we should compute pairwise total variation statistical distances between computed
         # approximations of formant distributions.
 
-        d_ij = numpy.zeros((len(info_list), len(info_list)))
+        d_ij = numpy.zeros((len(yes_index_list), len(yes_index_list)))
 
-        for i in range(len(info_list) - 1):
-            for j in range(i + 1, len(info_list)):
+        for i in range(len(yes_index_list) - 1):
+            for j in range(i + 1, len(yes_index_list)):
 
-                perspective_i, name_i = info_list[i][0], info_list[i][2]
-                perspective_j, name_j = info_list[j][0], info_list[j][2]
+                index_i = yes_index_list[i]
+                index_j = yes_index_list[j]
 
-                z_i = grid_data_list[i]
-                z_j = grid_data_list[j]
+                perspective_i, name_i = info_list[index_i][0], info_list[index_i][2]
+                perspective_j, name_j = info_list[index_j][0], info_list[index_j][2]
+
+                z_i = grid_data_list[index_i]
+                z_j = grid_data_list[index_j]
 
                 delta_abs = numpy.abs(z_i - z_j)
 
@@ -5763,17 +5832,29 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                     '\nperspective {0} ({1}, {2}/{3}),'
                     '\nperspective {4} ({5}, {6}/{7}):'
                     '\ntotal variation distance {8:.6f}'.format(
-                    i, name_i, perspective_i.client_id, perspective_i.object_id,
-                    j, name_j, perspective_j.client_id, perspective_j.object_id,
+                    index_i, name_i, perspective_i.client_id, perspective_i.object_id,
+                    index_j, name_j, perspective_j.client_id, perspective_j.object_id,
                     d_value))
 
         # Adding distance data to the workbook.
 
-        for i in range(len(info_list)):
+        name_list = [info_list[i][2] for i in yes_index_list]
+
+        worksheet_distance.set_column(0, 0, 64)
+
+        worksheet_distance.write_row('B1', name_list)
+        worksheet_distance.write_column('A2', name_list)
+
+        for i in range(len(yes_index_list)):
 
             worksheet_distance.write_row(
                 'B{0}'.format(i + 2),
                 [round(value, 4) for value in d_ij[i,:]])
+
+        worksheet_distance.write_column(
+            'A{0}'.format(len(yes_index_list) + 3),
+            ['Insufficient formant data:'] +
+                [info_list[i][2] for i in no_index_list])
 
         workbook.close()
 
