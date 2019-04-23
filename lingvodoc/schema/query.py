@@ -5851,10 +5851,12 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 'B{0}'.format(i + 2),
                 [round(value, 4) for value in d_ij[i,:]])
 
-        worksheet_distance.write_column(
-            'A{0}'.format(len(yes_index_list) + 3),
-            ['Insufficient formant data:'] +
-                [info_list[i][2] for i in no_index_list])
+        if no_index_list:
+
+            worksheet_distance.write_column(
+                'A{0}'.format(len(yes_index_list) + 3),
+                ['Insufficient formant data:'] +
+                    [info_list[i][2] for i in no_index_list])
 
         workbook.close()
 
