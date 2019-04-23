@@ -1,6 +1,7 @@
 import datetime
 from collections import defaultdict
 from itertools import chain
+import logging
 import graphene
 
 from lingvodoc.cache.caching import CACHE
@@ -17,7 +18,10 @@ from lingvodoc.models import (
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
     Organization as dbOrganization,
-    Grant as dbGrant
+    Grant as dbGrant,
+    Entity as dbEntity,
+    LexicalEntry as dbLexicalEntry,
+    PublishingEntity as dbPublishingEntity
     )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
@@ -34,6 +38,7 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID,
     UserAndOrganizationsRoles
 )
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (create_perspective,
@@ -41,6 +46,11 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dictionary_persp_to_field,
                                       edit_role)
 from lingvodoc.utils.deletion import real_delete_dictionary
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 class UserToRoles(graphene.ObjectType):
     id_user = graphene.Int()
@@ -103,7 +113,10 @@ class Dictionary(LingvodocObjectType):  # tested
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     status = graphene.String()
 
-    perspectives = graphene.List('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective', )
+    perspectives = graphene.List(
+        'lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective',
+        only_with_phonology_data = graphene.Boolean())
+
     persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
@@ -144,16 +157,50 @@ class Dictionary(LingvodocObjectType):  # tested
         return new_format_statistics
 
     @fetch_object()
-    def resolve_perspectives(self, info):
+    def resolve_perspectives(self, info, only_with_phonology_data = None):
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
         dictionary_client_id, dictionary_object_id = self.id  # self.dbObject.client_id, self.dbObject.object_id
 
-        perspectives = list()
-        child_persps = DBSession.query(dbDictionaryPerspective) \
+        child_persps_query = DBSession.query(dbDictionaryPerspective) \
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id,
-                       marked_for_deletion=False).all()
-        for persp in child_persps:
+                       marked_for_deletion=False)
+
+        # If required, filtering out pespectives without phonology data.
+
+        if only_with_phonology_data:
+
+            dbMarkup = aliased(dbEntity, name = 'Markup')
+            dbSound = aliased(dbEntity, name = 'Sound')
+
+            dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
+            dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
+
+            phonology_query = DBSession.query(
+                dbDictionaryPerspective, dbLexicalEntry, dbMarkup, dbSound).filter(
+                    dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
+                    dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbMarkup.parent_client_id == dbLexicalEntry.client_id,
+                    dbMarkup.parent_object_id == dbLexicalEntry.object_id,
+                    dbMarkup.marked_for_deletion == False,
+                    dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
+                    dbPublishingMarkup.client_id == dbMarkup.client_id,
+                    dbPublishingMarkup.object_id == dbMarkup.object_id,
+                    dbPublishingMarkup.published == True,
+                    dbPublishingMarkup.accepted == True,
+                    dbSound.client_id == dbMarkup.self_client_id,
+                    dbSound.object_id == dbMarkup.self_object_id,
+                    dbSound.marked_for_deletion == False,
+                    dbPublishingSound.client_id == dbSound.client_id,
+                    dbPublishingSound.object_id == dbSound.object_id,
+                    dbPublishingSound.published == True,
+                    dbPublishingSound.accepted == True)
+
+            child_persps_query = child_persps_query.filter(phonology_query.exists())
+
+        perspectives = list()
+        for persp in child_persps_query.all():
             persp_object = self.persp_class(id=[persp.client_id, persp.object_id])
             persp_object.dbObject = persp
             perspectives.append(persp_object)
