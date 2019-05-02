@@ -2543,15 +2543,22 @@ class CognateAnalysis(graphene.Mutation):
         distance_consonant_flag=graphene.Boolean()
 
     triumph = graphene.Boolean()
+
     dictionary_count = graphene.Int()
     group_count = graphene.Int()
     not_enough_count = graphene.Int()
     transcription_count = graphene.Int()
     translation_count = graphene.Int()
+
     result = graphene.String()
     xlsx_url = graphene.String()
     distance_list = graphene.Field(ObjectVal)
     figure_url = graphene.String()
+
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+    perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
     def tag_data_std(
@@ -3569,7 +3576,7 @@ class CognateAnalysis(graphene.Mutation):
                     dr2 = (x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2
 
                     if d_ij[i,j] <= 0:
-                        result += dr2
+                        result += 4 * dr2
 
                     else:
                         d2_ij = d_ij[i,j] ** 2
@@ -3598,11 +3605,11 @@ class CognateAnalysis(graphene.Mutation):
 
                     if d_ij[i,j] <= 0:
 
-                        df_x[i] += dx
-                        df_x[j] -= dx
+                        df_x[i] += 4 * dx
+                        df_x[j] -= 4 * dx
 
-                        df_y[i] += dy
-                        df_y[j] -= dy
+                        df_y[i] += 4 * dy
+                        df_y[j] -= 4 * dy
 
                     else:
 
@@ -3673,7 +3680,7 @@ class CognateAnalysis(graphene.Mutation):
                     dr2 = (x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2 + (z[i] - z[j]) ** 2
 
                     if d_ij[i,j] <= 0:
-                        result += dr2
+                        result += 4 * dr2
 
                     else:
                         d2_ij = d_ij[i,j] ** 2
@@ -3705,14 +3712,14 @@ class CognateAnalysis(graphene.Mutation):
 
                     if d_ij[i,j] <= 0:
 
-                        df_x[i] += dx
-                        df_x[j] -= dx
+                        df_x[i] += 4 * dx
+                        df_x[j] -= 4 * dx
 
-                        df_y[i] += dy
-                        df_y[j] -= dy
+                        df_y[i] += 4 * dy
+                        df_y[j] -= 4 * dy
 
-                        df_z[i] += dz
-                        df_z[j] -= dz
+                        df_z[i] += 4 * dz
+                        df_z[j] -= 4 * dz
 
                     else:
 
@@ -4588,119 +4595,137 @@ class CognateAnalysis(graphene.Mutation):
                 distance_data_array,
                 d_ij))
             
-            # Projecting the graph into a 2d plane via multidimensional scaling, using PCA to orient it
-            # left-right.
+            # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
+            # orient it left-right.
 
-            mds = sklearn.manifold.MDS(
-                dissimilarity = 'precomputed',
-                random_state = 17,
-                eps = 1e-6)
+            embedding_2d, strain_2d = (
+                CognateAnalysis.graph_2d_embedding(d_ij, verbose = __debug_flag__))
 
-            pca = sklearn.decomposition.PCA(n_components = 2)
+            embedding_2d_pca = (
+                sklearn.decomposition.PCA(n_components = 2)
+                    .fit_transform(embedding_2d))
 
-            result_x = pca.fit_transform(mds.fit(d_ij).embedding_)
-            result_d = sklearn.metrics.euclidean_distances(result_x)
+            distance_2d = sklearn.metrics.euclidean_distances(embedding_2d)
             
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
-                '\nembedding:\n{2}'
-                '\nstrain:\n{3}'
-                '\ndistances:\n{4}'.format(
+                '\nembedding 2d:\n{2}'
+                '\nembedding 2d (PCA-oriented):\n{3}'
+                '\nstrain 2d:\n{4}'
+                '\ndistances 2d:\n{5}'.format(
                 base_language_id[0], base_language_id[1],
-                result_x,
-                mds.fit(d_ij).stress_,
-                result_d))
-
-            # Trying direct optimization with relative distances.
-
-            rel_embedding, rel_strain = CognateAnalysis.graph_2d_embedding(d_ij, verbose = __debug_flag__)
-
-            result2_x = pca.fit_transform(rel_embedding)
-            result2_d = sklearn.metrics.euclidean_distances(result2_x)
-            
-            log.debug(
-                '\ncognate_analysis {0}/{1}:'
-                '\nembedding (rel):\n{2}'
-                '\nstrain (rel):\n{3}'
-                '\ndistances (rel):\n{4}'.format(
-                base_language_id[0], base_language_id[1],
-                result2_x,
-                rel_strain,
-                result2_d))
+                embedding_2d,
+                embedding_2d_pca,
+                strain_2d,
+                distance_2d))
 
             # And now the same with 3d embedding.
 
-            rel_embedding_3d, rel_strain_3d = (
+            embedding_3d, strain_3d = (
                 CognateAnalysis.graph_3d_embedding(d_ij, verbose = __debug_flag__))
 
-            result_3d_x = sklearn.decomposition.PCA(n_components = 3).fit_transform(rel_embedding_3d)
-            result_3d_d = sklearn.metrics.euclidean_distances(result_3d_x)
+            embedding_3d_pca = (
+                sklearn.decomposition.PCA(n_components = 3)
+                    .fit_transform(embedding_3d))
+
+            distance_3d = sklearn.metrics.euclidean_distances(embedding_3d_pca)
             
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
-                '\nembedding 3d (raw):\n{2}'
-                '\nembedding 3d (PCA-fixed):\n{3}'
+                '\nembedding 3d:\n{2}'
+                '\nembedding 3d (PCA-oriented):\n{3}'
                 '\nstrain 3d:\n{4}'
                 '\ndistances 3d:\n{5}'.format(
                 base_language_id[0], base_language_id[1],
-                rel_embedding_3d,
-                result_3d_x,
-                rel_strain_3d,
-                result_3d_d))
+                embedding_3d,
+                embedding_3d_pca,
+                strain_3d,
+                distance_3d))
 
-            # Computing minimum spanning tree.
+            # Computing minimum spanning tree via standard Jarnik-Prim-Dijkstra algorithm using 2d and 3d
+            # embedding distances to break ties.
 
-            mst = scipy.sparse.csgraph.minimum_spanning_tree(d_ij + numpy.ones(d_ij.shape))
-            mst_c = mst.tocoo()
+            d_min, d_extra_min, min_i, min_j = min(
+                (d_ij[i,j], distance_2d[i,j] + distance_3d[i,j], i, j)
+                for i in range(d_ij.shape[0] - 1)
+                for j in range(i + 1, d_ij.shape[0]))
+
+            mst_list = [(min_i, min_j)]
+            mst_dict = {}
+
+            log.debug('\n' + repr((min_i, min_j, d_min, d_extra_min)))
+
+            # MST construction initialization.
+
+            for i in range(d_ij.shape[0]):
+
+                if i == min_i or i == min_j:
+                    continue
+
+                d_min_i = (d_ij[i, min_i], distance_2d[i, min_i] + distance_3d[i, min_i])
+                d_min_j = (d_ij[i, min_j], distance_2d[i, min_j] + distance_3d[i, min_j])
+
+                mst_dict[i] = (
+                    (d_min_i, min_i) if d_min_i <= d_min_j else
+                    (d_min_j, min_i))
+
+            # Iterative MST construction.
+
+            while len(mst_dict) > 0:
+
+                (d_min, d_extra_min, i_min, i_from_min) = min(
+                    (d, d_extra, i, i_from) for i, ((d, d_extra), i_from) in mst_dict.items())
+
+                log.debug('\n' + pprint.pformat(mst_dict))
+                log.debug('\n' + repr((i_from_min, i_min, d_min, d_extra_min)))
+
+                mst_list.append((i_from_min, i_min))
+                del mst_dict[i_min]
+
+                # Updating shortest connection info.
+
+                for i_to in mst_dict.keys():
+
+                    d_to = (d_ij[i_min, i_to], distance_2d[i_min, i_to] + distance_3d[i_min, i_to])
+
+                    if d_to < mst_dict[i_to][0]:
+                        mst_dict[i_to] = (d_to, i_min)
 
             log.debug(
                 '\ncognate_analysis {0}/{1}:'
                 '\nminimum spanning tree:\n{2}'.format(
                 base_language_id[0], base_language_id[1],
-                mst))
+                pprint.pformat(mst_list)))
 
             # Plotting with matplotlib.
 
             figure = pyplot.figure(figsize = (10, 10))
+            axes = figure.add_subplot(212)
 
-            axes_a = figure.add_subplot(211)
-            axes_a.set_title('Etymological distance tree (MDS embedding)', fontsize = 14, family = 'Gentium')
+            axes.set_title(
+                'Etymological distance tree (relative distance embedding)',
+                fontsize = 14, family = 'Gentium')
 
-            axes_a.axis('equal')
-            axes_a.axis('off')
-            axes_a.autoscale()
+            axes.axis('equal')
+            axes.axis('off')
+            axes.autoscale()
 
-            axes_b = figure.add_subplot(212)
-            axes_b.set_title('Etymological distance tree (RD embedding)', fontsize = 14, family = 'Gentium')
-
-            axes_b.axis('equal')
-            axes_b.axis('off')
-            axes_b.autoscale()
-
-            def f(axes, result_x):
+            def f(axes, embedding_pca):
                 """
                 Plots specified graph embedding on a given axis.
                 """
 
-                flag_3d = numpy.size(result_x, 1) > 2
-
-                # Plotting positions.
-
-                x_delta = max(result_x[:, 0]) - min(result_x[:, 0])
-                y_delta = max(result_x[:, 1]) - min(result_x[:, 1])
-                z_delta = max(result_x[:, 2]) - min(result_x[:, 2]) if flag_3d else 0
-
-                result_x /= max(x_delta, y_delta, z_delta)
+                flag_3d = numpy.size(embedding_pca, 1) > 2
 
                 for index, (position, name) in enumerate(
-                    zip(result_x, distance_header_array)):
+                    zip(embedding_pca, distance_header_array)):
 
                     # Checking if any of the previous perspectives are already in this perspective's
                     # position.
 
                     same_position_index = None
 
-                    for i, p in enumerate(result_x[:index]):
+                    for i, p in enumerate(embedding_pca[:index]):
                         if numpy.linalg.norm(position - p) <= 1e-3:
 
                             same_position_index = i
@@ -4740,8 +4765,8 @@ class CognateAnalysis(graphene.Mutation):
                 # Plotting minimum spanning trees.
 
                 line_list = [
-                    (result_x[i], result_x[j])
-                    for i, j in zip(mst_c.row, mst_c.col)]
+                    (embedding_pca[i], embedding_pca[j])
+                    for i, j in mst_list]
 
                 line_collection = (
                     Line3DCollection if flag_3d else LineCollection)(
@@ -4751,14 +4776,13 @@ class CognateAnalysis(graphene.Mutation):
 
                 pyplot.setp(axes.texts, family = 'Gentium')
 
-            # Plotting our two embeddings, creating the legend.
+            # Plotting our embedding, creating the legend.
 
-            f(axes_a, result_x)
-            f(axes_b, result2_x)
+            f(axes, embedding_2d_pca)
 
             pyplot.tight_layout()
 
-            legend = axes_b.legend(
+            legend = axes.legend(
                 scatterpoints = 1,
                 loc = 'upper center',
                 bbox_to_anchor = (0.5, -0.05),
@@ -4768,9 +4792,7 @@ class CognateAnalysis(graphene.Mutation):
                 fontsize = 14)
 
             pyplot.setp(legend.texts, family = 'Gentium')
-
-            axes_a.autoscale_view()
-            axes_b.autoscale_view()
+            axes.autoscale_view()
 
             # Saving generated figure for debug purposes, if required.
 
@@ -4801,7 +4823,7 @@ class CognateAnalysis(graphene.Mutation):
                 axes_3d.axis('equal')
                 axes_3d.view_init(elev = 30, azim = -75)
 
-                f(axes_3d, result_3d_x)
+                f(axes_3d, embedding_3d_pca)
 
                 axes_3d.set_xlabel('X')
                 axes_3d.set_ylabel('Y')
@@ -4821,9 +4843,9 @@ class CognateAnalysis(graphene.Mutation):
                 # Fake cubic bounding box to force axis aspect ratios, see
                 # https://stackoverflow.com/a/13701747/2016856.
 
-                X = result_3d_x[:,0]
-                Y = result_3d_x[:,1]
-                Z = result_3d_x[:,2]
+                X = embedding_3d_pca[:,0]
+                Y = embedding_3d_pca[:,1]
+                Z = embedding_3d_pca[:,2]
 
                 max_range = numpy.array([
                     X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
@@ -4905,7 +4927,11 @@ class CognateAnalysis(graphene.Mutation):
             result = wrapped_output,
             xlsx_url = xlsx_url,
             distance_list = distance_list,
-            figure_url = figure_url)
+            figure_url = figure_url,
+            minimum_spanning_tree = mst_list,
+            embedding_2d = embedding_2d_pca,
+            embedding_3d = embedding_3d_pca,
+            perspective_name_list = distance_header_array)
 
     @staticmethod
     def mutate(self, info, **args):
