@@ -2447,8 +2447,8 @@ class PhonemicAnalysis(graphene.Mutation):
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug('phonemic_analysis: exception')
-            log.debug(traceback_string)
+            log.warning('phonemic_analysis: exception')
+            log.warning(traceback_string)
 
             return ResponseError(message =
                 'Exception:\n' + traceback_string)
@@ -2517,11 +2517,11 @@ def async_cognate_analysis(
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug(
+            log.warning(
                 'cognate_analysis {0}/{1}: exception'.format(
                 *base_language_id))
 
-            log.debug(traceback_string)
+            log.warning(traceback_string)
 
             if task_status is not None:
 
@@ -2541,6 +2541,7 @@ class CognateAnalysis(graphene.Mutation):
         figure_flag=graphene.Boolean()
         distance_vowel_flag=graphene.Boolean()
         distance_consonant_flag=graphene.Boolean()
+        debug_flag=graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -4970,7 +4971,7 @@ class CognateAnalysis(graphene.Mutation):
         distance_vowel_flag = args.get('distance_vowel_flag')
         distance_consonant_flag = args.get('distance_consonant_flag')
 
-        __debug_flag__ = False
+        __debug_flag__ = args.get('debug_flag', False)
 
         try:
 
@@ -5111,11 +5112,11 @@ class CognateAnalysis(graphene.Mutation):
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug(
+            log.warning(
                 'cognate_analysis {0}/{1}: exception'.format(
                 *base_language_id))
 
-            log.debug(traceback_string)
+            log.warning(traceback_string)
 
             return ResponseError(message =
                 'Exception:\n' + traceback_string)
@@ -5219,8 +5220,8 @@ def async_phonological_statistical_distance(
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug('phonological_statistical_distance: exception')
-            log.debug(traceback_string)
+            log.warning('phonological_statistical_distance: exception')
+            log.warning(traceback_string)
 
             if task_status is not None:
 
@@ -6012,8 +6013,8 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
             traceback_string = ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1]
 
-            log.debug('phonological_statistical_distance: exception')
-            log.debug(traceback_string)
+            log.warning('phonological_statistical_distance: exception')
+            log.warning(traceback_string)
 
             return ResponseError(message =
                 'Exception:\n' + traceback_string)
