@@ -4041,7 +4041,7 @@ class CognateAnalysis(graphene.Mutation):
                     row_list = row[4][0]
 
                     result = (
-                        acoustic_data(
+                        CognateAnalysis.acoustic_data(
                             base_language_id,
                             tuple(row_list[0:2]), row_list[2],
                             tuple(row_list[3:5]), row_list[5],
@@ -6502,3 +6502,36 @@ class Context(dict):
         """
 
         return self.acl_check_if(action, subject, args.get('id'))
+
+
+if __name__ == '__main__':
+
+    # Cognate analysis debugging script.
+
+    import pdb
+    import re
+    import sys
+
+    dictionary_count, line_count = map(
+        int, re.findall(r'\d+', sys.argv[1])[:2])
+
+    print(dictionary_count, line_count)
+
+    with open(sys.argv[1], 'rb') as input_file:
+        input = input_file.read().decode('utf-16')
+
+    input_buffer = ctypes.create_unicode_buffer(input)
+
+    output_buffer_size = cognate_analysis_f(
+        None, dictionary_count, line_count, None, 1)
+
+    print(output_buffer_size)
+
+    output_buffer = ctypes.create_unicode_buffer(output_buffer_size + 256)
+
+    result = cognate_analysis_f(
+        input_buffer, dictionary_count, line_count, output_buffer, 1)
+
+    print(result)
+
+
