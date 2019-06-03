@@ -4511,6 +4511,8 @@ class CognateAnalysis(graphene.Mutation):
 
         # Selecting one of the distance matrices, if we have any.
 
+        distance_header_array = None
+
         if distance_matrix_list is not None:
 
             distance_matrix = distance_matrix_list[-1]
@@ -4581,6 +4583,10 @@ class CognateAnalysis(graphene.Mutation):
         # Generating distance graph, if required.
 
         figure_url = None
+
+        mst_list = None
+        embedding_2d_pca = None
+        embedding_3d_pca = None
 
         if figure_flag:
 
