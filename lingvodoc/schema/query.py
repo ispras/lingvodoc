@@ -2188,9 +2188,13 @@ class StarlingEtymology(graphene.Mutation):
 class PhonemicAnalysis(graphene.Mutation):
 
     class Arguments:
-        perspective_id=LingvodocID(required=True)
-        transcription_field_id=LingvodocID(required=True)
-        translation_field_id=LingvodocID(required=True)
+
+        perspective_id = LingvodocID(required = True)
+        transcription_field_id = LingvodocID(required = True)
+        translation_field_id = LingvodocID(required = True)
+        wrap_flag = graphene.Boolean()
+
+        debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
     entity_count = graphene.Int()
@@ -2217,9 +2221,11 @@ class PhonemicAnalysis(graphene.Mutation):
         transcription_field_cid, transcription_field_oid = args['transcription_field_id']
         translation_field_cid, translation_field_oid = args['translation_field_id']
 
+        wrap_flag = args.get('wrap_flag', False)
+
         locale_id = info.context.get('locale_id') or 2
 
-        __debug_flag__ = False
+        __debug_flag__ = args.get('debug_flag', False)
 
         try:
 
@@ -2237,13 +2243,17 @@ class PhonemicAnalysis(graphene.Mutation):
                 '\n  perspective: {3}'
                 '\n  transcription field: {4}/{5}'
                 '\n  translation field: {6}/{7}'
-                '\n  locale_id: {8}'
-                '\n  phonemic_analysis_f: {9}'.format(
+                '\n  wrap_flag: {8}'
+                '\n  debug_flag: {9}'
+                '\n  locale_id: {10}'
+                '\n  phonemic_analysis_f: {11}'.format(
                     perspective_cid, perspective_oid,
                     repr(dictionary_name.strip()),
                     repr(perspective_name.strip()),
                     transcription_field_cid, transcription_field_oid,
                     translation_field_cid, translation_field_oid,
+                    wrap_flag,
+                    __debug_flag__,
                     locale_id,
                     repr(phonemic_analysis_f)))
 
@@ -2412,35 +2422,41 @@ class PhonemicAnalysis(graphene.Mutation):
                     translation_field_cid, translation_field_oid,
                     repr(output)))
 
-            # Reflowing output.
+            # Reflowing output, if required.
 
-            line_list = output.split('\r\n')
+            final_output = output
 
-            text_wrapper = textwrap.TextWrapper(
-                width = 108, tabsize = 4)
+            if wrap_flag:
 
-            reflow_list = []
+                line_list = output.split('\r\n')
 
-            for line in line_list:
-                reflow_list.extend(text_wrapper.wrap(line))
+                text_wrapper = textwrap.TextWrapper(
+                    width = 108, tabsize = 4)
 
-            wrapped_output = '\n'.join(reflow_list)
+                reflow_list = []
 
-            log.debug(
-                'phonemic_analysis {0}/{1}: '
-                'transcription field {2}/{3}, translation field {4}/{5}:'
-                '\nwrapped output:\n{6}'.format(
-                    perspective_cid, perspective_oid,
-                    transcription_field_cid, transcription_field_oid,
-                    translation_field_cid, translation_field_oid,
-                    wrapped_output))
+                for line in line_list:
+                    reflow_list.extend(text_wrapper.wrap(line))
+
+                wrapped_output = '\n'.join(reflow_list)
+
+                log.debug(
+                    'phonemic_analysis {0}/{1}: '
+                    'transcription field {2}/{3}, translation field {4}/{5}:'
+                    '\nwrapped output:\n{6}'.format(
+                        perspective_cid, perspective_oid,
+                        transcription_field_cid, transcription_field_oid,
+                        translation_field_cid, translation_field_oid,
+                        wrapped_output))
+
+                final_output = wrapped_output
 
             # Returning result.
 
             return PhonemicAnalysis(
                 triumph = True,
                 entity_count = total_count,
-                result = wrapped_output)
+                result = final_output)
 
         except Exception as exception:
 
@@ -2532,16 +2548,20 @@ def async_cognate_analysis(
 class CognateAnalysis(graphene.Mutation):
 
     class Arguments:
-        base_language_id=LingvodocID(required=True)
-        group_field_id=LingvodocID(required=True)
-        perspective_info_list=graphene.List(graphene.List(LingvodocID), required=True)
-        mode=graphene.String()
-        distance_flag=graphene.Boolean()
-        reference_perspective_id=LingvodocID()
-        figure_flag=graphene.Boolean()
-        distance_vowel_flag=graphene.Boolean()
-        distance_consonant_flag=graphene.Boolean()
-        debug_flag=graphene.Boolean()
+
+        base_language_id = LingvodocID(required = True)
+        group_field_id = LingvodocID(required = True)
+        perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
+        mode = graphene.String()
+
+        distance_flag = graphene.Boolean()
+        reference_perspective_id = LingvodocID()
+
+        figure_flag = graphene.Boolean()
+        distance_vowel_flag = graphene.Boolean()
+        distance_consonant_flag = graphene.Boolean()
+
+        debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -5006,9 +5026,10 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  figure_flag: {9}'
                  '\n  distance_vowel_flag: {10}'
                  '\n  distance_consonant_flag: {11}'
-                 '\n  cognate_analysis_f: {12}'
-                 '\n  cognate_acoustic_analysis_f: {13}'
-                 '\n  cognate_distance_analysis_f: {14}'.format(
+                 '\n  debug_flag: {12}'
+                 '\n  cognate_analysis_f: {13}'
+                 '\n  cognate_acoustic_analysis_f: {14}'
+                 '\n  cognate_distance_analysis_f: {15}'.format(
                     base_language_id[0], base_language_id[1],
                     repr(language_name.strip()),
                     group_field_id[0], group_field_id[1],
@@ -5019,6 +5040,7 @@ class CognateAnalysis(graphene.Mutation):
                     figure_flag,
                     distance_vowel_flag,
                     distance_consonant_flag,
+                    __debug_flag__,
                     repr(cognate_analysis_f),
                     repr(cognate_acoustic_analysis_f),
                     repr(cognate_distance_analysis_f)))
@@ -5238,10 +5260,13 @@ def async_phonological_statistical_distance(
 class PhonologicalStatisticalDistance(graphene.Mutation):
 
     class Arguments:
+
         id_list = graphene.List(LingvodocID, required = True)
         vowel_selection = graphene.Boolean(required = True)
         chart_threshold = graphene.Int()
-        synchronous = graphene.Boolean()
+
+        synchronous_flag = graphene.Boolean()
+        debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -5943,9 +5968,9 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
         vowel_selection = args['vowel_selection']
         chart_threshold = args['chart_threshold']
 
-        synchronous = args.get('synchronous')
+        synchronous_flag = args.get('synchronous_flag', False)
 
-        __debug_flag__ = False
+        __debug_flag__ = args.get('debug_flag', False)
 
         try:
 
@@ -5956,12 +5981,14 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 'id_list: {1}\n'
                 'vowel_selection: {2}\n'
                 'chart_threshold: {3}\n'
-                'synchronous: {4}'.format(
+                'synchronous_flag: {4}\n'
+                'debug_flag: {5}\n'.format(
                 len(id_list),
                 id_list,
                 vowel_selection,
                 chart_threshold,
-                synchronous))
+                synchronous_flag,
+                __debug_flag__))
 
             locale_id = info.context.get('locale_id')
 
@@ -5970,7 +5997,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
             # Simple synchronous phonological statistical distance computation.
 
-            if synchronous:
+            if synchronous_flag:
 
                 return PhonologicalStatisticalDistance.perform_phonological_statistical_distance(
                     id_list,
