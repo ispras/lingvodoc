@@ -17,6 +17,7 @@ import textwrap
 import time
 import traceback
 import urllib.parse
+import shutil
 
 import graphene
 from lingvodoc.utils.elan_functions import tgt_to_eaf
@@ -28,7 +29,8 @@ from lingvodoc.schema.gql_entity import (
     DeleteEntity,
     UpdateEntityContent,
     BulkCreateEntity,
-    ApproveAllForUser)
+    ApproveAllForUser,
+    BulkUpdateEntityContent)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -93,7 +95,7 @@ from lingvodoc.schema.gql_lexicalentry import (
     BulkDeleteLexicalEntry,
     BulkCreateLexicalEntry,
     ConnectLexicalEntries,
-    DeleteGroupingTags
+    DeleteGroupingTags,
 )
 
 from lingvodoc.schema.gql_language import (
@@ -211,7 +213,8 @@ from lingvodoc.utils.phonology import (
     gql_sound_and_markup)
 
 from lingvodoc.utils import starling_converter
-from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
+from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, \
+    find_lexical_entries_by_tags, search_eaf_blocks_in_perspective
 
 import lingvodoc.cache.caching as caching
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
@@ -284,6 +287,7 @@ import sklearn.mixture
 import transaction
 import xlsxwriter
 
+from lingvodoc.schema.gql_copy_field import CopySingleField, CopySoundMarkupFields
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -502,6 +506,16 @@ class Query(graphene.ObjectType):
         graphene.List(graphene.String), id=graphene.Int(required=False))
     perspectives_fields_intersection = graphene.Field(
         graphene.List(Field), perspectives=graphene.List(LingvodocID),)
+    eaf_search = graphene.Field(graphene.String, pid=LingvodocID(required=True), searchstring=graphene.Argument(ObjectVal))
+
+    def resolve_eaf_search(self, info, pid, searchstring):
+        storage = dict()
+        storage['path'] = "/home/andriy/Desktop/objects/"
+        storage['prefix'] = "http://localhost:6543/"
+        storage['static_route'] = "objects/"
+        client_id = info.context.get('client_id')
+        result = search_eaf_blocks_in_perspective(pid, storage, searchstring, client_id)
+        return result
 
     def resolve_perspectives_fields_intersection(self, info, perspectives=None):
         """
@@ -6379,7 +6393,7 @@ class AddRolesBulk(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id = user_id).first()
 
         if not user:
-            raise RespenseError('No user with id {0}'.format(user_id))
+            raise ResponseError('No user with id {0}'.format(user_id))
 
         # Getting permission groups info.
 
@@ -6484,15 +6498,18 @@ class MyMutations(graphene.ObjectType):
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
+    copy_sound_markup_fields = CopySoundMarkupFields.Field()
+    copy_single_field = CopySingleField.Field()
     create_entity = CreateEntity.Field()
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
     update_entity_content = UpdateEntityContent.Field()
+    bulk_update_entity_content = BulkUpdateEntityContent.Field()
     approve_all_for_user = ApproveAllForUser.Field()
     bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
-    activate_deactivate_user = ActivateDeactivateUser.Field();
+    activate_deactivate_user = ActivateDeactivateUser.Field()
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     update_language_atom = UpdateLanguageAtom.Field()
