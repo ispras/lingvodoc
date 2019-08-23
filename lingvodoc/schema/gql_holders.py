@@ -613,6 +613,7 @@ class Metadata(graphene.ObjectType):
     kind = graphene.String()
     speakersAmount = graphene.String()
     humanSettlement = graphene.List(graphene.String)
+    transcription_rules = graphene.String()
 
 
 # class LevelAndId(graphene.ObjectType):

@@ -1,4 +1,5 @@
 import itertools
+import logging
 
 import graphene
 from collections import  defaultdict
@@ -56,7 +57,8 @@ from lingvodoc.utils.creation import (
     create_gists_with_atoms,
     add_user_to_group,
     translationgist_contents,
-    edit_role
+    edit_role,
+    update_metadata
 )
 from lingvodoc.utils.deletion import real_delete_perspective
 
@@ -68,6 +70,11 @@ from sqlalchemy import (
 )
 
 from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 def group_by_lex(entity_with_published):
     entity = entity_with_published[0]
@@ -553,6 +560,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         id = LingvodocID(required=True)  #List(graphene.Int) # lingvidicID
         translation_gist_id = LingvodocID()
         parent_id = LingvodocID()
+        additional_metadata = ObjectVal()
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -564,6 +572,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         client_id = id[0]
         object_id = id[1]
         parent_id = args.get('parent_id')
+        additional_metadata = args.get('additional_metadata')
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="Error: No such perspective in the system")
@@ -585,6 +594,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
             dbperspective.parent_client_id = parent_client_id
             dbperspective.parent_object_id = parent_object_id
 
+        update_metadata(dbperspective, additional_metadata)
 
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
