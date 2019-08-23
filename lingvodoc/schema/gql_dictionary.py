@@ -585,7 +585,7 @@ class UpdateDictionary(graphene.Mutation):
         # location hook
         if additional_metadata:
 
-            if "locaton" in additional_metadata:
+            if "location" in additional_metadata:
                 child_persps = DBSession.query(dbDictionaryPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
