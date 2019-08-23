@@ -188,7 +188,7 @@ def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     return storage_path, filename
 
 
-def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
+def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True, byte_content=False):
     import errno
     storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
     directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
@@ -198,7 +198,9 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
         if exception.errno != errno.EEXIST:
             raise
     with open(storage_path, 'wb+') as f:
-        if json_input:
+        if byte_content:
+            f.write(content)
+        elif json_input:
             f.write(base64.urlsafe_b64decode(content))
         else:
             shutil.copyfileobj(content, f)
@@ -217,8 +219,8 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
     return real_location, url
 
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
-                  additional_metadata, client, content= None, filename=None,
-                  link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):
+                  additional_metadata, client, content= None, filename=None, self_client_id=None,
+                  self_object_id = None, link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None, byte_content=False):
     parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
     if not parent:
         return {'error': str("No such lexical entry in the system")}
@@ -241,6 +243,9 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                     ###additional_metadata=additional_metadata,
                     parent=parent)
 
+    if self_client_id and self_object_id:
+        entity.self_client_id = self_client_id
+        entity.self_object_id = self_object_id
 
     if upper_level:
         entity.upper_level = upper_level
@@ -250,7 +255,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     url = None
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
         ##entity.data_type = data_type
-        real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
+        real_location, url = create_object(content, entity, data_type, filename, folder_name, storage, byte_content=byte_content)
         entity.content = url
         old_meta = entity.additional_metadata
         need_hash = True
@@ -296,6 +301,10 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     entity.publishingentity.accepted = True
 
     DBSession.add(entity)
+
+    # means that the function was called from CopyField and so need to be sure that sound has been copied before copying markups
+    if byte_content:
+        DBSession.flush()
     return (entity.client_id, entity.object_id)
 
 

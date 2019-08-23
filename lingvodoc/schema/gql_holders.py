@@ -614,6 +614,12 @@ class Metadata(graphene.ObjectType):
     speakersAmount = graphene.String()
     humanSettlement = graphene.List(graphene.String)
     transcription_rules = graphene.String()
+    authors_process = graphene.List(graphene.String)
+    informant = graphene.List(graphene.String)
+    discourse_type = graphene.List(graphene.String)
+    speech_type = graphene.List(graphene.String)
+    speech_genre = graphene.List(graphene.String)
+    text_topic = graphene.List(graphene.String)
 
 
 # class LevelAndId(graphene.ObjectType):
