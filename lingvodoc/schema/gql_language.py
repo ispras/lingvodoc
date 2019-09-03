@@ -79,6 +79,8 @@ class Language(LingvodocObjectType):
     locale_exist = graphene.Boolean()
     dataType = graphene.String()
 
+    tree = graphene.List('lingvodoc.schema.gql_language.Language')
+
     class Meta:
         interfaces = (CommonFieldsComposite, TranslationHolder, TranslationGistInterface)
 
@@ -163,6 +165,17 @@ class Language(LingvodocObjectType):
             gql_language = Language(id=[language.client_id, language.object_id])
             gql_language.dbObject = language
             result.append(gql_language)
+
+        return result
+
+    @fetch_object()
+    def resolve_tree(self, info):
+        result = list()
+        iteritem = self.dbObject
+        while iteritem:
+            id = [iteritem.client_id, iteritem.object_id]
+            result.append(Language(id=id))
+            iteritem = iteritem.parent
 
         return result
 
