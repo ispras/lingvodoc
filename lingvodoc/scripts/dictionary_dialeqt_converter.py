@@ -9,6 +9,8 @@ import time
 import logging
 import shutil
 import transaction
+import traceback
+import re
 from collections import defaultdict
 from pathvalidate import sanitize_filename
 from sqlalchemy import create_engine
@@ -593,7 +595,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
     task_status.set(1, 1, "Preparing")
     hashes = dict()
     markups = set()
-    time.sleep(3)
+    #time.sleep(3)
     field_ids = {}
     with transaction.manager:
         blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
@@ -686,7 +688,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                     new_group.users.append(user)
                 DBSession.add(new_group)
                 DBSession.flush()
-        perspective_metadata = {"authors": ""}
+        perspective_metadata = {"authors": []}
         authors = sqconn.cursor()
         authors.execute("select dict_author, dict_coauthors from dict_attributes  where id=1;")
         author, coauthors = authors.fetchone()
@@ -699,9 +701,13 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             for word in coauthors.split(","):
                 if word:
                     authors_set.add(word.strip())
-        authors_string = ", ".join(authors_set)
-        if authors_string:
-            perspective_metadata = {"authors": authors_string}
+
+        # Author metadata is now a list of author strings, and not a single string with comma-separated
+        # author names as before.
+
+        authors_list = sorted(authors_set)
+        if authors_list:
+            perspective_metadata = {"authors": authors_list}
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
                                                        object_id=dictionary_object_id).first()
 
@@ -711,9 +717,11 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
             old_meta = parent.additional_metadata
             if authors_set:
                 if "authors" in old_meta:
-                        old_authors_str = old_meta["authors"]
+                        old_authors_list = old_meta["authors"]
+                        if isinstance(old_authors_list, str):
+                            old_authors_list = re.split(r'\s*,', old_authors_list)
                         new_authors_set = set()
-                        for old_word in old_authors_str.split(","):
+                        for old_word in old_authors_list:
                             if old_word:
                                 new_authors_set.add(old_word.strip())
                         old_authors_set = new_authors_set.copy()
@@ -722,8 +730,8 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                 if author:
                                     new_authors_set.add(author.strip())
                         if new_authors_set != old_authors_set:
-                            new_authors_string = ", ".join(new_authors_set)
-                            parent.additional_metadata["authors"] = new_authors_string
+                            new_authors_list = sorted(new_authors_set)
+                            parent.additional_metadata["authors"] = new_authors_list
         else:
             parent.additional_metadata = perspective_metadata
         flag_modified(parent, 'additional_metadata')
@@ -1434,23 +1442,39 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
 
 def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
                 language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
-                sqlalchemy_url, storage, locale_id, task_key, cache_kwargs):
+                sqlalchemy_url, storage, locale_id, task_key, cache_kwargs, synchronous = False):
     log = logging.getLogger(__name__)
-    time.sleep(3)
+    #time.sleep(3)
     #from lingvodoc.cache.caching import CACHE
-    from lingvodoc.cache.caching import initialize_cache
-    initialize_cache(cache_kwargs)
+
+    if not synchronous:
+        from lingvodoc.cache.caching import initialize_cache
+        initialize_cache(cache_kwargs)
+
     task_status = TaskStatus.get_from_cache(task_key)
+    status = None
+
     try:
-        engine = create_engine(sqlalchemy_url)
-        DBSession.configure(bind=engine)
+
+        if not synchronous:
+            engine = create_engine(sqlalchemy_url)
+            DBSession.configure(bind=engine)
+
         status = convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
                                 language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
                                 storage, locale_id, task_status)
     except Exception as err:
         task_status.set(None, -1, "Conversion failed: %s" % str(err))
+
+        traceback_string = ''.join(traceback.format_exception(
+            err, err, err.__traceback__))[:-1]
+
+        log.debug('convert_all: exception')
+        log.debug(traceback_string)
+
     log.debug(status)
     log.debug('Finished')
+
     return status
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ import math
 import os.path
 import pickle
 import pprint
+import re
 import shutil
 import textwrap
 import time
@@ -568,7 +569,9 @@ class Query(graphene.ObjectType):
             all_values = DBSession.query(dbDictionary.additional_metadata[metadata_name]) \
                 .filter(dbDictionary.additional_metadata[metadata_name] != None,
                         dbDictionary.marked_for_deletion==False)
-            all_authors_lists = [value for value, in all_values]
+            all_authors_lists = [
+                (re.split(r'\s*,', value) if isinstance(value, str) else value)
+                    for value, in all_values]
             values_iterator = itertools.chain.from_iterable(all_authors_lists)
             uniq_values = set(values_iterator)
             soreted_values = sorted(list(uniq_values))
