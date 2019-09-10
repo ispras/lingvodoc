@@ -1,6 +1,8 @@
 import json
 import datetime
 import graphene
+import logging
+import re
 from graphql.language.ast import ObjectValue, ListValue, IntValue
 from graphql.language import ast
 from graphene.types import Scalar
@@ -17,6 +19,10 @@ from lingvodoc.models import (
 )
 from lingvodoc.utils.verification import check_client_id
 from lingvodoc.cache.caching import CACHE
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 
 # Object types
@@ -682,6 +688,18 @@ class AdditionalMetadata(graphene.Interface):
             if metadata_dict["blobs"]:
                 old_id_meta = metadata_dict["blobs"]
                 metadata_dict["blobs"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
+
+        # New 'authors' metadata is a list of author strings, while some old dictionaries (in particular,
+        # ones converted from Dialeqt files via old convertion code) has 'authors' metadata which is a
+        # single string with comma-separated author names.
+        #
+        # So if 'authors' is a string, we assume that it's comma-separated and split it.
+
+        if ('authors' in metadata_dict and
+            isinstance(metadata_dict['authors'], str)):
+
+            metadata_dict['authors'] = re.split(r'\s*,', metadata_dict['authors'])
+
         metadata_object = Metadata(**metadata_dict)
         return metadata_object
 
