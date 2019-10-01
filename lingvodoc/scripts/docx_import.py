@@ -421,11 +421,12 @@ def parse_table(
     # Removing any snippet alignment marks, if we have any.
  
     for cell_list in row_list:
+        for i in range(len(cell_list)):
  
-        match = re.match(r'\(__\d+__\)\s*', cell_list[0])
- 
-        if match:
-            cell_list[0] = cell_list[0][match.end():]
+            match = re.match(r'\(__\d+__\)\s*', cell_list[i])
+     
+            if match:
+                cell_list[i] = cell_list[i][match.end():]
 
     state_list = []
     beam_width = 32
