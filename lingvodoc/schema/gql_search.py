@@ -689,9 +689,6 @@ class AdvancedSearch(LingvodocObjectType):
                     tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
                 )
         dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
-
-        if tag_list:
-            dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
         if publish:
             db_published_gist = translation_gist_search('Published')
             state_translation_gist_client_id = db_published_gist.client_id
@@ -710,32 +707,29 @@ class AdvancedSearch(LingvodocObjectType):
                 and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
                      dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
                 filter(dbDictionaryPerspective.marked_for_deletion == False)
+
+
         if search_metadata:
-            if "kind" in search_metadata:
-                kind = search_metadata.get("kind")
-                if kind:
-                    dictionaries = dictionaries.filter(
-                        dbDictionary.additional_metadata["kind"] != None,
-                        dbDictionary.additional_metadata["kind"].astext == kind)
-            if "authors" in search_metadata:
-                authors = search_metadata.get("authors")
-                if authors:
-                    dictionaries = dictionaries.filter(
-                        dbDictionary.additional_metadata["authors"] != None,
-                        dbDictionary.additional_metadata["authors"].contains(authors))
-            if "years" in search_metadata:
-                years = search_metadata.get("years")
-                if years:
-                    dictionaries = dictionaries.filter(
-                        dbDictionary.additional_metadata["years"] != None,
-                        dbDictionary.additional_metadata["years"].contains(years))
+            meta_filter_ids = set()
+            for meta_key in ["authors", "years"]:
+                meta_data = search_metadata.get(meta_key)
+                if meta_data:
+                    meta_filter_ids.update(DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                        dbDictionary.marked_for_deletion == False,
+                        dbDictionary.additional_metadata[meta_key] != None,
+                        dbDictionary.additional_metadata[meta_key].contains(meta_data)).all())
+            kind = search_metadata.get("kind")
+            if kind:
+                meta_filter_ids.update(DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                    dbDictionary.marked_for_deletion == False,
+                    dbDictionary.additional_metadata["kind"] != None,
+                    dbDictionary.additional_metadata["kind"].astext == kind).all())  # strict
             if "hasAudio" in search_metadata:
                 has_audio = search_metadata["hasAudio"]
                 if has_audio is not None:
                     if has_audio:
                         audio_dict_ids = dictionaries_with_audio_ids()
-                        dictionaries = dictionaries\
-                            .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids))
+                        meta_filter_ids.update(audio_dict_ids)
                     else:
                         audio_dict_ids = dictionaries_with_audio_ids()
                         dictionaries = dictionaries\
@@ -744,8 +738,16 @@ class AdvancedSearch(LingvodocObjectType):
                                 tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
                                 )
                             )
-
-
+            if meta_filter_ids:
+                dictionaries = dictionaries \
+                    .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(meta_filter_ids))
+        if tag_list:
+            tag_ids = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                dbDictionary.marked_for_deletion == False,
+                dbDictionary.additional_metadata["tag_list"] != None,
+                dbDictionary.additional_metadata["tag_list"].contains(tag_list)).all()
+            dictionaries = dictionaries \
+                .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(tag_ids))
 
         res_entities = list()
         res_lexical_entries = list()
