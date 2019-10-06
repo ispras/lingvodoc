@@ -711,25 +711,40 @@ class AdvancedSearch(LingvodocObjectType):
 
         if search_metadata:
             meta_filter_ids = set()
+            not_found_flag = False
             for meta_key in ["authors", "years"]:
                 meta_data = search_metadata.get(meta_key)
                 if meta_data:
-                    meta_filter_ids.update(DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
-                        dbDictionary.marked_for_deletion == False,
-                        dbDictionary.additional_metadata[meta_key] != None,
-                        dbDictionary.additional_metadata[meta_key].contains(meta_data)).all())
+                    dicts_with_tags = set()
+                    for text_tag in meta_data:
+                        single_tag_dicts = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                            dbDictionary.marked_for_deletion == False,
+                            dbDictionary.additional_metadata[meta_key] != None,
+                            dbDictionary.additional_metadata[meta_key].contains([text_tag])).all()
+                        dicts_with_tags.update(single_tag_dicts)
+                    if dicts_with_tags:
+                        meta_filter_ids.update(dicts_with_tags)
+                    else:
+                        not_found_flag = True
             kind = search_metadata.get("kind")
             if kind:
-                meta_filter_ids.update(DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                dicts_with_kind = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
                     dbDictionary.marked_for_deletion == False,
                     dbDictionary.additional_metadata["kind"] != None,
-                    dbDictionary.additional_metadata["kind"].astext == kind).all())  # strict
+                    dbDictionary.additional_metadata["kind"].astext == kind).all()
+                if dicts_with_kind:
+                    meta_filter_ids.update(dicts_with_kind)
+                else:
+                    not_found_flag = True
             if "hasAudio" in search_metadata:
                 has_audio = search_metadata["hasAudio"]
                 if has_audio is not None:
                     if has_audio:
                         audio_dict_ids = dictionaries_with_audio_ids()
-                        meta_filter_ids.update(audio_dict_ids)
+                        dictionaries = dictionaries\
+                            .filter(
+                                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
+                            )
                     else:
                         audio_dict_ids = dictionaries_with_audio_ids()
                         dictionaries = dictionaries\
@@ -738,9 +753,13 @@ class AdvancedSearch(LingvodocObjectType):
                                 tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
                                 )
                             )
-            if meta_filter_ids:
-                dictionaries = dictionaries \
-                    .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(meta_filter_ids))
+
+            if not_found_flag:
+                dictionaries = []
+            else:
+                if meta_filter_ids:
+                    dictionaries = dictionaries \
+                        .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(meta_filter_ids))
         if tag_list:
             tag_ids = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
                 dbDictionary.marked_for_deletion == False,
