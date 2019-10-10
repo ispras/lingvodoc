@@ -153,7 +153,10 @@ def save_xlsx_data(
         for perspective in perspective_dict[
             (dictionary.client_id, dictionary.object_id)]:
 
-            xlsx_context.ready_perspective(perspective)
+            xlsx_context.ready_perspective(
+                perspective,
+                dictionary,
+                list_flag = True)
 
             for lexical_entry in lexical_entry_dict[
                 (perspective.client_id, perspective.object_id)]:

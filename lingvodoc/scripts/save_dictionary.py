@@ -157,30 +157,48 @@ class Save_Context(object):
                 data_type_translation_gist_client_id = 1,
                 data_type_translation_gist_object_id = 47).all())
 
-    def ready_perspective(self, perspective):
+    def ready_perspective(
+        self,
+        perspective,
+        dictionary = None,
+        list_flag = False):
         """
         Prepares for saving data of lexical entries of another perspective.
         """
 
         perspective_name = perspective.get_translation(self.locale_id, self.session)
 
-        for c in u"[]:?/*\x00":
-            perspective_name = perspective_name.replace(c, "")
+        for c in '\x00*/:?[\\]':
+            perspective_name = perspective_name.replace(c, '')
 
-        worksheet_name = '{0}_{1}_{2}'.format(
-            perspective_name, perspective.client_id, perspective.object_id)
+        id_str = '_{0}_{1}'.format(
+            perspective.client_id, perspective.object_id)
 
-        if len(worksheet_name) >= 31:
+        worksheet_name = (
+            perspective_name[:31 - len(id_str)] + id_str)
 
-            worksheet_name = '{0}_{1}_{2}'.format(
-                    perspective_name[:20], perspective.client_id, perspective.object_id)
+        self.worksheet = (
+            self.workbook.add_worksheet(name = worksheet_name))
 
-        if len(perspective_name) >= 31:
+        # Listing dictionary and perspective names, if required.
 
-            worksheet_name = '{0}_{1}_{2}'.format(
-                    perspective_name[:10], perspective.client_id, perspective.object_id)
+        self.row = 0
 
-        self.worksheet = self.workbook.add_worksheet(name = worksheet_name)
+        if list_flag:
+
+            if dictionary:
+
+                self.worksheet.write(self.row, 0,
+                    dictionary.get_translation(self.locale_id, self.session))
+
+                self.row += 1
+
+            self.worksheet.write(self.row, 0,
+                perspective.get_translation(self.locale_id, self.session))
+
+            self.row += 1
+
+        # Getting field data.
 
         self.fields = (
                 
@@ -211,20 +229,23 @@ class Save_Context(object):
             field_ids_to_str(field): counter
             for counter, field in enumerate(self.fields)}
 
-        self.row = 1
+        # Listing fields.
+
         column = 0
 
         for field in self.fields:
 
-            self.worksheet.write(0, column,
+            self.worksheet.write(self.row, column,
                 field.field.get_translation(self.locale_id, self.session))
 
             column += 1
 
         if self.etymology_field:
 
-            self.worksheet.write(0, column,
+            self.worksheet.write(self.row, column,
                 self.etymology_field.field.get_translation(self.locale_id, self.session))
+
+        self.row += 1
 
     def save_lexical_entry(self, entry, published = None, accepted = True):
         """
