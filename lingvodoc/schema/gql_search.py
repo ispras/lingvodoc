@@ -166,8 +166,6 @@ def save_xlsx_data(
 def search_mechanism(
     dictionaries,
     category,
-    state_gist_id,
-    limited_gist_id,
     search_strings,
     publish,
     accept,
@@ -711,7 +709,6 @@ class AdvancedSearch(LingvodocObjectType):
                      dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
                 filter(dbDictionaryPerspective.marked_for_deletion == False)
 
-
         if search_metadata:
             meta_filter_ids = set()
             not_found_flag = False
@@ -811,9 +808,6 @@ class AdvancedSearch(LingvodocObjectType):
             res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
                 dictionaries=dictionaries,
                 category=0,
-                state_gist_id = (state_translation_gist_client_id,
-                                state_translation_gist_object_id),
-                limited_gist_id = (limited_client_id, limited_object_id),
                 search_strings=search_strings,
                 publish=publish,
                 accept=accept,
@@ -830,10 +824,6 @@ class AdvancedSearch(LingvodocObjectType):
             tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
                 dictionaries=dictionaries,
                 category=1,
-                state_gist_id=(state_translation_gist_client_id,
-                               state_translation_gist_object_id),
-                limited_gist_id=(limited_client_id,
-                                 limited_object_id),
                 search_strings=search_strings,
                 publish=publish,
                 accept=accept,
