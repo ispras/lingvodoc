@@ -42,6 +42,7 @@ from pyramid.httpexceptions import (
     HTTPUnauthorized
 )
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
+from lingvodoc.scripts.dictionary_dialeqt_converter import convert_all as dialeqt_convert_all
 from lingvodoc.views.v2.convert_five_tiers.core import async_convert_dictionary_new as convert_five_tiers
 import json
 import requests
@@ -54,6 +55,8 @@ from lingvodoc.utils.creation import create_gists_with_atoms
 ###############
 from lingvodoc.utils.corpus_converter import convert_all
 from lingvodoc.queue.celery import celery
+
+import transaction
 
 
 class ConvertDictionary(graphene.Mutation):
@@ -90,6 +93,7 @@ class ConvertDictionary(graphene.Mutation):
         language_id = LingvodocID()
         translation_gist_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
+        synchronous = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -126,6 +130,15 @@ class ConvertDictionary(graphene.Mutation):
             tr_atoms = args.get("translation_atoms")
             translation_gist_id = args.get('translation_gist_id')
             translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None], gist_type="Dictionary")
+
+            # We have to commit, because eventually in 
+            # lingvodoc.scripts.dictionary_dialeqt_converter.convert_db_new
+            # we will start a new transaction via 'with transaction.manager' line at
+            # dictionary_dialeqt_converter.py:599,
+            # and without commit the gist we've just created will be unavailable then.
+
+            transaction.manager.commit()
+
             cur_args["gist_client_id"] = translation_gist_id[0]
             cur_args["gist_object_id"] = translation_gist_id[1]
         else:
@@ -151,7 +164,16 @@ class ConvertDictionary(graphene.Mutation):
         except:
             raise ResponseError(message="wrong parameters")
         cur_args["task_key"] = task.key
-        res = async_convert_dictionary_new.delay(**cur_args)
+
+        if args.get('synchronous', False):
+
+          convert_f = dialeqt_convert_all
+          cur_args['synchronous'] = True
+
+        else:
+          convert_f = async_convert_dictionary_new.delay
+
+        res = convert_f(**cur_args)
         return ConvertDictionary(triumph=True)
 
 

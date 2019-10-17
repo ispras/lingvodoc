@@ -113,6 +113,8 @@ class Dictionary(LingvodocObjectType):  # tested
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     status = graphene.String()
 
+    tree = graphene.List(CommonFieldsComposite)
+
     perspectives = graphene.List(
         'lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective',
         only_with_phonology_data = graphene.Boolean())
@@ -139,6 +141,23 @@ class Dictionary(LingvodocObjectType):  # tested
             return atom[0]
         else:
             return None
+
+    @fetch_object()
+    def resolve_tree(self, info):
+
+        from .gql_language import Language
+
+        result = list()
+        iteritem = self.dbObject
+        while iteritem:
+            id = [iteritem.client_id, iteritem.object_id]
+            if type(iteritem) == dbDictionary:
+                result.append(Dictionary(id=id))
+            if type(iteritem) == dbLanguage:
+                result.append(Language(id=id))
+            iteritem = iteritem.parent
+
+        return result
 
     @fetch_object()
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
