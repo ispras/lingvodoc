@@ -5242,8 +5242,13 @@ class CognateAnalysis(graphene.Mutation):
 
         if task_status is not None:
 
-            task_status.set(5, 100, 'Finished', result_link_list =
-                [xlsx_url] + ([] if figure_url is None else [figure_url]))
+            result_link_list = (
+                [xlsx_url] +
+                ([] if figure_url is None else [figure_url]) +
+                (intermediate_url_list if __intermediate_flag__ else []))
+
+            task_status.set(5, 100, 'Finished',
+                result_link_list = result_link_list)
 
         return CognateAnalysis(
 
