@@ -387,6 +387,12 @@ class ConnectLexicalEntries(graphene.Mutation):
                         dbBaseGroup.action == 'create').one()
                     if user.is_active and user in group.users:
                         tag_entity.publishingentity.accepted = True
+
+                # If we are the admin, we automatically publish link entities.
+
+                if user.id == 1:
+                    tag_entity.publishingentity.published = True
+
         return ConnectLexicalEntries(triumph=True)
 
 

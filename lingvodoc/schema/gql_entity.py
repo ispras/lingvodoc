@@ -270,7 +270,7 @@ class CreateEntity(graphene.Mutation):
         # If the entity is being created by the admin, we automatically publish it.
 
         if user.id == 1:
-          dbentity.publishingentity.published = True
+            dbentity.publishingentity.published = True
 
         filename = args.get('filename')
         real_location = None
