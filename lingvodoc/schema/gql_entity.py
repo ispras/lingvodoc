@@ -248,26 +248,37 @@ class CreateEntity(graphene.Mutation):
                         additional_metadata=additional_metadata,
                         parent=parent)
 
-        # Acception override check.
-        # Currently disabled.
+        # Acception permission check.
+        # Admin is assumed to have all permissions.
 
-        #group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-        #                                                      dbGroup.subject_client_id == dbentity.parent.parent.client_id,
-        #                                                      dbGroup.subject_object_id == dbentity.parent.parent.object_id,
-        #                                                      dbBaseGroup.action == 'create').one()
+        create_flag = (user.id == 1)
 
-        #override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-        #    dbBaseGroup.subject == 'lexical_entries_and_entities',
-        #    dbGroup.subject_override == True,
-        #    dbBaseGroup.action == 'create').one()
+        if not create_flag:
 
-        #if user in group.users or user in override_group.users:
-        #    dbentity.publishingentity.accepted = True
+            group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+                dbBaseGroup.subject == 'lexical_entries_and_entities',
+                dbGroup.subject_client_id == parent.parent_client_id,
+                dbGroup.subject_object_id == parent.parent_object_id,
+                dbBaseGroup.action == 'create').one()
+
+            create_flag = (
+                user.is_active and user in group.users)
+
+        if not create_flag:
+
+            override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+                dbBaseGroup.subject == 'lexical_entries_and_entities',
+                dbGroup.subject_override == True,
+                dbBaseGroup.action == 'create').one()
+
+            create_flag = (
+                user.is_active and user in override_group.users)
+
+        if create_flag:
+            dbentity.publishingentity.accepted = True
 
         if upper_level:
             dbentity.upper_level = upper_level
-
-        dbentity.publishingentity.accepted = True
 
         # If the entity is being created by the admin, we automatically publish it.
 
