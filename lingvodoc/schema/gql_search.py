@@ -1,12 +1,16 @@
 import collections
 import datetime
+import gzip
+import hashlib
 import io
 import itertools
 import logging
 import os
 import os.path
+import pickle
 import pprint
 import shutil
+import time
 
 import graphene
 import xlsxwriter
@@ -47,6 +51,8 @@ from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective, en
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.scripts.save_dictionary import Save_Context
 from lingvodoc.utils.search import translation_gist_search
+
+import lingvodoc.utils as utils
 
 from sqlalchemy import (
     func,
@@ -161,7 +167,8 @@ def save_xlsx_data(
             for lexical_entry in lexical_entry_dict[
                 (perspective.client_id, perspective.object_id)]:
 
-                xlsx_context.save_lexical_entry(lexical_entry, published = True, accepted = True)
+                xlsx_context.save_lexical_entry(
+                    lexical_entry, published = True, accepted = True)
 
 def search_mechanism(
     dictionaries,
@@ -173,7 +180,8 @@ def search_mechanism(
     etymology,
     yield_batch_count,
     category_fields,
-    xlsx_context = None):
+    xlsx_context = None,
+    __debug_flag__ = False):
 
     """
     1) published dictionaries
@@ -182,6 +190,117 @@ def search_mechanism(
     4)
     """
     # 1) old filter
+
+    if __debug_flag__:
+
+        # If we are in debug mode, we try to load already computed search data to reduce debugging time.
+
+        dictionary_id_list = sorted(dictionaries.all())
+        field_id_list = sorted(category_fields)
+
+        search_list = [
+
+            [sorted(search_string.items())
+                for search_string in search_block]
+
+            for search_block in search_strings]
+
+        search_digest = hashlib.md5(
+
+            repr([
+                dictionary_id_list,
+                category,
+                search_list,
+                publish,
+                accept,
+                adopted,
+                etymology,
+                field_id_list])
+
+                .encode('utf-8')).hexdigest()
+
+        search_data_file_name = (
+            '__search_data_{0}__.gz'.format(search_digest))
+
+        # Checking if we have saved data.
+
+        if os.path.exists(search_data_file_name):
+
+            with gzip.open(search_data_file_name, 'rb') as search_data_file:
+
+                (lexical_entry_id_list,
+                    perspective_id_list,
+                    dictionary_id_list) = pickle.load(search_data_file)
+
+            # Loading search data.
+
+            lexical_entry_list = (
+
+                DBSession.query(dbLexicalEntry)
+
+                    .filter(
+                        tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
+                            lexical_entry_id_list))
+                        
+                    .all())
+
+            perspective_list = (
+
+                DBSession.query(dbDictionaryPerspective)
+                
+                    .filter(
+                        tuple_(dbDictionaryPerspective.client_id, dbDictionaryPerspective.object_id).in_(
+                            perspective_id_list))
+                        
+                    .all())
+
+            dictionary_list = (
+
+                DBSession.query(dbDictionary)
+                
+                    .filter(
+                        tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(
+                            dictionary_id_list))
+                        
+                    .all())
+
+            # Compiling search results.
+
+            result_lexical_entries = entries_with_entities(
+                lexical_entry_list, accept = True, delete = False, mode = None, publish = True)
+
+            def graphene_obj(dbobj, cur_cls):
+                obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
+                obj.dbObject = dbobj
+                return obj
+
+            res_perspectives = [
+                graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in perspective_list]
+
+            res_dictionaries = [
+                graphene_obj(dbdict, Dictionary) for dbdict in dictionary_list]
+
+            # Exporting search results as an XLSX data, if required.
+
+            if xlsx_context is not None:
+
+                start_time = time.time()
+
+                save_xlsx_data(
+                    xlsx_context,
+                    dictionary_list,
+                    perspective_list,
+                    [lexical_entry.dbObject for lexical_entry in result_lexical_entries])
+
+                elapsed_time = time.time() - start_time
+                resident_memory = utils.get_resident_memory()
+
+                log.debug(
+                    '\nelapsed_time, resident_memory: {0:.3f}s, {1:.3f}m'.format(
+                    elapsed_time,
+                    resident_memory / 1048576.0))
+
+            return [], result_lexical_entries, res_perspectives, res_dictionaries
 
     lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
         .join(dbDictionaryPerspective.parent).filter(
@@ -376,6 +495,7 @@ def search_mechanism(
                     inner_and.append(or_(*bs_or_block_list))
                 elif matching_type == 'regexp':
                     inner_and.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
+
             and_lexes = DBSession.query(all_entities_cte.c.parent_client_id,
                                 all_entities_cte.c.parent_object_id)\
                                 .filter(and_(*inner_and).self_group())\
@@ -391,7 +511,18 @@ def search_mechanism(
         all_results = all_results.union(or_element)
 
     if not all_results:
+
+        # Saving search results data, if required.
+
+        if __debug_flag__:
+
+            with gzip.open(
+                search_data_file_name, 'wb') as search_data_file:
+
+                pickle.dump(([], [], []), search_data_file)
+
         return [], [], [], []
+
     resolved_search = DBSession.query(dbLexicalEntry)\
         .filter(dbLexicalEntry.marked_for_deletion==False,
                 tuple_(dbLexicalEntry.client_id,
@@ -408,6 +539,27 @@ def search_mechanism(
     res_perspectives = [graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in tmp_perspectives]
     tmp_dictionaries = set([le.dbObject.parent for le in res_perspectives])
     res_dictionaries = [graphene_obj(dbdict, Dictionary) for dbdict in tmp_dictionaries]
+
+    # Saving search results data, if required.
+
+    if __debug_flag__:
+
+        with gzip.open(search_data_file_name, 'wb') as search_data_file:
+
+            search_data = (
+
+                sorted(list(all_results)),
+
+                sorted(
+                    (perspective.client_id, perspective.object_id)
+                    for perspective in tmp_perspectives),
+
+                sorted(
+                    (dictionary.client_id, dictionary.object_id)
+                    for dictionary in tmp_dictionaries))
+
+            pickle.dump(
+                search_data, search_data_file)
 
     # Exporting search results as an XLSX data, if required.
 
@@ -629,19 +781,24 @@ def get_sound_field_ids():
 #     return sound_field_id_list
 
 
-def save_xlsx(info, xlsx_context):
+def save_xlsx(info, xlsx_context, xlsx_filename):
 
     xlsx_context.workbook.close()
 
     storage = info.context.request.registry.settings['storage']
-    storage_dir = os.path.join(storage['path'], 'map_search')
+    time_str = '{0:.6f}'.format(time.time())
+
+    storage_dir = (
+
+        os.path.join(
+            storage['path'],
+            'map_search',
+            time_str))
 
     os.makedirs(storage_dir, exist_ok = True)
 
-    xlsx_filename = '{0:.6f}.xlsx'.format(
-        datetime.datetime.now(datetime.timezone.utc).timestamp())
-
-    xlsx_path = os.path.join(storage_dir, xlsx_filename)
+    xlsx_path = os.path.join(
+        storage_dir, xlsx_filename)
 
     with open(xlsx_path, 'wb') as xlsx_file:
 
@@ -652,6 +809,7 @@ def save_xlsx(info, xlsx_context):
         storage['prefix'],
         storage['static_route'],
         'map_search', '/',
+        time_str, '/',
         xlsx_filename])
 
 
@@ -676,7 +834,8 @@ class AdvancedSearch(LingvodocObjectType):
         publish,
         accept,
         search_metadata,
-        xlsx_export = False):
+        xlsx_export = False,
+        __debug_flag__ = False):
 
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
@@ -800,8 +959,13 @@ class AdvancedSearch(LingvodocObjectType):
         # Setting up export to an XLSX file, if required.
 
         xlsx_context = (
+
             None if not xlsx_export else
-                Save_Context(info.context.get('locale_id'), DBSession))
+
+            Save_Context(
+                info.context.get('locale_id'),
+                DBSession,
+                __debug_flag__))
 
         # normal dictionaries
         if category != 1:
@@ -815,9 +979,9 @@ class AdvancedSearch(LingvodocObjectType):
                 etymology=etymology,
                 category_fields=text_fields,
                 yield_batch_count=yield_batch_count,
-                xlsx_context=xlsx_context
+                xlsx_context=xlsx_context,
+                __debug_flag__=__debug_flag__
             )
-
 
         # corpora
         if category != 0:
@@ -831,7 +995,8 @@ class AdvancedSearch(LingvodocObjectType):
                 etymology=etymology,
                 category_fields=markup_fields,
                 yield_batch_count=yield_batch_count,
-                xlsx_context=xlsx_context
+                xlsx_context=xlsx_context,
+                __debug_flag__=__debug_flag__
             )
             res_entities += tmp_entities
             res_lexical_entries += tmp_lexical_entries
@@ -840,9 +1005,28 @@ class AdvancedSearch(LingvodocObjectType):
 
         # Saving XLSX-exported search results, if required.
 
-        xlsx_url = (
-            None if not xlsx_export else
-                save_xlsx(info, xlsx_context))
+        xlsx_url = None
+        
+        if xlsx_export:
+
+            query_str = '_'.join([
+                search_string["search_string"]
+                for search_block in search_strings
+                for search_string in search_block])
+
+            xlsx_filename = ('Search_' + query_str)[:64] + '.xlsx'
+
+            xlsx_url = save_xlsx(
+                info, xlsx_context, xlsx_filename)
+
+            # Saving resulting Excel workbook for debug purposes, if required.
+
+            if __debug_flag__:
+
+                xlsx_context.stream.seek(0)
+
+                with open(xlsx_filename, 'wb') as xlsx_file:
+                    shutil.copyfileobj(xlsx_context.stream, xlsx_file)
 
         return cls(
             entities=res_entities,
@@ -960,9 +1144,28 @@ class AdvancedSearchSimple(LingvodocObjectType):
 
         # Saving XLSX-exported search results, if required.
 
-        xlsx_url = (
-            None if not xlsx_export else
-                save_xlsx(info, xlsx_context))
+        xlsx_url = None
+        
+        if xlsx_export:
+
+            query_str = '_'.join([
+                search_string["search_string"]
+                for search_block in search_strings
+                for search_string in search_block])
+
+            xlsx_filename = ('Search_' + query_str)[:64] + '.xlsx'
+
+            xlsx_url = save_xlsx(
+                info, xlsx_context, xlsx_filename)
+
+            # Saving resulting Excel workbook for debug purposes, if required.
+
+            if __debug_flag__:
+
+                xlsx_context.stream.seek(0)
+
+                with open(xlsx_filename, 'wb') as xlsx_file:
+                    shutil.copyfileobj(xlsx_context.stream, xlsx_file)
 
         return cls(
             entities=res_entities,

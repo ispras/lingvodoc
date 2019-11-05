@@ -20,6 +20,7 @@ import traceback
 import urllib.parse
 
 import graphene
+import lingvodoc.utils as utils
 from lingvodoc.utils.elan_functions import tgt_to_eaf
 import requests
 from lingvodoc.schema.gql_entity import (
@@ -185,6 +186,8 @@ from lingvodoc.models import (
 from pyramid.request import Request
 
 from lingvodoc.utils.proxy import try_proxy, ProxyPass
+
+import sqlalchemy
 from sqlalchemy import (
     func,
     and_,
@@ -233,7 +236,10 @@ from sqlite3 import connect
 from lingvodoc.utils.merge import merge_suggestions
 import tempfile
 
-from lingvodoc.scripts.save_dictionary import save_dictionary as sync_save_dictionary
+from lingvodoc.scripts.save_dictionary import (
+    find_group_by_tags,
+    save_dictionary as sync_save_dictionary)
+
 from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
 import json
 
@@ -1992,7 +1998,7 @@ class Query(graphene.ObjectType):
     #     return True
 
     def resolve_connected_words(self, info, id, field_id, mode=None):
-        response = list()
+
         client_id = id[0]
         object_id = id[1]
         field_client_id = field_id[0]
@@ -2006,21 +2012,71 @@ class Query(graphene.ObjectType):
         elif mode == 'not_accepted':
             publish = None
             accept = False
+
+        # NOTE: modes 'deleted' and 'all_with_deleted' are currently not implemented.
+
         elif mode == 'deleted':
             publish = None
             accept = None
         elif mode == 'all_with_deleted':
             publish = None
             accept = None
+
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
-        lexical_entry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-        if not lexical_entry or lexical_entry.marked_for_deletion:
-            raise ResponseError(message="No such lexical entry in the system")
-        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accept, publish)
-        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accept, publish)
-        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
-                                for lex in lexes]
+
+        # Getting lexical entry group info.
+
+        marked_for_deletion = (
+                
+            DBSession
+                .query(dbLexicalEntry.marked_for_deletion)
+
+                .filter_by(
+                    client_id = client_id,
+                    object_id = object_id)
+
+                .scalar())
+
+        if (marked_for_deletion is None or
+            marked_for_deletion):
+
+            raise ResponseError(message = 'No such lexical entry in the system')
+
+        entry_query = (
+            
+            DBSession
+                .query(dbLexicalEntry)
+                .filter(
+
+                    tuple_(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+
+                    .in_(sqlalchemy.text('''
+
+                        select * from linked_group{0}(
+                            :field_client_id,
+                            :field_object_id,
+                            :client_id,
+                            :object_id)
+                            
+                        '''.format(
+                            '_no_publishing' if publish is None and accept is None else
+                            ''))))
+                
+                .params({
+                    'field_client_id': field_client_id,
+                    'field_object_id': field_object_id,
+                    'client_id': client_id,
+                    'object_id': object_id}))
+
+        lexes = entry_query.all()
+
+        lexes_composite_list = [
+            (entry.client_id, entry.object_id, entry.parent_client_id, entry.parent_object_id)
+            for entry in lexes]
+
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                    publish=publish, accept=accept)
 
@@ -2730,63 +2786,11 @@ class CognateAnalysis(graphene.Mutation):
         tag_list = list(tag_query.all())
         tag_set = set(tag_list)
 
-        # While we have tags we don't have all lexical entries for,
-        # we get these all entries of these tags...
-
-        while tag_list:
-
-            entry_id_query = (
-
-                DBSession.query(
-                    dbLexicalEntry.client_id,
-                    dbLexicalEntry.object_id)
-
-                .filter(
-                    dbLexicalEntry.marked_for_deletion == False,
-                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                    dbEntity.field_client_id == field_client_id,
-                    dbEntity.field_object_id == field_object_id,
-                    dbEntity.marked_for_deletion == False,
-                    dbEntity.content.in_(tag_list),
-                    dbPublishingEntity.client_id == dbEntity.client_id,
-                    dbPublishingEntity.object_id == dbEntity.object_id,
-                    dbPublishingEntity.published == True,
-                    dbPublishingEntity.accepted == True))
-
-            entry_id_list = []
-
-            for entry_id in entry_id_query.all():
-                if entry_id not in entry_id_set:
-
-                    entry_id_set.add(entry_id)
-                    entry_id_list.append(entry_id)
-
-            # And then get all tags for entries we haven't already done it for.
-
-            tag_query = (
-
-                DBSession.query(
-                    dbEntity.content)
-
-                .filter(
-                    tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                        .in_(entry_id_list),
-                    dbEntity.field_client_id == field_client_id,
-                    dbEntity.field_object_id == field_object_id,
-                    dbEntity.marked_for_deletion == False,
-                    dbPublishingEntity.client_id == dbEntity.client_id,
-                    dbPublishingEntity.object_id == dbEntity.object_id,
-                    dbPublishingEntity.published == True,
-                    dbPublishingEntity.accepted == True))
-
-            tag_list = []
-
-            for tag in tag_query.all():
-                if tag not in tag_set:
-
-                    tag_set.add(tag)
-                    tag_list.append(tag)
+        find_group_by_tags(
+            DBSession,
+            entry_id_set, tag_set, tag_list,
+            field_client_id, field_object_id,
+            True)
 
         return entry_id_set
 
@@ -3153,6 +3157,85 @@ class CognateAnalysis(graphene.Mutation):
             # Optimization is not fully implemented at the moment.
 
             raise NotImplementedError
+
+        return entry_already_set, group_list, time.time() - start_time
+
+    @staticmethod
+    def tag_data_plpgsql(
+        perspective_info_list,
+        tag_field_id,
+        statistics_flag = False,
+        optimize_flag = False):
+        """
+        Gets lexical entry grouping data using stored PL/pgSQL functions, computes elapsed time.
+        """
+
+        start_time = time.time()
+
+        # Getting lexical entries with tag data of the specified tag field from all perspectives.
+
+        perspective_id_list = [
+            perspective_id
+            for perspective_id, _, _ in perspective_info_list]
+
+        entry_id_query = (
+
+            DBSession.query(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id)
+
+            .filter(
+                tuple_(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
+                    .in_(perspective_id_list),
+                dbLexicalEntry.marked_for_deletion == False,
+                dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                dbEntity.field_client_id == tag_field_id[0],
+                dbEntity.field_object_id == tag_field_id[1],
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbPublishingEntity.published == True,
+                dbPublishingEntity.accepted == True)
+
+            .group_by(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id))
+
+        # Grouping lexical entries using stored PL/pgSQL function.
+
+        entry_already_set = set()
+        group_list = []
+
+        sql_str = '''
+            select * from linked_group(
+                :field_client_id,
+                :field_object_id,
+                :client_id,
+                :object_id)'''
+
+        for entry_id in entry_id_query:
+
+            if entry_id in entry_already_set:
+                continue
+
+            row_list = (
+                
+                DBSession.execute(sql_str, {
+                    'field_client_id': tag_field_id[0],
+                    'field_object_id': tag_field_id[1],
+                    'client_id': entry_id[0],
+                    'object_id': entry_id[1]})
+                
+                .fetchall())
+
+            entry_id_set = set(
+                map(tuple, row_list))
+
+            entry_already_set.update(entry_id_set)
+            group_list.append(entry_id_set)
 
         return entry_already_set, group_list, time.time() - start_time
 
@@ -3886,7 +3969,7 @@ class CognateAnalysis(graphene.Mutation):
 
             entry_already_set, group_list, group_time = (
 
-                CognateAnalysis.tag_data_aggregated(
+                CognateAnalysis.tag_data_plpgsql(
                     perspective_info_list, group_field_id))
 
         else:
