@@ -295,20 +295,33 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                     user = DBSession.query(User).filter_by(id = user_id).first()
 
                     user_data_dict[user_id] = {
-                        'login': user.login, 'name': user.name,
-                        'entities': {'published': {}, 'unpublished': {}, 'total': {}, "unaccepted": {}}}
+                        'login': user.login,
+                        'name': user.name,
+                        'entities': {
+                            'published': {},
+                            'unpublished': {},
+                            'total': {},
+                            'unaccepted': {}}}
 
                 user_data = user_data_dict[user_id]
 
                 if 'entities' not in user_data:
-                    user_data['entities'] = {'published': {}, 'unpublished': {}, 'total': {}, "unaccepted": {}}
+
+                    user_data['entities'] = {
+                        'published': {},
+                        'unpublished': {},
+                        'total': {},
+                        'unaccepted': {}}
 
                 entity_data = user_data['entities']
 
                 # Counting entities by publishing status, data type and client type.
 
-                client_string = 'web' if is_browser else 'desktop'
-                published_string = 'published' if published else 'unpublished'
+                client_string = (
+                    'web' if is_browser else 'desktop')
+
+                published_string = (
+                    'published' if published else 'unpublished')
 
                 for p_string in [published_string, 'total']:
 
@@ -318,30 +331,39 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                     for f_string in [field.get_translation(locale_id), 'total']:
 
                         if f_string not in entity_data[p_string]:
-                            entity_data[p_string][f_string] = {'web': 0, 'desktop': 0, 'total': 0, 'field_id': [field.client_id, field.object_id]}
+
+                            entity_data[p_string][f_string] = {
+                                'web': 0,
+                                'desktop': 0,
+                                'total': 0,
+                                'field_id': [field.client_id, field.object_id]}
 
                         for c_string in [client_string, 'total']:
                             entity_data[p_string][f_string][c_string] += entity_count
 
-
+                # Also counting unaccepted entities.
                 #
-                accepted_string = 'accpeted' if accepted else 'unaccepted'
+                # They do not count towards top-level total, everything there is counted through published /
+                # unpublished accounting just above.
+
                 if accepted:
                     continue
 
-                for a_string in [accepted_string, 'total']:
+                if 'unaccepted' not in entity_data:
+                    entity_data['unaccepted'] = {}
 
-                    if a_string not in entity_data:
-                        entity_data[a_string] = {}
+                for f_string in [field.get_translation(locale_id), 'total']:
 
-                    for f_string in [field.get_translation(locale_id), 'total']:
+                    if f_string not in entity_data['unaccepted']:
 
-                        if f_string not in entity_data[a_string]:
-                            entity_data[a_string][f_string] = {'web': 0, 'desktop': 0, 'total': 0, 'field_id': [field.client_id, field.object_id]}
+                        entity_data['unaccepted'][f_string] = {
+                            'web': 0,
+                            'desktop': 0,
+                            'total': 0,
+                            'field_id': [field.client_id, field.object_id]}
 
-                        for c_string in [client_string, 'total']:
-                            entity_data[a_string][f_string][c_string] += entity_count
-
+                    for c_string in [client_string, 'total']:
+                        entity_data['unaccepted'][f_string][c_string] += entity_count
 
         # Returning gathered statistics.
 
