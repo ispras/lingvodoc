@@ -2299,10 +2299,13 @@ class PhonemicAnalysis(graphene.Mutation):
         wrap_flag = graphene.Boolean()
 
         debug_flag = graphene.Boolean()
+        intermediate_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
     entity_count = graphene.Int()
     result = graphene.String()
+
+    intermediate_url_list = graphene.List(graphene.String)
 
     @staticmethod
     def mutate(self, info, **args):
@@ -2330,6 +2333,7 @@ class PhonemicAnalysis(graphene.Mutation):
         locale_id = info.context.get('locale_id') or 2
 
         __debug_flag__ = args.get('debug_flag', False)
+        __intermediate_flag__ = args.get('intermediate_flag', False)
 
         try:
 
@@ -2348,9 +2352,10 @@ class PhonemicAnalysis(graphene.Mutation):
                 '\n  transcription field: {4}/{5}'
                 '\n  translation field: {6}/{7}'
                 '\n  wrap_flag: {8}'
-                '\n  debug_flag: {9}'
-                '\n  locale_id: {10}'
-                '\n  phonemic_analysis_f: {11}'.format(
+                '\n  __debug_flag__: {9}'
+                '\n  __intermediate_flag__: {10}'
+                '\n  locale_id: {11}'
+                '\n  phonemic_analysis_f: {12}'.format(
                     perspective_cid, perspective_oid,
                     repr(dictionary_name.strip()),
                     repr(perspective_name.strip()),
@@ -2358,6 +2363,7 @@ class PhonemicAnalysis(graphene.Mutation):
                     translation_field_cid, translation_field_oid,
                     wrap_flag,
                     __debug_flag__,
+                    __intermediate_flag__,
                     locale_id,
                     repr(phonemic_analysis_f)))
 
@@ -2464,22 +2470,79 @@ class PhonemicAnalysis(graphene.Mutation):
 
             # Saving to a file, if required.
 
-            if __debug_flag__:
+            intermediate_url_list = []
+
+            if __debug_flag__ or __intermediate_flag__:
 
                 perspective = DBSession.query(dbDictionaryPerspective).filter_by(
                     client_id = perspective_cid, object_id = perspective_oid).first()
 
-                perspective_name = perspective.get_translation(2)
-                dictionary_name = perspective.parent.get_translation(2)
+                perspective_name = (
+                    perspective.get_translation(2).strip())
 
-                input_file_name = (
-                    'input phonemic {0} {1} {2}.utf16'.format(
-                    dictionary_name.strip(),
-                    perspective_name.strip(),
+                if len(perspective_name) > 48:
+                    perspective_name = perspective_name[:48] + '...'
+
+                dictionary_name = (
+                    perspective.parent.get_translation(2).strip())
+
+                if len(dictionary_name) > 48:
+                    dictionary_name = dictionary_name[:48] + '...'
+
+                phonemic_name_str = (
+                    'phonemic {0} {1} {2}'.format(
+                    dictionary_name,
+                    perspective_name,
                     len(data_list) + 1))
 
-                with open(input_file_name, 'wb') as input_file:
-                    input_file.write(input.encode('utf-16'))
+                # Initializing file storage directory, if required.
+
+                if __intermediate_flag__:
+
+                    storage = info.context.request.registry.settings['storage']
+                    cur_time = time.time()
+
+                    storage_dir = os.path.join(
+                        storage['path'], 'phonemic', str(cur_time))
+
+                for extension, encoding in (
+                    ('utf8', 'utf-8'), ('utf16', 'utf-16')):
+
+                    input_file_name = (
+                            
+                        pathvalidate.sanitize_filename(
+                            'input {0}.{1}'.format(
+                                phonemic_name_str, extension)))
+
+                    # Saving to the working directory...
+
+                    if __debug_flag__:
+
+                        with open(input_file_name, 'wb') as input_file:
+                            input_file.write(input.encode(encoding))
+
+                    # ...and / or to the file storage.
+
+                    if __intermediate_flag__:
+
+                        input_path = os.path.join(
+                            storage_dir, input_file_name)
+
+                        os.makedirs(
+                            os.path.dirname(input_path),
+                            exist_ok = True)
+
+                        with open(input_path, 'wb') as input_file:
+                            input_file.write(input.encode(encoding))
+
+                        input_url = ''.join([
+                            storage['prefix'],
+                            storage['static_route'],
+                            'phonemic', '/',
+                            str(cur_time), '/',
+                            input_file_name])
+
+                        intermediate_url_list.append(input_url)
 
             # Calling analysis library, starting with getting required output buffer size and continuing
             # with analysis proper.
@@ -2558,9 +2621,13 @@ class PhonemicAnalysis(graphene.Mutation):
             # Returning result.
 
             return PhonemicAnalysis(
+
                 triumph = True,
                 entity_count = total_count,
-                result = final_output)
+                result = final_output,
+
+                intermediate_url_list =
+                    intermediate_url_list if __intermediate_flag__ else None)
 
         except Exception as exception:
 
@@ -4469,13 +4536,17 @@ class CognateAnalysis(graphene.Mutation):
             if __intermediate_flag__ and storage_dir is None:
 
                 cur_time = time.time()
-                storage_dir = os.path.join(storage['path'], 'cognate', str(cur_time))
+
+                storage_dir = os.path.join(
+                    storage['path'], 'cognate', str(cur_time))
 
             for extension, encoding in ('utf8', 'utf-8'), ('utf16', 'utf-16'):
 
                 input_file_name = (
-                    'input {0}.{1}'.format(
-                        cognate_name_str, extension))
+
+                    pathvalidate.sanitize_filename(
+                        'input {0}.{1}'.format(
+                            cognate_name_str, extension)))
 
                 # Saving to the working directory...
 
@@ -4499,8 +4570,11 @@ class CognateAnalysis(graphene.Mutation):
                         input_file.write(input.encode(encoding))
 
                     input_url = ''.join([
-                        storage['prefix'], storage['static_route'],
-                        'cognate', '/', str(cur_time), '/', input_file_name])
+                        storage['prefix'],
+                        storage['static_route'],
+                        'cognate', '/',
+                        str(cur_time), '/',
+                        input_file_name])
 
                     intermediate_url_list.append(input_url)
 
@@ -5451,12 +5525,13 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  figure_flag: {10}'
                  '\n  distance_vowel_flag: {11}'
                  '\n  distance_consonant_flag: {12}'
-                 '\n  debug_flag: {13}'
-                 '\n  cognate_analysis_f: {14}'
-                 '\n  cognate_acoustic_analysis_f: {15}'
-                 '\n  cognate_distance_analysis_f: {16}'
-                 '\n  cognate_reconstruction_f: {17}'
-                 '\n  cognate_reconstruction_multi_f: {18}'.format(
+                 '\n  __debug_flag__: {13}'
+                 '\n  __intermediate_flag__: {14}'
+                 '\n  cognate_analysis_f: {15}'
+                 '\n  cognate_acoustic_analysis_f: {16}'
+                 '\n  cognate_distance_analysis_f: {17}'
+                 '\n  cognate_reconstruction_f: {18}'
+                 '\n  cognate_reconstruction_multi_f: {19}'.format(
                     language_str,
                     repr(base_language_name.strip()),
                     group_field_id[0], group_field_id[1],
@@ -5470,6 +5545,7 @@ class CognateAnalysis(graphene.Mutation):
                     distance_vowel_flag,
                     distance_consonant_flag,
                     __debug_flag__,
+                    __intermediate_flag__,
                     repr(cognate_analysis_f),
                     repr(cognate_acoustic_analysis_f),
                     repr(cognate_distance_analysis_f),
@@ -6368,7 +6444,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
         workbook.close()
 
-        xlsx_file_name = (
+        xlsx_file_name = pathvalidate.sanitize_filename(
             'Phonological statistical distance ({0} perspectives).xlsx'.format(len(info_list)))
 
         if __debug_flag__:
