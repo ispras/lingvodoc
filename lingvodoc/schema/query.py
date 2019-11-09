@@ -2343,22 +2343,28 @@ class PhonemicAnalysis(graphene.Mutation):
             perspective_name = perspective.get_translation(locale_id)
             dictionary_name = perspective.parent.get_translation(locale_id)
 
+            transcription_rules = (
+                '' if not perspective.additional_metadata else
+                    perspective.additional_metadata.get('transcription_rules', ''))
+
             # Showing phonemic analysis info, checking phonemic analysis library presence.
 
             log.debug(
                 '\nphonemic_analysis {0}/{1}:'
                 '\n  dictionary: {2}'
                 '\n  perspective: {3}'
-                '\n  transcription field: {4}/{5}'
-                '\n  translation field: {6}/{7}'
-                '\n  wrap_flag: {8}'
-                '\n  __debug_flag__: {9}'
-                '\n  __intermediate_flag__: {10}'
-                '\n  locale_id: {11}'
-                '\n  phonemic_analysis_f: {12}'.format(
+                '\n  transcription rules: {4}'
+                '\n  transcription field: {5}/{6}'
+                '\n  translation field: {7}/{8}'
+                '\n  wrap_flag: {9}'
+                '\n  __debug_flag__: {10}'
+                '\n  __intermediate_flag__: {11}'
+                '\n  locale_id: {12}'
+                '\n  phonemic_analysis_f: {13}'.format(
                     perspective_cid, perspective_oid,
                     repr(dictionary_name.strip()),
                     repr(perspective_name.strip()),
+                    repr(transcription_rules),
                     transcription_field_cid, transcription_field_oid,
                     translation_field_cid, translation_field_oid,
                     wrap_flag,
@@ -2449,10 +2455,17 @@ class PhonemicAnalysis(graphene.Mutation):
             # Preparing analysis input.
 
             input = (
-                '{0} - {1}\0\0'.format(dictionary_name, perspective_name) +
+
+                '{0} - {1}\0{2}\0'.format(
+                    dictionary_name,
+                    perspective_name,
+                    transcription_rules) +
 
                 ''.join(
-                    '{0}\0{1}\0'.format(transcription, translation)
+
+                    '{0}\0{1}\0'.format(
+                        transcription, translation)
+
                     for transcription, translation in data_list))
 
             log.debug(
