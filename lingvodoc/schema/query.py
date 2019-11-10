@@ -4085,7 +4085,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 entry_already_set, group_list, group_time = (
 
-                    CognateAnalysis.tag_data_aggregated(
+                    CognateAnalysis.tag_data_plpgsql(
                         perspective_info_list, group_field_id))
 
                 with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
