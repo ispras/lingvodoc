@@ -56,8 +56,11 @@ class PermissionException(ResponseError):
         """
 
         super().__init__(
-            'Client {0} doesn\'t have \'{1}\' permissions for \'{2}\' {3}.'.format(
-                client_id, action, subject, subject_id),
+            'Client {0} doesn\'t have \'{1}\' permissions for \'{2}\'{3}.'.format(
+                client_id,
+                action,
+                subject,
+                '' if subject_id is None else ' {0}'.format(subject_id)),
             params=(client_id, action, subject, subject_id))
 
         self.client_id = client_id
@@ -512,8 +515,11 @@ class About(graphene.Interface):
     about = graphene.String()
 
     @fetch_object("about")
-    def resolve_about(self, info):
-        return self.dbObject.about
+    def resolve_about(self, info, locale_id = None):
+
+        if self.dbObject:
+            return str(self.dbObject.get_about_translation( # TODO: fix it
+                locale_id if locale_id is not None else info.context.get('locale_id')))
 
 # PublishedEntity interface
 
@@ -620,6 +626,7 @@ class Metadata(graphene.ObjectType):
     speakersAmount = graphene.String()
     humanSettlement = graphene.List(graphene.String)
     transcription_rules = graphene.String()
+    admins = graphene.List(graphene.Int)
 
 
 # class LevelAndId(graphene.ObjectType):
