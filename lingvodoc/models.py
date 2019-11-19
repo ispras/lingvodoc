@@ -1131,21 +1131,10 @@ class Group(Base, TableNameMixin, CreatedAtMixin):
     parent = relationship(__parentname__, backref=backref('group'))
 
 
-class Organization(
-    Base,
-    TableNameMixin,
-    IdMixin,
-    CreatedAtMixin,
-    MarkedForDeletionMixin,
-    AdditionalMetadataMixin,
-    TranslationMixin):
+class AboutMixin(PrimeTableArgs):
 
     about_translation_gist_client_id = Column(SLBigInteger(), nullable = False)
     about_translation_gist_object_id = Column(SLBigInteger(), nullable = False)
-
-    users = relationship("User",
-                         secondary=user_to_organization_association,
-                         backref=backref("organizations"))
 
     @declared_attr
     def __table_args__(cls):
@@ -1166,6 +1155,21 @@ class Organization(
             locale_id,
             self.about_translation_gist_client_id,
             self.about_translation_gist_object_id)
+
+
+class Organization(
+    Base,
+    TableNameMixin,
+    IdMixin,
+    CreatedAtMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    TranslationMixin,
+    AboutMixin):
+
+    users = relationship("User",
+                         secondary=user_to_organization_association,
+                         backref=backref("organizations"))
 
 
 class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
