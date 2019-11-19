@@ -1,5 +1,6 @@
 import graphene
-from lingvodoc.schema.gql_holders import (CreatedAt,
+from lingvodoc.schema.gql_holders import (
+    CreatedAt,
     LingvodocObjectType,
     IdHolder,
     MarkedForDeletion,
@@ -9,7 +10,11 @@ from lingvodoc.schema.gql_holders import (CreatedAt,
     del_object,
     acl_check_by_id,
     ResponseError,
-    LingvodocID
+    LingvodocID,
+    TranslationHolder,
+    TranslationGistHolder,
+    fetch_object,
+    ObjectVal
 )
 from lingvodoc.models import (
     Organization as dbOrganization,
@@ -19,7 +24,11 @@ from lingvodoc.models import (
     Group as dbGroup,
     DBSession
 )
-from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.utils.creation import (
+    add_user_to_group,
+    create_gists_with_atoms
+)
+from lingvodoc.schema.gql_user import User
 
 
 class Organization(LingvodocObjectType):
@@ -32,15 +41,42 @@ class Organization(LingvodocObjectType):
      #additional_metadata | jsonb                       |
     """
     dbType = dbOrganization
+
+    about = graphene.String()
+    members = graphene.List(User)
+
     class Meta:
         interfaces = (CreatedAt,
                       IdHolder,
                       MarkedForDeletion,
                       AdditionalMetadata,
-                      Name,
+                      TranslationHolder,
+                      TranslationGistHolder,
                       About
                     )
-    pass
+
+    @fetch_object('about')
+    def resolve_about(self, info):
+
+        context = info.context
+
+        return str(
+            self.dbObject.get_about_translation(
+                context.get('locale_id')))
+
+    @fetch_object('members')
+    def resolve_members(self, info):
+
+        member_list = list()
+
+        for dbuser in self.dbObject.users:
+
+            user = User(id = dbuser.id)
+            user.dbObject = dbuser
+            member_list.append(user)
+
+        return member_list
+
 
 class CreateOrganization(graphene.Mutation):
     """
@@ -69,8 +105,8 @@ class CreateOrganization(graphene.Mutation):
     """
 
     class Arguments:
-        name = graphene.String(required=True)
-        about = graphene.String(required=True)
+        translation_atoms = graphene.List(ObjectVal, required = True)
+        about_translation_atoms = graphene.List(ObjectVal, required = True)
 
     organization = graphene.Field(Organization)
     triumph = graphene.Boolean()
@@ -78,34 +114,54 @@ class CreateOrganization(graphene.Mutation):
     @staticmethod
     @acl_check_by_id('create', 'organization')
     def mutate(root, info, **args):
-        name = args.get('name')
-        about = args.get('about')
 
-        client_id = info.context["client_id"]
-        client = DBSession.query(Client).filter_by(id=client_id).first()
+        client_id = info.context['client_id']
+
+        client = DBSession.query(Client).filter_by(id = client_id).first()
+
         if not client:
-            raise ResponseError(message="Invalid client id (not registered on server). Try to logout and then login.")
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
 
-        dborganization = dbOrganization(name=name,
-                                    about=about)
-        if user not in dborganization.users:
-            dborganization.users.append(user)
+            raise ResponseError(message =
+                'Invalid client id (not registered on server). Try to logout and then login.')
+
+        user = DBSession.query(dbUser).filter_by(id = client.user_id).first()
+
+        if not user:
+
+            raise ResponseError(message =
+                'This client id is orphaned. Try to logout and then login.')
+
+        translation_gist_id = create_gists_with_atoms(
+            args['translation_atoms'], None, [client_id, None], gist_type = 'Organization')
+
+        about_translation_gist_id = create_gists_with_atoms(
+            args['about_translation_atoms'], None, [client_id, None], gist_type = 'Organization')
+
+        dborganization = dbOrganization(
+            translation_gist_client_id = translation_gist_id[0],
+            translation_gist_object_id = translation_gist_id[1],
+            about_translation_gist_client_id = about_translation_gist_id[0],
+            about_translation_gist_object_id = about_translation_gist_id[1])
+
         DBSession.add(dborganization)
         DBSession.flush()
 
-        bases = DBSession.query(dbBaseGroup).filter_by(subject='organization')
-        for base in bases:
-            group = dbGroup(parent=base, subject_object_id=dborganization.id)
-            add_user_to_group(user, group)
-            DBSession.add(group)
+        # Organization creator can edit it.
 
+        base = DBSession.query(dbBaseGroup).filter_by(name = 'Can edit organization').first()
+        group = dbGroup(parent = base, subject_object_id = dborganization.id)
+        add_user_to_group(user, group)
+
+        DBSession.add(group)
         DBSession.flush()
-        organization = Organization(name=dborganization.name, about = dborganization.about, id = dborganization.id)
+
+        organization = Organization(id = dborganization.id)
         organization.dbObject = dborganization
-        return CreateOrganization(organization=organization, triumph=True)
+
+        return CreateOrganization(
+            organization = organization,
+            triumph = True)
+
 
 class UpdateOrganization(graphene.Mutation):
     """

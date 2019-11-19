@@ -1340,11 +1340,17 @@ class Query(graphene.ObjectType):
         return Organization(id=id)
 
     def resolve_organizations(self, info):
+
         organizations = DBSession.query(dbOrganization).filter_by(marked_for_deletion=False).all()
         organizations_list = list()
-        for db_organisation in organizations:
-            gql_organisation = Organization(id=db_organisation.id)
-            gql_organisation.dbObject = db_organisation
+
+        for db_organization in organizations:
+
+            gql_organization = Organization(id=db_organization.id)
+            gql_organization.dbObject = db_organization
+
+            organizations_list.append(gql_organization)
+
         return organizations_list
 
     # def resolve_passhash(self, args, context, info):
