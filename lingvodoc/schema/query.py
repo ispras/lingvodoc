@@ -314,6 +314,7 @@ try:
     cognate_distance_analysis_f = liboslon.CognateDistanceAnalysis_GetAllOutput
     cognate_reconstruction_f = liboslon.CognateReconstruct_GetAllOutput
     cognate_reconstruction_multi_f = liboslon.CognateMultiReconstruct_GetAllOutput
+    cognate_suggestions_f = liboslon.GuessCognates_GetAllOutput
 
 except:
 
@@ -325,6 +326,8 @@ except:
     cognate_acoustic_analysis_f = None
     cognate_distance_analysis_f = None
     cognate_reconstruction_f = None
+    cognate_reconstruction_multi_f = None
+    cognate_suggestions_f = None
 
 
 class TierList(graphene.ObjectType):
@@ -4118,6 +4121,12 @@ class CognateAnalysis(graphene.Mutation):
         dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
 
         phonemic_data_list = []
+        suggestions_data_list = []
+
+        sg_total_count = 0
+        sg_xcript_count = 0
+        sg_xlat_count = 0
+        sg_both_count = 0
 
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
             enumerate(perspective_info_list):
@@ -4140,12 +4149,16 @@ class CognateAnalysis(graphene.Mutation):
             perspective_data['dictionary_name'] = dictionary_name
             perspective_data['transcription_rules'] = transcription_rules
 
-            if mode == 'phonemic':
+            # Preparing to save additional data, if required.
 
-                # Saving additional phonemic data, if required.
+            if mode == 'phonemic':
 
                 phonemic_data_list.append([
                     '{0} - {1}'.format(dictionary_name, perspective_name), ''])
+
+            elif mode == 'suggestions':
+
+                suggestions_data_list.append([])
 
             log.debug(
                 '\ncognate_analysis {0}:'
@@ -4316,6 +4329,26 @@ class CognateAnalysis(graphene.Mutation):
                     for transcription in transcription_list:
                         phonemic_data_list[-1].extend([transcription, translation_str])
 
+                elif mode == 'suggestions' and entry_id not in entry_already_set:
+
+                    suggestions_data_list[-1].append([
+                        '|'.join(transcription_list),
+                        '|'.join(translation_list)])
+
+                    sg_total_count += 1
+
+                    # Counting how many instances of more than one transcription and / or translation
+                    # we have.
+
+                    if len(transcription_list) > 1:
+                        sg_xcript_count += 1
+
+                    if len(translation_list) > 1:
+                        sg_xlat_count += 1
+
+                    if len(transcription_list) > 1 and len(translation_list) > 1:
+                        sg_both_count += 1
+
                 # If we are fetching additional acoustic data, it's possible we have to process
                 # sound recordings and markup this lexical entry has.
 
@@ -4352,6 +4385,22 @@ class CognateAnalysis(graphene.Mutation):
                     entry_data_list = (index, transcription_list, translation_list)
 
                 text_dict[entry_id] = entry_data_list
+
+        # Showing some info on non-grouped entries, if required.
+
+        if mode == 'suggestions':
+
+            log.debug(
+                '\ncognate_analysis {0}:'
+                '\n{1} non-grouped entries'
+                '\n{2} with multiple transcriptions'
+                '\n{3} with multiple translations'
+                '\n{4} with multiple transcriptions and translations'.format(
+                language_str,
+                sg_total_count,
+                sg_xcript_count,
+                sg_xlat_count,
+                sg_both_count))
 
         if task_status is not None:
             task_status.set(3, 95, 'Performing analysis')
@@ -4496,6 +4545,7 @@ class CognateAnalysis(graphene.Mutation):
             cognate_acoustic_analysis_f if mode == 'acoustic' else
             cognate_reconstruction_f if mode == 'reconstruction' else
             cognate_reconstruction_multi_f if mode == 'multi' else
+            cognate_suggestions_f if mode == 'suggestions' else
             cognate_analysis_f)
 
         # Preparing analysis input.
@@ -4504,22 +4554,46 @@ class CognateAnalysis(graphene.Mutation):
             ''.join(text + '\0' for text in text_list)
             for text_list in phonemic_data_list]
 
+        suggestions_result_list = []
+
+        for tt_list in itertools.zip_longest(
+            *suggestions_data_list, fillvalue = ['', '']):
+
+            suggestions_result_list.append([])
+
+            for tt in tt_list:
+                suggestions_result_list[-1].extend(tt)
+
+        if mode == 'suggestions':
+
+            # Showing additional ungrouped input data, if required.
+
+            log.debug(
+                '\ncognate_analysis {0}:'
+                '\nsuggestions_result_list:\n{1}'.format(
+                    language_str,
+                    pprint.pformat(suggestions_result_list, width = 144)))
+
         result_input = (
                 
             ''.join(
                 ''.join(text + '\0' for text in text_list)
-                for text_list in result_list))
+
+                for text_list in (
+                    result_list + suggestions_result_list)))
 
         input = '\0'.join(phonemic_input_list + [result_input])
 
         log.debug(
             '\ncognate_analysis {0}:'
             '\nanalysis_f: {1}'
-            '\ninput ({2} columns, {3} rows):\n{4}'.format(
+            '\ninput ({2} columns, {3} rows{4}):\n{5}'.format(
                 language_str,
                 repr(analysis_f),
                 len(perspective_info_list),
                 len(result_list),
+                '' if mode != 'suggestions' else
+                    ', {0} ungrouped rows'.format(len(suggestions_result_list)),
                 pprint.pformat([input[i : i + 256]
                     for i in range(0, len(input), 256)], width = 144)))
 
@@ -4538,14 +4612,16 @@ class CognateAnalysis(graphene.Mutation):
                 language_name_str = language_name_str[:64] + '...'
 
             mode_name_str = (
-                '{0} {1} {2} {3}'.format(
+                '{0} {1} {2} {3}{4}'.format(
                 ' multi{0}'.format(len(multi_list)) if mode == 'multi' else
                    ' ' + mode if mode else '',
                 language_name_str,
                 ' '.join(str(count) for id, count in multi_list)
                     if mode == 'multi' else
                     len(perspective_info_list),
-                len(result_list)))
+                len(result_list),
+                ' {0}'.format(len(suggestions_result_list))
+                    if mode == 'suggestions' else ''))
             
             cognate_name_str = (
                 'cognate' + mode_name_str)
@@ -4620,6 +4696,19 @@ class CognateAnalysis(graphene.Mutation):
                 None,
                 1)
 
+        elif mode == 'suggestions':
+
+            # int GuessCognates_GetAllOutput(
+            #   LPTSTR bufIn, int nCols, int nRowsCorresp, int nRowsRest, LPTSTR bufOut, int flags)
+
+            output_buffer_size = analysis_f(
+                None,
+                len(perspective_info_list),
+                len(result_list),
+                len(suggestions_result_list),
+                None,
+                1)
+
         else:
 
             # int CognateAnalysis_GetAllOutput(
@@ -4659,6 +4748,16 @@ class CognateAnalysis(graphene.Mutation):
                 perspective_count_array,
                 len(multi_list),
                 len(result_list),
+                output_buffer,
+                1)
+
+        elif mode == 'suggestions':
+
+            result = analysis_f(
+                input_buffer,
+                len(perspective_info_list),
+                len(result_list),
+                len(suggestions_result_list),
                 output_buffer,
                 1)
 
@@ -4747,6 +4846,25 @@ class CognateAnalysis(graphene.Mutation):
                 len(result_list),
                 output_buffer,
                 2)
+
+        # If we are in the suggestions mode, we currently just return the output.
+
+        if mode == 'suggestions':
+
+            return CognateAnalysis(
+
+                triumph = True,
+
+                dictionary_count = len(perspective_info_list),
+                group_count = len(group_list),
+                not_enough_count = not_enough_count,
+                transcription_count = total_transcription_count,
+                translation_count = total_translation_count,
+
+                result = output,
+
+                intermediate_url_list =
+                    intermediate_url_list if __intermediate_flag__ else None)
 
         else:
 
