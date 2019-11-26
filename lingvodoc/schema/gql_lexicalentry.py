@@ -42,6 +42,11 @@ from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
 import time
 import string
 import random
+import logging
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 
 class LexicalEntry(LingvodocObjectType):
@@ -361,8 +366,54 @@ class ConnectLexicalEntries(graphene.Mutation):
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 
+        # Override create permission check, depends only on the user.
+        # Admin is assumed to have all permissions.
+
+        create_override_flag = (user.id == 1)
+
+        if not create_override_flag:
+
+            group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+                dbBaseGroup.subject == 'lexical_entries_and_entities',
+                dbGroup.subject_override == True,
+                dbBaseGroup.action == 'create').one()
+
+            create_override_flag = (
+                user.is_active and user in group.users)
+
+        create_flag_dict = {}
+
         for lex in lexical_entries:
+
+            create_flag = create_override_flag
+
+            # Create permission check, depends on the perspective of the lexical entry.
+
+            if not create_flag:
+
+                perspective_id = (
+                    lex.parent_client_id, lex.parent_object_id)
+
+                if perspective_id in create_flag_dict:
+                    create_flag = create_flag_dict[perspective_id]
+
+                else:
+
+                    group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+                        dbBaseGroup.subject == 'lexical_entries_and_entities',
+                        dbGroup.subject_client_id == perspective_id[0],
+                        dbGroup.subject_object_id == perspective_id[1],
+                        dbBaseGroup.action == 'create').one()
+
+                    create_flag = (
+                        user.is_active and user in group.users)
+
+                    create_flag_dict[perspective_id] = create_flag
+
+            # Ensuring that the lexical entry has all link tags.
+
             for tag in tags:
+
                 tag_entity = DBSession.query(dbEntity) \
                     .join(dbEntity.field) \
                     .join(dbEntity.publishingentity) \
@@ -371,24 +422,24 @@ class ConnectLexicalEntries(graphene.Mutation):
                             dbField.object_id == field_id[1],
                             dbEntity.content == tag,
                             dbEntity.marked_for_deletion == False).first()
-                if not tag_entity:
-                    tag_entity = dbEntity(client_id=client.id,
-                                        field=field, content=tag, parent=lex)
-                    group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                        dbBaseGroup.subject == 'lexical_entries_and_entities',
-                        dbGroup.subject_client_id == tag_entity.parent.parent.client_id,
-                        dbGroup.subject_object_id == tag_entity.parent.parent.object_id,
-                        dbBaseGroup.action == 'create').one()
-                    if user.is_active and user in group.users:
-                        tag_entity.publishingentity.accepted = True
-                    group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                        dbBaseGroup.subject == 'lexical_entries_and_entities',
-                        dbGroup.subject_override == True,
-                        dbBaseGroup.action == 'create').one()
-                    if user.is_active and user in group.users:
-                        tag_entity.publishingentity.accepted = True
-        return ConnectLexicalEntries(triumph=True)
 
+                if not tag_entity:
+
+                    tag_entity = dbEntity(
+                        client_id = client.id,
+                        field = field,
+                        content = tag,
+                        parent = lex)
+
+                    if create_flag:
+                        tag_entity.publishingentity.accepted = True
+
+                # If we are the admin, we automatically publish link entities.
+
+                if user.id == 1:
+                    tag_entity.publishingentity.published = True
+
+        return ConnectLexicalEntries(triumph=True)
 
 
 class DeleteGroupingTags(graphene.Mutation):

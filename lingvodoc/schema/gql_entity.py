@@ -56,6 +56,8 @@ from sqlalchemy import (
 import base64
 import hashlib
 
+import dateutil.parser
+
 from lingvodoc.models import DictionaryPerspective as dbPerspective
 from lingvodoc.utils.creation import create_entity
 from lingvodoc.utils.deletion import real_delete_entity
@@ -246,31 +248,42 @@ class CreateEntity(graphene.Mutation):
                         additional_metadata=additional_metadata,
                         parent=parent)
 
-        # Acception override check.
-        # Currently disabled.
+        # Acception permission check.
+        # Admin is assumed to have all permissions.
 
-        #group = DBSession.query(dbGroup).join(dbBaseGroup).filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-        #                                                      dbGroup.subject_client_id == dbentity.parent.parent.client_id,
-        #                                                      dbGroup.subject_object_id == dbentity.parent.parent.object_id,
-        #                                                      dbBaseGroup.action == 'create').one()
+        create_flag = (user.id == 1)
 
-        #override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-        #    dbBaseGroup.subject == 'lexical_entries_and_entities',
-        #    dbGroup.subject_override == True,
-        #    dbBaseGroup.action == 'create').one()
+        if not create_flag:
 
-        #if user in group.users or user in override_group.users:
-        #    dbentity.publishingentity.accepted = True
+            group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+                dbBaseGroup.subject == 'lexical_entries_and_entities',
+                dbGroup.subject_client_id == parent.parent_client_id,
+                dbGroup.subject_object_id == parent.parent_object_id,
+                dbBaseGroup.action == 'create').one()
+
+            create_flag = (
+                user.is_active and user in group.users)
+
+        if not create_flag:
+
+            override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
+                dbBaseGroup.subject == 'lexical_entries_and_entities',
+                dbGroup.subject_override == True,
+                dbBaseGroup.action == 'create').one()
+
+            create_flag = (
+                user.is_active and user in override_group.users)
+
+        if create_flag:
+            dbentity.publishingentity.accepted = True
 
         if upper_level:
             dbentity.upper_level = upper_level
 
-        dbentity.publishingentity.accepted = True
-
         # If the entity is being created by the admin, we automatically publish it.
 
         if user.id == 1:
-          dbentity.publishingentity.published = True
+            dbentity.publishingentity.published = True
 
         filename = args.get('filename')
         real_location = None
@@ -488,6 +501,8 @@ class ApproveAllForUser(graphene.Mutation):
         perspective_id = LingvodocID()
         language_id = LingvodocID()
         language_recursive = graphene.Boolean()
+        language_all = graphene.Boolean()
+        time_from = graphene.String()
 
     #entity = graphene.Field(Entity)
     triumph = graphene.Boolean()
@@ -497,28 +512,73 @@ class ApproveAllForUser(graphene.Mutation):
     def mutate(root, info, **args):
 
         user_id = args.get('user_id')
-        published = args.get('published')
-        accepted = args.get('accepted')
+
+        published = args.get('published', False)
+        accepted = args.get('accepted', False)
 
         field_ids = args.get('field_ids')
-        skip_deleted_entities = args.get('skip_deleted_entities')
+        skip_deleted_entities = args.get('skip_deleted_entities', True)
 
         perspective_id = args.get('perspective_id')
 
         language_id = args.get('language_id')
         language_recursive = args.get('language_recursive', False)
+        language_all = args.get('language_all', False)
+
+        time_from = args.get('time_from')
+
+        # We have a starting time specification, trying to parse it.
+
+        if time_from is not None:
+            time_from = dateutil.parser.parse(time_from)
+
+        log.debug(
+            '\napprove_all_for_user'
+            '\n  args: {0}'
+            '\napprove_all_for_user'
+            '\n  user_id: {1}'
+            '\n  published: {2}'
+            '\n  accepted: {3}'
+            '\n  field_ids: {4}'
+            '\n  skip_deleted_entities: {5}'
+            '\n  perspective_id: {6}'
+            '\n  language_id: {7}'
+            '\n  language_recursive: {8}'
+            '\n  language_all: {9}'
+            '\n  time_from: {10}'.format(
+            args,
+            user_id,
+            published,
+            accepted,
+            field_ids,
+            skip_deleted_entities,
+            perspective_id,
+            language_id,
+            language_recursive,
+            language_all,
+            time_from))
 
         request_client_id = info.context.request.authenticated_userid
         request_user = Client.get_user_by_client_id(request_client_id)
 
-        if not perspective_id and not language_id:
-            raise ResponseError('Please specify either a perspective or a language.')
+        if (not perspective_id and
+            not language_id and
+            not language_all):
 
-        if language_id and request_user.id != 1:
-            raise ResponseError('Only administrator can perform bulk approve for languages.')
+            raise ResponseError(
+                'Please specify either a perspective, a language or the flag for all languages.')
 
-        if user_id is None and request_user.id != 1:
-            raise ResponseError('Only administrator can perform bulk approve for all users.')
+        if ((language_id or language_all) and
+            request_user.id != 1):
+
+            raise ResponseError(
+                'Only administrator can perform bulk approve for languages.')
+
+        if (user_id is None and
+            request_user.id != 1):
+
+            raise ResponseError(
+                'Only administrator can perform bulk approve for all users.')
 
         # Entity selection condition.
 
@@ -541,12 +601,12 @@ class ApproveAllForUser(graphene.Mutation):
 
         if user_id is not None:
 
-            list_of_clients_of_given_user = [
-                x[0] for x in DBSession.query(Client.id).filter_by(user_id=user_id).all()]
+            client_id_query = (
+                DBSession.query(Client.id).filter_by(user_id = user_id))
 
             entity_select_condition = and_(
                 entity_select_condition,
-                dbEntity.client_id.in_(list_of_clients_of_given_user))
+                dbEntity.client_id.in_(client_id_query))
 
         # If have any specified fields, checking their info and updating selection condition.
 
@@ -575,6 +635,14 @@ class ApproveAllForUser(graphene.Mutation):
             entity_select_condition = and_(
                 entity_select_condition,
                 dbEntity.marked_for_deletion == False)
+
+        # Checking if we should filter entities based on creation datetime.
+
+        if time_from:
+
+            entity_select_condition = and_(
+                entity_select_condition,
+                dbEntity.created_at >= time_from)
 
         # Bulk approve for a single perspective.
 
@@ -632,24 +700,71 @@ class ApproveAllForUser(graphene.Mutation):
                 update_count,
                 'y' if update_count == 1 else 'ies'))
 
-        # Bulk approve for a language.
+        # Bulk approve for a language, possibly recursive, or all undeleted languages with transitively
+        # undeleted parents.
 
-        if language_id:
+        if language_id or language_all:
 
-            language = DBSession.query(dbLanguage).filter_by(
-                marked_for_deletion = False,
-                client_id = language_id[0],
-                object_id = language_id[1]).first()
+            if language_id:
 
-            if not language:
-                raise ResponseError('Language {0}/{1} not found'.format(*language_id))
+                # A single specified language.
 
-            language_id_list = [
-                (language.client_id, language.object_id)]
+                marked_for_deletion = (
+                        
+                    DBSession
+                    
+                        .query(
+                            dbLanguage.marked_for_deletion)
+                    
+                        .filter_by(
+                            client_id = language_id[0],
+                            object_id = language_id[1])
+                        
+                        .scalar())
+
+                if marked_for_deletion is None:
+                    raise ResponseError('Language {0}/{1} not found'.format(*language_id))
+
+                elif marked_for_deletion is True:
+                    raise ResponseError('Language {0}/{1} is deleted'.format(*language_id))
+
+                language_id_list = [
+                    (language_id[0], language_id[1])]
+
+                language_str = (
+
+                    'language {0}/{1}{2}'.format(
+                        language_id[0],
+                        language_id[1],
+                        ', recursive' if language_recursive else ''))
+
+            else:
+
+                # All undeleted languages with transitively undeleted parents.
+
+                language_id_query = (
+
+                    DBSession
+
+                        .query(
+                            dbLanguage.client_id,
+                            dbLanguage.object_id)
+
+                        .filter_by(
+                            marked_for_deletion = False,
+                            parent_client_id = None,
+                            parent_object_id = None))
+
+                language_id_list = [
+
+                    (client_id, object_id)
+                    for client_id, object_id in language_id_query.all()]
+
+                language_str = 'all languages'
 
             # Getting all child languages, if required.
 
-            if language_recursive:
+            if language_recursive or language_all:
 
                 parent_id_list = language_id_list
 
@@ -667,9 +782,10 @@ class ApproveAllForUser(graphene.Mutation):
                     language_id_list.extend(parent_id_list)
 
             log.debug(
-                'approve_all_for_user (language {0}/{1}{2}):\nlanguage_id_list: {3}'.format(
-                language_id[0], language_id[1],
-                ', recursive' if language_recursive else '',
+                '\napprove_all_for_user ({0}):'
+                '\nlanguage_id_list ({1}): {2}'.format(
+                language_str,
+                len(language_id_list),
                 language_id_list))
 
             # Performing bulk approve of entities for all non-deleted lexical entries from all non-deleted
@@ -710,9 +826,8 @@ class ApproveAllForUser(graphene.Mutation):
             update_count = update_result.rowcount
 
             log.debug(
-                'approve_all_for_user (language {0}/{1}{2}): updated {3} entit{4}'.format(
-                language_id[0], language_id[1],
-                ', recursive' if language_recursive else '',
+                'approve_all_for_user ({0}): updated {1} entit{2}'.format(
+                language_str,
                 update_count,
                 'y' if update_count == 1 else 'ies'))
 

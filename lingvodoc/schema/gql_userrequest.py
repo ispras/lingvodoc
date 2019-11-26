@@ -287,6 +287,7 @@ class AcceptUserRequest(graphene.Mutation):
                     if organization.additional_metadata.get('admins') is None:
                         organization.additional_metadata['admins'] = list()
                     organization.additional_metadata['admins'].append(user_id)
+                    flag_modified(organization, 'additional_metadata')
                 else:
                     pass
 
@@ -535,15 +536,17 @@ class ParticipateOrg(graphene.Mutation):
 
         orgadmins = list()
         org = DBSession.query(dbOrganization).filter_by(id=org_id).first()
-        if not org.additional_metadata:
-            raise ResponseError(message="No administrators")
 
-        orgadmins = org.additional_metadata.get('admins')
+        if org.additional_metadata:
+            orgadmins = org.additional_metadata.get('admins')
+
+        # If the org does not have any administrators, we'll send the request to the main administrator
+        # user.
 
         if not orgadmins:
-            raise ResponseError(message="No administrators")
+            orgadmins.append(1)
 
-        for orgadmin in org.additional_metadata['admins']:
+        for orgadmin in orgadmins:
             req['recipient_id'] = orgadmin
             req_id = create_one_userrequest(req, client_id)
 

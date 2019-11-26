@@ -381,6 +381,64 @@ class RelationshipMixin(PrimeTableArgs):
     parent_client_id = Column(SLBigInteger())  # , nullable=False
 
 
+def get_translation(
+    locale_id,
+    client_id,
+    object_id,
+    session = DBSession,
+    key_format_str = 'translation:%s:%s:%s'):
+    """
+    Standard translation retrieval with caching.
+    """
+
+    from lingvodoc.cache.caching import CACHE
+
+    main_locale = str(locale_id)
+    fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
+
+    key_main = key_format_str % (
+        str(client_id), str(object_id), str(main_locale))
+
+    translation = CACHE.get(key_main)
+    if translation:
+        log.info("Got cached %s " % str(key_main))
+        return translation
+    log.debug("No cached value, getting from DB: %s " % str(key_main))
+
+    all_translations = session.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(
+        parent_client_id=client_id,
+        parent_object_id=object_id).all()
+    all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
+    if not all_translations_dict:
+        return "Translation missing for all locales"
+    elif all_translations_dict.get(main_locale) is not None:
+        translation = all_translations_dict.get(main_locale)
+        CACHE.set(key=key_main, value=translation)
+        return translation
+    elif all_translations_dict.get(fallback_locale) is not None:
+        translation = all_translations_dict.get(fallback_locale)
+        key_fallback = key_format_str % (
+            str(client_id), str(object_id), str(fallback_locale))
+        CACHE.set(key=key_fallback, value=translation)
+        return translation
+
+    # Ok, no main, no fallback, so we get anything at all.
+
+    for locale, translation in sorted(all_translations_dict.items()):
+
+        if locale != main_locale and locale != fallback_locale:
+
+            key = key_format_str % (
+                str(client_id), str(object_id), str(locale))
+
+            CACHE.set(key = key, value = translation)
+            return translation
+
+    # Should be unreachable, so just in case.
+
+    return "Translation missing for all locales"
+
+
 class TranslationMixin(PrimeTableArgs):
     translation_gist_client_id = Column(SLBigInteger(), nullable=False)
     translation_gist_object_id = Column(SLBigInteger(), nullable=False)
@@ -391,41 +449,13 @@ class TranslationMixin(PrimeTableArgs):
                                      ['TranslationGist'.lower() + '.object_id',
                                       'TranslationGist'.lower() + '.client_id']),) + super().__table_args__
 
-    def get_translation(self, locale_id, session=DBSession):
-        from lingvodoc.cache.caching import CACHE
+    def get_translation(self, locale_id, session = DBSession):
 
-        main_locale = str(locale_id)
-        fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
-
-        key = "translation:%s:%s:%s" % (
-        str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
-        translation = CACHE.get(key)
-        if translation:
-            log.info("Got cached %s " % str(key))
-            return translation
-        log.debug("No cached value, getting from DB: %s " % str(key))
-
-        all_translations = session.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(
-            parent_client_id=self.translation_gist_client_id,
-            parent_object_id=self.translation_gist_object_id).all()
-        all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
-        if not all_translations_dict:
-            return "Translation missing for all locales"
-        elif all_translations_dict.get(main_locale) is not None:
-            translation = all_translations_dict.get(main_locale)
-            key = "translation:%s:%s:%s" % (
-            str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
-            CACHE.set(key=key, value=translation)
-            return translation
-        elif all_translations_dict.get(fallback_locale) is not None:
-            translation = all_translations_dict.get(fallback_locale)
-            key = "translation:%s:%s:%s" % (
-            str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(fallback_locale))
-            CACHE.set(key=key, value=translation)
-            return translation
-        else:
-            return "Translation missing for your locale and fallback locale"
-            # TODO: continue iterating to get any translation
+        return get_translation(
+            locale_id,
+            self.translation_gist_client_id,
+            self.translation_gist_object_id,
+            session)
 
 
 class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedForDeletionMixin):
@@ -435,37 +465,12 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, Ma
     type = Column(UnicodeText)
 
     def get_translation(self, locale_id):
-        from lingvodoc.cache.caching import CACHE
 
-        main_locale = str(locale_id)
-        fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
-
-        key = "%s:%s:%s" % (str(self.client_id), str(self.object_id), str(main_locale))
-        translation = CACHE.get(key)
-        if translation:
-            log.info("Got cached %s " % str(key))
-            return translation
-        log.debug("No cached value, getting from DB: %s " % str(key))
-
-        all_translations = DBSession.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(
-            parent_client_id=self.client_id,
-            parent_object_id=self.object_id).all()
-        all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
-        if not all_translations_dict:
-            return "Translation missing for all locales"
-        elif all_translations_dict.get(main_locale) is not None:
-            translation = all_translations_dict.get(main_locale)
-            key = "%s:%s:%s" % (str(self.client_id), str(self.object_id), str(main_locale))
-            CACHE.set(key=key, value=translation)
-            return translation
-        elif all_translations_dict.get(fallback_locale) is not None:
-            translation = all_translations_dict.get(fallback_locale)
-            key = "%s:%s:%s" % (str(self.client_id), str(self.object_id), str(fallback_locale))
-            CACHE.set(key=key, value=translation)
-            return translation
-        else:
-            return "Translation missing for your locale and fallback locale"
-            # TODO: continue iterating to get any translation
+        return get_translation(
+            locale_id,
+            self.client_id,
+            self.object_id,
+            key_format_str = '%s:%s:%s')
 
 
 class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, MarkedForDeletionMixin,
@@ -1126,13 +1131,45 @@ class Group(Base, TableNameMixin, CreatedAtMixin):
     parent = relationship(__parentname__, backref=backref('group'))
 
 
-class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
-    name = Column(UnicodeText)
+class AboutMixin(PrimeTableArgs):
+
+    about_translation_gist_client_id = Column(SLBigInteger(), nullable = False)
+    about_translation_gist_object_id = Column(SLBigInteger(), nullable = False)
+
+    @declared_attr
+    def __table_args__(cls):
+
+        return (
+
+            (ForeignKeyConstraint(
+                ['about_translation_gist_object_id',
+                    'about_translation_gist_client_id'],
+                ['TranslationGist'.lower() + '.object_id',
+                    'TranslationGist'.lower() + '.client_id']),) +
+
+            super().__table_args__)
+
+    def get_about_translation(self, locale_id):
+
+        return get_translation(
+            locale_id,
+            self.about_translation_gist_client_id,
+            self.about_translation_gist_object_id)
+
+
+class Organization(
+    Base,
+    TableNameMixin,
+    IdMixin,
+    CreatedAtMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    TranslationMixin,
+    AboutMixin):
+
     users = relationship("User",
                          secondary=user_to_organization_association,
                          backref=backref("organizations"))
-    about = Column(UnicodeText)
-    # locale_id = Column(ForeignKey("locale.id"))
 
 
 class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
@@ -1197,41 +1234,11 @@ class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, Add
     issuer_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
 
     def get_issuer_translation(self, locale_id):
-        from lingvodoc.cache.caching import CACHE
 
-        main_locale = str(locale_id)
-        fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
-
-        key = "translation:%s:%s:%s" % (
-            str(self.issuer_translation_gist_client_id), str(self.issuer_translation_gist_object_id), str(main_locale))
-        translation = CACHE.get(key)
-        if translation:
-            log.info("Got cached %s " % str(key))
-            return translation
-        log.debug("No cached value, getting from DB: %s " % str(key))
-
-        all_translations = DBSession.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(
-            parent_client_id=self.issuer_translation_gist_client_id,
-            parent_object_id=self.issuer_translation_gist_object_id).all()
-        all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
-        if not all_translations_dict:
-            return "Translation missing for all locales"
-        elif all_translations_dict.get(main_locale) is not None:
-            translation = all_translations_dict.get(main_locale)
-            key = "translation:%s:%s:%s" % (
-                str(self.issuer_translation_gist_client_id), str(self.issuer_translation_gist_object_id),
-                str(main_locale))
-            CACHE.set(key=key, value=translation)
-            return translation
-        elif all_translations_dict.get(fallback_locale) is not None:
-            translation = all_translations_dict.get(fallback_locale)
-            key = "translation:%s:%s:%s" % (
-                str(self.issuer_translation_gist_client_id), str(self.issuer_translation_gist_object_id),
-                str(fallback_locale))
-            CACHE.set(key=key, value=translation)
-            return translation
-        else:
-            return "Translation missing for your locale and fallback locale"
+        return get_translation(
+            locale_id,
+            self.issuer_translation_gist_client_id,
+            self.issuer_translation_gist_object_id)
 
     issuer_url = Column(String(2048), nullable=False)
     grant_url = Column(String(2048), nullable=False)

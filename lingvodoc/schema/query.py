@@ -20,6 +20,7 @@ import traceback
 import urllib.parse
 
 import graphene
+import lingvodoc.utils as utils
 from lingvodoc.utils.elan_functions import tgt_to_eaf
 import requests
 from lingvodoc.schema.gql_entity import (
@@ -185,6 +186,8 @@ from lingvodoc.models import (
 from pyramid.request import Request
 
 from lingvodoc.utils.proxy import try_proxy, ProxyPass
+
+import sqlalchemy
 from sqlalchemy import (
     func,
     and_,
@@ -233,7 +236,10 @@ from sqlite3 import connect
 from lingvodoc.utils.merge import merge_suggestions
 import tempfile
 
-from lingvodoc.scripts.save_dictionary import save_dictionary as sync_save_dictionary
+from lingvodoc.scripts.save_dictionary import (
+    find_group_by_tags,
+    save_dictionary as sync_save_dictionary)
+
 from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
 import json
 
@@ -308,6 +314,7 @@ try:
     cognate_distance_analysis_f = liboslon.CognateDistanceAnalysis_GetAllOutput
     cognate_reconstruction_f = liboslon.CognateReconstruct_GetAllOutput
     cognate_reconstruction_multi_f = liboslon.CognateMultiReconstruct_GetAllOutput
+    cognate_suggestions_f = liboslon.GuessCognates_GetAllOutput
 
 except:
 
@@ -319,6 +326,8 @@ except:
     cognate_acoustic_analysis_f = None
     cognate_distance_analysis_f = None
     cognate_reconstruction_f = None
+    cognate_reconstruction_multi_f = None
+    cognate_suggestions_f = None
 
 
 class TierList(graphene.ObjectType):
@@ -1334,11 +1343,17 @@ class Query(graphene.ObjectType):
         return Organization(id=id)
 
     def resolve_organizations(self, info):
+
         organizations = DBSession.query(dbOrganization).filter_by(marked_for_deletion=False).all()
         organizations_list = list()
-        for db_organisation in organizations:
-            gql_organisation = Organization(id=db_organisation.id)
-            gql_organisation.dbObject = db_organisation
+
+        for db_organization in organizations:
+
+            gql_organization = Organization(id=db_organization.id)
+            gql_organization.dbObject = db_organization
+
+            organizations_list.append(gql_organization)
+
         return organizations_list
 
     # def resolve_passhash(self, args, context, info):
@@ -1992,7 +2007,7 @@ class Query(graphene.ObjectType):
     #     return True
 
     def resolve_connected_words(self, info, id, field_id, mode=None):
-        response = list()
+
         client_id = id[0]
         object_id = id[1]
         field_client_id = field_id[0]
@@ -2006,21 +2021,71 @@ class Query(graphene.ObjectType):
         elif mode == 'not_accepted':
             publish = None
             accept = False
+
+        # NOTE: modes 'deleted' and 'all_with_deleted' are currently not implemented.
+
         elif mode == 'deleted':
             publish = None
             accept = None
         elif mode == 'all_with_deleted':
             publish = None
             accept = None
+
         else:
             raise ResponseError(message="mode: <all|published|not_accepted>")
-        lexical_entry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-        if not lexical_entry or lexical_entry.marked_for_deletion:
-            raise ResponseError(message="No such lexical entry in the system")
-        tags = find_all_tags(lexical_entry, field_client_id, field_object_id, accept, publish)
-        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id, accept, publish)
-        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
-                                for lex in lexes]
+
+        # Getting lexical entry group info.
+
+        marked_for_deletion = (
+                
+            DBSession
+                .query(dbLexicalEntry.marked_for_deletion)
+
+                .filter_by(
+                    client_id = client_id,
+                    object_id = object_id)
+
+                .scalar())
+
+        if (marked_for_deletion is None or
+            marked_for_deletion):
+
+            raise ResponseError(message = 'No such lexical entry in the system')
+
+        entry_query = (
+            
+            DBSession
+                .query(dbLexicalEntry)
+                .filter(
+
+                    tuple_(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+
+                    .in_(sqlalchemy.text('''
+
+                        select * from linked_group{0}(
+                            :field_client_id,
+                            :field_object_id,
+                            :client_id,
+                            :object_id)
+                            
+                        '''.format(
+                            '_no_publishing' if publish is None and accept is None else
+                            ''))))
+                
+                .params({
+                    'field_client_id': field_client_id,
+                    'field_object_id': field_object_id,
+                    'client_id': client_id,
+                    'object_id': object_id}))
+
+        lexes = entry_query.all()
+
+        lexes_composite_list = [
+            (entry.client_id, entry.object_id, entry.parent_client_id, entry.parent_object_id)
+            for entry in lexes]
+
         entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                    publish=publish, accept=accept)
 
@@ -2243,10 +2308,13 @@ class PhonemicAnalysis(graphene.Mutation):
         wrap_flag = graphene.Boolean()
 
         debug_flag = graphene.Boolean()
+        intermediate_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
     entity_count = graphene.Int()
     result = graphene.String()
+
+    intermediate_url_list = graphene.List(graphene.String)
 
     @staticmethod
     def mutate(self, info, **args):
@@ -2274,6 +2342,7 @@ class PhonemicAnalysis(graphene.Mutation):
         locale_id = info.context.get('locale_id') or 2
 
         __debug_flag__ = args.get('debug_flag', False)
+        __intermediate_flag__ = args.get('intermediate_flag', False)
 
         try:
 
@@ -2283,25 +2352,33 @@ class PhonemicAnalysis(graphene.Mutation):
             perspective_name = perspective.get_translation(locale_id)
             dictionary_name = perspective.parent.get_translation(locale_id)
 
+            transcription_rules = (
+                '' if not perspective.additional_metadata else
+                    perspective.additional_metadata.get('transcription_rules', ''))
+
             # Showing phonemic analysis info, checking phonemic analysis library presence.
 
             log.debug(
                 '\nphonemic_analysis {0}/{1}:'
                 '\n  dictionary: {2}'
                 '\n  perspective: {3}'
-                '\n  transcription field: {4}/{5}'
-                '\n  translation field: {6}/{7}'
-                '\n  wrap_flag: {8}'
-                '\n  debug_flag: {9}'
-                '\n  locale_id: {10}'
-                '\n  phonemic_analysis_f: {11}'.format(
+                '\n  transcription rules: {4}'
+                '\n  transcription field: {5}/{6}'
+                '\n  translation field: {7}/{8}'
+                '\n  wrap_flag: {9}'
+                '\n  __debug_flag__: {10}'
+                '\n  __intermediate_flag__: {11}'
+                '\n  locale_id: {12}'
+                '\n  phonemic_analysis_f: {13}'.format(
                     perspective_cid, perspective_oid,
                     repr(dictionary_name.strip()),
                     repr(perspective_name.strip()),
+                    repr(transcription_rules),
                     transcription_field_cid, transcription_field_oid,
                     translation_field_cid, translation_field_oid,
                     wrap_flag,
                     __debug_flag__,
+                    __intermediate_flag__,
                     locale_id,
                     repr(phonemic_analysis_f)))
 
@@ -2387,10 +2464,17 @@ class PhonemicAnalysis(graphene.Mutation):
             # Preparing analysis input.
 
             input = (
-                '{0} - {1}\0\0'.format(dictionary_name, perspective_name) +
+
+                '{0} - {1}\0{2}\0'.format(
+                    dictionary_name,
+                    perspective_name,
+                    transcription_rules) +
 
                 ''.join(
-                    '{0}\0{1}\0'.format(transcription, translation)
+
+                    '{0}\0{1}\0'.format(
+                        transcription, translation)
+
                     for transcription, translation in data_list))
 
             log.debug(
@@ -2408,22 +2492,79 @@ class PhonemicAnalysis(graphene.Mutation):
 
             # Saving to a file, if required.
 
-            if __debug_flag__:
+            intermediate_url_list = []
+
+            if __debug_flag__ or __intermediate_flag__:
 
                 perspective = DBSession.query(dbDictionaryPerspective).filter_by(
                     client_id = perspective_cid, object_id = perspective_oid).first()
 
-                perspective_name = perspective.get_translation(2)
-                dictionary_name = perspective.parent.get_translation(2)
+                perspective_name = (
+                    perspective.get_translation(2).strip())
 
-                input_file_name = (
-                    'input phonemic {0} {1} {2}.utf16'.format(
-                    dictionary_name.strip(),
-                    perspective_name.strip(),
+                if len(perspective_name) > 48:
+                    perspective_name = perspective_name[:48] + '...'
+
+                dictionary_name = (
+                    perspective.parent.get_translation(2).strip())
+
+                if len(dictionary_name) > 48:
+                    dictionary_name = dictionary_name[:48] + '...'
+
+                phonemic_name_str = (
+                    'phonemic {0} {1} {2}'.format(
+                    dictionary_name,
+                    perspective_name,
                     len(data_list) + 1))
 
-                with open(input_file_name, 'wb') as input_file:
-                    input_file.write(input.encode('utf-16'))
+                # Initializing file storage directory, if required.
+
+                if __intermediate_flag__:
+
+                    storage = info.context.request.registry.settings['storage']
+                    cur_time = time.time()
+
+                    storage_dir = os.path.join(
+                        storage['path'], 'phonemic', str(cur_time))
+
+                for extension, encoding in (
+                    ('utf8', 'utf-8'), ('utf16', 'utf-16')):
+
+                    input_file_name = (
+                            
+                        pathvalidate.sanitize_filename(
+                            'input {0}.{1}'.format(
+                                phonemic_name_str, extension)))
+
+                    # Saving to the working directory...
+
+                    if __debug_flag__:
+
+                        with open(input_file_name, 'wb') as input_file:
+                            input_file.write(input.encode(encoding))
+
+                    # ...and / or to the file storage.
+
+                    if __intermediate_flag__:
+
+                        input_path = os.path.join(
+                            storage_dir, input_file_name)
+
+                        os.makedirs(
+                            os.path.dirname(input_path),
+                            exist_ok = True)
+
+                        with open(input_path, 'wb') as input_file:
+                            input_file.write(input.encode(encoding))
+
+                        input_url = ''.join([
+                            storage['prefix'],
+                            storage['static_route'],
+                            'phonemic', '/',
+                            str(cur_time), '/',
+                            input_file_name])
+
+                        intermediate_url_list.append(input_url)
 
             # Calling analysis library, starting with getting required output buffer size and continuing
             # with analysis proper.
@@ -2502,9 +2643,13 @@ class PhonemicAnalysis(graphene.Mutation):
             # Returning result.
 
             return PhonemicAnalysis(
+
                 triumph = True,
                 entity_count = total_count,
-                result = final_output)
+                result = final_output,
+
+                intermediate_url_list =
+                    intermediate_url_list if __intermediate_flag__ else None)
 
         except Exception as exception:
 
@@ -2730,63 +2875,11 @@ class CognateAnalysis(graphene.Mutation):
         tag_list = list(tag_query.all())
         tag_set = set(tag_list)
 
-        # While we have tags we don't have all lexical entries for,
-        # we get these all entries of these tags...
-
-        while tag_list:
-
-            entry_id_query = (
-
-                DBSession.query(
-                    dbLexicalEntry.client_id,
-                    dbLexicalEntry.object_id)
-
-                .filter(
-                    dbLexicalEntry.marked_for_deletion == False,
-                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                    dbEntity.field_client_id == field_client_id,
-                    dbEntity.field_object_id == field_object_id,
-                    dbEntity.marked_for_deletion == False,
-                    dbEntity.content.in_(tag_list),
-                    dbPublishingEntity.client_id == dbEntity.client_id,
-                    dbPublishingEntity.object_id == dbEntity.object_id,
-                    dbPublishingEntity.published == True,
-                    dbPublishingEntity.accepted == True))
-
-            entry_id_list = []
-
-            for entry_id in entry_id_query.all():
-                if entry_id not in entry_id_set:
-
-                    entry_id_set.add(entry_id)
-                    entry_id_list.append(entry_id)
-
-            # And then get all tags for entries we haven't already done it for.
-
-            tag_query = (
-
-                DBSession.query(
-                    dbEntity.content)
-
-                .filter(
-                    tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id)
-                        .in_(entry_id_list),
-                    dbEntity.field_client_id == field_client_id,
-                    dbEntity.field_object_id == field_object_id,
-                    dbEntity.marked_for_deletion == False,
-                    dbPublishingEntity.client_id == dbEntity.client_id,
-                    dbPublishingEntity.object_id == dbEntity.object_id,
-                    dbPublishingEntity.published == True,
-                    dbPublishingEntity.accepted == True))
-
-            tag_list = []
-
-            for tag in tag_query.all():
-                if tag not in tag_set:
-
-                    tag_set.add(tag)
-                    tag_list.append(tag)
+        find_group_by_tags(
+            DBSession,
+            entry_id_set, tag_set, tag_list,
+            field_client_id, field_object_id,
+            True)
 
         return entry_id_set
 
@@ -3153,6 +3246,85 @@ class CognateAnalysis(graphene.Mutation):
             # Optimization is not fully implemented at the moment.
 
             raise NotImplementedError
+
+        return entry_already_set, group_list, time.time() - start_time
+
+    @staticmethod
+    def tag_data_plpgsql(
+        perspective_info_list,
+        tag_field_id,
+        statistics_flag = False,
+        optimize_flag = False):
+        """
+        Gets lexical entry grouping data using stored PL/pgSQL functions, computes elapsed time.
+        """
+
+        start_time = time.time()
+
+        # Getting lexical entries with tag data of the specified tag field from all perspectives.
+
+        perspective_id_list = [
+            perspective_id
+            for perspective_id, _, _ in perspective_info_list]
+
+        entry_id_query = (
+
+            DBSession.query(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id)
+
+            .filter(
+                tuple_(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
+                    .in_(perspective_id_list),
+                dbLexicalEntry.marked_for_deletion == False,
+                dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                dbEntity.field_client_id == tag_field_id[0],
+                dbEntity.field_object_id == tag_field_id[1],
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbPublishingEntity.published == True,
+                dbPublishingEntity.accepted == True)
+
+            .group_by(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id))
+
+        # Grouping lexical entries using stored PL/pgSQL function.
+
+        entry_already_set = set()
+        group_list = []
+
+        sql_str = '''
+            select * from linked_group(
+                :field_client_id,
+                :field_object_id,
+                :client_id,
+                :object_id)'''
+
+        for entry_id in entry_id_query:
+
+            if entry_id in entry_already_set:
+                continue
+
+            row_list = (
+                
+                DBSession.execute(sql_str, {
+                    'field_client_id': tag_field_id[0],
+                    'field_object_id': tag_field_id[1],
+                    'client_id': entry_id[0],
+                    'object_id': entry_id[1]})
+                
+                .fetchall())
+
+            entry_id_set = set(
+                map(tuple, row_list))
+
+            entry_already_set.update(entry_id_set)
+            group_list.append(entry_id_set)
 
         return entry_already_set, group_list, time.time() - start_time
 
@@ -3886,7 +4058,7 @@ class CognateAnalysis(graphene.Mutation):
 
             entry_already_set, group_list, group_time = (
 
-                CognateAnalysis.tag_data_aggregated(
+                CognateAnalysis.tag_data_plpgsql(
                     perspective_info_list, group_field_id))
 
         else:
@@ -3922,7 +4094,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 entry_already_set, group_list, group_time = (
 
-                    CognateAnalysis.tag_data_aggregated(
+                    CognateAnalysis.tag_data_plpgsql(
                         perspective_info_list, group_field_id))
 
                 with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
@@ -3949,6 +4121,12 @@ class CognateAnalysis(graphene.Mutation):
         dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
 
         phonemic_data_list = []
+        suggestions_data_list = []
+
+        sg_total_count = 0
+        sg_xcript_count = 0
+        sg_xlat_count = 0
+        sg_both_count = 0
 
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
             enumerate(perspective_info_list):
@@ -3971,12 +4149,16 @@ class CognateAnalysis(graphene.Mutation):
             perspective_data['dictionary_name'] = dictionary_name
             perspective_data['transcription_rules'] = transcription_rules
 
-            if mode == 'phonemic':
+            # Preparing to save additional data, if required.
 
-                # Saving additional phonemic data, if required.
+            if mode == 'phonemic':
 
                 phonemic_data_list.append([
                     '{0} - {1}'.format(dictionary_name, perspective_name), ''])
+
+            elif mode == 'suggestions':
+
+                suggestions_data_list.append([])
 
             log.debug(
                 '\ncognate_analysis {0}:'
@@ -4147,6 +4329,26 @@ class CognateAnalysis(graphene.Mutation):
                     for transcription in transcription_list:
                         phonemic_data_list[-1].extend([transcription, translation_str])
 
+                elif mode == 'suggestions' and entry_id not in entry_already_set:
+
+                    suggestions_data_list[-1].append([
+                        '|'.join(transcription_list),
+                        '|'.join(translation_list)])
+
+                    sg_total_count += 1
+
+                    # Counting how many instances of more than one transcription and / or translation
+                    # we have.
+
+                    if len(transcription_list) > 1:
+                        sg_xcript_count += 1
+
+                    if len(translation_list) > 1:
+                        sg_xlat_count += 1
+
+                    if len(transcription_list) > 1 and len(translation_list) > 1:
+                        sg_both_count += 1
+
                 # If we are fetching additional acoustic data, it's possible we have to process
                 # sound recordings and markup this lexical entry has.
 
@@ -4183,6 +4385,22 @@ class CognateAnalysis(graphene.Mutation):
                     entry_data_list = (index, transcription_list, translation_list)
 
                 text_dict[entry_id] = entry_data_list
+
+        # Showing some info on non-grouped entries, if required.
+
+        if mode == 'suggestions':
+
+            log.debug(
+                '\ncognate_analysis {0}:'
+                '\n{1} non-grouped entries'
+                '\n{2} with multiple transcriptions'
+                '\n{3} with multiple translations'
+                '\n{4} with multiple transcriptions and translations'.format(
+                language_str,
+                sg_total_count,
+                sg_xcript_count,
+                sg_xlat_count,
+                sg_both_count))
 
         if task_status is not None:
             task_status.set(3, 95, 'Performing analysis')
@@ -4327,6 +4545,7 @@ class CognateAnalysis(graphene.Mutation):
             cognate_acoustic_analysis_f if mode == 'acoustic' else
             cognate_reconstruction_f if mode == 'reconstruction' else
             cognate_reconstruction_multi_f if mode == 'multi' else
+            cognate_suggestions_f if mode == 'suggestions' else
             cognate_analysis_f)
 
         # Preparing analysis input.
@@ -4335,22 +4554,46 @@ class CognateAnalysis(graphene.Mutation):
             ''.join(text + '\0' for text in text_list)
             for text_list in phonemic_data_list]
 
+        suggestions_result_list = []
+
+        for tt_list in itertools.zip_longest(
+            *suggestions_data_list, fillvalue = ['', '']):
+
+            suggestions_result_list.append([])
+
+            for tt in tt_list:
+                suggestions_result_list[-1].extend(tt)
+
+        if mode == 'suggestions':
+
+            # Showing additional ungrouped input data, if required.
+
+            log.debug(
+                '\ncognate_analysis {0}:'
+                '\nsuggestions_result_list:\n{1}'.format(
+                    language_str,
+                    pprint.pformat(suggestions_result_list, width = 144)))
+
         result_input = (
                 
             ''.join(
                 ''.join(text + '\0' for text in text_list)
-                for text_list in result_list))
+
+                for text_list in (
+                    result_list + suggestions_result_list)))
 
         input = '\0'.join(phonemic_input_list + [result_input])
 
         log.debug(
             '\ncognate_analysis {0}:'
             '\nanalysis_f: {1}'
-            '\ninput ({2} columns, {3} rows):\n{4}'.format(
+            '\ninput ({2} columns, {3} rows{4}):\n{5}'.format(
                 language_str,
                 repr(analysis_f),
                 len(perspective_info_list),
                 len(result_list),
+                '' if mode != 'suggestions' else
+                    ', {0} ungrouped rows'.format(len(suggestions_result_list)),
                 pprint.pformat([input[i : i + 256]
                     for i in range(0, len(input), 256)], width = 144)))
 
@@ -4369,14 +4612,16 @@ class CognateAnalysis(graphene.Mutation):
                 language_name_str = language_name_str[:64] + '...'
 
             mode_name_str = (
-                '{0} {1} {2} {3}'.format(
+                '{0} {1} {2} {3}{4}'.format(
                 ' multi{0}'.format(len(multi_list)) if mode == 'multi' else
                    ' ' + mode if mode else '',
                 language_name_str,
                 ' '.join(str(count) for id, count in multi_list)
                     if mode == 'multi' else
                     len(perspective_info_list),
-                len(result_list)))
+                len(result_list),
+                ' {0}'.format(len(suggestions_result_list))
+                    if mode == 'suggestions' else ''))
             
             cognate_name_str = (
                 'cognate' + mode_name_str)
@@ -4386,13 +4631,17 @@ class CognateAnalysis(graphene.Mutation):
             if __intermediate_flag__ and storage_dir is None:
 
                 cur_time = time.time()
-                storage_dir = os.path.join(storage['path'], 'cognate', str(cur_time))
+
+                storage_dir = os.path.join(
+                    storage['path'], 'cognate', str(cur_time))
 
             for extension, encoding in ('utf8', 'utf-8'), ('utf16', 'utf-16'):
 
                 input_file_name = (
-                    'input {0}.{1}'.format(
-                        cognate_name_str, extension))
+
+                    pathvalidate.sanitize_filename(
+                        'input {0}.{1}'.format(
+                            cognate_name_str, extension)))
 
                 # Saving to the working directory...
 
@@ -4416,8 +4665,11 @@ class CognateAnalysis(graphene.Mutation):
                         input_file.write(input.encode(encoding))
 
                     input_url = ''.join([
-                        storage['prefix'], storage['static_route'],
-                        'cognate', '/', str(cur_time), '/', input_file_name])
+                        storage['prefix'],
+                        storage['static_route'],
+                        'cognate', '/',
+                        str(cur_time), '/',
+                        input_file_name])
 
                     intermediate_url_list.append(input_url)
 
@@ -4441,6 +4693,19 @@ class CognateAnalysis(graphene.Mutation):
                 perspective_count_array,
                 len(multi_list),
                 len(result_list),
+                None,
+                1)
+
+        elif mode == 'suggestions':
+
+            # int GuessCognates_GetAllOutput(
+            #   LPTSTR bufIn, int nCols, int nRowsCorresp, int nRowsRest, LPTSTR bufOut, int flags)
+
+            output_buffer_size = analysis_f(
+                None,
+                len(perspective_info_list),
+                len(result_list),
+                len(suggestions_result_list),
                 None,
                 1)
 
@@ -4483,6 +4748,16 @@ class CognateAnalysis(graphene.Mutation):
                 perspective_count_array,
                 len(multi_list),
                 len(result_list),
+                output_buffer,
+                1)
+
+        elif mode == 'suggestions':
+
+            result = analysis_f(
+                input_buffer,
+                len(perspective_info_list),
+                len(result_list),
+                len(suggestions_result_list),
                 output_buffer,
                 1)
 
@@ -4571,6 +4846,25 @@ class CognateAnalysis(graphene.Mutation):
                 len(result_list),
                 output_buffer,
                 2)
+
+        # If we are in the suggestions mode, we currently just return the output.
+
+        if mode == 'suggestions':
+
+            return CognateAnalysis(
+
+                triumph = True,
+
+                dictionary_count = len(perspective_info_list),
+                group_count = len(group_list),
+                not_enough_count = not_enough_count,
+                transcription_count = total_transcription_count,
+                translation_count = total_translation_count,
+
+                result = output,
+
+                intermediate_url_list =
+                    intermediate_url_list if __intermediate_flag__ else None)
 
         else:
 
@@ -5242,8 +5536,13 @@ class CognateAnalysis(graphene.Mutation):
 
         if task_status is not None:
 
-            task_status.set(5, 100, 'Finished', result_link_list =
-                [xlsx_url] + ([] if figure_url is None else [figure_url]))
+            result_link_list = (
+                [xlsx_url] +
+                ([] if figure_url is None else [figure_url]) +
+                (intermediate_url_list if __intermediate_flag__ else []))
+
+            task_status.set(5, 100, 'Finished',
+                result_link_list = result_link_list)
 
         return CognateAnalysis(
 
@@ -5363,12 +5662,13 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  figure_flag: {10}'
                  '\n  distance_vowel_flag: {11}'
                  '\n  distance_consonant_flag: {12}'
-                 '\n  debug_flag: {13}'
-                 '\n  cognate_analysis_f: {14}'
-                 '\n  cognate_acoustic_analysis_f: {15}'
-                 '\n  cognate_distance_analysis_f: {16}'
-                 '\n  cognate_reconstruction_f: {17}'
-                 '\n  cognate_reconstruction_multi_f: {18}'.format(
+                 '\n  __debug_flag__: {13}'
+                 '\n  __intermediate_flag__: {14}'
+                 '\n  cognate_analysis_f: {15}'
+                 '\n  cognate_acoustic_analysis_f: {16}'
+                 '\n  cognate_distance_analysis_f: {17}'
+                 '\n  cognate_reconstruction_f: {18}'
+                 '\n  cognate_reconstruction_multi_f: {19}'.format(
                     language_str,
                     repr(base_language_name.strip()),
                     group_field_id[0], group_field_id[1],
@@ -5382,6 +5682,7 @@ class CognateAnalysis(graphene.Mutation):
                     distance_vowel_flag,
                     distance_consonant_flag,
                     __debug_flag__,
+                    __intermediate_flag__,
                     repr(cognate_analysis_f),
                     repr(cognate_acoustic_analysis_f),
                     repr(cognate_distance_analysis_f),
@@ -6280,7 +6581,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
         workbook.close()
 
-        xlsx_file_name = (
+        xlsx_file_name = pathvalidate.sanitize_filename(
             'Phonological statistical distance ({0} perspectives).xlsx'.format(len(info_list)))
 
         if __debug_flag__:

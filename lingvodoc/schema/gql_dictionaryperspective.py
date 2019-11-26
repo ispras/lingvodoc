@@ -98,7 +98,11 @@ def entries_with_entities(lexes, accept, delete, mode, publish):
         return [gql_lexicalentry(lex, None) for lex in lexes]
     lex_id_to_obj = dict()
     lexes_composite_list = list()
-    for lex_obj in lexes.yield_per(100).all():
+
+    for lex_obj in (
+        lexes if isinstance(lexes, list) else
+        lexes.yield_per(100).all()):
+
         lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
                                     lex_obj.parent_client_id, lex_obj.parent_object_id))
         lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
