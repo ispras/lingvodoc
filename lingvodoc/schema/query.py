@@ -4444,6 +4444,8 @@ class CognateAnalysis(graphene.Mutation):
         total_transcription_count = 0
         total_translation_count = 0
 
+        not_suggestions = mode != 'suggestions'
+
         for entry_id_set in group_list:
 
             group_transcription_list = [[]
@@ -4480,10 +4482,11 @@ class CognateAnalysis(graphene.Mutation):
 
                     group_acoustic_list[index] = entry_data_list[3]
 
-            # Dropping groups with transcriptions from no more than a single dictionary.
+            # Dropping groups with transcriptions from no more than a single dictionary, if required.
 
-            if sum(min(1, len(transcription_list))
-                for transcription_list in group_transcription_list) <= 1:
+            if (not_suggestions and
+                sum(min(1, len(transcription_list))
+                    for transcription_list in group_transcription_list) <= 1):
 
                 not_enough_count += 1
                 continue
