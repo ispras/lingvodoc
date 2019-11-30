@@ -1,6 +1,12 @@
+import errno
 import json
-from os import path
+import urllib
+import os
 import pympi
+from pathvalidate import sanitize_filename
+from sqlalchemy import and_
+from sqlalchemy.orm import aliased
+
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
@@ -10,6 +16,7 @@ from lingvodoc.models import (
     Field as dbField,
     DBSession)
 from lingvodoc.utils.static_fields import fields_static
+from poioapi.eaf_search import eaf_search
 
 #from lingvodoc.views.v2.translations import translationgist_contents
 
@@ -107,6 +114,69 @@ def eaf_words(eaf_obj):
         #    annotations.add(ann)
     annotations = set(annotations)
     return annotations
+
+
+def search_eaf_blocks_in_perspective(pid, storage, searchstring, client_id):
+    e1 = aliased(dbEntity)
+    le = aliased(dbLexicalEntry)
+    f = aliased(dbField)
+    query_result = DBSession.query(e1, le, f).join(le, and_(
+        e1.parent_client_id == le.client_id, e1.parent_object_id == le.object_id,
+        le.parent_client_id == pid[0],
+        le.parent_object_id == pid[1], e1.marked_for_deletion == False,
+        le.marked_for_deletion == False,
+        le.moved_to == None)).join(f, and_(e1.field_client_id == f.client_id,
+                                   e1.field_object_id == f.object_id)).all()
+
+    base_folder = 'search_results'
+    client_folder = 'client_' + format(client_id)
+    folder = ''.join([base_folder, '/', client_folder])
+
+    xls_name = 'result.xls'
+
+    storage_path = ''.join([
+                storage['path'],
+                folder])
+
+    try:
+        os.makedirs(storage_path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    xls_path = ''.join([
+                storage_path, '/', xls_name])
+
+    result_url = ''.join([storage['prefix'], storage['static_route'], folder, '/', xls_name])
+
+    open(xls_path, "w+").close()
+
+    for row in query_result:
+        entity = row[0]
+        field = row[2]
+        if field.data_type != 'Markup' or entity.content.find(".eaf") == -1:
+            continue
+
+        ascii_part = entity.content[:entity.content.rfind('/') + 1]
+        unicode_part = entity.content[entity.content.rfind('/') + 1:entity.content.rfind('.')]
+        extension = entity.content[entity.content.rfind('.'):]
+        url = ascii_part + urllib.request.quote(unicode_part) + extension
+
+        response = urllib.request.urlopen(url)
+        tmp_content_file_path = ''.join([
+            storage_path, '/', 'tmp_content_file'])
+        tmp_content_file = open(tmp_content_file_path, "wb+")
+        tmp_content_file.write(response.read())
+
+        eaf_search(tmp_content_file_path, xls_path, searchstring,
+                   "entity_ids_" + format(entity.client_id) + "_" + format(entity.object_id))
+
+    if tmp_content_file_path:
+        try:
+            os.remove(tmp_content_file_path)
+        except OSError:
+            pass
+    return result_url
 
 # auxiliary function for filling simplified permissions. Gets python dictionary, Perspective object and a list of pairs
 # [("permission": boolean), ]

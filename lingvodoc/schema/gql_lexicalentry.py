@@ -289,6 +289,23 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
         return DeleteLexicalEntry(triumph=True)
 
 
+def create_n_entries_in_persp(n, pid, client):
+    lexentries_list = list()
+    client = client
+    for i in range(0, n):
+        id = [client.id, None]
+        perspective_id = pid
+        dblexentry = create_lexicalentry(id, perspective_id, True)
+        lexentries_list.append(dblexentry)
+    DBSession.bulk_save_objects(lexentries_list)
+    DBSession.flush()
+    result = list()
+    for lexentry in lexentries_list:
+        result.append(LexicalEntry(id=[lexentry.client_id, lexentry.object_id]))
+        result[-1].dbObject = lexentry
+    return result
+
+
 class BulkCreateLexicalEntry(graphene.Mutation):
     class Arguments:
         lexicalentries = graphene.List(ObjectVal)
