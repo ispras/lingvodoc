@@ -21,7 +21,7 @@ from lingvodoc.models import (
     Grant as dbGrant,
     Entity as dbEntity,
     LexicalEntry as dbLexicalEntry,
-    PublishingEntity as dbPublishingEntity
+    PublishingEntity as dbPublishingEntity,
     )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
@@ -649,6 +649,20 @@ class UpdateDictionary(graphene.Mutation):
                                                 )
                     persp.additional_metadata['info'] = {'content': old_format_blobs, 'type': 'list'}
                     flag_modified(persp, 'additional_metadata')
+
+            if "sociolinguistics" in additional_metadata:
+
+                child_persps = DBSession.query(dbDictionaryPerspective) \
+                    .filter_by(parent=db_dictionary).all()
+                for persp in child_persps:
+                    if not persp.additional_metadata:
+                        persp.additional_metadata = dict()
+                    persp.additional_metadata['sociolinguistics'] = {
+                        "type": "sociolinguistics",
+                        "content": additional_metadata["sociolinguistics"]
+                    }
+                    flag_modified(persp, 'additional_metadata')
+
         update_metadata(db_dictionary, additional_metadata)
         return db_dictionary
 
@@ -664,7 +678,7 @@ class UpdateDictionary(graphene.Mutation):
         dbdictionary = UpdateDictionary.update_dictionary(ids,
                                                           parent_id=parent_id,
                                                           translation_gist_id=translation_gist_id,
-                                                          additional_metadata=additional_metadata
+                                                          additional_metadata=additional_metadata,
                                                           )
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary

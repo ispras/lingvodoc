@@ -18,6 +18,7 @@ import textwrap
 import time
 import traceback
 import urllib.parse
+import shutil
 
 import graphene
 import lingvodoc.utils as utils
@@ -30,7 +31,8 @@ from lingvodoc.schema.gql_entity import (
     DeleteEntity,
     UpdateEntityContent,
     BulkCreateEntity,
-    ApproveAllForUser)
+    ApproveAllForUser,
+    BulkUpdateEntityContent)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -85,8 +87,10 @@ from lingvodoc.schema.gql_dictionary import (
     DeleteDictionary,
     UpdateDictionaryAtom)
 
-from lingvodoc.schema.gql_search import AdvancedSearch
-from lingvodoc.schema.gql_search import AdvancedSearchSimple
+from lingvodoc.schema.gql_search import (
+    AdvancedSearch,
+    AdvancedSearchSimple,
+    EafSearch)
 
 from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
@@ -95,7 +99,7 @@ from lingvodoc.schema.gql_lexicalentry import (
     BulkDeleteLexicalEntry,
     BulkCreateLexicalEntry,
     ConnectLexicalEntries,
-    DeleteGroupingTags
+    DeleteGroupingTags,
 )
 
 from lingvodoc.schema.gql_language import (
@@ -215,7 +219,13 @@ from lingvodoc.utils.phonology import (
     gql_sound_and_markup)
 
 from lingvodoc.utils import starling_converter
-from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
+
+from lingvodoc.utils.search import (
+    translation_gist_search,
+    recursive_sort,
+    eaf_words,
+    find_all_tags,
+    find_lexical_entries_by_tags)
 
 import lingvodoc.cache.caching as caching
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
@@ -291,6 +301,7 @@ import sklearn.mixture
 import transaction
 import xlsxwriter
 
+from lingvodoc.schema.gql_copy_field import CopySingleField, CopySoundMarkupFields
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -513,6 +524,22 @@ class Query(graphene.ObjectType):
         graphene.List(graphene.String), id=graphene.Int(required=False))
     perspectives_fields_intersection = graphene.Field(
         graphene.List(Field), perspectives=graphene.List(LingvodocID),)
+
+    eaf_search = (
+        graphene.Field(EafSearch,
+            perspective_id = LingvodocID(),
+            search_query = graphene.Argument(ObjectVal),
+            debug_flag = graphene.Boolean()))
+
+    def resolve_eaf_search(
+        self,
+        info,
+        perspective_id = None,
+        search_query = None,
+        debug_flag = False):
+
+        return EafSearch.constructor(
+            info, perspective_id, search_query, debug_flag)
 
     def resolve_perspectives_fields_intersection(self, info, perspectives=None):
         """
@@ -6967,7 +6994,7 @@ class AddRolesBulk(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id = user_id).first()
 
         if not user:
-            raise RespenseError('No user with id {0}'.format(user_id))
+            raise ResponseError('No user with id {0}'.format(user_id))
 
         # Getting permission groups info.
 
@@ -7072,15 +7099,18 @@ class MyMutations(graphene.ObjectType):
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
+    copy_sound_markup_fields = CopySoundMarkupFields.Field()
+    copy_single_field = CopySingleField.Field()
     create_entity = CreateEntity.Field()
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
     update_entity_content = UpdateEntityContent.Field()
+    bulk_update_entity_content = BulkUpdateEntityContent.Field()
     approve_all_for_user = ApproveAllForUser.Field()
     bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
-    activate_deactivate_user = ActivateDeactivateUser.Field();
+    activate_deactivate_user = ActivateDeactivateUser.Field()
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     update_language_atom = UpdateLanguageAtom.Field()

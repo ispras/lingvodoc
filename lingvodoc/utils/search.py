@@ -1,6 +1,12 @@
+import errno
 import json
-from os import path
+import urllib
+import os
 import pympi
+from pathvalidate import sanitize_filename
+from sqlalchemy import and_
+from sqlalchemy.orm import aliased
+
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
@@ -107,6 +113,7 @@ def eaf_words(eaf_obj):
         #    annotations.add(ann)
     annotations = set(annotations)
     return annotations
+
 
 # auxiliary function for filling simplified permissions. Gets python dictionary, Perspective object and a list of pairs
 # [("permission": boolean), ]

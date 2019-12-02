@@ -929,7 +929,7 @@ class BulkCreateEntity(graphene.Mutation):
             registry = entity_obj.get("registry")
 
             dbentity = create_entity(ids, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
-                                     filename, content, registry, request, False)
+                                     filename, content, registry, request, True)
 
             dbentities_list.append(dbentity)
 
@@ -1016,3 +1016,98 @@ class UpdateEntityContent(graphene.Mutation):
         entity = Entity(id = [dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return UpdateEntityContent(entity=entity, triumph=True)
+
+class BulkUpdateEntityContent(graphene.Mutation):
+    """
+            mutation My {
+        update_entity_content(ids:[[1907,10]], contents: ["cat"]){
+            entity{
+                created_at
+            }
+        }
+    }
+    """
+    class Arguments:
+        """
+        input values from request. Look at "LD methods" exel table
+        """
+        ids = graphene.List(LingvodocID)
+        contents = graphene.List(graphene.String)
+
+    entities = graphene.List(Entity)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        # delete
+        old_ids = args.get('ids')
+        contents = args.get('contents')
+
+        if len(old_ids) != len(contents):
+            raise ResponseError(message="Length of contents list is not equal to length of entities list")
+
+        client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
+
+        dbentities_old = list()
+
+        for old_id in old_ids:
+            dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_id[0], object_id=old_id[1]).first()
+
+            if not dbentity_old or dbentity_old.marked_for_deletion:
+                raise ResponseError(message="No entity" + format(old_id) + " in the system")
+            if dbentity_old.field.data_type != "Text":
+                raise ResponseError(message="Can't edit non-text entity" + format(old_id))
+
+            lexical_entry = dbentity_old.parent
+            info.context.acl_check('delete', 'lexical_entries_and_entities',
+                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
+            settings = info.context["request"].registry.settings
+            if 'desktop' in settings:
+                real_delete_entity(dbentity_old, settings)
+            else:
+                del_object(dbentity_old)
+            dbentities_old.append(dbentity_old)
+
+        # create
+        dbentities_new = list()
+        i = -1
+        for content in contents:
+            i += 1
+            client = DBSession.query(Client).filter_by(id=client_id).first()
+            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+            if not user:
+                raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+            parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentities_old[i].parent_client_id,
+                                                               object_id=dbentities_old[i].parent_object_id).first()
+            if not parent:
+                raise ResponseError(message="No such lexical entry in the system")
+
+            info.context.acl_check('create', 'lexical_entries_and_entities',
+                                   (parent.parent_client_id, parent.parent_object_id))
+            dbentity = dbEntity(client_id=client_id,
+                                object_id=None,
+                                field_client_id=dbentities_old[i].field_client_id,
+                                field_object_id=dbentities_old[i].field_object_id,
+                                locale_id=dbentities_old[i].locale_id,
+                                additional_metadata=dbentities_old[i].additional_metadata,
+                                parent=dbentities_old[i].parent)
+
+            dbentity.publishingentity.accepted = dbentities_old[i].publishingentity.accepted
+            dbentity.content = content
+            # if args.get('is_translatable', None): # TODO: fix it
+            #     field.is_translatable = bool(args['is_translatable'])
+            dbentities_new.append(dbentity)
+
+        DBSession.bulk_save_objects(dbentities_new)
+        DBSession.flush()
+
+        entities = list()
+        for dbentity in dbentities_new:
+            entity = Entity(id=[dbentity.client_id, dbentity.object_id])
+            entity.dbObject = dbentity
+            entities.append(entity)
+
+        return BulkUpdateEntityContent(entities=entities, triumph=True)
