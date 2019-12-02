@@ -26,7 +26,8 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     acl_check_by_id,
     ResponseError,
-    LingvodocID
+    LingvodocID,
+    ObjectVal
 )
 from lingvodoc.models import (
     Organization as dbOrganization,
@@ -54,6 +55,11 @@ from lingvodoc.utils.search import translation_gist_search
 
 import lingvodoc.utils as utils
 
+from lingvodoc.views.v2.utils import (
+    storage_file,
+    as_storage_file
+)
+
 from sqlalchemy import (
     func,
     and_,
@@ -66,6 +72,7 @@ from sqlalchemy import (
 from sqlalchemy.orm.util import aliased
 from itertools import chain
 
+from poioapi.eaf_search import eaf_search
 
 import re
 
@@ -1173,4 +1180,181 @@ class AdvancedSearchSimple(LingvodocObjectType):
             perspectives=res_perspectives,
             dictionaries=res_dictionaries,
             xlsx_url=xlsx_url)
+
+
+class EafSearch(LingvodocObjectType):
+
+    result_list = graphene.List(ObjectVal)
+    xlsx_url = graphene.String()
+
+    @classmethod
+    def constructor(
+        cls,
+        info,
+        perspective_id = None,
+        search_query = None,
+        __debug_flag__ = True):
+
+        log.debug(
+            '\neaf_search'
+            '\n  perspective_id: {0}'
+            '\n  search_query: {1}'
+            '\n  __debug_flag__: {2}'.format(
+                perspective_id,
+                search_query,
+                __debug_flag__))
+
+        # Getting query string to use for XLSX file name.
+
+        def f(query_dict):
+
+            value = query_dict.get('value')
+
+            if isinstance(value, list):
+                yield from map(f, value)
+
+            elif isinstance(value, str):
+                yield value
+
+        query_str = '_'.join(f(search_query))
+
+        xlsx_filename = (
+            ('Search_' + query_str)[:64] + '.xlsx')
+
+        # Constructing path and URL to the resulting XLSX file.
+
+        storage = info.context.request.registry.settings['storage']
+        time_str = '{0:.6f}'.format(time.time())
+
+        storage_dir = (
+
+            os.path.join(
+                storage['path'],
+                'eaf_search',
+                time_str))
+
+        os.makedirs(storage_dir, exist_ok = True)
+
+        xlsx_path = os.path.join(
+            storage_dir, xlsx_filename)
+
+        xlsx_url = ''.join([
+            storage['prefix'],
+            storage['static_route'],
+            'eaf_search', '/',
+            time_str, '/',
+            xlsx_filename])
+
+        log.debug(
+            '\neaf_search'
+            '\n  xlsx_path: {0}'
+            '\n  xlsx_url: {1}'.format(
+                xlsx_path,
+                xlsx_url))
+
+        # Preparing to get EAF data.
+
+        field_query = (DBSession
+                
+            .query(
+                dbField.client_id, dbField.object_id)
+
+            .filter(
+                dbField.marked_for_deletion == False,
+                dbField.data_type_translation_gist_client_id == dbTranslationGist.client_id,
+                dbField.data_type_translation_gist_object_id == dbTranslationGist.object_id,
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
+                dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
+                dbTranslationAtom.marked_for_deletion == False,
+                dbTranslationAtom.locale_id == 2,
+                dbTranslationAtom.content == 'Markup'))
+
+        eaf_query = (DBSession
+                
+            .query(
+                dbEntity.client_id,
+                dbEntity.object_id,
+                dbEntity.content)
+
+            .filter(
+                tuple_(dbEntity.field_client_id, dbEntity.field_object_id)
+                    .in_(field_query.subquery()),
+                dbEntity.marked_for_deletion == False,
+                dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                dbEntity.content.op('~*')('.*\\.eaf.*'),
+                dbLexicalEntry.marked_for_deletion == False,
+                dbLexicalEntry.moved_to == None))
+
+        if perspective_id is not None:
+
+            eaf_query = eaf_query.filter(
+                dbLexicalEntry.parent_client_id == perspective_id[0],
+                dbLexicalEntry.parent_object_id == perspective_id[1])
+
+        else:
+
+            eaf_query = eaf_query.filter(
+                dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
+                dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
+                dbDictionaryPerspective.marked_for_deletion == False)
+
+        eaf_count = eaf_query.count()
+
+        # Processing EAF corpora.
+
+        result_list = []
+
+        open(xlsx_path, 'w').close()
+
+        storage_f = (
+            as_storage_file if __debug_flag__ else storage_file)
+
+        for index, (entity_client_id, entity_object_id, eaf_url) in (
+            enumerate(eaf_query.yield_per(256))):
+
+            log.debug(
+                '\neaf_search {0}/{1}: entity {2}/{3} {4}'.format(
+                    index + 1,
+                    eaf_count,
+                    entity_client_id,
+                    entity_object_id,
+                    repr(eaf_url)))
+
+            sheet_name = (
+                'entity_{0}_{1}'.format(
+                    entity_client_id, entity_object_id))
+
+            with storage_f(storage, eaf_url) as eaf_file:
+
+                eaf_search(
+                    eaf_file,
+                    xlsx_path,
+                    search_query,
+                    sheet_name,
+                    result_list)
+
+        # If we do not have any results, we try to ensure that no unnecessary empty XLSX files are left.
+
+        if not result_list:
+            
+            try:
+                os.remove(xlsx_path)
+
+            except:
+                pass
+
+            xlsx_url = None
+
+        log.debug(
+            '\neaf_search'
+            '\nlen(result_list): {0}'
+            '\nresult_list: {1}'.format(
+                len(result_list),
+                pprint.pformat(result_list, width = 192)))
+
+        return cls(
+            result_list = result_list,
+            xlsx_url = xlsx_url)
 

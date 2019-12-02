@@ -87,8 +87,10 @@ from lingvodoc.schema.gql_dictionary import (
     DeleteDictionary,
     UpdateDictionaryAtom)
 
-from lingvodoc.schema.gql_search import AdvancedSearch
-from lingvodoc.schema.gql_search import AdvancedSearchSimple
+from lingvodoc.schema.gql_search import (
+    AdvancedSearch,
+    AdvancedSearchSimple,
+    EafSearch)
 
 from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
@@ -217,8 +219,13 @@ from lingvodoc.utils.phonology import (
     gql_sound_and_markup)
 
 from lingvodoc.utils import starling_converter
-from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, \
-    find_lexical_entries_by_tags, search_eaf_blocks_in_perspective
+
+from lingvodoc.utils.search import (
+    translation_gist_search,
+    recursive_sort,
+    eaf_words,
+    find_all_tags,
+    find_lexical_entries_by_tags)
 
 import lingvodoc.cache.caching as caching
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
@@ -517,16 +524,22 @@ class Query(graphene.ObjectType):
         graphene.List(graphene.String), id=graphene.Int(required=False))
     perspectives_fields_intersection = graphene.Field(
         graphene.List(Field), perspectives=graphene.List(LingvodocID),)
-    eaf_search = graphene.Field(graphene.String, pid=LingvodocID(required=True), searchstring=graphene.Argument(ObjectVal))
 
-    def resolve_eaf_search(self, info, pid, searchstring):
-        storage = dict()
-        storage['path'] = "/home/andriy/Desktop/objects/"
-        storage['prefix'] = "http://localhost:6543/"
-        storage['static_route'] = "objects/"
-        client_id = info.context.get('client_id')
-        result = search_eaf_blocks_in_perspective(pid, storage, searchstring, client_id)
-        return result
+    eaf_search = (
+        graphene.Field(EafSearch,
+            perspective_id = LingvodocID(),
+            search_query = graphene.Argument(ObjectVal),
+            debug_flag = graphene.Boolean()))
+
+    def resolve_eaf_search(
+        self,
+        info,
+        perspective_id = None,
+        search_query = None,
+        debug_flag = False):
+
+        return EafSearch.constructor(
+            info, perspective_id, search_query, debug_flag)
 
     def resolve_perspectives_fields_intersection(self, info, perspectives=None):
         """
