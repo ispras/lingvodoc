@@ -1211,9 +1211,12 @@ class EafSearch(LingvodocObjectType):
             value = query_dict.get('value')
 
             if isinstance(value, list):
-                yield from map(f, value)
+
+                for generator in map(f, value):
+                    yield from generator
 
             elif isinstance(value, str):
+
                 yield value
 
         query_str = '_'.join(f(search_query))
@@ -1346,6 +1349,11 @@ class EafSearch(LingvodocObjectType):
                 pass
 
             xlsx_url = None
+
+        # Saving debug copy, if required.
+
+        elif __debug_flag__:
+            shutil.copy(xlsx_path, '__eaf_search__.xlsx')
 
         log.debug(
             '\neaf_search'
