@@ -490,7 +490,9 @@ class Query(graphene.ObjectType):
                                      mode=graphene.String(),
                                      search_metadata=ObjectVal(),
                                      simple=graphene.Boolean(),
-                                     xlsx_export=graphene.Boolean())
+                                     xlsx_export=graphene.Boolean(),
+                                     cognates_flag=graphene.Boolean(),
+                                     debug_flag=graphene.Boolean())
     advanced_search_simple = graphene.Field(AdvancedSearchSimple,
                                      languages=graphene.List(LingvodocID),
                                      dicts_to_filter=graphene.List(LingvodocID),
@@ -880,7 +882,9 @@ class Query(graphene.ObjectType):
         search_metadata=None,
         mode='published',
         simple=True,
-        xlsx_export=False):
+        xlsx_export=False,
+        cognates_flag=True,
+        debug_flag=False):
 
         if mode == 'all':
             publish = None
@@ -906,12 +910,35 @@ class Query(graphene.ObjectType):
         if simple:
 
             return AdvancedSearchSimple().constructor(
-                info, languages, dicts_to_filter, tag_list, category, adopted,
-                etymology, search_strings, publish, accept, xlsx_export)
+                info,
+                languages,
+                dicts_to_filter,
+                tag_list,
+                category,
+                adopted,
+                etymology,
+                search_strings,
+                publish,
+                accept,
+                xlsx_export,
+                cognates_flag,
+                debug_flag)
 
         return AdvancedSearch().constructor(
-            info, languages, dicts_to_filter, tag_list, category, adopted, etymology,
-            search_strings, publish, accept, search_metadata, xlsx_export)
+            info,
+            languages,
+            dicts_to_filter,
+            tag_list,
+            category,
+            adopted,
+            etymology,
+            search_strings,
+            publish,
+            accept,
+            search_metadata,
+            xlsx_export,
+            cognates_flag,
+            debug_flag)
 
     def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
 
@@ -3370,8 +3397,12 @@ class CognateAnalysis(graphene.Mutation):
 
         workbook_stream = io.BytesIO()
 
-        workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
-        worksheet_results = workbook.add_worksheet('Results')
+        workbook = xlsxwriter.Workbook(
+            workbook_stream, {'in_memory': True})
+
+        worksheet_results = (
+            workbook.add_worksheet(
+                utils.sanitize_worksheet_name('Results')))
 
         index = output_str.find('\0')
         size_list = list(map(int, output_str[:index].split(',')))
@@ -3483,8 +3514,13 @@ class CognateAnalysis(graphene.Mutation):
 
             # Getting plot info, exporting it to the XLSX workbook, generating plots.
 
-            worksheet_table_2d = workbook.add_worksheet('F-table')
-            worksheet_chart = workbook.add_worksheet('F-chart')
+            worksheet_table_2d = (
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name('F-table')))
+
+            worksheet_chart = (
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name('F-chart')))
 
             table_2d_row_index = 0
             chart_2d_count = 0
@@ -6264,8 +6300,12 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
         workbook_stream = io.BytesIO()
 
-        workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
-        worksheet_distance = workbook.add_worksheet('Distance')
+        workbook = xlsxwriter.Workbook(
+            workbook_stream, {'in_memory': True})
+
+        worksheet_distance = (
+            workbook.add_worksheet(
+                utils.sanitize_worksheet_name('Distance')))
 
         worksheet_list = []
 
@@ -6312,7 +6352,9 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
             z = None
 
             worksheet_list.append(
-                workbook.add_worksheet('Figure {0}'.format(len(worksheet_list) + 1)))
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name(
+                        'Figure {0}'.format(len(worksheet_list) + 1))))
 
             # If we are in debug mode, we try to load saved grid data we might have.
 

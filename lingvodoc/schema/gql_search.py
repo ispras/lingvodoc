@@ -9,6 +9,15 @@ import os
 import os.path
 import pickle
 import pprint
+import re
+
+# Just in case, don't have that on Windows.
+
+try:
+    import resource
+except:
+    pass
+
 import shutil
 import time
 
@@ -51,7 +60,11 @@ from lingvodoc.schema.gql_dictionary import Dictionary
 from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective, entries_with_entities
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.scripts.save_dictionary import Save_Context
-from lingvodoc.utils.search import translation_gist_search
+
+from lingvodoc.utils.search import (
+    recursive_sort,
+    translation_gist_search
+)
 
 import lingvodoc.utils as utils
 
@@ -144,6 +157,16 @@ def save_xlsx_data(
     dictionary_list,
     perspective_list,
     lexical_entry_list):
+    """
+    Exports search results to as Xlsx data.
+    """
+
+    # Ordering perspectives in the same way as dictionaries later, by creation time descending.
+
+    perspective_list = sorted(
+        perspective_list,
+        key = lambda perspective: perspective.created_at,
+        reverse = True)
 
     perspective_dict = collections.defaultdict(list)
     lexical_entry_dict = collections.defaultdict(list)
@@ -158,24 +181,169 @@ def save_xlsx_data(
         parent = lexical_entry.parent
         lexical_entry_dict[(parent.client_id, parent.object_id)].append(lexical_entry)
 
-    # Saving data of all found lexical entries, see functions save() and compile_workbook() in
-    # scripts.save_dictionary.
+    # Dictionary and language info.
+
+    dictionary_dict = collections.defaultdict(list)
+
+    language_id_set = set()
+    language_list = []
+
+    def f(language):
+        """
+        Recursively gathers containing languages.
+        """
+
+        language_id = (
+            language.client_id, language.object_id)
+
+        if language_id in language_id_set:
+            return
+
+        language_list.append(language)
+        language_id_set.add(language_id)
+
+        parent = language.parent
+
+        if parent is not None:
+            f(language.parent)
+
+    # Standard dictionary ordering, creation time descending, see resolve_dictionaries(), order_by() clause.
+
+    dictionary_list = sorted(
+        dictionary_list,
+        key = lambda dictionary: dictionary.created_at,
+        reverse = True)
 
     for dictionary in dictionary_list:
 
-        for perspective in perspective_dict[
-            (dictionary.client_id, dictionary.object_id)]:
+        parent = dictionary.parent
+        dictionary_dict[(parent.client_id, parent.object_id)].append(dictionary)
 
-            xlsx_context.ready_perspective(
-                perspective,
-                dictionary,
-                list_flag = True)
+        f(parent)
 
-            for lexical_entry in lexical_entry_dict[
-                (perspective.client_id, perspective.object_id)]:
+    # Standard language ordering, see resolve_language_tree().
 
-                xlsx_context.save_lexical_entry(
-                    lexical_entry, published = True, accepted = True)
+    language_list.sort(
+        key = lambda language: (
+            language.parent_client_id or -1,
+            language.parent_object_id or -1,
+            language.additional_metadata['younger_siblings']))
+
+    visited = set()
+    stack = set()
+    result = list()
+    recursive_sort(language_list, visited, stack, result)
+
+    language_dict = collections.defaultdict(list)
+    id_to_language_dict = {}
+
+    for language in language_list:
+
+        parent_id = (
+            language.parent_client_id, language.parent_object_id)
+
+        language_dict[parent_id].append(language)
+
+        language_id = (
+            language.client_id, language.object_id)
+
+        id_to_language_dict[language_id] = language
+
+    # And now determining standard main language for each language and grouping dictionaries by main
+    # language.
+
+    standard_dict = {}
+
+    group_dict = collections.defaultdict(list)
+    group_list = []
+
+    def f(
+        language_id,
+        standard_id = None):
+
+        if language_id in utils.standard_language_id_set:
+
+            standard_id = language_id
+            group_list.append(standard_id)
+
+        standard_dict[language_id] = standard_id
+
+        # First sublanguages, and only then own dictionaries.
+
+        for language in language_dict[language_id]:
+
+            f(
+                (language.client_id, language.object_id),
+                standard_id)
+
+        group_dict[standard_id].extend(dictionary_dict[language_id])
+
+    f((None, None))
+
+    if group_dict[None]:
+        group_list.append(None)
+
+    # Showing what we've got.
+
+    log.debug(
+        '\nlen(dictionary_list): {0}'
+        '\nlen(language_list): {1}'
+        '\nlen(language_dict): {2}'
+        '\nlanguage_dict:\n{3}'
+        '\nlen(standard_dict): {4}'
+        '\nstandard_dict:\n{5}'
+        '\nlen(group_dict): {6}'
+        '\ngroup_dict:\n{7}'
+        '\nlen(group_list): {8}'
+        '\ngroup_list:\n{9}'.format(
+            len(dictionary_list),
+            len(language_list),
+            len(language_dict),
+            pprint.pformat(language_dict, width = 192),
+            len(standard_dict),
+            pprint.pformat(standard_dict, width = 192),
+            len(group_dict),
+            pprint.pformat(group_dict, width = 192),
+            len(group_list),
+            pprint.pformat(group_list, width = 192)))
+
+    # Saving data of all found lexical entries.
+
+    for language_id in group_list:
+
+        language = id_to_language_dict[language_id]
+        language_name = language.get_translation(xlsx_context.locale_id)
+
+        dictionary_list = group_dict[language_id]
+
+        log.debug(
+            '\n{0}: {1} dictionaries'.format(
+                repr(language_name),
+                len(dictionary_list)))
+
+        if not dictionary_list:
+            continue
+
+        xlsx_context.ready_worksheet(language_name)
+
+        # Another dictionary and its perspectives.
+
+        for dictionary in dictionary_list:
+
+            for perspective in perspective_dict[
+                (dictionary.client_id, dictionary.object_id)]:
+
+                xlsx_context.ready_perspective(
+                    perspective,
+                    dictionary,
+                    worksheet_flag = False,
+                    list_flag = True)
+
+                for lexical_entry in lexical_entry_dict[
+                    (perspective.client_id, perspective.object_id)]:
+
+                    xlsx_context.save_lexical_entry(
+                        lexical_entry, published = True, accepted = True)
 
 def search_mechanism(
     dictionaries,
@@ -842,6 +1010,7 @@ class AdvancedSearch(LingvodocObjectType):
         accept,
         search_metadata,
         xlsx_export = False,
+        cognates_flag = True,
         __debug_flag__ = False):
 
         yield_batch_count = 200
@@ -972,7 +1141,8 @@ class AdvancedSearch(LingvodocObjectType):
             Save_Context(
                 info.context.get('locale_id'),
                 DBSession,
-                __debug_flag__))
+                cognates_flag = cognates_flag,
+                __debug_flag__ = __debug_flag__))
 
         # normal dictionaries
         if category != 1:
@@ -1063,7 +1233,9 @@ class AdvancedSearchSimple(LingvodocObjectType):
         search_strings,
         publish,
         accept,
-        xlsx_export = False):
+        xlsx_export = False,
+        cognates_flag = True,
+        __debug_flag__ = False):
 
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
@@ -1104,8 +1276,14 @@ class AdvancedSearchSimple(LingvodocObjectType):
         # Setting up export to an XLSX file, if required.
 
         xlsx_context = (
+
             None if not xlsx_export else
-                Save_Context(info.context.get('locale_id'), DBSession))
+
+            Save_Context(
+                info.context.get('locale_id'),
+                DBSession,
+                cognates_flag = cognates_flag,
+                __debug_flag__ = __debug_flag__))
 
         # normal dictionaries
         if category != 1:
