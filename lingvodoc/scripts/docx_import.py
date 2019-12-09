@@ -617,13 +617,26 @@ def main_import(args):
         raise NotImplementedError
 
     # Accessing info of the first table.
+    #
+    # Counting only unique cells because apparently some .docx documents can have repeating cells in their
+    # structure.
 
     table = document.tables[0]
 
-    column_count = len(table.columns)
-    row_count = len(table.rows)
+    column_count = len(set(table.rows[0].cells))
+    row_count = len(set(table.columns[0].cells))
 
-    source_cell_list = table._cells
+    table_cell_list = list(table._cells)
+
+    source_cell_list = []
+    source_cell_set = set()
+    
+    for cell in table_cell_list:
+
+        if cell not in source_cell_set:
+
+            source_cell_list.append(cell)
+            source_cell_set.add(cell)
 
     if len(source_cell_list) != column_count * row_count:
 
