@@ -23,7 +23,7 @@ passlib==1.6.5
 PasteDeploy==1.5.2
 pathvalidate==0.8.3
 promise==2.1
-psycopg2==2.8.3
+psycopg2==2.7
 pycparser==2.16
 pydub==0.16.5
 Pygments==2.1.3
