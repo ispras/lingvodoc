@@ -9,6 +9,15 @@ import os
 import os.path
 import pickle
 import pprint
+import re
+
+# Just in case, don't have that on Windows.
+
+try:
+    import resource
+except:
+    pass
+
 import shutil
 import time
 
@@ -26,7 +35,8 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     acl_check_by_id,
     ResponseError,
-    LingvodocID
+    LingvodocID,
+    ObjectVal
 )
 from lingvodoc.models import (
     Organization as dbOrganization,
@@ -50,9 +60,18 @@ from lingvodoc.schema.gql_dictionary import Dictionary
 from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective, entries_with_entities
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.scripts.save_dictionary import Save_Context
-from lingvodoc.utils.search import translation_gist_search
+
+from lingvodoc.utils.search import (
+    recursive_sort,
+    translation_gist_search
+)
 
 import lingvodoc.utils as utils
+
+from lingvodoc.views.v2.utils import (
+    storage_file,
+    as_storage_file
+)
 
 from sqlalchemy import (
     func,
@@ -66,6 +85,7 @@ from sqlalchemy import (
 from sqlalchemy.orm.util import aliased
 from itertools import chain
 
+from poioapi.eaf_search import eaf_search
 
 import re
 
@@ -137,6 +157,16 @@ def save_xlsx_data(
     dictionary_list,
     perspective_list,
     lexical_entry_list):
+    """
+    Exports search results to as Xlsx data.
+    """
+
+    # Ordering perspectives in the same way as dictionaries later, by creation time descending.
+
+    perspective_list = sorted(
+        perspective_list,
+        key = lambda perspective: perspective.created_at,
+        reverse = True)
 
     perspective_dict = collections.defaultdict(list)
     lexical_entry_dict = collections.defaultdict(list)
@@ -151,24 +181,169 @@ def save_xlsx_data(
         parent = lexical_entry.parent
         lexical_entry_dict[(parent.client_id, parent.object_id)].append(lexical_entry)
 
-    # Saving data of all found lexical entries, see functions save() and compile_workbook() in
-    # scripts.save_dictionary.
+    # Dictionary and language info.
+
+    dictionary_dict = collections.defaultdict(list)
+
+    language_id_set = set()
+    language_list = []
+
+    def f(language):
+        """
+        Recursively gathers containing languages.
+        """
+
+        language_id = (
+            language.client_id, language.object_id)
+
+        if language_id in language_id_set:
+            return
+
+        language_list.append(language)
+        language_id_set.add(language_id)
+
+        parent = language.parent
+
+        if parent is not None:
+            f(language.parent)
+
+    # Standard dictionary ordering, creation time descending, see resolve_dictionaries(), order_by() clause.
+
+    dictionary_list = sorted(
+        dictionary_list,
+        key = lambda dictionary: dictionary.created_at,
+        reverse = True)
 
     for dictionary in dictionary_list:
 
-        for perspective in perspective_dict[
-            (dictionary.client_id, dictionary.object_id)]:
+        parent = dictionary.parent
+        dictionary_dict[(parent.client_id, parent.object_id)].append(dictionary)
 
-            xlsx_context.ready_perspective(
-                perspective,
-                dictionary,
-                list_flag = True)
+        f(parent)
 
-            for lexical_entry in lexical_entry_dict[
-                (perspective.client_id, perspective.object_id)]:
+    # Standard language ordering, see resolve_language_tree().
 
-                xlsx_context.save_lexical_entry(
-                    lexical_entry, published = True, accepted = True)
+    language_list.sort(
+        key = lambda language: (
+            language.parent_client_id or -1,
+            language.parent_object_id or -1,
+            language.additional_metadata['younger_siblings']))
+
+    visited = set()
+    stack = set()
+    result = list()
+    recursive_sort(language_list, visited, stack, result)
+
+    language_dict = collections.defaultdict(list)
+    id_to_language_dict = {}
+
+    for language in language_list:
+
+        parent_id = (
+            language.parent_client_id, language.parent_object_id)
+
+        language_dict[parent_id].append(language)
+
+        language_id = (
+            language.client_id, language.object_id)
+
+        id_to_language_dict[language_id] = language
+
+    # And now determining standard main language for each language and grouping dictionaries by main
+    # language.
+
+    standard_dict = {}
+
+    group_dict = collections.defaultdict(list)
+    group_list = []
+
+    def f(
+        language_id,
+        standard_id = None):
+
+        if language_id in utils.standard_language_id_set:
+
+            standard_id = language_id
+            group_list.append(standard_id)
+
+        standard_dict[language_id] = standard_id
+
+        # First sublanguages, and only then own dictionaries.
+
+        for language in language_dict[language_id]:
+
+            f(
+                (language.client_id, language.object_id),
+                standard_id)
+
+        group_dict[standard_id].extend(dictionary_dict[language_id])
+
+    f((None, None))
+
+    if group_dict[None]:
+        group_list.append(None)
+
+    # Showing what we've got.
+
+    log.debug(
+        '\nlen(dictionary_list): {0}'
+        '\nlen(language_list): {1}'
+        '\nlen(language_dict): {2}'
+        '\nlanguage_dict:\n{3}'
+        '\nlen(standard_dict): {4}'
+        '\nstandard_dict:\n{5}'
+        '\nlen(group_dict): {6}'
+        '\ngroup_dict:\n{7}'
+        '\nlen(group_list): {8}'
+        '\ngroup_list:\n{9}'.format(
+            len(dictionary_list),
+            len(language_list),
+            len(language_dict),
+            pprint.pformat(language_dict, width = 192),
+            len(standard_dict),
+            pprint.pformat(standard_dict, width = 192),
+            len(group_dict),
+            pprint.pformat(group_dict, width = 192),
+            len(group_list),
+            pprint.pformat(group_list, width = 192)))
+
+    # Saving data of all found lexical entries.
+
+    for language_id in group_list:
+
+        language = id_to_language_dict[language_id]
+        language_name = language.get_translation(xlsx_context.locale_id)
+
+        dictionary_list = group_dict[language_id]
+
+        log.debug(
+            '\n{0}: {1} dictionaries'.format(
+                repr(language_name),
+                len(dictionary_list)))
+
+        if not dictionary_list:
+            continue
+
+        xlsx_context.ready_worksheet(language_name)
+
+        # Another dictionary and its perspectives.
+
+        for dictionary in dictionary_list:
+
+            for perspective in perspective_dict[
+                (dictionary.client_id, dictionary.object_id)]:
+
+                xlsx_context.ready_perspective(
+                    perspective,
+                    dictionary,
+                    worksheet_flag = False,
+                    list_flag = True)
+
+                for lexical_entry in lexical_entry_dict[
+                    (perspective.client_id, perspective.object_id)]:
+
+                    xlsx_context.save_lexical_entry(
+                        lexical_entry, published = True, accepted = True)
 
 def search_mechanism(
     dictionaries,
@@ -835,6 +1010,7 @@ class AdvancedSearch(LingvodocObjectType):
         accept,
         search_metadata,
         xlsx_export = False,
+        cognates_flag = True,
         __debug_flag__ = False):
 
         yield_batch_count = 200
@@ -965,7 +1141,8 @@ class AdvancedSearch(LingvodocObjectType):
             Save_Context(
                 info.context.get('locale_id'),
                 DBSession,
-                __debug_flag__))
+                cognates_flag = cognates_flag,
+                __debug_flag__ = __debug_flag__))
 
         # normal dictionaries
         if category != 1:
@@ -1056,7 +1233,9 @@ class AdvancedSearchSimple(LingvodocObjectType):
         search_strings,
         publish,
         accept,
-        xlsx_export = False):
+        xlsx_export = False,
+        cognates_flag = True,
+        __debug_flag__ = False):
 
         yield_batch_count = 200
         dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
@@ -1097,8 +1276,14 @@ class AdvancedSearchSimple(LingvodocObjectType):
         # Setting up export to an XLSX file, if required.
 
         xlsx_context = (
+
             None if not xlsx_export else
-                Save_Context(info.context.get('locale_id'), DBSession))
+
+            Save_Context(
+                info.context.get('locale_id'),
+                DBSession,
+                cognates_flag = cognates_flag,
+                __debug_flag__ = __debug_flag__))
 
         # normal dictionaries
         if category != 1:
@@ -1173,4 +1358,189 @@ class AdvancedSearchSimple(LingvodocObjectType):
             perspectives=res_perspectives,
             dictionaries=res_dictionaries,
             xlsx_url=xlsx_url)
+
+
+class EafSearch(LingvodocObjectType):
+
+    result_list = graphene.List(ObjectVal)
+    xlsx_url = graphene.String()
+
+    @classmethod
+    def constructor(
+        cls,
+        info,
+        perspective_id = None,
+        search_query = None,
+        __debug_flag__ = True):
+
+        log.debug(
+            '\neaf_search'
+            '\n  perspective_id: {0}'
+            '\n  search_query: {1}'
+            '\n  __debug_flag__: {2}'.format(
+                perspective_id,
+                search_query,
+                __debug_flag__))
+
+        # Getting query string to use for XLSX file name.
+
+        def f(query_dict):
+
+            value = query_dict.get('value')
+
+            if isinstance(value, list):
+
+                for generator in map(f, value):
+                    yield from generator
+
+            elif isinstance(value, str):
+
+                yield value
+
+        query_str = '_'.join(f(search_query))
+
+        xlsx_filename = (
+            ('Search_' + query_str)[:64] + '.xlsx')
+
+        # Constructing path and URL to the resulting XLSX file.
+
+        storage = info.context.request.registry.settings['storage']
+        time_str = '{0:.6f}'.format(time.time())
+
+        storage_dir = (
+
+            os.path.join(
+                storage['path'],
+                'eaf_search',
+                time_str))
+
+        os.makedirs(storage_dir, exist_ok = True)
+
+        xlsx_path = os.path.join(
+            storage_dir, xlsx_filename)
+
+        xlsx_url = ''.join([
+            storage['prefix'],
+            storage['static_route'],
+            'eaf_search', '/',
+            time_str, '/',
+            xlsx_filename])
+
+        log.debug(
+            '\neaf_search'
+            '\n  xlsx_path: {0}'
+            '\n  xlsx_url: {1}'.format(
+                xlsx_path,
+                xlsx_url))
+
+        # Preparing to get EAF data.
+
+        field_query = (DBSession
+                
+            .query(
+                dbField.client_id, dbField.object_id)
+
+            .filter(
+                dbField.marked_for_deletion == False,
+                dbField.data_type_translation_gist_client_id == dbTranslationGist.client_id,
+                dbField.data_type_translation_gist_object_id == dbTranslationGist.object_id,
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
+                dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
+                dbTranslationAtom.marked_for_deletion == False,
+                dbTranslationAtom.locale_id == 2,
+                dbTranslationAtom.content == 'Markup'))
+
+        eaf_query = (DBSession
+                
+            .query(
+                dbEntity.client_id,
+                dbEntity.object_id,
+                dbEntity.content)
+
+            .filter(
+                tuple_(dbEntity.field_client_id, dbEntity.field_object_id)
+                    .in_(field_query.subquery()),
+                dbEntity.marked_for_deletion == False,
+                dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                dbEntity.content.op('~*')('.*\\.eaf.*'),
+                dbLexicalEntry.marked_for_deletion == False,
+                dbLexicalEntry.moved_to == None))
+
+        if perspective_id is not None:
+
+            eaf_query = eaf_query.filter(
+                dbLexicalEntry.parent_client_id == perspective_id[0],
+                dbLexicalEntry.parent_object_id == perspective_id[1])
+
+        else:
+
+            eaf_query = eaf_query.filter(
+                dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
+                dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
+                dbDictionaryPerspective.marked_for_deletion == False)
+
+        eaf_count = eaf_query.count()
+
+        # Processing EAF corpora.
+
+        result_list = []
+
+        open(xlsx_path, 'w').close()
+
+        storage_f = (
+            as_storage_file if __debug_flag__ else storage_file)
+
+        for index, (entity_client_id, entity_object_id, eaf_url) in (
+            enumerate(eaf_query.yield_per(256))):
+
+            log.debug(
+                '\neaf_search {0}/{1}: entity {2}/{3} {4}'.format(
+                    index + 1,
+                    eaf_count,
+                    entity_client_id,
+                    entity_object_id,
+                    repr(eaf_url)))
+
+            sheet_name = (
+                'entity_{0}_{1}'.format(
+                    entity_client_id, entity_object_id))
+
+            with storage_f(storage, eaf_url) as eaf_file:
+
+                eaf_search(
+                    eaf_file,
+                    xlsx_path,
+                    search_query,
+                    sheet_name,
+                    result_list)
+
+        # If we do not have any results, we try to ensure that no unnecessary empty XLSX files are left.
+
+        if not result_list:
+            
+            try:
+                os.remove(xlsx_path)
+
+            except:
+                pass
+
+            xlsx_url = None
+
+        # Saving debug copy, if required.
+
+        elif __debug_flag__:
+            shutil.copy(xlsx_path, '__eaf_search__.xlsx')
+
+        log.debug(
+            '\neaf_search'
+            '\nlen(result_list): {0}'
+            '\nresult_list: {1}'.format(
+                len(result_list),
+                pprint.pformat(result_list, width = 192)))
+
+        return cls(
+            result_list = result_list,
+            xlsx_url = xlsx_url)
 

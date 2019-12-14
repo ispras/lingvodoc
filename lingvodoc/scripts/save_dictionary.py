@@ -42,7 +42,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.cache.caching import TaskStatus, initialize_cache
-from lingvodoc.utils import explain_analyze
+from lingvodoc.utils import explain_analyze, sanitize_worksheet_name
 
 from sqlalchemy.orm import (
     aliased, sessionmaker,
@@ -713,10 +713,13 @@ class Save_Context(object):
         self,
         locale_id,
         session,
+        cognates_flag = True,
         __debug_flag__ = False):
 
         self.locale_id = locale_id
         self.session = session
+
+        self.cognates_flag = cognates_flag
 
         self.stream = io.BytesIO()
         self.workbook = xlsxwriter.Workbook(self.stream, {'in_memory': True})
@@ -767,35 +770,56 @@ class Save_Context(object):
                 '''.format(
                     text_field_id_table_name = self.text_field_id_table_name))
 
+    def ready_worksheet(
+        self,
+        worksheet_name):
+        """
+        Prepares for exporting data to another worksheet.
+        """
+
+        self.worksheet = (
+            self.workbook.add_worksheet(
+                sanitize_worksheet_name(worksheet_name)))
+
+        self.row = 0
+
     def ready_perspective(
         self,
         perspective,
         dictionary = None,
+        worksheet_flag = True,
         list_flag = False,
         __debug_flag__ = False):
         """
         Prepares for saving data of lexical entries of another perspective.
         """
 
-        perspective_name = perspective.get_translation(self.locale_id, self.session)
+        # Initializing another worksheet, if required.
 
-        for c in '\x00*/:?[\\]':
-            perspective_name = perspective_name.replace(c, '')
+        if worksheet_flag:
 
-        id_str = '_{0}_{1}'.format(
-            perspective.client_id, perspective.object_id)
+            perspective_name = (
+                perspective.get_translation(
+                    self.locale_id, self.session))
 
-        worksheet_name = (
-            perspective_name[:31 - len(id_str)] + id_str)
+            id_str = '_{0}_{1}'.format(
+                perspective.client_id, perspective.object_id)
 
-        self.worksheet = (
-            self.workbook.add_worksheet(name = worksheet_name))
+            sanitized_name = sanitize_worksheet_name(
+                perspective_name, max_width = 31 - len(id_str))
+
+            self.worksheet = (
+                self.workbook.add_worksheet(
+                    sanitize_worksheet_name(sanitized_name + id_str)))
+
+            self.row = 0
 
         # Listing dictionary and perspective names, if required.
 
-        self.row = 0
-
         if list_flag:
+
+            if self.row > 0:
+                self.row += 1
 
             if dictionary:
 
@@ -841,9 +865,12 @@ class Save_Context(object):
 
         self.fields = field_query.all()
 
-        # Etymology field.
+        # Etymology field, if required.
 
         self.etymology_field = (
+
+            None if not self.cognates_flag else
+
             self.session.query(DictionaryPerspectiveToField).filter_by(
                 parent_client_id=perspective.client_id,
                 parent_object_id=perspective.object_id,
@@ -895,7 +922,15 @@ class Save_Context(object):
             entry_id_list.append((client_id, object_id))
             text_list.append(text)
 
+        # Some groups can have quite a large number of entries, so we limit etymology data according to
+        # Excel limits, no more than 32767 characters and no more then 253 lines, see
+        #
+        # https://support.office.com/en-us/article/excel-specifications-and-limits-1672b34d-7043-467e-8e27-269d656771c3.
+
+        text_list = text_list[:253]
+
         etymology_text = '\n'.join(text_list)
+        etymology_text = etymology_text[:32767]
 
         for entry_id in entry_id_list:
             self.etymology_dict[entry_id] = etymology_text
@@ -1022,7 +1057,7 @@ def save(
         task_status.set(3, 20, 'Running async process')
 
     save_context = Save_Context(
-        locale_id, session, __debug_flag__)
+        locale_id, session, True, __debug_flag__)
 
     try:
         compile_workbook(save_context, client_id, object_id, session, locale_id, published)

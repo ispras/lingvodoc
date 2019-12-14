@@ -18,6 +18,7 @@ import textwrap
 import time
 import traceback
 import urllib.parse
+import shutil
 
 import graphene
 import lingvodoc.utils as utils
@@ -30,7 +31,8 @@ from lingvodoc.schema.gql_entity import (
     DeleteEntity,
     UpdateEntityContent,
     BulkCreateEntity,
-    ApproveAllForUser)
+    ApproveAllForUser,
+    BulkUpdateEntityContent)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -85,8 +87,10 @@ from lingvodoc.schema.gql_dictionary import (
     DeleteDictionary,
     UpdateDictionaryAtom)
 
-from lingvodoc.schema.gql_search import AdvancedSearch
-from lingvodoc.schema.gql_search import AdvancedSearchSimple
+from lingvodoc.schema.gql_search import (
+    AdvancedSearch,
+    AdvancedSearchSimple,
+    EafSearch)
 
 from lingvodoc.schema.gql_lexicalentry import (
     LexicalEntry,
@@ -95,7 +99,7 @@ from lingvodoc.schema.gql_lexicalentry import (
     BulkDeleteLexicalEntry,
     BulkCreateLexicalEntry,
     ConnectLexicalEntries,
-    DeleteGroupingTags
+    DeleteGroupingTags,
 )
 
 from lingvodoc.schema.gql_language import (
@@ -215,7 +219,13 @@ from lingvodoc.utils.phonology import (
     gql_sound_and_markup)
 
 from lingvodoc.utils import starling_converter
-from lingvodoc.utils.search import translation_gist_search, recursive_sort, eaf_words, find_all_tags, find_lexical_entries_by_tags
+
+from lingvodoc.utils.search import (
+    translation_gist_search,
+    recursive_sort,
+    eaf_words,
+    find_all_tags,
+    find_lexical_entries_by_tags)
 
 import lingvodoc.cache.caching as caching
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
@@ -291,6 +301,7 @@ import sklearn.mixture
 import transaction
 import xlsxwriter
 
+from lingvodoc.schema.gql_copy_field import CopySingleField, CopySoundMarkupFields
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -479,7 +490,9 @@ class Query(graphene.ObjectType):
                                      mode=graphene.String(),
                                      search_metadata=ObjectVal(),
                                      simple=graphene.Boolean(),
-                                     xlsx_export=graphene.Boolean())
+                                     xlsx_export=graphene.Boolean(),
+                                     cognates_flag=graphene.Boolean(),
+                                     debug_flag=graphene.Boolean())
     advanced_search_simple = graphene.Field(AdvancedSearchSimple,
                                      languages=graphene.List(LingvodocID),
                                      dicts_to_filter=graphene.List(LingvodocID),
@@ -513,6 +526,22 @@ class Query(graphene.ObjectType):
         graphene.List(graphene.String), id=graphene.Int(required=False))
     perspectives_fields_intersection = graphene.Field(
         graphene.List(Field), perspectives=graphene.List(LingvodocID),)
+
+    eaf_search = (
+        graphene.Field(EafSearch,
+            perspective_id = LingvodocID(),
+            search_query = graphene.Argument(ObjectVal),
+            debug_flag = graphene.Boolean()))
+
+    def resolve_eaf_search(
+        self,
+        info,
+        perspective_id = None,
+        search_query = None,
+        debug_flag = False):
+
+        return EafSearch.constructor(
+            info, perspective_id, search_query, debug_flag)
 
     def resolve_perspectives_fields_intersection(self, info, perspectives=None):
         """
@@ -853,7 +882,9 @@ class Query(graphene.ObjectType):
         search_metadata=None,
         mode='published',
         simple=True,
-        xlsx_export=False):
+        xlsx_export=False,
+        cognates_flag=True,
+        debug_flag=False):
 
         if mode == 'all':
             publish = None
@@ -879,12 +910,35 @@ class Query(graphene.ObjectType):
         if simple:
 
             return AdvancedSearchSimple().constructor(
-                info, languages, dicts_to_filter, tag_list, category, adopted,
-                etymology, search_strings, publish, accept, xlsx_export)
+                info,
+                languages,
+                dicts_to_filter,
+                tag_list,
+                category,
+                adopted,
+                etymology,
+                search_strings,
+                publish,
+                accept,
+                xlsx_export,
+                cognates_flag,
+                debug_flag)
 
         return AdvancedSearch().constructor(
-            info, languages, dicts_to_filter, tag_list, category, adopted, etymology,
-            search_strings, publish, accept, search_metadata, xlsx_export)
+            info,
+            languages,
+            dicts_to_filter,
+            tag_list,
+            category,
+            adopted,
+            etymology,
+            search_strings,
+            publish,
+            accept,
+            search_metadata,
+            xlsx_export,
+            cognates_flag,
+            debug_flag)
 
     def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
 
@@ -3343,8 +3397,12 @@ class CognateAnalysis(graphene.Mutation):
 
         workbook_stream = io.BytesIO()
 
-        workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
-        worksheet_results = workbook.add_worksheet('Results')
+        workbook = xlsxwriter.Workbook(
+            workbook_stream, {'in_memory': True})
+
+        worksheet_results = (
+            workbook.add_worksheet(
+                utils.sanitize_worksheet_name('Results')))
 
         index = output_str.find('\0')
         size_list = list(map(int, output_str[:index].split(',')))
@@ -3456,8 +3514,13 @@ class CognateAnalysis(graphene.Mutation):
 
             # Getting plot info, exporting it to the XLSX workbook, generating plots.
 
-            worksheet_table_2d = workbook.add_worksheet('F-table')
-            worksheet_chart = workbook.add_worksheet('F-chart')
+            worksheet_table_2d = (
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name('F-table')))
+
+            worksheet_chart = (
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name('F-chart')))
 
             table_2d_row_index = 0
             chart_2d_count = 0
@@ -4444,6 +4507,8 @@ class CognateAnalysis(graphene.Mutation):
         total_transcription_count = 0
         total_translation_count = 0
 
+        not_suggestions = mode != 'suggestions'
+
         for entry_id_set in group_list:
 
             group_transcription_list = [[]
@@ -4480,10 +4545,11 @@ class CognateAnalysis(graphene.Mutation):
 
                     group_acoustic_list[index] = entry_data_list[3]
 
-            # Dropping groups with transcriptions from no more than a single dictionary.
+            # Dropping groups with transcriptions from no more than a single dictionary, if required.
 
-            if sum(min(1, len(transcription_list))
-                for transcription_list in group_transcription_list) <= 1:
+            if (not_suggestions and
+                sum(min(1, len(transcription_list))
+                    for transcription_list in group_transcription_list) <= 1):
 
                 not_enough_count += 1
                 continue
@@ -6234,8 +6300,12 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
         workbook_stream = io.BytesIO()
 
-        workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
-        worksheet_distance = workbook.add_worksheet('Distance')
+        workbook = xlsxwriter.Workbook(
+            workbook_stream, {'in_memory': True})
+
+        worksheet_distance = (
+            workbook.add_worksheet(
+                utils.sanitize_worksheet_name('Distance')))
 
         worksheet_list = []
 
@@ -6282,7 +6352,9 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
             z = None
 
             worksheet_list.append(
-                workbook.add_worksheet('Figure {0}'.format(len(worksheet_list) + 1)))
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name(
+                        'Figure {0}'.format(len(worksheet_list) + 1))))
 
             # If we are in debug mode, we try to load saved grid data we might have.
 
@@ -6964,7 +7036,7 @@ class AddRolesBulk(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id = user_id).first()
 
         if not user:
-            raise RespenseError('No user with id {0}'.format(user_id))
+            raise ResponseError('No user with id {0}'.format(user_id))
 
         # Getting permission groups info.
 
@@ -7069,15 +7141,18 @@ class MyMutations(graphene.ObjectType):
     create_field = CreateField.Field()
     # update_field = UpdateField.Field()
     # delete_field = DeleteField.Field()
+    copy_sound_markup_fields = CopySoundMarkupFields.Field()
+    copy_single_field = CopySingleField.Field()
     create_entity = CreateEntity.Field()
     update_entity = UpdateEntity.Field()
     delete_entity = DeleteEntity.Field()
     update_entity_content = UpdateEntityContent.Field()
+    bulk_update_entity_content = BulkUpdateEntityContent.Field()
     approve_all_for_user = ApproveAllForUser.Field()
     bulk_create_entity = BulkCreateEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
-    activate_deactivate_user = ActivateDeactivateUser.Field();
+    activate_deactivate_user = ActivateDeactivateUser.Field()
     create_language = CreateLanguage.Field()
     update_language = UpdateLanguage.Field()
     update_language_atom = UpdateLanguageAtom.Field()

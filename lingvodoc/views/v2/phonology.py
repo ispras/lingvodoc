@@ -89,6 +89,7 @@ from lingvodoc.models import (
 )
 
 from lingvodoc.queue.celery import celery
+from lingvodoc.utils import sanitize_worksheet_name
 from lingvodoc.views.v2.utils import anonymous_userid, as_storage_file, message, storage_file, unimplemented
 
 
@@ -1829,7 +1830,9 @@ def compile_workbook(
     for group in group_list:
         group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
 
-        worksheet_results = workbook.add_worksheet('Results' + group_name_string)
+        worksheet_results = workbook.add_worksheet(
+            sanitize_worksheet_name('Results' + group_name_string))
+
         worksheet_results.write_row('A1', ['Transcription', 'Translation'] + header_list)
 
         # Formatting column widths.
@@ -1849,9 +1852,15 @@ def compile_workbook(
             worksheet_results.set_column(4, 9, 13)
 
         worksheet_dict[group] = (worksheet_results,
-            workbook.add_worksheet('F-table' + group_name_string),
-            workbook.add_worksheet('F-chart' + group_name_string),
-            workbook.add_worksheet('F-table (3d)' + group_name_string))
+
+            workbook.add_worksheet(
+                sanitize_worksheet_name('F-table' + group_name_string)),
+
+            workbook.add_worksheet(
+                sanitize_worksheet_name('F-chart' + group_name_string)),
+
+            workbook.add_worksheet(
+                sanitize_worksheet_name('F-table (3d)' + group_name_string)))
 
     # Writing out header for CSV file, if required.
 
