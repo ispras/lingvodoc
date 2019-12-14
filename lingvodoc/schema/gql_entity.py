@@ -1067,7 +1067,7 @@ class BulkUpdateEntityContent(graphene.Mutation):
             if 'desktop' in settings:
                 real_delete_entity(dbentity_old, settings)
             else:
-                del_object(dbentity_old)
+                del_object(dbentity_old, "update_entity_content", info.context.get('client_id'))
             dbentities_old.append(dbentity_old)
 
         # create

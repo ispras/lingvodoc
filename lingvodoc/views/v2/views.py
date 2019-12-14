@@ -320,27 +320,6 @@ def testing(request):
                 elif "object with this" in meta: # type 2
                     obj_str = meta.split("[")[1].split("]")[0].split(",")
                     obj_id=(int(obj_str[0]), int(gist_str[1]))
-                    # print(obj_id)
-                    # ob = DBSession.query(Language).filter_by(client_id=obj_id[0],
-                    #                                          object_id=obj_id[1]).first()
-                    # func_name = "delete_language"
-                    # if not ob:
-                    #     ob = DBSession.query(Dictionary).filter_by(client_id=obj_id[0],
-                    #                                                object_id=obj_id[1]).first()
-                    #     func_name = "delete_dictionary"
-                    # if not ob:
-                    #     ob = DBSession.query(DictionaryPerspective).filter_by(client_id=obj_id[0],
-                    #                                                           object_id=obj_id[1]).first()
-                    #     func_name = "delete_perspective"
-                    # if not ob:
-                    #     ob = DBSession.query(Field).filter_by(client_id=obj_id[0],
-                    #                                           object_id=obj_id[1]).first()
-                    #     func_name = "delete_field"
-                    # if not ob:
-                    #     ob = DBSession.query(Grant).filter_by(translationgist_client_id=gist_id[0],
-                    #                                           translationgist_object_id=gist_id[1]).first()
-                    #     func_name = "delete_grant"
-                    #print(ob, func_name)
                     new_meta=delete_message("del_object", None, subject=obj_id)
                     objecttoc.additional_metadata = new_meta
                     flag_modified(objecttoc, 'additional_metadata')
@@ -358,10 +337,16 @@ def testing(request):
                     print(meta)
 
             # Restore Mark`s deletions
-            restore_time = 1569186000 # 09/22/2019 @ 9:00pm (UTC)
+
             entities_to_delete = set()
             i = 0
-            for persp_id in ((1501,62090), (1501,62853)):
+            j = 0
+            for persp_id in ((1501,62090), (1501,62853), (2451,245)):
+                restore_time = 1569283200  # 24.09
+                if persp_id[1] == 62853:
+                    restore_time = 1571961600  # 25.10
+                if persp_id[1] == 62090:
+                    restore_time = 1569283200  # 24.09
                 perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=persp_id[0],
                                                                                object_id=persp_id[1]).first()
                 lexical_entries = DBSession.query(LexicalEntry).filter(LexicalEntry.parent==perspective).all()
@@ -374,26 +359,39 @@ def testing(request):
                                                                          object_id=le.object_id).one()
                         le_objecttoc.marked_for_deletion = False
                         i+=1
+
+                    import collections
+                    sort = collections.defaultdict(dict)
+                    for e in entities:
+                        sort[e.field_object_id][e.created_at] = e
+
+                    filtered_list = set()
+                    for e in sort:
+                        maxtime = max(sort[e].keys())
+                        filtered_list.add(sort[e][maxtime])
+
+
                     for entity in entities:
                         if entity.created_at > restore_time:
                             entities_to_delete.add(entity)
                         # restore
-                        if entity.marked_for_deletion:
-                            entity.marked_for_deletion = False
-                            objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=entity.client_id,
-                                                                             object_id=entity.object_id).one()
-                            objecttoc.marked_for_deletion = False
+                        if entity.marked_for_deletion and entity in filtered_list:
+                            if not "*" in entity.content and len(entity.content) > 0:
+                                entity.marked_for_deletion = False
+                                objecttoc = DBSession.query(ObjectTOC).filter_by(client_id=entity.client_id,
+                                                                                 object_id=entity.object_id).one()
+                                objecttoc.marked_for_deletion = False
+                                j+=1
 
 
             ent_count = len(entities_to_delete)
             task_id = str(uuid4())
             # deletion
             for entity in entities_to_delete:
-                print(entity.content)
+                print("delete: ", entity.content)
                 del_object(entity, "del_object", 1, counter=ent_count, task_id=task_id)  # count
 
-            print("%s entities deleted, %s le undeleted" % (ent_count, i))
-            return "Done"
+            return "%s entities deleted, %s le undeleted, %s ent undelted" % (ent_count, i, j)
     except Exception as err:
         print(str(err))
         return str(err)
