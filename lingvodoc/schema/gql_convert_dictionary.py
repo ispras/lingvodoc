@@ -1,61 +1,29 @@
 import graphene
 
 from lingvodoc.schema.gql_holders import (
-    LingvodocObjectType,
-    CompositeIdHolder,
-    AdditionalMetadata,
-    CreatedAt,
-    MarkedForDeletion,
-    Relationship,
-    MovedTo,
-    fetch_object,
     client_id_check,
-    del_object,
-    acl_check_by_id,
     ResponseError,
     LingvodocID,
     ObjectVal
 )
 
 from lingvodoc.models import (
-    Entity as dbEntity,
-    Field as dbField,
-    PublishingEntity as dbPublishingEntity,
-    LexicalEntry as dbLexicalEntry,
     Client,
     DBSession,
-    DictionaryPerspective as dbDictionaryPerspective,
-    Group as dbGroup,
-    LexicalEntry as dbLexicalEntry,
-    User as dbUser,
-    ObjectTOC as dbObjectTOC,
-    BaseGroup as dbBaseGroup,
     Dictionary as dbDictionary,
     TranslationGist as dbTranslationGist
 )
-from pyramid.security import authenticated_userid
 import logging
 from lingvodoc.cache.caching import TaskStatus
-from pyramid.httpexceptions import (
-    HTTPOk,
-    HTTPBadRequest,
-    HTTPUnauthorized
-)
+
 from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
 from lingvodoc.scripts.dictionary_dialeqt_converter import convert_all as dialeqt_convert_all
-from lingvodoc.views.v2.convert_five_tiers.core import async_convert_dictionary_new as convert_five_tiers
-import json
-import requests
-from pyramid.request import Request
-from pyramid.response import Response
 
 from lingvodoc.views.v2.utils import anonymous_userid
 log = logging.getLogger(__name__)
 from lingvodoc.utils.creation import create_gists_with_atoms
-###############
 from lingvodoc.utils.corpus_converter import convert_all
 from lingvodoc.queue.celery import celery
-
 import transaction
 
 

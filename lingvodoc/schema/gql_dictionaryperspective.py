@@ -3,7 +3,6 @@ import logging
 
 import graphene
 from collections import  defaultdict
-from sqlalchemy import and_
 
 from lingvodoc.cache.caching import CACHE
 from lingvodoc.models import (
@@ -14,12 +13,9 @@ from lingvodoc.models import (
     LexicalEntry as dbLexicalEntry,
     Client as dbClient,
     User as dbUser,
-    TranslationGist as dbTranslationGist,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
     Entity as dbEntity,
-    Organization as dbOrganization,
-    ObjectTOC,
     DBSession,
     DictionaryPerspectiveToField as dbColumn,
     PublishingEntity as dbPublishingEntity,
@@ -29,7 +25,6 @@ from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     LingvodocID,
     CommonFieldsComposite,
-    TranslationHolder,
     StateHolder,
     fetch_object,
     client_id_check,
@@ -46,26 +41,17 @@ from lingvodoc.schema.gql_language import Language
 from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.schema.gql_user import User
 from lingvodoc.utils.search import translation_gist_search
-
-from sqlalchemy.sql.expression import case, true, false
-
-from lingvodoc.views.v2.translations import translationgist_contents
 from lingvodoc.utils import statistics
-from pyramid.request import Request
 from lingvodoc.utils.creation import (
     create_perspective,
     create_gists_with_atoms,
-    add_user_to_group,
-    translationgist_contents,
     edit_role,
     update_metadata
 )
 from lingvodoc.utils.deletion import real_delete_perspective
 
 from sqlalchemy import (
-    func,
     or_,
-    and_,
     tuple_
 )
 
@@ -180,15 +166,12 @@ class DictionaryPerspective(LingvodocObjectType):
 
     tree = graphene.List(CommonFieldsComposite, )  # TODO: check it
     columns = graphene.List(Column)
-    # entities = graphene.List(Entity, mode=graphene.String())
-    # entities_old = graphene.List(Entity, mode=graphene.String())
+
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID), mode=graphene.String())
     authors = graphene.List('lingvodoc.schema.gql_user.User')
-    # stats = graphene.String() # ?
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     is_template = graphene.Boolean()
-    # counters = graphene.Field(PerspectiveCounters)
     counter = graphene.Int(mode=graphene.String())
 
     dbType = dbPerspective
@@ -453,7 +436,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
                 triumph
 
                 perspective{
-					is_template
+                    is_template
                     id
                 }
             }
@@ -642,12 +625,12 @@ class UpdatePerspectiveStatus(graphene.Mutation):
 
 class AddPerspectiveRoles(graphene.Mutation):
     """
-        mutation myQuery {
-            add_perspective_roles(id: [1279,7], user_id:2 , roles_users:[8,12,13,15,20,21,22,23,24,26,16,34]){
-						triumph
+    mutation myQuery {
+        add_perspective_roles(id: [1279,7], user_id:2 , roles_users:[8,12,13,15,20,21,22,23,24,26,16,34]){
+                    triumph
 
-					}
-        }
+                }
+    }
     """
     class Arguments:
         id = LingvodocID(required=True)
@@ -717,23 +700,23 @@ class DeletePerspectiveRoles(graphene.Mutation):
 
 class UpdatePerspectiveAtom(graphene.Mutation):
     """
-    example:
-mutation up{
-	update_perspective_atom(id: [2138, 6], locale_id: 2, content: "test6"){
-		triumph
-	}
+        example:
+    mutation up{
+        update_perspective_atom(id: [2138, 6], locale_id: 2, content: "test6"){
+            triumph
+        }
 
-}
+    }
 
-    now returns:
+        now returns:
 
-{
-	"data": {
-		"update_perspective_atom": {
-			"triumph": true
-		}
-	}
-}
+    {
+        "data": {
+            "update_perspective_atom": {
+                "triumph": true
+            }
+        }
+    }
     """
 
     class Arguments:
@@ -742,7 +725,6 @@ mutation up{
         locale_id = graphene.Int()
         atom_id = LingvodocID()
 
-    #translationatom = graphene.Field(TranslationAtom)
     triumph = graphene.Boolean()
     locale_id = graphene.Int()
     perspective = graphene.Field(DictionaryPerspective)
@@ -756,7 +738,6 @@ mutation up{
         if not dbperspective:
             raise ResponseError(message="No such perspective in the system")
         locale_id = args.get("locale_id")
-
 
         dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbperspective.translation_gist_client_id,
                                                             parent_object_id=dbperspective.translation_gist_object_id,
@@ -793,6 +774,7 @@ mutation up{
         perspective = DictionaryPerspective(id=[dbPerspective.client_id, dbPerspective.object_id])
         perspective.dbObject = dbPerspective
         return UpdatePerspectiveAtom(perspective=perspective, triumph=True)
+
 
 class DeleteDictionaryPerspective(graphene.Mutation):
     """
@@ -839,8 +821,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         if 'desktop' in settings:
             real_delete_perspective(dbperspective, settings)
         else:
-            del_object(dbperspective)
-
+            del_object(dbperspective, "delete_perspective", info.context.get('client_id'))
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return DeleteDictionaryPerspective(perspective=perspective, triumph=True)

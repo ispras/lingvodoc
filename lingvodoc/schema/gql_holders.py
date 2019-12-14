@@ -267,27 +267,77 @@ class DateTime(Scalar):  # TODO: change format
 # Functions
 
 
-def del_object(tmp_object):
-    if not tmp_object.marked_for_deletion:
-        if hasattr(tmp_object, "translation_gist_object_id"):
-            gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
-                                                         object_id=tmp_object.translation_gist_object_id,
-                                                                marked_for_deletion=False).first()
-            if gist and gist.type != "Perspective":
-                    atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
-                                                                         marked_for_deletion=False).all()
-                    for dbtranslationatom in atoms:
-                        key = "translation:%s:%s:%s" % (
-                            str(dbtranslationatom.parent_client_id),
-                            str(dbtranslationatom.parent_object_id),
-                            str(dbtranslationatom.locale_id))
-                        CACHE.rem(key)
-                        dbtranslationatom.mark_deleted("Manually deleted. gist: [%s,%s]" % (gist.client_id,
-                                                                                            gist.object_id))
-                    gist.mark_deleted("Manually deleted. object with this translationgist: [%s,%s]" % (
-                                                                                    tmp_object.client_id,
-                                                                                    tmp_object.object_id))
-        tmp_object.mark_deleted("Manually deleted")
+def delete_message(function_name, deleted_by, task_id=None, counter=1,
+                   reason="Manually deleted", deleted_at=None, subject=None):
+    """
+    This function generates a message for additional metadata to track reason of garbage collection.
+    :param function_name: name of function that delete object
+    :param deleted_by: client_id of user that delete object
+    :param subject: object that initially became a reason for deletion (it can be some of parents objects of self)
+    :param reason: how object was deleted
+    :param counter: number of deleted objects
+    :param task_id: uuid of operation
+    :param deleted_at: time
+    :param subject: like parent of deleted object. For ex. for atom it`s gist; for gist it`s perspective
+    :return:
+    """
+    if not deleted_at:
+        deleted_at = int(datetime.datetime.utcnow().timestamp())
+    message = {function_name:
+                {"deleted_at": deleted_at,
+                 "reason": reason,
+                 "deleted_by": deleted_by,
+                 "task_id": task_id,
+                 "counter": counter,
+                 "subject": subject},
+                }
+    return message
+
+
+def delete_gist_with_atoms(deleted_by, gist, task_id):
+    atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
+                                                         marked_for_deletion=False).all()
+    for dbtranslationatom in atoms:
+        key = "translation:%s:%s:%s" % (
+            str(dbtranslationatom.parent_client_id),
+            str(dbtranslationatom.parent_object_id),
+            str(dbtranslationatom.locale_id))
+        CACHE.rem(key)
+        dbtranslationatom.mark_deleted(
+            delete_message("del_object",
+                           deleted_by,
+                           task_id,
+                           counter=len(atoms),
+                           subject=(gist.client_id, gist.object_id),
+                           reason="Automatically deleted after gist removal"))
+    gist.mark_deleted(delete_message("del_object",
+                                     deleted_by,
+                                     task_id,
+                                     subject=(gist.parent_client_id, gist.parent_object_id)))
+
+def del_object(tmp_object, function_name, deleted_by, task_id=None, counter=1):
+    # This function can delete perspective\dictionary\any object
+    # with child gist and translationatoms
+    if tmp_object.marked_for_deletion:
+        return
+    # if object is translationgist, delete translationgist with atoms
+    if function_name == "delete_translationgist":
+        gist = tmp_object
+        delete_gist_with_atoms(deleted_by, gist, task_id)
+        return
+    # if object is Dictionary/Language/Field/etc. delete its translationgist
+    elif hasattr(tmp_object, "translation_gist_object_id"):
+        gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
+                                                            object_id=tmp_object.translation_gist_object_id,
+                                                            marked_for_deletion=False).first()
+        if gist and gist.type != "Perspective":
+            delete_gist_with_atoms(deleted_by, gist, task_id)
+    # delete object
+    message = delete_message(function_name, deleted_by, task_id, counter)
+    tmp_object.mark_deleted(message)
+
+
+
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
     """

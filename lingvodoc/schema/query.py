@@ -255,7 +255,7 @@ from lingvodoc.scripts import elan_parser
 from lingvodoc.utils.creation import create_entity, edit_role
 
 from lingvodoc.queue.celery import celery
-
+from lingvodoc.schema.gql_holders import del_object
 
 import cchardet as chardet
 
@@ -6877,7 +6877,7 @@ class MoveColumn(graphene.Mutation):
                                                                          marked_for_deletion=False).first()
         if not perspective:
             raise ResponseError('No such perspective')
-        info.context.acl_check('view', 'lexical_entries_and_entities',
+        info.context.acl_check('edit', 'lexical_entries_and_entities',
                            (perspective.client_id, perspective.object_id))
 
         lexes = DBSession.query(dbLexicalEntry).join(dbEntity).join(dbPublishingEntity).filter(
@@ -6927,7 +6927,7 @@ class MoveColumn(graphene.Mutation):
                                   registry=None,
                                   request=request,
                                   )
-                entity.marked_for_deletion = True
+                del_object(entity, "move_column", info.context.get('client_id'))
 
         return MoveColumn(triumph=True)
 

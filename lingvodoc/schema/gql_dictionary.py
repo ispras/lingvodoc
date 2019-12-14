@@ -1,6 +1,4 @@
-import datetime
 from collections import defaultdict
-from itertools import chain
 import logging
 import graphene
 
@@ -8,16 +6,12 @@ from lingvodoc.cache.caching import CACHE
 from lingvodoc.models import (
     Dictionary as dbDictionary,
     TranslationAtom as dbTranslationAtom,
-    TranslationGist as dbTranslationGist,
     DBSession,
     Client as dbClient,
     Language as dbLanguage,
-    User as dbUser,
-    Field as dbField,
     DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
-    Organization as dbOrganization,
     Grant as dbGrant,
     Entity as dbEntity,
     LexicalEntry as dbLexicalEntry,
@@ -28,7 +22,6 @@ from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CommonFieldsComposite,
     StateHolder,
-    TranslationHolder,
     fetch_object,
     del_object,
     client_id_check,
@@ -295,114 +288,114 @@ class CreateDictionary(graphene.Mutation):
     ============================
       # variables:
     ============================
-{
-	"parentId": [
-		508,
-		36
-	],
-	"dictionaryTranslations": [
-		{
-			"locale_id": 1,
-			"content": "Test dict"
-		}
-	],
-	"perspectives": [
-		{
-			"translation_atoms": [
-				{
-					"locale_id": 1,
-					"content": "One"
-				}
-			],
-            "fake_id": "0ce97e69-ece9-400b-a625-e7a20110246e3A",
-			"fields": [
-				{
-					"field_id": [
-						1,
-						213
-					],
-						"link_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75B"
+    {
+        "parentId": [
+            508,
+            36
+        ],
+        "dictionaryTranslations": [
+            {
+                "locale_id": 1,
+                "content": "Test dict"
+            }
+        ],
+        "perspectives": [
+            {
+                "translation_atoms": [
+                    {
+                        "locale_id": 1,
+                        "content": "One"
+                    }
+                ],
+                "fake_id": "0ce97e69-ece9-400b-a625-e7a20110246e3A",
+                "fields": [
+                    {
+                        "field_id": [
+                            1,
+                            213
+                        ],
+                            "link_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75B"
 
-				},
-				{
-					"fake_id": "2914bee7-4ef8-4275-869b-af8cdf268631",
-					"self_id": null,
-					"link_id": null,
-					"field_id": [
-						66,
-						6
-					]
-				},
-				{
-					"fake_id": "b33baa65-0314-4aa8-9c99-ab182bae765d",
-					"self_id": null,
-					"link_id": null,
-					"field_id": [
-						66,
-						8
-					]
-				},
-				{
-					"fake_id": "386a5913-c209-47de-aafa-f5a14f59612e",
-					"self_id": null,
-					"link_id": null,
-					"field_id": [
-						66,
-						10
-					]
-				},
-				{
-					"fake_id": "6aebd1a7-d105-495e-af2f-b118e53d939d",
-					"self_id": null,
-					"link_id": null,
-					"field_id": [
-						66,
-						12
-					]
-				},
-				{
-					"fake_id": "8a8c9c8b-c127-42e7-a8bb-b51ac714331c",
-					"self_id": "6aebd1a7-d105-495e-af2f-b118e53d939d",
-					"link_id": null,
-					"field_id": [
-						66,
-						23
-					]
-				}
-			]
-		},
-		{
-			"translation_atoms": [
-				{
-					"locale_id": 1,
-					"content": "Two"
-				}
-			],
-            "fake_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75B",
-			"fields": [
-				{
-					"fake_id": "ZZ",
-					"self_id": null,
-					"link_id": null,
-					"field_id": [
-						66,
-						12
-					]
-				},
-				{
-					"field_id": [
-						1,
-						213
-					],
+                    },
+                    {
+                        "fake_id": "2914bee7-4ef8-4275-869b-af8cdf268631",
+                        "self_id": null,
+                        "link_id": null,
+                        "field_id": [
+                            66,
+                            6
+                        ]
+                    },
+                    {
+                        "fake_id": "b33baa65-0314-4aa8-9c99-ab182bae765d",
+                        "self_id": null,
+                        "link_id": null,
+                        "field_id": [
+                            66,
+                            8
+                        ]
+                    },
+                    {
+                        "fake_id": "386a5913-c209-47de-aafa-f5a14f59612e",
+                        "self_id": null,
+                        "link_id": null,
+                        "field_id": [
+                            66,
+                            10
+                        ]
+                    },
+                    {
+                        "fake_id": "6aebd1a7-d105-495e-af2f-b118e53d939d",
+                        "self_id": null,
+                        "link_id": null,
+                        "field_id": [
+                            66,
+                            12
+                        ]
+                    },
+                    {
+                        "fake_id": "8a8c9c8b-c127-42e7-a8bb-b51ac714331c",
+                        "self_id": "6aebd1a7-d105-495e-af2f-b118e53d939d",
+                        "link_id": null,
+                        "field_id": [
+                            66,
+                            23
+                        ]
+                    }
+                ]
+            },
+            {
+                "translation_atoms": [
+                    {
+                        "locale_id": 1,
+                        "content": "Two"
+                    }
+                ],
+                "fake_id": "2e3684b7-6d81-4d103-a10e10-295517ad2f75B",
+                "fields": [
+                    {
+                        "fake_id": "ZZ",
+                        "self_id": null,
+                        "link_id": null,
+                        "field_id": [
+                            66,
+                            12
+                        ]
+                    },
+                    {
+                        "field_id": [
+                            1,
+                            213
+                        ],
 
 
-						"link_id": "0ce97e69-ece9-400b-a625-e7a20110246e3A"
+                            "link_id": "0ce97e69-ece9-400b-a625-e7a20110246e3A"
 
-				}
-			]
-		}
-	]
-}
+                    }
+                ]
+            }
+        ]
+    }
     """
 
     class Arguments:
@@ -851,9 +844,9 @@ class DeleteDictionaryRoles(graphene.Mutation):
     """
         mutation myQuery {
             delete_dictionary_roles(id: [1279,4], user_id:2 , roles_users:[7]){
-						triumph
+                        triumph
 
-					}
+                    }
         }
     """
     class Arguments:
@@ -935,7 +928,7 @@ class DeleteDictionary(graphene.Mutation):
         if 'desktop' in settings:
             real_delete_dictionary(dbdictionary_obj, settings)
         else:
-            del_object(dbdictionary_obj)
+            del_object(dbdictionary_obj, "delete_dictionary", info.context.get('client_id'))
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
         return DeleteDictionary(dictionary=dictionary, triumph=True)

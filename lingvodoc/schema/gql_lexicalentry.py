@@ -1,4 +1,8 @@
 import graphene
+import time
+import string
+import random
+import logging
 
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
@@ -21,28 +25,23 @@ from lingvodoc.models import (
     Entity as dbEntity,
     Field as dbField,
     PublishingEntity as dbPublishingEntity,
-    LexicalEntry as dbLexicalEntry,
     Client,
     DBSession,
-    DictionaryPerspective as dbDictionaryPerspective,
     Group as dbGroup,
     LexicalEntry as dbLexicalEntry,
     User as dbUser,
-    ObjectTOC as dbObjectTOC,
     BaseGroup as dbBaseGroup
 )
 from lingvodoc.schema.gql_entity import Entity
-from lingvodoc.utils.verification import check_client_id
+
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
 from lingvodoc.utils.creation import create_lexicalentry
 from lingvodoc.utils.deletion import real_delete_entity
 from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
-import time
-import string
-import random
-import logging
+from uuid import uuid4
+
 
 
 # Setting up logging.
@@ -249,16 +248,17 @@ class DeleteLexicalEntry(graphene.Mutation):
         lex_id = args.get('id')
         client_id, object_id = lex_id
         dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dblexicalentry or dblexicalentry.marked_for_deletion:
+            raise ResponseError(message="Error: No such entry in the system")
         info.context.acl_check('delete', 'lexical_entries_and_entities',
                                    (dblexicalentry.parent_client_id, dblexicalentry.parent_object_id))
-        if dblexicalentry and not dblexicalentry.marked_for_deletion:
-            settings = info.context["request"].registry.settings
-            if 'desktop' in settings:
-                real_delete_lexical_entry(dblexicalentry, settings)
-            else:
-                del_object(dblexicalentry)
-            return DeleteLexicalEntry(triumph=True)
-        raise ResponseError(message="No such entity in the system")
+        settings = info.context["request"].registry.settings
+        if 'desktop' in settings:
+            real_delete_lexical_entry(dblexicalentry, settings)
+        else:
+            del_object(dblexicalentry, "delete_lexicalentry", info.context.get('client_id'))
+        return DeleteLexicalEntry(triumph=True)
+
 
 
 class BulkDeleteLexicalEntry(graphene.Mutation):
@@ -272,20 +272,21 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
         ids = args.get('ids')
+        task_id = str(uuid4())
         for lex_id in ids:
             client_id, object_id = lex_id
             dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-
+            if not dblexicalentry or dblexicalentry.marked_for_deletion:
+                raise ResponseError(message="Error: No such entry in the system")
             info.context.acl_check('delete', 'lexical_entries_and_entities',
                                    (dblexicalentry.parent_client_id, dblexicalentry.parent_object_id))
-            if dblexicalentry and not dblexicalentry.marked_for_deletion:
-                settings = info.context["request"].registry.settings
-                if 'desktop' in settings:
-                    real_delete_lexical_entry(dblexicalentry, settings)
-                else:
-                    del_object(dblexicalentry)
+            settings = info.context["request"].registry.settings
+            if 'desktop' in settings:
+                real_delete_lexical_entry(dblexicalentry, settings)
             else:
-                raise ResponseError(message="No such entity in the system")
+                del_object(dblexicalentry, "bulk_delete_lexicalentry",
+                           info.context.get('client_id'), task_id=task_id, counter=len(ids))
+
         return DeleteLexicalEntry(triumph=True)
 
 
@@ -488,7 +489,7 @@ class DeleteGroupingTags(graphene.Mutation):
                 if 'desktop' in settings:
                     real_delete_entity(dbentity, settings)
                 else:
-                    del_object(dbentity)
+                    del_object(dbentity, "delete_grouping_tags", info.context.get('client_id'))
                 # entity.marked_for_deletion = True
                 # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=entity.client_id,
                 #                                                  object_id=entity.object_id).one()

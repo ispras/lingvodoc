@@ -12,7 +12,8 @@ from lingvodoc.schema.gql_holders import (
     acl_check_by_id,
     ResponseError,
     LocaleId,
-    LingvodocID
+    LingvodocID,
+    del_object
 )
 from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
@@ -21,7 +22,6 @@ from lingvodoc.models import (
     User as dbUser,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
-    ObjectTOC as dbObjectTOC,
     DBSession
 )
 
@@ -213,29 +213,31 @@ class UpdateTranslationAtom(graphene.Mutation):
 
         dbtranslationatom = DBSession.query(dbTranslationAtom).\
             filter_by(client_id=client_id, object_id=object_id).first()
-        if dbtranslationatom:
-            key = "translation:%s:%s:%s" % (
-                str(dbtranslationatom.parent_client_id),
-                str(dbtranslationatom.parent_object_id),
-                str(dbtranslationatom.locale_id))
-            CACHE.rem(key)
-            if content:
-                dbtranslationatom.content = content
-            if locale_id:
-                dbtranslationatom.locale_id = locale_id
+        if not dbtranslationatom:
+            raise ResponseError(message="Error: no such translationatom in the system")
 
-            translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
-                                              content=dbtranslationatom.content, locale_id=locale_id)
-            translationatom.dbObject = dbtranslationatom
-            return UpdateTranslationAtom(translationatom=translationatom, triumph=True)
-        raise ResponseError(message="Error: no such translationatom in the system")
+        key = "translation:%s:%s:%s" % (
+            str(dbtranslationatom.parent_client_id),
+            str(dbtranslationatom.parent_object_id),
+            str(dbtranslationatom.locale_id))
+        CACHE.rem(key)
+        if content:
+            dbtranslationatom.content = content
+        if locale_id:
+            dbtranslationatom.locale_id = locale_id
+
+        translationatom = TranslationAtom(id=[dbtranslationatom.client_id, dbtranslationatom.object_id],
+                                          content=dbtranslationatom.content, locale_id=locale_id)
+        translationatom.dbObject = dbtranslationatom
+        return UpdateTranslationAtom(translationatom=translationatom, triumph=True)
+
 
 
 class DeleteTranslationAtom(graphene.Mutation):
     """
     example:
     mutation {
-        update_translationatom(id: [866,4], content: "new content") {
+        delete_translationatom(id: [866,4], content: "new content") {
             translationatom {
                 id
                 content
@@ -247,7 +249,7 @@ class DeleteTranslationAtom(graphene.Mutation):
     now returns:
 
     {
-      "update_translationatom": {
+      "delete_translationatom": {
         "translationatom": {
           "id": [
             949,
@@ -270,26 +272,19 @@ class DeleteTranslationAtom(graphene.Mutation):
     @staticmethod
     @acl_check_by_id('edit', 'translations')
     def mutate(root, info, **args):
-        content = args.get('content')
         id = args.get('id')
         client_id = id[0]
         object_id = id[1]
-        locale_id = args.get("locale_id")
-
         dbtranslationatom = DBSession.query(dbTranslationAtom).\
             filter_by(client_id=client_id, object_id=object_id, marked_for_deletion=False).first()
-        if dbtranslationatom:
-            key = "translation:%s:%s:%s" % (
-                str(dbtranslationatom.parent_client_id),
-                str(dbtranslationatom.parent_object_id),
-                str(dbtranslationatom.locale_id))
-            CACHE.rem(key)
-            dbtranslationatom.mark_deleted("Manually deleted")
-            # dbtranslationatom.marked_for_deletion = True
-            # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dbtranslationatom.client_id,
-            #                                                  object_id=dbtranslationatom.object_id).one()
-            # objecttoc.marked_for_deletion = True
+        if not dbtranslationatom:
+            raise ResponseError(message="Error: no such translationatom in the system")
+        key = "translation:%s:%s:%s" % (
+            str(dbtranslationatom.parent_client_id),
+            str(dbtranslationatom.parent_object_id),
+            str(dbtranslationatom.locale_id))
+        CACHE.rem(key)
+        del_object(dbtranslationatom, "delete_translationatom", info.context.get('client_id'))
+        return UpdateTranslationAtom(translationatom=dbtranslationatom, triumph=True)
 
-            return UpdateTranslationAtom(translationatom=dbtranslationatom, triumph=True)
-        raise ResponseError(message="Error: no such translationatom in the system")
 

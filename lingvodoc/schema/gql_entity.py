@@ -856,7 +856,7 @@ class DeleteEntity(graphene.Mutation):
         if 'desktop' in settings:
             real_delete_entity(dbentity, settings)
         else:
-            del_object(dbentity)
+            del_object(dbentity, "delete_entity", info.context.get('client_id'))
         entity = Entity(id=[client_id, object_id])
         entity.dbObject = dbentity
         return DeleteEntity(entity=entity, triumph=True)
@@ -985,7 +985,7 @@ class UpdateEntityContent(graphene.Mutation):
         if 'desktop' in settings:
             real_delete_entity(dbentity_old, settings)
         else:
-            del_object(dbentity_old)
+            del_object(dbentity_old, "update_entity_content",info.context.get('client_id'))
         # create
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
