@@ -12,20 +12,11 @@ from lingvodoc.schema.gql_holders import (
     client_id_check,
     del_object,
     ResponseError,
-    TranslationHolder,
-    TranslationGistHolder,
     LingvodocID,
-    acl_check_by_id
 )
 from lingvodoc.models import (
+    DBSession,
     DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
-    Client,
-    User as dbUser,
-    TranslationGist as dbTranslationGist,
-    BaseGroup as dbBaseGroup,
-    Group as dbGroup,
-    ObjectTOC,
-    DBSession
 )
 
 from lingvodoc.utils.creation import create_dictionary_persp_to_field
@@ -78,9 +69,9 @@ class CreateColumn(graphene.Mutation):
     returns:
 
     {
-      "create_perspective_to_field": {
+      "create_column": {
         "triumph": true,
-        "perspective_to_field": {
+        "column": {
           "id": [
             949,
             2493
@@ -102,49 +93,15 @@ class CreateColumn(graphene.Mutation):
     column = graphene.Field(Column)
     triumph = graphene.Boolean()
 
-    #@staticmethod
-    # def create_dictionary_persp_to_field(client_id=None,
-    #                                      object_id=None,
-    #                                      parent_client_id=None,
-    #                                      parent_object_id=None,
-    #                                      field_client_id=None,
-    #                                      field_object_id=None,
-    #                                      self_client_id=None,
-    #                                      self_object_id=None,
-    #                                      link_client_id=None,
-    #                                      link_object_id=None,
-    #                                      position=1):
-    #     if DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
-    #                                                                  object_id=object_id).first():
-    #         raise ResponseError(message="This field already exists")
-    #     field_object = dbDictionaryPerspectiveToField(client_id=client_id,
-    #                                                   object_id=object_id,
-    #                                                   parent_client_id=parent_client_id,
-    #                                                   parent_object_id=parent_object_id,
-    #                                                   field_client_id=field_client_id,
-    #                                                   field_object_id=field_object_id,
-    #                                                   self_client_id=self_client_id,
-    #                                                   self_object_id=self_object_id,
-    #                                                   link_client_id=link_client_id,
-    #                                                   link_object_id=link_object_id,
-    #                                                   position=position
-    #                                                   )
-    #     DBSession.add(field_object)
-    #     DBSession.flush()
-    #     return field_object
-
     @staticmethod
     @client_id_check()
-    # @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         id = [client_id, object_id]
         parent_id = args.get('parent_id')
-
-        info.context.acl_check('edit', 'perspective',
-                                   parent_id)
+        info.context.acl_check('edit', 'perspective', parent_id)
         field_id = args.get('field_id')
         self_id = args.get('self_id')
         link_id = args.get('link_id')
@@ -166,7 +123,7 @@ class UpdateColumn(graphene.Mutation):
     """
     example:
       mutation  {
-        update_perspective_to_field(id: [949, 2493], position: 5) {
+        update_column(id: [949, 2493], position: 5) {
             triumph
             perspective_to_field{
                 id
@@ -179,9 +136,9 @@ class UpdateColumn(graphene.Mutation):
     returns:
 
     {
-      "update_perspective_to_field": {
+      "update_column": {
         "triumph": true,
-        "perspective_to_field": {
+        "column": {
           "id": [
             949,
             2493
@@ -204,7 +161,6 @@ class UpdateColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    # @acl_check_by_id("edit", "perspective", id_key="parent_id")
     def mutate(root, info, **args):
         id = args.get("id")
         client_id, object_id = id
@@ -237,9 +193,9 @@ class DeleteColumn(graphene.Mutation):
     """
     example:
       mutation  {
-       delete_perspective_to_field(id: [949, 2493]) {
+       delete_column(id: [949, 2493]) {
             triumph
-            perspective_to_field{
+            column{
                 id
             }
         }
@@ -249,9 +205,9 @@ class DeleteColumn(graphene.Mutation):
     returns:
 
     {
-      "delete_perspective_to_field": {
+      "delete_column": {
         "triumph": true,
-        "perspective_to_field": {
+        "column": {
           "id": [
             949,
             2493
@@ -276,7 +232,7 @@ class DeleteColumn(graphene.Mutation):
         info.context.acl_check('edit', 'perspective', perspective_ids)
         if not column_object or column_object.marked_for_deletion:
             raise ResponseError(message="No such column object in the system")
-        del_object(column_object)
+        del_object(column_object, "delete_column", info.context.get('client_id'))
         column = Column(id=id)
         column.dbObject = column_object
         return DeleteColumn(column=column, triumph=True)

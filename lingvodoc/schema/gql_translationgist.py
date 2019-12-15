@@ -11,7 +11,8 @@ from lingvodoc.schema.gql_holders import (
     ResponseError,
     fetch_object,
     LingvodocID,
-    TranslationHolder
+    TranslationHolder,
+    del_object
 )
 
 from lingvodoc.models import (
@@ -20,9 +21,7 @@ from lingvodoc.models import (
     User as dbUser,
     BaseGroup as dbBaseGroup,
     Group as dbGroup,
-    ObjectTOC as dbObjectTOC,
     DBSession,
-    TranslationAtom as dbTranslationAtom,
 )
 from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.utils.verification import check_client_id
@@ -166,16 +165,7 @@ class DeleteTranslationGist(graphene.Mutation):
         dbtranslationgist = DBSession.query(dbTranslationGist).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbtranslationgist or dbtranslationgist.marked_for_deletion:
             raise ResponseError(message="No such translationgist in the system")
-        dbtranslationgist.marked_for_deletion = True
-        objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=dbtranslationgist.client_id,
-                                                         object_id=dbtranslationgist.object_id).one()
-        objecttoc.marked_for_deletion = True
-        for translationatom in dbtranslationgist.translationatom:
-            translationatom.marked_for_deletion = True
-            objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=translationatom.client_id,
-                                                             object_id=translationatom.object_id).one()
-            objecttoc.marked_for_deletion = True
-
+        del_object(dbtranslationgist, "delete_translationgist", info.context.get('client_id'))
         translationgist = TranslationGist(id=[dbtranslationgist.client_id, dbtranslationgist.object_id])
         translationgist.dbObject = dbtranslationgist
         return DeleteTranslationGist(translationgist=translationgist, triumph=True)

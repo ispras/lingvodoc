@@ -655,7 +655,7 @@ class DeleteLanguage(graphene.Mutation):
             for lang in older_siblings:
                 lang.additional_metadata['younger_siblings'].remove(lang_ids)
                 flag_modified(lang, 'additional_metadata')
-            del_object(dblanguageobj)
+            del_object(dblanguageobj, "delete_language", info.context.get('client_id'))
         language = Language(id=id)
         language.dbObject = dblanguageobj
         return DeleteLanguage(language=language, triumph=True)

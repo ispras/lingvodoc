@@ -197,7 +197,7 @@ class DeleteUserBlob(graphene.Mutation):
             raise ResponseError(message="No such blob in the system'")
  
         filelocation = blob.real_storage_path
-        del_object(blob)
+        del_object(blob, "delete_userblob", info.context.get('client_id'))
         try:
             unlink(filelocation)
         except:
