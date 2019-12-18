@@ -1,5 +1,7 @@
 from collections import defaultdict
 import logging
+import pprint
+
 import graphene
 
 from lingvodoc.cache.caching import CACHE
@@ -128,7 +130,6 @@ class Dictionary(LingvodocObjectType):  # tested
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
             marked_for_deletion=False,
-
             locale_id=int(context.get('locale_id'))).first()
         if atom:
             return atom[0]
@@ -163,9 +164,28 @@ class Dictionary(LingvodocObjectType):  # tested
                                    ending_time,
                                    locale_id=locale_id
                                                         )
-        new_format_statistics = [
-            {"user_id": key, "name": current_statistics[key]['name'], "entities": current_statistics[key]['entities']}
-            for key in current_statistics]
+        new_format_statistics = []
+
+        for key, stat_dict in current_statistics.items():
+
+            new_dict = {
+                'user_id': key,
+                'name': stat_dict['name']}
+
+            # NOTE: 'lexical_entries' with underscore '_' for the new format.
+
+            if 'lexical entries' in stat_dict:
+                new_dict['lexical_entries'] = stat_dict['lexical entries']
+
+            if 'entities' in stat_dict:
+                new_dict['entities'] = stat_dict['entities']
+
+            new_format_statistics.append(new_dict)
+
+        log.debug(
+            '\nnew format:\n{0}'.format(
+                pprint.pformat(new_format_statistics, width = 144)))
+
         return new_format_statistics
 
     @fetch_object()
