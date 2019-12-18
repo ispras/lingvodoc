@@ -2720,6 +2720,7 @@ class PhonemicAnalysis(graphene.Mutation):
 @celery.task
 def async_cognate_analysis(
     language_str,
+    source_perspective_id,
     base_language_id,
     base_language_name,
     group_field_id,
@@ -2732,6 +2733,7 @@ def async_cognate_analysis(
     figure_flag,
     distance_vowel_flag,
     distance_consonant_flag,
+    match_translations_flag,
     locale_id,
     storage,
     task_key,
@@ -2763,6 +2765,7 @@ def async_cognate_analysis(
         try:
             CognateAnalysis.perform_cognate_analysis(
                 language_str,
+                source_perspective_id,
                 base_language_id,
                 base_language_name,
                 group_field_id,
@@ -2770,6 +2773,7 @@ def async_cognate_analysis(
                 multi_list,
                 multi_name_list,
                 mode,
+                None,
                 None,
                 None,
                 None,
@@ -2804,7 +2808,9 @@ class CognateAnalysis(graphene.Mutation):
 
     class Arguments:
 
+        source_perspective_id = LingvodocID(required = True)
         base_language_id = LingvodocID(required = True)
+
         group_field_id = LingvodocID(required = True)
         perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
         multi_list = graphene.List(ObjectVal)
@@ -2817,6 +2823,8 @@ class CognateAnalysis(graphene.Mutation):
         figure_flag = graphene.Boolean()
         distance_vowel_flag = graphene.Boolean()
         distance_consonant_flag = graphene.Boolean()
+
+        match_translations_flag = graphene.Boolean()
 
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
@@ -4083,6 +4091,7 @@ class CognateAnalysis(graphene.Mutation):
     @staticmethod
     def perform_cognate_analysis(
         language_str,
+        source_perspective_id,
         base_language_id,
         base_language_name,
         group_field_id,
@@ -4095,6 +4104,7 @@ class CognateAnalysis(graphene.Mutation):
         figure_flag,
         distance_vowel_flag,
         distance_consonant_flag,
+        match_translations_flag,
         locale_id,
         storage,
         task_status = None,
@@ -4164,7 +4174,8 @@ class CognateAnalysis(graphene.Mutation):
                     pickle.dump((entry_already_set, group_list, group_time), tag_data_file)
 
         log.debug(
-            'cognate_analysis {0}: {1} entries, {2} groups, {3:.2f}s elapsed time'.format(
+            '\ncognate_analysis {0}:'
+            '\n{1} entries, {2} groups, {3:.2f}s elapsed time'.format(
             language_str,
             len(entry_already_set),
             len(group_list),
@@ -4191,8 +4202,13 @@ class CognateAnalysis(graphene.Mutation):
         sg_xlat_count = 0
         sg_both_count = 0
 
+        source_perspective_index = None
+
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
             enumerate(perspective_info_list):
+
+            if perspective_id == source_perspective_id:
+                source_perspective_index = index
 
             # Getting and saving perspective info.
 
@@ -4494,9 +4510,11 @@ class CognateAnalysis(graphene.Mutation):
 
         log.debug(
             '\ncognate_analysis {0}:'
-            '\nperspective_list:\n{1}'
-            '\nheader_list:\n{2}'.format(
+            '\nsource_perspective_index: {1}'
+            '\nperspective_list:\n{2}'
+            '\nheader_list:\n{3}'.format(
             language_str,
+            source_perspective_index,
             pprint.pformat(perspective_name_list, width = 108),
             pprint.pformat(result_list[0], width = 108)))
 
@@ -4678,16 +4696,26 @@ class CognateAnalysis(graphene.Mutation):
                 language_name_str = language_name_str[:64] + '...'
 
             mode_name_str = (
+
                 '{0} {1} {2} {3}{4}'.format(
-                ' multi{0}'.format(len(multi_list)) if mode == 'multi' else
-                   ' ' + mode if mode else '',
-                language_name_str,
-                ' '.join(str(count) for id, count in multi_list)
-                    if mode == 'multi' else
-                    len(perspective_info_list),
-                len(result_list),
-                ' {0}'.format(len(suggestions_result_list))
-                    if mode == 'suggestions' else ''))
+
+                    ' multi{0}'.format(len(multi_list))
+                        if mode == 'multi' else
+                        (' ' + mode if mode else ''),
+
+                    language_name_str,
+
+                    ' '.join(str(count) for id, count in multi_list)
+                        if mode == 'multi' else
+                        len(perspective_info_list),
+
+                    len(result_list),
+
+                    '' if not_suggestions else
+                        ' {0} {1} {2}'.format(
+                            len(suggestions_result_list),
+                            source_perspective_index,
+                            int(match_translations_flag))))
             
             cognate_name_str = (
                 'cognate' + mode_name_str)
@@ -4765,13 +4793,16 @@ class CognateAnalysis(graphene.Mutation):
         elif mode == 'suggestions':
 
             # int GuessCognates_GetAllOutput(
-            #   LPTSTR bufIn, int nCols, int nRowsCorresp, int nRowsRest, LPTSTR bufOut, int flags)
+            #   LPTSTR bufIn, int nCols, int nRowsCorresp, int nRowsRest, int iDictThis, int doLookMeaning,
+            #   LPTSTR bufOut, int flags)
 
             output_buffer_size = analysis_f(
                 None,
                 len(perspective_info_list),
                 len(result_list),
                 len(suggestions_result_list),
+                source_perspective_index,
+                int(match_translations_flag),
                 None,
                 1)
 
@@ -4824,6 +4855,8 @@ class CognateAnalysis(graphene.Mutation):
                 len(perspective_info_list),
                 len(result_list),
                 len(suggestions_result_list),
+                source_perspective_index,
+                int(match_translations_flag),
                 output_buffer,
                 1)
 
@@ -4836,12 +4869,12 @@ class CognateAnalysis(graphene.Mutation):
                 output_buffer,
                 1)
 
-        # If we don't have a good result, we return an error.
-
         log.debug(
-            'cognate_analysis {0}: result {1}'.format(
+            '\ncognate_analysis {0}: result {1}'.format(
             language_str,
             result))
+
+        # If we don't have a good result, we return an error.
 
         if result <= 0:
 
@@ -4856,7 +4889,7 @@ class CognateAnalysis(graphene.Mutation):
         output = output_buffer.value
 
         log.debug(
-            'cognate_analysis {0}:\noutput:\n{1}'.format(
+            '\ncognate_analysis {0}:\noutput:\n{1}'.format(
             language_str,
             pprint.pformat([output[i : i + 256]
                 for i in range(0, len(output), 256)], width = 144)))
@@ -4915,7 +4948,7 @@ class CognateAnalysis(graphene.Mutation):
 
         # If we are in the suggestions mode, we currently just return the output.
 
-        if mode == 'suggestions':
+        elif mode == 'suggestions':
 
             return CognateAnalysis(
 
@@ -5656,6 +5689,7 @@ class CognateAnalysis(graphene.Mutation):
         }
         """
 
+        source_perspective_id = args['source_perspective_id']
         base_language_id = args['base_language_id']
 
         group_field_id = args['group_field_id']
@@ -5671,10 +5705,15 @@ class CognateAnalysis(graphene.Mutation):
         distance_vowel_flag = args.get('distance_vowel_flag')
         distance_consonant_flag = args.get('distance_consonant_flag')
 
+        match_translations_flag = args.get('match_translations_flag', True)
+
         __debug_flag__ = args.get('debug_flag', False)
         __intermediate_flag__ = args.get('intermediate_flag', False)
 
-        language_str = '{0}/{1}'.format(*base_language_id)
+        language_str = (
+            '{0}/{1}, language {2}/{3}'.format(
+                source_perspective_id[0], source_perspective_id[1],
+                base_language_id[0], base_language_id[1]))
 
         try:
 
@@ -5709,9 +5748,14 @@ class CognateAnalysis(graphene.Mutation):
 
             if mode == 'multi':
 
-                language_str = ', '.join(
+                multi_str = ', '.join(
                     '{0}/{1}'.format(*id)
                     for id, count in multi_list)
+
+                language_str = (
+                    '{0}/{1}, languages {2}'.format(
+                        source_perspective_id[0], source_perspective_id[1],
+                        multi_str))
 
             # Showing cognate analysis info, checking cognate analysis library presence.
 
@@ -5728,13 +5772,15 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  figure_flag: {10}'
                  '\n  distance_vowel_flag: {11}'
                  '\n  distance_consonant_flag: {12}'
-                 '\n  __debug_flag__: {13}'
-                 '\n  __intermediate_flag__: {14}'
-                 '\n  cognate_analysis_f: {15}'
-                 '\n  cognate_acoustic_analysis_f: {16}'
-                 '\n  cognate_distance_analysis_f: {17}'
-                 '\n  cognate_reconstruction_f: {18}'
-                 '\n  cognate_reconstruction_multi_f: {19}'.format(
+                 '\n  match_translations_flag: {13}'
+                 '\n  __debug_flag__: {14}'
+                 '\n  __intermediate_flag__: {15}'
+                 '\n  cognate_analysis_f: {16}'
+                 '\n  cognate_acoustic_analysis_f: {17}'
+                 '\n  cognate_distance_analysis_f: {18}'
+                 '\n  cognate_reconstruction_f: {19}'
+                 '\n  cognate_reconstruction_multi_f: {20}'
+                 '\n  cognate_suggestions_f: {21}'.format(
                     language_str,
                     repr(base_language_name.strip()),
                     group_field_id[0], group_field_id[1],
@@ -5747,13 +5793,15 @@ class CognateAnalysis(graphene.Mutation):
                     figure_flag,
                     distance_vowel_flag,
                     distance_consonant_flag,
+                    match_translations_flag,
                     __debug_flag__,
                     __intermediate_flag__,
                     repr(cognate_analysis_f),
                     repr(cognate_acoustic_analysis_f),
                     repr(cognate_distance_analysis_f),
                     repr(cognate_reconstruction_f),
-                    repr(cognate_reconstruction_multi_f)))
+                    repr(cognate_reconstruction_multi_f),
+                    repr(cognate_suggestions_f)))
 
             # Checking if we have analysis function ready.
 
@@ -5761,6 +5809,7 @@ class CognateAnalysis(graphene.Mutation):
                 cognate_acoustic_analysis_f if mode == 'acoustic' else
                 cognate_reconstruction_f if mode == 'reconstruction' else
                 cognate_reconstruction_multi_f if mode == 'multi' else
+                cognate_suggestions_f if mode == 'suggestions' else
                 cognate_analysis_f)
 
             if analysis_f is None:
@@ -5771,10 +5820,12 @@ class CognateAnalysis(graphene.Mutation):
                         'CognateAcousticAnalysis_GetAllOutput' if mode == 'acoustic' else
                         'CognateReconstruct_GetAllOutput' if mode == 'reconstruction' else
                         'CognateMultiReconstruct_GetAllOutput' if mode == 'multi' else
+                        'GuessCognates_GetAllOutput' if mode == 'suggestions' else
                         'CognateAnalysis_GetAllOutput'))
 
             # Transforming client/object pair ids from lists to 2-tuples.
 
+            source_perspective_id = tuple(source_perspective_id)
             base_language_id = tuple(base_language_id)
             group_field_id = tuple(group_field_id)
 
@@ -5814,6 +5865,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 async_cognate_analysis.delay(
                     language_str,
+                    source_perspective_id,
                     base_language_id,
                     base_language_name,
                     group_field_id,
@@ -5826,6 +5878,7 @@ class CognateAnalysis(graphene.Mutation):
                     figure_flag,
                     distance_vowel_flag,
                     distance_consonant_flag,
+                    match_translations_flag,
                     locale_id,
                     storage,
                     task_status.key,
@@ -5844,6 +5897,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 return CognateAnalysis.perform_cognate_analysis(
                     language_str,
+                    source_perspective_id,
                     base_language_id,
                     base_language_name,
                     group_field_id,
@@ -5856,6 +5910,7 @@ class CognateAnalysis(graphene.Mutation):
                     figure_flag,
                     distance_vowel_flag,
                     distance_consonant_flag,
+                    match_translations_flag,
                     locale_id,
                     storage,
                     None,
