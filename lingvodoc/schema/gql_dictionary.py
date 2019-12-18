@@ -18,6 +18,7 @@ from lingvodoc.models import (
     Entity as dbEntity,
     LexicalEntry as dbLexicalEntry,
     PublishingEntity as dbPublishingEntity,
+    TranslationGist as dbTranslationGist,
     )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
@@ -33,14 +34,16 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID,
     UserAndOrganizationsRoles
 )
+from sqlalchemy import and_, or_, tuple_
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
-from lingvodoc.utils import statistics
+from lingvodoc.utils import statistics, explain_analyze
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field,
                                       edit_role)
 from lingvodoc.utils.deletion import real_delete_dictionary
+from lingvodoc.utils.search import translation_gist_search
 
 
 # Setting up logging.
@@ -106,7 +109,16 @@ class Dictionary(LingvodocObjectType):  # tested
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
-    status = graphene.String()
+    status = graphene.Field(graphene.String, locale_id = graphene.Int())
+
+    # If the dictionary in 'Published' or 'Limited access' state and has at least one 'Published' or
+    # 'Limited access' perspective with some additional checks based on whether the dictionary is deleted or
+    # not.
+    #
+    # The same as parameter 'published' of the field 'dictionaries' of Language type, see
+    # gql_language.py.
+    #
+    published = graphene.Boolean()
 
     tree = graphene.List(CommonFieldsComposite)
 
@@ -124,17 +136,182 @@ class Dictionary(LingvodocObjectType):  # tested
         return self._meta.fields['persp'].type
 
     @fetch_object('status')
-    def resolve_status(self, info):
-        context = info.context
+    def resolve_status(self, info, locale_id = None):
+
+        if locale_id is None:
+            locale_id = int(info.context.get('locale_id'))
+
         atom = DBSession.query(dbTranslationAtom.content).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
             marked_for_deletion=False,
-            locale_id=int(context.get('locale_id'))).first()
+            locale_id=locale_id).first()
         if atom:
             return atom[0]
         else:
             return None
+
+    def published_cte_str(
+        self,
+        __debug_flag__ = False):
+
+        sql_str = ('''
+
+            with translation_gist_id_set as
+            (
+              select
+              T.client_id, T.object_id
+
+              from
+              translationgist T,
+              translationatom A
+
+              where
+              T.marked_for_deletion = false and
+              T.type = 'Service' and
+              A.parent_client_id = T.client_id and
+              A.parent_object_id = T.object_id and
+              A.locale_id = 2 and
+              A.marked_for_deletion = false and
+              (A.content = 'Published' or
+                A.content = 'Limited access')
+            )
+
+            select
+
+            (:state_translation_gist_client_id,
+              :state_translation_gist_object_id) in
+              (select * from translation_gist_id_set)
+
+              and
+
+              exists (
+                select 1
+                from dictionaryperspective P
+                where
+                P.parent_client_id = :client_id and
+                P.parent_object_id = :object_id and
+                {0}
+                (P.state_translation_gist_client_id,
+                  P.state_translation_gist_object_id) in
+                  (select * from translation_gist_id_set));
+
+            '''.format(
+                '' if self.dbObject.marked_for_deletion else
+                    'P.marked_for_deletion = false and'))
+
+        param_dict = {
+            'client_id': self.dbObject.client_id,
+            'object_id': self.dbObject.object_id,
+            'state_translation_gist_client_id': self.dbObject.state_translation_gist_client_id,
+            'state_translation_gist_object_id': self.dbObject.state_translation_gist_object_id}
+
+        if __debug_flag__:
+
+            row_list = (
+
+                DBSession.execute(
+                    'explain analyze\n' + sql_str,
+                    param_dict).fetchall())
+
+            log.debug(''.join(
+                '\n' + row[0] for row in row_list))
+
+        return (DBSession
+            .execute(sql_str, param_dict)
+            .scalar())
+
+    def published_cte_orm(
+        self,
+        __debug_flag__ = False):
+
+        translation_gist_query = (DBSession
+        
+            .query(
+                dbTranslationGist.client_id,
+                dbTranslationGist.object_id)
+
+            .filter(
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationGist.type == 'Service',
+                dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
+                dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
+                dbTranslationAtom.locale_id == 2,
+                dbTranslationAtom.marked_for_deletion == False,
+
+                or_(
+                    dbTranslationAtom.content == 'Published',
+                    dbTranslationAtom.content == 'Limited access')))
+
+        translation_gist_cte = (
+            translation_gist_query.cte('translation_gist_id_set'))
+
+        # NOTE: we have to use
+        # in_(DBSession.query(translation_gist_cte))
+        # and not just 
+        # in_(translation_gist_cte),
+        # because otherwise translation_gist_cte won't be used as a proper WITH CTE and will be just
+        # inserted literally two times.
+
+        perspective_query = (DBSession
+
+            .query(dbDictionaryPerspective)
+
+            .filter(
+                dbDictionaryPerspective.parent_client_id == self.dbObject.client_id,
+                dbDictionaryPerspective.parent_object_id == self.dbObject.object_id,
+
+                tuple_(
+                    dbDictionaryPerspective.state_translation_gist_client_id,
+                    dbDictionaryPerspective.state_translation_gist_object_id)
+
+                    .in_(DBSession.query(translation_gist_cte))))
+
+        if not self.dbObject.marked_for_deletion:
+
+            perspective_query = perspective_query.filter(
+                dbDictionaryPerspective.marked_for_deletion == False)
+
+        published_query = (DBSession
+
+            .query(
+
+                and_(
+
+                    tuple_(
+                        self.dbObject.state_translation_gist_client_id,
+                        self.dbObject.state_translation_gist_object_id)
+
+                        .in_(DBSession.query(translation_gist_cte)),
+                        
+                    perspective_query.exists())))
+
+        if __debug_flag__:
+
+            log.debug(str(
+                published_query.statement.compile(compile_kwargs = {'literal_binds': True})))
+
+            row_list = (
+                DBSession.execute(
+                    explain_analyze(published_query)).fetchall())
+
+            log.debug(''.join(
+                '\n' + row[0] for row in row_list))
+
+        return published_query.scalar()
+
+    @fetch_object()
+    def resolve_published(self, info, __debug_flag__ = False):
+
+        if __debug_flag__:
+
+            result_str = self.published_cte_str(True)
+            result_orm = self.published_cte_orm(True)
+
+            log.debug((result_str, result_orm))
+            return result_orm
+
+        return self.published_cte_orm()
 
     @fetch_object()
     def resolve_tree(self, info):

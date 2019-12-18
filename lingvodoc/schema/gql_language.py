@@ -71,7 +71,7 @@ class Language(LingvodocObjectType):
 
     dictionaries = graphene.List(Dictionary,
         deleted=graphene.Boolean(),
-        published_and_limited_only=graphene.Boolean())
+        published=graphene.Boolean())
 
     languages = graphene.List('lingvodoc.schema.gql_language.Language',
         deleted=graphene.Boolean())
@@ -89,18 +89,28 @@ class Language(LingvodocObjectType):
         return self.dbObject.locale
 
     @fetch_object()
-    def resolve_dictionaries(self, info, deleted = None, published_and_limited_only = None):
+    def resolve_dictionaries(self, info, deleted = None, published = None):
 
-        query = DBSession.query(dbDictionary).filter(
-            and_(dbDictionary.parent_object_id == self.dbObject.object_id,
-                 dbDictionary.parent_client_id == self.dbObject.client_id))
+        # Dictionaries of the language, in standard order, from last created to the first created.
+
+        dictionary_query = (DBSession
+                
+            .query(dbDictionary)
+            
+            .filter(
+                and_(dbDictionary.parent_object_id == self.dbObject.object_id,
+                     dbDictionary.parent_client_id == self.dbObject.client_id))
+                
+            .order_by(dbDictionary.created_at.desc()))
 
         if deleted is not None:
-            query = query.filter(dbDictionary.marked_for_deletion == deleted)
 
-        # Do we need only published and limited access dictionaries?
+            dictionary_query = dictionary_query.filter(
+                dbDictionary.marked_for_deletion == deleted)
 
-        if published_and_limited_only:
+        # Do we need to filter dictionaries by their published state?
+
+        if published is not None:
 
             db_published_gist = translation_gist_search('Published')
 
@@ -112,34 +122,81 @@ class Language(LingvodocObjectType):
             limited_client_id = db_limited_gist.client_id
             limited_object_id = db_limited_gist.object_id
 
-            # Filtering dictionaries based on status.
+            # If we need only published or limited dictionaries, we also filter dictionaries through their
+            # perspectives.
+            # 
+            # See dictionaries_list(), published_dictionaries_list() in lingvodoc/views/v2/dictionary.py.
+            #
+            # Additionally, we do it differently based on if the dictionary is deleted or not.
+            #
+            # If the dictionary is not deleted, we check its not deleted perspectives.
+            #
+            # If the dictionary is deleted, we check both its not deleted and deleted perspectives.
 
-            query = (query
+            perspective_query = (DBSession
 
-                .filter(or_(
-                    and_(dbDictionary.state_translation_gist_client_id == published_client_id,
-                        dbDictionary.state_translation_gist_object_id == published_object_id),
-                    and_(dbDictionary.state_translation_gist_client_id == limited_client_id,
-                        dbDictionary.state_translation_gist_object_id == limited_object_id)))
+                .query(dbPerspective)
 
-                .join(dbPerspective))
+                .filter(
+                    dbPerspective.parent_client_id == dbDictionary.client_id,
+                    dbPerspective.parent_object_id == dbDictionary.object_id,
 
-            if deleted is not None:
-                query = query.filter(dbPerspective.marked_for_deletion == deleted)
+                    or_(
+                        and_(dbPerspective.state_translation_gist_client_id == published_client_id,
+                            dbPerspective.state_translation_gist_object_id == published_object_id),
+                        and_(dbPerspective.state_translation_gist_client_id == limited_client_id,
+                            dbPerspective.state_translation_gist_object_id == limited_object_id))))
 
-            # Filtering dictionaries' perspectives based on status.
+            if deleted is None:
 
-            query = (query
+                perspective_query = perspective_query.filter(
 
-                .filter(or_(
-                    and_(dbPerspective.state_translation_gist_client_id == published_client_id,
-                        dbPerspective.state_translation_gist_object_id == published_object_id),
-                    and_(dbPerspective.state_translation_gist_client_id == limited_client_id,
-                        dbPerspective.state_translation_gist_object_id == limited_object_id))))
+                    or_(
+                        dbDictionary.marked_for_deletion,
+                        dbPerspective.marked_for_deletion == False))
+
+            elif not deleted:
+
+                perspective_query = perspective_query.filter(
+                    dbPerspective.marked_for_deletion == False)
+
+            # Applying dictionary filtering.
+
+            if published:
+
+                dictionary_query = (dictionary_query
+
+                    .filter(
+                        
+                        or_(
+                            and_(dbDictionary.state_translation_gist_client_id == published_client_id,
+                                dbDictionary.state_translation_gist_object_id == published_object_id),
+                            and_(dbDictionary.state_translation_gist_client_id == limited_client_id,
+                                dbDictionary.state_translation_gist_object_id == limited_object_id)),
+                            
+                        perspective_query.exists()))
+
+            else:
+
+                dictionary_query = (dictionary_query
+
+                    .filter(
+
+                        or_(
+                        
+                            and_(
+                                or_(dbDictionary.state_translation_gist_client_id != published_client_id,
+                                    dbDictionary.state_translation_gist_object_id != published_object_id),
+                                or_(dbDictionary.state_translation_gist_client_id != limited_client_id,
+                                    dbDictionary.state_translation_gist_object_id != limited_object_id)),
+                            
+                            ~perspective_query.exists())))
+
+        # Returning found dictionaries.
 
         result = list()
 
-        for dictionary in query:
+        for dictionary in dictionary_query:
 
             gql_dictionary = Dictionary(id =
                 [dictionary.client_id, dictionary.object_id])
