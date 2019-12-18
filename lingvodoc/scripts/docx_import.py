@@ -655,6 +655,10 @@ def main_import(args):
 
             for i in range(row_count)]
 
+    log.debug(
+        '\ntable: {0} columns, {1} rows, {2} cells'.format(
+            column_count, row_count, len(source_cell_list)))
+
     # Processing this info.
 
     header_list = row_list[0]
@@ -697,6 +701,11 @@ def main_import(args):
     if (check_file_path is not None or
         check_docx_file_path is not None or
         modify_docx_flag):
+
+        if not state_list:
+
+            log.debug('\nno data')
+            return
 
         best_state = state_list[0]
 
