@@ -367,7 +367,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
         # Returning gathered statistics.
 
-        log.debug('stat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
+        log.debug('\nstat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
             perspective_client_id, perspective_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
             datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,
@@ -823,7 +823,7 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
         # Returning gathered statistics.
 
-        log.debug('stat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
+        log.debug('\nstat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
             dictionary_client_id, dictionary_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
             datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,
