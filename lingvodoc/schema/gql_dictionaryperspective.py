@@ -161,7 +161,7 @@ class DictionaryPerspective(LingvodocObjectType):
     """
     data_type = graphene.String()
 
-    status = graphene.String()
+    status = graphene.Field(graphene.String, locale_id = graphene.Int())
     import_source = graphene.String()
     import_hash = graphene.String()
 
@@ -193,11 +193,16 @@ class DictionaryPerspective(LingvodocObjectType):
         return self.dbObject.is_template
 
     @fetch_object('status') # tested
-    def resolve_status(self, info):
+    def resolve_status(self, info, locale_id = None):
+
+        if locale_id is None:
+            locale_id = int(info.context.get('locale_id'))
+
         atom = DBSession.query(dbTranslationAtom.content).filter_by(
             parent_client_id=self.dbObject.state_translation_gist_client_id,
             parent_object_id=self.dbObject.state_translation_gist_object_id,
-            locale_id=int(info.context.get('locale_id'))
+            marked_for_deletion=False,
+            locale_id=locale_id
         ).first()
         if atom:
             return atom[0]
