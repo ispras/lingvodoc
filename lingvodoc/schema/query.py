@@ -4481,6 +4481,15 @@ class CognateAnalysis(graphene.Mutation):
                 sg_xlat_count,
                 sg_both_count))
 
+            # Also, if we are computing cognate suggestions, we should have a valid source perspective, it's
+            # an error otherwise.
+
+            if source_perspective_index is None:
+
+                return ResponseError(message =
+                    'Cognate suggestions require that the source perspective '
+                    'is among the ones being analyzed.')
+
         if task_status is not None:
             task_status.set(3, 95, 'Performing analysis')
 
