@@ -2733,7 +2733,7 @@ def async_cognate_analysis(
     figure_flag,
     distance_vowel_flag,
     distance_consonant_flag,
-    match_translations_flag,
+    match_translations_value,
     locale_id,
     storage,
     task_key,
@@ -2824,7 +2824,7 @@ class CognateAnalysis(graphene.Mutation):
         distance_vowel_flag = graphene.Boolean()
         distance_consonant_flag = graphene.Boolean()
 
-        match_translations_flag = graphene.Boolean()
+        match_translations_value = graphene.Int()
 
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
@@ -4104,7 +4104,7 @@ class CognateAnalysis(graphene.Mutation):
         figure_flag,
         distance_vowel_flag,
         distance_consonant_flag,
-        match_translations_flag,
+        match_translations_value,
         locale_id,
         storage,
         task_status = None,
@@ -4724,7 +4724,7 @@ class CognateAnalysis(graphene.Mutation):
                         ' {0} {1} {2}'.format(
                             len(suggestions_result_list),
                             source_perspective_index,
-                            int(match_translations_flag))))
+                            match_translations_value)))
             
             cognate_name_str = (
                 'cognate' + mode_name_str)
@@ -4802,7 +4802,7 @@ class CognateAnalysis(graphene.Mutation):
         elif mode == 'suggestions':
 
             # int GuessCognates_GetAllOutput(
-            #   LPTSTR bufIn, int nCols, int nRowsCorresp, int nRowsRest, int iDictThis, int doLookMeaning,
+            #   LPTSTR bufIn, int nCols, int nRowsCorresp, int nRowsRest, int iDictThis, int lookMeaning,
             #   LPTSTR bufOut, int flags)
 
             output_buffer_size = analysis_f(
@@ -4811,7 +4811,7 @@ class CognateAnalysis(graphene.Mutation):
                 len(result_list),
                 len(suggestions_result_list),
                 source_perspective_index,
-                int(match_translations_flag),
+                match_translations_value,
                 None,
                 1)
 
@@ -4865,7 +4865,7 @@ class CognateAnalysis(graphene.Mutation):
                 len(result_list),
                 len(suggestions_result_list),
                 source_perspective_index,
-                int(match_translations_flag),
+                match_translations_value,
                 output_buffer,
                 1)
 
@@ -5714,7 +5714,7 @@ class CognateAnalysis(graphene.Mutation):
         distance_vowel_flag = args.get('distance_vowel_flag')
         distance_consonant_flag = args.get('distance_consonant_flag')
 
-        match_translations_flag = args.get('match_translations_flag', True)
+        match_translations_value = args.get('match_translations_value', 1)
 
         __debug_flag__ = args.get('debug_flag', False)
         __intermediate_flag__ = args.get('intermediate_flag', False)
@@ -5781,7 +5781,7 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  figure_flag: {10}'
                  '\n  distance_vowel_flag: {11}'
                  '\n  distance_consonant_flag: {12}'
-                 '\n  match_translations_flag: {13}'
+                 '\n  match_translations_value: {13}'
                  '\n  __debug_flag__: {14}'
                  '\n  __intermediate_flag__: {15}'
                  '\n  cognate_analysis_f: {16}'
@@ -5802,7 +5802,7 @@ class CognateAnalysis(graphene.Mutation):
                     figure_flag,
                     distance_vowel_flag,
                     distance_consonant_flag,
-                    match_translations_flag,
+                    match_translations_value,
                     __debug_flag__,
                     __intermediate_flag__,
                     repr(cognate_analysis_f),
@@ -5887,7 +5887,7 @@ class CognateAnalysis(graphene.Mutation):
                     figure_flag,
                     distance_vowel_flag,
                     distance_consonant_flag,
-                    match_translations_flag,
+                    match_translations_value,
                     locale_id,
                     storage,
                     task_status.key,
@@ -5919,7 +5919,7 @@ class CognateAnalysis(graphene.Mutation):
                     figure_flag,
                     distance_vowel_flag,
                     distance_consonant_flag,
-                    match_translations_flag,
+                    match_translations_value,
                     locale_id,
                     storage,
                     None,
