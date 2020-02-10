@@ -2847,6 +2847,9 @@ class CognateAnalysis(graphene.Mutation):
     embedding_3d = graphene.List(graphene.List(graphene.Float))
     perspective_name_list = graphene.List(graphene.String)
 
+    suggestion_list = graphene.List(ObjectVal)
+    suggestion_field_id = LingvodocID()
+
     intermediate_url_list = graphene.List(graphene.String)
 
     @staticmethod
@@ -3787,6 +3790,247 @@ class CognateAnalysis(graphene.Mutation):
         return workbook_stream, matrix_info_list
 
     @staticmethod
+    def parse_suggestions(
+        language_str,
+        output_str,
+        perspective_count,
+        perspective_source_index,
+        entry_id_dict,
+        __debug_flag__ = False,
+        cognate_name_str = None,
+        group_field_id = None):
+        """
+        Parses cognate suggestions.
+        """
+
+        index = -1
+        row_list = []
+
+        table_count = 0
+
+        # Parsing result table rows.
+
+        while index < len(output_str):
+
+            value_list = []
+
+            # Getting required number of values.
+
+            for i in range(
+                perspective_count * 2):
+
+                index_next = (
+                    output_str.find('\0', index + 1))
+
+                # No more values, meaning we are at the end of the table.
+
+                if index_next == -1:
+                    break
+
+                value = (
+                    output_str[index + 1 : index_next])
+
+                value_list.append(value)
+                index = index_next
+
+            if index_next == -1:
+                break
+
+            # Another row of analysis result values.
+
+            log.debug(
+                '\n{0} / {1}: {2}'.format(
+                    len(row_list),
+                    index,
+                    repr(value_list)))
+
+            row_list.append(
+                value_list)
+
+            if output_str[index + 1] != '\0':
+                raise NotImplementedError
+
+            index += 1
+
+        # Parsing cognate suggestions table.
+
+        row_index = 2
+        suggestion_list = []
+
+        header_str = row_list[0][0]
+
+        begin_str = 'Предложения для '
+        end_str = ': '
+
+        while row_index < len(row_list):
+
+            word_str = row_list[row_index][0]
+
+            assert word_str.startswith(begin_str)
+
+            if word_str.endswith(': НЕТ'):
+
+                row_index += 1
+                continue
+
+            assert word_str.endswith(end_str)
+
+            word = (
+                word_str[
+                    len(begin_str) : -len(end_str)])
+
+            word_entry_id = (
+                    
+                entry_id_dict[(
+                    perspective_source_index,
+                    word)])
+
+            # Parsing suggestions for the word.
+
+            single_list = []
+            group_list = []
+
+            row_index += 1
+
+            if row_list[row_index][perspective_source_index * 2] == header_str:
+                row_index += 1
+
+            value_list = row_list[row_index]
+
+            while not (
+                value_list[0].startswith(begin_str)):
+
+                # Existing groups.
+
+                if value_list[0] == 'Уже имеющиеся ряды: ':
+
+                    row_index += 1
+                    value_list = row_list[row_index]
+
+                    while not (
+                        value_list[0].startswith(begin_str) or
+                        value_list[0] == 'Слова-сироты: '):
+
+                        word_list = []
+
+                        for i in range(perspective_count):
+
+                            if value_list[i * 2] or value_list[i * 2 + 1]:
+
+                                word_list.append(
+                                    (i, value_list[i * 2 : i * 2 + 2]))
+
+                        if word_list:
+                            group_list.append(word_list)
+
+                        row_index += 1
+                        value_list = row_list[row_index]
+
+                # Single words.
+
+                elif value_list[0] == 'Слова-сироты: ':
+
+                    row_index += 1
+
+                    if row_list[row_index][perspective_source_index * 2] == header_str:
+                        row_index += 1
+
+                    value_list = row_list[row_index]
+
+                    while not (
+                        value_list[0].startswith(begin_str) or
+                        value_list[0] == 'Уже имеющиеся ряды: '):
+
+                        for i in range(perspective_count):
+
+                            if value_list[i * 2] or value_list[i * 2 + 1]:
+
+                                single_list.append(
+                                    (i, value_list[i * 2 : i * 2 + 2]))
+
+                        row_index += 1
+                        value_list = row_list[row_index]
+
+                # Something unexpected?
+
+                else:
+
+                    log.debug(value_list)
+                    raise NotImplementedError
+
+            # Getting lexical entry identifiers, if required.
+
+            raw_list = single_list
+            single_list = []
+
+            for index, tt_tuple in raw_list:
+
+                entry_id = (
+                        
+                    entry_id_dict[(
+                        index,
+                        '{} {}'.format(*tt_tuple))])
+
+                single_list.append((
+                    index, tt_tuple, entry_id))
+
+            # For lexical entry groups we get id of just the first entry.
+
+            raw_list = group_list
+            group_list = []
+
+            for word_list in raw_list:
+
+                index, tt_tuple = word_list[0]
+
+                entry_id = (
+                        
+                    entry_id_dict[(
+                        index,
+                        '{} {}'.format(*tt_tuple))])
+
+                group_list.append((
+                    word_list, entry_id))
+
+            log.debug('\n' +
+                pprint.pformat(
+                    (word, word_entry_id, single_list, group_list),
+                    width = 192))
+
+            suggestion_list.append(
+                (perspective_source_index, word, word_entry_id, single_list, group_list))
+
+        # Maybe we need to gather suggestions info for debugging?
+
+        if group_field_id is not None:
+
+            data_list = []
+
+            for index, word, word_entry_id, single_list, group_list in suggestion_list:
+
+                entry_id_list = (
+                    [word_entry_id] +
+                    [single_info[-1] for single_info in single_list] +
+                    [group_info[-1] for group_info in group_list])
+
+                data_list.append(
+                    (group_field_id, entry_id_list))
+
+            log.debug(
+                '\ndebug data list:\n{}'.format(
+                    pprint.pformat(data_list, width = 192)))
+
+        # Showing and returning what we've got.
+
+        log.debug(
+            '\n{0}\n{1}'.format(
+                len(suggestion_list),
+                pprint.pformat(
+                    suggestion_list, width = 192)))
+
+        return suggestion_list
+
+    @staticmethod
     def acoustic_data(
         base_language_id,
         sound_entity_id,
@@ -4125,7 +4369,9 @@ class CognateAnalysis(graphene.Mutation):
         group_list = []
 
         tag_dict = collections.defaultdict(set)
+
         text_dict = {}
+        entry_id_dict = {}
 
         if not __debug_flag__:
 
@@ -4465,6 +4711,15 @@ class CognateAnalysis(graphene.Mutation):
 
                 text_dict[entry_id] = entry_data_list
 
+                entry_id_key = (
+
+                    index,
+                    '{} ʽ{}ʼ'.format(
+                        '|'.join(transcription_list),
+                        '|'.join(translation_list)))
+
+                entry_id_dict[entry_id_key] = entry_id
+
         # Showing some info on non-grouped entries, if required.
 
         if mode == 'suggestions':
@@ -4538,6 +4793,9 @@ class CognateAnalysis(graphene.Mutation):
 
         for entry_id_set in group_list:
 
+            group_entry_id_list = [[]
+                for i in range(len(perspective_info_list))]
+
             group_transcription_list = [[]
                 for i in range(len(perspective_info_list))]
 
@@ -4558,7 +4816,14 @@ class CognateAnalysis(graphene.Mutation):
                 # Processing text data of each entry of the group.
 
                 entry_data_list = text_dict[entry_id]
-                index, transcription_list, translation_list = entry_data_list[:3]
+
+                (index,
+                    transcription_list,
+                    translation_list) = (
+                            
+                    entry_data_list[:3])
+
+                group_entry_id_list[index].append(entry_id)
 
                 group_transcription_list[index].extend(transcription_list)
                 group_translation_list[index].extend(translation_list)
@@ -4587,17 +4852,44 @@ class CognateAnalysis(graphene.Mutation):
             result_list.append([])
 
             group_zipper = zip(
+                group_entry_id_list,
                 group_transcription_list,
                 group_translation_list,
                 group_acoustic_list)
 
-            for transcription_list, translation_list, acoustic_list in group_zipper:
+            # Forming row of the source data table based on the entry group.
 
-                result_list[-1].append('|'.join(transcription_list))
-                result_list[-1].append('|'.join(translation_list))
+            for (
+                index, (
+                    entry_id_list,
+                    transcription_list,
+                    translation_list,
+                    acoustic_list)) in (
+                    
+                enumerate(group_zipper)):
+
+                transcription_str = '|'.join(transcription_list)
+                translation_str = '|'.join(translation_list)
+
+                result_list[-1].append(transcription_str)
+                result_list[-1].append(translation_str)
 
                 if mode == 'acoustic':
                     result_list[-1].extend(acoustic_list or ['', '', '', '', ''])
+
+                # Saving mapping from the translation / transcription info string to an id of one entry of
+                # the group.
+
+                if transcription_list or translation_list:
+
+                    entry_id_key = (
+
+                        index,
+                        '{} ʽ{}ʼ'.format(
+                            transcription_str,
+                            translation_str))
+
+                    entry_id_dict[entry_id_key] = entry_id_list[0]
 
         # Showing what we've gathered.
 
@@ -4959,20 +5251,15 @@ class CognateAnalysis(graphene.Mutation):
 
         elif mode == 'suggestions':
 
-            return CognateAnalysis(
-
-                triumph = True,
-
-                dictionary_count = len(perspective_info_list),
-                group_count = len(group_list),
-                not_enough_count = not_enough_count,
-                transcription_count = total_transcription_count,
-                translation_count = total_translation_count,
-
-                result = output,
-
-                intermediate_url_list =
-                    intermediate_url_list if __intermediate_flag__ else None)
+            result_binary = analysis_f(
+                input_buffer,
+                len(perspective_info_list),
+                len(result_list),
+                len(suggestions_result_list),
+                source_perspective_index,
+                match_translations_value,
+                output_buffer,
+                2)
 
         else:
 
@@ -5018,7 +5305,7 @@ class CognateAnalysis(graphene.Mutation):
         if __debug_flag__:
 
             output_file_name = (
-                'output {0}.buffer'.format(
+                'output binary {0}.buffer'.format(
                     cognate_name_str))
 
             with open(
@@ -5030,7 +5317,7 @@ class CognateAnalysis(graphene.Mutation):
             for extension, encoding in ('utf8', 'utf-8'), ('utf16', 'utf-16'):
 
                 output_file_name = (
-                    'output {0}.{1}'.format(
+                    'output binary {0}.{1}'.format(
                         cognate_name_str, extension))
 
                 with open(
@@ -5038,6 +5325,42 @@ class CognateAnalysis(graphene.Mutation):
 
                     output_file.write(
                         output_binary.encode(encoding))
+
+        # For cognate suggestions we just parse and return suggestions.
+
+        if mode == 'suggestions':
+
+            suggestion_list = (
+                    
+                CognateAnalysis.parse_suggestions(
+                    language_str,
+                    output_binary,
+                    len(perspective_info_list),
+                    source_perspective_index,
+                    entry_id_dict,
+                    __debug_flag__,
+                    cognate_name_str if __debug_flag__ else None,
+                    group_field_id if __debug_flag__ else None))
+
+            return CognateAnalysis(
+
+                triumph = True,
+
+                dictionary_count = len(perspective_info_list),
+                group_count = len(group_list),
+                not_enough_count = not_enough_count,
+                transcription_count = total_transcription_count,
+                translation_count = total_translation_count,
+
+                result = output,
+
+                perspective_name_list = perspective_name_list,
+
+                suggestion_list = suggestion_list,
+                suggestion_field_id = group_field_id,
+
+                intermediate_url_list =
+                    intermediate_url_list if __intermediate_flag__ else None)
 
         # Performing etymological distance analysis, if required.
 
