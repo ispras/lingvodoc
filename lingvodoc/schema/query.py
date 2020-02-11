@@ -3898,6 +3898,7 @@ class CognateAnalysis(graphene.Mutation):
             value_list = row_list[row_index]
 
             while not (
+                row_index >= len(row_list) or
                 value_list[0].startswith(begin_str)):
 
                 # Existing groups.
@@ -3924,6 +3925,10 @@ class CognateAnalysis(graphene.Mutation):
                             group_list.append(word_list)
 
                         row_index += 1
+
+                        if row_index >= len(row_list):
+                            break
+
                         value_list = row_list[row_index]
 
                 # Single words.
@@ -3949,6 +3954,10 @@ class CognateAnalysis(graphene.Mutation):
                                     (i, value_list[i * 2 : i * 2 + 2]))
 
                         row_index += 1
+
+                        if row_index >= len(row_list):
+                            break
+
                         value_list = row_list[row_index]
 
                 # Something unexpected?
@@ -3963,16 +3972,17 @@ class CognateAnalysis(graphene.Mutation):
             raw_list = single_list
             single_list = []
 
-            for index, tt_tuple in raw_list:
+            for index, (transcription_str, translation_str) in raw_list:
 
                 entry_id = (
                         
                     entry_id_dict[(
                         index,
-                        '{} {}'.format(*tt_tuple))])
+                        transcription_str + (
+                            ' ' + translation_str if translation_str else ''))])
 
                 single_list.append((
-                    index, tt_tuple, entry_id))
+                    index, (transcription_str, translation_str), entry_id))
 
             # For lexical entry groups we get id of just the first entry.
 
@@ -3981,13 +3991,14 @@ class CognateAnalysis(graphene.Mutation):
 
             for word_list in raw_list:
 
-                index, tt_tuple = word_list[0]
+                index, (transcription_str, translation_str) = word_list[0]
 
                 entry_id = (
                         
                     entry_id_dict[(
                         index,
-                        '{} {}'.format(*tt_tuple))])
+                        transcription_str + (
+                            ' ' + translation_str if translation_str else ''))])
 
                 group_list.append((
                     word_list, entry_id))
@@ -4714,9 +4725,8 @@ class CognateAnalysis(graphene.Mutation):
                 entry_id_key = (
 
                     index,
-                    '{} ʽ{}ʼ'.format(
-                        '|'.join(transcription_list),
-                        '|'.join(translation_list)))
+                    '|'.join(transcription_list) + (
+                        ' ʽ' + '|'.join(translation_list) + 'ʼ' if translation_list else ''))
 
                 entry_id_dict[entry_id_key] = entry_id
 
@@ -4885,9 +4895,8 @@ class CognateAnalysis(graphene.Mutation):
                     entry_id_key = (
 
                         index,
-                        '{} ʽ{}ʼ'.format(
-                            transcription_str,
-                            translation_str))
+                        transcription_str + (
+                            ' ʽ' + translation_str + 'ʼ' if translation_str else ''))
 
                     entry_id_dict[entry_id_key] = entry_id_list[0]
 
