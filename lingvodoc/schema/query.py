@@ -3868,7 +3868,7 @@ class CognateAnalysis(graphene.Mutation):
 
             assert word_str.startswith(begin_str)
 
-            if word_str.endswith(': НЕТ'):
+            if word_str.endswith('НЕТ'):
 
                 row_index += 1
                 continue
