@@ -207,64 +207,51 @@ class AcceptUserRequest(graphene.Mutation):
                     if dict_ids not in grant.additional_metadata['participant']:
                         grant.additional_metadata['participant'].append(dict_ids)
 
-                    state_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                        dbGroup.subject_client_id == dict_ids['client_id'],
-                        dbGroup.subject_object_id == dict_ids['object_id'],
-                        dbBaseGroup.subject == 'dictionary_status',
-                        dbBaseGroup.action == 'edit'
-                    ).first()
-                    approve_groups = list()
-                    cur_dict = DBSession.query(dbDictionary).filter_by(client_id=dict_ids['client_id'],
-                                                                     object_id=dict_ids['object_id']).first()
-                    persp_ids = list()
-                    for persp in cur_dict.dictionaryperspective:
-                        persp_ids.append((persp.client_id, persp.object_id))
-                        approve_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                            dbGroup.subject_client_id == persp.client_id,
-                            dbGroup.subject_object_id == persp.object_id,
-                            dbBaseGroup.subject == 'perspective_status',
-                            dbBaseGroup.action == 'edit'
-                        ).first()
+                    subject_id_list = [
+                        (cur_dict.client_id, cur_dict.object_id)]
 
-                        if approve_group:
-                            approve_groups.append(approve_group)
-                        approve_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                            dbGroup.subject_client_id == persp.client_id,
-                            dbGroup.subject_object_id == persp.object_id,
-                            dbBaseGroup.subject == 'approve_entities',
-                            dbBaseGroup.action == 'create'
-                        ).first()
-                        if approve_group:
-                            approve_groups.append(approve_group)
-                        approve_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                            dbGroup.subject_client_id == persp.client_id,
-                            dbGroup.subject_object_id == persp.object_id,
-                            dbBaseGroup.subject == 'approve_entities',
-                            dbBaseGroup.action == 'delete'
-                        ).first()
-                        if approve_group:
-                            approve_groups.append(approve_group)
+                    for persp in cur_dict.dictionaryperspective:
+
+                        subject_id_list.append(
+                            (persp.client_id, persp.object_id))
 
                     grant_admins = DBSession.query(dbUser).filter(dbUser.id.in_(grant.owners))
                     if grant.additional_metadata is None:
                         grant.additional_metadata = dict()
                     if grant.additional_metadata.get('roles', None) is None:
                         grant.additional_metadata['roles'] = list()
-                    for admin in grant_admins:
-                        perm_groups = DBSession.query(dbGroup).filter_by(subject_client_id=cur_dict.client_id,
-                                                                       subject_object_id=cur_dict.object_id).all()
-                        for group in perm_groups:
-                            if group.id not in grant.additional_metadata['roles']:
-                                grant.additional_metadata['roles'].append(group.id)
+
+                    # All permissions for the dictionary and its perspectives.
+
+                    perm_groups = (
+
+                        DBSession.query(dbGroup)
+
+                            .filter(
+                                tuple_(dbGroup.subject_client_id, dbGroup.subject_object_id)
+                                    .in_(subject_id_list))
+
+                            .all())
+
+                    # Adding all permissions to the grant and granting all permissions to the grant's
+                    # admins.
+                    #
+                    # Roles list can be quite lengthy, more then 1000 items in one case, and we can have up
+                    # to 32 and more permission groups for a standard dictionary with 2 perspectives, so we
+                    # check role incidence efficiently using a set.
+
+                    role_set = (
+                        set(grant.additional_metadata['roles']))
+
+                    for group in perm_groups:
+
+                        if group.id not in role_set:
+                            grant.additional_metadata['roles'].append(group.id)
+
+                        for admin in grant_admins:
                             if group not in admin.groups:
                                 admin.groups.append(group)
-                        perm_groups = DBSession.query(dbGroup).filter(
-                            tuple_(dbGroup.subject_client_id, dbGroup.subject_object_id).in_(persp_ids)).all()
-                        for group in perm_groups:
-                            if group.id not in grant.additional_metadata['roles']:
-                                grant.additional_metadata['roles'].append(group.id)
-                            if group not in admin.groups:
-                                admin.groups.append(group)
+
                     flag_modified(grant, 'additional_metadata')
 
                 elif userrequest.type == 'participate_org':

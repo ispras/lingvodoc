@@ -1336,6 +1336,8 @@ class Query(graphene.ObjectType):
         if id is None:
             client_id = info.context.get('client_id')
             client = DBSession.query(Client).filter_by(id=client_id).first()
+            if not client:
+                return None
             id = client.user_id
         return User(id=id)
 
