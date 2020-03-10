@@ -2,6 +2,7 @@ import graphene
 import datetime
 import time
 from json import loads
+import logging
 from lingvodoc.models import (
     Grant as dbGrant,
     User as dbUser,
@@ -28,6 +29,11 @@ from lingvodoc.schema.gql_holders import (
 from lingvodoc.schema.gql_user import User
 from sqlalchemy.orm.attributes import flag_modified
 from lingvodoc.utils.creation import create_gists_with_atoms
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 class Grant(LingvodocObjectType):
     """
@@ -72,11 +78,21 @@ class Grant(LingvodocObjectType):
 
     @fetch_object("begin")
     def resolve_begin(self, info):
-        return datetime.datetime.strptime(self.dbObject.begin,'%Y-%m-%d').timestamp()  # find better option
+
+        return (
+            datetime.datetime
+                .strptime(self.dbObject.begin, '%Y-%m-%d')
+                .replace(tzinfo = datetime.timezone.utc)
+                .timestamp())
 
     @fetch_object("end")
     def resolve_end(self, info):
-        return datetime.datetime.strptime(self.dbObject.end,'%Y-%m-%d').timestamp()
+
+        return (
+            datetime.datetime
+                .strptime(self.dbObject.end, '%Y-%m-%d')
+                .replace(tzinfo = datetime.timezone.utc)
+                .timestamp())
 
     @fetch_object("issuer_translation_gist_id")
     def resolve_issuer_translation_gist_id(self, info):
