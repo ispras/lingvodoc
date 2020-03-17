@@ -231,11 +231,11 @@ class EpochType(TypeDecorator):
     impl = TIMESTAMP
 
     def process_result_value(self, value, dialect):
-        return int(value.timestamp())
+        return value.replace(tzinfo = datetime.timezone.utc).timestamp()
 
     def process_bind_param(self, value, dialect):
-        if type(value) == int:
-            return datetime.datetime.fromtimestamp(value)
+        if isinstance(value, (int, float)):
+            return datetime.datetime.utcfromtimestamp(value)
         return value
 
 
@@ -292,12 +292,45 @@ def get_client_counter(check_id):
 
 
 class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
-    """
-    This is base of translations
-    """
+
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
     table_name = Column(UnicodeText, nullable=False)
+
+
+class ObjectTOCMixin(object):
+    
+    @declared_attr
+    def objecttoc(cls):
+
+        return relationship(
+            ObjectTOC.__name__,
+            primaryjoin = 'and_(' +
+                cls.__name__ + '.client_id == ' + ObjectTOC.__name__ + '.client_id, ' +
+                cls.__name__ + '.object_id == ' + ObjectTOC.__name__ + '.object_id)',
+            foreign_keys = [cls.client_id, cls.object_id])
+
+    @property
+    def deleted_at(self):
+        """
+        Gets latest 'deleted_at' value from ObjectTOC metadata, if there are any.
+        """
+
+        metadata = self.objecttoc.additional_metadata;
+
+        if not metadata:
+            return None
+
+        deleted_at = None
+
+        for value in metadata.values():
+
+            d = value.get('deleted_at')
+
+            if d and (deleted_at is None or d > deleted_at):
+                deleted_at = d
+
+        return deleted_at
 
 
 class CompositeIdMixin(object):
@@ -486,7 +519,8 @@ class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin,
 
 class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, MarkedForDeletionMixin,
                RelationshipMixin,
-               AdditionalMetadataMixin):
+               AdditionalMetadataMixin,
+               ObjectTOCMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -528,8 +562,10 @@ class Dictionary(CompositeIdMixin,
                  RelationshipMixin,
                  CreatedAtMixin,
                  TranslationMixin,
-                 StateMixin, MarkedForDeletionMixin,
-                 AdditionalMetadataMixin):
+                 StateMixin,
+                 MarkedForDeletionMixin,
+                 AdditionalMetadataMixin,
+                 ObjectTOCMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -547,8 +583,10 @@ class DictionaryPerspective(CompositeIdMixin,
                             RelationshipMixin,
                             CreatedAtMixin,
                             TranslationMixin,
-                            StateMixin, MarkedForDeletionMixin,
-                            AdditionalMetadataMixin):
+                            StateMixin,
+                            MarkedForDeletionMixin,
+                            AdditionalMetadataMixin,
+                            ObjectTOCMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -736,9 +774,11 @@ class LexicalEntry(CompositeIdMixin,
                    Base,
                    TableNameMixin,
                    RelationshipMixin,
-                   CreatedAtMixin, MarkedForDeletionMixin,
+                   CreatedAtMixin,
+                   MarkedForDeletionMixin,
                    AdditionalMetadataMixin,
-                   ReprIdMixin):
+                   ReprIdMixin,
+                   ObjectTOCMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -921,7 +961,7 @@ class LexicalEntry(CompositeIdMixin,
                 cur_nodegroup = i['tree_numbering_scheme'] if prev_nodegroup != i[
                     'tree_numbering_scheme'] else prev_nodegroup
                 dictionary_form = dict(i)
-                dictionary_form['created_at'] = int(i['created_at'].timestamp())
+                dictionary_form['created_at'] = i['created_at'].replace(tzinfo = datetime.timezone.utc).timestamp()
                 dictionary_form['level'] = 'entity'
                 dictionary_form['contains'] = []
                 if not dictionary_form.get('locale_id'):
@@ -1035,7 +1075,8 @@ class Entity(CompositeIdMixin,
              FieldMixin,
              ParentLinkMixin, MarkedForDeletionMixin,
              AdditionalMetadataMixin,
-             ReprIdMixin):
+             ReprIdMixin,
+             ObjectTOCMixin):
     __parentname__ = "LexicalEntry"
 
     content = Column(UnicodeText)

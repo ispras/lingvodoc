@@ -217,11 +217,11 @@ class EpochType(TypeDecorator):
     impl = TIMESTAMP
 
     def process_result_value(self, value, dialect):
-        return int(value.timestamp())
+        return value.replace(tzinfo = datetime.timezone.utc).timestamp()
 
     def process_bind_param(self, value, dialect):
-        if type(value) == int:
-            return datetime.datetime.fromtimestamp(value)
+        if isinstance(value, (int, float)):
+            return datetime.datetime.utcfromtimestamp(value)
         return value
 
 
@@ -828,7 +828,7 @@ class LexicalEntry(CompositeIdMixin,
                     continue
                 cur_nodegroup = i['tree_numbering_scheme'] if prev_nodegroup != i['tree_numbering_scheme'] else prev_nodegroup
                 dictionary_form = dict(i)
-                dictionary_form['created_at'] = int(i['created_at'].timestamp())
+                dictionary_form['created_at'] = i['created_at'].replace(tzinfo = datetime.timezone.utc).timestamp()
                 dictionary_form['level'] = 'entity'
                 dictionary_form['contains'] = []
                 if not dictionary_form.get('locale_id'):

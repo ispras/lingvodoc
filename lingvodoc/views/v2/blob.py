@@ -69,8 +69,9 @@ def convert(request):  # TODO: test when convert in blobs will be needed
         content = r.content
         try:
             n = 10
-            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                              for c in range(n))
+            filename = (
+                time.asctime(time.gmtime()) + ''.join(
+                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
             extension = os.path.splitext(blob.content)[1]
             f = open(filename + extension, 'wb')
         except Exception as e:

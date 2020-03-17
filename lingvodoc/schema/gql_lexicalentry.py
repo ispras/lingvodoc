@@ -9,6 +9,7 @@ from lingvodoc.schema.gql_holders import (
     CompositeIdHolder,
     AdditionalMetadata,
     CreatedAt,
+    DeletedAt,
     MarkedForDeletion,
     Relationship,
     MovedTo,
@@ -64,7 +65,14 @@ class LexicalEntry(LingvodocObjectType):
     gql_Entities = None
 
     class Meta:
-        interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)
+        interfaces = (
+            CompositeIdHolder,
+            AdditionalMetadata,
+            CreatedAt,
+            DeletedAt,
+            MarkedForDeletion,
+            Relationship,
+            MovedTo)
 
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
@@ -374,8 +382,9 @@ class ConnectLexicalEntries(graphene.Mutation):
                     tags.append(tag)
         if not tags:
             n = 10  # better read from settings
-            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                         for c in range(n))
+            tag = (
+                time.asctime(time.gmtime()) + ''.join(
+                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
             tags.append(tag)
         lexical_entries = find_lexical_entries_by_tags(tags, field_id[0], field_id[1], False, False)
         for par in connections:

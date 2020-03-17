@@ -142,7 +142,7 @@ def edit_grant(request):  # tested & in docs
             if 'begin' in req:
                 grant.begin = datetime.datetime.strptime(req['begin'], "%d.%M.%Y").date()
             if 'end' in req:
-                grant.begin = datetime.datetime.strptime(req['end'], "%d.%M.%Y").date()
+                grant.end = datetime.datetime.strptime(req['end'], "%d.%M.%Y").date()
 
             additional_metadata = req.get('additional_metadata')
             if additional_metadata:

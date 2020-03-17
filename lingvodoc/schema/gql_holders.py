@@ -3,6 +3,7 @@ import datetime
 import graphene
 import logging
 import re
+import time
 from graphql.language.ast import ObjectValue, ListValue, IntValue
 from graphql.language import ast
 from graphene.types import Scalar
@@ -282,7 +283,7 @@ def delete_message(function_name, deleted_by, task_id=None, counter=1,
     :return:
     """
     if not deleted_at:
-        deleted_at = int(datetime.datetime.utcnow().timestamp())
+        deleted_at = datetime.datetime.now(datetime.timezone.utc).timestamp()
     message = {function_name:
                 {"deleted_at": deleted_at,
                  "reason": reason,
@@ -415,13 +416,21 @@ class CompositeIdHolder(graphene.Interface):
 
 
 class CreatedAt(graphene.Interface):
-    created_at = graphene.Int() #DateTime()
+    created_at = graphene.Float() #DateTime()
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
-        if type(self.dbObject.created_at) is int:
+        if isinstance(self.dbObject.created_at, (int, float)):
             return self.dbObject.created_at
-        return self.dbObject.created_at.timestamp()
+        return self.dbObject.created_at.replace(tzinfo = datetime.timezone.utc).timestamp()
+
+
+class DeletedAt(graphene.Interface):
+    deleted_at = graphene.Float()
+
+    @fetch_object("deleted_at")
+    def resolve_deleted_at(self, info):
+        return self.dbObject.deleted_at
 
 
 class Relationship(graphene.Interface):
@@ -640,7 +649,7 @@ class IsTranslatable(graphene.Interface):
 
 
 class MergeMetadata(graphene.ObjectType):
-    min_created_at = graphene.Int()
+    min_created_at = graphene.Float()
     original_client_id = graphene.Int()
     merge_tree = graphene.List(LingvodocID)
 
@@ -769,8 +778,15 @@ class AdditionalMetadata(graphene.Interface):
 #  end of metadata section
 
 
-class CommonFieldsComposite(MarkedForDeletion, AdditionalMetadata, CreatedAt, CompositeIdHolder, Relationship,
-                            TranslationGistHolder, TranslationHolder):
+class CommonFieldsComposite(
+    MarkedForDeletion,
+    AdditionalMetadata,
+    CreatedAt,
+    DeletedAt,
+    CompositeIdHolder,
+    Relationship,
+    TranslationGistHolder,
+    TranslationHolder):
     """
     used in Dictionary, DictionaryPerspective and Language classes as Interfaces because function
     tree = graphene.List(CommonFieldsComposite, ) does not support listing

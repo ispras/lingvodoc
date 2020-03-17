@@ -59,7 +59,7 @@ import urllib
 import json
 import requests
 from pyramid.request import Request
-from time import time
+import time
 from webob.multidict import MultiDict, NoVars
 from lingvodoc.schema.query import schema, Context
 
@@ -337,6 +337,9 @@ def testing(request):
                     print(meta)
 
             # Restore Mark`s deletions
+            #
+            # NOTE: after changing all created_at to proper UTC-based Unix timestamps (previously they were
+            # shifted by UTC - MSK difference) following time constants can be no longer right.
 
             entities_to_delete = set()
             i = 0
@@ -648,7 +651,7 @@ def garbage_collector(request):
     :return:
     """
     from lingvodoc.utils import garbage_collector
-    collection_time = datetime.datetime.utcnow()
+    collection_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
     null_entities = garbage_collector.get_null_entities()
     empty_entities = garbage_collector.get_empty_entities()
     entities_deleted = 0

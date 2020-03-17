@@ -699,8 +699,9 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     tags.append(tag)
         if not tags:
             n = 10  # better read from settings
-            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                         for c in range(n))
+            tag = (
+                time.asctime(time.gmtime()) + ''.join(
+                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
             tags.append(tag)
         lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
         for par in req['connections']:
