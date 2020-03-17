@@ -157,7 +157,7 @@ def basic_sync(request):
     import transaction
 
     return_date_time = lambda r: {
-    key: datetime.datetime.fromtimestamp(r[key]) if key == 'created_at' else r[key]
+    key: datetime.datetime.utcfromtimestamp(r[key]) if key == 'created_at' else r[key]
     for key in r}
     settings = request.registry.settings
     existing = basic_tables_content()

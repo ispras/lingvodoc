@@ -2198,8 +2198,10 @@ class Query(graphene.ObjectType):
             content = resp.content
             try:
                 n = 10
-                filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                                  for c in range(n))
+                filename = (
+                    time.asctime(time.gmtime()) + ''.join(
+                        random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                        for c in range(n)))
                 # extension = os.path.splitext(blob.content)[1]
                 f = open(filename, 'wb')
             except Exception as e:
@@ -2304,8 +2306,9 @@ class StarlingEtymology(graphene.Mutation):
                                                              marked_for_deletion=False).first()
         if not etymology_field:
             raise ResponseError(message='no such field')
-        timestamp = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                for c in range(10))
+        timestamp = (
+            time.asctime(time.gmtime()) + ''.join(
+                random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(10)))
         for complex_element in args['complex_list']:
             starling_ids = complex_element['starling_perspective_id']
             starling_perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=starling_ids[0],
