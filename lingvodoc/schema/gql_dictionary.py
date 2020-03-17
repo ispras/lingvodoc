@@ -1,4 +1,5 @@
 from collections import defaultdict
+import datetime
 import logging
 import pprint
 
@@ -19,6 +20,7 @@ from lingvodoc.models import (
     LexicalEntry as dbLexicalEntry,
     PublishingEntity as dbPublishingEntity,
     TranslationGist as dbTranslationGist,
+    ObjectTOC,
     )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
@@ -34,9 +36,13 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID,
     UserAndOrganizationsRoles
 )
-from sqlalchemy import and_, or_, tuple_
+
+import sqlalchemy
+from sqlalchemy import and_, cast, column, extract, func, or_, tuple_
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.sql.expression import Grouping
+
 from lingvodoc.utils import statistics, explain_analyze
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
@@ -110,6 +116,7 @@ class Dictionary(LingvodocObjectType):  # tested
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     status = graphene.Field(graphene.String, locale_id = graphene.Int())
+    last_modified_at = graphene.Float()
 
     # If the dictionary in 'Published' or 'Limited access' state and has at least one 'Published' or
     # 'Limited access' perspective with some additional checks based on whether the dictionary is deleted or
@@ -150,6 +157,149 @@ class Dictionary(LingvodocObjectType):  # tested
             return atom[0]
         else:
             return None
+
+    @fetch_object('last_modified_at')
+    def resolve_last_modified_at(self, info):
+        """
+        Dictionary's last modification time, defined as latest time of creation or deletion of the
+        dictionary and all its perspectives, lexical entries and entities.
+        """
+
+        # select
+        #   max((value ->> 'deleted_at') :: float)
+        #   
+        #   from
+        #     ObjectTOC,
+        #     jsonb_each(additional_metadata)
+        #   
+        #   where
+        #     client_id = <client_id> and
+        #     object_id = <object_id>;
+
+        deleted_at_query = (
+
+            DBSession
+
+            .query(
+                func.max(cast(
+                    column('value').op('->>')('deleted_at'),
+                    sqlalchemy.Float)))
+
+            .select_from(
+                ObjectTOC,
+                func.jsonb_each(ObjectTOC.additional_metadata))
+
+            .filter(
+                ObjectTOC.client_id == self.dbObject.client_id,
+                ObjectTOC.object_id == self.dbObject.object_id))
+
+        # Query for last modification time of the dictionary's perspectives, lexical entries and entities.
+
+        sql_str = ('''
+
+            select
+
+              max(
+                greatest(
+  
+                  extract(epoch from P.created_at),
+  
+                  (select
+                    max((value ->> 'deleted_at') :: float)
+  
+                    from
+                      jsonb_each(OP.additional_metadata)),
+                  
+                  (select
+  
+                    max(
+                      greatest(
+  
+                        extract(epoch from L.created_at),
+  
+                        (select
+                          max((value ->> 'deleted_at') :: float)
+  
+                          from
+                            jsonb_each(OL.additional_metadata)),
+                        
+                        (select
+  
+                          max(
+                            greatest(
+                              
+                              extract(epoch from E.created_at),
+  
+                              (select
+                                max((value ->> 'deleted_at') :: float)
+  
+                                from
+                                  jsonb_each(OE.additional_metadata))))
+  
+                          from
+                            public.entity E,
+                            ObjectTOC OE
+  
+                          where
+                            E.parent_client_id = L.client_id and
+                            E.parent_object_id = L.object_id and
+                            OE.client_id = E.client_id and
+                            OE.object_id = E.object_id)))
+  
+                    from
+                      lexicalentry L,
+                      ObjectTOC OL
+  
+                    where
+                      L.parent_client_id = P.client_id and
+                      L.parent_object_id = P.object_id and
+                      OL.client_id = L.client_id and
+                      OL.object_id = L.object_id)))
+
+            from
+              dictionaryperspective P,
+              ObjectTOC OP
+
+            where
+              P.parent_client_id = :client_id and
+              P.parent_object_id = :object_id and
+              OP.client_id = P.client_id and
+              OP.object_id = P.object_id
+
+            ''')
+
+        # Complete query for the dictionary, exclusing created_at which we already have.
+
+        query = (
+
+            DBSession
+
+            .query(
+
+                func.to_timestamp(
+                    func.greatest(
+                        deleted_at_query.label('deleted_at'),
+                        Grouping(sqlalchemy.text(sql_str))))
+
+                    .op('at time zone')('UTC'))
+                
+            .params({
+                'client_id': self.dbObject.client_id,
+                'object_id': self.dbObject.object_id}))
+
+        # Query returns timestamp without time zone, to be consistent with other timestamps stored in DB,
+        # e.g. 'created_at', so we take care to correctly get corresponding Unix time.
+
+        result = (
+                
+            query
+                .scalar()
+                .replace(tzinfo = datetime.timezone.utc)
+                .timestamp())
+
+        return max(
+            self.dbObject.created_at,
+            result)
 
     def published_cte_str(
         self,
