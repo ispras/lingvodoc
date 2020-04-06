@@ -295,7 +295,9 @@ def delete_message(function_name, deleted_by, task_id=None, counter=1,
     return message
 
 
-def delete_gist_with_atoms(deleted_by, gist, task_id):
+def delete_gist_with_atoms(
+    deleted_by, gist, task_id, subject = None):
+
     atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
                                                          marked_for_deletion=False).all()
     for dbtranslationatom in atoms:
@@ -314,7 +316,7 @@ def delete_gist_with_atoms(deleted_by, gist, task_id):
     gist.mark_deleted(delete_message("del_object",
                                      deleted_by,
                                      task_id,
-                                     subject=(gist.parent_client_id, gist.parent_object_id)))
+                                     subject=subject))
 
 def del_object(tmp_object, function_name, deleted_by, task_id=None, counter=1):
     # This function can delete perspective\dictionary\any object
@@ -332,7 +334,13 @@ def del_object(tmp_object, function_name, deleted_by, task_id=None, counter=1):
                                                             object_id=tmp_object.translation_gist_object_id,
                                                             marked_for_deletion=False).first()
         if gist and gist.type != "Perspective":
-            delete_gist_with_atoms(deleted_by, gist, task_id)
+
+            delete_gist_with_atoms(
+                deleted_by,
+                gist,
+                task_id,
+                subject = (tmp_object.client_id, tmp_object.object_id))
+
     # delete object
     message = delete_message(function_name, deleted_by, task_id, counter)
     tmp_object.mark_deleted(message)

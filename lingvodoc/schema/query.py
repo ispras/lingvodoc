@@ -5134,7 +5134,7 @@ class CognateAnalysis(graphene.Mutation):
                 1)
 
         log.debug(
-            'cognate_analysis {0}: output buffer size {1}'.format(
+            '\ncognate_analysis {0}: output buffer size {1}'.format(
             language_str,
             output_buffer_size))
 
@@ -5204,8 +5204,9 @@ class CognateAnalysis(graphene.Mutation):
         output = output_buffer.value
 
         log.debug(
-            '\ncognate_analysis {0}:\noutput:\n{1}'.format(
+            '\ncognate_analysis {}:\noutput ({}):\n{}'.format(
             language_str,
+            len(output),
             pprint.pformat([output[i : i + 256]
                 for i in range(0, len(output), 256)], width = 144)))
 
