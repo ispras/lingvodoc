@@ -382,34 +382,25 @@ class DictionaryPerspective(LingvodocObjectType):
 
             ''')
 
-        # Complete query for the perspective, exclusing created_at which we already have.
+        # Complete query for the perspective, excluding created_at which we already have.
 
-        query = (
+        DBSession.execute(
+            'set extra_float_digits to 3;');
+
+        result = (
 
             DBSession
 
             .query(
-
-                func.to_timestamp(
-                    func.greatest(
-                        deleted_at_query.label('deleted_at'),
-                        Grouping(sqlalchemy.text(sql_str))))
-
-                    .op('at time zone')('UTC'))
+                  func.greatest(
+                      deleted_at_query.label('deleted_at'),
+                      Grouping(sqlalchemy.text(sql_str))))
                 
             .params({
                 'client_id': self.dbObject.client_id,
-                'object_id': self.dbObject.object_id}))
-
-        # Query returns timestamp without time zone, to be consistent with other timestamps stored in DB,
-        # e.g. 'created_at', so we take care to correctly get corresponding Unix time.
-
-        result = (
-                
-            query
-                .scalar()
-                .replace(tzinfo = datetime.timezone.utc)
-                .timestamp())
+                'object_id': self.dbObject.object_id})
+            
+            .scalar())
 
         return max(
             self.dbObject.created_at,
