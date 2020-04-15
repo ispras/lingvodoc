@@ -42,7 +42,6 @@ class Organization(LingvodocObjectType):
     """
     dbType = dbOrganization
 
-    about = graphene.String()
     members = graphene.List(User)
 
     class Meta:
@@ -54,15 +53,6 @@ class Organization(LingvodocObjectType):
                       TranslationGistHolder,
                       About
                     )
-
-    @fetch_object('about')
-    def resolve_about(self, info):
-
-        context = info.context
-
-        return str(
-            self.dbObject.get_about_translation(
-                context.get('locale_id')))
 
     @fetch_object('members')
     def resolve_members(self, info):
