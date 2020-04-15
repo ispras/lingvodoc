@@ -419,7 +419,8 @@ def get_translation(
     client_id,
     object_id,
     session = DBSession,
-    key_format_str = 'translation:%s:%s:%s'):
+    key_format_str = 'translation:%s:%s:%s',
+    default = None):
     """
     Standard translation retrieval with caching.
     """
@@ -442,8 +443,10 @@ def get_translation(
         parent_client_id=client_id,
         parent_object_id=object_id).all()
     all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
+
     if not all_translations_dict:
-        return "Translation missing for all locales"
+        return default if default is not None else "Translation missing for all locales"
+
     elif all_translations_dict.get(main_locale) is not None:
         translation = all_translations_dict.get(main_locale)
         CACHE.set(key=key_main, value=translation)
@@ -469,7 +472,7 @@ def get_translation(
 
     # Should be unreachable, so just in case.
 
-    return "Translation missing for all locales"
+    return default if default is not None else "Translation missing for all locales"
 
 
 class TranslationMixin(PrimeTableArgs):
@@ -1195,7 +1198,8 @@ class AboutMixin(PrimeTableArgs):
         return get_translation(
             locale_id,
             self.about_translation_gist_client_id,
-            self.about_translation_gist_object_id)
+            self.about_translation_gist_object_id,
+            default = '')
 
 
 class Organization(

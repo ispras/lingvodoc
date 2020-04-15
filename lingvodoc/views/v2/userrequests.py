@@ -161,12 +161,12 @@ def accept_userrequest(request):
                 dict_ids = {'client_id': userrequest.subject['client_id'],
                             'object_id': userrequest.subject['object_id']}
 
-                no_grants = True
-                for tmp_grant in DBSession.query(Grant).all():
-                    if tmp_grant.additional_metadata and tmp_grant.additional_metadata.get('participant') and dict_ids in \
-                            tmp_grant.additional_metadata['participant']:
-                        no_grants = False
-                        break
+                # no_grants = True
+                # for tmp_grant in DBSession.query(Grant).all():
+                #     if tmp_grant.additional_metadata and tmp_grant.additional_metadata.get('participant') and dict_ids in \
+                #             tmp_grant.additional_metadata['participant']:
+                #         no_grants = False
+                #         break
 
                 if dict_ids not in grant.additional_metadata['participant']:
                     grant.additional_metadata['participant'].append(dict_ids)

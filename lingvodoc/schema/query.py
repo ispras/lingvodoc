@@ -155,6 +155,7 @@ from lingvodoc.schema.gql_userrequest import (
     AddDictionaryToGrant,
     AdministrateOrg,
     ParticipateOrg,
+    AddDictionaryToOrganization,
     AcceptUserRequest,
     # DeleteUserRequest
 )
@@ -7600,6 +7601,7 @@ class MyMutations(graphene.ObjectType):
     add_dictionary_to_grant = AddDictionaryToGrant.Field()
     administrate_org = AdministrateOrg.Field()
     participate_org = ParticipateOrg.Field()
+    add_dictionary_to_organization = AddDictionaryToOrganization.Field()
     accept_userrequest = AcceptUserRequest.Field()
     #delete_userrequest = DeleteUserRequest.Field()
     download_dictionary = DownloadDictionary.Field()
