@@ -30,3 +30,5 @@ alembic.ini
 # docker stuff
 docker/dbdump/*
 docker/frontend/*
+
+lingvodoc/version.py

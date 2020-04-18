@@ -304,6 +304,9 @@ import xlsxwriter
 
 from lingvodoc.schema.gql_copy_field import CopySingleField, CopySoundMarkupFields
 
+import lingvodoc.version
+
+
 # Setting up logging.
 log = logging.getLogger(__name__)
 
@@ -533,6 +536,11 @@ class Query(graphene.ObjectType):
             perspective_id = LingvodocID(),
             search_query = graphene.Argument(ObjectVal),
             debug_flag = graphene.Boolean()))
+
+    version = graphene.String()
+
+    def resolve_version(self, info):
+        return lingvodoc.version.__version__
 
     def resolve_eaf_search(
         self,
