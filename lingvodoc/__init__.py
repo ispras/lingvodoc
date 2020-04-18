@@ -1,9 +1,15 @@
-import logging
+
 from configparser import (
     ConfigParser,
     NoSectionError
 )
+import datetime
 import distutils.util
+import logging
+import os.path
+import re
+
+import git
 
 from sqlalchemy import engine_from_config
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -22,6 +28,173 @@ from .acl import (
     groupfinder
 )
 import multiprocess
+
+
+def get_git_version(repository_dir):
+    """
+    Determines version from the Git repository state.
+
+    If the Git version tag selected by `git describe` conforms to PEP 440, resulting version string conforms
+    to it too.
+    """
+
+    # Getting repository info.
+
+    try:
+
+        repository = (
+            git.Repo(os.path.join(
+                repository_dir, '.git')))
+
+        describe_result = (
+
+            repository.git.describe(
+                abbrev = 8,
+                always = True,
+                long = True,
+                tags = True,
+                match = 'v*'))
+
+        # Working tree status and head commit info.
+
+        status_result = (
+
+            repository.git.status(
+                porcelain = True,
+                untracked_files = 'no'))
+
+        head_commit = (
+            repository.head.commit)
+
+        head_datetime = (
+            head_commit.authored_datetime
+                .astimezone(tz = datetime.timezone.utc))
+
+    except git.exc.GitError:
+        return None
+
+    # Getting version info from 'git describe'.
+
+    match_result = (
+
+        re.fullmatch(
+            r'v(.*?)-(\d+)-g([0-9a-fA-F]+)?',
+            describe_result))
+
+    if match_result:
+
+        # We have a valid version tag.
+
+        assert (
+            head_commit.hexsha.startswith(
+                match_result.group(3)))
+
+        version_str = (
+            match_result.group(1))
+
+        commit_count = (
+            int(match_result.group(2)))
+
+        if commit_count > 0:
+
+            version_str += (
+                '+{}'.format(commit_count))
+
+        version_str += (
+
+            '-{}-{}'.format(
+                match_result.group(3),
+                head_datetime.strftime('%Y.%m.%d-%H:%M')))
+
+    else:
+
+        # No tagged version, using just the fallback commit hash/
+
+        assert (
+            head_commit.hexsha.startswith(
+                describe_result))
+
+        version_str = (
+                
+            '{}-{}'.format(
+                describe_result,
+                head_datetime.strftime('%Y.%m.%d-%H:%M')))
+
+    # Checking if we have any modifications from the last commit.
+
+    last_mtime = None
+
+    for line in status_result.splitlines():
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        # Another modified path.
+
+        if line[-1] == '"':
+
+            path_utf8_escaped = (
+                line[ line.rindex(' "', 0, -1) + 2 : -1 ])
+
+            path = (
+                path_utf8_escaped
+                    .encode('latin1')
+                    .decode('unicode-escape')
+                    .encode('latin1')
+                    .decode('utf-8'))
+
+        else:
+
+            path_utf8 = (
+                line[ line.rindex(' ') + 1 : ])
+
+            path = (
+                path_utf8
+                    .encode('latin1')
+                    .decode('utf-8'))
+
+        # Determining last modification time.
+
+        mtime = (
+            os.path.getmtime(
+                os.path.join(repository_dir, path)))
+
+        if (last_mtime is None or
+            mtime > last_mtime):
+
+            last_mtime = mtime
+
+    # Last commit time.
+
+    if last_mtime is not None:
+
+        last_m_datetime = (
+
+            datetime.datetime
+                .fromtimestamp(last_mtime)
+                .astimezone(tz = datetime.timezone.utc))
+
+        version_str += (
+            last_m_datetime.strftime('+modified-%Y.%m.%d-%H:%M'))
+
+    return version_str
+
+
+# Updating version with current Git repository info, if we have any, setting up package version.
+
+import lingvodoc.version
+
+version_str = (
+    get_git_version(os.path.join(
+      os.path.dirname(__file__), '..')))
+
+if version_str is not None:
+  lingvodoc.version.__version__ = version_str
+
+__version__ = lingvodoc.version.__version__
+
 
 # def add_route_custom(config, name, pattern, api_version=[]):
 

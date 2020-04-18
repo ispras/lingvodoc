@@ -1,10 +1,17 @@
 
 import os
+import os.path
+
+import textwrap
+
+import git
 
 from setuptools import setup, find_packages
 
 from setuptools.command.develop import develop
 from setuptools.command.install import install
+
+from lingvodoc import get_git_version
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -19,6 +26,9 @@ class React_Interface_Mixin(object):
     Adds ability to set up React-based interface to setuptools commands.
     """
 
+    user_options = [
+        ('react-interface=', None, 'path to React-based interface distribution')]
+
     def initialize_options(self):
         """
         Initializes standard setuptools' command options and a React interface option.
@@ -26,6 +36,21 @@ class React_Interface_Mixin(object):
 
         super().initialize_options()
         self.react_interface = None
+
+    def run(self):
+        """
+        Sets up React-based interface if required.
+        """
+
+        super().run()
+
+        if self.react_interface is not None:
+
+            self.setup_react_interface(
+
+                os.path.join(
+                    getattr(self, self.__react_path_attr__),
+                    'lingvodoc'))
 
     def setup_react_interface(self, lingvodoc_dir):
         """
@@ -52,46 +77,73 @@ class React_Interface_Mixin(object):
             lingvodoc_dir, 'assets'))
 
 
-class develop_with_interface(React_Interface_Mixin, develop):
+class Git_Version_Mixin(object):
+    """
+    Tries to determine version from the Git repository state.
+
+    Absense of Git repository is silently ignored.
+    """
+
+    version_py_template = textwrap.dedent(
+    
+        '''\
+
+        # This file is overwritten on setup.
+        # Please do not modify it and ignore its changes in version control.
+        __version__ = '{}'
+
+        ''')
+
+    def run(self):
+        """
+        Tries to determine version from the Git repository state, saves it to 'lingvodoc/version.py' if
+        successful.
+        """
+
+        version_str = (
+            get_git_version(here))
+
+        if version_str is not None:
+
+            with open(
+                os.path.join(here, 'lingvodoc', 'version.py'), 'w',
+                encoding = 'utf-8') as version_py_file:
+
+                version_py_file.write(
+                    self.version_py_template.format(version_str))
+
+        # Continuing with setup.
+
+        super().run()
+
+
+class develop_with_interface(
+    React_Interface_Mixin,
+    develop):
     """
     Extends 'develop' setup.py command with ability to develop React-based interface.
     """
 
-    user_options = develop.user_options + [
-        ('react-interface=', None, 'path to React-based interface distribution')]
+    __react_path_attr__ = 'egg_path'
 
-    def run(self):
-        """
-        Runs development installation, sets up React-based interface if required.
-        """
-
-        develop.run(self)
-
-        if self.react_interface is not None:
-
-            self.setup_react_interface(
-                os.path.join(self.egg_path, 'lingvodoc'))
+    user_options = (
+        develop.user_options + React_Interface_Mixin.user_options)
 
 
-class install_with_interface(React_Interface_Mixin, install):
+class install_with_interface(
+    React_Interface_Mixin,
+    Git_Version_Mixin,
+    install):
     """
-    Extends 'install' setup.py command with ability to install React-based interface.
+    Extends 'install' setup.py command with ability to install React-based interface and update version from
+    the Git repository state.
     """
 
-    user_options = install.user_options + [
-        ('react-interface=', None, 'path to React-based interface distribution')]
+    __react_path_attr__ = 'install_lib'
 
-    def run(self):
-        """
-        Performs installation, then installs React-based interface if required.
-        """
-
-        install.run(self)
-
-        if self.react_interface is not None:
-
-            self.setup_react_interface(
-                os.path.join(self.install_lib, 'lingvodoc'))
+    user_options = (
+        install.user_options +
+        React_Interface_Mixin.user_options)
 
 
 requires = [
