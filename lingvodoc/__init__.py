@@ -172,9 +172,9 @@ def get_git_version(repository_dir):
 
         last_m_datetime = (
 
-            datetime.datetime
-                .fromtimestamp(last_mtime)
-                .astimezone(tz = datetime.timezone.utc))
+            datetime.datetime.fromtimestamp(
+                last_mtime,
+                tz = datetime.timezone.utc))
 
         version_str += (
             last_m_datetime.strftime('+modified-%Y.%m.%d-%H:%M'))

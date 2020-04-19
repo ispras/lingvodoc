@@ -6,6 +6,7 @@ cchardet==1.1.1
 celery==3.1.24
 cffi==1.8.3
 Chameleon==2.25
+dataproperty==0.42.1
 dogpile.cache==0.6.2
 git+https://github.com/myrix/poio-api.git
 GitPython==3.1.0

@@ -15,4 +15,8 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" > /etc/
 	apt-key add - && \ 
 	apt-get update && \
 	apt-get install -y postgresql-server-dev-10 postgresql-client-10
-RUN easy_install3 pip==9.0.1 && pip3 install --upgrade setuptools && pip3 install -r server-requirements.txt && pip3 install alembic gunicorn==19.7.1
+RUN \
+  easy_install3 pip==9.0.1 && \
+  pip3 install --upgrade setuptools==40.8.0 && \
+  pip3 install -r server-requirements.txt && \
+  pip3 install alembic gunicorn==19.7.1
