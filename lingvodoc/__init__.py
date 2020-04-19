@@ -124,6 +124,10 @@ def get_git_version(repository_dir):
 
     last_mtime = None
 
+    version_path = (
+        os.path.join(
+            repository_dir, 'lingvodoc', 'version.py'))
+
     for line in status_result.splitlines():
 
         line = line.strip()
@@ -157,9 +161,14 @@ def get_git_version(repository_dir):
 
         # Determining last modification time.
 
+        path = (
+            os.path.join(repository_dir, path))
+
+        if path == version_path:
+            continue
+
         mtime = (
-            os.path.getmtime(
-                os.path.join(repository_dir, path)))
+            os.path.getmtime(path))
 
         if (last_mtime is None or
             mtime > last_mtime):
