@@ -791,7 +791,13 @@ class LexicalEntry(CompositeIdMixin,
     __parentname__ = 'DictionaryPerspective'
     moved_to = Column(UnicodeText)
 
-    def track(self, publish, locale_id, accept = None, delete = False):
+    def track(
+        self,
+        publish,
+        locale_id,
+        accept = None,
+        delete = False,
+        check_perspective = True):
 
         metadata = self.additional_metadata if self.additional_metadata else None
         came_from = metadata.get('came_from') if metadata and 'came_from' in metadata else None
@@ -800,19 +806,43 @@ class LexicalEntry(CompositeIdMixin,
                                  self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
                                  self.marked_for_deletion, metadata, came_from)]
 
-        res_list = self.track_multiple(lexes_composite_list, locale_id, publish, accept, delete)
+        res_list = (
+                
+            self.track_multiple(
+                lexes_composite_list,
+                locale_id,
+                publish,
+                accept,
+                delete,
+                check_perspective))
 
         return res_list[0] if res_list else {}
 
     @classmethod
-    def track_multiple(cls, lexs, locale_id, publish=None, accept=None, delete=False):
-        log.debug(lexs)
-        filtered_lexes = []
+    def track_multiple(
+        cls,
+        lexs,
+        locale_id,
+        publish = None,
+        accept = None,
+        delete = False,
+        check_perspective = True):
 
-        deleted_persps = DictionaryPerspective.get_deleted()
-        for i in lexs:
-            if (i[3], i[4]) not in deleted_persps:
-                filtered_lexes.append(i)
+        log.debug(lexs)
+
+        if check_perspective:
+
+            filtered_lexes = []
+
+            deleted_persps = DictionaryPerspective.get_deleted()
+            for i in lexs:
+                if (i[3], i[4]) not in deleted_persps:
+                    filtered_lexes.append(i)
+
+        else:
+
+            filtered_lexes = lexs
+
         ls = []
 
         for i, x in enumerate(filtered_lexes):
@@ -889,7 +919,7 @@ class LexicalEntry(CompositeIdMixin,
          WHERE tree_level <= 10
         )
 
-        SELECT
+        SELECT DISTINCT
           cte_expr.*,
           COALESCE (data_type_atom.content, data_type_atom_fallback.content) as data_type,
           COALESCE (entity_type_atom.content, entity_type_atom_fallback.content) as entity_type,

@@ -1037,7 +1037,29 @@ def merge_suggestions_compute(
 
         return [], [], user_has_permissions
 
-    entry_data_list = [l.track(False, locale_id) for l in lexical_entry_list]
+    # Aggregated entity tracking without checking lexical entries' perspective.
+
+    composite_list = [
+
+        (entry.created_at,
+            entry.client_id,
+            entry.object_id,
+            entry.parent_client_id,
+            entry.parent_object_id,
+            entry.marked_for_deletion,
+            entry.additional_metadata,
+            entry.additional_metadata.get('came_from') if entry.additional_metadata else None)
+
+        for entry in lexical_entry_list]
+
+    entry_data_list = (
+
+        LexicalEntry.track_multiple(
+            composite_list,
+            locale_id,
+            False,
+            check_perspective = False))
+
     remove_deleted(entry_data_list)
 
     log.debug('merge_suggestions {0}/{1}: {2} lexical entries'.format(
