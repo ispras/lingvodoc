@@ -311,8 +311,14 @@ def save_xlsx_data(
 
     for language_id in group_list:
 
-        language = id_to_language_dict[language_id]
-        language_name = language.get_translation(xlsx_context.locale_id)
+        if language_id is None:
+
+            language_name = '(ungrouped)'
+
+        else:
+
+            language = id_to_language_dict[language_id]
+            language_name = language.get_translation(xlsx_context.locale_id)
 
         dictionary_list = group_dict[language_id]
 
@@ -454,26 +460,6 @@ def search_mechanism(
 
             res_dictionaries = [
                 graphene_obj(dbdict, Dictionary) for dbdict in dictionary_list]
-
-            # Exporting search results as an XLSX data, if required.
-
-            if xlsx_context is not None:
-
-                start_time = time.time()
-
-                save_xlsx_data(
-                    xlsx_context,
-                    dictionary_list,
-                    perspective_list,
-                    [lexical_entry.dbObject for lexical_entry in result_lexical_entries])
-
-                elapsed_time = time.time() - start_time
-                resident_memory = utils.get_resident_memory()
-
-                log.debug(
-                    '\nelapsed_time, resident_memory: {0:.3f}s, {1:.3f}m'.format(
-                    elapsed_time,
-                    resident_memory / 1048576.0))
 
             return [], result_lexical_entries, res_perspectives, res_dictionaries
 
@@ -719,7 +705,8 @@ def search_mechanism(
 
     if __debug_flag__:
 
-        with gzip.open(search_data_file_name, 'wb') as search_data_file:
+        with gzip.open(
+            search_data_file_name, 'wb') as search_data_file:
 
             search_data = (
 
@@ -736,17 +723,7 @@ def search_mechanism(
             pickle.dump(
                 search_data, search_data_file)
 
-    # Exporting search results as an XLSX data, if required.
-
-    if xlsx_context is not None:
-
-        save_xlsx_data(
-            xlsx_context,
-            tmp_dictionaries,
-            tmp_perspectives,
-            [lexical_entry.dbObject for lexical_entry in result_lexical_entries])
-
-    return [], result_lexical_entries, res_perspectives , res_dictionaries
+    return [], result_lexical_entries, res_perspectives, res_dictionaries
 
 def search_mechanism_simple(
     dictionaries,
@@ -881,16 +858,6 @@ def search_mechanism_simple(
     res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in tmp_perspectives]
     tmp_dictionaries = {entity[aliases_len + 2] for entity in resolved_search}
     res_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
-
-    # Exporting search results as an XLSX data, if required.
-
-    if xlsx_context is not None:
-
-        save_xlsx_data(
-            xlsx_context,
-            tmp_dictionaries,
-            tmp_perspectives,
-            tmp_lexical_entries)
 
     return [], res_lexical_entries, res_perspectives, res_dictionaries
 
@@ -1180,6 +1147,30 @@ class AdvancedSearch(LingvodocObjectType):
             res_perspectives += tmp_perspectives
             res_dictionaries += tmp_dictionaries
 
+        # Exporting search results as an XLSX data, if required.
+
+        if xlsx_context is not None:
+
+            if __debug_flag__:
+
+                start_time = time.time()
+
+            save_xlsx_data(
+                xlsx_context,
+                [dictionary.dbObject for dictionary in res_dictionaries],
+                [perspective.dbObject for perspective in res_perspectives],
+                [lexical_entry.dbObject for lexical_entry in res_lexical_entries])
+
+            if __debug_flag__:
+
+                elapsed_time = time.time() - start_time
+                resident_memory = utils.get_resident_memory()
+
+                log.debug(
+                    '\nelapsed_time, resident_memory: {0:.3f}s, {1:.3f}m'.format(
+                    elapsed_time,
+                    resident_memory / 1048576.0))
+
         # Saving XLSX-exported search results, if required.
 
         xlsx_url = None
@@ -1326,6 +1317,16 @@ class AdvancedSearchSimple(LingvodocObjectType):
             res_lexical_entries += tmp_lexical_entries
             res_perspectives += tmp_perspectives
             res_dictionaries += tmp_dictionaries
+
+        # Exporting search results as an XLSX data, if required.
+
+        if xlsx_context is not None:
+
+            save_xlsx_data(
+                xlsx_context,
+                [dictionary.dbObject for dictionary in res_dictionaries],
+                [perspective.dbObject for perspective in res_perspectives],
+                [lexical_entry.dbObject for lexical_entry in res_lexical_entries])
 
         # Saving XLSX-exported search results, if required.
 
