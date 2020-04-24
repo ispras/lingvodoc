@@ -11,6 +11,7 @@ services:
       - ./dbdump:/docker-entrypoint-initdb.d
     ports:
       - "15432:5432"
+
   nginx:
     image: nginx:latest
     container_name: ngx
@@ -23,6 +24,8 @@ services:
     depends_on:
       - pg
       - api
+      - keycloak
+
   redis:
     image: 'bitnami/redis:latest'
     environment:
@@ -31,6 +34,29 @@ services:
       kompose.service.type: nodeport
     ports:
       - '16379:6379'
+
+  keycloak_pg:
+    restart: always
+    image: postgres:10.4
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+
+  keycloak:
+    restart: always
+    image: jboss/keycloak
+    depends_on:
+      - keycloak_pg
+    environment:
+      - DB_ADDR=keycloak_pg
+      - DB_DATABASE=keycloak
+      - DB_USER=keycloak
+      - DB_PASSWORD=keycloak
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=admin
+      - PROXY_ADDRESS_FORWARDING=true
+
   api:
     build: ..
     depends_on:
@@ -39,14 +65,12 @@ services:
     links:
       - pg
       - redis
-      
     container_name: ld
     volumes:
       - ./frontend/dist:/dist
       - ./sock:/sock
       - /api/build/
       - ../:/api
-
     env_file:
       - ./locale_env.sh
     command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg gunicorn --paster /api/docker/docker.ini"
