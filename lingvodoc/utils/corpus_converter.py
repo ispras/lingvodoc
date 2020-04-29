@@ -6,6 +6,7 @@ import hashlib
 import shutil
 import transaction
 import tempfile
+import urllib
 import warnings
 import logging
 import requests
@@ -469,7 +470,7 @@ def convert_five_tiers(dictionary_id,
                 sound_format = "flac"
             with tempfile.NamedTemporaryFile() as temp:
                 try:
-                   sound_file = request.urlopen(sound_url)
+                    sound_file = request.urlopen(urllib.parse.quote(sound_url, safe='/:'))
                 except HTTPError as e:
                     return {'error': str(e.read().decode("utf8", 'ignore'))}
                 with open(temp.name,'wb') as output:
