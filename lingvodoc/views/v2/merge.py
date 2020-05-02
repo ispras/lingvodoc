@@ -32,12 +32,12 @@ from sqlalchemy import and_, create_engine, tuple_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 
+import transaction
 from transaction import manager
 
 # Lingvodoc imports.
 
 from lingvodoc.cache.caching import initialize_cache, TaskStatus
-
 from lingvodoc.exceptions import CommonException
 
 import lingvodoc.merge_perspectives as merge_perspectives
@@ -59,9 +59,9 @@ from lingvodoc.models import (
     user_to_organization_association
 )
 
-from lingvodoc.utils.static_fields import fields_static
-
 from lingvodoc.queue.celery import celery
+from lingvodoc.schema.gql_holders import del_object
+from lingvodoc.utils.static_fields import fields_static
 
 from lingvodoc.views.v2.utils import (
     as_storage_file,
@@ -1536,20 +1536,24 @@ class Merge_Context(object):
         else:
             raise Exception('Unknown metadata object type \'{0}\'.'.format(type(object)))
 
-    @staticmethod
-    def mark_delete_merge(object, merge_tag, merge_id):
+    def mark_delete_merge(
+        self,
+        object,
+        merge_tag,
+        merge_id):
         """
         Marks lexical entry or entity as deleted and merged/replaced.
         """
 
-        object.marked_for_deletion = True
-
         if not object.additional_metadata:
+
             object.additional_metadata = {merge_tag: merge_id}
 
         elif not isinstance(object.additional_metadata, dict):
-            raise Exception('Unsupported additional metadata type \'{0}\'.'.format(
-                type(object.additional_metadata)))
+
+            raise Exception(
+                'Unsupported additional metadata type \'{}\'.'.format(
+                    type(object.additional_metadata)))
 
         # Checking for a situation of a repeated merge, which should be impossible.
 
@@ -1558,49 +1562,107 @@ class Merge_Context(object):
             already_client_id, already_object_id = object.additional_metadata[merge_tag]
 
             raise Exception(
-                'Trying to merge lexical object {0}/{1}, which '
-                'is already merged into lexical object {2}/{3}, into lexical object {3}/{4}.'.format(
+                'Trying to merge lexical object {}/{}, which '
+                'is already merged into lexical object {}/{}, into lexical object {}/{}.'.format(
                     object.client_id, object.object_id,
-                    already_client_id, already_object_id, *merge_id))
+                    already_client_id, already_object_id,
+                    *merge_id))
 
         else:
+
             object.additional_metadata[merge_tag] = merge_id
 
         flag_modified(object, 'additional_metadata')
 
-        # Updating object ToC.
+        # Object deletion.
 
-        objecttoc = DBSession.query(ObjectTOC).filter_by(
-            client_id = object.client_id, object_id = object.object_id).one()
-
-        objecttoc.marked_for_deletion = True
+        del_object(
+            object, 'merge', self.client_id)
 
     def check_group(self, index, entry_id_list):
         """
-        Checks that all lexical entries belong to the same perspective, and that the user has necessary
-        permissions to perform the merge.
+        Checks that all lexical entries exist, belong to the same perspective, are not deleted and are not
+        already merged, and that the user has necessary permissions to perform the merge.
         """
 
-        entry_list = DBSession.query(LexicalEntry).filter(
-            tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(
-                (entry['client_id'], entry['object_id']) for entry in entry_id_list)).all()
+        entry_id_set = set(
+            (entry_id['client_id'], entry_id['object_id'])
+            for entry_id in entry_id_list)
+
+        entry_list = (DBSession
+                
+            .query(LexicalEntry)
+
+            .filter(
+                tuple_(LexicalEntry.client_id, LexicalEntry.object_id)
+                    .in_(entry_id_set))
+
+            .all())
+
+        # Checking that all specified lexical entries exist.
+
+        if len(entry_list) < len(entry_id_set):
+
+            nonexistent_id_set = set(entry_id_set)
+
+            for entry in entry_list:
+
+                nonexistent_id_set.remove(
+                    (entry.client_id, entry.object_id))
+
+            raise Exception(
+                'Group {} {} has following nonexistent entries: {}'.format(
+                    index, entry_id_set, nonexistent_id_set))
+
+        # Checking that they are from the same perspective, are not deleted and are not already merged.
 
         perspective_id = None
+
         for entry in entry_list:
 
+            entry_parent_id = (
+                entry.parent_client_id, entry.parent_object_id)
+
+            # Perspective check.
+
             if perspective_id is None:
-                perspective_id = (entry.parent_client_id, entry.parent_object_id)
 
-            elif perspective_id != (entry.parent_client_id, entry.parent_object_id):
+                perspective_id = entry_parent_id
 
-                DBSession.rollback()
-                raise Exception('Entries {0} (group {1}) are from different perspectives.'.format(
-                    entry_id_list, index))
+            elif perspective_id != entry_parent_id:
 
-            if not self.check_permissions(*perspective_id):
+                raise Exception(
+                    'Entries {} (group {}) are from different perspectives: {}, {}'.format(
+                        entry_id_set,
+                        index,
+                        perspective_id,
+                        entry_parent_id))
 
-                DBSession.rollback()
-                raise Exception('No create/delete permissions for perspective {0}/{1}.'.format(
+            # Deleted/merged check.
+
+            if entry.marked_for_deletion:
+
+                raise Exception(
+                    'Entry {}/{} (group {}) is deleted.'.format(
+                        entry.client_id,
+                        entry.object_id,
+                        index))
+
+            if (entry.additional_metadata and
+                'merged_to' in entry.additional_metadata):
+
+                raise Exception(
+                    'Entry {}/{} (group {}) is already merged.'.format(
+                        entry.client_id,
+                        entry.object_id,
+                        index))
+
+        # Checking that the user has the necessary permissions.
+
+        if not self.check_permissions(*perspective_id):
+
+            raise Exception(
+                'No create/delete permissions for perspective {}/{}.'.format(
                     *perspective_id))
 
         return entry_list, perspective_id
@@ -1631,7 +1693,6 @@ class Merge_Context(object):
                 'marked_for_deletion', 'object_id', 'parent_client_id', 'parent_object_id',
                 'published']))) > 0:
 
-                DBSession.rollback()
                 raise Exception('Unexpected lexical entry data keys.')
 
             entry_dict['published'] = (
@@ -1642,7 +1703,6 @@ class Merge_Context(object):
 
             if not isinstance(additional_metadata, dict):
 
-                DBSession.rollback()
                 raise Exception('Unsupported additional metadata type \'{0}\'.'.format(
                     type(additional_metadata)))
 
@@ -1788,7 +1848,10 @@ class Merge_Context(object):
 
         # Getting lexical entry data.
 
-        entry_data_list = [e.track(False, 2) for e in entry_list]
+        entry_data_list = [
+            entry.track(False, 2, check_perspective = False)
+            for entry in entry_list]
+
         remove_deleted(entry_data_list)
 
         log.debug('{0}: group {1}/{2}, lexical entries\' ids:\n{3}'.format(
@@ -2042,7 +2105,6 @@ class Merge_Context(object):
                 if (self_id in entry_dict['merge_entity_set'] or
                     parent_id in entry_dict['merge_entry_dict']):
 
-                    DBSession.rollback()
                     raise Exception(
                         'Unexpected additional reference from entity {0}/{1} (lexical '
                         'entry group {2}), please contact developers.'.format(
@@ -2363,47 +2425,106 @@ class Merge_Context(object):
             merge_entity.marked_for_deletion = True
 
 
-def merge_bulk_try(request, publish_any, group_list, error_f):
+def merge_bulk_try(
+    request, publish_any, group_list, error_f):
     """
     Helper function for bulk merges.
     """
 
-    log.debug('merge_bulk')
-
-    # Getting client and user data.
-
     client_id = request.authenticated_userid
 
-    if not client_id:
-        return False, error_f('Unrecognized client.')
-
-    user = Client.get_user_by_client_id(client_id)
-
-    if not user:
-        return False, error_f('User authentification failure.')
-
-    # Processing lexical entries group by group.
+    log.debug(
+        '\nmerge_bulk:'
+        '\n  client_id: {}'
+        '\n  publish_any: {}'
+        '\n  group_list:\n{}'
+        '\n  error_f: {}'.format(
+            client_id,
+            publish_any,
+            pprint.pformat(group_list, width = 144),
+            error_f))
 
     try:
-        merge_context = Merge_Context(
-            'merge_bulk', request, client_id, user,
-            publish_any, group_list)
+
+        # Getting client and user data.
+
+        if not client_id:
+
+            raise Exception(
+                'Invalid client id {}, please relogin.'.format(
+                    client_id))
+
+        user = Client.get_user_by_client_id(client_id)
+
+        if not user:
+
+            raise Exception(
+                'User authentification failure, client id: {}. Please relogin.'.format(
+                    client_id))
+
+        # Checking that each group has at least two lexical entries and that no specified lexical entry
+        # belongs to a more than one group.
+
+        entry_id_set = set()
+
+        for index, group_entry_id_list in enumerate(group_list):
+
+            group_entry_id_set = set(
+                (entry_id['client_id'], entry_id['object_id'])
+                for entry_id in group_entry_id_list)
+
+            if len(group_entry_id_set) <= 1:
+
+                raise Exception(
+                    'Group {} {} does not have at least two unique lexical entry ids.'.format(
+                        index, group_entry_id_set))
+
+            if not group_entry_id_set.isdisjoint(entry_id_set):
+
+                already_set = (
+                    group_entry_id_set & entry_id_set)
+
+                raise Exception(
+                    'Group {} {} has previously encountered lexical entry id{} {}.'.format(
+                        index,
+                        group_entry_id_set,
+                        '' if len(already_set) == 1 else 's',
+                        already_set))
+
+            entry_id_set.update(group_entry_id_set)
+
+        # Processing lexical entries group by group.
+
+        merge_context = (
+                
+            Merge_Context(
+                'merge_bulk',
+                request,
+                client_id,
+                user,
+                publish_any,
+                group_list))
 
         for index, entry_id_list in enumerate(merge_context.group_list):
-            merge_context.merge_group(index, entry_id_list)
+
+            merge_context.merge_group(
+                index, entry_id_list)
 
     # If something is not right, we report it.
 
     except Exception as exception:
 
-        traceback_string = ''.join(traceback.format_exception(
-            exception, exception, exception.__traceback__))[:-1]
+        traceback_string = (
+                
+            ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1])
 
         log.debug('merge_bulk: exception')
         log.debug('\n' + traceback_string)
 
-        DBSession.rollback()
-        return False, error_f(message('\n' + traceback_string))
+        return (
+            False,
+            error_f(message('\n' + traceback_string)))
 
     # Returning resulting merge data.
 
@@ -2411,7 +2532,9 @@ def merge_bulk_try(request, publish_any, group_list, error_f):
         '\n' if len(merge_context.result_list) > 1 else ' ',
         pprint.pformat(merge_context.result_list)))
 
-    return True, merge_context
+    return (
+        True,
+        merge_context)
 
 
 @view_config(route_name = 'merge_bulk', renderer = 'json', request_method = 'POST')
@@ -2492,7 +2615,8 @@ def merge_update_2(request):
         log.debug('merge_update_2: exception')
         log.debug('\n' + traceback_string)
 
-        DBSession.rollback()
+        transaction.abort()
+
         return {'error': message('\n' + traceback_string)}
 
 
@@ -2653,7 +2777,8 @@ def merge_update_3(request):
         log.debug('merge_update_3: exception')
         log.debug('\n' + traceback_string)
 
-        DBSession.rollback()
+        transaction.abort()
+
         return {'error': message('\n' + traceback_string)}
 
 
@@ -2715,7 +2840,8 @@ def merge_bulk_task(task_key, cache_kwargs, sqlalchemy_url, merge_context):
 
     if not try_ok:
 
-        DBSession.rollback()
+        transaction.abort()
+
         return {'error': message('\n' + traceback_string)}
 
 
@@ -2798,11 +2924,13 @@ def merge_bulk_async(request):
     # If something was not as expected, we report it.
 
     if not try_ok:
+
         traceback_string = result
 
         request.response.status = HTTPInternalServerError.code
 
-        DBSession.rollback()
+        transaction.abort()
+
         return {'error': message('\n' + traceback_string)}
 
     # Launched asynchronous merge task successfully.
@@ -2997,6 +3125,7 @@ def hash_fix(request):
         log.debug('hash_fix: exception')
         log.debug('\n' + traceback_string)
 
-        DBSession.rollback()
+        transaction.abort()
+
         return {'error': message('\n' + traceback_string)}
 
