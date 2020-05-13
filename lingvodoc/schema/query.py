@@ -3987,46 +3987,64 @@ class CognateAnalysis(graphene.Mutation):
             # Getting lexical entry identifiers, if required.
 
             raw_list = single_list
-            single_list = []
 
-            for index, (transcription_str, translation_str) in raw_list:
+            def f(index, tt_tuple):
+                """
+                Gets entry id by its perspective index, translations and transcriptions.
+                """
 
-                entry_id = (
-                        
+                transcription_str, translation_str = tt_tuple
+
+                return (
+
                     entry_id_dict[(
                         index,
                         transcription_str + (
                             ' ' + translation_str if translation_str else ''))])
 
-                single_list.append((
-                    index, (transcription_str, translation_str), entry_id))
+            single_list = [
+                (index, tt_tuple, f(index, tt_tuple))
+                for index, tt_tuple in raw_list]
 
             # For lexical entry groups we get id of just the first entry.
 
             raw_list = group_list
             group_list = []
 
+            word_group = None
+
             for word_list in raw_list:
 
-                index, (transcription_str, translation_str) = word_list[0]
+                entry_id_list = list(f(*w) for w in word_list)
 
-                entry_id = (
-                        
-                    entry_id_dict[(
-                        index,
-                        transcription_str + (
-                            ' ' + translation_str if translation_str else ''))])
+                if word_entry_id in entry_id_list:
 
-                group_list.append((
-                    word_list, entry_id))
+                    if word_group is not None:
+                        raise NotImplementedError
+
+                    word_group = (word_list, entry_id_list[0])
+
+                else:
+
+                    group_list.append((
+                        word_list, entry_id_list[0]))
+
+            # Showing what we've got, saving suggestion if it is non-trivial.
 
             log.debug('\n' +
                 pprint.pformat(
-                    (word, word_entry_id, single_list, group_list),
+                    (word, word_entry_id, word_group, single_list, group_list),
                     width = 192))
 
-            suggestion_list.append(
-                (perspective_source_index, word, word_entry_id, single_list, group_list))
+            if single_list or group_list:
+
+                suggestion_list.append((
+                    perspective_source_index,
+                    word,
+                    word_entry_id,
+                    word_group,
+                    single_list,
+                    group_list))
 
         # Maybe we need to gather suggestions info for debugging?
 
@@ -4034,7 +4052,7 @@ class CognateAnalysis(graphene.Mutation):
 
             data_list = []
 
-            for index, word, word_entry_id, single_list, group_list in suggestion_list:
+            for index, word, word_entry_id, word_group, single_list, group_list in suggestion_list:
 
                 entry_id_list = (
                     [word_entry_id] +
