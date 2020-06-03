@@ -85,6 +85,7 @@ from lingvodoc.schema.gql_dictionary import (
     AddDictionaryRoles,
     DeleteDictionaryRoles,
     DeleteDictionary,
+    UndeleteDictionary,
     UpdateDictionaryAtom)
 
 from lingvodoc.schema.gql_search import (
@@ -118,6 +119,7 @@ from lingvodoc.schema.gql_dictionaryperspective import (
     AddPerspectiveRoles,
     DeletePerspectiveRoles,
     DeleteDictionaryPerspective,
+    UndeleteDictionaryPerspective,
     UpdatePerspectiveAtom)
 from lingvodoc.schema.gql_user import (
     User,
@@ -7607,6 +7609,7 @@ class MyMutations(graphene.ObjectType):
     add_dictionary_roles = AddDictionaryRoles.Field()
     delete_dictionary_roles = DeleteDictionaryRoles.Field()
     delete_dictionary = DeleteDictionary.Field()
+    undelete_dictionary = UndeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
     update_organization = UpdateOrganization.Field()
     #delete_organization = DeleteOrganization.Field()
@@ -7628,6 +7631,7 @@ class MyMutations(graphene.ObjectType):
     add_perspective_roles = AddPerspectiveRoles.Field()
     delete_perspective_roles = DeletePerspectiveRoles.Field()
     delete_perspective = DeleteDictionaryPerspective.Field()
+    undelete_perspective = UndeleteDictionaryPerspective.Field()
     create_column = CreateColumn.Field()
     update_column = UpdateColumn.Field()
     delete_column = DeleteColumn.Field()

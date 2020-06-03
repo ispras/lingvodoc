@@ -4,11 +4,16 @@ import graphene
 import logging
 import re
 import time
+
 from graphql.language.ast import ObjectValue, ListValue, IntValue
 from graphql.language import ast
+
 from graphene.types import Scalar
 from graphene.types.json import JSONString as JSONtype
 from graphene.types.generic import GenericScalar
+
+from sqlalchemy import tuple_
+
 from lingvodoc.models import (
     ObjectTOC,
     DBSession,
@@ -268,8 +273,16 @@ class DateTime(Scalar):  # TODO: change format
 # Functions
 
 
-def delete_message(function_name, deleted_by, task_id=None, counter=1,
-                   reason="Manually deleted", deleted_at=None, subject=None):
+def delete_message(
+    function_name,
+    deleted_by,
+    task_id=None,
+    counter=1,
+    reason="Manually deleted",
+    deleted_at=None,
+    subject=None,
+    undelete=False,
+    __additional_info__=None):
     """
     This function generates a message for additional metadata to track reason of garbage collection.
     :param function_name: name of function that delete object
@@ -282,30 +295,48 @@ def delete_message(function_name, deleted_by, task_id=None, counter=1,
     :param subject: like parent of deleted object. For ex. for atom it`s gist; for gist it`s perspective
     :return:
     """
+
     if not deleted_at:
         deleted_at = datetime.datetime.now(datetime.timezone.utc).timestamp()
+
+    if reason == "Manually deleted" and undelete:
+        reason = "Manually undeleted"
+
     message = {function_name:
-                {"deleted_at": deleted_at,
+                {"undeleted_at" if undelete else "deleted_at": deleted_at,
                  "reason": reason,
-                 "deleted_by": deleted_by,
+                 "undeleted_by" if undelete else "deleted_by": deleted_by,
                  "task_id": task_id,
                  "counter": counter,
                  "subject": subject},
                 }
+
+    if __additional_info__ is not None:
+        message['__additional_info__'] = __additional_info__
+
     return message
 
 
+def undelete_message(*args, **kwargs):
+    return delete_message(*args, undelete = True, **kwargs)
+
+
 def delete_gist_with_atoms(
-    deleted_by, gist, task_id, subject = None):
+    deleted_by, gist, task_id, subject = None, reason = "Manually deleted", **kwargs):
 
     atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
                                                          marked_for_deletion=False).all()
+
+    atom_id_list = []
+
     for dbtranslationatom in atoms:
         key = "translation:%s:%s:%s" % (
             str(dbtranslationatom.parent_client_id),
             str(dbtranslationatom.parent_object_id),
             str(dbtranslationatom.locale_id))
         CACHE.rem(key)
+        atom_id_list.append(
+            [dbtranslationatom.client_id, dbtranslationatom.object_id])
         dbtranslationatom.mark_deleted(
             delete_message("del_object",
                            deleted_by,
@@ -313,21 +344,88 @@ def delete_gist_with_atoms(
                            counter=len(atoms),
                            subject=(gist.client_id, gist.object_id),
                            reason="Automatically deleted after gist removal"))
+
+    additional_info = kwargs.copy()
+    additional_info['atom_id_list'] = sorted(atom_id_list)
+
     gist.mark_deleted(delete_message("del_object",
                                      deleted_by,
                                      task_id,
-                                     subject=subject))
+                                     reason=reason,
+                                     subject=subject,
+                                     __additional_info__=additional_info))
 
-def del_object(tmp_object, function_name, deleted_by, task_id=None, counter=1):
-    # This function can delete perspective\dictionary\any object
-    # with child gist and translationatoms
+
+def undelete_gist_with_atoms(
+    deleted_by, gist, task_id, subject = None, reason = "Manually undeleted", **kwargs):
+
+    objecttoc_obj = (
+
+        DBSession.query(ObjectTOC).filter_by(
+            client_id = gist.client_id,
+            object_id = gist.object_id).first())
+
+    # Restoring translation atoms, if required.
+
+    additional_info = objecttoc_obj.additional_metadata.get('__additional_info__')
+
+    if additional_info:
+
+        atom_id_list = additional_info.get('atom_id_list')
+
+        if atom_id_list:
+
+            atom_list = (
+
+                DBSession.query(dbTranslationAtom)
+                
+                    .filter(
+                        tuple_(dbTranslationAtom.client_id, dbTranslationAtom.object_id)
+                            .in_(atom_id_list))
+                    
+                    .all())
+
+            for atom in atom_list:
+
+                atom.mark_undeleted(
+                    undelete_message(
+                        "undel_object",
+                        deleted_by,
+                        task_id,
+                        counter=len(atom_list),
+                        subject=(gist.client_id, gist.object_id),
+                        reason="Automatically undeleted after gist restore"))
+
+    gist.mark_undeleted(
+        undelete_message(
+            "undel_object",
+            deleted_by,
+            task_id,
+            reason = reason,
+            subject = subject,
+            __additional_info__ = kwargs or None))
+
+
+def del_object(
+    tmp_object,
+    function_name,
+    deleted_by,
+    task_id=None,
+    counter=1,
+    **kwargs):
+    """
+    This function can delete perspective/dictionary/any object with child gist and translationatoms.
+    """
+
     if tmp_object.marked_for_deletion:
         return
+
     # if object is translationgist, delete translationgist with atoms
     if function_name == "delete_translationgist":
         gist = tmp_object
-        delete_gist_with_atoms(deleted_by, gist, task_id)
+        delete_gist_with_atoms(deleted_by, gist, task_id, **kwargs)
         return
+
     # if object is Dictionary/Language/Field/etc. delete its translationgist
     elif hasattr(tmp_object, "translation_gist_object_id"):
         gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
@@ -339,13 +437,65 @@ def del_object(tmp_object, function_name, deleted_by, task_id=None, counter=1):
                 deleted_by,
                 gist,
                 task_id,
+                reason = 'Automatically deleted after object removal',
                 subject = (tmp_object.client_id, tmp_object.object_id))
 
     # delete object
-    message = delete_message(function_name, deleted_by, task_id, counter)
+    message = (
+            
+        delete_message(
+            function_name,
+            deleted_by,
+            task_id,
+            counter,
+            __additional_info__ = kwargs or None))
+
     tmp_object.mark_deleted(message)
 
 
+def undel_object(
+    tmp_object,
+    function_name,
+    deleted_by,
+    task_id=None,
+    counter=1,
+    **kwargs):
+    """
+    Reverse for del_object(), should be modified accordingly whenever del_object() is modified.
+    """
+
+    if not tmp_object.marked_for_deletion:
+        return
+    # if object is translationgist, undelete translationgist with atoms
+    if function_name == "undelete_translationgist":
+        gist = tmp_object
+        undelete_gist_with_atoms(deleted_by, gist, task_id, **kwargs)
+        return
+    # if object is Dictionary/Language/Field/etc. undelete its translationgist
+    elif hasattr(tmp_object, "translation_gist_object_id"):
+        gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
+                                                            object_id=tmp_object.translation_gist_object_id,
+                                                            marked_for_deletion=True).first()
+        if gist and gist.type != "Perspective":
+
+            undelete_gist_with_atoms(
+                deleted_by,
+                gist,
+                task_id,
+                reason = 'Automatically undeleted after object restore',
+                subject = (tmp_object.client_id, tmp_object.object_id))
+
+    # delete object
+    message = (
+            
+        undelete_message(
+            function_name,
+            deleted_by,
+            task_id,
+            counter,
+            __additional_info__ = kwargs or None))
+
+    tmp_object.mark_undeleted(message)
 
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
