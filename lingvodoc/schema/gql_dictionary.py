@@ -29,6 +29,7 @@ from lingvodoc.schema.gql_holders import (
     StateHolder,
     fetch_object,
     del_object,
+    undel_object,
     client_id_check,
     ResponseError,
     ObjectVal,
@@ -1265,24 +1266,106 @@ class DeleteDictionary(graphene.Mutation):
     @staticmethod
     @acl_check_by_id('delete', 'dictionary')
     def mutate(root, info, **args):
+
         ids = args.get('id')
         client_id, object_id = ids
         dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
+
+        grant_id_list = []
+
         for grant in DBSession.query(dbGrant).all():
             dict_id = {'client_id': client_id, 'object_id': object_id}
+
             if grant.additional_metadata and grant.additional_metadata.get('participant') and dict_id in grant.additional_metadata['participant']:
                 grant.additional_metadata['participant'].remove(dict_id)
                 flag_modified(grant, 'additional_metadata')
+                grant_id_list.append(grant.id)
 
         settings = info.context["request"].registry.settings
+
+        if 'desktop' in settings:
+            real_delete_dictionary(dbdictionary_obj, settings)
+
+        else:
+            del_object(
+                dbdictionary_obj, "delete_dictionary", info.context.get('client_id'),
+                grant_id_list = sorted(grant_id_list))
+
+        dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
+        dictionary.dbObject = dbdictionary_obj
+
+        return DeleteDictionary(dictionary=dictionary, triumph=True)
+
+
+class UndeleteDictionary(graphene.Mutation):
+
+    class Arguments:
+        id = LingvodocID(required=True)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id('delete', 'dictionary')
+    def mutate(root, info, **args):
+        ids = args.get('id')
+        client_id, object_id = ids
+        dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbdictionary_obj:
+            raise ResponseError(message="Error: No such dictionary in the system")
+        if not dbdictionary_obj.marked_for_deletion:
+            raise ResponseError(message="Error: Dictionary is not deleted")
+
+        objecttoc_obj = DBSession.query(ObjectTOC).filter_by(client_id=client_id, object_id=object_id).first()
+
+        # Restoring grant membership, if required.
+
+        additional_info = objecttoc_obj.additional_metadata.get('__additional_info__')
+
+        if additional_info:
+            
+            grant_id_list = additional_info.get('grant_id_list')
+
+            if grant_id_list:
+
+                grant_list = DBSession.query(dbGrant).filter(dbGrant.id.in_(grant_id_list)).all()
+
+                dict_id = {
+                    'client_id': client_id,
+                    'object_id': object_id}
+
+                for grant in grant_list:
+
+                    if grant.additional_metadata is None:
+                        grant.additional_metadata = {}
+
+                    participant_list = grant.additional_metadata.get('participant')
+
+                    if participant_list is None:
+
+                        participant_list = []
+                        grant.additional_metadata['participant'] = participant_list
+
+                    if dict_id not in participant_list:
+
+                        participant_list.append(dict_id)
+                        flag_modified(grant, 'additional_metadata')
+
+                        log.debug(participant_list)
+
+        # Undeleting dictionary object with its translations.
+
+        settings = info.context["request"].registry.settings
+
         if 'desktop' in settings:
             real_delete_dictionary(dbdictionary_obj, settings)
         else:
-            del_object(dbdictionary_obj, "delete_dictionary", info.context.get('client_id'))
+            undel_object(dbdictionary_obj, "undelete_dictionary", info.context.get('client_id'))
+
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
-        return DeleteDictionary(dictionary=dictionary, triumph=True)
-
+        return UndeleteDictionary(dictionary=dictionary, triumph=True)
 

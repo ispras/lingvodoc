@@ -32,6 +32,7 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     client_id_check,
     del_object,
+    undel_object,
     ResponseError,
     acl_check_by_id,
     ObjectVal
@@ -961,7 +962,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         id = args.get("id")
         client_id, object_id = id
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if not dbPerspective or dbperspective.marked_for_deletion:
+        if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
         settings = info.context["request"].registry.settings
         if 'desktop' in settings:
@@ -971,4 +972,28 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return DeleteDictionaryPerspective(perspective=perspective, triumph=True)
+
+
+class UndeleteDictionaryPerspective(graphene.Mutation):
+
+    class Arguments:
+        id = LingvodocID(required=True)
+
+    perspective = graphene.Field(DictionaryPerspective)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id('delete', 'perspective')
+    def mutate(root, info, **args):
+        id = args.get("id")
+        client_id, object_id = id
+        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbperspective:
+            raise ResponseError(message="No such perspective in the system")
+        if not dbperspective.marked_for_deletion:
+            raise ResponseError(message="Perspective is not deleted")
+        undel_object(dbperspective, "undelete_perspective", info.context.get('client_id'))
+        perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+        perspective.dbObject = dbperspective
+        return UndeleteDictionaryPerspective(perspective=perspective, triumph=True)
 

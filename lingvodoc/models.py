@@ -359,17 +359,38 @@ class CompositeIdMixin(object):
 
         super().__init__(**kwargs)
 
-    def mark_deleted(self, message, **kwargs):
-        self.marked_for_deletion = True
+    def mark_deleted(self, message, marked_for_deletion = True, **kwargs):
+
+        self.marked_for_deletion = marked_for_deletion
+
         if kwargs.get("session", None):
             session = kwargs['session']
         else:
             session = DBSession
-        session.merge(ObjectTOC(client_id=self.client_id,
-                                object_id=self.object_id,
-                                table_name=self.__tablename__,
-                                additional_metadata=message,
-                                marked_for_deletion=True))
+
+        objecttoc = (
+
+            session
+                .query(ObjectTOC)
+                .filter_by(client_id = self.client_id, object_id = self.object_id)
+                .first())
+
+        previous_metadata = objecttoc.additional_metadata
+        objecttoc.additional_metadata = message.copy()
+
+        if previous_metadata is not None:
+
+            if '__previous_metadata__' in message:
+                raise NotImplementedError
+
+            objecttoc.additional_metadata['__previous_metadata__'] = previous_metadata
+
+        flag_modified(objecttoc, 'additional_metadata')
+
+        objecttoc.marked_for_deletion = marked_for_deletion
+
+    def mark_undeleted(self, message, **kwargs):
+        self.mark_deleted(message, marked_for_deletion = False, **kwargs)
 
 
 class CompositeKeysHelper(object):
