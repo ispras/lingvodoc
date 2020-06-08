@@ -3434,6 +3434,14 @@ class CognateAnalysis(graphene.Mutation):
             workbook.add_worksheet(
                 utils.sanitize_worksheet_name('Results')))
 
+        # 20% background yellow, 10% background gray.
+
+        format_yellow = (
+            workbook.add_format({'bg_color': '#ffffcc'}))
+
+        format_gray = (
+            workbook.add_format({'bg_color': '#e6e6e6'}))
+
         index = output_str.find('\0')
         size_list = list(map(int, output_str[:index].split(',')))
 
@@ -3444,6 +3452,9 @@ class CognateAnalysis(graphene.Mutation):
 
         max_width = 0
         row_count = 0
+
+        re_series = r'\s*(\[\S+\]|\?)(\s*—\s*(\[\S+\]|\?))+\s*'
+        re_item_list = r'\s*(\[\S+\]|\?)\s*—(\s*—\s*(\[\S+\]|\?)\s*—)+\s*'
 
         def export_table(table_index, table_str, n_col, n_row, source_str):
             """
@@ -3482,6 +3493,19 @@ class CognateAnalysis(graphene.Mutation):
 
                 item_list_count = max(map(len, split_list_list))
 
+                # Checking if we need color formatting.
+
+                cell_format = None
+
+                if (re.match(re_series, value_list[0]) is not None or
+                    re.match(re_item_list, '—'.join(value_list))):
+
+                    cell_format = format_yellow
+
+                emphasize_flag_list = [
+                    value.startswith('(') and value.endswith(')')
+                    for value in value_list[::2]]
+
                 # Some values may actually be sequences, so we check and process them if they are.
 
                 for i in range(item_list_count):
@@ -3492,9 +3516,16 @@ class CognateAnalysis(graphene.Mutation):
 
                     row_list.append(item_list)
 
-                    worksheet_results.write_row(
-                        'A{0}'.format(row_count + 1),
-                        item_list)
+                    for j, (x_script, x_lat, emphasize_flag) in (
+                        enumerate(zip(item_list[::2], item_list[1::2], emphasize_flag_list))):
+
+                        worksheet_results.write_row(
+                            row_count,
+                            j * 2,
+                            [x_script, x_lat],
+                            format_gray
+                                if emphasize_flag and (x_script + x_lat).strip() else
+                                cell_format)
 
                     row_count += 1
 
