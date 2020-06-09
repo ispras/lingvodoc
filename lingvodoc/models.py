@@ -1037,13 +1037,27 @@ class LexicalEntry(CompositeIdMixin,
         return lexical_list
 
     @classmethod
-    def graphene_track_multiple(cls, lexs, publish=None, accept=None, delete=False):
-        filtered_lexes = []
+    def graphene_track_multiple(
+        cls,
+        lexs,
+        publish = None,
+        accept = None,
+        delete = False,
+        check_perspective = True):
 
-        deleted_persps = DictionaryPerspective.get_deleted()
-        for i in lexs:
-            if (i[2], i[3]) not in deleted_persps:
-                filtered_lexes.append(i)
+        if check_perspective:
+
+            filtered_lexes = []
+
+            deleted_persps = DictionaryPerspective.get_deleted()
+            for i in lexs:
+                if (i[2], i[3]) not in deleted_persps:
+                    filtered_lexes.append(i)
+
+        else:
+
+            filtered_lexes = lexs
+
         ls = []
 
         for i, x in enumerate(filtered_lexes):
