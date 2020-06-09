@@ -1633,146 +1633,182 @@ class Query(graphene.ObjectType):
 
         """
 
-        if searchstring:
-            if len(searchstring) >= 1:
-                field = None
-                if field_id:
-                    field_client_id, field_object_id = field_id[0], field_id[1]
-                    field = DBSession.query(dbField).filter_by(client_id=field_client_id, object_id=field_object_id).first()
+        if (not searchstring or
+            len(searchstring) < 1):
 
-                client_id = info.context.get('client_id')
-                group = DBSession.query(dbGroup).filter(dbGroup.subject_override == True).join(dbBaseGroup) \
-                    .filter(dbBaseGroup.subject == 'lexical_entries_and_entities', dbBaseGroup.action == 'view') \
-                    .join(dbUser, dbGroup.users).join(Client) \
-                    .filter(Client.id == client_id).first()
+            raise ResponseError(message="Bad string")
 
-                published_cursor = None
+        field = None
+        if field_id:
+            field_client_id, field_object_id = field_id[0], field_id[1]
+            field = DBSession.query(dbField).filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
-                if group:
-                    results_cursor = DBSession.query(dbEntity).join(dbEntity.publishingentity).filter(dbEntity.content.like('%'+searchstring+'%'), dbEntity.marked_for_deletion == False)
-                    if perspective_id:
-                        perspective_client_id, perspective_object_id = perspective_id
-                        results_cursor = results_cursor.join(dbLexicalEntry) \
-                            .join(dbPerspective) \
-                            .filter(dbPerspective.client_id == perspective_client_id,
-                                    dbPerspective.object_id == perspective_object_id)
+        client_id = info.context.get('client_id')
+        group = DBSession.query(dbGroup).filter(dbGroup.subject_override == True).join(dbBaseGroup) \
+            .filter(dbBaseGroup.subject == 'lexical_entries_and_entities', dbBaseGroup.action == 'view') \
+            .join(dbUser, dbGroup.users).join(Client) \
+            .filter(Client.id == client_id).first()
 
-                    if search_in_published is not None:
-                        results_cursor.filter(dbPublishingEntity.published == search_in_published)
+        # See get_hidden() in models.py.
 
-                    results_cursor.filter(dbPublishingEntity.accepted==True)
-                else:
-                    results_cursor = DBSession.query(dbEntity).join(dbEntity.publishingentity) \
-                        .join(dbEntity.parent) \
-                        .join(dbPerspective)
+        hidden_id = (
+                
+            DBSession
+            
+                .query(
+                    dbTranslationGist.client_id,
+                    dbTranslationGist.object_id)
 
-                    if not perspective_id:
-                        published_cursor = results_cursor
+                .join(dbTranslationAtom)
 
-                    if search_in_published is not None:
-                        results_cursor.filter(dbPublishingEntity.published == search_in_published)
+                .filter(
+                    dbTranslationGist.type == 'Service',
+                    dbTranslationAtom.content == 'Hidden',
+                    dbTranslationAtom.locale_id == 2)
+                
+                .first())
 
-                    results_cursor.filter(dbPublishingEntity.accepted==True)
+        # NOTE: due to no-op nature of publishing entity checks (see note below), removing joins
+        # with PublishingEntity.
 
-                    ignore_groups = False
-                    db_published_gist = translation_gist_search('Published')
-                    state_translation_gist_client_id = db_published_gist.client_id
-                    state_translation_gist_object_id = db_published_gist.object_id
+        results_cursor = (
 
-                    if perspective_id:
-                        perspective_client_id, perspective_object_id = perspective_id
-                        results_cursor = results_cursor.filter(dbPerspective.client_id == perspective_client_id,
-                                                               dbPerspective.object_id == perspective_object_id)
-                        persp = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id,
-                                                                                 object_id=perspective_object_id).first()
-                        if persp and persp.state_translation_gist_client_id == state_translation_gist_client_id and persp.state_translation_gist_object_id == state_translation_gist_object_id:
-                            ignore_groups = True
-                    else:
-                        published_cursor = results_cursor
+            DBSession
 
-                    if not ignore_groups:
-                        results_cursor = results_cursor.join(dbGroup, and_(
-                            dbPerspective.client_id == dbGroup.subject_client_id,
-                            dbPerspective.object_id == dbGroup.subject_object_id)) \
-                            .join(dbBaseGroup) \
-                            .join(dbUser, dbGroup.users) \
-                            .join(Client) \
-                            .filter(Client.id == client_id,
-                                    dbEntity.content.like('%' + searchstring + '%'), dbEntity.marked_for_deletion == False)
-                    else:
-                        results_cursor = results_cursor.filter(dbEntity.content.like('%' + searchstring + '%'),
-                                                               dbEntity.marked_for_deletion == False)
-                    if published_cursor:
-                        published_cursor = published_cursor \
-                            .join(dbPerspective.parent).filter(
-                            dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                            dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id,
-                            dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                            dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
-                            dbEntity.content.like('%' + searchstring + '%'))
+                .query(dbLexicalEntry)
 
-                if can_add_tags and not group:
-                    results_cursor = results_cursor \
-                        .filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                or_(dbBaseGroup.action == 'create', dbBaseGroup.action == 'view')) \
-                        .group_by(dbEntity).having(func.count('*') == 2)
-                elif not group:
-                    results_cursor = results_cursor.filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                                   dbBaseGroup.action == 'view')
+                .join(dbEntity)
+                .join(dbPerspective)
+                .join(dbDictionary)
 
-                if field:
-                    results_cursor = results_cursor.join(dbPerspective.dictionaryperspectivetofield).filter(
-                        dbPerspectiveToField.field == field)
-                    if published_cursor:
-                        published_cursor = published_cursor.join(
-                            dbPerspective.dictionaryperspectivetofield).filter(
-                            dbPerspectiveToField.field == field)
+                .filter(
+                    dbEntity.content.like('%' + searchstring + '%'),
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbPerspective.marked_for_deletion == False,
+                    dbDictionary.marked_for_deletion == False,
+                    or_(dbDictionary.state_translation_gist_client_id != hidden_id[0],
+                        dbDictionary.state_translation_gist_object_id != hidden_id[1]),
+                    or_(dbPerspective.state_translation_gist_client_id != hidden_id[0],
+                        dbPerspective.state_translation_gist_object_id != hidden_id[1])))
 
-                entries = list()
+        published_cursor = None
 
-                for item in results_cursor:
-                    if item.parent_client_id==1125 and item.parent_object_id==29:
-                        pass
-                    if item.parent not in entries:
-                        entries.append(item.parent)
+        if perspective_id:
 
-                if published_cursor:
-                    for item in published_cursor:
-                        if item.parent not in entries:
-                            entries.append(item.parent)
+            results_cursor = (
+                    
+                results_cursor.filter(
+                    dbPerspective.client_id == perspective_id[0],
+                    dbPerspective.object_id == perspective_id[1]))
 
-                lexes = list()
-                for entry in entries:
-                    if not entry.marked_for_deletion:
-                        if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_deleted():
-                            continue
-                        if (entry.parent_client_id, entry.parent_object_id) in dbPerspective.get_hidden():
-                            continue
-                        lexes.append(entry)
+        # NOTE:
+        #
+        # Well, intention is clear, but this does not work and is actually a no-op.
+        # 
+        # To work, should be:
+        #
+        #   results_cursor = results_cursor.filter(...)
+        #
+        # So, broken or at least not working as intended for almost 2.5 years.
+        #
+        # But this GraphQL api is currently used in only a single place, searching words for grouping, so
+        # apparently all right, no problem.
+        #
+        # Commenting out for optimization.
 
-                lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
-                        for lex in lexes]
+#       if search_in_published is not None:
+#           results_cursor.filter(dbPublishingEntity.published == search_in_published)
 
-                entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
-                                                           publish=search_in_published, accept=True)
+#       results_cursor.filter(dbPublishingEntity.accepted == True)
 
-                def graphene_entity(cur_entity, cur_publishing):
-                    ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
-                    ent.dbObject = cur_entity
-                    ent.publishingentity = cur_publishing
-                    return ent
+        if not group:
 
-                def graphene_obj(dbobj, cur_cls):
-                    obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-                    obj.dbObject = dbobj
-                    return obj
+            ignore_groups = False
+            db_published_gist = translation_gist_search('Published')
+            state_translation_gist_client_id = db_published_gist.client_id
+            state_translation_gist_object_id = db_published_gist.object_id
 
-                entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
-                lexical_entries = [graphene_obj(lex, LexicalEntry) for lex in lexes]
-                return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
+            if perspective_id:
 
+                persp = DBSession.query(dbPerspective).filter_by(client_id=perspective_id[0],
+                                                                 object_id=perspective_id[1]).first()
 
-        raise ResponseError(message="Bad string")
+                if (persp and
+                    persp.state_translation_gist_client_id == state_translation_gist_client_id and
+                    persp.state_translation_gist_object_id == state_translation_gist_object_id):
+
+                    ignore_groups = True
+
+            else:
+                published_cursor = results_cursor
+
+            if not ignore_groups:
+                results_cursor = results_cursor.join(dbGroup, and_(
+                    dbPerspective.client_id == dbGroup.subject_client_id,
+                    dbPerspective.object_id == dbGroup.subject_object_id)) \
+                    .join(dbBaseGroup) \
+                    .join(dbUser, dbGroup.users) \
+                    .join(Client) \
+                    .filter(Client.id == client_id)
+
+            if published_cursor:
+                published_cursor = published_cursor.filter(
+                    dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                    dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id,
+                    dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                    dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id)
+
+        if can_add_tags and not group:
+            results_cursor = results_cursor \
+                .filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+                        or_(dbBaseGroup.action == 'create', dbBaseGroup.action == 'view')) \
+                .group_by(dbEntity).having(func.count('*') == 2)
+        elif not group:
+            results_cursor = results_cursor.filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
+                                           dbBaseGroup.action == 'view')
+
+        if field:
+            results_cursor = results_cursor.join(dbPerspective.dictionaryperspectivetofield).filter(
+                dbPerspectiveToField.field == field)
+            if published_cursor:
+                published_cursor = published_cursor.join(
+                    dbPerspective.dictionaryperspectivetofield).filter(
+                    dbPerspectiveToField.field == field)
+
+        results_cursor = (
+            results_cursor.filter(dbEntity.marked_for_deletion == False))
+
+        if published_cursor:
+            results_cursor = results_cursor.union(published_cursor)
+
+        lexes = results_cursor.distinct().all()
+
+        lexes_composite_list = [
+            (lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id)
+            for lex in lexes]
+
+        entities = (
+
+            dbLexicalEntry.graphene_track_multiple(
+                lexes_composite_list,
+                publish = search_in_published,
+                accept = True,
+                check_perspective = False))
+
+        def graphene_entity(cur_entity, cur_publishing):
+            ent = Entity(id = (cur_entity.client_id, cur_entity.object_id))
+            ent.dbObject = cur_entity
+            ent.publishingentity = cur_publishing
+            return ent
+
+        def graphene_obj(dbobj, cur_cls):
+            obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
+            obj.dbObject = dbobj
+            return obj
+
+        entities = [graphene_entity(entity[0], entity[1]) for entity in entities]
+        lexical_entries = [graphene_obj(lex, LexicalEntry) for lex in lexes]
+        return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
 
     def resolve_advanced_lexicalentries(self, info, searchstrings, perspectives=None, adopted=None,
                                         adopted_type=None, with_etimology=None): #advanced_search() function
