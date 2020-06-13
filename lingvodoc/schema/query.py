@@ -188,7 +188,8 @@ from lingvodoc.models import (
     Grant as dbGrant,
     DictionaryPerspective as dbDictionaryPerspective,
     Client,
-    PublishingEntity as dbPublishingEntity
+    PublishingEntity as dbPublishingEntity,
+    user_to_group_association
 )
 from pyramid.request import Request
 
@@ -1644,6 +1645,7 @@ class Query(graphene.ObjectType):
             field = DBSession.query(dbField).filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
         client_id = info.context.get('client_id')
+
         group = DBSession.query(dbGroup).filter(dbGroup.subject_override == True).join(dbBaseGroup) \
             .filter(dbBaseGroup.subject == 'lexical_entries_and_entities', dbBaseGroup.action == 'view') \
             .join(dbUser, dbGroup.users).join(Client) \
@@ -1683,6 +1685,7 @@ class Query(graphene.ObjectType):
 
                 .filter(
                     dbEntity.content.like('%' + searchstring + '%'),
+                    dbEntity.marked_for_deletion == False,
                     dbLexicalEntry.marked_for_deletion == False,
                     dbPerspective.marked_for_deletion == False,
                     dbDictionary.marked_for_deletion == False,
@@ -1690,8 +1693,6 @@ class Query(graphene.ObjectType):
                         dbDictionary.state_translation_gist_object_id != hidden_id[1]),
                     or_(dbPerspective.state_translation_gist_client_id != hidden_id[0],
                         dbPerspective.state_translation_gist_object_id != hidden_id[1])))
-
-        published_cursor = None
 
         if perspective_id:
 
@@ -1723,63 +1724,80 @@ class Query(graphene.ObjectType):
 
         if not group:
 
-            ignore_groups = False
+            # We do not have a single group giving us all necessary permissions.
+            #
+            # So, we look in either published perspectives or perspectives we have nesessary permissions
+            # for.
+
             db_published_gist = translation_gist_search('Published')
-            state_translation_gist_client_id = db_published_gist.client_id
-            state_translation_gist_object_id = db_published_gist.object_id
 
-            if perspective_id:
+            published_id = (
+                db_published_gist.client_id,
+                db_published_gist.object_id)
 
-                persp = DBSession.query(dbPerspective).filter_by(client_id=perspective_id[0],
-                                                                 object_id=perspective_id[1]).first()
+            group_query = (
 
-                if (persp and
-                    persp.state_translation_gist_client_id == state_translation_gist_client_id and
-                    persp.state_translation_gist_object_id == state_translation_gist_object_id):
+                DBSession
 
-                    ignore_groups = True
+                    .query(dbBaseGroup.action)
+                    .join(dbGroup)
+
+                    .filter(
+                        dbGroup.subject_client_id == dbPerspective.client_id,
+                        dbGroup.subject_object_id == dbPerspective.object_id,
+                        dbGroup.id == user_to_group_association.c.group_id,
+                        user_to_group_association.c.user_id == Client.user_id,
+                        Client.id == client_id,
+                        dbBaseGroup.subject == 'lexical_entries_and_entities'))
+
+            # Do we need both view and create permissions?
+
+            if can_add_tags:
+
+                group_query = (
+                        
+                    group_query
+                    
+                        .filter(or_(
+                            dbBaseGroup.action == 'create',
+                            dbBaseGroup.action == 'view'))
+                        
+                        .group_by(dbBaseGroup.action)
+                        .subquery())
+
+                group_count_query = (
+
+                    DBSession
+                        .query(func.count(group_query.c.action))
+                        .as_scalar())
+
+                group_condition = (
+                    group_count_query == 2)
+
+            # Only view persmissions.
 
             else:
-                published_cursor = results_cursor
 
-            if not ignore_groups:
-                results_cursor = results_cursor.join(dbGroup, and_(
-                    dbPerspective.client_id == dbGroup.subject_client_id,
-                    dbPerspective.object_id == dbGroup.subject_object_id)) \
-                    .join(dbBaseGroup) \
-                    .join(dbUser, dbGroup.users) \
-                    .join(Client) \
-                    .filter(Client.id == client_id)
+                group_query = (
+                    group_query.filter(dbBaseGroup.action == 'view'))
 
-            if published_cursor:
-                published_cursor = published_cursor.filter(
-                    dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                    dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id,
-                    dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                    dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id)
+                group_condition = group_query.exists()
 
-        if can_add_tags and not group:
-            results_cursor = results_cursor \
-                .filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                        or_(dbBaseGroup.action == 'create', dbBaseGroup.action == 'view')) \
-                .group_by(dbEntity).having(func.count('*') == 2)
-        elif not group:
-            results_cursor = results_cursor.filter(dbBaseGroup.subject == 'lexical_entries_and_entities',
-                                           dbBaseGroup.action == 'view')
+            results_cursor = (
+                    
+                results_cursor.filter(
+                    
+                    or_(
+
+                        and_(
+                            dbPerspective.state_translation_gist_client_id == published_id[0],
+                            dbPerspective.state_translation_gist_object_id == published_id[1]),
+                        
+                        group_condition)))
 
         if field:
             results_cursor = results_cursor.join(dbPerspective.dictionaryperspectivetofield).filter(
                 dbPerspectiveToField.field == field)
-            if published_cursor:
-                published_cursor = published_cursor.join(
-                    dbPerspective.dictionaryperspectivetofield).filter(
-                    dbPerspectiveToField.field == field)
-
-        results_cursor = (
-            results_cursor.filter(dbEntity.marked_for_deletion == False))
-
-        if published_cursor:
-            results_cursor = results_cursor.union(published_cursor)
 
         lexes = results_cursor.distinct().all()
 
