@@ -416,7 +416,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             sound_metadata.update({"blob_description": blob_description, "original_filename": common_name})
         if not audio or not markup:
             continue
-        sound_ids.add(word_id)
+        sound_ids.add((word_id, blob_id))
         audio_hash = hashlib.sha224(audio).hexdigest()
         markup_hash = hashlib.sha224(markup).hexdigest()
         if audio_hash not in audio_hashes:
@@ -504,9 +504,9 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
         sound_metadata = {}
         if blob_description is not None:
             sound_metadata.update({"blob_description": blob_description, "original_filename": common_name})
-        if word_id in sound_ids:
+        if (word_id, blob_id) in sound_ids:
             continue
-        sound_ids.add(word_id)
+        sound_ids.add((word_id, blob_id))
         audio_hash = hashlib.sha224(audio).hexdigest()
         if audio_hash not in audio_hashes:
             if common_name:
@@ -565,7 +565,8 @@ def translation_service_search_all(searchstring):
 
 
 def check_perspective_perm(user_id, perspective_client_id, perspective_object_id):
-    #user_id = Client.get_user_by_client_id(client_id).id
+    if user_id == 1:
+        return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
     user_create = DBSession.query(user_to_group_association, Group).filter(and_(
@@ -578,7 +579,8 @@ def check_perspective_perm(user_id, perspective_client_id, perspective_object_id
 
 
 def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
-    #user_id = Client.get_user_by_client_id(client_id).id
+    if user_id == 1:
+        return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'perspective', action = 'create').first()
     user_create = DBSession.query(user_to_group_association, Group).filter(and_(
