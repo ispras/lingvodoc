@@ -542,6 +542,31 @@ class Query(graphene.ObjectType):
 
     version = graphene.String()
 
+    client_list = (
+        graphene.Field(
+            graphene.List(graphene.List(graphene.Int)),
+            client_id_list = graphene.List(graphene.Int, required = True)))
+
+    def resolve_client_list(
+        self,
+        info,
+        client_id_list):
+
+        client_list = (
+
+            DBSession
+
+                .query(
+                    Client.id,
+                    Client.user_id)
+
+                .filter(
+                    Client.id.in_(set(client_id_list)))
+
+                .distinct())
+
+        return client_list
+
     def resolve_version(self, info):
         return lingvodoc.version.__version__
 
