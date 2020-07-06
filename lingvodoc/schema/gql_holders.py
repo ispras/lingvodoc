@@ -578,9 +578,13 @@ class CreatedAt(graphene.Interface):
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
-        if isinstance(self.dbObject.created_at, (int, float)):
-            return self.dbObject.created_at
-        return self.dbObject.created_at.replace(tzinfo = datetime.timezone.utc).timestamp()
+
+        created_at = self.dbObject.created_at
+
+        if isinstance(created_at, (int, float)):
+            return created_at
+
+        return created_at.replace(tzinfo = datetime.timezone.utc).timestamp()
 
 
 class DeletedAt(graphene.Interface):

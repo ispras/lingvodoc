@@ -69,6 +69,9 @@ import uuid
 from time import sleep
 from sqlalchemy.orm import joinedload
 
+import lingvodoc.cache.caching as caching
+
+
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
@@ -392,6 +395,10 @@ class CompositeIdMixin(object):
     def mark_undeleted(self, message, **kwargs):
         self.mark_deleted(message, marked_for_deletion = False, **kwargs)
 
+    @property
+    def id(self):
+        return (self.client_id, self.object_id)
+
 
 class CompositeKeysHelper(object):
     """
@@ -434,6 +441,10 @@ class RelationshipMixin(PrimeTableArgs):
     parent_object_id = Column(SLBigInteger())  # , nullable=False
     parent_client_id = Column(SLBigInteger())  # , nullable=False
 
+    @property
+    def parent_id(self):
+        return (self.parent_client_id, self.parent_object_id)
+
 
 def get_translation(
     locale_id,
@@ -446,7 +457,7 @@ def get_translation(
     Standard translation retrieval with caching.
     """
 
-    from lingvodoc.cache.caching import CACHE
+    CACHE = caching.CACHE
 
     main_locale = str(locale_id)
     fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
@@ -674,6 +685,10 @@ class SelfMixin(PrimeTableArgs):
                             remote_side=[cls.client_id,
                                          cls.object_id])
 
+    @property
+    def self_id(self):
+        return (self.self_client_id, self.self_object_id)
+
 
 class FieldMixin(PrimeTableArgs):
     @declared_attr
@@ -690,6 +705,10 @@ class FieldMixin(PrimeTableArgs):
     def field(cls):
         return relationship('Field',
                             backref=backref(cls.__tablename__.lower()))
+
+    @property
+    def field_id(self):
+        return (self.field_client_id, self.field_object_id)
 
 
 class ParentLinkMixin(PrimeTableArgs):
@@ -747,10 +766,36 @@ class DataTypeMixin(PrimeTableArgs):
 
     @property
     def data_type(self):
-        return DBSession.query(TranslationAtom.content).filter_by(
-            parent_client_id=self.data_type_translation_gist_client_id,
-            parent_object_id=self.data_type_translation_gist_object_id,
-            locale_id=2).scalar()
+
+        cache_key = (
+
+            'translation:%s:%s:%s' % (
+                self.data_type_translation_gist_client_id,
+                self.data_type_translation_gist_object_id,
+                2))
+
+        translation = caching.CACHE.get(cache_key)
+
+        if translation:
+            return translation
+
+        translation = (
+                
+            DBSession
+
+                .query(TranslationAtom.content)
+
+                .filter_by(
+                    parent_client_id=self.data_type_translation_gist_client_id,
+                    parent_object_id=self.data_type_translation_gist_object_id,
+                    locale_id=2)
+
+                .scalar())
+
+        caching.CACHE.set(
+            cache_key, translation)
+
+        return translation
 
 
 class Field(CompositeIdMixin,

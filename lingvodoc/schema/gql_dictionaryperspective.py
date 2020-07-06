@@ -491,6 +491,12 @@ class DictionaryPerspective(LingvodocObjectType):
         #     else_=dbEntity.content))) \
         #     .group_by(dbLexicalEntry)
         lexical_entries = entries_with_entities(lexes, accept, delete, mode, publish)
+
+        # If we were asked for specific lexical entries, we try to return them in creation order.
+
+        if ids is not None:
+            lexical_entries.sort(key = lambda e: (e.dbObject.created_at, e.dbObject.object_id))
+
         return lexical_entries
 
 
