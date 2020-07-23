@@ -10,12 +10,12 @@ import urllib
 import warnings
 import logging
 import requests
+import pprint
 from collections import defaultdict
 from pathvalidate import sanitize_filename
 from urllib import request
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy import create_engine
-from sqlalchemy import and_
+from sqlalchemy import and_, create_engine, or_, tuple_
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -45,6 +45,7 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary)
 from lingvodoc.utils.search import get_id_to_field_dict
 
+
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
@@ -53,8 +54,10 @@ EAF_TIERS = {
     "transcription": "Transcription",
     "translation": "Translation"
 }
+
+
 log = logging.getLogger(__name__)
-log.setLevel(logging.WARNING)
+
 
 with warnings.catch_warnings():
     warnings.filterwarnings('error')
@@ -219,37 +222,32 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
                   filename))
     return real_location, url
 
-def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
-                  additional_metadata, client, content= None, filename=None, self_client_id=None,
-                  self_object_id = None, link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None, byte_content=False):
-    parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
-    if not parent:
-        return {'error': str("No such lexical entry in the system")}
-    upper_level = None
-    tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
-        TranslationAtom.locale_id == 2,
-        TranslationAtom.parent_client_id == TranslationGist.client_id,
-        TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
-        TranslationGist.client_id == Field.data_type_translation_gist_client_id,
-        TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
-        Field.client_id == field_client_id, Field.object_id == field_object_id).first()
-    data_type = tr_atom.content.lower()
-    if up_lvl:
-        upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
-                                                              object_id=up_lvl[1]).first()
-    entity = Entity(client_id=client.id,
+def create_entity(
+    le_client_id,
+    le_object_id,
+    field_client_id,
+    field_object_id,
+    data_type,
+    client_id,
+    content = None,
+    filename = None,
+    self_client_id = None,
+    self_object_id = None,
+    link_client_id = None,
+    link_object_id = None,
+    folder_name = None,
+    storage = None,
+    byte_content = False):
+
+    entity = Entity(client_id=client_id,
                     field_client_id=field_client_id,
                     field_object_id=field_object_id,
-                    locale_id=locale_id,
-                    ###additional_metadata=additional_metadata,
-                    parent=parent)
+                    parent_client_id=le_client_id,
+                    parent_object_id=le_object_id)
 
     if self_client_id and self_object_id:
         entity.self_client_id = self_client_id
         entity.self_object_id = self_object_id
-
-    if upper_level:
-        entity.upper_level = upper_level
 
     hash = None
     real_location = None
@@ -334,6 +332,7 @@ def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
         Group.subject_object_id == dictionary_object_id)).limit(1).count() > 0
     return user_create
 
+
 def convert_five_tiers(dictionary_id,
                 client_id,
                 sqlalchemy_url,
@@ -346,11 +345,7 @@ def convert_five_tiers(dictionary_id,
                 language_id,
                 sound_url):
 
-
-
-
     task_status.set(1, 1, "Preparing")
-
 
     field_ids = {}
     with transaction.manager:
@@ -442,8 +437,7 @@ def convert_five_tiers(dictionary_id,
 
 
 
-        client_id, object_id = markup_id
-        markup_entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        markup_entity = DBSession.query(Entity).filter_by(client_id=markup_id[0], object_id=markup_id[1]).first()
         if not markup_entity:
             raise KeyError("No such file")
 
@@ -524,6 +518,7 @@ def convert_five_tiers(dictionary_id,
                     return
                 second_perspective = perspective
             structure.clear()
+
         lexes = []
         if first_perspective:
             lexes = DBSession.query(DictionaryPerspective, LexicalEntry, Entity)\
@@ -566,7 +561,7 @@ def convert_five_tiers(dictionary_id,
         if first_perspective is None:
             resp = translation_service_search_all("Lexical Entries")
             persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
-            first_perspective = DictionaryPerspective(client_id=client.id, ###
+            first_perspective = DictionaryPerspective(client_id=client_id, ###
                                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                                 state_translation_gist_client_id=state_translation_gist_client_id,
                                                 parent=parent,
@@ -600,7 +595,7 @@ def convert_five_tiers(dictionary_id,
         resp = translation_service_search_all("Paradigms")
         persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
         if second_perspective is None:
-            second_perspective = DictionaryPerspective(client_id=client.id, ### variables['auth']
+            second_perspective = DictionaryPerspective(client_id=client_id, ### variables['auth']
                                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                                 state_translation_gist_client_id=state_translation_gist_client_id,
                                                 parent=parent,
@@ -707,7 +702,53 @@ def convert_five_tiers(dictionary_id,
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
         dubl = []
 
+        # Getting field data types.
 
+        field_data_type_list = (
+
+            DBSession
+            
+                .query(
+                    Field.client_id,
+                    Field.object_id,
+                    TranslationAtom.content)
+
+                .filter(
+
+                    tuple_(
+                        Field.client_id, Field.object_id)
+
+                        .in_(
+                            field_ids.values()),
+
+                    TranslationAtom.locale_id == 2,
+                    TranslationAtom.parent_client_id ==
+                        Field.data_type_translation_gist_client_id,
+                    TranslationAtom.parent_object_id ==
+                        Field.data_type_translation_gist_object_id)
+
+                .all())
+
+        field_data_type_dict = {
+            (field_cid, field_oid): data_type.lower()
+            for field_cid, field_oid, data_type in field_data_type_list}
+
+        for field_name, field_id in field_ids.items():
+            field_data_type_dict[field_name] = field_data_type_dict[field_id]
+
+        log.debug('\n' +
+            pprint.pformat(field_data_type_dict))
+
+        # Parsing and processing markup.
+
+        le_sound_fid = field_ids['Sound']
+        le_sound_dtype = field_data_type_dict[le_sound_fid]
+
+        pa_sound_fid = field_ids['Sounds of Paradigmatic forms']
+        pa_sound_dtype = field_data_type_dict[pa_sound_fid]
+
+        backref_fid = field_ids['Backref']
+        backref_dtype = field_data_type_dict[backref_fid]
 
         resp = requests.get(markup_entity.content)
         if not resp:
@@ -772,7 +813,7 @@ def convert_five_tiers(dictionary_id,
                     sp_lexical_entry_client_id = max_sim.client_id
                     sp_lexical_entry_object_id = max_sim.object_id
                 else:
-                    lexentr = LexicalEntry(client_id=client.id,
+                    lexentr = LexicalEntry(client_id=client_id,
                                            parent_object_id=second_perspective_object_id,
                                            parent=second_perspective)
                     DBSession.add(lexentr)
@@ -786,28 +827,28 @@ def convert_five_tiers(dictionary_id,
                         sim = [(x[2].content, (x[2].field.client_id, x[2].field.object_id)) for x in p_match_dict[max_sim]]
                         if text_and_field not in sim:
                             if other_word.text:
+                                field_id = field_ids[EAF_TIERS[other_word.tier]]
                                 create_entity(sp_lexical_entry_client_id,
                                               sp_lexical_entry_object_id,
-                                              field_ids[EAF_TIERS[other_word.tier]][0],
-                                              field_ids[EAF_TIERS[other_word.tier]][1],
-                                              None,
-                                              client,
+                                              field_id[0],
+                                              field_id[1],
+                                              field_data_type_dict[field_id],
+                                              client_id,
                                               other_word.text,
-                                              locale_id=locale_id,
                                               filename=None,
                                               storage=storage)
                     else:
                         if other_word.text:
+                            field_id = field_ids[EAF_TIERS[other_word.tier]]
                             create_entity(sp_lexical_entry_client_id,
                                           sp_lexical_entry_object_id,
-                                          field_ids[EAF_TIERS[other_word.tier]][0],
-                                          field_ids[EAF_TIERS[other_word.tier]][1],
-                                          None,
-                                          client,
+                                          field_id[0],
+                                          field_id[1],
+                                          field_data_type_dict[field_id],
+                                          client_id,
                                           other_word.text,
                                           filename=None,
-                                          storage=storage,
-                                          locale_id=locale_id)
+                                          storage=storage)
             else:
                 sp_lexical_entry_client_id, sp_lexical_entry_object_id = par_rows[par_row]
             if not no_sound:
@@ -831,15 +872,14 @@ def convert_five_tiers(dictionary_id,
                                     filename = 'noname.wav'
                                 create_entity(sp_lexical_entry_client_id,
                                               sp_lexical_entry_object_id,
-                                              field_ids["Sounds of Paradigmatic forms"][0],
-                                              field_ids["Sounds of Paradigmatic forms"][1],
-                                              None,
-                                              client,
+                                              pa_sound_fid[0],
+                                              pa_sound_fid[1],
+                                              pa_sound_dtype,
+                                              client_id,
                                               filename=filename,
                                               folder_name="corpus_paradigm_sounds",
                                               content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                              storage=storage,
-                                              locale_id=locale_id)
+                                              storage=storage)
                         else:
                             common_name = word.index
                             if common_name:
@@ -853,15 +893,14 @@ def convert_five_tiers(dictionary_id,
                                 filename = 'noname.wav'
                             create_entity(sp_lexical_entry_client_id,
                                           sp_lexical_entry_object_id,
-                                          field_ids["Sounds of Paradigmatic forms"][0],
-                                          field_ids["Sounds of Paradigmatic forms"][1],
-                                          None,
-                                          client,
+                                          pa_sound_fid[0],
+                                          pa_sound_fid[1],
+                                          pa_sound_dtype,
+                                          client_id,
                                           filename=filename,
                                           folder_name="corpus_paradigm_sounds",
                                           content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                          storage=storage,
-                                          locale_id=locale_id)
+                                          storage=storage)
 
                         temp.flush()
             p_match_dict.clear()
@@ -907,7 +946,7 @@ def convert_five_tiers(dictionary_id,
                         fp_lexical_entry_client_id = max_sim.client_id
                         fp_lexical_entry_object_id = max_sim.object_id
                     else:
-                        lexentr = LexicalEntry(client_id=client.id,
+                        lexentr = LexicalEntry(client_id=client_id,
                                                parent_object_id=first_perspective_object_id, parent=first_perspective)
                         DBSession.add(lexentr)
                         fp_lexical_entry_client_id = lexentr.client_id
@@ -920,30 +959,28 @@ def convert_five_tiers(dictionary_id,
                                    for x in match_dict[max_sim]]
                             if text_and_field not in sim:
                                 if other_word.text:
+                                    field_id = field_ids[EAF_TIERS[other_word.tier]]
                                     create_entity(fp_lexical_entry_client_id,
                                                   fp_lexical_entry_object_id,
-                                                  field_ids[EAF_TIERS[other_word.tier]][0],
-                                                  field_ids[EAF_TIERS[other_word.tier]][1],
-                                                  None,
-                                                  client,
+                                                  field_id[0],
+                                                  field_id[1],
+                                                  field_data_type_dict[field_id],
+                                                  client_id,
                                                   other_word.text,
                                                   filename=None,
-                                                  storage=storage,
-                                                  locale_id=locale_id
-                                                  )
+                                                  storage=storage)
                         else:
                             if other_word.text:
+                                field_id = field_ids[EAF_TIERS[other_word.tier]]
                                 create_entity(fp_lexical_entry_client_id,
                                               fp_lexical_entry_object_id,
-                                              field_ids[EAF_TIERS[other_word.tier]][0],
-                                              field_ids[EAF_TIERS[other_word.tier]][1],
-                                              None,
-                                              client,
+                                              field_id[0],
+                                              field_id[1],
+                                              field_data_type_dict[field_id],
+                                              client_id,
                                               other_word.text,
                                               filename=None,
-                                              storage=storage,
-                                              locale_id=locale_id
-                                              )
+                                              storage=storage)
                 else:
                     fp_lexical_entry_client_id, fp_lexical_entry_object_id = lex_rows[lex_row]
                 if not no_sound:
@@ -967,28 +1004,25 @@ def convert_five_tiers(dictionary_id,
                                     hashes.append(hash)
                                     create_entity(fp_lexical_entry_client_id,
                                                   fp_lexical_entry_object_id,
-                                                  field_ids["Sound"][0],
-                                                  field_ids["Sound"][1],
-                                                  None,
-                                                  client,
+                                                  le_sound_fid[0],
+                                                  le_sound_fid[1],
+                                                  le_sound_dtype,
+                                                  client_id,
                                                   filename=filename ,
                                                   folder_name="corpus_lexical_entry_sounds",
                                                   content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                                  storage=storage,
-                                                  locale_id=locale_id)
+                                                  storage=storage)
                             else:
                                 create_entity(fp_lexical_entry_client_id,
                                               fp_lexical_entry_object_id,
-                                              field_ids["Sound"][0],
-                                              field_ids["Sound"][1],
-                                              None,
-                                              client,
+                                              le_sound_fid[0],
+                                              le_sound_fid[1],
+                                              le_sound_dtype,
+                                              client_id,
                                               filename=filename,
                                               folder_name="corpus_lexical_entry_sounds",
                                               content=base64.urlsafe_b64encode(audio_slice).decode(),
-                                              storage=storage,
-                                              locale_id=locale_id
-                                              )
+                                              storage=storage)
                             temp.flush()
                 fp_le_ids = (fp_lexical_entry_client_id, fp_lexical_entry_object_id)
                 sp_le_ids = (sp_lexical_entry_client_id, sp_lexical_entry_object_id)
@@ -999,296 +1033,412 @@ def convert_five_tiers(dictionary_id,
                         if not (sp_le_ids, fp_le_ids) in links :
                             create_entity(sp_lexical_entry_client_id,
                                           sp_lexical_entry_object_id,
-                                          field_ids["Backref"][0],
-                                          field_ids["Backref"][1],
-                                          None,
-                                          client,
+                                          backref_fid[0],
+                                          backref_fid[1],
+                                          backref_dtype,
+                                          client_id,
                                           filename=None,
                                           link_client_id=fp_lexical_entry_client_id,
                                           link_object_id=fp_lexical_entry_object_id,
-                                          storage=storage,
-                                          locale_id=locale_id)
+                                          storage=storage)
                         if not (fp_le_ids, sp_le_ids) in links:
                             create_entity(fp_lexical_entry_client_id,
                                           fp_lexical_entry_object_id,
-                                          field_ids["Backref"][0],
-                                          field_ids["Backref"][1],
-                                          None,
-                                          client,
+                                          backref_fid[0],
+                                          backref_fid[1],
+                                          backref_dtype,
+                                          client_id,
                                           filename=None,
                                           link_client_id=sp_lexical_entry_client_id,
                                           link_object_id=sp_lexical_entry_object_id,
-                                          storage=storage,
-                                          locale_id=locale_id)
+                                          storage=storage)
                     else:
                         create_entity(sp_lexical_entry_client_id,
                                       sp_lexical_entry_object_id,
-                                      field_ids["Backref"][0],
-                                      field_ids["Backref"][1],
-                                      None,
-                                      client,
+                                      backref_fid[0],
+                                      backref_fid[1],
+                                      backref_dtype,
+                                      client_id,
                                       filename=None,
                                       link_client_id=fp_lexical_entry_client_id,
                                       link_object_id=fp_lexical_entry_object_id,
-                                      storage=storage,
-                                      locale_id=locale_id)
+                                      storage=storage)
                         create_entity(fp_lexical_entry_client_id,
                                       fp_lexical_entry_object_id,
-                                      field_ids["Backref"][0],
-                                      field_ids["Backref"][1],
-                                      None,
-                                      client,
+                                      backref_fid[0],
+                                      backref_fid[1],
+                                      backref_dtype,
+                                      client_id,
                                       filename=None,
                                       link_client_id=sp_lexical_entry_client_id,
                                       link_object_id=sp_lexical_entry_object_id,
-                                      storage=storage,
-                                      locale_id=locale_id)
+                                      storage=storage)
                 column[:] = []
                 match_dict.clear()
 
-        lexes = []
+        # Current data of lexical entries and paradigms.
+
+        lexes_with_text = []
+
+        le_word_fid = field_ids['Word']
+        le_word_dtype = field_data_type_dict[le_word_fid]
+
+        le_xcript_fid = field_ids['Transcription']
+        le_xcript_dtype = field_data_type_dict[le_xcript_fid]
+
+        le_xlat_fid = field_ids['Translation']
+        le_xlat_dtype = field_data_type_dict[le_xlat_fid]
+
         if first_perspective:
-            lexes = DBSession.query(DictionaryPerspective, LexicalEntry, Entity)\
-                .filter(and_(DictionaryPerspective.object_id==first_perspective.object_id,
-                        DictionaryPerspective.client_id==first_perspective.client_id))\
-                .join(LexicalEntry, and_( LexicalEntry.parent_object_id==DictionaryPerspective.object_id,
-                                          LexicalEntry.parent_client_id==DictionaryPerspective.client_id))\
-                .join(Entity, and_(LexicalEntry.object_id==Entity.parent_object_id,
-                                   LexicalEntry.client_id==Entity.parent_client_id))
-        p_lexes = []
+
+            le_text_fid_list = [
+                le_word_fid,
+                le_xcript_fid,
+                le_xlat_fid]
+
+            lexes_with_text = (
+
+                DBSession
+                    .query(Entity)
+
+                    .filter(
+                        Entity.marked_for_deletion == False,
+                        LexicalEntry.client_id == Entity.parent_client_id,
+                        LexicalEntry.object_id == Entity.parent_object_id,
+                        LexicalEntry.marked_for_deletion == False,
+                        LexicalEntry.parent_client_id == first_perspective.client_id,
+                        LexicalEntry.parent_object_id == first_perspective.object_id,
+
+                        tuple_(
+                            Entity.field_client_id,
+                            Entity.field_object_id)
+
+                            .in_(le_text_fid_list))
+
+                    .all())
+
+        p_lexes_with_text_after_update = []
+
+        pa_word_fid = field_ids['Word of Paradigmatic forms']
+        pa_xcript_fid = field_ids['Transcription of Paradigmatic forms']
+        pa_xlat_fid = field_ids['Translation of Paradigmatic forms'] 
+
         if second_perspective:
-            p_lexes = DBSession.query(DictionaryPerspective, LexicalEntry, Entity)\
-                .filter(and_(DictionaryPerspective.object_id==second_perspective.object_id,
-                        DictionaryPerspective.client_id==second_perspective.client_id))\
-                .join(LexicalEntry, and_( LexicalEntry.parent_object_id==DictionaryPerspective.object_id,
-                                          LexicalEntry.parent_client_id==DictionaryPerspective.client_id))\
-                .join(Entity, and_(LexicalEntry.object_id==Entity.parent_object_id,
-                                   LexicalEntry.client_id==Entity.parent_client_id))
-        lexes_with_text = [x for x in lexes if x[2].field.data_type == "Text" and
-                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values() and not
-                            x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
-        p_lexes_with_text_after_update = [x for x in p_lexes if x[2].field.data_type == "Text" and
-                           (x[2].field.client_id, x[2].field.object_id) in field_ids.values() and not
-                            x[2].marked_for_deletion and not x[1].marked_for_deletion and not x[0].marked_for_deletion]
+
+            pa_text_fid_list = [
+                pa_word_fid,
+                pa_xcript_fid,
+                pa_xlat_fid]
+
+            p_lexes_with_text_after_update = (
+
+                DBSession
+                    .query(Entity)
+
+                    .filter(
+                        Entity.marked_for_deletion == False,
+                        LexicalEntry.client_id == Entity.parent_client_id,
+                        LexicalEntry.object_id == Entity.parent_object_id,
+                        LexicalEntry.marked_for_deletion == False,
+                        LexicalEntry.parent_client_id == second_perspective.client_id,
+                        LexicalEntry.parent_object_id == second_perspective.object_id,
+
+                        tuple_(
+                            Entity.field_client_id,
+                            Entity.field_object_id)
+
+                            .in_(pa_text_fid_list))
+
+                    .all())
+
+        # Info of words and transcriptions in the first perspective.
+
         task_status.set(9, 90, "Uploading translations with marks")
 
         noms = []  # words with NOM/INF mark
         conjs = []
         new_lex_entries = {}
 
+        le_xlat_dict = {}
+
+        le_word_dict = defaultdict(set)
+        le_xcript_dict = defaultdict(set)
+
         for t in lexes_with_text:
-            t_fids = (t[2].field.client_id, t[2].field.object_id)
-            if field_ids["Translation"] == t_fids:
-                translation_text = t[2].content
+
+            if t.field_id == le_word_fid:
+
+                le_word_dict[t.parent_id].add(
+                    t.content.strip().lower())
+
+            elif t.field_id == le_xcript_fid:
+
+                le_xcript_dict[t.parent_id].add(
+                    t.content.strip().lower())
+
+            # Translation.
+
+            else:
+
+                translation_text = t.content
+
                 if re.search("[-]NOM|[-]INF|[-]SG.NOM", translation_text):
                     noms.append(t)
+
                 if re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", translation_text):
                     conjs.append(t)
+
+                le_xlat_dict[
+                    translation_text.strip().lower()] = (
+                            
+                    t.parent_id)
+
+        # Updated words and transcriptions in the second perspective.
+
+        pa_already_set = set(
+            t[2].id for t in p_lexes_with_text)
+
+        p_lexes_with_text_after_update = [
+
+            t
+            for t in p_lexes_with_text_after_update
+            if t.id not in pa_already_set]
+
+        pa_word_dict = defaultdict(list)
+        pa_xcript_dict = defaultdict(list)
+
         for t in p_lexes_with_text_after_update:
-            if t in p_lexes_with_text:
+
+            if t.field_id == pa_word_fid:
+                pa_word_dict[t.parent_id].append(t.content)
+
+            elif t.field_id == pa_xcript_fid:
+                pa_xcript_dict[t.parent_id].append(t.content)
+
+        def establish_link(
+            le_entry_id,
+            pa_entry_id,
+            pa_xlat):
+            """
+            Establishes link between lexical and paradigmatic entries, adds paradigmatic words and/or
+            transcriptions to lexical entries if required.
+            """
+
+            if not (le_entry_id, pa_entry_id) in links:
+
+                create_entity(
+                    le_entry_id[0],
+                    le_entry_id[1],
+                    backref_fid[0],
+                    backref_fid[1],
+                    backref_dtype,
+                    client_id,
+                    link_client_id = pa_entry_id[0],
+                    link_object_id = pa_entry_id[1])
+
+            if not (pa_entry_id, le_entry_id) in links:
+
+                create_entity(
+                    pa_entry_id[0],
+                    pa_entry_id[1],
+                    backref_fid[0],
+                    backref_fid[1],
+                    backref_dtype,
+                    client_id,
+                    link_client_id = le_entry_id[0],
+                    link_object_id = le_entry_id[1])
+
+            # Adding paradigmatic word and transcriptions to lexical entries.
+
+            for pa_word in pa_word_dict[t.parent_id]:
+
+                word_key = (
+                    pa_word.strip().lower())
+
+                le_word_set = (
+                    le_word_dict[le_entry_id])
+
+                if word_key not in le_word_set:
+
+                    le_word_set.add(word_key)
+
+                    create_entity(
+                        le_entry_id[0],
+                        le_entry_id[1],
+                        le_word_fid[0],
+                        le_word_fid[1],
+                        le_word_dtype,
+                        client_id,
+                        pa_word)
+
+            for pa_xcript in pa_xcript_dict[t.parent_id]:
+
+                xcript_key = (
+                    pa_xcript.strip().lower())
+
+                le_xcript_set = (
+                    le_xcript_dict[le_entry_id])
+
+                if xcript_key not in le_xcript_set:
+
+                    le_xcript_set.add(pa_xcript)
+
+                    create_entity(
+                        le_entry_id[0],
+                        le_entry_id[1],
+                        le_xcript_fid[0],
+                        le_xcript_fid[1],
+                        le_xcript_dtype,
+                        client_id,
+                        pa_xcript)
+
+        # Linking updated paradigms.
+
+        for t in p_lexes_with_text_after_update:
+
+            if t.field_id != pa_xlat_fid:
                 continue
-            t_fids = (t[2].field.client_id, t[2].field.object_id)
-            if field_ids["Translation of Paradigmatic forms"] == t_fids:
-                translation_text = t[2].content
-                tag = re.search('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]', translation_text)
-                create_le_flag = None
-                if tag:
-                    create_le_flag = True
-                    tag_name = tag.group(0)
-                    if translation_text[:3] == tag.group(0):
-                        for conj in conjs:
-                            if tag_name == conj[2].content:
-                                sp_le_ids = (t[1].client_id, t[1].object_id)
-                                fp_le_ids = (conj[1].client_id, conj[1].object_id)
-                                if not (sp_le_ids, fp_le_ids) in links:
-                                    create_entity(t[1].client_id,
-                                                  t[1].object_id,
-                                                  field_ids["Backref"][0],
-                                                  field_ids["Backref"][1],
-                                                  None,
-                                                  client,
-                                                  filename=None,
-                                                  link_client_id=conj[1].client_id,
-                                                  link_object_id=conj[1].object_id,
-                                                  storage=storage,
-                                                  locale_id=locale_id)
 
-                                if not (fp_le_ids, sp_le_ids) in links:
-                                    create_entity(conj[1].client_id,
-                                                  conj[1].object_id,
-                                                  field_ids["Backref"][0],
-                                                  field_ids["Backref"][1],
-                                                  None,
-                                                  client,
-                                                  filename=None,
-                                                  link_client_id=t[1].client_id,
-                                                  link_object_id=t[1].object_id,
-                                                  storage=storage,
-                                                  locale_id=locale_id)
-                                create_le_flag = False
-                                break
-                    else:
-                        create_le_flag = False
-                        reg = re.search('[-.][\dA-Z]+', t[2].content)
-                        if reg:
-                            create_le_flag = True
-                            for x in noms:
-                                mark_w_text = reg.start()
-                                nom_clean_text = re.search('[-.][\dA-Z]+', x[2].content).start()
-                                if x[2].content[:nom_clean_text] == t[2].content[:mark_w_text]:
-                                    sp_le_ids = (t[1].client_id, t[1].object_id)
-                                    fp_le_ids = (x[1].client_id, x[1].object_id)
-                                    if not (sp_le_ids, fp_le_ids) in links:
-                                        create_entity(t[1].client_id,
-                                                      t[1].object_id,
-                                                      field_ids["Backref"][0],
-                                                      field_ids["Backref"][1],
-                                                      None,
-                                                      client,
-                                                      filename=None,
-                                                      link_client_id=x[1].client_id,
-                                                      link_object_id=x[1].object_id,
-                                                      storage=storage,
-                                                      locale_id=locale_id)
+            translation_text = t.content
+            tag = re.search('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]', translation_text)
+            create_le_flag = None
 
-                                    if not (fp_le_ids, sp_le_ids) in links:
-                                        create_entity(x[1].client_id,
-                                                      x[1].object_id,
-                                                      field_ids["Backref"][0],
-                                                      field_ids["Backref"][1],
-                                                      None,
-                                                      client,
-                                                      filename=None,
-                                                      link_client_id=t[1].client_id,
-                                                      link_object_id=t[1].object_id,
-                                                      storage=storage,
-                                                      locale_id=locale_id)
-                                    create_le_flag = False
-                                    break
+            if tag:
+
+                create_le_flag = True
+                tag_name = tag.group(0)
+
+                if translation_text[:3] == tag.group(0):
+
+                    for conj in conjs:
+
+                        if tag_name == conj.content:
+
+                            sp_le_ids = t.parent_id
+                            fp_le_ids = conj.parent_id
+
+                            if not (sp_le_ids, fp_le_ids) in links:
+                                create_entity(t.parent_client_id,
+                                              t.parent_object_id,
+                                              backref_fid[0],
+                                              backref_fid[1],
+                                              backref_dtype,
+                                              client_id,
+                                              link_client_id=conj.parent_client_id,
+                                              link_object_id=conj.parent_object_id)
+
+                            if not (fp_le_ids, sp_le_ids) in links:
+                                create_entity(conj.parent_client_id,
+                                              conj.parent_object_id,
+                                              backref_fid[0],
+                                              backref_fid[1],
+                                              backref_dtype,
+                                              client_id,
+                                              link_client_id=t.parent_client_id,
+                                              link_object_id=t.parent_object_id)
+
+                            create_le_flag = False
+                            break
+
                 else:
-                    create_le_flag = False
-                    reg = re.search('[-.][\dA-Z]+', t[2].content)
-                    if reg:
-                        create_le_flag = True
-                        for x in noms:
-                            mark_w_text = reg.start()
-                            nom_clean_text = re.search('[-.][\dA-Z]+', x[2].content).start()
-                            if x[2].content[:nom_clean_text] == t[2].content[:mark_w_text]:
-                                sp_le_ids = (t[1].client_id, t[1].object_id)
-                                fp_le_ids = (x[1].client_id, x[1].object_id)
-                                if not (sp_le_ids, fp_le_ids) in links:
-                                    create_entity(t[1].client_id,
-                                                  t[1].object_id,
-                                                  field_ids["Backref"][0],
-                                                  field_ids["Backref"][1],
-                                                  None,
-                                                  client,
-                                                  filename=None,
-                                                  link_client_id=x[1].client_id,
-                                                  link_object_id=x[1].object_id,
-                                                  storage=storage,
-                                                  locale_id=locale_id)
 
-                                if not (fp_le_ids, sp_le_ids) in links:
-                                    create_entity(x[1].client_id,
-                                                  x[1].object_id,
-                                                  field_ids["Backref"][0],
-                                                  field_ids["Backref"][1],
-                                                  None,
-                                                  client,
-                                                  filename=None,
-                                                  link_client_id=t[1].client_id,
-                                                  link_object_id=t[1].object_id,
-                                                  storage=storage,
-                                                  locale_id=locale_id)
+                    create_le_flag = False
+                    reg = re.search('[-.][\dA-Z]+', t.content)
+
+                    if reg:
+
+                        create_le_flag = True
+
+                        for x in noms:
+
+                            mark_w_text = reg.start()
+                            nom_clean_text = re.search('[-.][\dA-Z]+', x.content).start()
+
+                            if x.content[:nom_clean_text] == t.content[:mark_w_text]:
+
+                                establish_link(
+                                    x.parent_id,
+                                    t.parent_id,
+                                    t.content[:mark_w_text])
+
                                 create_le_flag = False
                                 break
-                if create_le_flag:
-                    before_dash = re.search('[-.][\dA-Z]+', translation_text)
-                    if before_dash:
-                        translation_text = translation_text[:before_dash.start()]
-                    if not translation_text in new_lex_entries:
-                        lexentr = LexicalEntry(client_id=client.id,
-                                               parent_object_id=first_perspective_object_id, parent=first_perspective)
-                        DBSession.add(lexentr)
-                        new_fp_lexical_entry_client_id = lexentr.client_id
-                        new_fp_lexical_entry_object_id = lexentr.object_id
-                        new_lex_entries[translation_text] = (new_fp_lexical_entry_client_id,
-                                                             new_fp_lexical_entry_object_id)
+            else:
 
-                        create_entity(new_fp_lexical_entry_client_id,
-                                      new_fp_lexical_entry_object_id,
-                                      field_ids["Translation"][0],
-                                      field_ids["Translation"][1],
-                                      None,
-                                      client,
-                                      translation_text,
-                                      filename=None,
-                                      storage=storage,
-                                      locale_id=locale_id
-                                      )
-                        sp_le_ids = (t[1].client_id, t[1].object_id)
-                        fp_le_ids = (new_fp_lexical_entry_client_id, new_fp_lexical_entry_object_id)
-                        if not (sp_le_ids, fp_le_ids) in links:
-                            create_entity(t[1].client_id,
-                                          t[1].object_id,
-                                          field_ids["Backref"][0],
-                                          field_ids["Backref"][1],
-                                          None,
-                                          client,
-                                          filename=None,
-                                          link_client_id=new_fp_lexical_entry_client_id,
-                                          link_object_id=new_fp_lexical_entry_object_id,
-                                          storage=storage,
-                                          locale_id=locale_id)
+                create_le_flag = False
+                reg = re.search('[-.][\dA-Z]+', t.content)
 
-                        if not (fp_le_ids, sp_le_ids) in links:
-                            create_entity(new_fp_lexical_entry_client_id,
-                                          new_fp_lexical_entry_object_id,
-                                          field_ids["Backref"][0],
-                                          field_ids["Backref"][1],
-                                          None,
-                                          client,
-                                          filename=None,
-                                          link_client_id=t[1].client_id,
-                                          link_object_id=t[1].object_id,
-                                          storage=storage,
-                                          locale_id=locale_id)
-                    else:
-                        new_fp_lexical_entry_client_id = new_lex_entries[translation_text][0]
-                        new_fp_lexical_entry_object_id = new_lex_entries[translation_text][1]
-                        sp_le_ids = (t[1].client_id, t[1].object_id)
-                        fp_le_ids = (new_fp_lexical_entry_client_id, new_fp_lexical_entry_object_id)
-                        if not (sp_le_ids, fp_le_ids) in links:
-                            create_entity(t[1].client_id,
-                                          t[1].object_id,
-                                          field_ids["Backref"][0],
-                                          field_ids["Backref"][1],
-                                          None,
-                                          client,
-                                          filename=None,
-                                          link_client_id=new_fp_lexical_entry_client_id,
-                                          link_object_id=new_fp_lexical_entry_object_id,
-                                          storage=storage,
-                                          locale_id=locale_id)
+                if reg:
 
-                        if not (fp_le_ids, sp_le_ids) in links:
-                            create_entity(new_fp_lexical_entry_client_id,
-                                          new_fp_lexical_entry_object_id,
-                                          field_ids["Backref"][0],
-                                          field_ids["Backref"][1],
-                                          None,
-                                          client,
-                                          filename=None,
-                                          link_client_id=t[1].client_id,
-                                          link_object_id=t[1].object_id,
-                                          storage=storage,
-                                          locale_id=locale_id)
+                    create_le_flag = True
+
+                    for x in noms:
+
+                        mark_w_text = reg.start()
+                        nom_clean_text = re.search('[-.][\dA-Z]+', x.content).start()
+
+                        if x.content[:nom_clean_text] == t.content[:mark_w_text]:
+
+                            establish_link(
+                                x.parent_id,
+                                t.parent_id,
+                                t.content[:mark_w_text])
+
+                            create_le_flag = False
+                            break
+
+            if create_le_flag:
+
+                before_dash = re.search('[-.][\dA-Z]+', translation_text)
+
+                if before_dash:
+                    translation_text = translation_text[:before_dash.start()]
+
+                if not translation_text in new_lex_entries:
+
+                    lexentr = (
+                            
+                        LexicalEntry(
+                            client_id=client_id,
+                            parent=first_perspective))
+
+                    DBSession.add(lexentr)
+                    new_fp_lexical_entry_client_id = lexentr.client_id
+                    new_fp_lexical_entry_object_id = lexentr.object_id
+
+                    lexentr_id = (
+                        new_fp_lexical_entry_client_id,
+                        new_fp_lexical_entry_object_id)
+
+                    new_lex_entries[translation_text] = lexentr_id
+
+                    create_entity(
+                        new_fp_lexical_entry_client_id,
+                        new_fp_lexical_entry_object_id,
+                        le_xlat_fid[0],
+                        le_xlat_fid[1],
+                        le_xlat_dtype,
+                        client_id,
+                        translation_text)
+
+                    le_xlat_dict[
+                        translation_text.strip().lower()] = (
+                                
+                        lexentr_id)
+
+                    establish_link(
+                        lexentr_id,
+                        t.parent_id,
+                        translation_text)
+
+                else:
+
+                    establish_link(
+                        new_lex_entries[translation_text],
+                        t.parent_id,
+                        translation_text)
+
     task_status.set(10, 100, "Finished", "")
-
-
-
-
 
 
 def convert_all(dictionary_id,
@@ -1301,12 +1451,15 @@ def convert_all(dictionary_id,
                 cache_kwargs,
                 translation_gist_id,
                 language_id,
-                sound_url
-                ):
-    from lingvodoc.cache.caching import initialize_cache
-    engine = create_engine(sqlalchemy_url)
-    DBSession.configure(bind=engine)
-    initialize_cache(cache_kwargs)
+                sound_url,
+                synchronous = False):
+
+    if not synchronous:
+        from lingvodoc.cache.caching import initialize_cache
+        engine = create_engine(sqlalchemy_url)
+        DBSession.configure(bind=engine)
+        initialize_cache(cache_kwargs)
+
     task_status = TaskStatus.get_from_cache(task_key)
     try:
         convert_five_tiers(

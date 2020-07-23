@@ -71,6 +71,7 @@ class ConvertDictionary(graphene.Mutation):
         request = info.context.request
         locale_id = int(request.cookies.get('locale_id') or 1)
         client_id = request.authenticated_userid
+        synchronous = args.get('synchronous', False)
         if not client_id:
             user_id = anonymous_userid(request)
         else:
@@ -133,7 +134,7 @@ class ConvertDictionary(graphene.Mutation):
             raise ResponseError(message="wrong parameters")
         cur_args["task_key"] = task.key
 
-        if args.get('synchronous', False):
+        if synchronous:
 
           convert_f = dialeqt_convert_all
           cur_args['synchronous'] = True
@@ -206,6 +207,7 @@ class ConvertFiveTiers(graphene.Mutation):
         language_id = LingvodocID()
         translation_gist_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
+        synchronous = graphene.Boolean()
 
 
     triumph = graphene.Boolean()
@@ -216,6 +218,7 @@ class ConvertFiveTiers(graphene.Mutation):
         request = info.context.request
         locale_id = int(request.cookies.get('locale_id') or 1)
         client_id = request.authenticated_userid
+        synchronous = args.get('synchronous', False)
         if not client_id:
             user_id = anonymous_userid(request)
         else:
@@ -230,6 +233,7 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
         cur_args["storage"] = request.registry.settings["storage"]
         cur_args["language_id"] = args.get('language_id')
+
         if not args.get("dictionary_id"):
             if "translation_gist_id" in args:
                 cur_args["gist_client_id"] = args['translation_gist_id'][0]
@@ -244,6 +248,11 @@ class ConvertFiveTiers(graphene.Mutation):
                 tr_atoms = args.get("translation_atoms")
                 translation_gist_id = args.get('gist_id')
                 translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None], gist_type="Dictionary")
+
+                # See the same line higher in ConvertDictionary.
+
+                transaction.manager.commit()
+
                 cur_args["translation_gist_id"] = translation_gist_id
                 gist = DBSession.query(dbTranslationGist).filter_by(client_id=translation_gist_id[0],
                                                                  object_id=translation_gist_id[1]).first()
@@ -281,5 +290,14 @@ class ConvertFiveTiers(graphene.Mutation):
         #task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
         cur_args["task_key"] = task.key
         cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-        res = async_convert_five_tiers.delay(**cur_args)
+
+        if synchronous:
+
+            convert_f = convert_all
+            cur_args['synchronous'] = True
+
+        else:
+            convert_f = async_convert_five_tiers.delay
+
+        res = convert_f(**cur_args)
         return ConvertFiveTiers(triumph=True)

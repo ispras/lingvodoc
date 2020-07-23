@@ -291,7 +291,7 @@ def get_client_counter(check_id):
     DBSession.query(Client).filter_by(id=check_id).update(values={"counter": Client.counter + 1},
                                                           synchronize_session='fetch')
     DBSession.flush()
-    return DBSession.query(Client).filter_by(id=check_id).with_for_update(of=Client).first()
+    return DBSession.query(Client.counter).filter_by(id=check_id).with_for_update(of=Client).scalar()
 
 
 class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
@@ -345,8 +345,7 @@ class CompositeIdMixin(object):
 
     def __init__(self, **kwargs):
         if not kwargs.get("object_id", None):
-            client_by_id = get_client_counter(kwargs['client_id'])
-            kwargs["object_id"] = client_by_id.counter
+            kwargs["object_id"] = get_client_counter(kwargs['client_id'])
         if kwargs.get("session", None):
             session = kwargs['session']
         else:
