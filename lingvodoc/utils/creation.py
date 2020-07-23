@@ -36,6 +36,10 @@ from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils.search import translation_gist_search
 
 
+import logging
+log = logging.getLogger(__name__)
+
+
 def add_user_to_group(user, group):
     if user not in group.users:
         group.users.append(user)

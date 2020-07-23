@@ -38,7 +38,15 @@ def create_n_entries_in_persp(n, pid, client):
         result.append(lexentry)
     return result
 
-def copy_sound_or_markup_entity(entity, dest_fid, client, self_client_id=None, self_object_id=None, parent_client_id=None, parent_object_id=None):
+def copy_sound_or_markup_entity(
+    entity,
+    dest_fid,
+    ftype,
+    client,
+    self_client_id=None,
+    self_object_id=None,
+    parent_client_id=None,
+    parent_object_id=None):
 
     storage = dict()
     storage['path'] = "/home/andriy/Desktop/objects/"
@@ -55,15 +63,23 @@ def copy_sound_or_markup_entity(entity, dest_fid, client, self_client_id=None, s
 
     response = urllib.request.urlopen(url)
     content = response.read()
-    outfile = open("out.wav", "wb")
-    outfile.write(content)
 
-    created_entity_ids = corpus_create_entity(parent_client_id, parent_object_id, dest_fid[0], dest_fid[1],
-                                            entity.additional_metadata, client,
-                                            content=content, filename=filename,
-                                            folder_name="graphql_files", locale_id=entity.locale_id,
-                                            storage=storage, byte_content=True,
-                                            self_client_id=self_client_id, self_object_id=self_object_id)
+    created_entity_ids = (
+            
+        corpus_create_entity(
+            parent_client_id,
+            parent_object_id,
+            dest_fid[0],
+            dest_fid[1],
+            ftype,
+            client.id,
+            content=content,
+            filename=filename,
+            folder_name="graphql_files",
+            storage=storage,
+            byte_content=True,
+            self_client_id=self_client_id,
+            self_object_id=self_object_id))
 
     return created_entity_ids
 
@@ -78,6 +94,8 @@ def async_copy_single_field(one_pid, ftype, client, info,
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
     task_status = TaskStatus.get_from_cache(task_key)
+
+    ftype = ftype.lower()
 
     try:
 
@@ -116,8 +134,9 @@ def async_copy_single_field(one_pid, ftype, client, info,
                 i += 1
                 for entity in lex_entry_from:
                     # create one db entry and add to list of all entries to be added
-                    if ftype != "Text":
-                        copy_sound_or_markup_entity(entity, fid2, client, parent_client_id=lex_entries_to[i].client_id,
+                    if ftype != "text":
+                        copy_sound_or_markup_entity(entity, fid2, ftype, client,
+                                                    parent_client_id=lex_entries_to[i].client_id,
                                                     parent_object_id=lex_entries_to[i].object_id)
                         task_status.set(4, 15+round((1 / len(query_result)) * 85), "Copied an entity")
                     else:
@@ -132,8 +151,9 @@ def async_copy_single_field(one_pid, ftype, client, info,
         else:
 
             for entity in query_result:
-                if ftype != "Text":
-                    copy_sound_or_markup_entity(entity, fid2, client, parent_client_id=entity.parent_client_id,
+                if ftype != "text":
+                    copy_sound_or_markup_entity(entity, fid2, ftype, client,
+                                                parent_client_id=entity.parent_client_id,
                                                 parent_object_id=entity.parent_object_id)
                     task_status.set(4, 15 + round((1 / len(query_result)) * 85), "Copied an entity")
                 else:

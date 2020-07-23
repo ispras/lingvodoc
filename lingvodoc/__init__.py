@@ -9,7 +9,11 @@ import logging
 import os.path
 import re
 
-import git
+try:
+    import git
+
+except ImportError:
+    git = None
 
 from sqlalchemy import engine_from_config
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -37,6 +41,9 @@ def get_git_version(repository_dir):
     If the Git version tag selected by `git describe` conforms to PEP 440, resulting version string conforms
     to it too.
     """
+
+    if not git:
+        return None
 
     # Getting repository info.
 
