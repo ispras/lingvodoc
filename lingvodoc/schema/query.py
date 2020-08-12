@@ -5731,12 +5731,18 @@ class CognateAnalysis(graphene.Mutation):
 
                 # Compiling and showing relative distance list.
 
-                distance_list = [
+                if max_distance > 0:
 
-                    (perspective_id, distance / max_distance)
+                    distance_list = [
 
-                    for perspective_id, distance in zip(
-                        perspective_id_list, distance_value_list)]
+                        (perspective_id, distance / max_distance)
+
+                        for perspective_id, distance in zip(
+                            perspective_id_list, distance_value_list)]
+
+                else:
+
+                    distance_list = distance_value_list
 
                 log.debug(
                     '\ncognate_analysis {0}:'
