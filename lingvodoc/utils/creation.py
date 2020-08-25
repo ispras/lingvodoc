@@ -5,14 +5,18 @@ import shutil
 import time
 import random
 import string
+import urllib
 
-
+import transaction
 from pathvalidate import sanitize_filename
 from sqlalchemy import (
-    and_,
+    and_, create_engine,
 )
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_
+
+from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.queue.celery import celery
 from lingvodoc.utils.elan_functions import eaf_wordlist
 from lingvodoc.models import (
     Client,
@@ -30,7 +34,7 @@ from lingvodoc.models import (
     Entity,
     Field,
     PublishingEntity,
-    Organization as dbOrganization
+    Organization as dbOrganization, Parser, ParserResult
 )
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils.search import translation_gist_search
@@ -39,6 +43,7 @@ from lingvodoc.utils.search import translation_gist_search
 import logging
 log = logging.getLogger(__name__)
 
+import lingvodoc.utils.parser as ParseMethods
 
 def add_user_to_group(user, group):
     if user not in group.users:
@@ -401,6 +406,89 @@ def create_lexicalentry(id, perspective_id, save_object=False):
         DBSession.add(dblexentry)
         DBSession.flush()
     return dblexentry
+
+def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=False):
+
+    client_id, object_id = id
+    parser_client_id, parser_object_id = parser_id
+    entity_client_id, entity_object_id = entity_id
+
+    entity = DBSession.query(Entity). \
+        filter_by(client_id=entity_client_id, object_id=entity_object_id).first()
+
+    parser = DBSession.query(Parser). \
+        filter_by(client_id=parser_client_id, object_id=parser_object_id).first()
+    if not parser:
+        raise ResponseError(message="No such parser in the system")
+
+    parse_method = getattr(ParseMethods, parser.name)
+    result = parse_method(entity.content, **arguments)
+
+    dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
+                                  parser_object_id=parser_object_id, parser_client_id=parser_client_id,
+                                  entity_client_id=entity_client_id, entity_object_id=entity_object_id,
+                                  arguments=arguments, content=result)
+    if save_object:
+        DBSession.add(dbparserresult)
+        DBSession.flush()
+
+    return dbparserresult
+
+@celery.task
+def async_create_parser_result(client, info, id, parser_id, entity_id,
+                               task_key, cache_kwargs, sqlalchemy_url,
+                               arguments, save_object):
+
+    from lingvodoc.cache.caching import initialize_cache
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind=engine)
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
+
+    try:
+
+        client_id, object_id = id
+        parser_client_id, parser_object_id = parser_id
+        entity_client_id, entity_object_id = entity_id
+
+        entity = DBSession.query(Entity). \
+            filter_by(client_id=entity_client_id, object_id=entity_object_id).first()
+
+        parser = DBSession.query(Parser). \
+            filter_by(client_id=parser_client_id, object_id=parser_object_id).first()
+        if not parser:
+            raise ResponseError(message="No such parser in the system")
+
+        task_status.set(2, 10, "Parser was launched")
+
+        parse_method = getattr(ParseMethods, parser.name)
+        result = parse_method(entity.content, **arguments)
+
+        task_status.set(3, 90, "Parser was finished")
+
+        dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
+                                      parser_object_id=parser_object_id, parser_client_id=parser_client_id,
+                                      entity_client_id=entity_client_id, entity_object_id=entity_object_id,
+                                      arguments=arguments, content=result)
+        if save_object:
+            DBSession.add(dbparserresult)
+            DBSession.flush()
+
+    except Exception as err:
+        task_status.set(None, -1, "Parsing failed: %s" % str(err))
+        raise
+
+    task_status.set(4, 100, "Parsing finished")
+
+def create_parser(id, name, parameters=None):
+
+    client_id, object_id = id
+
+    dbparser = Parser(client_id=client_id, object_id=object_id,
+                      name=name, parameters=parameters)
+    DBSession.add(dbparser)
+    DBSession.flush()
+    return dbparser
 
 # Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
 # it's uploaded via multipart form, it's just saved as-is.
