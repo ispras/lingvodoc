@@ -59,7 +59,7 @@ class ExecuteParser(graphene.Mutation):
         cur_args = dict()
 
         # check if client
-        cur_args['client'] = client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            info.context["client_id"])
@@ -107,17 +107,21 @@ class ExecuteParser(graphene.Mutation):
         if not entity.is_subject_for_parsing:
             raise ResponseError(message="Entity is not suitable for parsing")
 
+        cur_args['id'] = id
         cur_args['entity_id'] = args.get('entity_id')
         cur_args['parser_id'] = args.get('parser_id')
         cur_args['arguments'] = args.get('arguments')
+        cur_args["save_object"] = True
 
-        task = TaskStatus(user_id, "Parsing an entity", "", 4)
+        """
+        cur_args['client'] = client
         cur_args['info'] = info
         cur_args["task_key"] = task.key
         cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
-
-        async_create_parser_result.delay(**cur_args)
+        #async_create_parser_result.delay(**cur_args)
+        """
+        create_parser_result(**cur_args)
 
         return ExecuteParser(triumph=True)
 
@@ -133,6 +137,8 @@ class DeleteParserResult(graphene.Mutation):
     def mutate(root, info, **args):
         id = args.get('id')
         parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1]).first()
+        if not parser_result:
+            print("No such parser in the system")
         DBSession.delete(parser_result)
         return DeleteParserResult(triumph=True)
 
@@ -149,6 +155,8 @@ class UpdateParserResult(graphene.Mutation):
         id = args.get('id')
         content = args.get('content')
         parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1])
+        if not parser_result:
+            print("No such parser in the system")
         parser_result.update({'content': content})
         transaction.commit()
         return UpdateParserResult(triumph=True)
