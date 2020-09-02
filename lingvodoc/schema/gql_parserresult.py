@@ -2,8 +2,10 @@ import tempfile
 
 import graphene
 import transaction
+from sqlalchemy import create_engine
 
 from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.schema.gql_holders import LingvodocID, LingvodocObjectType, AdditionalMetadata, CreatedAt, \
     MarkedForDeletion, fetch_object, client_id_check, CompositeIdHolder, ObjectVal, ResponseError
@@ -12,7 +14,6 @@ from lingvodoc.models import DBSession, ParserResult as dbParserResult, \
 from lingvodoc.schema.gql_parser import Parser
 from lingvodoc.utils.creation import create_parser_result, async_create_parser_result
 from lingvodoc.schema.gql_parser import ParameterType
-
 
 class ParserResult(LingvodocObjectType):
     dbType = dbParserResult
@@ -48,6 +49,7 @@ class ExecuteParser(graphene.Mutation):
         entity_id = LingvodocID(required=True)
         parser_id = LingvodocID(required=True)
         arguments = ObjectVal()
+        async = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -113,15 +115,25 @@ class ExecuteParser(graphene.Mutation):
         cur_args['arguments'] = args.get('arguments')
         cur_args["save_object"] = True
 
-        """
-        cur_args['client'] = client
-        cur_args['info'] = info
-        cur_args["task_key"] = task.key
-        cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-        cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
-        #async_create_parser_result.delay(**cur_args)
-        """
-        create_parser_result(**cur_args)
+        async = args.get("async")
+
+        entity.is_under_parsing = True
+        DBSession.flush()
+
+        if async:
+            task = TaskStatus(user_id, "Parsing entity", "", 3)
+            cur_args['client'] = client
+            cur_args['info'] = info
+            cur_args["task_key"] = task.key
+            cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+            cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
+            async_create_parser_result.delay(**cur_args)
+
+        else:
+            create_parser_result(**cur_args)
+
+        entity.is_under_parsing = False
+        DBSession.flush()
 
         return ExecuteParser(triumph=True)
 

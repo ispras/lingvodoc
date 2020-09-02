@@ -2366,12 +2366,9 @@ class Query(graphene.ObjectType):
         return tgt_to_eaf(content, entity.additional_metadata)
 
 
-    def resolve_parser_results(self, info, parser_id, entity_id):
-        parser_client_id, parser_object_id = parser_id
+    def resolve_parser_results(self, info, entity_id):
         entity_client_id, entity_object_id = entity_id
-        results = DBSession.query(dbParserResult).filter_by(parser_client_id=parser_client_id,
-                                                            parser_object_id=parser_object_id,
-                                                            entity_client_id=entity_client_id,
+        results = DBSession.query(dbParserResult).filter_by(entity_client_id=entity_client_id,
                                                             entity_object_id=entity_object_id,
                                                             ).all()
         return_list = list()

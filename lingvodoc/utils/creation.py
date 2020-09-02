@@ -34,7 +34,8 @@ from lingvodoc.models import (
     Entity,
     Field,
     PublishingEntity,
-    Organization as dbOrganization, Parser, ParserResult
+    Organization as dbOrganization, Parser, ParserResult,
+    get_client_counter
 )
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils.search import translation_gist_search
@@ -412,7 +413,6 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
     client_id, object_id = id
     parser_client_id, parser_object_id = parser_id
     entity_client_id, entity_object_id = entity_id
-
     entity = DBSession.query(Entity). \
         filter_by(client_id=entity_client_id, object_id=entity_object_id).first()
 
@@ -428,6 +428,8 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,
                                   entity_client_id=entity_client_id, entity_object_id=entity_object_id,
                                   arguments=arguments, content=result)
+    if not dbparserresult.object_id:
+        dbparserresult.object_id = get_client_counter(client_id)
     if save_object:
         DBSession.add(dbparserresult)
         DBSession.flush()
@@ -456,8 +458,6 @@ def async_create_parser_result(client, info, id, parser_id, entity_id,
 
         parser = DBSession.query(Parser). \
             filter_by(client_id=parser_client_id, object_id=parser_object_id).first()
-        if not parser:
-            raise ResponseError(message="No such parser in the system")
 
         task_status.set(2, 10, "Parser was launched")
 
