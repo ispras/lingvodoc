@@ -99,6 +99,8 @@ def timarkh_udm(content):
     html += content_copy.replace("\n", "<br>")
     html += ("</body>"
               "</html>")
+    # file = open("/home/andriy/out.html", "w")
+    # file.write(html)
 
     return html
 

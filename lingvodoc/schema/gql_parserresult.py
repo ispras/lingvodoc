@@ -106,6 +106,12 @@ class ExecuteParser(graphene.Mutation):
             filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
         if not entity:
             raise ResponseError(message="No such entity in the system")
+        extension = entity.content[entity.content.rfind('.'):]
+        if extension == ".odt":
+            entity.is_subject_for_parsing = True
+        else:
+            entity.is_subject_for_parsing = False
+        DBSession.flush()
         if not entity.is_subject_for_parsing:
             raise ResponseError(message="Entity is not suitable for parsing")
 

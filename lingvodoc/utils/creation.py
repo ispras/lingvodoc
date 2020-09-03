@@ -2,12 +2,15 @@ import base64
 import hashlib
 import os
 import shutil
+import tempfile
 import time
 import random
 import string
 import urllib
 
 import transaction
+from odf import text, teletype
+from odf.opendocument import load
 from pathvalidate import sanitize_filename
 from sqlalchemy import (
     and_, create_engine,
@@ -422,7 +425,23 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
         raise ResponseError(message="No such parser in the system")
 
     parse_method = getattr(ParseMethods, parser.name)
-    result = parse_method(entity.content, **arguments)
+
+    print(entity.content)
+    ascii_part = entity.content[:entity.content.rfind('/') + 1]
+    unicode_part = entity.content[entity.content.rfind('/') + 1:entity.content.rfind('.')]
+    extension = entity.content[entity.content.rfind('.'):]
+    url = ascii_part + urllib.request.quote(unicode_part) + extension
+    response = urllib.request.urlopen(url)
+
+    tmp_file_id, tmp_filename = tempfile.mkstemp()
+    tmp_file = open(tmp_filename, 'wb')
+    tmp_file.write(response.read())
+
+    doc = load(tmp_filename)
+    content = teletype.extractText(doc.text)
+    print(content)
+
+    result = parse_method(content, **arguments)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,
