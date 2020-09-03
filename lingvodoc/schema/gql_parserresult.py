@@ -127,7 +127,7 @@ class ExecuteParser(graphene.Mutation):
         DBSession.flush()
 
         if async:
-            task = TaskStatus(user_id, "Parsing entity", "", 3)
+            task = TaskStatus(user_id, "Parsing entity", "", 2)
             cur_args['client'] = client
             cur_args['info'] = info
             cur_args["task_key"] = task.key
