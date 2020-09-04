@@ -411,6 +411,37 @@ def create_lexicalentry(id, perspective_id, save_object=False):
         DBSession.flush()
     return dblexentry
 
+@celery.task
+def async_create_parser_result(id, parser_id, entity_id,
+                               task_key, cache_kwargs, sqlalchemy_url,
+                               arguments, save_object):
+    async_create_parser_result_method(id=id, parser_id=parser_id, entity_id=entity_id,
+                                      task_key=task_key, cache_kwargs=cache_kwargs,
+                                      sqlalchemy_url=sqlalchemy_url,
+                                      arguments=arguments, save_object=save_object)
+
+def async_create_parser_result_method(id, parser_id, entity_id,
+                               task_key, cache_kwargs, sqlalchemy_url,
+                               arguments, save_object):
+
+    from lingvodoc.cache.caching import initialize_cache
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind=engine)
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
+    task_status.set(1, 5, "Parsing started")
+
+    try:
+
+        create_parser_result(id=id, parser_id=parser_id, entity_id=entity_id,
+                             arguments=arguments, save_object=save_object)
+
+    except Exception as err:
+        task_status.set(None, -1, "Parsing failed: %s" % str(err))
+        raise
+
+    task_status.set(2, 100, "Parsing finished")
+
 def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=False):
 
     client_id, object_id = id
@@ -456,38 +487,9 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
         DBSession.add(dbparserresult)
         DBSession.flush()
 
+    transaction.commit()
+
     return dbparserresult
-
-@celery.task
-def async_create_parser_result(id, parser_id, entity_id,
-                               task_key, cache_kwargs, sqlalchemy_url,
-                               arguments, save_object):
-    async_create_parser_result_method(id=id, parser_id=parser_id, entity_id=entity_id,
-                                      task_key=task_key, cache_kwargs=cache_kwargs,
-                                      sqlalchemy_url=sqlalchemy_url,
-                                      arguments=arguments, save_object=save_object)
-
-def async_create_parser_result_method(id, parser_id, entity_id,
-                               task_key, cache_kwargs, sqlalchemy_url,
-                               arguments, save_object):
-
-    from lingvodoc.cache.caching import initialize_cache
-    engine = create_engine(sqlalchemy_url)
-    DBSession.configure(bind=engine)
-    initialize_cache(cache_kwargs)
-    task_status = TaskStatus.get_from_cache(task_key)
-    task_status.set(1, 5, "Parsing started")
-
-    try:
-
-        create_parser_result(id=id, parser_id=parser_id, entity_id=entity_id,
-                             arguments=arguments, save_object=save_object)
-
-    except Exception as err:
-        task_status.set(None, -1, "Parsing failed: %s" % str(err))
-        raise
-
-    task_status.set(2, 100, "Parsing finished")
 
 def create_parser(id, name, parameters=None):
 

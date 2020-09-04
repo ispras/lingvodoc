@@ -116,6 +116,8 @@ class ExecuteParser(graphene.Mutation):
         cur_args["save_object"] = True
 
         async = args.get("async")
+        if not async:
+            async = True
 
         entity.is_under_parsing = True
         DBSession.flush()
@@ -148,7 +150,7 @@ class DeleteParserResult(graphene.Mutation):
         id = args.get('id')
         parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1]).first()
         if not parser_result:
-            print("No such parser in the system")
+            raise ResponseError("No such parser result in the system")
         DBSession.delete(parser_result)
         return DeleteParserResult(triumph=True)
 
@@ -166,7 +168,7 @@ class UpdateParserResult(graphene.Mutation):
         content = args.get('content')
         parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1])
         if not parser_result:
-            print("No such parser in the system")
+            raise ResponseError("No such parser result in the system")
         parser_result.update({'content': content})
         transaction.commit()
         return UpdateParserResult(triumph=True)
