@@ -424,6 +424,9 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
     if not parser:
         raise ResponseError(message="No such parser in the system")
 
+    if not arguments:
+        arguments = dict()
+
     parse_method = getattr(ParseMethods, parser.name)
 
     # print(entity.content)
@@ -456,16 +459,15 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
     return dbparserresult
 
 @celery.task
-def async_create_parser_result(client, info, id, parser_id, entity_id,
+def async_create_parser_result(id, parser_id, entity_id,
                                task_key, cache_kwargs, sqlalchemy_url,
                                arguments, save_object):
-    async_create_parser_result_method(client=client, info=info, id=id,
-                                      parser_id=parser_id, entity_id=entity_id,
+    async_create_parser_result_method(id=id, parser_id=parser_id, entity_id=entity_id,
                                       task_key=task_key, cache_kwargs=cache_kwargs,
                                       sqlalchemy_url=sqlalchemy_url,
                                       arguments=arguments, save_object=save_object)
 
-def async_create_parser_result_method(client, info, id, parser_id, entity_id,
+def async_create_parser_result_method(id, parser_id, entity_id,
                                task_key, cache_kwargs, sqlalchemy_url,
                                arguments, save_object):
 

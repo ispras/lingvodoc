@@ -122,8 +122,6 @@ class ExecuteParser(graphene.Mutation):
 
         if async:
             task = TaskStatus(user_id, "Parsing entity", "", 2)
-            cur_args['client'] = client
-            cur_args['info'] = info
             cur_args["task_key"] = task.key
             cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
             cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
