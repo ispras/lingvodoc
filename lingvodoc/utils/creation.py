@@ -439,7 +439,7 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
 
     doc = load(tmp_filename)
     content = teletype.extractText(doc.text)
-    print(content)
+    # print(content)
 
     result = parse_method(content, **arguments)
 
