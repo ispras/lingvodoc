@@ -32,7 +32,8 @@ from lingvodoc.schema.gql_entity import (
     UpdateEntityContent,
     BulkCreateEntity,
     ApproveAllForUser,
-    BulkUpdateEntityContent)
+    BulkUpdateEntityContent,
+    SimpleUpdateEntityContent)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -7806,6 +7807,7 @@ class MyMutations(graphene.ObjectType):
     execute_parser = ExecuteParser.Field()
     delete_parser_result = DeleteParserResult.Field()
     update_parser_result = UpdateParserResult.Field()
+    simple_update_entity_content = SimpleUpdateEntityContent.Field()
 
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)

@@ -498,6 +498,25 @@ class UpdateEntity(graphene.Mutation):
         return UpdateEntity(entity=entity, triumph=True)
 
 
+# TODO: delete this query for production
+class SimpleUpdateEntityContent(graphene.Mutation):
+    class Arguments:
+        entity_id = LingvodocID()
+        new_content = graphene.String()
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        dbentity = DBSession.query(dbEntity).filter_by(client_id=args.get("entity_id")[0],
+                                                      object_id=args.get("entity_id")[1]).first()
+        dbentity.content = args.get("new_content")
+        DBSession.flush()
+
+        return UpdateEntityContent(triumph=True)
+
+
 class ApproveAllForUser(graphene.Mutation):
     """
     mutation Mu{
