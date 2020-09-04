@@ -132,11 +132,9 @@ class Entity(LingvodocObjectType):
     def resolve_is_subject_for_parsing(self, info):
         extension = self.dbObject.content[self.dbObject.content.rfind('.'):]
         if extension == ".odt":
-            self.dbObject.is_subject_for_parsing = True
+            return True
         else:
-            self.dbObject.is_subject_for_parsing = False
-        DBSession.flush()
-        return self.dbObject.is_subject_for_parsing
+            return False
 
     @fetch_object('is_under_parsing')
     def resolve_is_under_parsing(self, info):

@@ -426,7 +426,7 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
 
     parse_method = getattr(ParseMethods, parser.name)
 
-    print(entity.content)
+    # print(entity.content)
     ascii_part = entity.content[:entity.content.rfind('/') + 1]
     unicode_part = entity.content[entity.content.rfind('/') + 1:entity.content.rfind('.')]
     extension = entity.content[entity.content.rfind('.'):]

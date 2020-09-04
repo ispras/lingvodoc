@@ -1,4 +1,6 @@
+import base64
 import tempfile
+import urllib
 
 import graphene
 import transaction
@@ -95,20 +97,17 @@ class ExecuteParser(graphene.Mutation):
                 elif parameter['type'] == ParameterType.Boolean:
                     arguments[parameter['name']] = bool(arguments[parameter['name']])
                 elif parameter['type'] == ParameterType.File:
+                    response = urllib.request.urlopen(arguments[parameter['name']])
                     tmp_file_id, tmp_filename = tempfile.mkstemp()
-                    tmp_file = open(tmp_filename, 'w+', newline='')
-                    tmp_file.write(arguments[parameter['name']])
+                    tmp_file = open(tmp_filename, 'wb')
+                    tmp_file.write(response.read())
                     arguments[parameter['name']] = tmp_filename
-                    tmp_file.flush()
 
 
         entity = DBSession.query(dbEntity). \
             filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
         if not entity:
             raise ResponseError(message="No such entity in the system")
-
-        if not entity.is_subject_for_parsing:
-            raise ResponseError(message="Entity is not suitable for parsing")
 
         cur_args['id'] = id
         cur_args['entity_id'] = args.get('entity_id')

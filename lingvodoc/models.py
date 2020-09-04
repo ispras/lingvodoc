@@ -1233,7 +1233,6 @@ class Entity(CompositeIdMixin,
 
     content = Column(UnicodeText)
     locale_id = Column(SLBigInteger())
-    is_subject_for_parsing = Column(Boolean)
     is_under_parsing = Column(Boolean)
 
     def __init__(self, **kwargs):
