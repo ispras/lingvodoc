@@ -1150,7 +1150,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
             else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
-        dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
+        dbdicts = dbdicts.order_by(dbDictionary.created_at)
         if mode is not None and client:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             if not mode:
@@ -7453,7 +7453,14 @@ class SoundAndMarkup(graphene.Mutation):
 
 
 def save_dictionary(
-    dict_id, request, user_id, locale_id, publish, synchronous):
+    dict_id,
+    dictionary_obj,
+    request,
+    user_id,
+    locale_id,
+    publish,
+    synchronous = False,
+    debug_flag = False):
 
     my_args = dict()
     my_args["client_id"] = dict_id[0]
@@ -7462,8 +7469,6 @@ def save_dictionary(
     my_args["storage"] = request.registry.settings["storage"]
     my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
     try:
-        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
-                                                                 object_id=dict_id[1]).first()
         gist = DBSession.query(dbTranslationGist). \
             filter_by(client_id=dictionary_obj.translation_gist_client_id,
                       object_id=dictionary_obj.translation_gist_object_id).first()
@@ -7478,6 +7483,7 @@ def save_dictionary(
     my_args["task_key"] = task.key if not synchronous else None
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     my_args["published"] = publish
+    my_args['__debug_flag__'] = debug_flag
 
     res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
 
@@ -7488,6 +7494,7 @@ class SaveDictionary(graphene.Mutation):
         id = LingvodocID(required=True)
         mode = graphene.String(required=True)
         synchronous = graphene.Boolean()
+        debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -7518,8 +7525,14 @@ class SaveDictionary(graphene.Mutation):
                                    (persp.client_id, persp.object_id))
 
         save_dictionary(
-            dict_id, request, user_id, locale_id, publish,
-            args.get('synchronous'))
+            dict_id,
+            dictionary_obj,
+            request,
+            user_id,
+            locale_id,
+            publish,
+            args.get('synchronous', False),
+            args.get('debug_flag', False))
 
         return DownloadDictionary(triumph=True)
 
@@ -7551,8 +7564,17 @@ class SaveAllDictionaries(graphene.Mutation):
 
         else:
             raise ResponseError(message="mode: <all|published>")
+
         for dictionary in dictionaries:
-            save_dictionary([dictionary.client_id, dictionary.object_id], request, user_id, locale_id, publish)
+
+            save_dictionary(
+                [dictionary.client_id, dictionary.object_id],
+                dictionary_obj,
+                request,
+                user_id,
+                locale_id,
+                publish)
+
             # if not counter % 5:
             #     time.sleep(5)
             # counter += 1
