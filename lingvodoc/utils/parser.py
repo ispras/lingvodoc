@@ -103,7 +103,7 @@ def timarkh_udm(content):
     #file = open("/home/andriy/out.html", "w")
     #soup = bs4.BeautifulSoup(html, 'html.parser')
     #file.write(soup.prettify())
-    #return html
+    return html
 
 #f = open("/home/andriy/lingvodoc/udmurtian-text.txt", "r")
 #out = open("/home/andriy/lingvodoc/out.html", "w")
