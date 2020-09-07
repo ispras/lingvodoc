@@ -11,6 +11,6 @@ from lingvodoc.utils.creation import create_parser
 dbname = "postgresql+psycopg2://lingvodoc:@localhost:15432/lingvodoc"
 engine = create_engine(dbname)
 DBSession.configure(bind=engine)
-# Parser.__table__.create(engine)
+ParserResult.__table__.create(engine)
 # ParserResult.__table__.create(engine)
 

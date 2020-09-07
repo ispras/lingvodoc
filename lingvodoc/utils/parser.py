@@ -85,7 +85,6 @@ def timarkh_udm(content):
               "</style>")
     html += ("</head>")
     html += ("<body>")
-    html += ("<p>")
     for elem in parsed_dict.keys():
         parsed_data = ""
         for key in parsed_dict[elem]:
@@ -99,10 +98,10 @@ def timarkh_udm(content):
     html += content_copy.replace("\n", "<br>")
     html += ("</body>"
               "</html>")
-    # file = open("/home/andriy/out.html", "w")
-    # file.write(html)
-
-    return html
+    #file = open("/home/andriy/out.html", "w")
+    #soup = bs4.BeautifulSoup(html, 'html.parser')
+    #file.write(soup.prettify())
+    #return html
 
 #f = open("/home/andriy/lingvodoc/udmurtian-text.txt", "r")
 #out = open("/home/andriy/lingvodoc/out.html", "w")
