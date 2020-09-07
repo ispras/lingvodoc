@@ -85,6 +85,7 @@ def timarkh_udm(content):
               "</style>")
     html += ("</head>")
     html += ("<body>")
+    html += ("<p>")
     for elem in parsed_dict.keys():
         parsed_data = ""
         for key in parsed_dict[elem]:
@@ -96,6 +97,7 @@ def timarkh_udm(content):
                   "</span>" + "</span>")
         content_copy = re.sub(r"\b{}\b".format(elem), replace_str, content_copy)
     html += content_copy.replace("\n", "<br>")
+    html += ("</p>")
     html += ("</body>"
               "</html>")
     #file = open("/home/andriy/out.html", "w")
