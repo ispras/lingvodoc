@@ -41,7 +41,21 @@ def translation_gist_search(searchstring):
             return translationgist
 
 
-def recursive_sort(langs, visited, stack, result):
+def recursive_sort(
+    langs,
+    visited = None,
+    stack = None,
+    result = None):
+
+    if visited is None:
+        visited = set()
+
+    if stack is None:
+        stack = set()
+
+    if result is None:
+        result = list()
+
     for lang in langs:
         parent = (lang.parent_client_id, lang.parent_object_id)
         if parent == (None, None):
@@ -87,7 +101,8 @@ def recursive_sort(langs, visited, stack, result):
             recursive_sort(list(stack), visited, stack, result)
         else:
             stack.add(lang)
-    return
+
+    return result
 
 def eaf_words(eaf_obj):
     annotations = list()
