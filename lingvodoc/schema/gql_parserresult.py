@@ -116,7 +116,7 @@ class ExecuteParser(graphene.Mutation):
         cur_args["save_object"] = True
 
         async = args.get("async")
-        if not async:
+        if async == None:
             async = True
 
         entity.is_under_parsing = True

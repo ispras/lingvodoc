@@ -9,7 +9,7 @@ cffi==1.8.3
 Chameleon==2.25
 dataproperty==0.42.1
 dogpile.cache==0.6.2
-git+https://gitlab.at.ispras.ru/Ilya/dedoc_project.git
+-e git+https://gitlab.at.ispras.ru/Ilya/dedoc_project@604556933f97fe32837d3a5ca5d6f3867009bcb3#eg=dedoc
 git+https://github.com/myrix/poio-api.git
 git+https://github.com/ankan2013/udmparser.git
 GitPython==3.1.0

@@ -476,6 +476,7 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
     # print(content)
 
     result = parse_method(content, **arguments)
+    # result = ParseMethods.dedoc_extract(tmp_filename)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,

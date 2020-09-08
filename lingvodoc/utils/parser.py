@@ -8,6 +8,21 @@ import tempfile
 import bs4
 
 """
+from dedoc.manager import dedoc_manager
+from dedoc.api.api_utils import json2html
+
+
+def dedoc_extract(file):
+    manager = dedoc_manager.DedocManager()
+    parameters = dict()
+    document_tree = manager.parse_file(file, parameters=parameters)
+    response = json2html(text="", paragraph=document_tree.content.structure,
+                                 tables=document_tree.content.tables,
+                                 tabs=0)
+    return response
+"""
+
+"""
 def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
             derivFile, conversionFile, cliticFile, delAnaFile,
             parsedFile, unparsedFile, errorFile,
@@ -38,7 +53,9 @@ def timarkh_udm(content):
             l.append(word)
         return l
 
-    content_copy = (content + '.')[:-1]
+    span_id_counter = 1
+
+    content_original = (content + '.')[:-1]
     content = content.replace('\n', '')
     tokenizer = RegexpTokenizer(r'\w+')
     freq_dict = dict()
@@ -86,17 +103,27 @@ def timarkh_udm(content):
     html += ("</head>")
     html += ("<body>")
     html += ("<p>")
+
+    replace_wrap_dict = dict()
     for elem in parsed_dict.keys():
         parsed_data = ""
         for key in parsed_dict[elem]:
             parsed_data += ("\'" + key + "\'" + ": " + "\'" + parsed_dict[elem][key] + "\'" + ", ")
         if len(parsed_data) >= 2 and parsed_data[-2] == ',':
             parsed_data = parsed_data[:-2] + "."
-        replace_str = ("<span class=\"unverified\">" +
-                  elem + "<span class=\"result\">" + parsed_data +
+        replace_str = ("<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">" +
+                  elem + "<span class=\"result\"" + " id=" + str(span_id_counter+1) + ">" + parsed_data +
                   "</span>" + "</span>")
-        content_copy = re.sub(r"\b{}\b".format(elem), replace_str, content_copy)
-    html += content_copy.replace("\n", "<br>")
+        span_id_counter += 2
+        replace_wrap_dict["1eFtB0rDEr" + elem + "R1Gh4B0RERr"] = replace_str
+        content_original = re.sub(r"\b{}\b".format(elem),
+                                  "1eFtB0rDEr" + elem + "R1Gh4B0RERr", content_original)
+
+    for key in replace_wrap_dict.keys():
+        content_original = re.sub(r"\b{}\b".format(key),
+                                  replace_wrap_dict[key], content_original)
+
+    html += content_original.replace("\n", "<br>")
     html += ("</p>")
     html += ("</body>"
               "</html>")
