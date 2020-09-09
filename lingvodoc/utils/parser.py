@@ -102,7 +102,7 @@ def timarkh_udm(content_file):
              
                     "}"
                 "SPAN.unverified {"
-                    "background-color: orangered;"
+                    "background-color: salmon;"
                     "border-top-left-radius: 10% 10px;"
                     "border-top-right-radius: 10% 10px;"
                     "border-bottom-left-radius: 10% 10px;"
