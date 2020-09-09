@@ -6,6 +6,8 @@ import csv
 import os
 import tempfile
 import bs4
+from odf import text, teletype
+from odf.opendocument import load
 
 """
 from dedoc.manager import dedoc_manager
@@ -32,19 +34,7 @@ def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
             minFlexLen=4, maxCompileTime=60)
 """
 
-def timarkh_udm(content):
-
-    def extract_parsed(file):
-        html = open(file, "r")
-        soup = bs4.BeautifulSoup(html, 'html.parser')
-        parsed_dict = dict()
-        for w in soup.find_all('w'):
-            word = w.contents[-1]
-            parsed_dict[word] = dict()
-            tag_with_attributes = next(w.children)
-            for attr in tag_with_attributes.attrs:
-                parsed_dict[word][attr] = tag_with_attributes[attr]
-        return parsed_dict
+def timarkh_udm(content_file):
 
     def extract_unparsed(file):
         f = open(file, "r")
@@ -53,13 +43,14 @@ def timarkh_udm(content):
             l.append(word)
         return l
 
-    span_id_counter = -1
+    doc = load(content_file)
+    content_for_parsing = teletype.extractText(doc.text)
 
-    content_original = (content + '.')[:-1]
-    content = content.replace('\n', '')
+    content_for_html = (content_for_parsing + '.')[:-1]
+    content_for_parsing = content_for_parsing.replace('\n', '')
     tokenizer = RegexpTokenizer(r'\w+')
     freq_dict = dict()
-    for word in tokenizer.tokenize(content):
+    for word in tokenizer.tokenize(content_for_parsing):
         if word not in freq_dict.keys():
             freq_dict[word] = 1
         else:
@@ -79,6 +70,18 @@ def timarkh_udm(content):
     open(unparsed_filename, 'w').close()
 
     analyze(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+
+    def extract_parsed(file):
+        html = open(file, "r")
+        soup = bs4.BeautifulSoup(html, 'html.parser')
+        parsed_dict = dict()
+        for w in soup.find_all('w'):
+            word = w.contents[-1]
+            parsed_dict[word] = dict()
+            tag_with_attributes = next(w.children)
+            for attr in tag_with_attributes.attrs:
+                parsed_dict[word][attr] = tag_with_attributes[attr]
+        return parsed_dict
 
     parsed_dict = extract_parsed(parsed_filename)
     #unparsed_list = extract_unparsed(unparsed_filename)
@@ -104,16 +107,22 @@ def timarkh_udm(content):
     html += ("<body>")
     html += ("<p>")
 
-    def generate_html_wrap(elem, title=False):
-        if title:
-            elem = elem[0].lower()+elem[1:]
+    span_id_counter = -1
+    def generate_html_wrap(elem):
+        if elem.lower() in parsed_dict.keys():
+            elem_case_as_in_parsed_dict = elem[:].lower()
+        elif elem.capitalize() in parsed_dict.keys():
+            elem_case_as_in_parsed_dict = elem[:].capitalize()
+        elif elem.upper() in parsed_dict.keys():
+            elem_case_as_in_parsed_dict = elem[:].upper()
+        else:
+            return elem
         parsed_data = ""
-        for key in parsed_dict[elem]:
-            parsed_data += ("\'" + key + "\'" + ": " + "\'" + parsed_dict[elem][key] + "\'" + ", ")
+        for key in parsed_dict[elem_case_as_in_parsed_dict]:
+            parsed_data += ("\'" + key + "\'" + ": " + "\'" +
+                            parsed_dict[elem_case_as_in_parsed_dict][key] + "\'" + ", ")
         if len(parsed_data) >= 2 and parsed_data[-2] == ',':
-            parsed_data = parsed_data[:-2] + "."
-        if title:
-            elem = elem[0].upper()+elem[1:]
+            parsed_data = parsed_data[:-2]
         nonlocal span_id_counter
         span_id_counter += 2
         return ("<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">" +
@@ -124,22 +133,19 @@ def timarkh_udm(content):
     right_border = "_R1Gh4B0RERr"
 
     for elem in parsed_dict.keys():
+        content_for_html = re.sub(r"\b{}\b".format(elem),
+                                  left_border + elem + right_border, content_for_html)
+        content_for_html = re.sub(r"\b{}\b".format(elem.capitalize()),
+                                  left_border + elem.capitalize() + right_border, content_for_html)
+        content_for_html = re.sub(r"\b{}\b".format(elem.upper()),
+                                  left_border + elem.upper() + right_border, content_for_html)
 
-        content_original = re.sub(r"\b{}\b".format(elem),
-                                  left_border + elem + right_border, content_original)
-        content_original = re.sub(r"\b{}\b".format(elem[0].upper() + elem[1:]),
-                                  left_border + elem[0].upper() + elem[1:] + right_border, content_original)
-
-    split_list = content_original.split(left_border)
-    for elem in split_list:
+    parsed_words_split_list = content_for_html.split(left_border)
+    for elem in parsed_words_split_list:
         index = elem.find(right_border)
         if index != -1:
-            if elem[0].isupper():
-                html += generate_html_wrap(elem[:index], title=True)
-            else:
-                html += generate_html_wrap(elem[:index])
+            html += generate_html_wrap(elem[:index])
             html += elem[index+len(right_border):]
-
         else:
             html += elem
 

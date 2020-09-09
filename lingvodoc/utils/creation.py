@@ -9,8 +9,6 @@ import string
 import urllib
 
 import transaction
-from odf import text, teletype
-from odf.opendocument import load
 from pathvalidate import sanitize_filename
 from sqlalchemy import (
     and_, create_engine,
@@ -471,11 +469,7 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=F
     tmp_file = open(tmp_filename, 'wb')
     tmp_file.write(response.read())
 
-    doc = load(tmp_filename)
-    content = teletype.extractText(doc.text)
-    # print(content)
-
-    result = parse_method(content, **arguments)
+    result = parse_method(tmp_filename, **arguments)
     # result = ParseMethods.dedoc_extract(tmp_filename)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
