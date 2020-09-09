@@ -94,17 +94,26 @@ def timarkh_udm(content_file):
                     "<title></title>")
     html += ("<style>"
                 "SPAN.verified {"
-                    "background-color: green;"
+                    "background-color: limegreen;"
+                    "border-top-left-radius: 10% 10px;"
+                    "border-top-right-radius: 10% 10px;"
+                    "border-bottom-left-radius: 10% 10px;"
+                    "border-bottom-right-radius: 10% 10px;"
+             
                     "}"
                 "SPAN.unverified {"
-                    "background-color: red;"
+                    "background-color: orangered;"
+                    "border-top-left-radius: 10% 10px;"
+                    "border-top-right-radius: 10% 10px;"
+                    "border-bottom-left-radius: 10% 10px;"
+                    "border-bottom-right-radius: 10% 10px;"
                     "}"
                 "SPAN.result {"
                     "display: None;"
                     "}"
               "</style>")
     html += ("</head>")
-    html += ("<body>")
+    html += ("<body leftmargin=30pt rightmargin=30pt topmargin=20pt>")
     html += ("<p>")
 
     span_id_counter = -1
