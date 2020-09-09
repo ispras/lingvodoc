@@ -427,7 +427,9 @@ def async_create_parser_result_method(id, parser_id, entity_id,
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
     task_status = TaskStatus.get_from_cache(task_key)
-    task_status.set(1, 5, "Parsing started")
+    entity = DBSession.query(Entity).filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
+    content_filename = entity.content.split('/')[-1]
+    task_status.set(1, 5, "Parsing of file " + content_filename + " started")
 
     try:
 
@@ -435,12 +437,12 @@ def async_create_parser_result_method(id, parser_id, entity_id,
                              arguments=arguments, save_object=save_object)
 
     except Exception as err:
-        task_status.set(None, -1, "Parsing failed: %s" % str(err))
+        task_status.set(None, -1, "Parsing of file " + content_filename + " failed: %s" % str(err))
         raise
 
-    task_status.set(2, 100, "Parsing finished")
+    task_status.set(2, 100, "Parsing of file " + content_filename + " finished")
 
-def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=False):
+def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=True):
 
     client_id, object_id = id
     parser_client_id, parser_object_id = parser_id
