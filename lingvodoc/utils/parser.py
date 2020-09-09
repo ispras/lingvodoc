@@ -1,3 +1,4 @@
+import json
 import re
 
 from udmparser.analyzer.analyze import analyze
@@ -126,12 +127,8 @@ def timarkh_udm(content_file):
             elem_case_as_in_parsed_dict = elem[:].upper()
         else:
             return elem
-        parsed_data = ""
-        for key in parsed_dict[elem_case_as_in_parsed_dict]:
-            parsed_data += ("\'" + key + "\'" + ": " + "\'" +
-                            parsed_dict[elem_case_as_in_parsed_dict][key] + "\'" + ", ")
-        if len(parsed_data) >= 2 and parsed_data[-2] == ',':
-            parsed_data = parsed_data[:-2]
+        parsed_data = ((json.dumps(parsed_dict[elem_case_as_in_parsed_dict],
+                                   ensure_ascii=False)).encode('utf8')).decode()
         nonlocal span_id_counter
         span_id_counter += 2
         return ("<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">" +
@@ -162,9 +159,9 @@ def timarkh_udm(content_file):
     html += ("</body>"
               "</html>")
 
-    #file = open("/home/andriy/out.html", "w")
-    #soup = bs4.BeautifulSoup(html, 'html.parser')
-    #file.write(soup.prettify())
+    file = open("/home/andriy/out.html", "w")
+    soup = bs4.BeautifulSoup(html, 'html.parser')
+    file.write(soup.prettify())
     #file.write(html)
 
     return html
