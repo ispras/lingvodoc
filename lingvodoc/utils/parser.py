@@ -78,10 +78,14 @@ def timarkh_udm(content_file):
         parsed_dict = dict()
         for w in soup.find_all('w'):
             word = w.contents[-1]
-            parsed_dict[word] = dict()
-            tag_with_attributes = next(w.children)
-            for attr in tag_with_attributes.attrs:
-                parsed_dict[word][attr] = tag_with_attributes[attr]
+            parsed_dict[word] = list()
+            for child in w.children:
+                if type(child) == bs4.element.Tag and child.name == "ana":
+                    tag_with_attributes = child
+                    new_res = dict()
+                    for attr in tag_with_attributes.attrs:
+                        new_res[attr] = tag_with_attributes[attr]
+                    parsed_dict[word].append(new_res)
         return parsed_dict
 
     parsed_dict = extract_parsed(parsed_filename)
@@ -117,7 +121,7 @@ def timarkh_udm(content_file):
     html += ("<body leftmargin=30pt rightmargin=30pt topmargin=20pt>")
     html += ("<p>")
 
-    span_id_counter = -1
+    span_id_counter = 0
     def generate_html_wrap(elem):
         if elem.lower() in parsed_dict.keys():
             elem_case_as_in_parsed_dict = elem[:].lower()
@@ -127,13 +131,15 @@ def timarkh_udm(content_file):
             elem_case_as_in_parsed_dict = elem[:].upper()
         else:
             return elem
-        parsed_data = ((json.dumps(parsed_dict[elem_case_as_in_parsed_dict],
-                                   ensure_ascii=False)).encode('utf8')).decode()
         nonlocal span_id_counter
-        span_id_counter += 2
-        return ("<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">" +
-                elem + "<span class=\"result\"" + " id=" + str(span_id_counter+1) + ">" + parsed_data +
-                "</span>" + "</span>")
+        span_id_counter += 1
+        wrap = "<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">"
+        for res in parsed_dict[elem_case_as_in_parsed_dict]:
+            span_id_counter += 1
+            parsed_data = ((json.dumps(res, ensure_ascii=False)).encode('utf8')).decode()
+            wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + parsed_data + "</span>"
+        wrap += elem + "</span>"
+        return wrap
 
     left_border = "1eFtB0rDeR_"
     right_border = "_R1Gh4B0RERr"
