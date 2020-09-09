@@ -159,9 +159,9 @@ def timarkh_udm(content_file):
     html += ("</body>"
               "</html>")
 
-    file = open("/home/andriy/out.html", "w")
-    soup = bs4.BeautifulSoup(html, 'html.parser')
-    file.write(soup.prettify())
+    #file = open("/home/andriy/out.html", "w")
+    #soup = bs4.BeautifulSoup(html, 'html.parser')
+    #file.write(soup.prettify())
     #file.write(html)
 
     return html
