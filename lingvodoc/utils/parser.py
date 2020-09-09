@@ -53,7 +53,7 @@ def timarkh_udm(content):
             l.append(word)
         return l
 
-    span_id_counter = 1
+    span_id_counter = -1
 
     content_original = (content + '.')[:-1]
     content = content.replace('\n', '')
@@ -104,32 +104,54 @@ def timarkh_udm(content):
     html += ("<body>")
     html += ("<p>")
 
-    replace_wrap_dict = dict()
-    for elem in parsed_dict.keys():
+    def generate_html_wrap(elem, title=False):
+        if title:
+            elem = elem[0].lower()+elem[1:]
         parsed_data = ""
         for key in parsed_dict[elem]:
             parsed_data += ("\'" + key + "\'" + ": " + "\'" + parsed_dict[elem][key] + "\'" + ", ")
         if len(parsed_data) >= 2 and parsed_data[-2] == ',':
             parsed_data = parsed_data[:-2] + "."
-        replace_str = ("<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">" +
-                  elem + "<span class=\"result\"" + " id=" + str(span_id_counter+1) + ">" + parsed_data +
-                  "</span>" + "</span>")
+        if title:
+            elem = elem[0].upper()+elem[1:]
+        nonlocal span_id_counter
         span_id_counter += 2
-        replace_wrap_dict["1eFtB0rDEr" + elem + "R1Gh4B0RERr"] = replace_str
+        return ("<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">" +
+                elem + "<span class=\"result\"" + " id=" + str(span_id_counter+1) + ">" + parsed_data +
+                "</span>" + "</span>")
+
+    left_border = "1eFtB0rDeR_"
+    right_border = "_R1Gh4B0RERr"
+
+    for elem in parsed_dict.keys():
+
         content_original = re.sub(r"\b{}\b".format(elem),
-                                  "1eFtB0rDEr" + elem + "R1Gh4B0RERr", content_original)
+                                  left_border + elem + right_border, content_original)
+        content_original = re.sub(r"\b{}\b".format(elem[0].upper() + elem[1:]),
+                                  left_border + elem[0].upper() + elem[1:] + right_border, content_original)
 
-    for key in replace_wrap_dict.keys():
-        content_original = re.sub(r"\b{}\b".format(key),
-                                  replace_wrap_dict[key], content_original)
+    split_list = content_original.split(left_border)
+    for elem in split_list:
+        index = elem.find(right_border)
+        if index != -1:
+            if elem[0].isupper():
+                html += generate_html_wrap(elem[:index], title=True)
+            else:
+                html += generate_html_wrap(elem[:index])
+            html += elem[index+len(right_border):]
 
-    html += content_original.replace("\n", "<br>")
+        else:
+            html += elem
+
     html += ("</p>")
     html += ("</body>"
               "</html>")
+
     #file = open("/home/andriy/out.html", "w")
     #soup = bs4.BeautifulSoup(html, 'html.parser')
     #file.write(soup.prettify())
+    #file.write(html)
+
     return html
 
 #f = open("/home/andriy/lingvodoc/udmurtian-text.txt", "r")
