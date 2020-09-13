@@ -5,7 +5,8 @@
    "Effect": "Allow",
    "Action": [
     "s3:ListBucket",
-    "s3:GetBucketLocation"
+    "s3:GetBucketLocation",
+    "s3:ListAllMyBuckets"
    ],
    "Resource": [
     "arn:aws:s3:::lingvodoc-temp-files/*"
