@@ -1,0 +1,44 @@
+{
+    "Rules": [
+        {
+            "Expiration": {
+                "Days": 7
+            },
+            "ID": "lingvodoc.ispras.ru/tmp",
+            "Filter": {
+                "Prefix": "lingvodoc.ispras.ru/"
+            },
+            "Status": "Enabled"
+        },
+        {
+            "Expiration": {
+                "Days": 4
+            },
+            "ID": "lingvodoc.tsu.ru/tmp",
+            "Filter": {
+                "Prefix": "lingvodoc.tsu.ru/"
+            },
+            "Status": "Enabled"
+        },
+        {
+            "Expiration": {
+                "Days": 1
+            },
+            "ID": "staging/tmp",
+            "Filter": {
+                "Prefix": "staging/"
+            },
+            "Status": "Enabled"
+        },
+        {
+            "Expiration": {
+                "Days": 1
+            },
+            "ID": "dev/tmp",
+            "Filter": {
+                "Prefix": "dev/"
+            },
+            "Status": "Enabled"
+        }
+    ]
+}
