@@ -23,4 +23,4 @@ mc admin policy add minio lingvodoc_temp_objects_rw_dev ./lingvodoc_temp_objects
 mc admin policy set "minio/lingvodoc-temp-files/lingvodoc.ispras.ru/*" lingvodoc_temp_objects_rw_prod_main user=lingvodoc_main_access_key_username_not_real_here_of_course
 mc admin policy set "minio/lingvodoc-temp-files/lingvodoc.tsu.ru/*" lingvodoc_temp_objects_rw_prod_tomsk user=lingvodoc_temp_objects_rw_prod_tomsk
 mc admin policy set "minio/lingvodoc-temp-files/staging/*" lingvodoc_temp_objects_rw_staging user=lingvodoc_temp_objects_rw_prod_tomsk
-mc admin policy set "minio/lingvodoc-temp-files/dev/*" lingvodoc_temp_objects_rw_dev user=lingvodoc_temp_objects_rw_prod_tomsk
+mc admin policy set "minio/lingvodoc-temp-files/dev/*" lingvodoc_temp_objects_rw_dev user=lingvodoc_temp_objects_rw_dev
