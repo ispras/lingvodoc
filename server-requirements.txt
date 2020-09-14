@@ -14,10 +14,11 @@ graf-python==0.3.1
 graphene==2.0.1
 iso8601==0.1.11
 kombu==3.0.37
+minio==6.0.0
 Mako==1.0.4
 MarkupSafe==0.23
 matplotlib==1.5.3
-multiprocess==0.70.4
+multiprocess==0.70.6
 numpy==1.11.2
 numpydoc==0.9.1
 numpydoc==0.9.1

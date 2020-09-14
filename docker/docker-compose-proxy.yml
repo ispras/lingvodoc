@@ -29,6 +29,7 @@ services:
       - ./frontend/dist:/dist
       - ./nginx:/etc/nginx/conf.d
       - ./sock:/sock
+      - /tmp:/tmp
     depends_on:
       - pg
       - api
@@ -75,6 +76,7 @@ services:
       - ./sock:/sock
       - /api/build/
       - ../:/api
+      - /tmp:/tmp
 
     env_file:
       - ./locale_env.sh

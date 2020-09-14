@@ -1021,9 +1021,23 @@ def main(global_config, **settings):
 
     # TODO: DANGER
 
-    settings['storage'] = dict(parser.items(
-        'backend:storage' if parser.has_section('backend:storage') else
-            'storage'))
+    storage_dict = (
+            
+        dict(parser.items(
+            'backend:storage' if parser.has_section('backend:storage') else
+                'storage')))
+
+    if parser.has_section('backend:storage.temporary'):
+
+        storage_dict['temporary'] = (
+            dict(parser.items('backend:storage.temporary')))
+
+    elif parser.has_section('storage.temporary'):
+
+        storage_dict['temporary'] = (
+            dict(parser.items('storage.temporary')))
+
+    settings['storage'] = storage_dict
 
     if parser.has_section('app:desktop'):
         storage = dict()
