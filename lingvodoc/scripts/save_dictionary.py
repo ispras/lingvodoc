@@ -13,12 +13,22 @@ import hashlib
 import pprint
 import re
 import shutil
-import transaction
+import sndhdr
 import tempfile
-from pydub import AudioSegment
+import transaction
+import zipfile
+
+import collections
 from collections import defaultdict
+
 from pathvalidate import sanitize_filename
+
+import urllib
 from urllib import request
+
+import minio
+
+from pydub import AudioSegment
 
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
@@ -47,6 +57,7 @@ from lingvodoc.cache.caching import TaskStatus, initialize_cache
 from lingvodoc.utils import explain_analyze, sanitize_worksheet_name
 from lingvodoc.utils.search import recursive_sort
 from lingvodoc.utils.static_fields import fields_static
+from lingvodoc.views.v2.utils import as_storage_file, storage_file
 
 from sqlalchemy.orm import (
     aliased, sessionmaker,
@@ -718,12 +729,15 @@ class Save_Context(object):
         locale_id,
         session,
         cognates_flag = True,
+        sound_flag = False,
+        storage = None,
         __debug_flag__ = False):
 
         self.locale_id = locale_id
         self.session = session
 
         self.cognates_flag = cognates_flag
+        self.sound_flag = sound_flag
 
         self.stream = io.BytesIO()
         self.workbook = xlsxwriter.Workbook(self.stream, {'in_memory': True})
@@ -732,6 +746,8 @@ class Save_Context(object):
 
         self.session.execute(
             'refresh materialized view text_field_id_view;')
+
+        # Preparation for etymology listing.
 
         if cognates_flag:
 
@@ -777,6 +793,13 @@ class Save_Context(object):
             self.pid_fid_table_name = 'pid_fid_table_' + uuid_str
             self.eid_pid_table_name = 'eid_pid_table_' + uuid_str
 
+            sound_fid_str = (
+
+                '''
+                sound_client_id BIGINT,
+                sound_object_id BIGINT,
+                ''')
+
             self.session.execute('''
 
                 create temporary table
@@ -787,7 +810,7 @@ class Save_Context(object):
                   transcription_client_id BIGINT,
                   transcription_object_id BIGINT,
                   translation_client_id BIGINT,
-                  translation_object_id BIGINT,
+                  translation_object_id BIGINT,{sound_str}
 
                   primary key (
                     perspective_client_id,
@@ -810,8 +833,15 @@ class Save_Context(object):
                 on commit drop;
 
                 '''.format(
-                    pid_fid_table_name = self.pid_fid_table_name,
-                    eid_pid_table_name = self.eid_pid_table_name))
+
+                    pid_fid_table_name =
+                        self.pid_fid_table_name,
+
+                    eid_pid_table_name =
+                        self.eid_pid_table_name,
+
+                    sound_str =
+                        sound_fid_str if sound_flag else ''))
 
             # Some commonly used etymological SQL queries.
 
@@ -845,6 +875,65 @@ class Save_Context(object):
                 '''.format(
                     eid_pid_table_name = self.eid_pid_table_name))
 
+            sound_fid_str = (
+
+                ''',
+                Tp.sound_client_id,
+                Tp.sound_object_id
+                ''')
+
+            sound_cte_str = (
+                    
+                ''',
+
+                sound_cte as (
+
+                  select
+                  E.parent_client_id,
+                  E.parent_object_id,
+                  jsonb_agg(
+                    jsonb_build_array(
+                      E.content,
+                      extract(epoch from E.created_at))) content_list
+
+                  from
+                  eid_pid_fid_cte T,
+                  public.entity E,
+                  publishingentity P
+                  
+                  where
+                  E.parent_client_id = T.entry_client_id and
+                  E.parent_object_id = T.entry_object_id and
+                  E.field_client_id = T.sound_client_id and
+                  E.field_object_id = T.sound_object_id and
+                  E.content is not null and
+                  E.marked_for_deletion is false and
+                  P.client_id = E.client_id and
+                  P.object_id = E.object_id and
+                  P.accepted = true{0}
+                  
+                  group by
+                  E.parent_client_id,
+                  E.parent_object_id)
+
+                ''')
+
+            sound_select_str = (
+
+                ''',
+                S.content_list
+                ''')
+
+            sound_join_str = (
+
+                '''
+                left outer join
+                sound_cte S
+                on
+                S.parent_client_id = T.entry_client_id and
+                S.parent_object_id = T.entry_object_id
+                ''')
+
             self.sql_etymology_str_b = ('''
 
                 with
@@ -859,7 +948,7 @@ class Save_Context(object):
                   Tp.transcription_client_id,
                   Tp.transcription_object_id,
                   Tp.translation_client_id,
-                  Tp.translation_object_id
+                  Tp.translation_object_id{sound_fid_str}
 
                   from
                   {eid_pid_table_name} Te,
@@ -921,7 +1010,7 @@ class Save_Context(object):
                   
                   group by
                   E.parent_client_id,
-                  E.parent_object_id)
+                  E.parent_object_id){sound_cte_str}
 
                 select
                 T.entry_client_id,
@@ -929,7 +1018,7 @@ class Save_Context(object):
                 T.perspective_client_id,
                 T.perspective_object_id,
                 Xc.content_list,
-                Xl.content_list
+                Xl.content_list{sound_select_str}
 
                 from
                 eid_pid_fid_cte T
@@ -944,14 +1033,58 @@ class Save_Context(object):
                 translation_cte Xl
                 on
                 Xl.parent_client_id = T.entry_client_id and
-                Xl.parent_object_id = T.entry_object_id;
+                Xl.parent_object_id = T.entry_object_id{sound_join_str};
 
                 '''.format(
-                    pid_fid_table_name = self.pid_fid_table_name,
-                    eid_pid_table_name = self.eid_pid_table_name))
+
+                    pid_fid_table_name =
+                        self.pid_fid_table_name,
+
+                    eid_pid_table_name =
+                        self.eid_pid_table_name,
+                        
+                    sound_fid_str =
+                        sound_fid_str if sound_flag else '',
+                        
+                    sound_cte_str =
+                        sound_cte_str if sound_flag else '',
+                        
+                    sound_select_str =
+                        sound_select_str if sound_flag else '',
+                        
+                    sound_join_str =
+                        sound_join_str if sound_flag else ''))
 
             self.format_gray = (
                 self.workbook.add_format({'bg_color': '#e6e6e6'}))
+
+        # If we need to export sounds, we will need some sound fields info.
+
+        if sound_flag:
+
+            self.storage = storage
+
+            self.storage_f = (
+                as_storage_file if __debug_flag__ else storage_file)
+
+            self.sound_type_id = (
+
+                self.session
+
+                    .query(
+                        TranslationGist.client_id,
+                        TranslationGist.object_id)
+
+                    .join(TranslationAtom)
+
+                    .filter(
+                        TranslationGist.marked_for_deletion == False,
+                        TranslationGist.type == 'Service',
+                        TranslationAtom.marked_for_deletion == False,
+                        TranslationAtom.content == 'Sound',
+                        TranslationAtom.locale_id == 2)
+                    
+                    .first())
 
         if __debug_flag__:
 
@@ -1057,20 +1190,50 @@ class Save_Context(object):
 
         # Getting field data.
 
+        if self.sound_flag:
+
+            self.field_condition = (
+
+                or_(
+
+                    tuple_(
+                        DictionaryPerspectiveToField.field_client_id,
+                        DictionaryPerspectiveToField.field_object_id)
+
+                        .in_(
+                            sqlalchemy.text('select * from text_field_id_view')),
+
+                    and_(
+                        Field.data_type_translation_gist_client_id == self.sound_type_id[0],
+                        Field.data_type_translation_gist_object_id == self.sound_type_id[1])))
+
+        else:
+
+            self.field_condition = (
+
+                tuple_(
+                    DictionaryPerspectiveToField.field_client_id,
+                    DictionaryPerspectiveToField.field_object_id)
+
+                    .in_(
+                        sqlalchemy.text('select * from text_field_id_view')))
+
         field_query = (
                 
             self.session
-                .query(DictionaryPerspectiveToField)
 
-                .filter_by(
-                    parent_client_id=perspective.client_id,
-                    parent_object_id=perspective.object_id,
-                    marked_for_deletion=False)
-                
-                .filter(tuple_(
-                    DictionaryPerspectiveToField.field_client_id,
-                    DictionaryPerspectiveToField.field_object_id)
-                        .in_(sqlalchemy.text('select * from text_field_id_view')))
+                .query(
+                    DictionaryPerspectiveToField,
+                    Field)
+
+                .filter(
+                    DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
+                    DictionaryPerspectiveToField.parent_object_id == perspective.object_id,
+                    DictionaryPerspectiveToField.marked_for_deletion == False,
+                    Field.client_id == DictionaryPerspectiveToField.field_client_id,
+                    Field.object_id == DictionaryPerspectiveToField.field_object_id,
+                    Field.marked_for_deletion == False,
+                    self.field_condition)
 
                 .order_by(DictionaryPerspectiveToField.position))
 
@@ -1085,7 +1248,22 @@ class Save_Context(object):
             log.debug(''.join(
                 '\n' + row[0] for row in row_list))
 
-        self.fields = field_query.all()
+        field_info_list = field_query.all()
+
+        # All perspective fields we are to extract, and separately just the sound field ids.
+
+        self.fields = [
+
+            to_field 
+            for to_field, field in field_info_list]
+
+        if self.sound_flag:
+
+            self.sound_field_id_set = set(
+
+                field.id
+                for to_field, field in field_info_list
+                if field.data_type_translation_gist_id == self.sound_type_id)
 
         # Etymology field, if required.
 
@@ -1135,6 +1313,7 @@ class Save_Context(object):
         self.row += 1
 
         self.perspective_fail_set = set()
+        self.perspective_snd_fail_set = set()
 
     def update_dictionary_info(
         self, perspective_id_set):
@@ -1151,11 +1330,18 @@ class Save_Context(object):
 
             if perspective_info:
 
-                order_key, name_str, xcript_fid, xlat_fid = perspective_info
+                order_key, name_str, xcript_fid, xlat_fid, snd_fid = perspective_info
 
                 if xcript_fid is None or xlat_fid is None:
 
                     self.perspective_fail_set.add(
+                        (order_key, name_str))
+
+                elif (
+                    self.sound_flag and
+                    snd_fid is None):
+
+                    self.perspective_snd_fail_set.add(
                         (order_key, name_str))
 
             else:
@@ -1235,16 +1421,10 @@ class Save_Context(object):
                         DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
                         DictionaryPerspectiveToField.parent_object_id == perspective.object_id,
                         DictionaryPerspectiveToField.marked_for_deletion == False,
-
-                        tuple_(
-                            DictionaryPerspectiveToField.field_client_id,
-                            DictionaryPerspectiveToField.field_object_id)
-
-                            .in_(sqlalchemy.text('select * from text_field_id_view')),
-
                         Field.client_id == DictionaryPerspectiveToField.field_client_id,
                         Field.object_id == DictionaryPerspectiveToField.field_object_id,
                         Field.marked_for_deletion == False,
+                        self.field_condition,
                         Field.translation_gist_client_id == TranslationAtom.parent_client_id,
                         Field.translation_gist_object_id == TranslationAtom.parent_object_id,
                         TranslationAtom.marked_for_deletion == False)
@@ -1265,11 +1445,12 @@ class Save_Context(object):
                     field_name_info_list, width = 192))
 
             # Choosing perspective transcription and translation fields.
-            
+            #
             # At first, we look for standard fields.
 
             transcription_fid = None
             translation_fid = None
+            sound_fid = None
 
             for field_cid, field_oid, name_dict in field_name_info_list:
 
@@ -1279,15 +1460,20 @@ class Save_Context(object):
                 elif field_cid == 66 and field_oid == 10:
                     translation_fid = (field_cid, field_oid)
 
+                elif field_cid == 66 and field_oid == 12:
+                    sound_fid = (field_cid, field_oid)
+
             # If we don't have standard fields, we look through fields by names.
 
             if transcription_fid is None or translation_fid is None:
 
                 en_xcript_fid = None
                 en_xlat_fid = None
+                en_snd_fid = None
 
                 ru_xcript_fid = None
                 ru_xlat_fid = None
+                ru_snd_fid = None
 
                 for field_cid, field_oid, name_dict in field_name_info_list:
 
@@ -1302,6 +1488,9 @@ class Save_Context(object):
                         elif en_name == 'meaning':
                             en_xlat_fid = (field_cid, field_oid)
 
+                        elif en_name == 'sound':
+                            en_snd_fid = (field_cid, field_oid)
+
                     if '1' in name_dict:
 
                         ru_name = (
@@ -1313,15 +1502,20 @@ class Save_Context(object):
                         elif ru_name == 'лексема':
                             ru_xlat_fid = (field_cid, field_oid)
 
+                        elif ru_name == 'звук':
+                            ru_snd_fid = (field_cid, field_oid)
+
                 if en_xcript_fid is not None and en_xlat_fid is not None:
 
                     transcription_fid = en_xcript_fid
                     translation_fid = en_xlat_fid
+                    sound_fid = en_snd_fid
 
                 elif ru_xcript_fid is not None and ru_xlat_fid is not None:
 
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
+                    sound_fid = ru_snd_fid
 
             # If we don't have fields with standard names, maybe this is paradigmatic perspective with
             # paradigmatic fields?
@@ -1330,9 +1524,11 @@ class Save_Context(object):
 
                 en_xcript_fid = None
                 en_xlat_fid = None
+                en_snd_fid = None
 
                 ru_xcript_fid = None
                 ru_xlat_fid = None
+                ru_snd_fid = None
 
                 for field_cid, field_oid, name_dict in field_name_info_list:
 
@@ -1347,6 +1543,9 @@ class Save_Context(object):
                         elif en_name == 'translationofparadigmaticforms':
                             en_xlat_fid = (field_cid, field_oid)
 
+                        elif en_name == 'soundofparadigmaticforms':
+                            en_snd_fid = (field_cid, field_oid)
+
                     if '1' in name_dict:
 
                         ru_name = (
@@ -1358,17 +1557,24 @@ class Save_Context(object):
                         elif ru_name == 'переводпарадигматическихформ':
                             ru_xlat_fid = (field_cid, field_oid)
 
+                        elif ru_name == 'звукпарадигматическихформ':
+                            ru_snd_fid = (field_cid, field_oid)
+
                 if en_xcript_fid is not None and en_xlat_fid is not None:
 
                     transcription_fid = en_xcript_fid
                     translation_fid = en_xlat_fid
+                    sound_fid = en_snd_fid
 
                 elif ru_xcript_fid is not None and ru_xlat_fid is not None:
 
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
+                    sound_fid = ru_snd_fid
 
             # Finally, if it is a Starling-related perspective, we can try Starling-specific fields.
+            #
+            # No sound field for such a perspective.
 
             if ((transcription_fid is None or translation_fid is None) and
                 perspective_name_str.lower().find('starling') != -1):
@@ -1422,17 +1628,30 @@ class Save_Context(object):
 
             else:
 
+                if (self.sound_flag and
+                    sound_fid is None):
+
+                    self.perspective_snd_fail_set.add(
+                        (order_key, name_str))
+
+                format_str = (
+                    '({}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag else
+                    '({}, {}, {}, {}, {}, {})')
+
                 insert_list.append(
-                    '({}, {}, {}, {}, {}, {})'.format(
+
+                    format_str.format(
                         perspective.client_id,
                         perspective.object_id,
                         transcription_fid[0],
                         transcription_fid[1],
                         translation_fid[0],
-                        translation_fid[1]))
+                        translation_fid[1],
+                        sound_fid[0] if sound_fid is not None else 'null',
+                        sound_fid[1] if sound_fid is not None else 'null'))
 
             self.perspective_info_dict[perspective.id] = (
-                order_key, name_str, transcription_fid, translation_fid)
+                order_key, name_str, transcription_fid, translation_fid, sound_fid)
 
         # Updating perspectives' transcription / transpation field info, if required.
 
@@ -1494,13 +1713,17 @@ class Save_Context(object):
 
         info_list = []
 
-        for (
-            entry_cid,
-            entry_oid,
-            perspective_cid,
-            perspective_oid,
-            transcription_list,
-            translation_list) in result_list:
+        for result_item in result_list:
+
+            (
+                entry_cid,
+                entry_oid,
+                perspective_cid,
+                perspective_oid,
+                transcription_list,
+                translation_list) = (
+
+                result_item[:6])
 
             perspective_info = (
                     
@@ -1510,13 +1733,21 @@ class Save_Context(object):
             if perspective_info is None:
                 continue
 
+            sound_list = (
+                result_item[-1] if self.sound_flag else [])
+
             if transcription_list is None:
                 transcription_list = []
 
             if translation_list is None:
                 translation_list = []
 
-            order_key, name_str, _, _ = perspective_info
+            if sound_list is None:
+                sound_list = []
+
+            # Preparing info of another cognate lexical entry.
+
+            order_key, name_str, _, _, _ = perspective_info
 
             row_list = (
                     
@@ -1527,6 +1758,8 @@ class Save_Context(object):
                             for t in transcription_list],
                         ['\'' + t.strip() + '\''
                             for t in translation_list],
+                        [[self.get_sound_link(*args)]
+                            for args in sound_list],
                         fillvalue = '')))
 
             info_list.append((
@@ -1579,12 +1812,34 @@ class Save_Context(object):
 
             ent_field_ids = field_ids_to_str(entity)
 
+            # Processing text and sound entities.
+
             if ent_field_ids in self.field_to_column:
 
-                (rows_to_write[
-                    self.field_to_column[ent_field_ids]]
-                
-                    .append(entity.content))
+                if (self.sound_flag and
+                    entity.field_id in self.sound_field_id_set):
+
+                    # Sound entity, getting sound file link.
+
+                    sound_link = (
+                            
+                        self.get_sound_link(
+                            entity.content,
+                            entity.created_at))
+
+                    (rows_to_write[
+                        self.field_to_column[ent_field_ids]]
+                    
+                        .append([sound_link]))
+
+                else:
+
+                    # Text entity, simply getting its text content.
+
+                    (rows_to_write[
+                        self.field_to_column[ent_field_ids]]
+                    
+                        .append(entity.content))
 
             # Adding etymologycal info, if required.
 
@@ -1613,7 +1868,7 @@ class Save_Context(object):
                     len(rows_to_write))
 
                 rows_to_write.extend(
-                    ([], [], []))
+                    ([], [], [], []))
 
                 for _, cognate_entry_id, row_list in etymology_info:
 
@@ -1642,16 +1897,137 @@ class Save_Context(object):
 
                 for index, cell in enumerate(cell_list):
 
+                    # Tuple means with format, list means a local link.
+
                     if isinstance(cell, tuple):
-                        self.worksheet.write(self.row, index, *cell)
+
+                        value, cell_format = cell
+
+                        if isinstance(value, list):
+
+                            self.worksheet.write_url(
+                                self.row, index, './' + value[0], cell_format, value[0])
+
+                        else:
+
+                            self.worksheet.write(
+                                self.row, index, value, cell_format)
+
+                    elif isinstance(cell, list):
+
+                        self.worksheet.write_url(
+                            self.row, index, './' + cell[0], None, cell[0])
 
                     else:
-                        self.worksheet.write(self.row, index, cell)
+
+                        self.worksheet.write(
+                            self.row, index, cell)
 
                 self.row += 1
 
+    def get_zip_info(
+        self,
+        name,
+        hash = None,
+        date = None):
+        """
+        Prepares file for saving into the zip archive, changes file name if it is a duplicate.
+        """
 
-def compile_workbook(context, client_id, object_id, session, locale_id, published):
+        zip_name = (
+
+            self.zip_hash_dict.get(
+                (name, hash)))
+
+        if zip_name is not None:
+            return zip_name
+
+        if date is None:
+            date = datetime.datetime.utcnow()
+
+        name_count = (
+            self.zip_name_dict[name])
+
+        self.zip_name_dict[name] += 1
+
+        if name_count >= 1:
+
+            name_root, name_ext = (
+                path.splitext(name))
+
+            zip_name = (
+
+                '{}_{}{}'.format(
+                    name_root, name_count, name_ext))
+
+        else:
+            zip_name = name
+
+        self.zip_hash_dict[(name, hash)] = zip_name
+
+        zip_date = (
+            date.year,
+            date.month,
+            date.day,
+            date.hour,
+            date.minute,
+            date.second)
+
+        return zipfile.ZipInfo(zip_name, zip_date)
+
+    def get_sound_link(
+        self,
+        sound_url,
+        created_at):
+        """
+        Processes linked sound file, adding it to the archive if necessary.
+        """
+
+        with self.storage_f(
+            self.storage, sound_url) as sound_stream:
+
+            sound_bytes = sound_stream.read()
+
+        # Checking if we need to save the file, and if we need to rename it to avoid duplicate
+        # names.
+
+        zip_info = (
+                
+            self.get_zip_info(
+
+                path.basename(
+                    urllib.parse.urlparse(sound_url).path),
+
+                hashlib.sha256(
+                    sound_bytes).digest(),
+
+                datetime.datetime.utcfromtimestamp(
+                    created_at)))
+
+        # Saving sound file to the archive, if required.
+
+        if isinstance(zip_info, str):
+            return zip_info
+
+        if sndhdr.test_wav(
+            sound_bytes, io.BytesIO(sound_bytes)):
+
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+
+        self.zip_file.writestr(zip_info, sound_bytes)
+
+        return zip_info.filename
+
+
+def compile_workbook(
+    context,
+    client_id,
+    object_id,
+    session,
+    locale_id,
+    published,
+    storage = None,
+    __debug_flag__ = False):
     """
     Compiles analysis results into an Excel workbook.
     """
@@ -1679,7 +2055,10 @@ def compile_workbook(context, client_id, object_id, session, locale_id, publishe
             lexical_entries = lexical_entries.filter(PublishingEntity.published == published)
 
         for lex in lexical_entries:
-            context.save_lexical_entry(lex, published)
+
+            context.save_lexical_entry(
+                lex,
+                published)
 
         # Writing out additional perspective info, if we have any.
 
@@ -1701,6 +2080,26 @@ def compile_workbook(context, client_id, object_id, session, locale_id, publishe
 
                 context.row += 1
 
+        # The same for missing sound fields.
+
+        if context.perspective_snd_fail_set:
+
+            context.row += 1
+
+            context.worksheet.write(
+                context.row, 0,
+                'Perspective{} without appropriate sound field:'.format(
+                    '' if len(context.perspective_snd_fail_set) == 1 else 's'))
+
+            context.row += 1
+
+            for _, name_str in sorted(context.perspective_snd_fail_set):
+
+                context.worksheet.write(
+                    context.row, 0, name_str)
+
+                context.row += 1
+
     context.workbook.close()
 
 
@@ -1715,6 +2114,7 @@ def save_dictionary(
     dict_name,
     locale_id,
     published,
+    sound_flag,
     __debug_flag__ = False
 ):  # :(
 
@@ -1730,122 +2130,261 @@ def save_dictionary(
     if task_status:
         task_status.set(3, 20, 'Running async process')
 
-    save_context = Save_Context(
-        locale_id, session, True, __debug_flag__)
-
     try:
-        compile_workbook(save_context, client_id, object_id, session, locale_id, published)
+
+        # Creating saving context, compiling dictionary data to a workbook.
+
+        save_context = (
+                
+            Save_Context(
+                locale_id,
+                session,
+                True,
+                sound_flag,
+                storage,
+                __debug_flag__))
+
+        if sound_flag:
+
+            temporary_zip_file = (
+                    
+                tempfile.NamedTemporaryFile(
+                    delete = False))
+
+            save_context.zip_file = (
+                zipfile.ZipFile(temporary_zip_file, 'w'))
+
+            save_context.zip_name_dict = (
+                collections.Counter())
+
+            save_context.zip_hash_dict = {}
+
+        compile_workbook(
+            save_context,
+            client_id,
+            object_id,
+            session,
+            locale_id,
+            published,
+            storage,
+            __debug_flag__ = __debug_flag__)
+
+        # Name(s) of the resulting file(s) includes dictionary name, perspective name and current date.
+
+        current_datetime = datetime.datetime.now(datetime.timezone.utc)
+
+        result_filename = '{0} - {1:04d}.{2:02d}.{3:02d}'.format(
+            dict_name[:64],
+            current_datetime.year,
+            current_datetime.month,
+            current_datetime.day)
+
+        table_filename = sanitize_filename(result_filename + '.xlsx')
+
+        if __debug_flag__:
+
+            with open(table_filename, 'wb') as xlsx_file:
+
+                save_context.stream.seek(0)
+                copyfileobj(save_context.stream, xlsx_file)
+
+        # Either addint XLSX file to the Zip archive...
+
+        if sound_flag:
+
+            zip_info = (
+
+                save_context.get_zip_info(
+                    table_filename))
+
+            save_context.stream.seek(0)
+
+            save_context.zip_file.writestr(
+                zip_info,
+                save_context.stream.read())
+
+            save_context.zip_file.close()
+            temporary_zip_file.close()
+
+            zip_filename = (
+                sanitize_filename(result_filename + '.zip'))
+
+            zip_file_path = temporary_zip_file.name
+
+            # Saving a local copy of the archive, if required.
+
+            if __debug_flag__:
+
+                shutil.move(
+                    temporary_zip_file.name,
+                    zip_filename)
+
+                zip_file_path = zip_filename
+
+            storage_temporary = storage['temporary']
+
+            host = storage_temporary['host']
+            bucket = storage_temporary['bucket']
+
+            minio_client = (
+                    
+                minio.Minio(
+                    host,
+                    access_key = storage_temporary['access_key'],
+                    secret_key = storage_temporary['secret_key'],
+                    secure = True))
+
+            object_name = (
+
+                storage_temporary['prefix'] +
+            
+                '/'.join((
+                    'save_dictionary',
+                    '{:.6f}'.format(time.time()),
+                    zip_filename)))
+
+            (etag, version_id) = (
+
+                minio_client.fput_object(
+                    bucket,
+                    object_name,
+                    zip_file_path,
+                    'application/zip'))
+
+            url = (
+
+                '/'.join((
+                    'https:/',
+                    host,
+                    bucket,
+                    object_name)))
+
+            log.debug(
+                '\nobject_name:\n{}'
+                '\netag:\n{}'
+                '\nversion_id:\n{}'
+                '\nurl:\n{}'.format(
+                    object_name,
+                    etag,
+                    version_id,
+                    url))
+
+            url_list = [url]
+
+            if not __debug_flag__:
+
+                os.remove(
+                    temporary_zip_file.name)
+
+        # Or saving it in the object storage.
+
+        else:
+
+            dictionary = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).one()
+
+            dict_status_atom = session.query(TranslationAtom).filter_by(
+                parent_client_id=dictionary.state_translation_gist_client_id,
+                parent_object_id=dictionary.state_translation_gist_object_id,
+                locale_id=2).first()
+
+            if not dict_status_atom:
+                dict_status = 'translation_failure'
+            else:
+                dict_status = dict_status_atom.content
+
+            if published is None:
+                cur_folder = 'edit'
+            elif published is True:
+                cur_folder = 'view'
+            else:
+                cur_folder = 'should_be_impossible'
+
+            cur_time = '{:.6f}'.format(time.time())
+
+            storage_dir = (
+                    
+                path.join(
+                    storage['path'],
+                    'save_dictionary',
+                    dict_status,
+                    cur_folder,
+                    cur_time))
+
+            makedirs(storage_dir, exist_ok=True)
+
+            # Storing file with the results.
+
+            storage_path = path.join(storage_dir, table_filename)
+            directory = path.dirname(storage_path)
+
+            try:
+
+                makedirs(directory)
+
+            except OSError as exception:
+                if exception.errno != EEXIST:
+                    raise
+
+            # If the name of the result file is too long, we try again with a shorter name.
+
+            try:
+
+                with open(storage_path, 'wb+') as workbook_file:
+
+                    save_context.stream.seek(0)
+                    copyfileobj(save_context.stream, workbook_file)
+
+            except OSError as os_error:
+
+                if os_error.errno != 36:
+                    raise
+
+                result_filename = '{0} - {1:04d}.{2:02d}.{3:02d}'.format(
+                    dict_name[:32],
+                    current_datetime.year,
+                    current_datetime.month,
+                    current_datetime.day)
+
+                table_filename = sanitize_filename(result_filename + '.xlsx')
+                storage_path = path.join(storage_dir, table_filename)
+
+                with open(storage_path, 'wb+') as workbook_file:
+
+                    save_context.stream.seek(0)
+                    copyfileobj(save_context.stream, workbook_file)
+
+            # Successfully saved dictionary, finishing and returning links to files with results.
+
+            url_list = [
+
+                ''.join([
+                    storage['prefix'],
+                    storage['static_route'],
+                    'save_dictionary', '/',
+                    dict_status, '/',
+                    cur_folder, '/',
+                    cur_time, '/',
+                    table_filename])]
+
+        if task_status:
+            task_status.set(4, 100, 'Finished', result_link_list=url_list)
 
     except Exception as exception:
 
         traceback_string = ''.join(traceback.format_exception(
             exception, exception, exception.__traceback__))[:-1]
 
-        log.debug('compile_workbook: exception')
+        log.debug('save_dictionary: exception')
         log.debug(traceback_string)
 
-        # If we failed to create an Excel file, we terminate with error.
+        # If we failed to save the dictionary, we terminate with error.
 
         if task_status:
-            task_status.set(4, 100, 'Finished (ERROR), result compilation error')
+
+            task_status.set(4, 100,
+                'Finished (ERROR), exception:\n' + traceback_string)
 
         return {'error': 'result compilation error'}
-
-    # Name(s) of the resulting file(s) includes dictionary name, perspective name and current date.
-
-    current_datetime = datetime.datetime.now(datetime.timezone.utc)
-
-    result_filename = '{0} - {1:04d}.{2:02d}.{3:02d}'.format(
-        dict_name[:64],
-        current_datetime.year,
-        current_datetime.month,
-        current_datetime.day)
-
-    table_filename = sanitize_filename(result_filename + '.xlsx')
-
-    # cur_time = time.time()
-    dictionary = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).one()
-    dict_status_atom = session.query(TranslationAtom).filter_by(
-        parent_client_id=dictionary.state_translation_gist_client_id,
-        parent_object_id=dictionary.state_translation_gist_object_id,
-        locale_id=2).first()
-    if not dict_status_atom:
-        dict_status = 'translation_failure'
-    else:
-        dict_status = dict_status_atom.content
-
-    if published is None:
-        cur_folder = 'edit'
-    elif published is True:
-        cur_folder = 'view'
-    else:
-        cur_folder = 'should_be_impossible'
-
-    storage_dir = path.join(storage['path'], 'save_dictionary', dict_status, cur_folder)
-    makedirs(storage_dir, exist_ok=True)
-
-    # Storing file with the results.
-
-    storage_path = path.join(storage_dir, table_filename)
-    directory = path.dirname(storage_path)
-
-    try:
-        makedirs(directory)
-
-    except OSError as exception:
-        if exception.errno != EEXIST:
-            raise
-
-    # If the name of the result file is too long, we try again with a shorter name.
-
-    try:
-        with open(storage_path, 'wb+') as workbook_file:
-
-            save_context.stream.seek(0)
-            copyfileobj(save_context.stream, workbook_file)
-
-    except OSError as os_error:
-
-        if os_error.errno != 36:
-            raise
-
-        result_filename = '{0} - {1:04d}.{2:02d}.{3:02d}'.format(
-            dict_name[:32],
-            current_datetime.year,
-            current_datetime.month,
-            current_datetime.day)
-
-        table_filename = sanitize_filename(result_filename + '.xlsx')
-        storage_path = path.join(storage_dir, table_filename)
-
-        with open(storage_path, 'wb+') as workbook_file:
-
-            save_context.stream.seek(0)
-            copyfileobj(save_context.stream, workbook_file)
-
-    if __debug_flag__:
-
-        with open(table_filename, 'wb') as xlsx_file:
-
-            save_context.stream.seek(0)
-            copyfileobj(save_context.stream, xlsx_file)
-
-    # Successfully saved dictionary, finishing and returning links to files with results.
-
-    url_list = [
-
-        ''.join([
-            storage['prefix'],
-            storage['static_route'],
-            'save_dictionary', '/',
-            dict_status, '/',
-            cur_folder, '/',
-            filename])
-
-        for filename in [table_filename]]
-
-    if task_status:
-        task_status.set(4, 100, 'Finished', result_link_list=url_list)
 
     session.commit()
     engine.dispose()

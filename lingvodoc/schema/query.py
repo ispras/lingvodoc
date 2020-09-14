@@ -7459,6 +7459,7 @@ def save_dictionary(
     user_id,
     locale_id,
     publish,
+    sound_flag,
     synchronous = False,
     debug_flag = False):
 
@@ -7483,6 +7484,7 @@ def save_dictionary(
     my_args["task_key"] = task.key if not synchronous else None
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     my_args["published"] = publish
+    my_args['sound_flag'] = sound_flag
     my_args['__debug_flag__'] = debug_flag
 
     res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
@@ -7493,6 +7495,7 @@ class SaveDictionary(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         mode = graphene.String(required=True)
+        sound_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
@@ -7501,14 +7504,18 @@ class SaveDictionary(graphene.Mutation):
     @staticmethod
     # @client_id_check()
     def mutate(root, info, **args):
+
         request = info.context.request
         locale_id = int(request.cookies.get('locale_id') or 2)
         dict_id = args['id']
         mode = args['mode']
-        variables = {'auth': authenticated_userid(request)}
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        user_id = user.id
+        sound_flag = args.get('sound_flag', False)
+
+        client_id = authenticated_userid(request)
+
+        user_id = (
+            Client.get_user_by_client_id(client_id).id
+                if client_id else anonymous_userid(request))
 
         dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
                                                                object_id=dict_id[1]).first()
@@ -7531,6 +7538,7 @@ class SaveDictionary(graphene.Mutation):
             user_id,
             locale_id,
             publish,
+            sound_flag,
             args.get('synchronous', False),
             args.get('debug_flag', False))
 

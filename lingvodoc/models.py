@@ -796,6 +796,13 @@ class DataTypeMixin(PrimeTableArgs):
 
         return translation
 
+    @property
+    def data_type_translation_gist_id(self):
+
+        return (
+            self.data_type_translation_gist_client_id,
+            self.data_type_translation_gist_object_id)
+
 
 class Field(CompositeIdMixin,
             Base,
