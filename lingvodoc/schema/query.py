@@ -1161,7 +1161,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
             else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
-        dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
+        dbdicts = dbdicts.order_by(dbDictionary.created_at)
         if mode is not None and client:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             if not mode:
@@ -3574,8 +3574,8 @@ class CognateAnalysis(graphene.Mutation):
         max_width = 0
         row_count = 0
 
-        re_series = r'\s*(\[\S+\]|\?)(\s*—\s*(\[\S+\]|\?))+\s*'
-        re_item_list = r'\s*(\[\S+\]|\?)\s*—(\s*—\s*(\[\S+\]|\?)\s*—)+\s*'
+        re_series = r'\s*(\[\S+\]|\?|0)(\s*—\s*(\[\S+\]|\?|0))+\s*'
+        re_item_list = r'\s*(\[\S+\]|\?|0)\s*—(\s*—\s*(\[\S+\]|\?|0)\s*—)+\s*'
 
         def export_table(table_index, table_str, n_col, n_row, source_str):
             """
@@ -4223,7 +4223,7 @@ class CognateAnalysis(graphene.Mutation):
         # Showing and returning what we've got.
 
         log.debug(
-            '\n{0}\n{1}'.format(
+            '\nsuggestion_list (length {0}):\n{1}'.format(
                 len(suggestion_list),
                 pprint.pformat(
                     suggestion_list, width = 192)))
@@ -4559,8 +4559,44 @@ class CognateAnalysis(graphene.Mutation):
         Performs cognate analysis in either synchronous or asynchronous mode.
         """
 
+        __result_flag__ = False
+
         if task_status is not None:
             task_status.set(1, 0, 'Gathering grouping data')
+
+        # Sometimes in debugging mode we should return already computed results.
+
+        if __debug_flag__:
+
+            tag_data_digest = (
+                    
+                hashlib.md5(
+
+                    repr(list(group_field_id) +
+                        [perspective_info[0] for perspective_info in perspective_info_list])
+
+                    .encode('utf-8'))
+                
+                .hexdigest())
+
+            result_file_name = (
+
+                '__result_{0}_{1}__.gz'.format(
+
+                    'multi{0}'.format(len(multi_list))
+                        if mode == 'multi' else
+                        '{0}_{1}'.format(*base_language_id),
+
+                    tag_data_digest))
+
+            if __result_flag__ and os.path.exists(result_file_name):
+
+                with gzip.open(
+                    result_file_name, 'rb') as result_file:
+
+                    result_dict = pickle.load(result_file)
+
+                return CognateAnalysis(**result_dict)
 
         # Gathering entry grouping data.
 
@@ -4585,21 +4621,15 @@ class CognateAnalysis(graphene.Mutation):
 
             # If we are in debug mode, we try to load existing tag data to reduce debugging time.
 
-            tag_data_digest = hashlib.md5(
+            tag_data_file_name = (
 
-                repr(list(group_field_id) +
-                    [perspective_info[0] for perspective_info in perspective_info_list])
-
-                    .encode('utf-8')).hexdigest()
-
-            tag_data_file_name = \
                 '__tag_data_{0}_{1}__.gz'.format(
 
                     'multi{0}'.format(len(multi_list))
                         if mode == 'multi' else
                         '{0}_{1}'.format(*base_language_id),
 
-                    tag_data_digest)
+                    tag_data_digest))
 
             # Checking if we have saved data.
 
@@ -5546,25 +5576,36 @@ class CognateAnalysis(graphene.Mutation):
                     cognate_name_str if __debug_flag__ else None,
                     group_field_id if __debug_flag__ else None))
 
-            return CognateAnalysis(
+            result_dict = (
 
-                triumph = True,
+                dict(
 
-                dictionary_count = len(perspective_info_list),
-                group_count = len(group_list),
-                not_enough_count = not_enough_count,
-                transcription_count = total_transcription_count,
-                translation_count = total_translation_count,
+                    triumph = True,
 
-                result = output,
+                    dictionary_count = len(perspective_info_list),
+                    group_count = len(group_list),
+                    not_enough_count = not_enough_count,
+                    transcription_count = total_transcription_count,
+                    translation_count = total_translation_count,
 
-                perspective_name_list = perspective_name_list,
+                    result = output,
 
-                suggestion_list = suggestion_list,
-                suggestion_field_id = group_field_id,
+                    perspective_name_list = perspective_name_list,
 
-                intermediate_url_list =
-                    intermediate_url_list if __intermediate_flag__ else None)
+                    suggestion_list = suggestion_list,
+                    suggestion_field_id = group_field_id,
+
+                    intermediate_url_list =
+                        intermediate_url_list if __intermediate_flag__ else None))
+
+            if __debug_flag__ and __result_flag__:
+
+                with gzip.open(
+                    result_file_name, 'wb') as result_file:
+
+                    pickle.dump(result_dict, result_file)
+
+            return CognateAnalysis(**result_dict)
 
         # Performing etymological distance analysis, if required.
 
@@ -7409,7 +7450,15 @@ class SoundAndMarkup(graphene.Mutation):
 
 
 def save_dictionary(
-    dict_id, request, user_id, locale_id, publish, synchronous):
+    dict_id,
+    dictionary_obj,
+    request,
+    user_id,
+    locale_id,
+    publish,
+    sound_flag,
+    synchronous = False,
+    debug_flag = False):
 
     my_args = dict()
     my_args["client_id"] = dict_id[0]
@@ -7418,8 +7467,6 @@ def save_dictionary(
     my_args["storage"] = request.registry.settings["storage"]
     my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
     try:
-        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
-                                                                 object_id=dict_id[1]).first()
         gist = DBSession.query(dbTranslationGist). \
             filter_by(client_id=dictionary_obj.translation_gist_client_id,
                       object_id=dictionary_obj.translation_gist_object_id).first()
@@ -7434,6 +7481,8 @@ def save_dictionary(
     my_args["task_key"] = task.key if not synchronous else None
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     my_args["published"] = publish
+    my_args['sound_flag'] = sound_flag
+    my_args['__debug_flag__'] = debug_flag
 
     res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
 
@@ -7443,21 +7492,27 @@ class SaveDictionary(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         mode = graphene.String(required=True)
+        sound_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
+        debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
     @staticmethod
     # @client_id_check()
     def mutate(root, info, **args):
+
         request = info.context.request
         locale_id = int(request.cookies.get('locale_id') or 2)
         dict_id = args['id']
         mode = args['mode']
-        variables = {'auth': authenticated_userid(request)}
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        user_id = user.id
+        sound_flag = args.get('sound_flag', False)
+
+        client_id = authenticated_userid(request)
+
+        user_id = (
+            Client.get_user_by_client_id(client_id).id
+                if client_id else anonymous_userid(request))
 
         dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
                                                                object_id=dict_id[1]).first()
@@ -7474,8 +7529,15 @@ class SaveDictionary(graphene.Mutation):
                                    (persp.client_id, persp.object_id))
 
         save_dictionary(
-            dict_id, request, user_id, locale_id, publish,
-            args.get('synchronous'))
+            dict_id,
+            dictionary_obj,
+            request,
+            user_id,
+            locale_id,
+            publish,
+            sound_flag,
+            args.get('synchronous', False),
+            args.get('debug_flag', False))
 
         return DownloadDictionary(triumph=True)
 
@@ -7507,8 +7569,17 @@ class SaveAllDictionaries(graphene.Mutation):
 
         else:
             raise ResponseError(message="mode: <all|published>")
+
         for dictionary in dictionaries:
-            save_dictionary([dictionary.client_id, dictionary.object_id], request, user_id, locale_id, publish)
+
+            save_dictionary(
+                [dictionary.client_id, dictionary.object_id],
+                dictionary_obj,
+                request,
+                user_id,
+                locale_id,
+                publish)
+
             # if not counter % 5:
             #     time.sleep(5)
             # counter += 1

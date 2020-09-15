@@ -11,7 +11,9 @@ def async_save_dictionary(client_id,
                           cache_kwargs,
                           dict_name,
                           locale_id,
-                          published):
+                          published,
+                          sound_flag,
+                          __debug_flag__ = False):
     save_dictionary(client_id,
                     object_id,
                     storage,
@@ -20,6 +22,8 @@ def async_save_dictionary(client_id,
                     cache_kwargs,
                     dict_name,
                     locale_id,
-                    published
+                    published,
+                    sound_flag,
+                    __debug_flag__ = __debug_flag__
                     )
     return

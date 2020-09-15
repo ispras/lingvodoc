@@ -9,7 +9,7 @@ cffi==1.8.3
 Chameleon==2.25
 dataproperty==0.42.1
 dogpile.cache==0.6.2
--e git+https://gitlab.at.ispras.ru/Ilya/dedoc_project@604556933f97fe32837d3a5ca5d6f3867009bcb3#eg=dedoc
+git+https://gitlab.at.ispras.ru/Ilya/dedoc_project@604556933f97fe32837d3a5ca5d6f3867009bcb3#egg=dedoc
 git+https://github.com/myrix/poio-api.git
 git+https://github.com/ankan2013/udmparser.git
 GitPython==3.1.0
@@ -18,10 +18,11 @@ graphene==2.0.1
 iso8601==0.1.11
 kombu==3.0.37
 nltk==3.5
+minio==6.0.0
 Mako==1.0.4
 MarkupSafe==0.23
 matplotlib==1.5.3
-multiprocess==0.70.4
+multiprocess==0.70.6
 numpy==1.11.2
 numpydoc==0.9.1
 numpydoc==0.9.1
