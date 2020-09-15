@@ -6,8 +6,6 @@ from sqlalchemy import and_, create_engine
 from sqlalchemy.orm import aliased
 
 from lingvodoc.queue.celery import celery
-from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective
-from lingvodoc.schema.gql_field import Field
 from lingvodoc.utils.creation import create_entity, create_lexicalentry
 from lingvodoc.utils.verification import check_lingvodoc_id
 

@@ -32,7 +32,8 @@ from lingvodoc.schema.gql_entity import (
     UpdateEntityContent,
     BulkCreateEntity,
     ApproveAllForUser,
-    BulkUpdateEntityContent)
+    BulkUpdateEntityContent,
+    SimpleUpdateEntityContent)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -162,6 +163,9 @@ from lingvodoc.schema.gql_userrequest import (
     # DeleteUserRequest
 )
 
+from lingvodoc.schema.gql_parser import Parser
+from lingvodoc.schema.gql_parserresult import DeleteParserResult, UpdateParserResult, ParserResult
+
 import lingvodoc.acl as acl
 import time
 import random
@@ -189,7 +193,9 @@ from lingvodoc.models import (
     DictionaryPerspective as dbDictionaryPerspective,
     Client,
     PublishingEntity as dbPublishingEntity,
-    user_to_group_association
+    user_to_group_association,
+    Parser as dbParser,
+    ParserResult as dbParserResult
 )
 from pyramid.request import Request
 
@@ -309,6 +315,7 @@ from lingvodoc.schema.gql_copy_field import CopySingleField, CopySoundMarkupFiel
 
 import lingvodoc.version
 
+from lingvodoc.schema.gql_parserresult import ExecuteParser
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -546,6 +553,10 @@ class Query(graphene.ObjectType):
         graphene.Field(
             graphene.List(graphene.List(graphene.Int)),
             client_id_list = graphene.List(graphene.Int, required = True)))
+    parser_results = graphene.Field((graphene.List(ParserResult)),
+                                    entity_id = LingvodocID(), parser_id=LingvodocID())
+    parser_result = graphene.Field(ParserResult, id=LingvodocID())
+    parsers = graphene.Field(graphene.List(Parser))
 
     def resolve_client_list(
         self,
@@ -2357,6 +2368,37 @@ class Query(graphene.ObjectType):
         return tgt_to_eaf(content, entity.additional_metadata)
 
 
+    def resolve_parser_results(self, info, entity_id):
+        entity_client_id, entity_object_id = entity_id
+        results = DBSession.query(dbParserResult).filter_by(entity_client_id=entity_client_id,
+                                                            entity_object_id=entity_object_id,
+                                                            ).all()
+        return_list = list()
+        for result in results:
+            new_parser_result = ParserResult(id = [result.client_id, result.object_id])
+            new_parser_result.dbObject = result
+            return_list.append(new_parser_result)
+        return return_list
+    
+    def resolve_parser_result(self, info, id):
+        client_id, object_id = id
+        result = DBSession.query(dbParserResult).filter_by(client_id=client_id,
+                                                            object_id=object_id,
+                                                            ).first()
+        if not result:
+            return None
+        parser_result = ParserResult(id=[result.client_id, result.object_id])
+        parser_result.dbObject = result
+        return parser_result
+
+    def resolve_parsers(self, info):
+        parsers = DBSession.query(dbParser).all()
+        return_list = list()
+        for parser in parsers:
+            element = Parser(id=[parser.client_id, parser.object_id])
+            element.dbObject = parser
+            return_list.append(element)
+        return return_list
 
 
 
@@ -2926,8 +2968,6 @@ class CognateAnalysis(graphene.Mutation):
 
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
-
-        synchronous = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -5772,18 +5812,12 @@ class CognateAnalysis(graphene.Mutation):
 
                 # Compiling and showing relative distance list.
 
-                if max_distance > 0:
+                distance_list = [
 
-                    distance_list = [
+                    (perspective_id, distance / max_distance)
 
-                        (perspective_id, distance / max_distance)
-
-                        for perspective_id, distance in zip(
-                            perspective_id_list, distance_value_list)]
-
-                else:
-
-                    distance_list = distance_value_list
+                    for perspective_id, distance in zip(
+                        perspective_id_list, distance_value_list)]
 
                 log.debug(
                     '\ncognate_analysis {0}:'
@@ -6254,8 +6288,6 @@ class CognateAnalysis(graphene.Mutation):
         __debug_flag__ = args.get('debug_flag', False)
         __intermediate_flag__ = args.get('intermediate_flag', False)
 
-        synchronous = args.get('synchronous', False)
-
         language_str = (
             '{0}/{1}, language {2}/{3}'.format(
                 source_perspective_id[0], source_perspective_id[1],
@@ -6411,57 +6443,30 @@ class CognateAnalysis(graphene.Mutation):
 
                 request.response.status = HTTPOk.code
 
-                if synchronous:
-
-                    CognateAnalysis.perform_cognate_analysis(
-                        language_str,
-                        source_perspective_id,
-                        base_language_id,
-                        base_language_name,
-                        group_field_id,
-                        perspective_info_list,
-                        multi_list,
-                        multi_name_list,
-                        mode,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        match_translations_value,
-                        only_orphans_flag,
-                        locale_id,
-                        storage,
-                        task_status,
-                        __debug_flag__,
-                        __intermediate_flag__)
-
-                else:
-
-                    async_cognate_analysis.delay(
-                        language_str,
-                        source_perspective_id,
-                        base_language_id,
-                        base_language_name,
-                        group_field_id,
-                        perspective_info_list,
-                        multi_list,
-                        multi_name_list,
-                        mode,
-                        distance_flag,
-                        reference_perspective_id,
-                        figure_flag,
-                        distance_vowel_flag,
-                        distance_consonant_flag,
-                        match_translations_value,
-                        only_orphans_flag,
-                        locale_id,
-                        storage,
-                        task_status.key,
-                        request.registry.settings['cache_kwargs'],
-                        request.registry.settings['sqlalchemy.url'],
-                        __debug_flag__,
-                        __intermediate_flag__)
+                async_cognate_analysis.delay(
+                    language_str,
+                    source_perspective_id,
+                    base_language_id,
+                    base_language_name,
+                    group_field_id,
+                    perspective_info_list,
+                    multi_list,
+                    multi_name_list,
+                    mode,
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
+                    match_translations_value,
+                    only_orphans_flag,
+                    locale_id,
+                    storage,
+                    task_status.key,
+                    request.registry.settings['cache_kwargs'],
+                    request.registry.settings['sqlalchemy.url'],
+                    __debug_flag__,
+                    __intermediate_flag__)
 
                 # Signifying that we've successfully launched asynchronous cognate acoustic analysis.
 
@@ -6471,30 +6476,28 @@ class CognateAnalysis(graphene.Mutation):
 
             else:
 
-                return (
-                        
-                    CognateAnalysis.perform_cognate_analysis(
-                        language_str,
-                        source_perspective_id,
-                        base_language_id,
-                        base_language_name,
-                        group_field_id,
-                        perspective_info_list,
-                        multi_list,
-                        multi_name_list,
-                        mode,
-                        distance_flag,
-                        reference_perspective_id,
-                        figure_flag,
-                        distance_vowel_flag,
-                        distance_consonant_flag,
-                        match_translations_value,
-                        only_orphans_flag,
-                        locale_id,
-                        storage,
-                        None,
-                        __debug_flag__,
-                        __intermediate_flag__))
+                return CognateAnalysis.perform_cognate_analysis(
+                    language_str,
+                    source_perspective_id,
+                    base_language_id,
+                    base_language_name,
+                    group_field_id,
+                    perspective_info_list,
+                    multi_list,
+                    multi_name_list,
+                    mode,
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
+                    match_translations_value,
+                    only_orphans_flag,
+                    locale_id,
+                    storage,
+                    None,
+                    __debug_flag__,
+                    __intermediate_flag__)
 
         # Exception occured while we tried to perform cognate analysis.
 
@@ -6944,12 +6947,6 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
         worksheet_list = []
 
         # Getting integrable density grids for each distribution model.
-        
-        x_min = x_min or 500
-        x_max = x_max or 1000
-
-        y_min = y_min or 500
-        y_max = y_max or 1000
 
         x_low = max(0, x_min - (x_max - x_min) * 0.25)
         x_high = x_max + (x_max - x_min) * 0.25
@@ -7890,6 +7887,11 @@ class MyMutations(graphene.ObjectType):
     add_roles_bulk = AddRolesBulk.Field()
     create_basegroup = CreateBasegroup.Field()
     add_user_to_basegroup = AddUserToBasegroup.Field()
+    execute_parser = ExecuteParser.Field()
+    delete_parser_result = DeleteParserResult.Field()
+    update_parser_result = UpdateParserResult.Field()
+    simple_update_entity_content = SimpleUpdateEntityContent.Field()
+
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
