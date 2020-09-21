@@ -8856,8 +8856,6 @@ class XlsxBulkDisconnect(graphene.Mutation):
                     group_count,
                     disconnect_count))
 
-            raise NotImplementedError
-
             return (
                     
                 XlsxBulkDisconnect(
