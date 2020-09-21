@@ -1202,9 +1202,25 @@ class Entity(CompositeIdMixin,
     locale_id = Column(SLBigInteger())
 
     def __init__(self, **kwargs):
+
+        pe_kwargs = {}
+
+        if 'published' in kwargs:
+            pe_kwargs['published'] = kwargs.pop('published')
+
+        if 'accepted' in kwargs:
+            pe_kwargs['accepted'] = kwargs.pop('accepted')
+
         super().__init__(**kwargs)
-        publishingentity = PublishingEntity(client_id=self.client_id, object_id=self.object_id,
-                                            created_at=self.created_at)
+
+        publishingentity = (
+                
+            PublishingEntity(
+                client_id = self.client_id,
+                object_id = self.object_id,
+                created_at = self.created_at,
+                **pe_kwargs))
+
         DBSession.add(publishingentity)
         self.publishingentity = publishingentity
 

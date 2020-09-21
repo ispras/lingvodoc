@@ -976,7 +976,7 @@ class Save_Context(object):
                   E.field_client_id = T.transcription_client_id and
                   E.field_object_id = T.transcription_object_id and
                   E.content is not null and
-                  E.marked_for_deletion is false and
+                  E.marked_for_deletion = false and
                   P.client_id = E.client_id and
                   P.object_id = E.object_id and
                   P.accepted = true{{0}}
@@ -1003,7 +1003,7 @@ class Save_Context(object):
                   E.field_client_id = T.translation_client_id and
                   E.field_object_id = T.translation_object_id and
                   E.content is not null and
-                  E.marked_for_deletion is false and
+                  E.marked_for_deletion = false and
                   P.client_id = E.client_id and
                   P.object_id = E.object_id and
                   P.accepted = true{{0}}
@@ -1499,7 +1499,7 @@ class Save_Context(object):
                         if ru_name == 'фонологическаятранскрипция':
                             ru_xcript_fid = (field_cid, field_oid)
 
-                        elif ru_name == 'лексема':
+                        elif ru_name == 'значение':
                             ru_xlat_fid = (field_cid, field_oid)
 
                         elif ru_name == 'звук':
