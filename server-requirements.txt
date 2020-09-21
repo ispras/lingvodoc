@@ -22,7 +22,7 @@ multiprocess==0.70.6
 numpy==1.11.2
 numpydoc==0.9.1
 numpydoc==0.9.1
-openpyxl==3.0.2
+openpyxl==2.6.4
 passlib==1.6.5
 PasteDeploy==1.5.2
 pathvalidate==0.8.3
