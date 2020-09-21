@@ -382,9 +382,11 @@ class ConnectLexicalEntries(graphene.Mutation):
                     tags.append(tag)
         if not tags:
             n = 10  # better read from settings
+            rnd = random.SystemRandom()
+            choice_str = string.digits + string.ascii_letters
             tag = (
-                time.asctime(time.gmtime()) + ''.join(
-                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
+                time.asctime(time.gmtime()) +
+                ''.join(rnd.choice(choice_str) for c in range(n)))
             tags.append(tag)
         lexical_entries = find_lexical_entries_by_tags(tags, field_id[0], field_id[1], False, False)
         for par in connections:
