@@ -91,7 +91,7 @@ class Language(LingvodocObjectType):
     @fetch_object()
     def resolve_dictionaries(self, info, deleted = None, published = None):
 
-        # Dictionaries of the language, in standard order.
+        # Dictionaries of the language, in standard order, from newest to oldest.
 
         dictionary_query = (DBSession
                 
@@ -101,7 +101,7 @@ class Language(LingvodocObjectType):
                 and_(dbDictionary.parent_object_id == self.dbObject.object_id,
                      dbDictionary.parent_client_id == self.dbObject.client_id))
                 
-            .order_by(dbDictionary.created_at))
+            .order_by(dbDictionary.created_at.desc()))
 
         if deleted is not None:
 

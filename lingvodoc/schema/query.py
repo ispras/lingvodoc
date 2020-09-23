@@ -1153,7 +1153,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
             else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
-        dbdicts = dbdicts.order_by(dbDictionary.created_at)
+        dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
         if mode is not None and client:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             if not mode:
