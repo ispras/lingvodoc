@@ -41,8 +41,6 @@ def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
 
 def timarkh_udm(content_file, dedoc_url):
 
-    metadata_pattern = "{.*@.*@.*@.*@.*@.*@.*@.*}"
-
     # Load pure text string from the file
     doc = load(content_file)
     content_for_parsing = teletype.extractText(doc.text)
@@ -50,23 +48,6 @@ def timarkh_udm(content_file, dedoc_url):
     # Save dedoc module output for further result composing
     # Exclude sub tag with content as have no need in it
     content_for_html = dedoc_extract(content_file, dedoc_url)
-    metadata_match = re.search(r"{}".format(metadata_pattern), content_for_html)
-    metadata = None
-    metadata_str = ""
-    if metadata_match:
-       metadata = metadata_match.group(0).replace("{", "").replace("}", "")
-    if metadata:
-       content_for_html = re.sub(r"{}".format(metadata_pattern), "", content_for_html)
-       metadata_lst = metadata.split('@')
-       metadata_str = metadata_str.join(("Полное название в переводе: ", metadata_lst[0], "<br>",
-                            "Авторы: ", metadata_lst[1], "<br>",
-                            "Название: ", metadata_lst[2], "<br>",
-                            "Жанр: ", metadata_lst[3], "<br>",
-                            "Год: ", metadata_lst[4], "<br>",
-                            "Полное название в оригинале: ", metadata_lst[5], "<br>",
-                            "Номер: ", metadata_lst[6], "<br>",
-                            "Тип повествования: ", metadata_lst[7], "<br>"))
-
     content_for_html = re.sub(r"(<sub>.*?</sub>)", "", content_for_html)
 
     # Build a csv file with frequences of each word in the input document to pass it to the parsing function
@@ -162,7 +143,7 @@ def timarkh_udm(content_file, dedoc_url):
 
     html_close = "</body>"
 
-    result = html_body_open + metadata_str + "".join(parsed_words_split_list) + html_close
+    result = html_body_open + "".join(parsed_words_split_list) + html_close
 
     # Remove all temporary files
     os.remove(csv_filename)
