@@ -126,19 +126,14 @@ class Entity(LingvodocObjectType):
     dbType = dbEntity
     publishingentity = None
     is_subject_for_parsing = graphene.Boolean()
-    is_under_parsing = graphene.Boolean()
 
     @fetch_object('is_subject_for_parsing')
     def resolve_is_subject_for_parsing(self, info):
-        extension = self.dbObject.content[self.dbObject.content.rfind('.'):]
-        if extension == ".odt":
-            return True
-        else:
-            return False
-
-    @fetch_object('is_under_parsing')
-    def resolve_is_under_parsing(self, info):
-        return self.dbObject.is_under_parsing
+        if self.dbObject.content:
+            extension = self.dbObject.content[self.dbObject.content.rfind('.'):]
+            if extension == ".odt":
+                return True
+        return False
 
     class Meta:
         interfaces = (CompositeIdHolder,
@@ -496,25 +491,6 @@ class UpdateEntity(graphene.Mutation):
         entity = Entity(id=[dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return UpdateEntity(entity=entity, triumph=True)
-
-
-# TODO: delete this query for production
-class SimpleUpdateEntityContent(graphene.Mutation):
-    class Arguments:
-        entity_id = LingvodocID()
-        new_content = graphene.String()
-
-    triumph = graphene.Boolean()
-
-    @staticmethod
-    def mutate(root, info, **args):
-
-        dbentity = DBSession.query(dbEntity).filter_by(client_id=args.get("entity_id")[0],
-                                                      object_id=args.get("entity_id")[1]).first()
-        dbentity.content = args.get("new_content")
-        DBSession.flush()
-
-        return UpdateEntityContent(triumph=True)
 
 
 class ApproveAllForUser(graphene.Mutation):

@@ -411,15 +411,15 @@ def create_lexicalentry(id, perspective_id, save_object=False):
 
 @celery.task
 def async_create_parser_result(id, parser_id, entity_id,
-                               task_key, cache_kwargs, sqlalchemy_url,
+                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url,
                                arguments, save_object):
     async_create_parser_result_method(id=id, parser_id=parser_id, entity_id=entity_id,
                                       task_key=task_key, cache_kwargs=cache_kwargs,
-                                      sqlalchemy_url=sqlalchemy_url,
+                                      sqlalchemy_url=sqlalchemy_url, dedoc_url=dedoc_url,
                                       arguments=arguments, save_object=save_object)
 
 def async_create_parser_result_method(id, parser_id, entity_id,
-                               task_key, cache_kwargs, sqlalchemy_url,
+                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url,
                                arguments, save_object):
 
     from lingvodoc.cache.caching import initialize_cache
@@ -433,7 +433,7 @@ def async_create_parser_result_method(id, parser_id, entity_id,
 
     try:
 
-        create_parser_result(id=id, parser_id=parser_id, entity_id=entity_id,
+        create_parser_result(id=id, parser_id=parser_id, entity_id=entity_id, dedoc_url=dedoc_url,
                              arguments=arguments, save_object=save_object)
 
     except Exception as err:
@@ -442,7 +442,10 @@ def async_create_parser_result_method(id, parser_id, entity_id,
 
     task_status.set(2, 100, "Parsing of file " + content_filename + " finished")
 
-def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=True):
+# Downloads a document by the URL in an entity's content and saves the result of its parsing
+
+
+def create_parser_result(id, parser_id, entity_id, dedoc_url, arguments=None, save_object=True):
 
     client_id, object_id = id
     parser_client_id, parser_object_id = parser_id
@@ -458,9 +461,9 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=T
     if not arguments:
         arguments = dict()
 
-    parse_method = getattr(ParseMethods, parser.name)
+    # 'method' attribute of Parser model should be the same as one of methods in utils/parser.py
+    parse_method = getattr(ParseMethods, parser.method)
 
-    # print(entity.content)
     ascii_part = entity.content[:entity.content.rfind('/') + 1]
     unicode_part = entity.content[entity.content.rfind('/') + 1:entity.content.rfind('.')]
     extension = entity.content[entity.content.rfind('.'):]
@@ -470,9 +473,10 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=T
     tmp_file_id, tmp_filename = tempfile.mkstemp()
     tmp_file = open(tmp_filename, 'wb')
     tmp_file.write(response.read())
+    os.rename(tmp_filename, tmp_filename + ".odt")
+    tmp_filename = tmp_filename + ".odt"
 
-    result = parse_method(tmp_filename, **arguments)
-    # result = ParseMethods.dedoc_extract(tmp_filename)
+    result = parse_method(tmp_filename, dedoc_url, **arguments)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,
@@ -484,19 +488,11 @@ def create_parser_result(id, parser_id, entity_id, arguments=None, save_object=T
         DBSession.add(dbparserresult)
         DBSession.flush()
 
+    os.remove(tmp_filename)
+
     transaction.commit()
 
     return dbparserresult
-
-def create_parser(id, name, parameters=None):
-
-    client_id, object_id = id
-
-    dbparser = Parser(client_id=client_id, object_id=object_id,
-                      name=name, parameters=parameters)
-    DBSession.add(dbparser)
-    DBSession.flush()
-    return dbparser
 
 # Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
 # it's uploaded via multipart form, it's just saved as-is.

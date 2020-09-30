@@ -1240,7 +1240,6 @@ class Entity(CompositeIdMixin,
 
     content = Column(UnicodeText)
     locale_id = Column(SLBigInteger())
-    is_under_parsing = Column(Boolean)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1693,9 +1692,15 @@ class ApproveAllAcl(object):
     def __acl__(self):
         return [(Allow, Everyone, ALL_PERMISSIONS)]
 
+
+# 'method' attribute of Parser model should be the same as one of methods in utils/parser.py
+
+
 class Parser(Base, TableNameMixin, CompositeIdMixin, CreatedAtMixin, AdditionalMetadataMixin):
+    method = Column(UnicodeText, nullable=False, unique=True)
     name = Column(UnicodeText, nullable=False, unique=True)
     parameters = Column(JSONB)
+
 
 class ParserResult(Base, TableNameMixin, CompositeIdMixin, EntityMixin, ParserMixin,
                    CreatedAtMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):

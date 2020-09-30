@@ -9,23 +9,24 @@ import tempfile
 import bs4
 from odf import text, teletype
 from odf.opendocument import load
+import requests
+
+# Extracts html string with headers using dedoc module
+
+
+def dedoc_extract(file, dedoc_url):
+
+    files = {'file': open(file, 'rb')}
+    data = {'return_html': True}
+    r = requests.post(url=dedoc_url, files=files, data=data)
+
+    return r.content.decode('utf-8')
+
 
 """
-from dedoc.manager import dedoc_manager
-from dedoc.api.api_utils import json2html
+This is the main parsing function with all parameters
+Some of these parameters may be added further
 
-
-def dedoc_extract(file):
-    manager = dedoc_manager.DedocManager()
-    parameters = dict()
-    document_tree = manager.parse_file(file, parameters=parameters)
-    response = json2html(text="", paragraph=document_tree.content.structure,
-                                 tables=document_tree.content.tables,
-                                 tabs=0)
-    return response
-"""
-
-"""
 def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
             derivFile, conversionFile, cliticFile, delAnaFile,
             parsedFile, unparsedFile, errorFile,
@@ -35,19 +36,40 @@ def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
             minFlexLen=4, maxCompileTime=60)
 """
 
-def timarkh_udm(content_file):
+# Parses an odt file with udmurtian text, returns an html string with parsed words wrapped into tags
 
-    def extract_unparsed(file):
-        f = open(file, "r")
-        l = list()
-        for word in f.read().split("\n"):
-            l.append(word)
-        return l
 
+def timarkh_udm(content_file, dedoc_url):
+
+    metadata_pattern = "{.*@.*@.*@.*@.*@.*@.*@.*}"
+
+    # Load pure text string from the file
     doc = load(content_file)
     content_for_parsing = teletype.extractText(doc.text)
 
-    content_for_html = (content_for_parsing + '.')[:-1]
+    # Save dedoc module output for further result composing
+    # Exclude sub tag with content as have no need in it
+    content_for_html = dedoc_extract(content_file, dedoc_url)
+    metadata_match = re.search(r"{}".format(metadata_pattern), content_for_html)
+    metadata = None
+    metadata_str = ""
+    if metadata_match:
+       metadata = metadata_match.group(0).replace("{", "").replace("}", "")
+    if metadata:
+       content_for_html = re.sub(r"{}".format(metadata_pattern), "", content_for_html)
+       metadata_lst = metadata.split('@')
+       metadata_str = metadata_str.join(("Полное название в переводе: ", metadata_lst[0], "<br>",
+                            "Авторы: ", metadata_lst[1], "<br>",
+                            "Название: ", metadata_lst[2], "<br>",
+                            "Жанр: ", metadata_lst[3], "<br>",
+                            "Год: ", metadata_lst[4], "<br>",
+                            "Полное название в оригинале: ", metadata_lst[5], "<br>",
+                            "Номер: ", metadata_lst[6], "<br>",
+                            "Тип повествования: ", metadata_lst[7], "<br>"))
+
+    content_for_html = re.sub(r"(<sub>.*?</sub>)", "", content_for_html)
+
+    # Build a csv file with frequences of each word in the input document to pass it to the parsing function
     content_for_parsing = content_for_parsing.replace('\n', '')
     tokenizer = RegexpTokenizer(r'\w+')
     freq_dict = dict()
@@ -56,22 +78,21 @@ def timarkh_udm(content_file):
             freq_dict[word] = 1
         else:
             freq_dict[word] += 1
-
     csv_file_id, csv_filename = tempfile.mkstemp()
     csv_file = open(csv_filename, 'w+', newline='')
     writer = csv.writer(csv_file, delimiter='\t')
     for key in sorted(freq_dict, key=freq_dict.get, reverse=True):
         writer.writerow([key] + [freq_dict[key]])
-    print(csv_file)
     csv_file.close()
 
+    # Call the parsing function and save its results into temporary files
     parsed_file_id, parsed_filename = tempfile.mkstemp()
     unparsed_file_id, unparsed_filename = tempfile.mkstemp()
     open(parsed_filename, 'w').close()
     open(unparsed_filename, 'w').close()
-
     analyze(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
 
+    # Build a dictionary with parsing results for each word
     def extract_parsed(file):
         html = open(file, "r")
         soup = bs4.BeautifulSoup(html, 'html.parser')
@@ -87,40 +108,16 @@ def timarkh_udm(content_file):
                         new_res[attr] = tag_with_attributes[attr]
                     parsed_dict[word].append(new_res)
         return parsed_dict
-
     parsed_dict = extract_parsed(parsed_filename)
-    #unparsed_list = extract_unparsed(unparsed_filename)
 
-    html = ""
-    html += ("<!DOCTYPE html> "
-              "<html>"
-                "<head>"
-                    "<meta charset=\"utf-8\">"
-                    "<title></title>")
-    html += ("<style>"
-                "SPAN.verified {"
-                    "background-color: limegreen;"
-                    "border-top-left-radius: 10% 10px;"
-                    "border-top-right-radius: 10% 10px;"
-                    "border-bottom-left-radius: 10% 10px;"
-                    "border-bottom-right-radius: 10% 10px;"
-             
-                    "}"
-                "SPAN.unverified {"
-                    "background-color: salmon;"
-                    "border-top-left-radius: 10% 10px;"
-                    "border-top-right-radius: 10% 10px;"
-                    "border-bottom-left-radius: 10% 10px;"
-                    "border-bottom-right-radius: 10% 10px;"
-                    "}"
-                "SPAN.result {"
-                    "display: None;"
-                    "}"
-              "</style>")
-    html += ("</head>")
-    html += ("<body leftmargin=30pt rightmargin=30pt topmargin=20pt>")
-    html += ("<p>")
+    html_body_open = "<body>"
 
+    """
+    Generate a wrap into tags for a word:
+    span tag with class unverified is used for background colour filling for parsed words;
+    span tags with class result inside of previous span are used for saving the results data for further 
+    front-end processing
+    """
     span_id_counter = 0
     def generate_html_wrap(elem):
         if elem.lower() in parsed_dict.keys():
@@ -141,9 +138,11 @@ def timarkh_udm(content_file):
         wrap += elem + "</span>"
         return wrap
 
+    # This is used to avoid tag wrapping of some words in result data
     left_border = "1eFtB0rDeR_"
     right_border = "_R1Gh4B0RERr"
 
+    # Wrap each word of text (in various case forms) into markers
     for elem in parsed_dict.keys():
         content_for_html = re.sub(r"\b{}\b".format(elem),
                                   left_border + elem + right_border, content_for_html)
@@ -152,29 +151,25 @@ def timarkh_udm(content_file):
         content_for_html = re.sub(r"\b{}\b".format(elem.upper()),
                                   left_border + elem.upper() + right_border, content_for_html)
 
+    # Generate a wrap into tags for each word that has been occured in the parsing results dictionary:
     parsed_words_split_list = content_for_html.split(left_border)
-    for elem in parsed_words_split_list:
-        index = elem.find(right_border)
-        if index != -1:
-            html += generate_html_wrap(elem[:index])
-            html += elem[index+len(right_border):]
-        else:
-            html += elem
+    for i in range(len(parsed_words_split_list)):
+        elem = parsed_words_split_list[i]
+        index_of_find = parsed_words_split_list[i].find(right_border)
+        if index_of_find != -1:
+            parsed_words_split_list[i] = generate_html_wrap(elem[:index_of_find]) + \
+                                         elem[index_of_find + len(right_border):]
 
-    html += ("</p>")
-    html += ("</body>"
-              "</html>")
+    html_close = "</body>"
 
-    #file = open("/home/andriy/out.html", "w")
-    #soup = bs4.BeautifulSoup(html, 'html.parser')
-    #file.write(soup.prettify())
-    #file.write(html)
+    result = html_body_open + metadata_str + "".join(parsed_words_split_list) + html_close
 
-    return html
+    # Remove all temporary files
+    os.remove(csv_filename)
+    os.remove(parsed_filename)
+    os.remove(unparsed_filename)
 
-#f = open("/home/andriy/lingvodoc/udmurtian-text.txt", "r")
-#out = open("/home/andriy/lingvodoc/out.html", "w")
-#print(timarkh_udm(f.read()), file=out)
+    return result
 
 
 

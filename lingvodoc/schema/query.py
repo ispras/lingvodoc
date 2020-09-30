@@ -32,8 +32,7 @@ from lingvodoc.schema.gql_entity import (
     UpdateEntityContent,
     BulkCreateEntity,
     ApproveAllForUser,
-    BulkUpdateEntityContent,
-    SimpleUpdateEntityContent)
+    BulkUpdateEntityContent)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -2372,6 +2371,7 @@ class Query(graphene.ObjectType):
         entity_client_id, entity_object_id = entity_id
         results = DBSession.query(dbParserResult).filter_by(entity_client_id=entity_client_id,
                                                             entity_object_id=entity_object_id,
+							    marked_for_deletion=False
                                                             ).all()
         return_list = list()
         for result in results:
@@ -2385,7 +2385,7 @@ class Query(graphene.ObjectType):
         result = DBSession.query(dbParserResult).filter_by(client_id=client_id,
                                                             object_id=object_id,
                                                             ).first()
-        if not result:
+        if not result or result.marked_for_deletion:
             return None
         parser_result = ParserResult(id=[result.client_id, result.object_id])
         parser_result.dbObject = result
@@ -7890,7 +7890,6 @@ class MyMutations(graphene.ObjectType):
     execute_parser = ExecuteParser.Field()
     delete_parser_result = DeleteParserResult.Field()
     update_parser_result = UpdateParserResult.Field()
-    simple_update_entity_content = SimpleUpdateEntityContent.Field()
 
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
