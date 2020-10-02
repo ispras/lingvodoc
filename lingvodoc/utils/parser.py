@@ -47,8 +47,7 @@ def timarkh_udm(content_file, dedoc_url):
 
     # Save dedoc module output for further result composing
     # Exclude sub tag with content as have no need in it
-    content_for_html = dedoc_extract(content_file, dedoc_url)
-    content_for_html = re.sub(r"(<sub>.*?</sub>)", "", content_for_html)
+    dedoc_output = dedoc_extract(content_file, dedoc_url)
 
     # Build a csv file with frequences of each word in the input document to pass it to the parsing function
     content_for_parsing = content_for_parsing.replace('\n', '')
@@ -73,77 +72,82 @@ def timarkh_udm(content_file, dedoc_url):
     open(unparsed_filename, 'w').close()
     analyze(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
 
-    # Build a dictionary with parsing results for each word
-    def extract_parsed(file):
-        html = open(file, "r")
-        soup = bs4.BeautifulSoup(html, 'html.parser')
-        parsed_dict = dict()
-        for w in soup.find_all('w'):
-            word = w.contents[-1]
-            parsed_dict[word] = list()
-            for child in w.children:
-                if type(child) == bs4.element.Tag and child.name == "ana":
-                    tag_with_attributes = child
-                    new_res = dict()
-                    for attr in tag_with_attributes.attrs:
-                        new_res[attr] = tag_with_attributes[attr]
-                    parsed_dict[word].append(new_res)
-        return parsed_dict
-    parsed_dict = extract_parsed(parsed_filename)
+    def insert_parser_results(parser_output, dedoc_output):
 
-    html_body_open = "<body>"
+        content_for_html = re.sub(r"(<sub>.*?</sub>)", "", dedoc_output)
 
-    """
-    Generate a wrap into tags for a word:
-    span tag with class unverified is used for background colour filling for parsed words;
-    span tags with class result inside of previous span are used for saving the results data for further 
-    front-end processing
-    """
-    span_id_counter = 0
-    def generate_html_wrap(elem):
-        if elem.lower() in parsed_dict.keys():
-            elem_case_as_in_parsed_dict = elem[:].lower()
-        elif elem.capitalize() in parsed_dict.keys():
-            elem_case_as_in_parsed_dict = elem[:].capitalize()
-        elif elem.upper() in parsed_dict.keys():
-            elem_case_as_in_parsed_dict = elem[:].upper()
-        else:
-            return elem
-        nonlocal span_id_counter
-        span_id_counter += 1
-        wrap = "<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">"
-        for res in parsed_dict[elem_case_as_in_parsed_dict]:
+        # Build a dictionary with parsing results for each word
+        def extract_parsed(parsed_filename):
+            html = open(parsed_filename, "r")
+            soup = bs4.BeautifulSoup(html, 'html.parser')
+            parsed_dict = dict()
+            for w in soup.find_all('w'):
+                word = w.contents[-1]
+                parsed_dict[word] = list()
+                for child in w.children:
+                    if type(child) == bs4.element.Tag and child.name == "ana":
+                        tag_with_attributes = child
+                        new_res = dict()
+                        for attr in tag_with_attributes.attrs:
+                            new_res[attr] = tag_with_attributes[attr]
+                        parsed_dict[word].append(new_res)
+            return parsed_dict
+
+        parsed_dict = extract_parsed(parser_output)
+
+        """
+        Generate a wrap into tags for a word:
+        span tag with class unverified is used for background colour filling for parsed words;
+        span tags with class result inside of previous span are used for saving the results data for further 
+        front-end processing
+        """
+        span_id_counter = 0
+        def generate_html_wrap(elem):
+            if elem.lower() in parsed_dict.keys():
+                elem_case_as_in_parsed_dict = elem[:].lower()
+            elif elem.capitalize() in parsed_dict.keys():
+                elem_case_as_in_parsed_dict = elem[:].capitalize()
+            elif elem.upper() in parsed_dict.keys():
+                elem_case_as_in_parsed_dict = elem[:].upper()
+            else:
+                return elem
+            nonlocal span_id_counter
             span_id_counter += 1
-            parsed_data = ((json.dumps(res, ensure_ascii=False)).encode('utf8')).decode()
-            wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + parsed_data + "</span>"
-        wrap += elem + "</span>"
-        return wrap
+            wrap = "<span class=\"unverified\"" + " id=" + str(span_id_counter) + ">"
+            for res in parsed_dict[elem_case_as_in_parsed_dict]:
+                span_id_counter += 1
+                parsed_data = ((json.dumps(res, ensure_ascii=False)).encode('utf8')).decode()
+                wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + parsed_data + "</span>"
+            wrap += elem + "</span>"
+            return wrap
 
-    # This is used to avoid tag wrapping of some words in result data
-    left_border = "1eFtB0rDeR_"
-    right_border = "_R1Gh4B0RERr"
+        # Construct a sorted list of all matches in the document
+        matches = list()
+        for elem in parsed_dict.keys():
+            matches_for_elem = list(re.finditer(r"\b{}\b".format(elem), content_for_html)) + \
+                               list(re.finditer(r"\b{}\b".format(elem.capitalize()), content_for_html)) + \
+                               list(re.finditer(r"\b{}\b".format(elem.upper()), content_for_html))
+            for match in matches_for_elem:
+                new_element = dict()
+                new_element['elem'] = elem
+                new_element['begin'] = match.regs[0][0]
+                new_element['end'] = match.regs[0][1]
+                matches.append(new_element)
+        matches = sorted(matches, key=lambda k: k['begin'])
 
-    # Wrap each word of text (in various case forms) into markers
-    for elem in parsed_dict.keys():
-        content_for_html = re.sub(r"\b{}\b".format(elem),
-                                  left_border + elem + right_border, content_for_html)
-        content_for_html = re.sub(r"\b{}\b".format(elem.capitalize()),
-                                  left_border + elem.capitalize() + right_border, content_for_html)
-        content_for_html = re.sub(r"\b{}\b".format(elem.upper()),
-                                  left_border + elem.upper() + right_border, content_for_html)
+        # Construct the result by step-by-step concatenation of content before match and matched elem tag wrap
+        previous_wrap_end = 0
+        result = "<body>"
+        for match in matches:
+            wrap = generate_html_wrap(match['elem'])
+            result += content_for_html[previous_wrap_end:match['begin']]
+            previous_wrap_end = match['end']
+            result += wrap
+        result += "</body>"
 
-    # Generate a wrap into tags for each word that has been occured in the parsing results dictionary:
-    parsed_words_split_list = content_for_html.split(left_border)
-    for i in range(len(parsed_words_split_list)):
-        elem = parsed_words_split_list[i]
-        index_of_find = parsed_words_split_list[i].find(right_border)
-        if index_of_find != -1:
-            parsed_words_split_list[i] = generate_html_wrap(elem[:index_of_find]) + \
-                                         elem[index_of_find + len(right_border):]
+        return result
 
-    html_close = "</body>"
-
-    result = html_body_open + "".join(parsed_words_split_list) + html_close
+    result = insert_parser_results(parsed_filename, dedoc_output)
 
     # Remove all temporary files
     os.remove(csv_filename)
