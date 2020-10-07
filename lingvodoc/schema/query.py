@@ -8356,9 +8356,11 @@ class XlsxBulkDisconnect(graphene.Mutation):
 
         # We shouldn't have any duplicate results.
 
-        if len(set(result_list)) < len(result_list):
+        result_set = set(result_list)
 
-            log.debug(
+        if len(result_set) < len(result_list):
+
+            log.warning(
                     
                 '\n' +
 
@@ -8366,9 +8368,14 @@ class XlsxBulkDisconnect(graphene.Mutation):
                     sqlalchemy
                         .text(sql_str)
                         .bindparams(**param_dict)
-                        .compile(compile_kwargs = {'literal_binds': True})))
+                        .compile(compile_kwargs = {'literal_binds': True})) +
+                
+                '\nresult_list: {}'
+                '\nresult_set: {}'.format(
+                    result_list,
+                    result_set))
 
-            raise NotImplementedError
+            result_list = list(result_set)
 
         # If we've got the unambiguous entry info, ok, cool, otherwise no problem, skipping this and going
         # ahead.
