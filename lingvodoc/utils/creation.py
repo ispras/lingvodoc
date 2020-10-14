@@ -45,7 +45,7 @@ from lingvodoc.utils.search import translation_gist_search
 import logging
 log = logging.getLogger(__name__)
 
-import lingvodoc.utils.parser as ParseMethods
+import lingvodoc.utils.doc_parser as ParseMethods
 
 def add_user_to_group(user, group):
     if user not in group.users:
