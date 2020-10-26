@@ -114,13 +114,14 @@ class ExecuteParser(graphene.Mutation):
         cur_args['parser_id'] = args.get('parser_id')
         cur_args['arguments'] = args.get('arguments')
         cur_args["save_object"] = True
+        try:
+            cur_args["dedoc_url"] = request.registry.settings["dedoc_url"]
+        except KeyError:
+            raise ResponseError(message="Dedoc server url was not provided in configuration")
 
         async = args.get("async")
         if async == None:
             async = True
-
-        entity.is_under_parsing = True
-        DBSession.flush()
 
         if async:
             task = TaskStatus(user_id, "Parsing entity", "", 2)
@@ -131,9 +132,6 @@ class ExecuteParser(graphene.Mutation):
 
         else:
             create_parser_result(**cur_args)
-
-        entity.is_under_parsing = False
-        DBSession.flush()
 
         return ExecuteParser(triumph=True)
 
@@ -151,8 +149,10 @@ class DeleteParserResult(graphene.Mutation):
         parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1]).first()
         if not parser_result:
             raise ResponseError("No such parser result in the system")
-        DBSession.delete(parser_result)
+        parser_result.marked_for_deletion = True
+        transaction.commit()
         return DeleteParserResult(triumph=True)
+
 
 class UpdateParserResult(graphene.Mutation):
     class Arguments:
@@ -166,9 +166,9 @@ class UpdateParserResult(graphene.Mutation):
     def mutate(root, info, **args):
         id = args.get('id')
         content = args.get('content')
-        parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1])
-        if not parser_result:
+        parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1]).first()
+        if not parser_result or parser_result.marked_for_deletion:
             raise ResponseError("No such parser result in the system")
-        parser_result.update({'content': content})
+        parser_result.content = content[:]
         transaction.commit()
         return UpdateParserResult(triumph=True)

@@ -12,7 +12,6 @@ from lingvodoc.schema.gql_holders import (
     CreatedAt,
     AdditionalMetadata, LingvodocID, client_id_check, CompositeIdHolder, fetch_object, ObjectVal,
 )
-from lingvodoc.utils.creation import create_parser
 
 class ParameterType(graphene.Enum):
     Int = 1
@@ -45,10 +44,15 @@ class Parameters(graphene.Interface):
 class Parser(LingvodocObjectType):
 
     dbType = dbParser
+    method = graphene.String()
     name = graphene.String()
 
     class Meta:
         interfaces = (Parameters, CompositeIdHolder, AdditionalMetadata, CreatedAt)
+
+    @fetch_object('method')
+    def resolve_method(self, info):
+        return self.dbObject.method
 
     @fetch_object('name')
     def resolve_name(self, info):
