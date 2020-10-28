@@ -2969,6 +2969,8 @@ class CognateAnalysis(graphene.Mutation):
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
 
+        synchronous = graphene.Boolean()
+
     triumph = graphene.Boolean()
 
     dictionary_count = graphene.Int()
