@@ -18,10 +18,11 @@ import textwrap
 import time
 import traceback
 import urllib.parse
-import shutil
+import uuid
 
 import graphene
 import lingvodoc.utils as utils
+from lingvodoc.utils.deletion import real_delete_entity
 from lingvodoc.utils.elan_functions import tgt_to_eaf
 import requests
 from lingvodoc.schema.gql_entity import (
@@ -148,6 +149,7 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     client_id_check,
     LingvodocID,
+    Upload
     # LevelAndId
 )
 
@@ -294,6 +296,7 @@ from mpl_toolkits.mplot3d import proj3d
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 import numpy
+import openpyxl
 import pathvalidate
 import pydub
 import pylab
@@ -1160,7 +1163,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 1)
             else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
-        dbdicts = dbdicts.order_by(dbDictionary.created_at)
+        dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
         if mode is not None and client:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
             if not mode:
@@ -7473,7 +7476,19 @@ def save_dictionary(
         dict_name = gist.get_translation(locale_id)
 
         if not synchronous:
-            task = TaskStatus(user_id, "Saving dictionary", dict_name, 4)
+
+            task_name_str = 'Saving dictionary'
+
+            modifier_list = [
+                'published only' if publish else 'with unpublished']
+
+            if sound_flag:
+                modifier_list.append('with sound')
+
+            task_name_str += (
+                ' (' + ', '.join(modifier_list) + ')')
+
+            task = TaskStatus(user_id, task_name_str, dict_name, 4)
 
     except:
         raise ResponseError('bad request')
@@ -7795,6 +7810,1082 @@ class AddRolesBulk(graphene.Mutation):
             perspective_count = perspective_count)
 
 
+class XlsxBulkDisconnect(graphene.Mutation):
+    """
+    Parses uploaded XLSX file, disconnects highlighted cognates.
+    """
+
+    class Arguments:
+        xlsx_file = Upload()
+        debug_flag = graphene.Boolean()
+
+    entry_info_count = graphene.Int()
+    skip_count = graphene.Int()
+
+    group_count = graphene.Int()
+    disconnect_count = graphene.Int()
+
+    triumph = graphene.Boolean()
+
+    sql_search_str = ('''
+
+        select
+        L.client_id,
+        L.object_id
+
+        from
+        dictionary D,
+        dictionaryperspective P,
+        dictionaryperspectivetofield Fc,
+        dictionaryperspectivetofield Fl,
+        lexicalentry L
+
+        where
+
+        (D.translation_gist_client_id, D.translation_gist_object_id) in (
+
+          select distinct
+          parent_client_id,
+          parent_object_id
+
+          from
+          translationatom
+
+          where
+          content = :d_name and
+          marked_for_deletion = false) and
+
+        D.marked_for_deletion = false and
+
+        P.parent_client_id = D.client_id and
+        P.parent_object_id = D.object_id and
+        P.marked_for_deletion = false and
+
+        exists (
+
+          select 1
+
+          from
+          translationatom A
+
+          where
+          A.parent_client_id = P.translation_gist_client_id and
+          A.parent_object_id = P.translation_gist_object_id and
+          A.marked_for_deletion = false and
+          A.content = :p_name) and
+
+        Fc.parent_client_id = P.client_id and
+        Fc.parent_object_id = P.object_id and
+        Fc.marked_for_deletion = false and
+
+        Fl.parent_client_id = P.client_id and
+        Fl.parent_object_id = P.object_id and
+        Fl.marked_for_deletion = false and
+
+        (
+          Fc.field_client_id = 66 and Fc.field_object_id = 8 and
+          Fl.field_client_id = 66 and Fl.field_object_id = 10 or
+
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fc.field_client_id and
+            F.object_id = Fc.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 2 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'phonemictranscription') and
+         
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fl.field_client_id and
+            F.object_id = Fl.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 2 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'meaning') or
+
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fc.field_client_id and
+            F.object_id = Fc.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 1 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'фонологическаятранскрипция') and
+         
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fl.field_client_id and
+            F.object_id = Fl.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 1 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'значение') or
+
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fc.field_client_id and
+            F.object_id = Fc.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 2 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'transcriptionofparadigmaticforms') and
+         
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fl.field_client_id and
+            F.object_id = Fl.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 2 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'translationofparadigmaticforms') or
+
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fc.field_client_id and
+            F.object_id = Fc.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 1 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'транскрипцияпарадигматическихформ') and
+         
+          exists (
+
+            select 1
+
+            from
+            field F,
+            translationatom A
+
+            where
+            F.client_id = Fl.field_client_id and
+            F.object_id = Fl.field_object_id and
+            A.parent_client_id = F.translation_gist_client_id and
+            A.parent_object_id = F.translation_gist_object_id and
+            A.marked_for_deletion = false and
+            A.locale_id = 1 and
+            lower(regexp_replace(A.content, '\W+', '', 'g')) =
+              'переводпарадигматическихформ') or
+
+          :p_name ~* '.*starling.*' and
+
+          (
+            exists (
+
+              select 1
+
+              from
+              field F,
+              translationatom A
+
+              where
+              F.client_id = Fc.field_client_id and
+              F.object_id = Fc.field_object_id and
+              A.parent_client_id = F.translation_gist_client_id and
+              A.parent_object_id = F.translation_gist_object_id and
+              A.marked_for_deletion = false and
+              A.locale_id = 2 and
+              lower(regexp_replace(A.content, '\W+', '', 'g')) =
+                'protoform') and
+         
+            exists (
+
+              select 1
+
+              from
+              field F,
+              translationatom A
+
+              where
+              F.client_id = Fl.field_client_id and
+              F.object_id = Fl.field_object_id and
+              A.parent_client_id = F.translation_gist_client_id and
+              A.parent_object_id = F.translation_gist_object_id and
+              A.marked_for_deletion = false and
+              A.locale_id = 2 and
+              lower(regexp_replace(A.content, '\W+', '', 'g')) =
+                'protoformmeaning') or
+
+            exists (
+
+              select 1
+
+              from
+              field F,
+              translationatom A
+
+              where
+              F.client_id = Fc.field_client_id and
+              F.object_id = Fc.field_object_id and
+              A.parent_client_id = F.translation_gist_client_id and
+              A.parent_object_id = F.translation_gist_object_id and
+              A.marked_for_deletion = false and
+              A.locale_id = 1 and
+              lower(regexp_replace(A.content, '\W+', '', 'g')) =
+                'праформа') and
+           
+            exists (
+
+              select 1
+
+              from
+              field F,
+              translationatom A
+
+              where
+              F.client_id = Fl.field_client_id and
+              F.object_id = Fl.field_object_id and
+              A.parent_client_id = F.translation_gist_client_id and
+              A.parent_object_id = F.translation_gist_object_id and
+              A.marked_for_deletion = false and
+              A.locale_id = 1 and
+              lower(regexp_replace(A.content, '\W+', '', 'g')) =
+                'значениепраформы'))) and
+
+        L.parent_client_id = P.client_id and
+        L.parent_object_id = P.object_id and
+        L.marked_for_deletion = false and
+
+        exists (
+          
+          select 1
+          
+          from
+          public.entity E
+          
+          where
+          E.parent_client_id = L.client_id and
+          E.parent_object_id = L.object_id and
+          E.field_client_id = 66 and
+          E.field_object_id = 25 and
+          E.marked_for_deletion = false and
+          E.content in {}){}{};
+
+        ''')
+
+    sql_tag_str = ('''
+
+        (
+  
+          select distinct
+          E.content
+  
+          from
+          lexicalentry L,
+          public.entity E
+  
+          where
+  
+          L.parent_client_id = {} and
+          L.parent_object_id = {} and
+          L.marked_for_deletion = false{}
+  
+          and
+  
+          E.parent_client_id = L.client_id and
+          E.parent_object_id = L.object_id and
+          E.field_client_id = 66 and
+          E.field_object_id = 25 and
+          E.marked_for_deletion = false)
+
+        ''')
+
+    sql_xcript_str = ('''
+    
+        and
+
+        (
+          select count(*)
+
+          from
+          public.entity E
+
+          where
+          E.parent_client_id = L.client_id and
+          E.parent_object_id = L.object_id and
+          E.field_client_id = Fc.field_client_id and
+          E.field_object_id = Fc.field_object_id and
+          E.marked_for_deletion = false and
+          E.content ~ :xc_regexp
+        )
+        = {}
+
+        ''')
+
+    sql_xlat_str = ('''
+    
+        and
+
+        (
+          select count(*)
+
+          from
+          public.entity E
+
+          where
+          E.parent_client_id = L.client_id and
+          E.parent_object_id = L.object_id and
+          E.field_client_id = Fl.field_client_id and
+          E.field_object_id = Fl.field_object_id and
+          E.marked_for_deletion = false and
+          E.content ~ :xl_regexp
+        )
+        = {}
+
+        ''')
+
+    def escape(string):
+        """
+        Escapes special regexp characters in literal strings for PostgreSQL regexps, see
+        https://stackoverflow.com/questions/4202538/escape-regex-special-characters-in-a-python-string/12012114.
+        """
+
+        return re.sub(r'([!$()*+.:<=>?[\\\]^{|}-])', r'\\\1', string)
+
+    @staticmethod
+    def get_entry_id(
+        perspective_id,
+        entry_info,
+        row_index_set):
+        """
+        Tries to get id of a cognate entry.
+        """
+
+        (content_info,
+            dp_name,
+            xcript_tuple,
+            xlat_tuple) = (
+
+            entry_info)
+
+        # We have to have at least some entry info.
+
+        if not xcript_tuple and not xlat_tuple and not content_info:
+            return None
+
+        d_name, p_name = (
+            dp_name.split(' › '))
+
+        param_dict = {
+            'd_name': d_name,
+            'p_name': p_name}
+
+        if xcript_tuple:
+
+            param_dict.update({
+
+                'xc_regexp':
+
+                    r'^\s*(' +
+
+                    '|'.join(
+                        XlsxBulkDisconnect.escape(xcript)
+                        for xcript in xcript_tuple) +
+
+                    r')\s*$'})
+
+        if xlat_tuple:
+
+            param_dict.update({
+
+                'xl_regexp':
+
+                    r'^\s*(' +
+
+                    '|'.join(
+                        XlsxBulkDisconnect.escape(xlat)
+                        for xlat in xlat_tuple) +
+
+                    r')\s*$'})
+
+        # Trying to find the entry.
+
+        if content_info:
+
+            sql_str_a_list = []
+
+            for i, (field_id_set, content_str) in enumerate(content_info):
+
+                sql_str_a_list.append(
+
+                    '''
+                    and
+
+                    exists (
+
+                      select 1
+
+                      from
+                      public.entity E
+
+                      where
+                      E.parent_client_id = L.client_id and
+                      E.parent_object_id = L.object_id and
+                      E.marked_for_deletion = false and
+                      (E.field_client_id, E.field_object_id) in ({}) and
+                      E.content = :content_{})
+                    '''
+                    
+                    .format(
+                        ', '.join(map(str, field_id_set)),
+                        i))
+
+                param_dict[
+                    'content_{}'.format(i)] = content_str
+
+            sql_str_a = (
+
+                XlsxBulkDisconnect.sql_tag_str.format(
+                    perspective_id[0],
+                    perspective_id[1],
+                    ''.join(sql_str_a_list)))
+
+        else:
+
+            sql_str_a = (
+                    
+                '(select * from {})'.format(
+                    tag_table_name))
+
+        sql_str_b = (
+
+            XlsxBulkDisconnect.sql_xcript_str.format(len(xcript_tuple))
+                if xcript_tuple else '')
+
+        sql_str_c = (
+
+            XlsxBulkDisconnect.sql_xlat_str.format(len(xlat_tuple))
+                if xlat_tuple else '')
+
+        sql_str = (
+
+            XlsxBulkDisconnect.sql_search_str.format(
+                sql_str_a,
+                sql_str_b,
+                sql_str_c))
+
+        result_list = (
+                
+            DBSession
+
+                .execute(
+                    sql_str,
+                    param_dict)
+
+                .fetchall())
+
+        result_list = [
+
+            (entry_cid, entry_oid)
+            for entry_cid, entry_oid in result_list]
+
+        log.debug(
+            '\nresult_list: {}'.format(
+                result_list))
+
+        # If we haven't found anything, no problem, just going on ahead.
+
+        if not result_list:
+            return None
+
+        # We shouldn't have any duplicate results.
+
+        result_set = set(result_list)
+
+        if len(result_set) < len(result_list):
+
+            log.warning(
+                    
+                '\n' +
+
+                str(
+                    sqlalchemy
+                        .text(sql_str)
+                        .bindparams(**param_dict)
+                        .compile(compile_kwargs = {'literal_binds': True})) +
+                
+                '\nresult_list: {}'
+                '\nresult_set: {}'.format(
+                    result_list,
+                    result_set))
+
+            result_list = list(result_set)
+
+        # If we've got the unambiguous entry info, ok, cool, otherwise no problem, skipping this and going
+        # ahead.
+
+        if len(result_list) <= len(row_index_set):
+            return result_list
+
+        return None
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        __debug_flag__ = args.get('debug_flag', False)
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client or client.user_id != 1:
+                return ResponseError('Only administrator can bulk disconnect.')
+
+            request = info.context.request
+
+            if '0' not in request.POST:
+                return ResponseError('XLSX file is required.')
+
+            multipart = request.POST.pop('0')
+
+            xlsx_file_name = multipart.filename
+            xlsx_file = multipart.file
+
+            log.debug(
+                '\n{}\n{}'.format(
+                    xlsx_file_name,
+                    type(xlsx_file)))
+
+            settings = (
+                request.registry.settings)
+
+            # Processing XLSX workbook, assuming each worksheet has data of a single perspective.
+
+            workbook = (
+                openpyxl.load_workbook(xlsx_file))
+
+            entry_info_count = 0
+            skip_count = 0
+
+            group_count = 0
+            disconnect_count = 0
+
+            tag_table_name = None
+
+            for sheet_name in workbook.sheetnames:
+
+                worksheet = workbook[sheet_name]
+
+                field_name_list = []
+                cognates_index = None
+
+                for i in itertools.count(1):
+
+                    cell = worksheet.cell(1, i)
+
+                    if cell.value:
+
+                        field_name_list.append(cell.value)
+                        cognates_index = i
+
+                    else:
+                        break
+
+                # Trying to parse perspective's fields.
+
+                (perspective_name,
+                    perspective_cid,
+                    perspective_oid) = (
+
+                    re.match(
+                        r'^(.*)_(\d+)_(\d+)$',
+                        sheet_name)
+                    
+                        .groups())
+
+                perspective_id = (
+                    perspective_cid, perspective_oid)
+
+                log.debug(
+                    '\nperspective: \'{}\' {}/{}'
+                    '\nfield_name_list:\n{}'.format(
+                        perspective_name,
+                        perspective_cid,
+                        perspective_oid,
+                        field_name_list))
+
+                field_id_set_list = []
+
+                for field_name in field_name_list[:-1]:
+
+                    result_list = (
+
+                        DBSession
+
+                            .query(
+                                dbField.client_id,
+                                dbField.object_id)
+
+                            .filter(
+                                dbPerspectiveToField.parent_client_id == perspective_cid,
+                                dbPerspectiveToField.parent_object_id == perspective_oid,
+                                dbPerspectiveToField.marked_for_deletion == False,
+
+                                tuple_(
+                                    dbPerspectiveToField.field_client_id,
+                                    dbPerspectiveToField.field_object_id)
+
+                                    .in_(
+                                        sqlalchemy.text('select * from text_field_id_view')),
+
+                                dbField.client_id == dbPerspectiveToField.field_client_id,
+                                dbField.object_id == dbPerspectiveToField.field_object_id,
+                                dbField.marked_for_deletion == False,
+                                dbTranslationAtom.parent_client_id == dbField.translation_gist_client_id,
+                                dbTranslationAtom.parent_object_id == dbField.translation_gist_object_id,
+                                dbTranslationAtom.marked_for_deletion == False,
+                                dbTranslationAtom.content == field_name)
+                            
+                            .distinct()
+
+                            .all())
+
+                    field_id_set_list.append(
+
+                        tuple(set(
+                            tuple(field_id) for field_id in result_list)
+
+                            if result_list else None))
+
+                # Getting all possible cognate tags of the entries of the perspective.
+
+                if tag_table_name is None:
+
+                    tag_table_name = (
+
+                        'tag_table_' +
+                        str(uuid.uuid4()).replace('-', '_'))
+
+                    DBSession.execute('''
+
+                        create temporary table
+
+                        {} (
+                          tag TEXT,
+                          primary key (tag))
+
+                        on commit drop;
+
+                        '''.format(
+                            tag_table_name))
+
+                else:
+
+                    DBSession.execute(
+                        'truncate table {};'.format(
+                            tag_table_name))
+
+                DBSession.execute('''
+
+                    insert into {}
+
+                    select
+                    E.content
+
+                    from
+                    lexicalentry L,
+                    public.entity E
+
+                    where
+                    L.parent_client_id = {} and
+                    L.parent_object_id = {} and
+                    L.marked_for_deletion = false and
+                    E.parent_client_id = L.client_id and
+                    E.parent_object_id = L.object_id and
+                    E.field_client_id = 66 and
+                    E.field_object_id = 25 and
+                    E.marked_for_deletion = false
+
+                    on conflict do nothing;
+
+                    '''.format(
+                        tag_table_name,
+                        perspective_cid,
+                        perspective_oid))
+
+                # Processing cognate groups.
+
+                color_set = set()
+
+                content_info = None
+
+                entry_info_list = []
+                entry_info_dict = collections.defaultdict(set)
+
+                entry_content_info = None
+                entry_dp_name = None
+
+                for i in range(2, worksheet.max_row):
+
+                    # Getting text field info if we have any.
+
+                    previous_content_info = content_info
+
+                    content_info = []
+                    content_flag = False
+
+                    for j, field_id_set in enumerate(field_id_set_list):
+
+                        field_cell = worksheet.cell(i, j + 1)
+
+                        if field_cell.value:
+
+                            content_flag = True
+
+                            if field_id_set is not None:
+
+                                content_info.append(
+                                    (field_id_set, field_cell.value))
+
+                    if content_flag:
+
+                        content_info = (
+                            tuple(content_info) if content_info else None)
+
+                    else:
+
+                        content_info = (
+                            previous_content_info)
+
+                    # Do we have a beginning of another cognate entry info?
+
+                    dp_cell = worksheet.cell(i, cognates_index)
+
+                    if dp_cell.value:
+
+                        if (entry_dp_name and
+                            entry_highlight_list and
+                            len(entry_highlight_list) >= len(entry_xcript_list)):
+
+                            entry_info = (
+                                entry_content_info,
+                                entry_dp_name,
+                                tuple(xcript for xcript in entry_xcript_list if xcript),
+                                tuple(xlat[1:-1] for xlat in entry_xlat_list))
+
+                            if entry_info not in entry_info_dict:
+                                entry_info_list.append(entry_info)
+
+                            entry_info_dict[entry_info].add(entry_row_index)
+
+                        entry_dp_name = dp_cell.value
+                        entry_content_info = content_info
+
+                        entry_row_index = i
+
+                        entry_xcript_list = []
+                        entry_xlat_list = []
+
+                        entry_highlight_list = []
+
+                    # Do we have transcription and / or translation, is transcription highlighted?
+
+                    xc_cell = worksheet.cell(i, cognates_index + 1)
+
+                    if xc_cell.value or dp_cell.value:
+
+                        entry_xcript_list.append(xc_cell.value)
+
+                        color = xc_cell.fill.fgColor.rgb
+
+                        if color != '00000000':
+                            color_set.add(color)
+
+                        if color == 'FFFFFF00':
+                            entry_highlight_list.append(xc_cell.value)
+
+                    xl_cell = worksheet.cell(i, cognates_index + 2)
+
+                    if xl_cell.value:
+                        entry_xlat_list.append(xl_cell.value)
+
+                log.debug(
+                    '\n' +
+                    pprint.pformat(
+                        entry_info_list, width = 192))
+
+                # Processing highlighted entries.
+
+                entry_id_list = []
+                skip_list = []
+
+                for entry_info in entry_info_list:
+
+                    id_list = (
+                            
+                        XlsxBulkDisconnect.get_entry_id(
+                            perspective_id,
+                            entry_info,
+                            entry_info_dict[entry_info]))
+
+                    if id_list:
+
+                        entry_id_list.extend(
+                            id_list)
+
+                    else:
+
+                        skip_list.append((
+                            entry_info,
+                            entry_info_dict[entry_info]))
+
+                log.debug(
+                    '\nentry_id_list:\n{}'
+                    '\nskip_list:\n{}'
+                    '\nlen(entry_info_list): {}'
+                    '\nlen(entry_id_list): {}'
+                    '\nlen(skip_list): {}'.format(
+
+                        pprint.pformat(
+                            entry_id_list, width = 192),
+
+                        pprint.pformat(
+                            skip_list, width = 192),
+                        
+                        len(entry_info_list),
+                        len(entry_id_list),
+                        len(skip_list)))
+
+                # Performing disconnects.
+
+                entry_id_set = set(entry_id_list)
+                already_set = set()
+
+                perspective_group_count = 0
+                perspective_disconnect_count = 0
+
+                for entry_id in entry_id_list:
+
+                    if entry_id in already_set:
+                        continue
+
+                    result_list = (
+                        
+                        DBSession
+                        
+                            .execute(
+                                'select * from linked_group(66, 25, {}, {})'.format(
+                                    *entry_id))
+                        
+                            .fetchall())
+
+                    cognate_id_set = (
+                            
+                        set(
+                            (entry_cid, entry_oid)
+                            for entry_cid, entry_oid in result_list))
+
+                    disconnect_set = (
+                        cognate_id_set & entry_id_set)
+
+                    leave_set = (
+                        cognate_id_set - disconnect_set)
+
+                    log.debug(
+                        '\ncognate_id_set ({}):\n{}'
+                        '\ndisconnect_set ({}):\n{}'
+                        '\nleave_set ({}):\n{}'.format(
+                        len(cognate_id_set),
+                        cognate_id_set,
+                        len(disconnect_set),
+                        disconnect_set,
+                        len(leave_set),
+                        leave_set))
+
+                    # Disconnecting highlighted entries, see `class DeleteGroupingTags()`.
+
+                    entity_list = (
+
+                        DBSession
+
+                            .query(dbEntity)
+
+                            .filter(
+
+                                tuple_(
+                                    dbEntity.parent_client_id,
+                                    dbEntity.parent_object_id)
+                                    .in_(disconnect_set),
+
+                                dbEntity.field_client_id == 66,
+                                dbEntity.field_object_id == 25,
+                                dbEntity.marked_for_deletion == False)
+
+                            .all())
+
+                    for entity in entity_list:
+
+                        if 'desktop' in settings:
+
+                            real_delete_entity(
+                                entity,
+                                settings)
+
+                        else:
+
+                            del_object(
+                                entity,
+                                'xlsx_bulk_disconnect',
+                                client_id)
+
+                    # Connecting disconnected entries together, if there is more than one, see
+                    # `class ConnectLexicalEntries()`.
+
+                    n = 10
+
+                    rnd = (
+                        random.SystemRandom())
+
+                    choice_str = (
+                        string.digits + string.ascii_letters)
+
+                    tag_str = (
+
+                        time.asctime(time.gmtime()) +
+
+                        ''.join(
+                            rnd.choice(choice_str)
+                            for c in range(n)))
+
+                    for entry_id in disconnect_set:
+
+                        dbEntity(
+                            client_id = client_id,
+                            parent_client_id = entry_id[0],
+                            parent_object_id = entry_id[1],
+                            field_client_id = 66,
+                            field_object_id = 25,
+                            content = tag_str,
+                            published = True,
+                            accepted = True)
+
+                    already_set.update(disconnect_set)
+
+                    perspective_group_count += 1
+                    perspective_disconnect_count += len(disconnect_set)
+
+                # Finished this perspective.
+
+                log.debug(
+                    '\n\'{}\' {}/{}:'
+                    '\nperspective_group_count: {}'
+                    '\nperspective_disconnect_count: {}'.format(
+                        perspective_name,
+                        perspective_cid,
+                        perspective_oid,
+                        perspective_group_count,
+                        perspective_disconnect_count))
+
+                entry_info_count += len(entry_info_list)
+                skip_count += len(skip_list)
+
+                group_count += perspective_group_count
+                disconnect_count += perspective_disconnect_count
+
+            # Finished bulk disconnects.
+
+            log.debug(
+                '\n{} perspectives'
+                '\nentry_info_count: {}'
+                '\nskip_count: {}'
+                '\ngroup_count: {}'
+                '\ndisconnect_count: {}'.format(
+                    len(workbook.sheetnames),
+                    entry_info_count,
+                    skip_count,
+                    group_count,
+                    disconnect_count))
+
+            return (
+                    
+                XlsxBulkDisconnect(
+                    entry_info_count = entry_info_count,
+                    skip_count = skip_count,
+                    group_count = group_count,
+                    disconnect_count = disconnect_count,
+                    triumph = True))
+
+        except Exception as exception:
+
+            traceback_string = (
+                    
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('xlsx_bulk_disconnect: exception')
+            log.warning(traceback_string)
+
+            return (
+                    
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -7890,7 +8981,7 @@ class MyMutations(graphene.ObjectType):
     execute_parser = ExecuteParser.Field()
     delete_parser_result = DeleteParserResult.Field()
     update_parser_result = UpdateParserResult.Field()
-
+    xlsx_bulk_disconnect = XlsxBulkDisconnect.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
