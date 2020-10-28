@@ -2972,6 +2972,8 @@ class CognateAnalysis(graphene.Mutation):
         debug_flag = graphene.Boolean()
         intermediate_flag = graphene.Boolean()
 
+        synchronous = graphene.Boolean()
+
     triumph = graphene.Boolean()
 
     dictionary_count = graphene.Int()
@@ -5816,11 +5818,11 @@ class CognateAnalysis(graphene.Mutation):
                 # Compiling and showing relative distance list.
 
                 if max_distance > 0:
-                        distance_list = [
-                            (perspective_id, distance / max_distance)
+                    distance_list = [
+                        (perspective_id, distance / max_distance)
 
-                            for perspective_id, distance in zip(
-                                perspective_id_list, distance_value_list)]
+                        for perspective_id, distance in zip(
+                            perspective_id_list, distance_value_list)]
 
                 else:
 
