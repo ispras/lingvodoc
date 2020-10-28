@@ -51,8 +51,6 @@ services:
 
     env_file:
       - ./locale_env.sh
-
     command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg gunicorn --paster /api/docker/docker.ini"
-    
     ports:
       - "16543:6543"

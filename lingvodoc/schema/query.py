@@ -5812,12 +5812,16 @@ class CognateAnalysis(graphene.Mutation):
 
                 # Compiling and showing relative distance list.
 
-                distance_list = [
+                if max_distance > 0:
+                        distance_list = [
+                            (perspective_id, distance / max_distance)
 
-                    (perspective_id, distance / max_distance)
+                            for perspective_id, distance in zip(
+                                perspective_id_list, distance_value_list)]
 
-                    for perspective_id, distance in zip(
-                        perspective_id_list, distance_value_list)]
+                else:
+
+                    distance_list = distance_value_list
 
                 log.debug(
                     '\ncognate_analysis {0}:'
@@ -6288,6 +6292,8 @@ class CognateAnalysis(graphene.Mutation):
         __debug_flag__ = args.get('debug_flag', False)
         __intermediate_flag__ = args.get('intermediate_flag', False)
 
+        synchronous = args.get('synchronous', False)
+
         language_str = (
             '{0}/{1}, language {2}/{3}'.format(
                 source_perspective_id[0], source_perspective_id[1],
@@ -6443,30 +6449,57 @@ class CognateAnalysis(graphene.Mutation):
 
                 request.response.status = HTTPOk.code
 
-                async_cognate_analysis.delay(
-                    language_str,
-                    source_perspective_id,
-                    base_language_id,
-                    base_language_name,
-                    group_field_id,
-                    perspective_info_list,
-                    multi_list,
-                    multi_name_list,
-                    mode,
-                    distance_flag,
-                    reference_perspective_id,
-                    figure_flag,
-                    distance_vowel_flag,
-                    distance_consonant_flag,
-                    match_translations_value,
-                    only_orphans_flag,
-                    locale_id,
-                    storage,
-                    task_status.key,
-                    request.registry.settings['cache_kwargs'],
-                    request.registry.settings['sqlalchemy.url'],
-                    __debug_flag__,
-                    __intermediate_flag__)
+                if synchronous:
+
+                    CognateAnalysis.perform_cognate_analysis(
+                        language_str,
+                        source_perspective_id,
+                        base_language_id,
+                        base_language_name,
+                        group_field_id,
+                        perspective_info_list,
+                        multi_list,
+                        multi_name_list,
+                        mode,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        match_translations_value,
+                        only_orphans_flag,
+                        locale_id,
+                        storage,
+                        task_status,
+                        __debug_flag__,
+                        __intermediate_flag__)
+
+                else:
+
+                    async_cognate_analysis.delay(
+                        language_str,
+                        source_perspective_id,
+                        base_language_id,
+                        base_language_name,
+                        group_field_id,
+                        perspective_info_list,
+                        multi_list,
+                        multi_name_list,
+                        mode,
+                        distance_flag,
+                        reference_perspective_id,
+                        figure_flag,
+                        distance_vowel_flag,
+                        distance_consonant_flag,
+                        match_translations_value,
+                        only_orphans_flag,
+                        locale_id,
+                        storage,
+                        task_status.key,
+                        request.registry.settings['cache_kwargs'],
+                        request.registry.settings['sqlalchemy.url'],
+                        __debug_flag__,
+                        __intermediate_flag__)
 
                 # Signifying that we've successfully launched asynchronous cognate acoustic analysis.
 
@@ -6947,6 +6980,12 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
         worksheet_list = []
 
         # Getting integrable density grids for each distribution model.
+
+        x_min = x_min or 500
+        x_max = x_max or 1000
+
+        y_min = y_min or 500
+        y_max = y_max or 1000
 
         x_low = max(0, x_min - (x_max - x_min) * 0.25)
         x_high = x_max + (x_max - x_min) * 0.25
