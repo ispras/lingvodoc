@@ -4,6 +4,7 @@ import shutil
 from pathvalidate import sanitize_filename
 import graphene
 from sqlalchemy import and_, BigInteger, cast, func, or_, tuple_
+from sqlalchemy import and_, or_, tuple_
 from lingvodoc.schema.gql_holders import (
     fetch_object,
     ObjectVal,
@@ -125,6 +126,15 @@ class Entity(LingvodocObjectType):
     data_type = graphene.String()
     dbType = dbEntity
     publishingentity = None
+    is_subject_for_parsing = graphene.Boolean()
+
+    @fetch_object('is_subject_for_parsing')
+    def resolve_is_subject_for_parsing(self, info):
+        if self.dbObject.content:
+            extension = self.dbObject.content[self.dbObject.content.rfind('.'):]
+            if extension == ".odt":
+                return True
+        return False
 
     class Meta:
         interfaces = (CompositeIdHolder,
@@ -607,16 +617,20 @@ class ApproveAllForUser(graphene.Mutation):
                 DBSession.query(Client.id).filter_by(user_id = user_id))
 
             entity_select_condition = (
-                    
+
                 and_(
                     entity_select_condition,
 
                     func.coalesce(
                         cast(dbEntity.additional_metadata[
-                            ('merge', 'original_client_id')].astext, BigInteger),
+                                 ('merge', 'original_client_id')].astext, BigInteger),
                         dbEntity.client_id)
 
                         .in_(client_id_query)))
+
+            entity_select_condition = and_(
+                entity_select_condition,
+                dbEntity.client_id.in_(client_id_query))
 
         # If have any specified fields, checking their info and updating selection condition.
 
@@ -680,9 +694,7 @@ class ApproveAllForUser(graphene.Mutation):
                                        (perspective_id[0], perspective_id[1]))
 
             # Performing bulk approve.
-
             update_dict = {}
-
             if published:
                 update_dict['published'] = True
 
@@ -690,12 +702,9 @@ class ApproveAllForUser(graphene.Mutation):
                 update_dict['accepted'] = True
 
             update_count = (
-
                 DBSession
-
                     .query(
                         dbPublishingEntity)
-
                     .filter(
                         dbLexicalEntry.parent_client_id == perspective_id[0],
                         dbLexicalEntry.parent_object_id == perspective_id[1],
@@ -705,10 +714,31 @@ class ApproveAllForUser(graphene.Mutation):
                         dbPublishingEntity.client_id == dbEntity.client_id,
                         dbPublishingEntity.object_id == dbEntity.object_id,
                         entity_select_condition)
-
                     .update(
                         values = update_dict,
                         synchronize_session = False))
+
+            entities = (
+                DBSession.query(dbPublishingEntity)
+                    .join(dbEntity.parent)
+                    .join(dbEntity.publishingentity)
+
+                    .filter(
+                        dbLexicalEntry.parent_client_id == given_perspective.client_id,
+                        dbLexicalEntry.parent_object_id == given_perspective.object_id,
+                        entity_select_condition)
+
+                    .all())
+
+            for entity in entities:
+
+                if published:
+                    entity.published = True
+
+                if accepted:
+                    entity.accepted = True
+
+            update_count = len(entities)
 
             log.debug(
                 'approve_all_for_user (perspective {0}/{1}): updated {2} entit{3}'.format(

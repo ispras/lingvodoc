@@ -6,8 +6,6 @@ from sqlalchemy import and_, create_engine
 from sqlalchemy.orm import aliased
 
 from lingvodoc.queue.celery import celery
-from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective
-from lingvodoc.schema.gql_field import Field
 from lingvodoc.utils.creation import create_entity, create_lexicalentry
 from lingvodoc.utils.verification import check_lingvodoc_id
 
@@ -48,10 +46,7 @@ def copy_sound_or_markup_entity(
     parent_client_id=None,
     parent_object_id=None):
 
-    storage = dict()
-    storage['path'] = "/home/andriy/Desktop/objects/"
-    storage['prefix'] = "http://localhost:6543/"
-    storage['static_route'] = "objects/"
+    storage = info.context.request.registry.settings["storage"]
 
     # filename = "copy_" + sound.content[sound.content.rfind('/')+1:]
     filename = entity.content[entity.content.rfind('/') + 1:]

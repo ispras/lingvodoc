@@ -47,7 +47,7 @@ from sqlalchemy.ext.declarative import (
 )
 
 from sqlalchemy.engine import (
-    Engine
+    Engine, create_engine
 )
 
 from zope.sqlalchemy import ZopeTransactionExtension
@@ -708,6 +708,46 @@ class FieldMixin(PrimeTableArgs):
     @property
     def field_id(self):
         return (self.field_client_id, self.field_object_id)
+
+class EntityMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (
+                   ForeignKeyConstraint(['entity_client_id', 'entity_object_id'],
+                                        ['entity' + '.client_id',
+                                         'entity' + '.object_id']),) + super().__table_args__
+
+    entity_client_id = Column(SLBigInteger(), nullable=False)
+    entity_object_id = Column(SLBigInteger(), nullable=False)
+
+    @declared_attr
+    def entity(cls):
+        return relationship('Entity',
+                            backref=backref(cls.__tablename__.lower()))
+
+    @property
+    def entity_id(self):
+        return (self.entity_client_id, self.entity_object_id)
+
+class ParserMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (
+                   ForeignKeyConstraint(['parser_client_id', 'parser_object_id'],
+                                        ['parser' + '.client_id',
+                                         'parser' + '.object_id']),) + super().__table_args__
+
+    parser_client_id = Column(SLBigInteger(), nullable=False)
+    parser_object_id = Column(SLBigInteger(), nullable=False)
+
+    @declared_attr
+    def parser(cls):
+        return relationship('Parser',
+                            backref=backref(cls.__tablename__.lower()))
+
+    @property
+    def parser_id(self):
+        return (self.parser_client_id, self.parser_object_id)
 
 
 class ParentLinkMixin(PrimeTableArgs):
@@ -1667,3 +1707,18 @@ class ApproveAllAcl(object):
 
     def __acl__(self):
         return [(Allow, Everyone, ALL_PERMISSIONS)]
+
+
+# 'method' attribute of Parser model should be the same as one of methods in utils/parser.py
+
+
+class Parser(Base, TableNameMixin, CompositeIdMixin, CreatedAtMixin, AdditionalMetadataMixin):
+    method = Column(UnicodeText, nullable=False, unique=True)
+    name = Column(UnicodeText, nullable=False, unique=True)
+    parameters = Column(JSONB)
+
+
+class ParserResult(Base, TableNameMixin, CompositeIdMixin, EntityMixin, ParserMixin,
+                   CreatedAtMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
+    arguments = Column(JSONB)
+    content = Column(UnicodeText)

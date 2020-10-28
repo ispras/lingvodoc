@@ -2,17 +2,22 @@ import base64
 import hashlib
 import os
 import shutil
+import tempfile
 import time
 import random
 import string
+import urllib
 
-
+import transaction
 from pathvalidate import sanitize_filename
 from sqlalchemy import (
-    and_,
+    and_, create_engine,
 )
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_
+
+from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.queue.celery import celery
 from lingvodoc.utils.elan_functions import eaf_wordlist
 from lingvodoc.models import (
     Client,
@@ -30,7 +35,8 @@ from lingvodoc.models import (
     Entity,
     Field,
     PublishingEntity,
-    Organization as dbOrganization
+    Organization as dbOrganization, Parser, ParserResult,
+    get_client_counter
 )
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils.search import translation_gist_search
@@ -39,6 +45,7 @@ from lingvodoc.utils.search import translation_gist_search
 import logging
 log = logging.getLogger(__name__)
 
+import lingvodoc.utils.doc_parser as ParseMethods
 
 def add_user_to_group(user, group):
     if user not in group.users:
@@ -401,6 +408,91 @@ def create_lexicalentry(id, perspective_id, save_object=False):
         DBSession.add(dblexentry)
         DBSession.flush()
     return dblexentry
+
+@celery.task
+def async_create_parser_result(id, parser_id, entity_id,
+                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url,
+                               arguments, save_object):
+    async_create_parser_result_method(id=id, parser_id=parser_id, entity_id=entity_id,
+                                      task_key=task_key, cache_kwargs=cache_kwargs,
+                                      sqlalchemy_url=sqlalchemy_url, dedoc_url=dedoc_url,
+                                      arguments=arguments, save_object=save_object)
+
+def async_create_parser_result_method(id, parser_id, entity_id,
+                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url,
+                               arguments, save_object):
+
+    from lingvodoc.cache.caching import initialize_cache
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind=engine)
+    initialize_cache(cache_kwargs)
+    task_status = TaskStatus.get_from_cache(task_key)
+    entity = DBSession.query(Entity).filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
+    content_filename = entity.content.split('/')[-1]
+    task_status.set(1, 5, "Parsing of file " + content_filename + " started")
+
+    try:
+
+        create_parser_result(id=id, parser_id=parser_id, entity_id=entity_id, dedoc_url=dedoc_url,
+                             arguments=arguments, save_object=save_object)
+
+    except Exception as err:
+        task_status.set(None, -1, "Parsing of file " + content_filename + " failed: %s" % str(err))
+        raise
+
+    task_status.set(2, 100, "Parsing of file " + content_filename + " finished")
+
+# Downloads a document by the URL in an entity's content and saves the result of its parsing
+
+
+def create_parser_result(id, parser_id, entity_id, dedoc_url, arguments=None, save_object=True):
+
+    client_id, object_id = id
+    parser_client_id, parser_object_id = parser_id
+    entity_client_id, entity_object_id = entity_id
+    entity = DBSession.query(Entity). \
+        filter_by(client_id=entity_client_id, object_id=entity_object_id).first()
+
+    parser = DBSession.query(Parser). \
+        filter_by(client_id=parser_client_id, object_id=parser_object_id).first()
+    if not parser:
+        raise ResponseError(message="No such parser in the system")
+
+    if not arguments:
+        arguments = dict()
+
+    # 'method' attribute of Parser model should be the same as one of methods in utils/parser.py
+    parse_method = getattr(ParseMethods, parser.method)
+
+    ascii_part = entity.content[:entity.content.rfind('/') + 1]
+    unicode_part = entity.content[entity.content.rfind('/') + 1:entity.content.rfind('.')]
+    extension = entity.content[entity.content.rfind('.'):]
+    url = ascii_part + urllib.request.quote(unicode_part) + extension
+    response = urllib.request.urlopen(url)
+
+    tmp_file_id, tmp_filename = tempfile.mkstemp()
+    tmp_file = open(tmp_filename, 'wb')
+    tmp_file.write(response.read())
+    os.rename(tmp_filename, tmp_filename + ".odt")
+    tmp_filename = tmp_filename + ".odt"
+
+    result = parse_method(tmp_filename, dedoc_url, **arguments)
+
+    dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
+                                  parser_object_id=parser_object_id, parser_client_id=parser_client_id,
+                                  entity_client_id=entity_client_id, entity_object_id=entity_object_id,
+                                  arguments=arguments, content=result)
+    if not dbparserresult.object_id:
+        dbparserresult.object_id = get_client_counter(client_id)
+    if save_object:
+        DBSession.add(dbparserresult)
+        DBSession.flush()
+
+    os.remove(tmp_filename)
+
+    transaction.commit()
+
+    return dbparserresult
 
 # Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
 # it's uploaded via multipart form, it's just saved as-is.

@@ -1,5 +1,4 @@
 import time
-
 from dogpile.cache.api import NO_VALUE
 from dogpile.cache import make_region
 
@@ -112,8 +111,8 @@ class TaskStatus():
                     task = dill.loads(task)
                     task_list.append(task)
         task_list.sort(
-            key = lambda task: (getattr(task, 'created_at', 0), task.id),
-            reverse = True)
+            key=lambda task: (getattr(task, 'created_at', 0), task.id),
+            reverse=True)
         if clear_out:
             return [task.__dict__ for task in task_list]
         else:
