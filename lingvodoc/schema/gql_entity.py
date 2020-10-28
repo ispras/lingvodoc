@@ -3,6 +3,7 @@ import os
 import shutil
 from pathvalidate import sanitize_filename
 import graphene
+from sqlalchemy import and_, BigInteger, cast, func, or_, tuple_
 from sqlalchemy import and_, or_, tuple_
 from lingvodoc.schema.gql_holders import (
     fetch_object,
@@ -615,6 +616,18 @@ class ApproveAllForUser(graphene.Mutation):
             client_id_query = (
                 DBSession.query(Client.id).filter_by(user_id = user_id))
 
+            entity_select_condition = (
+
+                and_(
+                    entity_select_condition,
+
+                    func.coalesce(
+                        cast(dbEntity.additional_metadata[
+                                 ('merge', 'original_client_id')].astext, BigInteger),
+                        dbEntity.client_id)
+
+                        .in_(client_id_query)))
+
             entity_select_condition = and_(
                 entity_select_condition,
                 dbEntity.client_id.in_(client_id_query))
@@ -681,9 +694,31 @@ class ApproveAllForUser(graphene.Mutation):
                                        (perspective_id[0], perspective_id[1]))
 
             # Performing bulk approve.
+            update_dict = {}
+            if published:
+                update_dict['published'] = True
+
+            if accepted:
+                update_dict['accepted'] = True
+
+            update_count = (
+                DBSession
+                    .query(
+                        dbPublishingEntity)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        entity_select_condition)
+                    .update(
+                        values = update_dict,
+                        synchronize_session = False))
 
             entities = (
-
                 DBSession.query(dbPublishingEntity)
                     .join(dbEntity.parent)
                     .join(dbEntity.publishingentity)
