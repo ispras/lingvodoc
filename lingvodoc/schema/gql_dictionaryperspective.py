@@ -892,9 +892,31 @@ class UpdatePerspectiveAtom(graphene.Mutation):
             raise ResponseError(message="No such perspective in the system")
         locale_id = args.get("locale_id")
 
-        dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbperspective.translation_gist_client_id,
-                                                            parent_object_id=dbperspective.translation_gist_object_id,
-                                                            locale_id=locale_id).first()
+        if 'atom_id' in args:
+
+            atom_id = args['atom_id']
+
+            dbtranslationatom = (
+                    
+                DBSession
+                    .query(dbTranslationAtom)
+                    .filter_by(
+                        client_id = atom_id[0],
+                        object_id = atom_id[1])
+                    .first())
+
+        else:
+
+            dbtranslationatom = (
+                    
+                DBSession
+                    .query(dbTranslationAtom)
+                    .filter_by(
+                        parent_client_id=dbperspective.translation_gist_client_id,
+                        parent_object_id=dbperspective.translation_gist_object_id,
+                        locale_id=locale_id)
+                    .first())
+
         if dbtranslationatom:
             if dbtranslationatom.locale_id == locale_id:
                 key = "translation:%s:%s:%s" % (
