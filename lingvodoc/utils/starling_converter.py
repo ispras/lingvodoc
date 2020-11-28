@@ -6,8 +6,14 @@ import transaction
 import datetime
 from collections import defaultdict
 from itertools import chain
+import logging
+import traceback
+import pprint
+import csv
+
 import graphene
 from sqlalchemy import create_engine
+
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.models import (
     Dictionary as dbDictionary,
@@ -50,6 +56,13 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_group_entity)
 from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
 
+from lingvodoc.scripts.convert_five_tiers import convert_all
+from lingvodoc.queue.celery import celery
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 #from lingvodoc.utils.creation import create_entity, create_lexicalentry
 
@@ -75,33 +88,76 @@ from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
 
 
 def csv_to_columns(path):
-    import csv
-    csv_file = open(path, "rb").read().decode("utf-8", "ignore")
-    lines = list()
-    for x in csv_file.split("\n"):
-        if not x:
-            continue
-        lines.append(x.rstrip().split('#####'))
-        #n = len(x.rstrip().split('|'))
-    #lines = [x.rstrip().split('|') for x in csv_file.split("\n") if x.rstrip().split('|')]
-    column_dict = dict()
-    columns = lines[0]
 
-    for line in lines[1:]:
-        if len(line) != len(columns):
-            continue
-        col_num = 0
-        for column in columns:
-            if not column in column_dict:
-                column_dict[column] = []
-            column_dict[column].append(line[col_num])
-            col_num += 1
-    # hack #1
+    # First trying as if it is a special Starling CSV-like format.
 
-    column_dict["NUMBER"] = [int(x) for x in column_dict["NUMBER"]] #list(range(1, len(column_dict["NUMBER"]) + 1))
-    return column_dict
-from lingvodoc.scripts.convert_five_tiers import convert_all
-from lingvodoc.queue.celery import celery
+    try:
+
+        csv_file = open(path, "rb").read().decode("utf-8-sig", "ignore")
+
+        lines = list()
+        for x in csv_file.split("\n"):
+            if not x:
+                continue
+            lines.append(x.rstrip().split('#####'))
+            #n = len(x.rstrip().split('|'))
+        #lines = [x.rstrip().split('|') for x in csv_file.split("\n") if x.rstrip().split('|')]
+        column_dict = dict()
+        columns = lines[0]
+
+        for line in lines[1:]:
+            if len(line) != len(columns):
+                continue
+            col_num = 0
+            for column in columns:
+                if not column in column_dict:
+                    column_dict[column] = []
+                column_dict[column].append(line[col_num])
+                col_num += 1
+        # hack #1
+
+        column_dict["NUMBER"] = [int(x) for x in column_dict["NUMBER"]] #list(range(1, len(column_dict["NUMBER"]) + 1))
+
+        return column_dict, True
+
+    # If failed, we try as if it is an Excel-generated CSV file.
+
+    except:
+
+        with open(path,
+            encoding = 'utf-8-sig',
+            errors = 'ignore',
+            newline = '') as csv_file:
+
+            dialect = csv.Sniffer().sniff(csv_file.read(4096))
+
+            csv_file.seek(0)
+
+            csv_reader = csv.reader(csv_file, dialect)
+            row_list = [row for row in csv_reader]
+
+            # Assuming first row contains field headers.
+
+            header_list = row_list[0]
+
+            while header_list and not header_list[-1].strip():
+                header_list.pop()
+
+            column_dict = {
+                header: [] for header in header_list}
+
+            column_dict['NUMBER'] = []
+
+            # BAD HACK, just mocking up a 'NUMBER' column based on row indices.
+
+            for index, row in enumerate(row_list[1:]):
+
+                for column, value in zip(header_list, row):
+                    column_dict[column].append(value)
+
+                column_dict['NUMBER'].append(index)
+
+            return column_dict, False
 
 
 def create_entity(id=None,
@@ -189,20 +245,28 @@ def graphene_to_dicts(starling_dictionaries):
 
     return result
 
-def convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
+def convert(
+    info,
+    starling_dictionaries,
+    cache_kwargs,
+    sqlalchemy_url,
+    task_key,
+    synchronous = False):
+
     ids = [info.context["client_id"], None]
     locale_id = info.context.get('locale_id')
 
+    convert_f = (
+        convert_start_sync if synchronous else
+        convert_start_async.delay)
 
-    convert_start_async.delay(ids, graphene_to_dicts(starling_dictionaries), cache_kwargs, sqlalchemy_url, task_key)
-    """
-    convert_start_sync(ids,
-              graphene_to_dicts(starling_dictionaries),
-              cache_kwargs,
-              sqlalchemy_url,
-              task_key
-              )
-    """
+    convert_f(
+        ids,
+        graphene_to_dicts(starling_dictionaries),
+        cache_kwargs,
+        sqlalchemy_url,
+        task_key)
+
     return True
 
 
@@ -230,6 +294,7 @@ class GqlStarling(graphene.Mutation):
 
     class Arguments:
         starling_dictionaries=graphene.List(StarlingDictionary)
+        synchronous=graphene.Boolean()
 
     def mutate(root, info, **args):
         starling_dictionaries = args.get("starling_dictionaries")
@@ -244,7 +309,15 @@ class GqlStarling(graphene.Mutation):
         name = ",".join(task_names)
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
-        convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
+
+        convert(
+            info,
+            starling_dictionaries,
+            cache_kwargs,
+            sqlalchemy_url,
+            task.key,
+            synchronous = args.get('synchronous', False))
+
         return GqlStarling(triumph=True)
 
 
@@ -361,11 +434,9 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 task_status_counter += 1
                 blob_id = tuple(starling_dictionary.get("blob_id"))
                 blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
-                column_dict = csv_to_columns(blob.real_storage_path)
-                perspective_column_dict[blob_id] = column_dict
 
-
-
+                column_dict, starling_flag = csv_to_columns(blob.real_storage_path)
+                perspective_column_dict[blob_id] = column_dict, starling_flag
 
                 atoms_to_create = starling_dictionary.get("translation_atoms")
                 if atoms_to_create:
@@ -465,13 +536,15 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                     position_counter += 1
                     etymology_blobs.add(blob_id)
 
-                persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                         parent_id=perspective_id,
-                         field_id=relation_field_id,
-                         upper_level=None,
-                         link_id=None,
-                         position=position_counter
-                         )
+                if starling_flag:
+
+                    persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
+                             parent_id=perspective_id,
+                             field_id=relation_field_id,
+                             upper_level=None,
+                             link_id=None,
+                             position=position_counter
+                             )
 
                 fields_marked_as_links = [x.get("starling_name") for x in fields if x.get("starling_type") == 3]
                 link_field_dict[blob_id] = fields_marked_as_links
@@ -480,6 +553,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 csv_data = column_dict
                 collist = list(starlingname_to_column)
                 le_list = []
+
                 for number in csv_data["NUMBER"]:  # range()
                     le_client_id, le_object_id = client_id, obj_id.next
                     lexentr = dbLexicalEntry(object_id=le_object_id,
@@ -523,14 +597,15 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                     continue
                 #persp = blob_to_perspective[blob_id]
                 copy_field_to_starlig = copy_field_dict[blob_id]
+                column_dict, starling_flag = perspective_column_dict[blob_id]
 
                 le_links = defaultdict(dict)
                 for num_col in link_field_dict[blob_id]:
                     if num_col in link_col_to_blob[blob_id].keys():
                         new_blob_link = link_col_to_blob[blob_id][num_col]
                         link_numbers = list(zip(
-                                           [int(x) for x in perspective_column_dict[blob_id]["NUMBER"]],
-                                           [int(x) for x in perspective_column_dict[blob_id][num_col]])
+                                           [int(x) for x in column_dict["NUMBER"]],
+                                           [int(x) for x in column_dict[num_col]])
                         )
                         for link_pair in link_numbers:
                             # TODO: fix
@@ -579,8 +654,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
                 for field_id in copy_field_to_starlig:
                     starling_field = copy_field_to_starlig[field_id]
-                    word_list = perspective_column_dict[blob_id][starling_field]
-                    numb_list = iter(perspective_column_dict[blob_id]["NUMBER"])
+                    word_list = column_dict[starling_field]
+                    numb_list = iter(column_dict["NUMBER"])
                     i = 0
                     for word in word_list:
                         i = next(numb_list)
@@ -606,10 +681,23 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         #i+=1
             DBSession.flush()
 
-    except  Exception as err:
-        task_status.set(None, -1, "Conversion failed: %s" % str(err))
+    except Exception as exception:
+
+        traceback_string = (
+                
+            ''.join(
+                traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1])
+
+        log.warning('\nconvert_starling: exception')
+        log.warning('\n' + traceback_string)
+
+        task_status.set(None, -1,
+            'Convertion failed, exception:\n' + traceback_string)
+
     else:
         task_status.set(10, 100, "Finished", "")
+
     # pr.disable()
     # s = StringIO()
     # ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
