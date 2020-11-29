@@ -419,7 +419,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
         sound_ids.add((word_id, blob_id))
         audio_hash = hashlib.sha224(audio).hexdigest()
         markup_hash = hashlib.sha224(markup).hexdigest()
-        if audio_hash not in audio_hashes:
+        if (word_id, audio_hash) not in audio_hashes:
             if common_name:
                 fname, ext = os.path.splitext(common_name)
                 ext = ext.replace(".", "").replace(" ", "")
@@ -442,10 +442,11 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                                 content=base64.urlsafe_b64encode(audio).decode(),
                                 folder_name="%s_sounds"%folder_name,
                                 storage=storage)
+            audio_hashes[(word_id, audio_hash)] = None
         else:
-            lvl = audio_hashes[audio_hash][0]
+            lvl = audio_hashes[(word_id, audio_hash)][0]
             markup_update_flag = True
-        if markup and markup_hash not in markup_hashes:
+        if markup and (word_id, markup_hash) not in markup_hashes:
             if lvl:
                 if common_name:
                     fname, ext = os.path.splitext(common_name)
@@ -456,12 +457,12 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                     filename = "%s.%s" % (fname, ext)
                 else:
                     filename = 'noname.TextGrid'
-                markup_hashes.add(markup_hash)
+                markup_hashes.add((word_id, markup_hash))
     
                 if not markup_update_flag:
                     le_id = ids_map[int(word_id)]
                 else:
-                    le_id = audio_hashes[audio_hash][1]
+                    le_id = audio_hashes[(word_id, audio_hash)][1]
                 sound_metadata.update({"hash": markup_hash})
                 create_entity(le_id[0],
                               le_id[1],
@@ -508,7 +509,7 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
             continue
         sound_ids.add((word_id, blob_id))
         audio_hash = hashlib.sha224(audio).hexdigest()
-        if audio_hash not in audio_hashes:
+        if (word_id, audio_hash) not in audio_hashes:
             if common_name:
                 fname, ext = os.path.splitext(common_name)
                 ext = ext.replace(".", "").replace(" ", "")
@@ -531,7 +532,7 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
                                 content=base64.urlsafe_b64encode(audio).decode(),
                                 folder_name="%s_sounds" % folder_name,
                                 storage=storage)
-            audio_hashes[audio_hash] = None
+            audio_hashes[(word_id, audio_hash)] = None
         if audio_counter > 50:
             DBSession.flush()
             audio_counter = 0
