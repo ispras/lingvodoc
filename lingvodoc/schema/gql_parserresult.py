@@ -120,10 +120,7 @@ class ExecuteParser(graphene.Mutation):
             raise ResponseError(message="Dedoc server url was not provided in configuration")
 
         async = args.get("async")
-        if async == None:
-            async = True
-
-        if async:
+        if async == None or async == True:
             task = TaskStatus(user_id, "Parsing entity", "", 2)
             cur_args["task_key"] = task.key
             cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]

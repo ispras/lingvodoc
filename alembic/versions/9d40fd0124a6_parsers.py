@@ -42,7 +42,7 @@ def upgrade():
         content text
         );
     
-	INSERT INTO public.parser (additional_metadata, created_at, object_id, client_id, name, parameters, method) VALUES (null, '2020-10-28 20:19:36.000000', 1, 1, 'Парсер удмуртского языка Т.Архангельского', '[]', 'timarkh_udm');
+	    INSERT INTO public.parser (additional_metadata, created_at, object_id, client_id, name, parameters, method) VALUES (null, '2020-10-28 20:19:36.000000', 1, 1, 'Парсер удмуртского языка Т.Архангельского', '[]', 'timarkh_udm');
         INSERT INTO public.parser (additional_metadata, created_at, object_id, client_id, name, parameters, method) VALUES (null, '2020-10-28 20:21:55.000000', 2, 1, 'Парсер эрзянского языка Т.Архангельского', '[]', 'timarkh_erzya');
         INSERT INTO public.parser (additional_metadata, created_at, object_id, client_id, name, parameters, method) VALUES (null, '2020-10-28 20:21:58.000000', 3, 1, 'Парсер марийского лугового языка Т.Архангельского', '[]', 'timarkh_meadow_mari');
         INSERT INTO public.parser (additional_metadata, created_at, object_id, client_id, name, parameters, method) VALUES (null, '2020-10-28 20:22:00.000000', 4, 1, 'Парсер мокшанского языка Т.Архангельского', '[]', 'timarkh_moksha');
