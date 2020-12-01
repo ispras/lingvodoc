@@ -1,14 +1,16 @@
 import json
 import re
 
-from udmparser.analyzer.analyze import analyze
+from udmparser.analyzer.analyze import analyze as analyze_udm
+from erzyanparser.analyzer.analyze import analyze as analyze_erzya
+from mokshanparser.analyzer.analyze import analyze as analyze_moksha
+from komizyryanparser.analyzer.analyze import analyze as analyze_komi_zyryan
+from meadowmariparser.analyzer.analyze import analyze as analyze_meadow_mari
 from nltk.tokenize import RegexpTokenizer
 import csv
 import os
 import tempfile
 import bs4
-from odf import text, teletype
-from odf.opendocument import load
 import requests
 
 # Extracts html string with headers using dedoc module
@@ -39,17 +41,16 @@ def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
 # Parses an odt file with udmurtian text, returns an html string with parsed words wrapped into tags
 
 
-def timarkh_udm(content_file, dedoc_url):
-
-    # Load pure text string from the file
-    doc = load(content_file)
-    content_for_parsing = teletype.extractText(doc.text)
+def timarkh_uniparser(content_file, dedoc_url, lang):
 
     # Save dedoc module output for further result composing
     # Exclude sub tag with content as have no need in it
     dedoc_output = dedoc_extract(content_file, dedoc_url)
+    dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", dedoc_output)
 
+    # Build the content for parsing by formatting the dedoc's output
     # Build a csv file with frequences of each word in the input document to pass it to the parsing function
+    content_for_parsing = re.sub(r"(<.*?>)", "", dedoc_output)
     content_for_parsing = content_for_parsing.replace('\n', '')
     tokenizer = RegexpTokenizer(r'\w+')
     freq_dict = dict()
@@ -70,7 +71,17 @@ def timarkh_udm(content_file, dedoc_url):
     unparsed_file_id, unparsed_filename = tempfile.mkstemp()
     open(parsed_filename, 'w').close()
     open(unparsed_filename, 'w').close()
-    analyze(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+
+    if lang == 'udm':
+        analyze_udm(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+    if lang == 'erzya':
+        analyze_erzya(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+    if lang == 'moksha':
+        analyze_moksha(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+    if lang == 'komi_zyryan':
+        analyze_komi_zyryan(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+    if lang == 'meadow_mari':
+        analyze_meadow_mari(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
 
     def insert_parser_results(parser_output, dedoc_output):
 
@@ -155,6 +166,23 @@ def timarkh_udm(content_file, dedoc_url):
     os.remove(unparsed_filename)
 
     return result
+
+
+def timarkh_udm(content_file, dedoc_url):
+    return timarkh_uniparser(content_file, dedoc_url, 'udm')
+
+def timarkh_erzya(content_file, dedoc_url):
+    return timarkh_uniparser(content_file, dedoc_url, 'erzya')
+
+def timarkh_moksha(content_file, dedoc_url):
+    return timarkh_uniparser(content_file, dedoc_url, 'moksha')
+
+def timarkh_komi_zyryan(content_file, dedoc_url):
+    return timarkh_uniparser(content_file, dedoc_url, 'komi_zyryan')
+
+def timarkh_meadow_mari(content_file, dedoc_url):
+    return timarkh_uniparser(content_file, dedoc_url, 'meadow_mari')
+
 
 
 

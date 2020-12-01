@@ -4,7 +4,7 @@ RUN locale-gen en_US.UTF-8
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 ADD . /api
 WORKDIR /api
-RUN apt-get update && apt-get install -y python3.5-dev python3.5 python3-setuptools libssl-dev libffi-dev wget build-essential xz-utils bzip2 tar unzip git
+RUN apt-get update && apt-get install -y python3.5-dev python3.5 python3-setuptools libssl-dev libffi-dev wget build-essential xz-utils bzip2 tar unzip git python3-pip
 RUN \
   wget https://github.com/ispras/lingvodoc-ext-oslon/archive/master.zip -O /tmp/master.zip && \
   unzip /tmp/master.zip -d /tmp/ && \
@@ -16,7 +16,7 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" > /etc/
 	apt-get update && \
 	apt-get install -y postgresql-server-dev-10 postgresql-client-10
 RUN \
-  easy_install3 pip==9.0.1 && \
+  pip3 install pip==9.0.1 && \
   pip3 install --upgrade setuptools==40.8.0 && \
   pip3 install -r server-requirements.txt && \
   pip3 install alembic gunicorn==19.7.1
