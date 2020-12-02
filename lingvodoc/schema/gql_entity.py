@@ -129,9 +129,10 @@ class Entity(LingvodocObjectType):
 
     @fetch_object('is_subject_for_parsing')
     def resolve_is_subject_for_parsing(self, info):
+        supported_extensions = (".odt", ".doc", ".docx")
         if self.dbObject.content:
             extension = self.dbObject.content[self.dbObject.content.rfind('.'):]
-            if extension == ".odt":
+            if extension in supported_extensions:
                 return True
         return False
 

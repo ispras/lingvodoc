@@ -473,8 +473,8 @@ def create_parser_result(id, parser_id, entity_id, dedoc_url, arguments=None, sa
     tmp_file_id, tmp_filename = tempfile.mkstemp()
     tmp_file = open(tmp_filename, 'wb')
     tmp_file.write(response.read())
-    os.rename(tmp_filename, tmp_filename + ".odt")
-    tmp_filename = tmp_filename + ".odt"
+    os.rename(tmp_filename, tmp_filename + extension)
+    tmp_filename = tmp_filename + extension
 
     result = parse_method(tmp_filename, dedoc_url, **arguments)
 
