@@ -23,5 +23,5 @@ def upgrade():
 
 def downgrade():
     op.execute('''
-    DELETE FROM parser WHERE method = 'timarkh_moksha';
+    DELETE FROM parser WHERE method = 'timarkh_komi_zyryan';
     ''')
