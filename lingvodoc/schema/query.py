@@ -6274,6 +6274,20 @@ class CognateAnalysis(graphene.Mutation):
           }
         }
         """
+        
+        # Administrator check.
+
+        client_id = info.context.request.authenticated_userid
+
+        if not client_id:
+            raise ResponseError('Only administrator can perform cognate analysis.')
+
+        user = Client.get_user_by_client_id(client_id)
+
+        if user.id != 1:
+            raise ResponseError('Only administrator can perform cognate analysis.')
+
+        # Getting arguments.
 
         source_perspective_id = args['source_perspective_id']
         base_language_id = args['base_language_id']
