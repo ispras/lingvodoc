@@ -1166,47 +1166,55 @@ class Query(graphene.ObjectType):
         dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
         if mode is not None and client:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
             if not mode:
-                # available
-                clients = DBSession.query(Client).filter(Client.user_id.in_([user.id])).all()  # user,id?
-                cli = [o.id for o in clients]
-                #response['clients'] = cli
-                dbdicts = dbdicts.filter(dbDictionary.client_id.in_(cli))
+                # my dictionaries
+
+                client_query = (
+
+                    DBSession
+                        .query(Client.id)
+                        .filter(Client.user_id == user.id)
+                        .subquery()) # user,id?
+
+                dbdicts = dbdicts.filter(dbDictionary.client_id.in_(client_query))
+
             else:
-                #  my_dictionaries
-                dictstemp = []
+                # available dictionaries
+
+                dictstemp_set = set()
                 group_tuples = []
                 isadmin = False
                 for group in user.groups: # todo: LOOK AT ME this is really bad. rewrite me from group point of view
+                    subject_id = (group.subject_client_id, group.subject_object_id)
                     if group.parent.dictionary_default:
                         if group.subject_override:
                             isadmin = True
                             break
-                        dcttmp = (group.subject_client_id, group.subject_object_id)
-                        if dcttmp not in dictstemp:
-                            dictstemp += [dcttmp]
+                        dictstemp_set.add(subject_id)
                     if group.parent.perspective_default:
                         if group.subject_override:
                             isadmin = True
                             break
-                    group_tuples.append((group.subject_client_id, group.subject_object_id))
+                    group_tuples.append(subject_id)
 
-                list_remainder = group_tuples[:1000]
-                group_tuples = group_tuples[1000:]
-                dicti = list()
-                while list_remainder:
-                    dicti+= DBSession.query(dbDictionary) \
-                        .join(dbDictionaryPerspective) \
-                        .filter(tuple_(dbDictionaryPerspective.client_id, dbDictionaryPerspective.object_id).in_(list_remainder)) \
-                        .all()
-                    list_remainder = group_tuples[:1000]
-                    group_tuples = group_tuples[1000:]
-                for d in dicti:
-                    dcttmp = (d.client_id, d.object_id)
-                    if dcttmp not in dictstemp:
-                        dictstemp += [dcttmp]
                 if not isadmin:
-                    dbdicts = [o for o in dbdicts if (o.client_id, o.object_id) in dictstemp]
+
+                    for i in range(0, len(group_tuples), 1000):
+
+                        dictstemp_set.update(
+
+                            DBSession
+                                .query(dbDictionary.client_id, dbDictionary.object_id)
+                                .join(dbDictionaryPerspective)
+                                .filter(
+                                    tuple_(
+                                        dbDictionaryPerspective.client_id,
+                                        dbDictionaryPerspective.object_id)
+                                        .in_(group_tuples[i : i + 1000]))
+                                .all())
+
+                    dbdicts = [o for o in dbdicts if (o.client_id, o.object_id) in dictstemp_set]
 
         dictionaries_list = list()
         for dbdict in dbdicts:
