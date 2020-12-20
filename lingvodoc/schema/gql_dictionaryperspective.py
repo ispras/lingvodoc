@@ -11,6 +11,7 @@ from lingvodoc.models import (
     DictionaryPerspective as dbPerspective,
     Dictionary as dbDictionary,
     TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
     Client as dbClient,
@@ -22,6 +23,7 @@ from lingvodoc.models import (
     DictionaryPerspectiveToField as dbColumn,
     PublishingEntity as dbPublishingEntity,
     ObjectTOC,
+    user_to_group_association
     )
 
 from lingvodoc.schema.gql_holders import (
@@ -56,10 +58,12 @@ from lingvodoc.utils.deletion import real_delete_perspective
 
 import sqlalchemy
 from sqlalchemy import (
+    and_,
     cast,
     column,
     extract,
     func,
+    literal,
     or_,
     tuple_
 )
@@ -186,10 +190,130 @@ class DictionaryPerspective(LingvodocObjectType):
     counter = graphene.Int(mode=graphene.String())
     last_modified_at = graphene.Float()
 
+    is_hidden_for_client = graphene.Boolean()
+
     dbType = dbPerspective
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
+
+    def check_is_hidden_for_client(self, info):
+        """
+        Checks if the perspective is hidden for the current client.
+
+        Perspective is hidden for the current client if either it or its dictionary status is 'Hidden' and
+        it is not in the 'Available dictionaries' list for the client, see 'def resolve_dictionaries()' in
+        query.py switching based on 'mode'.
+        """
+
+        try:
+            return self.is_hidden_for_client_flag
+
+        except AttributeError:
+            pass
+
+        # See get_hidden() in models.py.
+
+        hidden_id = (
+                
+            DBSession
+            
+                .query(
+                    dbTranslationGist.client_id,
+                    dbTranslationGist.object_id)
+
+                .join(dbTranslationAtom)
+
+                .filter(
+                    dbTranslationGist.type == 'Service',
+                    dbTranslationAtom.content == 'Hidden',
+                    dbTranslationAtom.locale_id == 2)
+                
+                .first())
+
+        # Checking if either the perspective or its dictionary has 'Hidden' status.
+
+        is_hidden = (
+            self.dbObject.state_translation_gist_client_id == hidden_id[0] and
+            self.dbObject.state_translation_gist_object_id == hidden_id[1])
+
+        if not is_hidden:
+
+            is_hidden = (
+
+                DBSession
+
+                    .query(
+                        and_(
+                            dbDictionary.state_translation_gist_client_id == hidden_id[0],
+                            dbDictionary.state_translation_gist_object_id == hidden_id[1]))
+
+                    .filter(
+                        dbDictionary.client_id == self.dbObject.parent_client_id,
+                        dbDictionary.object_id == self.dbObject.parent_object_id)
+                    
+                    .scalar())
+
+        if not is_hidden:
+
+            self.is_hidden_for_client_flag = False
+            return False
+
+        # Perspective is hidden, checking if it's hidden for the client.
+
+        client_id = info.context.request.authenticated_userid
+
+        if not client_id:
+
+            self.is_hidden_for_client_flag = True
+            return True
+
+        user = dbClient.get_user_by_client_id(client_id)
+
+        if user.id == 1:
+
+            self.is_hidden_for_client_flag = False
+            return False
+
+        # Not an admin, we check if the perspective's dictionary is available for the client, see 'available
+        # dictionaries' branch in resolve_dictionaries() in query.py.
+
+        exists_query = (
+
+            DBSession
+
+                .query(
+                    literal(1))
+
+                .filter(
+                    user_to_group_association.c.user_id == user.id,
+                    dbGroup.id == user_to_group_association.c.group_id,
+                    dbBaseGroup.id == dbGroup.base_group_id,
+
+                    or_(
+                        and_(
+                            dbGroup.subject_override,
+                            or_(
+                                dbBaseGroup.dictionary_default,
+                                dbBaseGroup.perspective_default)),
+                        and_(
+                            dbGroup.subject_client_id == self.dbObject.client_id,
+                            dbGroup.subject_object_id == self.dbObject.object_id),
+                        and_(
+                            dbGroup.subject_client_id == self.dbObject.parent_client_id,
+                            dbGroup.subject_object_id == self.dbObject.parent_object_id,
+                            dbBaseGroup.dictionary_default)))
+
+                .exists())
+
+        is_available = (
+
+            DBSession
+                .query(exists_query)
+                .scalar())
+
+        self.is_hidden_for_client_flag = not is_available
+        return self.is_hidden_for_client_flag
 
     # @fetch_object()
     # def resolve_additional_metadata(self, args, context, info):
@@ -408,8 +532,20 @@ class DictionaryPerspective(LingvodocObjectType):
             result)
 
     @fetch_object()
+    def resolve_is_hidden_for_client(self, info):
+        """
+        If the perspective is hidden for the current client.
+        """
+
+        return self.check_is_hidden_for_client(info)
+
+    @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
                              position=1):
+
+        if self.check_is_hidden_for_client(info):
+            return []
+
         result = list()
         request = info.context.get('request')
         if mode == 'all':
