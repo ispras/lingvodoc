@@ -450,11 +450,6 @@ def search_mechanism(
             result_lexical_entries = entries_with_entities(
                 lexical_entry_list, accept = True, delete = False, mode = None, publish = True)
 
-            def graphene_obj(dbobj, cur_cls):
-                obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-                obj.dbObject = dbobj
-                return obj
-
             res_perspectives = [
                 graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in perspective_list]
 
@@ -469,7 +464,8 @@ def search_mechanism(
         dbLexicalEntry.parent_object_id==dbDictionaryPerspective.object_id,
         dbDictionaryPerspective.marked_for_deletion==False,
         dbLexicalEntry.marked_for_deletion==False,
-        tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
+        tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(
+            DBSession.query(dictionaries.cte())))
 
     if adopted is not None or etymology is not None:
         lexes.join(dbLexicalEntry.entity)
@@ -487,8 +483,7 @@ def search_mechanism(
             else:
                 lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
 
-    lexes = lexes.all()
-    lexes = set([tuple(x) for x in lexes])
+    lexes_cte = lexes.cte()
 
     # get all_entity_content_filter
 
@@ -586,7 +581,6 @@ def search_mechanism(
                                        dbEntity.parent_object_id,
                                        *select_query).filter(
                 dbEntity.marked_for_deletion == False,
-                #tuple_(dbEntity.parent_client_id, dbEntity.parent_object_id).in_(lexes),
                 *published_filter,
                 all_entity_content_filter).cte()  # only published entities
 
@@ -657,19 +651,49 @@ def search_mechanism(
                 elif matching_type == 'regexp':
                     inner_and.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
 
-            and_lexes = DBSession.query(all_entities_cte.c.parent_client_id,
-                                all_entities_cte.c.parent_object_id)\
-                                .filter(and_(*inner_and).self_group())\
-                                .yield_per(yield_batch_count).distinct().all()
-            and_lexes_sum.append(set([tuple(x) for x in and_lexes if tuple(x) in lexes]))
+            and_lexes_query = (
 
+                DBSession
+                
+                    .query(
+                        all_entities_cte.c.parent_client_id,
+                        all_entities_cte.c.parent_object_id)
 
-        and_lexes_inter = set.intersection(*[x for x in and_lexes_sum])
-        full_or_block.append(and_lexes_inter)
+                    .filter(and_(*inner_and).self_group())
+
+                    .distinct())
+
+            and_lexes_sum.append(and_lexes_query)
+
+        and_lexes_sum.append(
+            DBSession.query(lexes_cte))
+
+        and_lexes_sum_query = (
+
+            and_lexes_sum[0].intersect(
+                *and_lexes_sum[1:]))
+
+        full_or_block.append(and_lexes_sum_query)
 
     all_results = set()
-    for or_element in full_or_block:
-        all_results = all_results.union(or_element)
+
+    if full_or_block:
+
+        results_query = (
+            full_or_block[0])
+
+        if len(full_or_block) > 1:
+
+            results_query = (
+
+                results_query.union(
+                    *full_or_block[1:]))
+
+        all_results = (
+
+            set(
+                tuple(x)
+                for x in results_query.all()))
 
     if not all_results:
 
@@ -687,13 +711,8 @@ def search_mechanism(
     resolved_search = DBSession.query(dbLexicalEntry)\
         .filter(dbLexicalEntry.marked_for_deletion==False,
                 tuple_(dbLexicalEntry.client_id,
-                       dbLexicalEntry.object_id).in_(list(all_results )))
+                       dbLexicalEntry.object_id).in_(all_results))
     result_lexical_entries = entries_with_entities(resolved_search, accept=True, delete=False, mode=None, publish=True)
-
-    def graphene_obj(dbobj, cur_cls):
-        obj = cur_cls(id=(dbobj.client_id, dbobj.object_id))
-        obj.dbObject = dbobj
-        return obj
 
     #result_lexical_entries = [graphene_obj(x, LexicalEntry) for x in resolved_search.all()]
     tmp_perspectives = set([le.dbObject.parent for le in result_lexical_entries])
@@ -988,28 +1007,40 @@ class AdvancedSearch(LingvodocObjectType):
             d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
         if languages:
             if dicts_to_filter:
+                dictionaries = dictionaries.join(dbLanguage)
                 d_filter.append(
-                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
+                    and_(
+                        tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages),
+                        dbLanguage.marked_for_deletion == False)
                 )
         dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
+
         if publish:
             db_published_gist = translation_gist_search('Published')
             state_translation_gist_client_id = db_published_gist.client_id
             state_translation_gist_object_id = db_published_gist.object_id
             db_la_gist = translation_gist_search('Limited access')
             limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
-            dictionaries = dictionaries.filter(dbDictionary.marked_for_deletion == False).filter(
-                or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                         dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                    and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                         dbDictionary.state_translation_gist_client_id == limited_client_id))). \
-                join(dbDictionaryPerspective) \
-                .filter(or_(
-                and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                     dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                     dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
-                filter(dbDictionaryPerspective.marked_for_deletion == False)
+
+            dictionaries = (
+
+                dictionaries
+
+                    .filter(
+                        or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                                 dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                            and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
+                                 dbDictionary.state_translation_gist_client_id == limited_client_id)))
+
+                    .join(dbDictionaryPerspective)
+
+                    .filter(
+                        dbDictionaryPerspective.marked_for_deletion == False,
+                        or_(
+                            and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                                 dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                            and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                                 dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))))
 
         if search_metadata:
             meta_filter_ids = set()
