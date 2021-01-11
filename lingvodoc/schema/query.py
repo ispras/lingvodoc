@@ -149,7 +149,8 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     client_id_check,
     LingvodocID,
-    Upload
+    Upload,
+    UnstructuredData
     # LevelAndId
 )
 
@@ -196,7 +197,8 @@ from lingvodoc.models import (
     PublishingEntity as dbPublishingEntity,
     user_to_group_association,
     Parser as dbParser,
-    ParserResult as dbParserResult
+    ParserResult as dbParserResult,
+    UnstructuredData as dbUnstructuredData
 )
 from pyramid.request import Request
 
@@ -559,6 +561,15 @@ class Query(graphene.ObjectType):
                                     entity_id = LingvodocID(), parser_id=LingvodocID())
     parser_result = graphene.Field(ParserResult, id=LingvodocID())
     parsers = graphene.Field(graphene.List(Parser))
+
+    unstructured_data = (
+
+        graphene.Field(
+            UnstructuredData,
+            id = graphene.String(required = True)))
+
+    def resolve_unstructured_data(self, info, id):
+        return UnstructuredData(id = id)
 
     def resolve_client_list(
         self,
@@ -8949,6 +8960,153 @@ class XlsxBulkDisconnect(graphene.Mutation):
                     message = 'Exception:\n' + traceback_string))
 
 
+class NewUnstructuredData(graphene.Mutation):
+    """
+    Creates new unstructured data entry, returns its id.
+    """
+
+    class Arguments:
+
+        data = ObjectVal(required = True)
+        metadata = ObjectVal()
+
+    triumph = graphene.Boolean()
+    id = graphene.String()
+
+    @staticmethod
+    def get_random_unstructured_data_id():
+        """
+        Returns reasonably short random unused base59 string unstructured data id.
+        """
+
+        # Not using 'l', 'I' and 'O' which in some cases can cause confusion.
+
+        base59_str = '0123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+
+        rng = (
+            random.Random(
+                int(time.time() * 1000000000)))
+
+        id_count = DBSession.query(dbUnstructuredData).count()
+
+        id_length = 5
+
+        id_length_limit = (
+            5 if id_count <= 0 else
+            min(5, int(math.ceil(math.log(2 * id_count, 59)))))
+
+        def random_id_generator(how_many):
+
+            nonlocal id_length
+
+            for i in range(how_many):
+
+                yield (
+
+                    ''.join(
+                        rng.choice(base59_str)
+                        for i in range(id_length)))
+
+                if id_length < id_length_limit:
+                    id_length += 1
+
+        sql_str = ('''
+
+            select id
+            from (values {}) T(id)
+
+            where id not in (
+              select id from unstructured_data)
+
+            order by length(id)
+            limit 1;
+
+            ''')
+
+        def get_another_query_str():
+
+            return (
+
+                sql_str.format(
+
+                    ', '.join(
+                        '(\'{}\')'.format(random_id)
+                        for random_id in random_id_generator(8))))
+
+        result = (
+
+            DBSession
+                .execute(get_another_query_str())
+                .first())
+
+        while not result:
+
+            result = (
+
+                DBSession
+                    .execute(get_another_query_str())
+                    .first())
+
+        return result[0]
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+                return ResponseError('Only registered users can create unstructured data entries.')
+
+            data = args.get('data')
+            metadata = args.get('metadata')
+
+            log.debug(
+                '\nnew_unstructured_data'
+                '\nclient_id: {}'
+                '\ndata:\n{}'
+                '\nmetadata:\n{}'.format(
+                    client_id,
+                    pprint.pformat(data, width = 144),
+                    pprint.pformat(metadata, width = 144)))
+
+            id_str = NewUnstructuredData.get_random_unstructured_data_id()
+
+            unstructured_data = (
+                    
+                dbUnstructuredData(
+                    id = id_str,
+                    client_id = client_id,
+                    data = data,
+                    additional_metadata = metadata))
+
+            DBSession.add(unstructured_data)
+
+            return (
+
+                NewUnstructuredData(
+                    id = id_str,
+                    triumph = True))
+
+        except Exception as exception:
+
+            traceback_string = (
+                    
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('new_unstructured_data: exception')
+            log.warning(traceback_string)
+
+            return (
+                    
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -9045,6 +9203,7 @@ class MyMutations(graphene.ObjectType):
     delete_parser_result = DeleteParserResult.Field()
     update_parser_result = UpdateParserResult.Field()
     xlsx_bulk_disconnect = XlsxBulkDisconnect.Field()
+    new_unstructured_data = NewUnstructuredData.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

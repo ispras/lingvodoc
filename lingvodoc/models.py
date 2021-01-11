@@ -1722,3 +1722,16 @@ class ParserResult(Base, TableNameMixin, CompositeIdMixin, EntityMixin, ParserMi
                    CreatedAtMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
     arguments = Column(JSONB)
     content = Column(UnicodeText)
+
+
+class UnstructuredData(
+    Base,
+    CreatedAtMixin,
+    AdditionalMetadataMixin):
+
+    __tablename__ = 'unstructured_data'
+
+    id = Column(UnicodeText, primary_key = True)
+    client_id = Column(SLBigInteger())
+    data = Column(JSONB)
+
