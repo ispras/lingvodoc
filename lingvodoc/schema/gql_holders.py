@@ -21,7 +21,8 @@ from lingvodoc.models import (
     LexicalEntry,
     DictionaryPerspectiveToField,
     TranslationGist as dbTranslationGist,
-    TranslationAtom as dbTranslationAtom
+    TranslationAtom as dbTranslationAtom,
+    UnstructuredData as dbUnstructuredData,
 )
 from lingvodoc.utils.verification import check_client_id
 from lingvodoc.cache.caching import CACHE
@@ -520,10 +521,9 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
             if cls.ErrorHappened:
                 return None
             if not cls.dbObject:
-                if type(cls.id) is int:
-                    # example: (id: 1)
-                    id = cls.id
-                    cls.dbObject = DBSession.query(cls.dbType).filter_by(id=id).first()
+                if isinstance(cls.id, (int, str)):
+                    # example: (id: 1),  (id: 'ihGLq')
+                    cls.dbObject = DBSession.query(cls.dbType).filter_by(id=cls.id).first()
                     if cls.dbObject is None:
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
@@ -965,3 +965,33 @@ class UserAndOrganizationsRoles(graphene.ObjectType):
 
     def resolve_roles_organizations(self, info):
         return self.roles_organizations
+
+
+class UnstructuredData(LingvodocObjectType):
+
+    dbType = dbUnstructuredData
+
+    id = graphene.String()
+    client_id = graphene.Int()
+    data = ObjectVal()
+    additional_metadata = ObjectVal()
+
+    class Meta:
+        interfaces = (CreatedAt,)
+
+    @fetch_object('id')
+    def resolve_id(self, info):
+        return self.dbObject.id
+
+    @fetch_object('client_id')
+    def resolve_client_id(self, info):
+        return self.dbObject.client_id
+
+    @fetch_object('data')
+    def resolve_data(self, info):
+        return self.dbObject.data
+
+    @fetch_object('additional_metadata')
+    def resolve_additional_metadata(self, info):
+        return self.dbObject.additional_metadata
+
