@@ -55,10 +55,10 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
     tokenizer = RegexpTokenizer(r'\w+')
     freq_dict = dict()
     for word in tokenizer.tokenize(content_for_parsing):
-        if word not in freq_dict.keys():
-            freq_dict[word] = 1
+        if word.lower() not in freq_dict.keys():
+            freq_dict[word.lower()] = 1
         else:
-            freq_dict[word] += 1
+            freq_dict[word.lower()] += 1
     csv_file_id, csv_filename = tempfile.mkstemp()
     csv_file = open(csv_filename, 'w+', newline='')
     writer = csv.writer(csv_file, delimiter='\t')
@@ -136,24 +136,35 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
         matches = list()
         for elem in parsed_dict.keys():
             matches_for_elem = list(re.finditer(r"\b{}\b".format(elem), content_for_html)) + \
-                               list(re.finditer(r"\b{}\b".format(elem.capitalize()), content_for_html)) + \
-                               list(re.finditer(r"\b{}\b".format(elem.upper()), content_for_html))
+            list(re.finditer(r"\b{}\b".format(elem.capitalize()), content_for_html)) + \
+            list(re.finditer(r"\b{}\b".format(elem.upper()), content_for_html))
+            matches_for_elem_start_indices = set()
+            
             for match in matches_for_elem:
+                if match.regs[0][0] in matches_for_elem_start_indices:
+                    continue
+                
                 new_element = dict()
-                new_element['elem'] = elem
                 new_element['begin'] = match.regs[0][0]
                 new_element['end'] = match.regs[0][1]
+                new_element['elem'] = content_for_html[new_element['begin']:new_element['end']]
                 matches.append(new_element)
+                
+                matches_for_elem_start_indices.add(new_element['begin'])
+       
         matches = sorted(matches, key=lambda k: k['begin'])
 
         # Construct the result by step-by-step concatenation of content before match and matched elem tag wrap
         previous_wrap_end = 0
         result = "<body>"
+        if len(matches) == 0:
+            result = content_for_html
         for match in matches:
             wrap = generate_html_wrap(match['elem'])
             result += content_for_html[previous_wrap_end:match['begin']]
             previous_wrap_end = match['end']
             result += wrap
+        result += content_for_html[previous_wrap_end:]
         result += "</body>"
 
         return result
