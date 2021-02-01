@@ -136,8 +136,8 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
         matches = list()
         for elem in parsed_dict.keys():
             matches_for_elem = list(re.finditer(r"\b{}\b".format(elem), content_for_html)) + \
-            list(re.finditer(r"\b{}\b".format(elem.capitalize()), content_for_html)) + \
-            list(re.finditer(r"\b{}\b".format(elem.upper()), content_for_html))
+                               list(re.finditer(r"\b{}\b".format(elem.capitalize()), content_for_html)) + \
+                               list(re.finditer(r"\b{}\b".format(elem.upper()), content_for_html))
             matches_for_elem_start_indices = set()
             
             for match in matches_for_elem:
@@ -157,13 +157,12 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
         # Construct the result by step-by-step concatenation of content before match and matched elem tag wrap
         previous_wrap_end = 0
         result = "<body>"
-        if len(matches) == 0:
-            result = content_for_html
-        for match in matches:
-            wrap = generate_html_wrap(match['elem'])
-            result += content_for_html[previous_wrap_end:match['begin']]
-            previous_wrap_end = match['end']
-            result += wrap
+        if len(matches) > 0:
+            for match in matches:
+                wrap = generate_html_wrap(match['elem'])
+                result += content_for_html[previous_wrap_end:match['begin']]
+                previous_wrap_end = match['end']
+                result += wrap
         result += content_for_html[previous_wrap_end:]
         result += "</body>"
 
