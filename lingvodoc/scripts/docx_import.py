@@ -574,6 +574,7 @@ def main_import(args):
 
     opt_list, arg_list = (
         getopt.gnu_getopt(args, '', [
+            'all-tables',
             'check-docx-file=',
             'check-file=',
             'debug',
@@ -616,48 +617,63 @@ def main_import(args):
     if len(document.tables) <= 0:
         raise NotImplementedError
 
-    # Accessing info of the first table.
+    # Accessing info of the first table, or all tables, depending on the options.
     #
     # Counting only unique cells because apparently some .docx documents can have repeating cells in their
     # structure.
 
-    table = document.tables[0]
+    row_list = []
 
-    column_count = len(set(table.rows[0].cells))
-    row_count = len(set(table.columns[0].cells))
+    table_list = (
+            
+        document.tables if '--all-tables' in opt_dict else
+        document.tables[:1])
 
-    table_cell_list = list(table._cells)
+    for table_index, table in enumerate(table_list):
 
-    source_cell_list = []
-    source_cell_set = set()
-    
-    for cell in table_cell_list:
+        column_count = len(set(table.rows[0].cells))
+        row_count = len(set(table.columns[0].cells))
 
-        if cell not in source_cell_set:
+        table_cell_list = list(table._cells)
 
-            source_cell_list.append(cell)
-            source_cell_set.add(cell)
+        source_cell_list = []
+        source_cell_set = set()
+        
+        for cell in table_cell_list:
 
-    if len(source_cell_list) != column_count * row_count:
+            if cell not in source_cell_set:
 
-        log.error(
-            '\nTable rows and / or columns are uneven, '
-            '{0} rows, {1} columns, {2} != {0} * {1} cells.'.format(
-            row_count, column_count, len(source_cell_list)))
+                source_cell_list.append(cell)
+                source_cell_set.add(cell)
 
-        raise NotImplementedError
+        # Checking for non-uniform rows / columns.
 
-    row_list = [
+        if len(source_cell_list) != column_count * row_count:
 
-        [cell.text
-            for cell in source_cell_list[
-                i * column_count : (i + 1) * column_count]]
+            log.error(
+                '\nTable ({}): rows and / or columns are uneven, '
+                '{} rows, {} columns, {3} != {1} * {2} cells.'.format(
+                    table_index,
+                    row_count,
+                    column_count,
+                    len(source_cell_list)))
 
-            for i in range(row_count)]
+            raise NotImplementedError
 
-    log.debug(
-        '\ntable: {0} columns, {1} rows, {2} cells'.format(
-            column_count, row_count, len(source_cell_list)))
+        row_list.extend(
+
+            [cell.text
+                for cell in source_cell_list[
+                    i * column_count : (i + 1) * column_count]]
+
+                for i in range(row_count))
+
+        log.debug(
+            '\ntable ({}): {} columns, {} rows, {} cells'.format(
+                table_index,
+                column_count,
+                row_count,
+                len(source_cell_list)))
 
     # Processing this info.
 
@@ -698,7 +714,8 @@ def main_import(args):
 
     # Getting all parsed snippets, if we need them.
 
-    if (check_file_path is not None or
+    if (eaf_file_path is not None or
+        check_file_path is not None or
         check_docx_file_path is not None or
         modify_docx_flag):
 
@@ -1197,8 +1214,11 @@ if __name__ == '__main__':
         log_handler = logging.StreamHandler(sys.stdout)
         log_handler.setLevel(logging.DEBUG)
 
-        log_formatter = logging.Formatter(
-            '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s')
+        log_formatter = (
+                
+            logging.Formatter(
+                '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] '
+                '%(pathname)s:%(lineno)d: %(message)s'))
 
         log_handler.setFormatter(log_formatter)
         log_root.addHandler(log_handler)
