@@ -50,9 +50,8 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
 
     # Build the content for parsing by formatting the dedoc's output
     # Build a csv file with frequences of each word in the input document to pass it to the parsing function
-    content_for_parsing = re.sub(r"(<.*?>)", "", dedoc_output)
-    content_for_parsing = content_for_parsing.replace('\n', '')
-    tokenizer = RegexpTokenizer(r'\w+')
+    content_for_parsing = re.sub(r"(<.*?>)|nbsp", " ", dedoc_output)
+    tokenizer = RegexpTokenizer(r'\w+[-\w]+')
     freq_dict = dict()
     for word in tokenizer.tokenize(content_for_parsing):
         if word.lower() not in freq_dict.keys():
@@ -85,7 +84,7 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
 
     def insert_parser_results(parser_output, dedoc_output):
 
-        content_for_html = re.sub(r"(<sub>.*?</sub>)", "", dedoc_output)
+        content_for_html = dedoc_output
 
         # Build a dictionary with parsing results for each word
         def extract_parsed(parsed_filename):
@@ -115,11 +114,11 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
         span_id_counter = 0
         def generate_html_wrap(elem):
             if elem.lower() in parsed_dict.keys():
-                elem_case_as_in_parsed_dict = elem[:].lower()
+                elem_case_as_in_parsed_dict = elem.lower()
             elif elem.capitalize() in parsed_dict.keys():
-                elem_case_as_in_parsed_dict = elem[:].capitalize()
+                elem_case_as_in_parsed_dict = elem.capitalize()
             elif elem.upper() in parsed_dict.keys():
-                elem_case_as_in_parsed_dict = elem[:].upper()
+                elem_case_as_in_parsed_dict = elem.upper()
             else:
                 return elem
             nonlocal span_id_counter
@@ -132,25 +131,32 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
             wrap += elem + "</span>"
             return wrap
 
-        # Construct a sorted list of all matches in the document
+        # Construct a sorted list of all matches in the document avoiding processing single match multiple times
+        matches_indices = list()
         matches = list()
-        for elem in parsed_dict.keys():
-            matches_for_elem = list(re.finditer(r"\b{}\b".format(elem), content_for_html)) + \
-                               list(re.finditer(r"\b{}\b".format(elem.capitalize()), content_for_html)) + \
-                               list(re.finditer(r"\b{}\b".format(elem.upper()), content_for_html))
-            matches_for_elem_start_indices = set()
-            
-            for match in matches_for_elem:
-                if match.regs[0][0] in matches_for_elem_start_indices:
+        for i in range(0,2):
+            for elem in parsed_dict.keys():
+                if (i == 0 and elem.find("-") == -1) or (i == 1 and elem.find("-") != -1):
                     continue
+                matches_for_elem = list(re.finditer(r"\b{}\b".format(elem), content_for_html)) + \
+                                   list(re.finditer(r"\b{}\b".format(elem.capitalize()), content_for_html)) + \
+                                   list(re.finditer(r"\b{}\b".format(elem.upper()), content_for_html))
+
+                def check_indices(match):
+                    for pair in matches_indices:
+                        if match.regs[0][0] >= pair[0] and match.regs[0][1] <= pair[1]:
+                            return False
+                    return True
                 
-                new_element = dict()
-                new_element['begin'] = match.regs[0][0]
-                new_element['end'] = match.regs[0][1]
-                new_element['elem'] = content_for_html[new_element['begin']:new_element['end']]
-                matches.append(new_element)
+                for match in matches_for_elem:
+                    if check_indices(match):
+                        new_element = dict()
+                        new_element['begin'] = match.regs[0][0]
+                        new_element['end'] = match.regs[0][1]
+                        new_element['elem'] = content_for_html[new_element['begin']:new_element['end']]
+                        matches.append(new_element)
                 
-                matches_for_elem_start_indices.add(new_element['begin'])
+                        matches_indices.append((new_element['begin'], new_element['end']))
        
         matches = sorted(matches, key=lambda k: k['begin'])
 
@@ -164,7 +170,6 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
                 previous_wrap_end = match['end']
                 result += wrap
         result += content_for_html[previous_wrap_end:]
-        result += "</body>"
 
         return result
 
