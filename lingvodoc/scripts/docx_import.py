@@ -842,8 +842,8 @@ def main_import(args):
         eaf.add_tier('other text', 'symbolic_association', 'text')
         eaf.add_tier('literary translation', 'symbolic_association', 'text')
         eaf.add_tier('translation', 'word_translation_included_in', 'text')
+        eaf.add_tier('transcription', 'symbolic_association', 'translation')
         eaf.add_tier('word', 'symbolic_association', 'translation')
-        eaf.add_tier('other word', 'symbolic_association', 'translation')
 
         eaf.remove_tier('default')
 
@@ -862,7 +862,7 @@ def main_import(args):
 
         # Compiling annotation data.
 
-        step = 50
+        step = 75
         position = step
 
         for snippet_value_list, snippet_value_index in snippet_list:
@@ -902,7 +902,10 @@ def main_import(args):
                 word, word_other, translation = text_list
 
                 translation_duration = (
-                    len(word or translation or word_other) * translation_step)
+                        
+                    round(
+                        max(len(word or translation or word_other), 1) *
+                        translation_step))
 
                 eaf.add_annotation(
                     'translation',
@@ -911,10 +914,10 @@ def main_import(args):
                     translation)
 
                 eaf.add_ref_annotation(
-                    'word', 'translation', translation_position, word)
+                    'transcription', 'translation', translation_position, word_other)
 
                 eaf.add_ref_annotation(
-                    'other word', 'translation', translation_position, word_other)
+                    'word', 'translation', translation_position, word)
 
                 translation_position += (
                     translation_duration + translation_step)
@@ -932,6 +935,8 @@ def main_import(args):
                     repr(name),
                     eaf.get_annotation_data_for_tier(name)[:4])
                 for name in eaf.get_tier_names()))
+
+        eaf.header['TIME_UNITS'] = 'milliseconds'
 
         eaf.to_file(eaf_file_path)
 

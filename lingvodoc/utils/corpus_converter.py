@@ -3,6 +3,7 @@ import os
 import re
 import base64
 import hashlib
+import math
 import shutil
 import transaction
 import tempfile
@@ -766,7 +767,9 @@ def convert_five_tiers(dictionary_id,
         par_rows = {}
         task_status.set(8, 60, "Uploading sounds and words")
 
-        for phrase in final_dicts:
+        current_percent = 60
+
+        for phrase_index, phrase in enumerate(final_dicts):
             curr_dict = {}
             paradigm_words = []
             for word_translation in phrase:
@@ -793,7 +796,7 @@ def convert_five_tiers(dictionary_id,
                     if new:
                         paradigm_words.append(elan_parser.Word(text=new, tier=tier_name, time=word.time))
             par_row  = tuple([x.text for x in paradigm_words])
-            if not par_row in par_rows:
+            if par_row and par_row not in par_rows:
                 p_match_dict = defaultdict(list)
                 for pword in paradigm_words:
                     match = [x for x in p_lexes_with_text if x[2].content == pword.text]  #LEX COUNT OR RANDOM
@@ -849,9 +852,9 @@ def convert_five_tiers(dictionary_id,
                                           other_word.text,
                                           filename=None,
                                           storage=storage)
-            else:
+            elif par_row:
                 sp_lexical_entry_client_id, sp_lexical_entry_object_id = par_rows[par_row]
-            if not no_sound:
+            if par_row and not no_sound:
                 if word.time[1] <= len(full_audio):
                     with tempfile.NamedTemporaryFile() as temp:
                         full_audio[ word.time[0]: word.time[1]].export(temp.name, format=sound_format)
@@ -866,10 +869,10 @@ def convert_five_tiers(dictionary_id,
                                     ext = ext.replace(".", "").replace(" ", "")
                                     fname = fname.replace(".", "_")
                                     if not ext:
-                                        ext = "wav"
+                                        ext = 'flac' if sound_format == 'flac' else 'wav'
                                     filename = "%s.%s" % (fname, ext)
                                 else:
-                                    filename = 'noname.wav'
+                                    filename = 'noname.flac'
                                 create_entity(sp_lexical_entry_client_id,
                                               sp_lexical_entry_object_id,
                                               pa_sound_fid[0],
@@ -887,10 +890,10 @@ def convert_five_tiers(dictionary_id,
                                 ext = ext.replace(".", "").replace(" ", "")
                                 fname = fname.replace(".", "_")
                                 if not ext:
-                                    ext = "wav"
+                                    ext = 'flac' if sound_format == 'flac' else 'wav'
                                 filename = "%s.%s" % (fname, ext)
                             else:
-                                filename = 'noname.wav'
+                                filename = 'noname.flac'
                             create_entity(sp_lexical_entry_client_id,
                                           sp_lexical_entry_object_id,
                                           pa_sound_fid[0],
@@ -995,10 +998,10 @@ def convert_five_tiers(dictionary_id,
                                 ext = ext.replace(".", "").replace(" ", "")
                                 fname = fname.replace(".", "_")
                                 if not ext:
-                                    ext = "wav"
+                                    ext = 'flac' if sound_format == 'flac' else 'wav'
                                 filename = "%s.%s" % (fname, ext)
                             else:
-                                filename = 'noname.wav'
+                                filename = 'noname.flac'
                             if max_sim:
                                 if not hash in hashes:
                                     hashes.append(hash)
@@ -1075,6 +1078,16 @@ def convert_five_tiers(dictionary_id,
                                       storage=storage)
                 column[:] = []
                 match_dict.clear()
+
+            # Checking if need to update task progress.
+
+            percent = (
+                60 + int(math.floor(phrase_index * 30 / len(final_dicts))))
+
+            if percent > current_percent:
+
+                task_status.set(8, percent, "Uploading sounds and words")
+                current_percent = percent
 
         # Current data of lexical entries and paradigms.
 
@@ -1250,7 +1263,7 @@ def convert_five_tiers(dictionary_id,
 
             # Adding paradigmatic word and transcriptions to lexical entries.
 
-            for pa_word in pa_word_dict[t.parent_id]:
+            for pa_word in pa_word_dict[pa_entry_id]:
 
                 word_key = (
                     pa_word.strip().lower())
@@ -1271,7 +1284,7 @@ def convert_five_tiers(dictionary_id,
                         client_id,
                         pa_word)
 
-            for pa_xcript in pa_xcript_dict[t.parent_id]:
+            for pa_xcript in pa_xcript_dict[pa_entry_id]:
 
                 xcript_key = (
                     pa_xcript.strip().lower())
@@ -1281,7 +1294,7 @@ def convert_five_tiers(dictionary_id,
 
                 if xcript_key not in le_xcript_set:
 
-                    le_xcript_set.add(pa_xcript)
+                    le_xcript_set.add(xcript_key)
 
                     create_entity(
                         le_entry_id[0],
