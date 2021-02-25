@@ -621,7 +621,7 @@ def convert_db_new(
         log.debug("client_id: %s" % client_id)
         log.debug("Starting convert_one")
         log.debug("Creating session")
-        log.debug(f'\nfilename: {filename}')
+        log.debug('\nfilename: {}'.format(filename))
 
         # Trying to open Sqlite3 DB file.
 

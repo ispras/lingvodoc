@@ -135,7 +135,8 @@ def exb_to_eaf(
             os.path.splitext(basename))
 
         log.debug(
-            f'\nreference_url: {reference_url}')
+            '\nreference_url: {}'.format(
+                reference_url))
 
         if (reference_ext_set and
             ext not in reference_ext_set):
@@ -146,7 +147,8 @@ def exb_to_eaf(
                 exb_file)
 
             log.warning(
-                f'\nmissing: {exb_path} -> {reference_url}')
+                '\nmissing: {} -> {}'.format(
+                    exb_path, reference_url))
 
     # Parsing timeline, collecting timeline points without assigned time values.
 
@@ -224,7 +226,7 @@ def exb_to_eaf(
 
     log.debug(
         '\nduration: {}'.format(
-            duration if duration is None else f'{duration:f}'))
+            duration if duration is None else '{:f}'.format(duration)))
 
     extra_begin_flag = (
 
@@ -328,9 +330,12 @@ def exb_to_eaf(
         else:
 
             log.debug(
-                f'\ntier_id: {repr(tier_id)}'
-                f'\ntier_cat: {repr(tier_cat)}'
-                f'\ntier_name: {repr(tier_name)}')
+                '\ntier_id: {}'
+                '\ntier_cat: {}'
+                '\ntier_name: {}'.format(
+                    repr(tier_id),
+                    repr(tier_cat),
+                    repr(tier_name)))
 
             raise NotImplementedError
 
@@ -389,8 +394,12 @@ def exb_to_eaf(
             if timeline_index_dict[time_id_a] >= timeline_index_dict[time_id_b]:
 
                 log.debug(
-                    f'\ntime_id: {time_id_a}, {time_id_b}'
-                    f'\nindex: {timeline_index_dict[time_id_a]}, {timeline_index_dict[time_id_b]}')
+                    '\ntime_id: {}, {}'
+                    '\nindex: {}, {}'.format(
+                        time_id_a,
+                        time_id_b,
+                        timeline_index_dict[time_id_a],
+                        timeline_index_dict[time_id_b]))
 
                 raise NotImplementedError
 
@@ -641,10 +650,21 @@ def exb_to_eaf(
         if __debug_flag__:
 
             log.debug(
-                f'\noverlap {event_index_a}, {event_index_b}:'
-                f'\n{a_start:.3f}, {a_half:.3f}, {a_end:.3f}, {repr(event_a.content)}'
-                f'\n{b_start:.3f}, {b_half:.3f}, {b_end:.3f}, {repr(event_b.content)}'
-                f'\n{"large enough, skip 2nd" if large_enough_check else "small enough"}')
+                '\noverlap {}, {}:'
+                '\n{:.3f}, {:.3f}, {:.3f}, {}'
+                '\n{:.3f}, {:.3f}, {:.3f}, {}'
+                '\n{}'.format(
+                    event_index_a,
+                    event_index_b,
+                    a_start,
+                    a_half,
+                    a_end,
+                    repr(event_a.content),
+                    b_start,
+                    b_half,
+                    b_end,
+                    repr(event_b.content),
+                    "large enough, skip 2nd" if large_enough_check else "small enough"))
 
         # Accepting next event if the overlap is not large enough.
 
@@ -1000,12 +1020,15 @@ def main_convert_exb(args):
         None if len(args) <= 2 else ast.literal_eval(args[2]))
 
     duration_str = (
-        repr(None) if duration is None else f'{duration:.3f}s')
+        repr(None) if duration is None else '{:.3f}s'.format(duration))
 
     log.debug(
-        f'\nexb_path:\n{exb_path}'
-        f'\neaf_path:\n{eaf_path}'
-        f'\nduration:\n{duration_str}')
+        '\nexb_path:\n{}'
+        '\neaf_path:\n{}'
+        '\nduration:\n{}'.format(
+            exb_path,
+            eaf_path,
+            duration_str))
 
     exb_to_eaf(
         exb_path,
@@ -1052,11 +1075,15 @@ def main_convert_corpus(args):
                     exb_eaf_list.append(
                         (name, zip_info.filename, eaf_file_path))
 
-                    log.debug(f'\n{zip_info.filename} -> eaf delayed')
+                    log.debug(
+                        '\n{} -> eaf delayed'.format(
+                            zip_info.filename))
 
                 else:
 
-                    log.debug(f'\n{zip_info.filename}: eaf exists')
+                    log.debug(
+                        '\n{}: eaf exists'.format(
+                            zip_info.filename))
 
             # Converting .wav file to FLAC, noting that we have a FLAC sound recording.
 
@@ -1067,7 +1094,9 @@ def main_convert_corpus(args):
 
                 if not os.path.exists(flac_file_path):
 
-                    log.debug(f'\n{zip_info.filename} -> flac')
+                    log.debug(
+                        '\n{} -> flac'.format(
+                            zip_info.filename))
 
                     with tempfile.NamedTemporaryFile() as temporary_file:
 
@@ -1092,7 +1121,9 @@ def main_convert_corpus(args):
 
                 else:
 
-                    log.debug(f'\n{zip_info.filename}: flac exists')
+                    log.debug(
+                        '\n{}: flac exists'.format(
+                            zip_info.filename))
 
                 sound_dict[name].update(('.wav', '.flac'))
 
@@ -1106,7 +1137,9 @@ def main_convert_corpus(args):
 
             elif ext == '.mp3':
 
-                log.debug(f'\n{zip_info.filename}')
+                log.debug(
+                    '\n{}'.format(
+                        zip_info.filename))
 
                 sound_dict[name].add('.mp3')
 
@@ -1140,9 +1173,12 @@ def main_convert_corpus(args):
             elif ext not in ext_skip_set:
 
                 log.debug(
-                    f'\nzip_info.filename: {zip_info.filename}'
-                    f'\nname: {name}'
-                    f'\next: {ext}')
+                    '\nzip_info.filename: {}'
+                    '\nname: {}'
+                    '\next: {}'.format(
+                        zip_info.filename,
+                        name,
+                        ext))
 
                 raise NotImplementedError
 
@@ -1154,9 +1190,12 @@ def main_convert_corpus(args):
                 duration_dict.get(name))
 
             duration_str = (
-                repr(None) if duration is None else f'{duration:.3f}s')
+                repr(None) if duration is None else '{:.3f}s'.format(duration))
 
-            log.debug(f'\n{zip_filename} [{duration_str}] -> eaf')
+            log.debug(
+                '\n{} [{}] -> eaf'.format(
+                    zip_filename,
+                    duration_str))
 
             with corpus_zip_file.open(zip_filename) as exb_file:
 
