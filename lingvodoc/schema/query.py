@@ -397,17 +397,6 @@ class StarlingField(graphene.InputObjectType):
     link_fake_id = LingvodocID()  # graphene.String()
 
 
-class StarlingDictionary(graphene.InputObjectType):
-    blob_id = LingvodocID()
-    parent_id = LingvodocID(required=True)
-    perspective_gist_id = LingvodocID()
-    perspective_atoms = graphene.List(ObjectVal)
-    translation_gist_id = LingvodocID()
-    translation_atoms = graphene.List(ObjectVal)
-    field_map = graphene.List(StarlingField, required=True)
-    add_etymology = graphene.Boolean(required=True)
-
-
 class DialeqtInfo(graphene.ObjectType):
     dictionary_name = graphene.String()
     dialeqt_id = graphene.String()
@@ -9114,7 +9103,7 @@ class MyMutations(graphene.ObjectType):
     create_field = gql_field.CreateField.Field()
     for more beautiful imports
     """
-    convert_starling = starling_converter.GqlStarling.Field()#graphene.Field(starling_converter.GqlStarling,  starling_dictionaries=graphene.List(StarlingDictionary))
+    convert_starling = starling_converter.GqlStarling.Field()
     convert_dialeqt = ConvertDictionary.Field()
     convert_corpus = ConvertFiveTiers.Field()
     create_field = CreateField.Field()

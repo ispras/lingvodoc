@@ -395,6 +395,9 @@ def convert_five_tiers(dictionary_id,
         sp_structure = set([field_ids[x] for x in sp_fields])
         DBSession.flush()
 
+        markup_entity = DBSession.query(Entity).filter_by(client_id=markup_id[0], object_id=markup_id[1]).first()
+        if not markup_entity:
+            raise KeyError("No such file")
 
         if dictionary_id:
             dictionary_client_id, dictionary_object_id = dictionary_id
@@ -410,16 +413,36 @@ def convert_five_tiers(dictionary_id,
             lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id,
                                                               object_id=language_object_id).first()
 
+            # Getting license from the markup's dictionary.
+
+            license = (
+            
+                DBSession
+                    .query(Dictionary.additional_metadata['license'].astext)
+                    .filter(
+                        LexicalEntry.client_id == markup_entity.parent_client_id,
+                        LexicalEntry.object_id == markup_entity.parent_object_id,
+                        DictionaryPerspective.client_id == LexicalEntry.parent_client_id,
+                        DictionaryPerspective.object_id == LexicalEntry.parent_object_id,
+                        Dictionary.client_id == DictionaryPerspective.parent_client_id,
+                        Dictionary.object_id == DictionaryPerspective.parent_object_id)
+                    .scalar())
+
             resp = translation_service_search("WiP")
             state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-            dictionary = Dictionary(client_id=client_id,
-                                    state_translation_gist_object_id=state_translation_gist_object_id,
-                                    state_translation_gist_client_id=state_translation_gist_client_id,
-                                    parent=lang_parent,
-                                    translation_gist_client_id=gist_client_id,
-                                    translation_gist_object_id=gist_object_id
-                                          )
-                                    #additional_metadata=additional_metadata)
+
+            dictionary = (
+                    
+                Dictionary(
+                    client_id = client_id,
+                    state_translation_gist_object_id = state_translation_gist_object_id,
+                    state_translation_gist_client_id = state_translation_gist_client_id,
+                    parent = lang_parent,
+                    translation_gist_client_id = gist_client_id,
+                    translation_gist_object_id = gist_object_id,
+                    additional_metadata = {
+                        'license': license or 'proprietary'}))
+
             DBSession.add(dictionary)
             DBSession.flush()
 
@@ -434,15 +457,6 @@ def convert_five_tiers(dictionary_id,
                 DBSession.add(new_group)
                 DBSession.flush()
             #dictionary_client_id, dictionary_object_id = dbdictionary_obj.client_id, dbdictionary_obj.object_id
-
-
-
-
-        markup_entity = DBSession.query(Entity).filter_by(client_id=markup_id[0], object_id=markup_id[1]).first()
-        if not markup_entity:
-            raise KeyError("No such file")
-
-
 
         sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
         sound_url = None

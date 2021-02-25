@@ -8,9 +8,11 @@ import string
 import time
 import logging
 import shutil
+import tempfile
 import transaction
 import traceback
 import re
+import urllib
 from collections import defaultdict
 from pathvalidate import sanitize_filename
 from sqlalchemy import create_engine
@@ -591,8 +593,21 @@ def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
         Group.subject_object_id == dictionary_object_id)).limit(1).count() > 0
     return user_create
 
-def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage,
-                   locale_id, task_status):
+def convert_db_new(
+    dictionary_client_id,
+    dictionary_object_id,
+    blob_client_id,
+    blob_object_id,
+    language_client_id,
+    language_object_id,
+    client_id,
+    gist_client_id,
+    gist_object_id,
+    license,
+    storage,
+    locale_id,
+    task_status):
+
     log = logging.getLogger(__name__)
     #from lingvodoc.cache.caching import CACHE
     task_status.set(1, 1, "Preparing")
@@ -606,7 +621,29 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         log.debug("client_id: %s" % client_id)
         log.debug("Starting convert_one")
         log.debug("Creating session")
-        sqconn = sqlite3.connect(filename)
+        log.debug(f'\nfilename: {filename}')
+
+        # Trying to open Sqlite3 DB file.
+
+        try:
+            sqconn = sqlite3.connect(filename)
+
+        # Failed, maybe we can download it instead?
+
+        except sqlite3.OperationalError:
+
+            with tempfile.NamedTemporaryFile() as temporary_file:
+
+                sqlite3_url = (
+                    urllib.parse.quote(blob.content, safe = '/:'))
+
+                with urllib.request.urlopen(sqlite3_url) as sqlite3_stream:
+                    shutil.copyfileobj(sqlite3_stream, temporary_file)
+
+                temporary_file.flush()
+
+                sqconn = sqlite3.connect(temporary_file.name)
+
         log.debug("Connected to sqlite3 database")
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
@@ -678,6 +715,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                     translation_gist_object_id=gist_object_id
                                           )
                                     #additional_metadata=additional_metadata)
+
             DBSession.add(dictionary)
             DBSession.flush()
 
@@ -737,6 +775,12 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             parent.additional_metadata["authors"] = new_authors_list
         else:
             parent.additional_metadata = perspective_metadata
+
+        if license:
+
+            parent.update_additional_metadata(
+                {'license': license or 'proprietary'})
+
         flag_modified(parent, 'additional_metadata')
         if not update_flag:
             """
@@ -1443,9 +1487,24 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         task_status.set(10, 100, "Finished", "")
         return {}
 
-def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
-                language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
-                sqlalchemy_url, storage, locale_id, task_key, cache_kwargs, synchronous = False):
+def convert_all(
+    dictionary_client_id,
+    dictionary_object_id,
+    blob_client_id,
+    blob_object_id,
+    language_client_id,
+    language_object_id,
+    client_id,
+    gist_client_id,
+    gist_object_id,
+    license,
+    sqlalchemy_url,
+    storage,
+    locale_id,
+    task_key,
+    cache_kwargs,
+    synchronous = False):
+
     log = logging.getLogger(__name__)
     #time.sleep(3)
     #from lingvodoc.cache.caching import CACHE
@@ -1463,9 +1522,23 @@ def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob
             engine = create_engine(sqlalchemy_url)
             DBSession.configure(bind=engine)
 
-        status = convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
-                                language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
-                                storage, locale_id, task_status)
+        status = (
+                
+            convert_db_new(
+                dictionary_client_id,
+                dictionary_object_id,
+                blob_client_id,
+                blob_object_id,
+                language_client_id,
+                language_object_id,
+                client_id,
+                gist_client_id,
+                gist_object_id,
+                license,
+                storage,
+                locale_id,
+                task_status))
+
     except Exception as err:
         task_status.set(None, -1, "Conversion failed: %s" % str(err))
 
