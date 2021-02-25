@@ -61,6 +61,7 @@ class ConvertDictionary(graphene.Mutation):
         language_id = LingvodocID()
         translation_gist_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
+        license = graphene.String()
         synchronous = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -113,6 +114,9 @@ class ConvertDictionary(graphene.Mutation):
         else:
             cur_args["gist_client_id"] = None
             cur_args["gist_object_id"] = None
+
+        cur_args['license'] = args.get('license')
+
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
         cur_args["storage"] = request.registry.settings["storage"]
         cur_args["locale_id"] = locale_id

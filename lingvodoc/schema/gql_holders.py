@@ -854,6 +854,7 @@ class Metadata(graphene.ObjectType):
     speech_type = graphene.List(graphene.String)
     speech_genre = graphene.List(graphene.String)
     text_topic = graphene.List(graphene.String)
+    license = graphene.String()
 
 
 # class LevelAndId(graphene.ObjectType):

@@ -10,6 +10,8 @@ import logging
 import traceback
 import pprint
 import csv
+import urllib
+import io
 
 import graphene
 from sqlalchemy import create_engine
@@ -87,13 +89,27 @@ log = logging.getLogger(__name__)
 """
 
 
-def csv_to_columns(path):
+def csv_to_columns(path, url):
 
     # First trying as if it is a special Starling CSV-like format.
 
     try:
 
-        csv_file = open(path, "rb").read().decode("utf-8-sig", "ignore")
+        try:
+            csv_file = (
+
+                open(path, 'rb')
+                    .read()
+                    .decode('utf-8-sig', 'ignore'))
+
+        except FileNotFoundError:
+
+            csv_file = (
+
+                urllib.request.urlopen(
+                    urllib.parse.quote(url, safe = '/:'))
+                    .read()
+                    .decode('utf-8-sig', 'ignore'))
 
         lines = list()
         for x in csv_file.split("\n"):
@@ -124,40 +140,61 @@ def csv_to_columns(path):
 
     except:
 
-        with open(path,
-            encoding = 'utf-8-sig',
-            errors = 'ignore',
-            newline = '') as csv_file:
+        try:
 
-            dialect = csv.Sniffer().sniff(csv_file.read(4096))
+            csv_file = (
+                    
+                open(path,
+                    encoding = 'utf-8-sig',
+                    errors = 'ignore',
+                    newline = ''))
 
-            csv_file.seek(0)
+        except FileNotFoundError:
 
-            csv_reader = csv.reader(csv_file, dialect)
-            row_list = [row for row in csv_reader]
+            csv_str = (
 
-            # Assuming first row contains field headers.
+                urllib.request.urlopen(
+                    urllib.parse.quote(url, safe = '/:'))
+                    .read()
+                    .decode('utf-8-sig', 'ignore'))
 
-            header_list = row_list[0]
+            csv_file = (
+                io.StringIO(csv_str))
 
-            while header_list and not header_list[-1].strip():
-                header_list.pop()
+        dialect = (
+            csv.Sniffer().sniff(csv_file.read(4096)))
 
-            column_dict = {
-                header: [] for header in header_list}
+        csv_file.seek(0)
 
-            column_dict['NUMBER'] = []
+        csv_reader = (
+            csv.reader(csv_file, dialect))
 
-            # BAD HACK, just mocking up a 'NUMBER' column based on row indices.
+        row_list = [row for row in csv_reader]
 
-            for index, row in enumerate(row_list[1:]):
+        # Assuming first row contains field headers.
 
-                for column, value in zip(header_list, row):
-                    column_dict[column].append(value)
+        header_list = row_list[0]
 
-                column_dict['NUMBER'].append(index)
+        while header_list and not header_list[-1].strip():
+            header_list.pop()
 
-            return column_dict, False
+        column_dict = {
+            header: [] for header in header_list}
+
+        column_dict['NUMBER'] = []
+
+        # BAD HACK, just mocking up a 'NUMBER' column based on row indices.
+
+        for index, row in enumerate(row_list[1:]):
+
+            for column, value in zip(header_list, row):
+                column_dict[column].append(value)
+
+            column_dict['NUMBER'].append(index)
+
+        csv_file.close()
+
+        return column_dict, False
 
 
 def create_entity(id=None,
@@ -286,6 +323,7 @@ class StarlingDictionary(graphene.InputObjectType):
     translation_atoms = graphene.List(ObjectVal)
     field_map = graphene.List(StarlingField, required=True)
     add_etymology = graphene.Boolean(required=True)
+    license = graphene.String()
 
 
 class GqlStarling(graphene.Mutation):
@@ -435,7 +473,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 blob_id = tuple(starling_dictionary.get("blob_id"))
                 blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
 
-                column_dict, starling_flag = csv_to_columns(blob.real_storage_path)
+                column_dict, starling_flag = csv_to_columns(blob.real_storage_path, blob.content)
                 perspective_column_dict[blob_id] = column_dict, starling_flag
 
                 atoms_to_create = starling_dictionary.get("translation_atoms")
@@ -447,10 +485,16 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                                          (old_client_id, None),
                                                                          gist_type="Dictionary")
                 parent_id = starling_dictionary.get("parent_id")
-                dbdictionary_obj = create_dbdictionary(id=obj_id.id_pair(client_id),
-                                                       parent_id=parent_id,
-                                                       translation_gist_id=dictionary_translation_gist_id,
-                                                       add_group=True)
+
+                dbdictionary_obj = (
+                        
+                    create_dbdictionary(
+                        id = obj_id.id_pair(client_id),
+                        parent_id = parent_id,
+                        translation_gist_id = dictionary_translation_gist_id,
+                        add_group = True,
+                        additional_metadata = {
+                            'license': starling_dictionary.get('license') or 'proprietary'}))
 
                 atoms_to_create = [{"locale_id": 2, "content": "starling_source"}]
                 persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,

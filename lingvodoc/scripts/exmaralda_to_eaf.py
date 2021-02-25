@@ -983,6 +983,8 @@ def exb_to_eaf(
 
     # Saving EAF file.
 
+    eaf.header['TIME_UNITS'] = 'milliseconds'
+
     eaf.to_file(eaf_file_path)
 
 
