@@ -4,6 +4,7 @@
 import ast
 import collections
 import getopt
+import json
 import logging
 import os
 import os.path
@@ -14,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import xml.etree.ElementTree as ElementTree
 import zipfile
 
@@ -21,6 +23,7 @@ import zipfile
 
 import pympi
 import pyramid.paster as paster
+import requests
 
 
 # Setting up logging, if we are not being run as a script.
@@ -282,7 +285,6 @@ def exb_to_eaf(
         timeline_list[0].before = time_point
 
         if time_id in timeline_id_dict:
-            pdb.set_trace()
             raise NotImplementedError
 
         timeline_id_dict[time_id] = time_point
@@ -1036,6 +1038,9 @@ def main_convert_exb(args):
         duration)
 
 
+ext_skip_set = set(['', '.coma', '.exs', '.pdf'])
+
+
 def main_convert_corpus(args):
     """
     Converts INEL corpus from a .zip archive to collection of 5-tier compatible EAF files.
@@ -1046,8 +1051,6 @@ def main_convert_corpus(args):
 
     __debug_flag__ = (
         len(args) > 2 and args[2] == '--debug')
-
-    ext_skip_set = set(['', '.coma', '.exs', '.pdf'])
 
     exb_eaf_list = []
     sound_dict = collections.defaultdict(set)
@@ -1207,6 +1210,851 @@ def main_convert_corpus(args):
                     __debug_flag__)
 
 
+def main_upload_corpus(args):
+    """
+    Converts INEL corpus from a .zip archive to collection of 5-tier compatible EAF files and uploads it to
+    a specified Lingvodoc server.
+    """
+
+    corpus_file_path = args[0]
+    output_dir_path = args[1]
+
+    # Command-line options.
+
+    opt_list, arg_list = (
+
+        getopt.gnu_getopt(args[2:], '', [
+            'cookies-dict=',
+            'debug',
+            'dialect-coma=',
+            'graphql-url=',
+            'language-id=',
+            'language-name=',
+            'limit=',]))
+
+    opt_dict = dict(opt_list)
+
+    cookies_dict = (
+        ast.literal_eval(opt_dict['--cookies-dict']))
+
+    dialect_flag = (
+        '--dialect-coma' in opt_dict)
+
+    language_id = (
+        ast.literal_eval(opt_dict['--language-id']))
+    
+    language_name = (
+        opt_dict['--language-name'])
+
+    limit = (
+        ast.literal_eval(opt_dict['--limit']) if '--limit' in opt_dict else
+        None)
+
+    # Loading dialect info, if required.
+
+    if '--dialect-coma' in opt_dict:
+
+        dialect_dict = {}
+
+        dialect_str_map = {
+            'Chaya': 'Lower-Chaya',
+            'Baikha': 'Northern',
+            'Ket': 'Ket',
+            'Narym': 'Narym',
+            'Narym/Tym': 'Narym',
+            'Ob': 'Ob',
+            'Taz': 'Northern',
+            'Tym': 'Tym',
+            'Upper Tolka': 'Northern'}
+
+        dialect_id_map = {
+            'Lower-Chaya': [3602, 5],
+            'Ket': [302, 4],
+            'Narym': [33, 87],
+            'Northern': [2045, 2048],
+            'Tym': [3619, 5],
+            'Ob': [2111, 84]}
+
+        log.debug(
+            '\ndialect_str_map:\n' +
+            pprint.pformat(dialect_str_map))
+
+        tree = (
+            ElementTree.parse(opt_dict['--dialect-coma']))
+
+        root = (
+            tree.getroot())
+
+        mismatch_list = []
+
+        # Looking through all communication infos.
+
+        for communication_xml in root.iter('Communication'):
+
+            description_xml = (
+                communication_xml.find('Description'))
+
+            genre_str = None
+            dialect_str = None
+            speaker_str = None
+
+            for key_xml in description_xml.iter('Key'):
+
+                key_name = (
+                    key_xml.get('Name'))
+                
+                if key_name == '1 Genre':
+
+                    if genre_str is not None:
+                        raise NotImplementedError
+
+                    genre_str = key_xml.text
+                
+                elif key_name == '3b Dialect':
+
+                    if dialect_str is not None:
+                        raise NotImplementedError
+
+                    dialect_str = key_xml.text
+
+                elif key_name == '4 Speakers':
+
+                    if speaker_str is not None:
+                        raise NotImplementedError
+
+                    speaker_str = key_xml.text
+
+            if (genre_str is None or
+                dialect_str is None or
+                speaker_str is None):
+
+                raise NotImplementedError
+
+            speaker_str_a = (
+                re.sub(r',\s+', '_', speaker_str))
+
+            # Finding .exb file entry, to get speaker info consistent with our .eaf files.
+
+            speaker_str_b = None
+
+            for transcription_xml in communication_xml.iter('Transcription'):
+
+                filename = (
+                    transcription_xml.find('Filename').text)
+
+                name, ext = (
+                    os.path.splitext(filename))
+
+                if ext == '.exb':
+
+                    match = (
+
+                        re.fullmatch(
+                            r'(.*?)_\d+[^_]*?_.*?(?:_' + genre_str + ')?',
+                            name))
+
+                    speaker_str_b = match.group(1)
+                    break
+
+            if speaker_str_b is None:
+                raise NotImplementedError
+
+            if speaker_str_b != speaker_str_a:
+
+                mismatch_list.append(
+                    (filename, speaker_str_b, speaker_str_a))
+
+            if speaker_str_b in dialect_str:
+                raise NotImplementedError
+
+            dialect_dict[speaker_str_b] = (
+                dialect_id_map[dialect_str_map[dialect_str]])
+
+        log.debug(
+            '\ndialect_dict:\n' +
+            pprint.pformat(dialect_dict, width = 192))
+    
+    # __VARIANT__
+
+#   # Selkup dialects' data partition info.
+
+#   dialect_dict = {
+
+#       (304, 2): [ # Selkup Ket
+#           ('BAG', '1964'),
+#           ('KMS', '1963'),
+#           ('SVG', '1964'),
+#           ('PES', '1964'),
+#           ('SyVI', '1964'),
+#           ('ZIF', '1963')],
+
+#       (33, 87): [ # Selkup Narym
+#           ('IAI', '1968')],
+
+#       'Tym': [ # Selkup Tym
+#           ('KFN', '1965'),
+#           ('SG', '196X'),
+#           ('YIF', '1968')],
+
+#       (2045, 2048): [ # Selkup Northern
+#           ('AR', '1965'),
+#           ('DN', '196X'),
+#           ('KAI', '1965'),
+#           ('KGE', '1965'),
+#           ('KIA', '1965'),
+#           ('KMG', '1976'),
+#           ('KMI', '1976'),
+#           ('KNK', '1965'),
+#           ('KNM', '196X'),
+#           ('KNS', '1966'),
+#           ('KPG', '1969'),
+#           ('KPM', '1977'),
+#           ('KR', '1969'),
+#           ('KTP', '196X'),
+#           ('KVS', '1965'),
+#           ('KuLP', '1976'),
+#           ('KuMI', '196X'),
+#           ('MMS', '196X'),
+#           ('MNA', '1965'),
+#           ('NAI', '1965'),
+#           ('NEP', '1965'),
+#           ('NN1', '1976'),
+#           ('NN2', '196X'),
+#           ('NST', '1965'),
+#           ('NVA', '1965'),
+#           ('PL', '1965'),
+#           ('SAG', '1965'),
+#           ('SAI', '1965'),
+#           ('SAIAI', '1965'),
+#           ('SAIAn', '1965'),
+#           ('SMI', '1965'),
+#           ('SMV', '196X'),
+#           ('TAV', '1965'),
+#           ('TVP', '1965')]}
+
+#   if dialect_flag:
+
+#       speaker_dialect_dict = {}
+
+#       for dialect_id, key_str_list in dialect_dict.items():
+#           for speaker_str, date_str in key_str_list:
+
+#               if speaker_str in speaker_dialect_dict:
+#                   raise NotImplementedError
+
+#               speaker_dialect_dict[speaker_str] = (dialect_id, date_str)
+
+    # Going through INEL corpus data.
+
+    exb_eaf_list = []
+    sound_dict = collections.defaultdict(dict)
+    duration_dict = {}
+
+    upload_list = []
+
+    with zipfile.ZipFile(corpus_file_path) as corpus_zip_file:
+
+        info_list = (
+            corpus_zip_file.infolist())
+
+        if limit is not None:
+
+            info_list = info_list[:limit]
+
+        for zip_info in info_list:
+
+            name, ext = os.path.splitext(zip_info.filename)
+
+            # Saving .exb Exmaralda markup file info later convertion, as we prefer to process sounds first.
+
+            if ext == '.exb':
+
+                eaf_file_path = (
+                    os.path.join(output_dir_path, name + '.eaf'))
+
+                os.makedirs(
+                    os.path.dirname(eaf_file_path),
+                    exist_ok = True)
+
+                if not os.path.exists(eaf_file_path):
+
+                    exb_eaf_list.append(
+                        (name, zip_info.filename, eaf_file_path))
+
+                    log.debug(
+                        '\n{} -> eaf delayed'.format(
+                            zip_info.filename))
+
+                else:
+
+                    log.debug(
+                        '\n{}: eaf exists'.format(
+                            zip_info.filename))
+
+                upload_list.append((eaf_file_path, name))
+
+            # Converting .wav file to FLAC, noting that we have a FLAC sound recording.
+
+            elif ext == '.wav':
+
+                flac_file_path = (
+                    os.path.join(output_dir_path, name + '.flac'))
+
+                if not os.path.exists(flac_file_path):
+
+                    log.debug(
+                        '\n{} -> flac'.format(
+                            zip_info.filename))
+
+                    with tempfile.NamedTemporaryFile() as temporary_file:
+
+                        with corpus_zip_file.open(zip_info.filename) as wav_file:
+                            shutil.copyfileobj(wav_file, temporary_file)
+
+                        temporary_file.flush()
+
+                        call_list = [
+                            'ffmpeg',
+                            '-f', 'wav',
+                            '-i',
+                            temporary_file.name,
+                            '-f', 'flac',
+                            flac_file_path]
+
+                        log.debug(
+                            '\n' + repr(call_list))
+
+                        subprocess.check_call(
+                            call_list)
+
+                else:
+
+                    log.debug(
+                        '\n{}: flac exists'.format(
+                            zip_info.filename))
+
+                sound_dict[name]['.wav'] = zip_info
+                sound_dict[name]['.flac'] = flac_file_path
+
+                # Saving sound recording duration, if required.
+
+                if name not in duration_dict:
+
+                    raise NotImplementedError
+
+            # Noting that we have an MP3 sound recording.
+
+            elif ext == '.mp3':
+
+                log.debug(
+                    '\n{}'.format(
+                        zip_info.filename))
+
+                sound_dict[name]['.mp3'] = zip_info
+
+                # Saving sound recording duration, if required.
+
+                if name not in duration_dict:
+
+                    with tempfile.NamedTemporaryFile() as temporary_file:
+
+                        with corpus_zip_file.open(zip_info.filename) as mp3_file:
+                            shutil.copyfileobj(mp3_file, temporary_file)
+
+                        result = (
+
+                            subprocess.check_output([
+                                'ffprobe',
+                                '-f', 'mp3',
+                                '-i',
+                                temporary_file.name,
+                                '-show_entries',
+                                'format=duration',
+                                '-v',
+                                'quiet',
+                                '-of',
+                                'csv=p=0']))
+
+                        duration_dict[name] = float(result)
+
+            # Extension we don't know what to do with.
+
+            elif ext not in ext_skip_set:
+
+                log.debug(
+                    '\nzip_info.filename: {}'
+                    '\nname: {}'
+                    '\next: {}'.format(
+                        zip_info.filename,
+                        name,
+                        ext))
+
+                raise NotImplementedError
+
+        # Converting .exb files to .eaf.
+
+        for name, zip_filename, eaf_file_path in exb_eaf_list:
+
+            duration = (
+                duration_dict.get(name))
+
+            duration_str = (
+                repr(None) if duration is None else '{:.3f}s'.format(duration))
+
+            log.debug(
+                '\n{} [{}] -> eaf'.format(
+                    zip_filename,
+                    duration_str))
+
+            with corpus_zip_file.open(zip_filename) as exb_file:
+
+                exb_to_eaf(
+                    exb_file,
+                    eaf_file_path,
+                    duration_dict.get(name),
+                    sound_dict.get(name).keys(),
+                    __debug_flag__)
+
+        # Getting ready to upload .eaf files with audio, starting by grouping by speaker.
+
+        upload_list.sort(
+            key = lambda upload: upload[1])
+
+        log.debug(
+            '\nupload_list:\n' +
+            pprint.pformat(upload_list, width = 192))
+
+        log.debug(
+            '\nsound_dict:\n' +
+            pprint.pformat(sound_dict, width = 192))
+
+        speaker_dict = collections.OrderedDict()
+
+        for eaf_file_path, name in upload_list:
+
+            dirname, base_name = os.path.split(name)
+            type_name, dir_name = os.path.split(dirname)
+
+            log.debug(
+                '\n{}\n{}\n{}'.format(
+                    repr(eaf_file_path),
+                    repr(name),
+                    [type_name, dir_name, base_name]))
+
+            match = (
+
+                re.fullmatch(
+                    r'(.*?)_(\d+[^_]*?)_(.*?)(?:_' + type_name + ')?',
+                    base_name))
+
+            speaker_str, date_str, title_str = match.groups()
+
+            if speaker_str not in speaker_dict:
+                speaker_dict[speaker_str] = []
+
+            speaker_dict[speaker_str].append(
+                    
+                (eaf_file_path, name,
+                    type_name, dir_name, base_name,
+                    speaker_str, date_str, title_str))
+
+        # __VARIANT__
+
+#       # Checking consistency of speaker separation by dialects, if required.
+
+#       if dialect_flag:
+
+#           inconsistency_flag = False
+
+#           for speaker_str, speaker_info_list in speaker_dict.items():
+
+#               if speaker_str not in speaker_dialect_dict:
+#                   continue
+
+#               dialect_id, dialect_date_str = speaker_dialect_dict[speaker_str]
+
+#               in_list = []
+#               out_list = []
+
+#               for speaker_info in speaker_info_list:
+
+#                   _, name, type_name, dir_name, base_name, speaker_str, date_str, title_str = (
+#                       speaker_info)
+
+#                   ((in_list if date_str == dialect_date_str else out_list)
+#                       .append(base_name))
+
+#               if not in_list or out_list:
+
+#                   log.debug(
+#                       '\ninconsistency'
+#                       '\nspeaker: {}, {}'
+#                       '\n{}\n{}'.format(
+#                           speaker_str,
+#                           dialect_date_str,
+#                           in_list, out_list))
+
+#           if inconsistency_flag:
+#               raise NotImplementedError
+
+#       raise NotImplementedError
+
+        # Going by speakers, creating corpora and uploading data.
+
+        log.debug(
+            '\nspeaker_dict:\n' +
+            pprint.pformat(speaker_dict, width = 192))
+
+        for speaker_str, speaker_info_list in speaker_dict.items():
+
+            # Creating corpus for speaker's data.
+
+            query_str = '''
+
+                mutation create_dictionary(
+                  $category: Int!,
+                  $parent_id: LingvodocID!,
+                  $translation_atoms: [ObjectVal]!,
+                  $perspectives: [ObjectVal]!,
+                  $additional_metadata: ObjectVal)
+                {
+                  create_dictionary(
+                    category: $category,
+                    parent_id: $parent_id,
+                    translation_atoms: $translation_atoms,
+                    perspectives: $perspectives,
+                    additional_metadata: $additional_metadata)
+                  {
+                    dictionary
+                    {
+                      id
+                      perspectives
+                      {
+                        id
+                      }
+                    }
+                  }
+                }
+
+                '''
+
+            variable_dict = {
+                    
+                'category': 1,
+
+                'parent_id': language_id,
+
+                'translation_atoms': [{
+                    'content': 'INEL {} 1.0 {} corpus'.format(
+                        language_name,
+                        speaker_str),
+                    'locale_id': 2}],
+
+                'perspectives': [{
+                    'fake_id': 0,
+                    'fields': [
+                        {'fake_id': '6f355d7a-e68d-44ab-9cf6-36f78e8f1b34',
+                            'field_id': [66, 12],
+                            'link_id': None,
+                            'self_id': None},
+                        {'fake_id': '4e299305-94fd-4939-bc35-61cfda5b4fce',
+                            'field_id': [66, 23],
+                            'link_id': None,
+                            'self_id': '6f355d7a-e68d-44ab-9cf6-36f78e8f1b34'},
+                        {'fake_id': '51fbe0b6-2cea-4d40-a994-f6bb6f501d48',
+                            'field_id': [66, 23],
+                            'link_id': None,
+                            'self_id': None},
+                        {'fake_id': '0ba8e515-e9d5-42c5-a25c-c616297b5b60',
+                            'field_id': [674, 5],
+                            'link_id': None,
+                            'self_id': None}],
+                    'translation_atoms': [{
+                        'content': speaker_str, 'locale_id': 2}]}],
+
+                'additional_metadata': {
+                    'authors': [],
+                    'bibliographicDataOfTheSource': '',
+                    'bibliographicDataOfTheTranslation': '',
+                    'genre': '',
+                    'humanSettlement': [],
+                    'kind': 'Expedition',
+                    'license': 'cc-by-nc-sa-4.0',
+                    'quantitativeCharacteristic': '',
+                    'timeOfWriting': '',
+                    'titleOfTheWork': '',
+                    'translator': '',
+                    'years': []}}
+
+            if (dialect_flag and
+                speaker_str in dialect_dict):
+
+                variable_dict['parent_id'] = (
+                    dialect_dict[speaker_str])
+
+            log.debug(
+                '\nquery_str:\n{}\nvariable_dict:\n{}'.format(
+                    textwrap.dedent(query_str).strip(),
+                    pprint.pformat(variable_dict, width = 192)))
+
+            result = (
+
+                requests.post(
+                    opt_dict['--graphql-url'],
+                    cookies = cookies_dict,
+                    json = {'query': query_str, 'variables': variable_dict}))
+
+            log.debug(
+                '\nresult.text:\n' +
+                repr(result.text))
+
+            result_dict = (
+                result.json()['data']['create_dictionary'])
+
+            log.debug(
+                '\nresult_dict:\n' +
+                pprint.pformat(result_dict, width = 192))
+
+            corpus_id = (
+                result_dict['dictionary']['perspectives'][0]['id'])
+
+            # Now uploading each markup with possibly attached audio.
+
+            for speaker_info in speaker_info_list:
+
+                eaf_file_path, name, type_name, dir_name, base_name, speaker_str, date_str, title_str = (
+                    speaker_info)
+
+                # Creating a lexical entry.
+
+                query_str = '''
+
+                    mutation create_lexicalentry(
+                      $perspective_id: LingvodocID!)
+                    {
+                      create_lexicalentry(
+                        perspective_id: $perspective_id)
+                      {
+                        lexicalentry
+                        {
+                          id
+                        }
+                      }
+                    }
+
+                    '''
+
+                variable_dict = (
+                    {'perspective_id': corpus_id})
+
+                log.debug(
+                    '\nquery_str:\n{}\nvariable_dict:\n{}'.format(
+                        textwrap.dedent(query_str).strip(),
+                        pprint.pformat(variable_dict, width = 192)))
+
+                result = (
+
+                    requests.post(
+                        opt_dict['--graphql-url'],
+                        cookies = cookies_dict,
+                        json = {
+                            'query': query_str,
+                            'variables': variable_dict}))
+
+                log.debug(
+                    '\nresult.text:\n' +
+                    repr(result.text))
+
+                result_dict = (
+                    result.json()['data']['create_lexicalentry'])
+
+                entry_id = (
+                    result_dict['lexicalentry']['id'])
+
+                log.debug(
+                    '\nresult_dict:\n' +
+                    pprint.pformat(result_dict, width = 192))
+
+                # If we have audio, upload it first.
+
+                sound_entity_id = None
+                audio_info_dict = sound_dict.get(name)
+
+                if audio_info_dict:
+
+                    if '.flac' in audio_info_dict:
+
+                        audio_file = (
+
+                            open(
+                                audio_info_dict['.flac'], 'rb'))
+
+                        audio_file_name = base_name + '.flac'
+                        audio_file_ct = 'audio/flac'
+
+                    else:
+
+                        if ('.wav' in audio_info_dict or
+                            '.mp3' not in audio_info_dict):
+
+                            raise NotImplementedError
+
+                        audio_file = (
+
+                            corpus_zip_file.open(
+                                audio_info_dict['.mp3'].filename, 'r'))
+
+                        audio_file_name = base_name + '.mp3'
+                        audio_file_ct = 'audio/mp3'
+
+                    query_str = '''
+
+                        mutation createEntity(
+                          $parent_id: LingvodocID!,
+                          $field_id: LingvodocID!,
+                          $file_content: Upload)
+                        {
+                          create_entity(
+                            parent_id: $parent_id,
+                            field_id: $field_id,
+                            file_content: $file_content)
+                          {
+                            entity
+                            {
+                              id
+                            }
+                          }
+                        }
+                        '''
+
+                    variable_dict = {
+                        'parent_id': entry_id,
+                        'field_id': [66, 12],
+                        'file_content': None}
+
+                    operations_str = (
+                            
+                        json.dumps({
+                            'query': re.sub(r'\s+', ' ', query_str).strip(),
+                            'variables': variable_dict}))
+
+                    # See https://stackoverflow.com/a/12385661/2016856 for example of None for multipart
+                    # file name.
+
+                    file_list = [
+                        ('operations', (None, operations_str)),
+                        ('map', (None, json.dumps({'0': ['variables.file_content']}))),
+                        ('0', (audio_file_name, audio_file, audio_file_ct))]
+
+                    log.debug(
+                        '\nquery_str:\n{}'
+                        '\nvariable_dict:\n{}'
+                        '\nfile_list:\n{}'.format(
+                            textwrap.dedent(query_str).strip(),
+                            pprint.pformat(variable_dict, width = 192),
+                            pprint.pformat(file_list, width = 192)))
+
+                    result = (
+                            
+                        requests.post(
+                            opt_dict['--graphql-url'],
+                            cookies = cookies_dict,
+                            files = file_list))
+
+                    log.debug(
+                        '\nresult.text:\n' +
+                        repr(result.text))
+
+                    result_dict = (
+                        result.json()['data']['create_entity'])
+
+                    sound_entity_id = (
+                        result_dict['entity']['id'])
+
+                    log.debug(
+                        '\nresult_dict:\n' +
+                        pprint.pformat(result_dict, width = 192))
+
+                    audio_file.close()
+
+                # And now we will upload markup.
+
+                markup_file = (
+
+                    open(
+                        eaf_file_path, 'rb'))
+
+                markup_file_name = base_name + '.eaf'
+                markup_file_ct = 'application/octet-stream'
+
+                query_str = '''
+
+                    mutation createEntity(
+                      $parent_id: LingvodocID!,
+                      $field_id: LingvodocID!,
+                      $self_id: LingvodocID,
+                      $file_content: Upload)
+                    {
+                      create_entity(
+                        parent_id: $parent_id,
+                        field_id: $field_id,
+                        self_id: $self_id,
+                        file_content: $file_content)
+                      {
+                        entity
+                        {
+                          id
+                        }
+                      }
+                    }
+                    '''
+
+                variable_dict = {
+                    'parent_id': entry_id,
+                    'field_id': [66, 23],
+                    'self_id': sound_entity_id,
+                    'file_content': None}
+
+                operations_str = (
+                        
+                    json.dumps({
+                        'query': re.sub(r'\s+', ' ', query_str).strip(),
+                        'variables': variable_dict}))
+
+                file_list = [
+                    ('operations', (None, operations_str)),
+                    ('map', (None, json.dumps({'0': ['variables.file_content']}))),
+                    ('0', (markup_file_name, markup_file, markup_file_ct))]
+
+                log.debug(
+                    '\nquery_str:\n{}'
+                    '\nvariable_dict:\n{}'
+                    '\nfile_list:\n{}'.format(
+                        textwrap.dedent(query_str).strip(),
+                        pprint.pformat(variable_dict, width = 192),
+                        pprint.pformat(file_list, width = 192)))
+
+                result = (
+                        
+                    requests.post(
+                        opt_dict['--graphql-url'],
+                        cookies = cookies_dict,
+                        files = file_list))
+
+                log.debug(
+                    '\nresult.text:\n' +
+                    repr(result.text))
+
+                result_dict = (
+                    result.json()['data']['create_entity'])
+
+                log.debug(
+                    '\nresult_dict:\n' +
+                    pprint.pformat(result_dict, width = 192))
+
+                markup_file.close()
+
+
 # If we are being run as a script.
 
 if __name__ == '__main__':
@@ -1266,6 +2114,10 @@ if __name__ == '__main__':
     elif arg_list[0] == 'convert_corpus':
 
         main_convert_corpus(arg_list[1:])
+
+    elif arg_list[0] == 'upload_corpus':
+
+        main_upload_corpus(arg_list[1:])
 
     else:
 
