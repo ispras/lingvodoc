@@ -2219,6 +2219,32 @@ class Query(graphene.ObjectType):
 
             raise ResponseError(message = 'No such lexical entry in the system')
 
+        if publish is None and accept is None:
+
+            sql_str = '''
+
+                select * from linked_group_no_publishing(
+                    :field_client_id,
+                    :field_object_id,
+                    :client_id,
+                    :object_id)
+                    
+                '''
+
+        else:
+
+            sql_str = '''
+
+                select * from linked_group(
+                    :field_client_id,
+                    :field_object_id,
+                    :client_id,
+                    :object_id,
+                    :publish,
+                    :accept)
+                    
+                '''
+
         entry_query = (
             
             DBSession
@@ -2229,23 +2255,15 @@ class Query(graphene.ObjectType):
                         dbLexicalEntry.client_id,
                         dbLexicalEntry.object_id)
 
-                    .in_(sqlalchemy.text('''
-
-                        select * from linked_group{0}(
-                            :field_client_id,
-                            :field_object_id,
-                            :client_id,
-                            :object_id)
-                            
-                        '''.format(
-                            '_no_publishing' if publish is None and accept is None else
-                            ''))))
+                    .in_(sqlalchemy.text(sql_str)))
                 
                 .params({
                     'field_client_id': field_client_id,
                     'field_object_id': field_object_id,
                     'client_id': client_id,
-                    'object_id': object_id}))
+                    'object_id': object_id,
+                    'publish': publish,
+                    'accept': accept}))
 
         lexes = entry_query.all()
 
