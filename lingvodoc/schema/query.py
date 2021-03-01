@@ -6633,7 +6633,10 @@ class Phonology(graphene.Mutation):
         }
         """
 
-        parameters = Phonology_Parameters.from_graphql(args)
+        parameters = (
+            Phonology_Parameters.from_graphql(args))
+
+        parameters.__debug_flag__ = False
 
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')

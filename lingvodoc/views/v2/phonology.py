@@ -1486,10 +1486,13 @@ def sigma_inverse(sigma):
     return sigma, inverse
 
 
-def chart_data(f_2d_list, f_3d_list):
+def chart_data(f_2d_tt_list, f_3d_tt_list):
     """
     Generates formant chart data given formant series.
     """
+
+    f_2d_list = [f_2d for f_2d, tt in f_2d_tt_list]
+    f_3d_list = [f_3d for f_3d, tt in f_3d_tt_list]
 
     # Computing means and standard deviation matrices.
 
@@ -1515,18 +1518,30 @@ def chart_data(f_2d_list, f_3d_list):
     distance_2d_list = []
     distance_3d_list = []
 
-    for f_2d in f_2d_list:
+    for f_2d, tt in f_2d_tt_list:
 
-        delta_2d = f_2d - mean_2d
-        distance_2d_list.append((numpy.einsum('n,nk,k->', delta_2d, inverse_2d, delta_2d), f_2d))
+        delta_2d = (
+            f_2d - mean_2d)
 
-    for f_3d in f_3d_list:
+        distance_2d = (
+            numpy.einsum('n,nk,k->', delta_2d, inverse_2d, delta_2d))
 
-        delta_3d = f_3d - mean_3d
-        distance_3d_list.append((numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d), f_3d))
+        distance_2d_list.append(
+            (distance_2d, f_2d, tt))
 
-    distance_2d_list.sort(key = lambda df: df[0])
-    distance_3d_list.sort(key = lambda df: df[0])
+    for f_3d, tt in f_3d_tt_list:
+
+        delta_3d = (
+            f_3d - mean_3d)
+
+        distance_3d = (
+            numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d))
+
+        distance_3d_list.append(
+            (distance_3d, f_3d, tt))
+
+    distance_2d_list.sort(key = lambda dft: dft[0])
+    distance_3d_list.sort(key = lambda dft: dft[0])
 
     # Trying to produce one standard deviation ellipse for F1/F2 2-vectors.
 
@@ -1544,34 +1559,52 @@ def chart_data(f_2d_list, f_3d_list):
     filtered_2d_list = []
     outlier_2d_list = []
 
-    for distance_squared, f_2d in distance_2d_list:
+    for distance_squared, f_2d, tt in distance_2d_list:
+
         if distance_squared <= 2:
-            filtered_2d_list.append(f_2d)
+            filtered_2d_list.append((f_2d, tt))
+
         else:
-            outlier_2d_list.append(f_2d)
+            outlier_2d_list.append((f_2d, tt))
 
     if len(filtered_2d_list) < (len(distance_2d_list) + 1) // 2:
-        sorted_list = [f_2d for distance_squared, f_2d in distance_2d_list]
 
-        filtered_2d_list = sorted_list[:(len(distance_2d_list) + 1) // 2]
-        outlier_2d_list = sorted_list[(len(distance_2d_list) + 1) // 2:]
+        sorted_list = [
+
+            (f_2d, tt)
+            for distance_squared, f_2d, tt in distance_2d_list]
+
+        filtered_2d_list = (
+            sorted_list[:(len(distance_2d_list) + 1) // 2])
+
+        outlier_2d_list = (
+            sorted_list[(len(distance_2d_list) + 1) // 2:])
 
     # The same for F1/F2/F3 3-vectors.
 
     filtered_3d_list = []
     outlier_3d_list = []
 
-    for distance_squared, f_3d in distance_3d_list:
+    for distance_squared, f_3d, tt in distance_3d_list:
+
         if distance_squared <= 2:
-            filtered_3d_list.append(f_3d)
+            filtered_3d_list.append((f_3d, tt))
+
         else:
-            outlier_3d_list.append(f_3d)
+            outlier_3d_list.append((f_3d, tt))
 
     if len(filtered_3d_list) < (len(distance_3d_list) + 1) // 2:
-        sorted_list = [f_3d for distance_squared, f_3d in distance_3d_list]
 
-        filtered_3d_list = sorted_list[:(len(distance_3d_list) + 1) // 2]
-        outlier_3d_list = sorted_list[(len(distance_3d_list) + 1) // 2:]
+        sorted_list = [
+                
+            (f_3d, tt)
+            for distance_squared, f_3d, tt in distance_3d_list]
+
+        filtered_3d_list = (
+            sorted_list[:(len(distance_3d_list) + 1) // 2])
+
+        outlier_3d_list = (
+            sorted_list[(len(distance_3d_list) + 1) // 2:])
 
     # Returning computed chart data.
 
@@ -1611,14 +1644,20 @@ def chart_definition_list(
         for c, tc, v, f_2d_list, o_list, m, e_list in chart_data_2d_list)
 
     heading_list = []
+
     for c, tc, vowel, f_list, o_list, m, e_list in chart_data_2d_list:
-        heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
+
+        heading_list.extend([
+            '{0} F1'.format(vowel),
+            '{0} F2'.format(vowel),
+            '',
+            ''])
 
     worksheet_table_2d.write_row(
         'A{0}'.format(row_index + 1), heading_list)
 
     worksheet_table_2d.write_row(
-        'A{0}'.format(row_index + 2), ['main part', ''] * len(chart_data_2d_list))
+        'A{0}'.format(row_index + 2), ['main part', '', '', ''] * len(chart_data_2d_list))
 
     # Removing outliers that outlie too much.
 
@@ -1626,11 +1665,16 @@ def chart_definition_list(
     f2_limit = max_2d_f2 + min_2d_f2 / 2
 
     for i in range(len(chart_data_2d_list)):
+
         chart_data_2d_list[i] = list(chart_data_2d_list[i])
 
-        chart_data_2d_list[i][4] = list(filter(
-            lambda f_2d: f_2d[0] <= f1_limit and f_2d[1] <= f2_limit,
-            chart_data_2d_list[i][4]))
+        chart_data_2d_list[i][4] = (
+                
+            list(filter(
+                lambda f_2d_tt:
+                    f_2d_tt[0][0] <= f1_limit and
+                    f_2d_tt[0][1] <= f2_limit,
+                chart_data_2d_list[i][4])))
 
     max_outlier_list_length = max(len(outlier_list)
         for c, tc, v, f_list, outlier_list, m, e_list in chart_data_2d_list)
@@ -1638,17 +1682,32 @@ def chart_definition_list(
     # Writing out chart data and compiling chart data series info.
 
     for index, (count, total_count, vowel,
-        f_2d_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_2d_list):
+        f_2d_tt_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_2d_list):
+
+        f_2d_list = [f_2d for f_2d, tt in f_2d_tt_list]
+        tt_list = [tt for f_2d, tt in f_2d_tt_list]
 
         f1_list, f2_list = zip(*f_2d_list)
+        xc_list, xl_list = zip(*tt_list)
 
-        f1_outlier_list, f2_outlier_list = \
-            zip(*outlier_list) if outlier_list else ([], [])
+        f1_outlier_list, f2_outlier_list = [], []
+        xc_outlier_list, xl_outlier_list = [], []
+
+        if outlier_list:
+
+            f_2d_list = [f_2d for f_2d, tt in outlier_list]
+            tt_list = [tt for f_2d, tt in outlier_list]
+
+            f1_outlier_list, f2_outlier_list = zip(*f_2d_list)
+            xc_outlier_list, xl_outlier_list = zip(*tt_list)
 
         x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
 
-        f1_column = column_list[index * 2]
-        f2_column = column_list[index * 2 + 1]
+        f1_column = column_list[index * 4]
+        f2_column = column_list[index * 4 + 1]
+
+        xc_column = column_list[index * 4 + 2]
+        xl_column = column_list[index * 4 + 3]
 
         # Writing out formant data.
 
@@ -1676,7 +1735,22 @@ def chart_definition_list(
                 [''] * (max_outlier_list_length - len(f2_outlier_list)) +
                 ['', mean[1], ''] + list(x2_ellipse_list))
 
-        worksheet_table_2d.set_column(index * 2, index * 2 + 1, 11)
+        worksheet_table_2d.write_column(
+            xc_column + str(row_index + 4),
+            list(xc_list) +
+                [''] * (max_f_2d_list_length - len(xc_list)) +
+                ['', ''] + list(xc_outlier_list) +
+                [''] * (max_outlier_list_length - len(xc_outlier_list)))
+
+        worksheet_table_2d.write_column(
+            xl_column + str(row_index + 4),
+            list(xl_list) +
+                [''] * (max_f_2d_list_length - len(xl_list)) +
+                ['', ''] + list(xl_outlier_list) +
+                [''] * (max_outlier_list_length - len(xl_outlier_list)))
+
+        worksheet_table_2d.set_column(index * 4, index * 4 + 1, 11)
+        worksheet_table_2d.set_column(index * 4 + 2, index * 4 + 3, 15)
 
         # Compiling and saving chart data series info.
 
@@ -1890,6 +1964,10 @@ def compile_workbook(
         already_set.add(entry_id)
         result_list, text_list, link_set = result_dict[entry_id]
 
+        text_list_str = (
+            ', '.join(text[2] for text in text_list)
+            if text_list else None)
+
         text = text_list[0] if text_list else None
         text_str = text[2] if text else ''
         text_index = 0
@@ -1985,14 +2063,20 @@ def compile_workbook(
 
                         for group in textgrid_group_list:
 
+                            f_list_a.extend([
+                                tier_result.transcription, text_list_str])
+
                             sound_counter_dict[group] += 1
-                            vowel_formant_dict[group][vowel_a].append(tuple(f_list_a))
+                            vowel_formant_dict[group][vowel_a].append(f_list_a)
 
                         if text_b_list[2] != text_a_list[2]:
                             for group in textgrid_group_list:
 
+                                f_list_b.extend([
+                                    tier_result.transcription, text_list_str])
+
                                 sound_counter_dict[group] += 1
-                                vowel_formant_dict[group][vowel_b].append(tuple(f_list_b))
+                                vowel_formant_dict[group][vowel_b].append(f_list_b)
 
                     # ...for all intervals.
 
@@ -2030,8 +2114,11 @@ def compile_workbook(
 
                                 row_counter_dict[group] += 1
 
+                                f_list.extend([
+                                    tier_result.transcription, text_list_str])
+
                                 sound_counter_dict[group] += 1
-                                vowel_formant_dict[group][vowel].append(tuple(f_list))
+                                vowel_formant_dict[group][vowel].append(f_list)
 
                             if csv_stream:
 
@@ -2077,14 +2164,25 @@ def compile_workbook(
 
         vowel_formant_list = []
 
-        for vowel, f_tuple_list in sorted(vowel_formant_dict[group].items()):
-            f_tuple_list = list(set(f_tuple_list))
+        for vowel, f_list_list_raw in sorted(vowel_formant_dict[group].items()):
 
-            if len(f_tuple_list) >= args.chart_threshold:
+            f_list_list = []
+            f_tuple_set = set()
+
+            for f_list in f_list_list_raw:
+
+                f_tuple = tuple(f_list[:3])
+
+                if f_tuple not in f_tuple_set:
+
+                    f_list_list.append(f_list)
+                    f_tuple_set.add(f_tuple)
+
+            if len(f_list_list) >= args.chart_threshold:
 
                 vowel_formant_list.append((vowel,
-                    list(map(lambda f_tuple: numpy.array(f_tuple[:2]), f_tuple_list)),
-                    list(map(numpy.array, f_tuple_list))))
+                    list(map(lambda f_list: (numpy.array(f_list[:2]), f_list[3:]), f_list_list)),
+                    list(map(lambda f_list: (numpy.array(f_list[:3]), f_list[3:]), f_list_list))))
 
         # Compiling data of formant value series by filtering F1/F2 2-vectors and F1/F2/F3 3-vectors by
         # Mahalonobis distance.
@@ -2118,7 +2216,8 @@ def compile_workbook(
 
             # Updating F1/F2 maximum/minimum info.
 
-            f1_list, f2_list = zip(*filtered_2d_list)
+            f1_list, f2_list = (
+                zip(*[f_2d for f_2d, tt in filtered_2d_list]))
 
             min_f1_list, max_f1_list = min(f1_list), max(f1_list)
             min_f2_list, max_f2_list = min(f2_list), max(f2_list)
@@ -2137,7 +2236,8 @@ def compile_workbook(
 
             # Updating F1/F2/F3 maximum/minimum info.
 
-            f1_list, f2_list, f3_list = zip(*filtered_3d_list)
+            f1_list, f2_list, f3_list = (
+                zip(*[f_3d for f_3d, tt in filtered_3d_list]))
 
             min_f1_list, max_f1_list = min(f1_list), max(f1_list)
             min_f2_list, max_f2_list = min(f2_list), max(f2_list)
@@ -2164,6 +2264,7 @@ def compile_workbook(
         # Compiling info of the formant scatter chart data series, unless we actually don't have any.
 
         if len(chart_data_2d_list) > 0:
+
             chart_dict_list = []
 
             # It seems that we have to plot data in order of its size, from vowels with least number of
@@ -2219,13 +2320,21 @@ def compile_workbook(
                 for c, tc, v, f_3d_list, o_list, m, s_3d, i_3d in chart_data_3d_list)
 
             heading_list = []
+
             for c, tc, vowel, f_list, o_list, m, s_3d, i_3d in chart_data_3d_list:
 
                 heading_list.extend([
-                    '{0} F1'.format(vowel), '{0} F2'.format(vowel), '{0} F3'.format(vowel)])
+                    '{0} F1'.format(vowel),
+                    '{0} F2'.format(vowel),
+                    '{0} F3'.format(vowel),
+                    '',
+                    ''])
 
-            worksheet_table_3d.write_row('A1', heading_list)
-            worksheet_table_3d.write_row('A2', ['main part', '', ''] * len(chart_data_3d_list))
+            worksheet_table_3d.write_row(
+                'A1', heading_list)
+
+            worksheet_table_3d.write_row(
+                'A2', ['main part', '', '', '', ''] * len(chart_data_3d_list))
 
             # Removing outliers that outlie too much.
 
@@ -2234,59 +2343,99 @@ def compile_workbook(
             f3_limit = max_3d_f3 + min_3d_f3 / 2
 
             for i in range(len(chart_data_3d_list)):
+
                 chart_data_3d_list[i] = list(chart_data_3d_list[i])
 
-                chart_data_3d_list[i][4] = list(filter(
-                    lambda f_3d: f_3d[0] <= f1_limit and f_3d[1] <= f2_limit and f_3d[2] <= f3_limit,
-                    chart_data_3d_list[i][4]))
+                chart_data_3d_list[i][4] = (
+                        
+                    list(filter(
+                        lambda f_3d_tt:
+                            f_3d_tt[0][0] <= f1_limit and
+                            f_3d_tt[0][1] <= f2_limit and
+                            f_3d_tt[0][2] <= f3_limit,
+                        chart_data_3d_list[i][4])))
 
             max_outlier_list_length = max(len(outlier_list)
                 for c, tc, v, f_list, outlier_list, m, s_3d, i_3d in chart_data_3d_list)
 
             # Writing out chart data.
 
-            for index, (count, total_count, vowel, f_3d_list,
-                outlier_list, mean, sigma_3d, inverse_3d) in enumerate(chart_data_3d_list):
+            for index, (count, total_count, vowel,
+                f_3d_tt_list, outlier_list, mean, sigma_3d, inverse_3d) in enumerate(chart_data_3d_list):
+
+                f_3d_list = [f_3d for f_3d, tt in f_3d_tt_list]
+                tt_list = [tt for f_3d, tt in f_3d_tt_list]
 
                 f1_list, f2_list, f3_list = zip(*f_3d_list)
+                xc_list, xl_list = zip(*tt_list)
 
-                f1_outlier_list, f2_outlier_list, f3_outlier_list = \
-                    zip(*outlier_list) if outlier_list else ([], [], [])
+                f1_outlier_list, f2_outlier_list, f3_outlier_list = [], [], []
+                xc_outlier_list, xl_outlier_list = [], []
 
-                f1_column = column_list[index * 3]
-                f2_column = column_list[index * 3 + 1]
-                f3_column = column_list[index * 3 + 2]
+                if outlier_list:
+
+                    f_3d_list = [f_3d for f_3d, tt in outlier_list]
+                    tt_list = [tt for f_3d, tt in outlier_list]
+
+                    f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*f_3d_list)
+                    xc_outlier_list, xl_outlier_list = zip(*tt_list)
+                
+                f1_column = column_list[index * 5]
+                f2_column = column_list[index * 5 + 1]
+                f3_column = column_list[index * 5 + 2]
+
+                xc_column = column_list[index * 5 + 3]
+                xl_column = column_list[index * 5 + 4]
 
                 # Writing out formant data.
 
-                worksheet_table_3d.write(f1_column + '3',
+                worksheet_table_3d.write(
+                    f1_column + '3',
                     '{0}/{1} ({2:.1f}%) points'.format(
                         count, total_count, 100.0 * count / total_count))
 
-                worksheet_table_3d.write_column(f1_column + '4',
+                worksheet_table_3d.write_column(
+                    f1_column + '4',
                     list(f1_list) +
-                    [''] * (max_f_3d_list_length - len(f1_list)) +
-                    [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
-                        len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
-                    list(f1_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f1_outlier_list)) +
-                    [vowel + ' mean', mean[0]])
+                        [''] * (max_f_3d_list_length - len(f1_list)) +
+                        [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
+                            len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
+                        list(f1_outlier_list) +
+                        [''] * (max_outlier_list_length - len(f1_outlier_list)) +
+                        [vowel + ' mean', mean[0]])
 
-                worksheet_table_3d.write_column(f2_column + '4',
+                worksheet_table_3d.write_column(
+                    f2_column + '4',
                     list(f2_list) +
-                    [''] * (max_f_3d_list_length - len(f2_list)) +
-                    ['', ''] + list(f2_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f2_outlier_list)) +
-                    ['', mean[1]])
+                        [''] * (max_f_3d_list_length - len(f2_list)) +
+                        ['', ''] + list(f2_outlier_list) +
+                        [''] * (max_outlier_list_length - len(f2_outlier_list)) +
+                        ['', mean[1]])
 
-                worksheet_table_3d.write_column(f3_column + '4',
+                worksheet_table_3d.write_column(
+                    f3_column + '4',
                     list(f3_list) +
-                    [''] * (max_f_3d_list_length - len(f3_list)) +
-                    ['', ''] + list(f3_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f3_outlier_list)) +
-                    ['', mean[2]])
+                        [''] * (max_f_3d_list_length - len(f3_list)) +
+                        ['', ''] + list(f3_outlier_list) +
+                        [''] * (max_outlier_list_length - len(f3_outlier_list)) +
+                        ['', mean[2]])
 
-                worksheet_table_3d.set_column(index * 3, index * 3 + 2, 11)
+                worksheet_table_3d.write_column(
+                    xc_column + '4',
+                    list(xc_list) +
+                        [''] * (max_f_3d_list_length - len(xc_list)) +
+                        ['', ''] + list(xc_outlier_list) +
+                        [''] * (max_outlier_list_length - len(xc_outlier_list)))
+
+                worksheet_table_3d.write_column(
+                    xl_column + '4',
+                    list(xl_list) +
+                        [''] * (max_f_3d_list_length - len(xl_list)) +
+                        ['', ''] + list(xl_outlier_list) +
+                        [''] * (max_outlier_list_length - len(xl_outlier_list)))
+
+                worksheet_table_3d.set_column(index * 5, index * 5 + 2, 11)
+                worksheet_table_3d.set_column(index * 5 + 3, index * 5 + 4, 15)
 
             # Creating 3d formant scatter charts, if we have any data.
 
@@ -2315,21 +2464,21 @@ def compile_workbook(
 
                 # Graphing every vowel's data.
 
-                for index, ((c, tc, vowel, f_3d_list, outlier_list, mean_3d, s_3d, inverse_3d),
+                for index, ((c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, s_3d, inverse_3d),
                     color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
 
                     axes.scatter(
-                        [f_3d[0] for f_3d in f_3d_list],
-                        [f_3d[1] for f_3d in f_3d_list],
-                        [f_3d[2] for f_3d in f_3d_list],
+                        [f_3d[0] for f_3d, tt in f_3d_tt_list],
+                        [f_3d[1] for f_3d, tt in f_3d_tt_list],
+                        [f_3d[2] for f_3d, tt in f_3d_tt_list],
                         color = color, s = 4, depthshade = False, alpha = 0.5, zorder = 1000 + index)
 
                     if outlier_list:
 
-                        f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*outlier_list)
-
                         axes.scatter(
-                            f1_outlier_list, f2_outlier_list, f3_outlier_list,
+                            [f_3d[0] for f_3d, tt in outlier_list],
+                            [f_3d[1] for f_3d, tt in outlier_list],
+                            [f_3d[2] for f_3d, tt in outlier_list],
                             color = color, s = 1.44, depthshade = False, alpha = 0.5, zorder = index)
 
                     # Using 'plot' and not 'scatter' so that z-ordering would work correctly and mean
@@ -2410,7 +2559,7 @@ def compile_workbook(
                 z_min_current, z_max_current = axes.get_zlim3d()
                 z_level = z_min_current - (z_max - z_min_current) / 4
 
-                for index, ((c, tc, vowel, f_3d_list, outlier_list, mean_3d, sigma_3d, i_3d),
+                for index, ((c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, sigma_3d, i_3d),
                     color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
 
                     axes.scatter(mean_3d[0], mean_3d[1], z_level,
@@ -2758,7 +2907,11 @@ def phonology(request):
     task_status = None
 
     try:
-        args = Phonology_Parameters.from_request(request)
+
+        args = (
+            Phonology_Parameters.from_request(request))
+
+        args.__debug_flag__ = False
 
         log.debug(
             'phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}'.format(
@@ -3792,6 +3945,13 @@ def perform_phonology(args, task_status, storage):
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
 
+    if args.__debug_flag__:
+
+        workbook_stream.seek(0)
+
+        with open(xlsx_filename, 'wb+') as workbook_file:
+            copyfileobj(workbook_stream, workbook_file)
+
     # Writing out data in a CSV file, if required.
 
     if csv_stream:
@@ -3814,6 +3974,13 @@ def perform_phonology(args, task_status, storage):
             copyfileobj(chart_stream, chart_file)
 
         chart_filename_list.append(chart_filename)
+
+        if args.__debug_flag__:
+
+            chart_stream.seek(0)
+
+            with open(chart_filename, 'wb+') as chart_file:
+                copyfileobj(chart_stream, chart_file)
 
     # Successfully compiled phonology, finishing and returning links to files with results.
 
