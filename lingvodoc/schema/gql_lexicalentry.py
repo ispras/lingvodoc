@@ -479,7 +479,6 @@ class DeleteGroupingTags(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('delete', 'lexical_entries_and_entities', id_key= "parent_id")
     def mutate(root, info, **args):
         """
         mutation DeleteTag{
@@ -495,9 +494,6 @@ class DeleteGroupingTags(graphene.Mutation):
         variables = {'auth': authenticated_userid(request)}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        tags = list()
-
-
 
         client_id, object_id = args.get("id")
         field_client_id, field_object_id = args.get("field_id")
@@ -507,6 +503,31 @@ class DeleteGroupingTags(graphene.Mutation):
             return {'error': str("No such field in the system")}
         elif field.data_type != 'Grouping Tag':
             return {'error': str("Wrong type of field")}
+
+        perspective_id = (
+                
+            DBSession
+            
+                .query(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
+
+                .filter(
+                    dbLexicalEntry.client_id == client_id,
+                    dbLexicalEntry.object_id == object_id,
+                    dbLexicalEntry.marked_for_deletion == False)
+
+                .first())
+
+        if not perspective_id:
+            return ResponseError('No such lexical entry in the system.')
+
+        # Checking permissions.
+
+        info.context.acl_check(
+            'delete',
+            'lexical_entries_and_entities',
+            perspective_id)
 
         entities = DBSession.query(dbEntity).filter_by(field_client_id=field_client_id,
                                                      field_object_id=field_object_id,
