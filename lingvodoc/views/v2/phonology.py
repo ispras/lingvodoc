@@ -3066,7 +3066,7 @@ def analyze_sound_markup(
 
         log.debug(message('\n  blob description: {0}/{1}'.format(
             row.Markup.additional_metadata['blob_description'],
-            row.Sound.additional_metadata['blob_description'])))
+            row.Sound.additional_metadata.get('blob_description'))))
 
     # Checking if we have cached result for this pair of sound/markup.
     #
