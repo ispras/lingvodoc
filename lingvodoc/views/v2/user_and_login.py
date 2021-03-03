@@ -78,7 +78,6 @@ def new_user(login, name, email, password, year, month, day):
     basegroups = []
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create dictionaries").first()]
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create languages").first()]
-    basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create organizations").first()]
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create translation strings").first()]
 
     groups = []
