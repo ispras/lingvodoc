@@ -51,7 +51,7 @@ from lingvodoc.schema.gql_organization import (
     Organization,
     CreateOrganization,
     UpdateOrganization,
-    #DeleteOrganization
+    DeleteOrganization
 )
 # from lingvodoc.schema.gql_publishingentity import (
 #     PublishingEntity
@@ -9162,7 +9162,7 @@ class MyMutations(graphene.ObjectType):
     undelete_dictionary = UndeleteDictionary.Field()
     create_organization = CreateOrganization.Field()
     update_organization = UpdateOrganization.Field()
-    #delete_organization = DeleteOrganization.Field()
+    delete_organization = DeleteOrganization.Field()
     create_translationatom = CreateTranslationAtom.Field()
     update_translationatom = UpdateTranslationAtom.Field()
     delete_translationatom = DeleteTranslationAtom.Field()

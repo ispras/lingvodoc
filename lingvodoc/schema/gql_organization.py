@@ -1,4 +1,8 @@
+import datetime
+
 import graphene
+from sqlalchemy.orm.attributes import flag_modified
+
 from lingvodoc.schema.gql_holders import (
     CreatedAt,
     LingvodocObjectType,
@@ -36,13 +40,13 @@ class Organization(LingvodocObjectType):
      #created_at          | timestamp without time zone | NOT NULL
      #id                  | bigint                      | NOT NULL DEFAULT nextval('organization_id_seq'::regclass)
      #marked_for_deletion | boolean                     | NOT NULL
-     #name                | text                        |
      #about               | text                        |
      #additional_metadata | jsonb                       |
     """
     dbType = dbOrganization
 
     members = graphene.List(User)
+    admins = graphene.List(User)
 
     class Meta:
         interfaces = (CreatedAt,
@@ -66,6 +70,19 @@ class Organization(LingvodocObjectType):
             member_list.append(user)
 
         return member_list
+
+    @fetch_object('admins')
+    def resolve_admins(self, info):
+
+        additional_metadata = (
+            self.dbObject.additional_metadata)
+
+        if not additional_metadata:
+            return []
+
+        return (
+           [User(id = user_id)
+                for user_id in additional_metadata.get('admins', [])])
 
 
 class CreateOrganization(graphene.Mutation):
@@ -246,48 +263,67 @@ class UpdateOrganization(graphene.Mutation):
         return UpdateOrganization(organization=organization, triumph=True)
 
 
-# class DeleteOrganization(graphene.Mutation):
-#     """
-#     example:
-#     mutation  {
-#         delete_organization(organization_id: 6) {
-#             field {
-#                 name,
-#                 id,
-#                 about
-#             }
-#             triumph
-#         }
-#     }
-#
-#     (this example works)
-#     return:
-#     {
-#       "delete_organization": {
-#         "field": {
-#           "name": "new2",
-#           "id": 6,
-#           "about": "about"
-#         },
-#         "triumph": true
-#       }
-#     }
-#     """
-#
-#     class Arguments:
-#         organization_id = graphene.Int()
-#
-#     organization = graphene.Field(Organization)
-#     triumph = graphene.Boolean()
-#
-#     @staticmethod
-#     def mutate(root, info, **args):
-#         organization_id = args.get('organization_id')
-#         dborganization = DBSession.query(dbOrganization).filter_by(id=organization_id).first()
-#         if dborganization:
-#             if not dborganization.marked_for_deletion:
-#                 del_object(dborganization)
-#                 organization = Organization(name=dborganization.name, about=dborganization.about, id=dborganization.id)
-#                 organization.dbObject = dborganization
-#                 return DeleteOrganization(organization=organization, triumph=True)
-#         raise ResponseError(message="No such organization in the system")
+class DeleteOrganization(graphene.Mutation):
+    """
+    mutation {
+      delete_organization(organization_id: 6) {
+        orgaization {
+          id
+          translation
+          about
+        }
+        triumph
+      }
+    }
+    """
+
+    class Arguments:
+        organization_id = graphene.Int()
+
+    organization = graphene.Field(Organization)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        client_id = (
+            info.context.client_id)
+
+        user = (
+            Client.get_user_by_client_id(client_id))
+
+        if not user or user.id != 1:
+            return ResponseError(message = 'Only administrator can delete organizations.')
+
+        organization_id = args.get('organization_id')
+        dborganization = DBSession.query(dbOrganization).filter_by(id=organization_id).first()
+
+        if not dborganization:
+            return ResponseError(message = 'No such organization in the system.')
+
+        organization = Organization(id = dborganization.id)
+        organization.dbObject = dborganization
+
+        if dborganization.marked_for_deletion:
+            return DeleteOrganization(organization = organization, triumph = False)
+
+        # Actually deleting organization.
+
+        additional_metadata = (
+            dborganization.additional_metadata)
+
+        if not additional_metadata:
+            additional_metadata = {}
+
+        additional_metadata['delete'] = {
+            'deleted_from': 'DeleteOrganization',
+            'deleted_by': client_id,
+            'deleted_at': datetime.datetime.now(datetime.timezone.utc).timestamp()}
+
+        dborganization.marked_for_deletion = True
+        dborganization.additional_metadata = additional_metadata
+
+        flag_modified(dborganization, 'additional_metadata')
+
+        return DeleteOrganization(organization = organization, triumph = True)
+
