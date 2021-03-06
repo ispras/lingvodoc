@@ -1,0 +1,9 @@
+*.buffer
+*.gz
+*.png
+*.utf16
+*.utf8
+*.xlsx
+*.zip
+.git
+pyramid.log*

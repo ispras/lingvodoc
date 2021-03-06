@@ -493,6 +493,7 @@ class Query(graphene.ObjectType):
                                      category=graphene.Int(),
                                      adopted=graphene.Boolean(),
                                      etymology=graphene.Boolean(),
+                                     diacritics=graphene.String(),
                                      search_strings=graphene.List(graphene.List(ObjectVal), required=True),
                                      mode=graphene.String(),
                                      search_metadata=ObjectVal(),
@@ -929,6 +930,7 @@ class Query(graphene.ObjectType):
         category=None,
         adopted=None,
         etymology=None,
+        diacritics=None,
         search_metadata=None,
         mode='published',
         simple=True,
@@ -982,6 +984,7 @@ class Query(graphene.ObjectType):
             category,
             adopted,
             etymology,
+            diacritics,
             search_strings,
             publish,
             accept,
@@ -6614,6 +6617,7 @@ class Phonology(graphene.Mutation):
         link_field_list=graphene.List(LingvodocID)
         link_perspective_list=graphene.List(graphene.List(LingvodocID))
         synchronous=graphene.Boolean()
+        debug_flag=graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -6636,7 +6640,8 @@ class Phonology(graphene.Mutation):
         parameters = (
             Phonology_Parameters.from_graphql(args))
 
-        parameters.__debug_flag__ = False
+        parameters.__debug_flag__ = (
+            args.get('debug_flag', False))
 
         locale_id = info.context.get('locale_id')
         request = info.context.get('request')
