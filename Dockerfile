@@ -14,7 +14,7 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" > /etc/
 	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
 	apt-key add - && \ 
 	apt-get update && \
-	apt-get install -y postgresql-server-dev-10 postgresql-client-10
+	apt-get install -y postgresql-server-dev-13 postgresql-client-13
 RUN \
   pip3 install pip==9.0.1 && \
   pip3 install --upgrade setuptools==40.8.0 && \

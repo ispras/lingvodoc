@@ -10,6 +10,7 @@ import os.path
 import pickle
 import pprint
 import re
+import traceback
 
 # Just in case, don't have that on Windows.
 
@@ -359,6 +360,7 @@ def search_mechanism(
     accept,
     adopted,
     etymology,
+    diacritics,
     yield_batch_count,
     category_fields,
     xlsx_context = None,
@@ -396,6 +398,7 @@ def search_mechanism(
                 accept,
                 adopted,
                 etymology,
+                diacritics,
                 field_id_list])
 
                 .encode('utf-8')).hexdigest()
@@ -490,6 +493,17 @@ def search_mechanism(
     all_entity_content_filter = list()
     all_block_fields = list()
     fields_flag = True
+
+    if diacritics == 'ignore':
+
+        xform_func = func.diacritic_xform
+        xform_bag_func = func.diacritic_xform_bag
+
+    else:
+
+        xform_func = func.lower
+        xform_bag_func = func.lower_bag
+
     if category == 0:
         for search_block in search_strings:
             all_block_fields+=[tuple(sb.get("field_id")) for sb in search_block if
@@ -499,51 +513,85 @@ def search_mechanism(
                     fields_flag = False
 
                 if search_string.get('matching_type') == "substring":
-                    curr_bs_search_blocks = boolean_search(search_string["search_string"])
+
+                    curr_bs_search_blocks = (
+                        boolean_search(search_string["search_string"]))
+
                     for ss in chain.from_iterable(curr_bs_search_blocks):
+
+                        xform_ss = xform_func(ss["search_string"])
+
                         if ss.get('matching_type') == "substring":
+
                             all_entity_content_filter.append(
-                                func.lower(dbEntity.content).like(ss["search_string"]))
+                                xform_func(dbEntity.content).like(xform_ss))
+
                         elif ss.get('matching_type') == "full_string":
+
                             all_entity_content_filter.append(
-                                func.lower(dbEntity.content) == func.lower(ss["search_string"])
-                            )
+                                xform_func(dbEntity.content) == xform_ss)
+
                         elif ss.get('matching_type') == "regexp":
+
                             all_entity_content_filter.append(
-                                func.lower(dbEntity.content).op('~*')(ss["search_string"]))
+                                xfrom_func(dbEntity.content).op('~*')(xform_ss))
 
                 elif search_string.get('matching_type') == "full_string":
+
                     all_entity_content_filter.append(
-                        func.lower(dbEntity.content) == func.lower(search_string["search_string"]))
+                        xform_func(dbEntity.content) ==
+                            xform_func(search_string["search_string"]))
+
                 elif search_string.get('matching_type') == "regexp":
+
                     all_entity_content_filter.append(
-                        func.lower(dbEntity.content).op('~*')(search_string["search_string"]))
+                        xform_func(dbEntity.content).op('~*')(
+                            xform_func(search_string["search_string"])))
+
     elif category == 1:
         for search_block in search_strings:
             for search_string in search_block:
                 if not search_string.get("field_id"):
                     fields_flag = False
+
                 if search_string.get('matching_type') == "substring":
-                    curr_bs_search_blocks = boolean_search(search_string["search_string"])
+
+                    curr_bs_search_blocks = (
+                        boolean_search(search_string["search_string"]))
+
                     for ss in chain.from_iterable(curr_bs_search_blocks):
+
+                        xform_ss = xform_func(ss["search_string"])
+
                         if ss.get('matching_type') == "substring":
-                            corpus_word_list = func.lower(dbEntity.additional_metadata['bag_of_words'].astext)
-                            all_entity_content_filter.append(func.lower(corpus_word_list).like(ss["search_string"]))
-                        elif ss.get('matching_type') == "full_string":
-                            all_entity_content_filter.append(dbEntity.additional_metadata['bag_of_words'].contains(
-                        [ss["search_string"].lower()]))
-                        elif ss.get('matching_type') == "regexp":
+
                             all_entity_content_filter.append(
-                                func.lower(dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(
-                                    ss["search_string"]))
+                                xform_func(dbEntity.additional_metadata['bag_of_words'].astext)
+                                    .like(xform_ss))
+
+                        elif ss.get('matching_type') == "full_string":
+
+                            all_entity_content_filter.append(
+                                xform_bag_func(dbEntity.additional_metadata['bag_of_words'])
+                                    .op('@>')(func.to_jsonb(xform_ss)))
+
+                        elif ss.get('matching_type') == "regexp":
+
+                            all_entity_content_filter.append(
+                                xform_func(dbEntity.additional_metadata['bag_of_words'].astext)
+                                    .op('~*')(xform_ss))
 
                 elif search_string.get('matching_type') == "full_string":
-                    all_entity_content_filter.append(dbEntity.additional_metadata['bag_of_words'].contains(
-                        [search_string["search_string"].lower()]))
-                elif search_string.get('matching_type') == "regexp":
+
                     all_entity_content_filter.append(
-                                func.lower(dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(
-                                    search_string["search_string"]))
+                        xform_bag_func(dbEntity.additional_metadata['bag_of_words'])
+                            .op('@>')(func.to_jsonb(xform_func(search_string["search_string"]))))
+
+                elif search_string.get('matching_type') == "regexp":
+
+                    all_entity_content_filter.append(
+                        xform_func(dbEntity.additional_metadata['bag_of_words'].astext)
+                            .op('~*')(xform_func(search_string["search_string"])))
 
     # all_entity_content_filter = and_(or_(*all_entity_content_filter))
 
@@ -609,47 +657,98 @@ def search_mechanism(
                 raise ResponseError(message='wrong matching_type')
 
             if category == 1:
+
                 if matching_type == "full_string":
-                    inner_and.append(cur_dbEntity.additional_metadata['bag_of_words'].contains(
-                        [search_string["search_string"].lower()]))
+
+                    inner_and.append(
+                        xform_bag_func(cur_dbEntity.additional_metadata['bag_of_words'])
+                            .op('@>')(func.to_jsonb(xform_func(search_string["search_string"]))))
+
                 elif matching_type == 'substring':
-                    curr_bs_search_blocks = boolean_search(search_string["search_string"])
+
+                    curr_bs_search_blocks = (
+                        boolean_search(search_string["search_string"]))
+
                     for ss in chain.from_iterable(curr_bs_search_blocks):
+
+                        xform_ss = xform_func(ss["search_string"])
+
                         if ss.get('matching_type') == "substring":
-                            corpus_word_list = func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext)
-                            inner_and.append(func.lower(corpus_word_list).like(ss["search_string"]))
-                        elif ss.get('matching_type') == "full_string":
-                            inner_and.append(dbEntity.additional_metadata['bag_of_words'].contains(
-                        [ss["search_string"].lower()]))
-                        elif ss.get('matching_type') == "regexp":
+
                             inner_and.append(
-                                func.lower(dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(
-                                    ss["search_string"]))
+                                xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
+                                    .like(xform_ss))
+
+                        elif ss.get('matching_type') == "full_string":
+
+                            inner_and.append(
+                                xform_bag_func(cur_dbEntity.additional_metadata['bag_of_words'])
+                                    .op('@>')(func.to_jsonb(xform_ss)))
+
+                        elif ss.get('matching_type') == "regexp":
+
+                            inner_and.append(
+                                xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
+                                    .op('~*')(xform_ss))
+
                 elif matching_type == 'regexp':
-                    inner_and.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(
-                        search_string["search_string"]))
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
+                            .op('~*')(xform_func(search_string["search_string"])))
+
             else:
+
                 if matching_type == "full_string":
-                    inner_and.append(func.lower(cur_dbEntity.content) == func.lower(search_string["search_string"]))
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.content) ==
+                            xform_func(search_string["search_string"]))
+
                 elif matching_type == 'substring':
-                    curr_bs_search_blocks = boolean_search(search_string["search_string"])
+
+                    curr_bs_search_blocks = (
+                        boolean_search(search_string["search_string"]))
+
                     bs_or_block_list = list()
+
                     for bs_or_block in curr_bs_search_blocks:
+
                         bs_and = list()
+
                         for ss in bs_or_block:
+
+                            xform_ss = xform_func(ss["search_string"])
+
                             if ss.get('matching_type') == "substring":
-                                bs_and.append(func.lower(cur_dbEntity.content).like(ss["search_string"]))
-                            elif ss.get('matching_type') == "full_string":
+
                                 bs_and.append(
-                                    func.lower(cur_dbEntity.content) == func.lower(ss["search_string"]))
+                                    xform_func(cur_dbEntity.content).like(xform_ss))
+
+                            elif ss.get('matching_type') == "full_string":
+
+                                bs_and.append(
+                                    xform_func(cur_dbEntity.content) == xform_ss)
+
                             elif ss.get('matching_type') == "regexp":
-                                bs_and.append(func.lower(cur_dbEntity.content).op('~*')(ss["search_string"]))
+
+                                bs_and.append(
+                                    xform_func(cur_dbEntity.content).op('~*')(xform_ss))
+
                             elif ss.get('matching_type') == "exclude":
-                                bs_and.append(func.lower(cur_dbEntity.content) != func.lower(ss["search_string"]))
+
+                                bs_and.append(
+                                    xform_func(cur_dbEntity.content) != xform_ss)
+
                         bs_or_block_list.append(and_(*bs_and))
+
                     inner_and.append(or_(*bs_or_block_list))
+
                 elif matching_type == 'regexp':
-                    inner_and.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.content).op('~*')(
+                            xform_func(search_string["search_string"])))
 
             and_lexes_query = (
 
@@ -675,6 +774,8 @@ def search_mechanism(
 
         full_or_block.append(and_lexes_sum_query)
 
+    # Searching for and getting lexical entries.
+
     all_results = set()
 
     if full_or_block:
@@ -695,6 +796,12 @@ def search_mechanism(
                 tuple(x)
                 for x in results_query.all()))
 
+        # Showing overall query.
+
+        log.debug(
+            '\nresults_query:\n' +
+            str(results_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
     if not all_results:
 
         # Saving search results data, if required.
@@ -712,6 +819,7 @@ def search_mechanism(
         .filter(dbLexicalEntry.marked_for_deletion==False,
                 tuple_(dbLexicalEntry.client_id,
                        dbLexicalEntry.object_id).in_(all_results))
+
     result_lexical_entries = entries_with_entities(resolved_search, accept=True, delete=False, mode=None, publish=True)
 
     #result_lexical_entries = [graphene_obj(x, LexicalEntry) for x in resolved_search.all()]
@@ -991,6 +1099,7 @@ class AdvancedSearch(LingvodocObjectType):
         category,
         adopted,
         etymology,
+        diacritics,
         search_strings,
         publish,
         accept,
@@ -999,240 +1108,259 @@ class AdvancedSearch(LingvodocObjectType):
         cognates_flag = True,
         __debug_flag__ = False):
 
-        yield_batch_count = 200
-        dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
-            marked_for_deletion=False)
-        d_filter = []
-        if dicts_to_filter:
-            d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
-        if languages:
+        try:
+
+            yield_batch_count = 200
+            dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
+                marked_for_deletion=False)
+            d_filter = []
             if dicts_to_filter:
-                dictionaries = dictionaries.join(dbLanguage)
-                d_filter.append(
-                    and_(
-                        tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages),
-                        dbLanguage.marked_for_deletion == False)
-                )
-        dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
+                d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+            if languages:
+                if dicts_to_filter:
+                    dictionaries = dictionaries.join(dbLanguage)
+                    d_filter.append(
+                        and_(
+                            tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages),
+                            dbLanguage.marked_for_deletion == False)
+                    )
+            dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
 
-        if publish:
-            db_published_gist = translation_gist_search('Published')
-            state_translation_gist_client_id = db_published_gist.client_id
-            state_translation_gist_object_id = db_published_gist.object_id
-            db_la_gist = translation_gist_search('Limited access')
-            limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+            if publish:
+                db_published_gist = translation_gist_search('Published')
+                state_translation_gist_client_id = db_published_gist.client_id
+                state_translation_gist_object_id = db_published_gist.object_id
+                db_la_gist = translation_gist_search('Limited access')
+                limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
 
-            dictionaries = (
+                dictionaries = (
 
-                dictionaries
+                    dictionaries
 
-                    .filter(
-                        or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                                 dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                            and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                                 dbDictionary.state_translation_gist_client_id == limited_client_id)))
+                        .filter(
+                            or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                                and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
+                                     dbDictionary.state_translation_gist_client_id == limited_client_id)))
 
-                    .join(dbDictionaryPerspective)
+                        .join(dbDictionaryPerspective)
 
-                    .filter(
-                        dbDictionaryPerspective.marked_for_deletion == False,
-                        or_(
-                            and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                                 dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                            and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                                 dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))))
+                        .filter(
+                            dbDictionaryPerspective.marked_for_deletion == False,
+                            or_(
+                                and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                                     dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                                and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                                     dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))))
 
-        if search_metadata:
-            meta_filter_ids = set()
-            not_found_flag = False
-            for meta_key in ["authors", "years"]:
-                meta_data = search_metadata.get(meta_key)
-                if meta_data:
-                    dicts_with_tags = set()
-                    for text_tag in meta_data:
-                        single_tag_dicts = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
-                            dbDictionary.marked_for_deletion == False,
-                            dbDictionary.additional_metadata[meta_key] != None,
-                            dbDictionary.additional_metadata[meta_key].contains([text_tag])).all()
-                        dicts_with_tags.update(single_tag_dicts)
-                    if dicts_with_tags:
-                        meta_filter_ids.update(dicts_with_tags)
+            if search_metadata:
+                meta_filter_ids = set()
+                not_found_flag = False
+                for meta_key in ["authors", "years"]:
+                    meta_data = search_metadata.get(meta_key)
+                    if meta_data:
+                        dicts_with_tags = set()
+                        for text_tag in meta_data:
+                            single_tag_dicts = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                                dbDictionary.marked_for_deletion == False,
+                                dbDictionary.additional_metadata[meta_key] != None,
+                                dbDictionary.additional_metadata[meta_key].contains([text_tag])).all()
+                            dicts_with_tags.update(single_tag_dicts)
+                        if dicts_with_tags:
+                            meta_filter_ids.update(dicts_with_tags)
+                        else:
+                            not_found_flag = True
+                kind = search_metadata.get("kind")
+                if kind:
+                    dicts_with_kind = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                        dbDictionary.marked_for_deletion == False,
+                        dbDictionary.additional_metadata["kind"] != None,
+                        dbDictionary.additional_metadata["kind"].astext == kind).all()
+                    if dicts_with_kind:
+                        meta_filter_ids.update(dicts_with_kind)
                     else:
                         not_found_flag = True
-            kind = search_metadata.get("kind")
-            if kind:
-                dicts_with_kind = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
-                    dbDictionary.marked_for_deletion == False,
-                    dbDictionary.additional_metadata["kind"] != None,
-                    dbDictionary.additional_metadata["kind"].astext == kind).all()
-                if dicts_with_kind:
-                    meta_filter_ids.update(dicts_with_kind)
-                else:
-                    not_found_flag = True
-            if "hasAudio" in search_metadata:
-                has_audio = search_metadata["hasAudio"]
-                if has_audio is not None:
-                    if has_audio:
-                        audio_dict_ids = dictionaries_with_audio_ids()
-                        dictionaries = dictionaries\
-                            .filter(
-                                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
-                            )
-                    else:
-                        audio_dict_ids = dictionaries_with_audio_ids()
-                        dictionaries = dictionaries\
-                            .filter(
-                                not_(
-                                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
+                if "hasAudio" in search_metadata:
+                    has_audio = search_metadata["hasAudio"]
+                    if has_audio is not None:
+                        if has_audio:
+                            audio_dict_ids = dictionaries_with_audio_ids()
+                            dictionaries = dictionaries\
+                                .filter(
+                                    tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
                                 )
-                            )
+                        else:
+                            audio_dict_ids = dictionaries_with_audio_ids()
+                            dictionaries = dictionaries\
+                                .filter(
+                                    not_(
+                                    tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
+                                    )
+                                )
 
-            if not_found_flag:
-                dictionaries = []
-            else:
-                if meta_filter_ids:
-                    dictionaries = dictionaries \
-                        .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(meta_filter_ids))
-        if tag_list:
-            tag_ids = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
-                dbDictionary.marked_for_deletion == False,
-                dbDictionary.additional_metadata["tag_list"] != None,
-                dbDictionary.additional_metadata["tag_list"].contains(tag_list)).all()
-            dictionaries = dictionaries \
-                .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(tag_ids))
+                if not_found_flag:
+                    dictionaries = []
+                else:
+                    if meta_filter_ids:
+                        dictionaries = dictionaries \
+                            .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(meta_filter_ids))
+            if tag_list:
+                tag_ids = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
+                    dbDictionary.marked_for_deletion == False,
+                    dbDictionary.additional_metadata["tag_list"] != None,
+                    dbDictionary.additional_metadata["tag_list"].contains(tag_list)).all()
+                dictionaries = dictionaries \
+                    .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(tag_ids))
 
-        res_entities = list()
-        res_lexical_entries = list()
-        res_perspectives = list()
-        res_dictionaries = list()
-        if not search_strings:
-            res_dictionaries = [
-                graphene_obj(
-                    DBSession.query(dbDictionary).filter(tuple_(dbDictionary.client_id, dbDictionary.object_id) == x).first(),
-                    Dictionary) for x in dictionaries]
-            perspective_objects = DBSession.query(dbDictionaryPerspective).filter(
-               dbDictionaryPerspective.marked_for_deletion==False,
-               tuple_(dbDictionaryPerspective.parent_client_id,
-               dbDictionaryPerspective.parent_object_id).in_([(x.dbObject.client_id, x.dbObject.object_id) for x in res_dictionaries])).all()
-            res_perspectives = [graphene_obj(x, DictionaryPerspective) for x in perspective_objects]
+            res_entities = list()
+            res_lexical_entries = list()
+            res_perspectives = list()
+            res_dictionaries = list()
+            if not search_strings:
+                res_dictionaries = [
+                    graphene_obj(
+                        DBSession.query(dbDictionary).filter(tuple_(dbDictionary.client_id, dbDictionary.object_id) == x).first(),
+                        Dictionary) for x in dictionaries]
+                perspective_objects = DBSession.query(dbDictionaryPerspective).filter(
+                   dbDictionaryPerspective.marked_for_deletion==False,
+                   tuple_(dbDictionaryPerspective.parent_client_id,
+                   dbDictionaryPerspective.parent_object_id).in_([(x.dbObject.client_id, x.dbObject.object_id) for x in res_dictionaries])).all()
+                res_perspectives = [graphene_obj(x, DictionaryPerspective) for x in perspective_objects]
 
-            return cls(entities=[], lexical_entries=[], perspectives=res_perspectives, dictionaries=res_dictionaries)
+                return cls(entities=[], lexical_entries=[], perspectives=res_perspectives, dictionaries=res_dictionaries)
 
 
 
-        text_data_type = translation_gist_search('Text')
-        text_fields = DBSession.query(dbField.client_id, dbField.object_id).\
-            filter(dbField.data_type_translation_gist_client_id == text_data_type.client_id,
-                   dbField.data_type_translation_gist_object_id == text_data_type.object_id).all()
+            text_data_type = translation_gist_search('Text')
+            text_fields = DBSession.query(dbField.client_id, dbField.object_id).\
+                filter(dbField.data_type_translation_gist_client_id == text_data_type.client_id,
+                       dbField.data_type_translation_gist_object_id == text_data_type.object_id).all()
 
-        markup_data_type = translation_gist_search('Markup')
-        markup_fields = DBSession.query(dbField.client_id, dbField.object_id). \
-            filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
-                   dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()
+            markup_data_type = translation_gist_search('Markup')
+            markup_fields = DBSession.query(dbField.client_id, dbField.object_id). \
+                filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
+                       dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()
 
-        # Setting up export to an XLSX file, if required.
+            # Setting up export to an XLSX file, if required.
 
-        xlsx_context = (
+            xlsx_context = (
 
-            None if not xlsx_export else
+                None if not xlsx_export else
 
-            Save_Context(
-                info.context.get('locale_id'),
-                DBSession,
-                cognates_flag = cognates_flag,
-                __debug_flag__ = __debug_flag__))
+                Save_Context(
+                    info.context.get('locale_id'),
+                    DBSession,
+                    cognates_flag = cognates_flag,
+                    __debug_flag__ = __debug_flag__))
 
-        # normal dictionaries
-        if category != 1:
-            res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
-                dictionaries=dictionaries,
-                category=0,
-                search_strings=search_strings,
-                publish=publish,
-                accept=accept,
-                adopted=adopted,
-                etymology=etymology,
-                category_fields=text_fields,
-                yield_batch_count=yield_batch_count,
-                xlsx_context=xlsx_context,
-                __debug_flag__=__debug_flag__
-            )
+            # normal dictionaries
+            if category != 1:
+                res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
+                    dictionaries=dictionaries,
+                    category=0,
+                    search_strings=search_strings,
+                    publish=publish,
+                    accept=accept,
+                    adopted=adopted,
+                    etymology=etymology,
+                    diacritics=diacritics,
+                    category_fields=text_fields,
+                    yield_batch_count=yield_batch_count,
+                    xlsx_context=xlsx_context,
+                    __debug_flag__=__debug_flag__
+                )
 
-        # corpora
-        if category != 0:
-            tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
-                dictionaries=dictionaries,
-                category=1,
-                search_strings=search_strings,
-                publish=publish,
-                accept=accept,
-                adopted=adopted,
-                etymology=etymology,
-                category_fields=markup_fields,
-                yield_batch_count=yield_batch_count,
-                xlsx_context=xlsx_context,
-                __debug_flag__=__debug_flag__
-            )
-            res_entities += tmp_entities
-            res_lexical_entries += tmp_lexical_entries
-            res_perspectives += tmp_perspectives
-            res_dictionaries += tmp_dictionaries
+            # corpora
+            if category != 0:
+                tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
+                    dictionaries=dictionaries,
+                    category=1,
+                    search_strings=search_strings,
+                    publish=publish,
+                    accept=accept,
+                    adopted=adopted,
+                    etymology=etymology,
+                    diacritics=diacritics,
+                    category_fields=markup_fields,
+                    yield_batch_count=yield_batch_count,
+                    xlsx_context=xlsx_context,
+                    __debug_flag__=__debug_flag__
+                )
+                res_entities += tmp_entities
+                res_lexical_entries += tmp_lexical_entries
+                res_perspectives += tmp_perspectives
+                res_dictionaries += tmp_dictionaries
 
-        # Exporting search results as an XLSX data, if required.
+            # Exporting search results as an XLSX data, if required.
 
-        if xlsx_context is not None:
+            if xlsx_context is not None:
 
-            if __debug_flag__:
+                if __debug_flag__:
 
-                start_time = time.time()
+                    start_time = time.time()
 
-            save_xlsx_data(
-                xlsx_context,
-                [dictionary.dbObject for dictionary in res_dictionaries],
-                [perspective.dbObject for perspective in res_perspectives],
-                [lexical_entry.dbObject for lexical_entry in res_lexical_entries])
+                save_xlsx_data(
+                    xlsx_context,
+                    [dictionary.dbObject for dictionary in res_dictionaries],
+                    [perspective.dbObject for perspective in res_perspectives],
+                    [lexical_entry.dbObject for lexical_entry in res_lexical_entries])
 
-            if __debug_flag__:
+                if __debug_flag__:
 
-                elapsed_time = time.time() - start_time
-                resident_memory = utils.get_resident_memory()
+                    elapsed_time = time.time() - start_time
+                    resident_memory = utils.get_resident_memory()
 
-                log.debug(
-                    '\nelapsed_time, resident_memory: {0:.3f}s, {1:.3f}m'.format(
-                    elapsed_time,
-                    resident_memory / 1048576.0))
+                    log.debug(
+                        '\nelapsed_time, resident_memory: {0:.3f}s, {1:.3f}m'.format(
+                        elapsed_time,
+                        resident_memory / 1048576.0))
 
-        # Saving XLSX-exported search results, if required.
+            # Saving XLSX-exported search results, if required.
 
-        xlsx_url = None
-        
-        if xlsx_export:
+            xlsx_url = None
+            
+            if xlsx_export:
 
-            query_str = '_'.join([
-                search_string["search_string"]
-                for search_block in search_strings
-                for search_string in search_block])
+                query_str = '_'.join([
+                    search_string["search_string"]
+                    for search_block in search_strings
+                    for search_string in search_block])
 
-            xlsx_filename = ('Search_' + query_str)[:64] + '.xlsx'
+                xlsx_filename = ('Search_' + query_str)[:64] + '.xlsx'
 
-            xlsx_url = save_xlsx(
-                info, xlsx_context, xlsx_filename)
+                xlsx_url = save_xlsx(
+                    info, xlsx_context, xlsx_filename)
 
-            # Saving resulting Excel workbook for debug purposes, if required.
+                # Saving resulting Excel workbook for debug purposes, if required.
 
-            if __debug_flag__:
+                if __debug_flag__:
 
-                xlsx_context.stream.seek(0)
+                    xlsx_context.stream.seek(0)
 
-                with open(xlsx_filename, 'wb') as xlsx_file:
-                    shutil.copyfileobj(xlsx_context.stream, xlsx_file)
+                    with open(xlsx_filename, 'wb') as xlsx_file:
+                        shutil.copyfileobj(xlsx_context.stream, xlsx_file)
 
-        return cls(
-            entities=res_entities,
-            lexical_entries=res_lexical_entries,
-            perspectives=res_perspectives,
-            dictionaries=res_dictionaries,
-            xlsx_url=xlsx_url)
+            return cls(
+                entities=res_entities,
+                lexical_entries=res_lexical_entries,
+                perspectives=res_perspectives,
+                dictionaries=res_dictionaries,
+                xlsx_url=xlsx_url)
+
+        except Exception as exception:
+
+            traceback_string = (
+                    
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('advanced_search: exception')
+            log.warning(traceback_string)
+
+            return (
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
 
 
 class AdvancedSearchSimple(LingvodocObjectType):
