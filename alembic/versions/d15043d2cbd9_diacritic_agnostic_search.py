@@ -79,7 +79,7 @@ def upgrade():
         begin
 
           return
-            jsonb_agg(diacritic_xform(W))
+            jsonb_agg(public.diacritic_xform(W))
             from jsonb_array_elements_text(source_array) W;
 
         end
