@@ -210,7 +210,8 @@ from sqlalchemy import (
     and_,
     or_,
     tuple_,
-    create_engine
+    create_engine,
+    literal
 )
 from lingvodoc.views.v2.utils import (
     view_field_from_object,
@@ -6258,28 +6259,39 @@ class CognateAnalysis(graphene.Mutation):
             task_status.set(5, 100, 'Finished',
                 result_link_list = result_link_list)
 
-        return CognateAnalysis(
+        result_dict = (
 
-            triumph = True,
+            dict(
 
-            dictionary_count = len(perspective_info_list),
-            group_count = len(group_list),
-            not_enough_count = not_enough_count,
-            transcription_count = total_transcription_count,
-            translation_count = total_translation_count,
+                triumph = True,
 
-            result = wrapped_output,
-            xlsx_url = xlsx_url,
-            distance_list = distance_list,
-            figure_url = figure_url,
+                dictionary_count = len(perspective_info_list),
+                group_count = len(group_list),
+                not_enough_count = not_enough_count,
+                transcription_count = total_transcription_count,
+                translation_count = total_translation_count,
 
-            minimum_spanning_tree = mst_list,
-            embedding_2d = embedding_2d_pca,
-            embedding_3d = embedding_3d_pca,
-            perspective_name_list = distance_header_array,
+                result = wrapped_output,
+                xlsx_url = xlsx_url,
+                distance_list = distance_list,
+                figure_url = figure_url,
 
-            intermediate_url_list =
-                intermediate_url_list if __intermediate_flag__ else None)
+                minimum_spanning_tree = mst_list,
+                embedding_2d = embedding_2d_pca,
+                embedding_3d = embedding_3d_pca,
+                perspective_name_list = distance_header_array,
+
+                intermediate_url_list =
+                    intermediate_url_list if __intermediate_flag__ else None))
+
+        if __debug_flag__ and __result_flag__:
+
+            with gzip.open(
+                result_file_name, 'wb') as result_file:
+
+                pickle.dump(result_dict, result_file)
+
+        return CognateAnalysis(**result_dict)
 
     @staticmethod
     def mutate(self, info, **args):
@@ -6304,17 +6316,40 @@ class CognateAnalysis(graphene.Mutation):
         }
         """
         
-        # Administrator check.
+        # Administrator / perspective author check.
 
         client_id = info.context.request.authenticated_userid
 
         if not client_id:
-            raise ResponseError('Only administrator can perform cognate analysis.')
+            raise ResponseError('Only administrator and perspective authors can perform cognate analysis.')
 
         user = Client.get_user_by_client_id(client_id)
 
-        if user.id != 1:
-            raise ResponseError('Only administrator can perform cognate analysis.')
+        author_client_id_set = (
+                
+            set(
+                client_id
+                for (client_id, _), _, _ in args['perspective_info_list']))
+
+        author_id_check = (
+
+            DBSession
+
+                .query(                    
+
+                    DBSession
+                        .query(literal(1))
+                        .filter(
+                            Client.id.in_(author_client_id_set),
+                            Client.user_id == user.id)
+                        .exists())
+
+                .scalar())
+
+        if (user.id != 1 and
+            not author_id_check):
+
+            raise ResponseError('Only administrator and perspective authors can perform cognate analysis.')
 
         # Getting arguments.
 
