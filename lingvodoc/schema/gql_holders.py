@@ -17,12 +17,13 @@ from sqlalchemy import tuple_
 from lingvodoc.models import (
     ObjectTOC,
     DBSession,
-    Client,
+    Client as dbClient,
     LexicalEntry,
     DictionaryPerspectiveToField,
     TranslationGist as dbTranslationGist,
     TranslationAtom as dbTranslationAtom,
     UnstructuredData as dbUnstructuredData,
+    User as dbUser
 )
 from lingvodoc.utils.verification import check_client_id
 from lingvodoc.cache.caching import CACHE
@@ -124,7 +125,7 @@ def client_id_check():
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                                    authenticated)
             else:
-                client = DBSession.query(Client).filter_by(id=authenticated).first()
+                client = DBSession.query(dbClient).filter_by(id=authenticated).first()
                 if not client:
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                                    authenticated)
@@ -556,7 +557,10 @@ class IdHolder(graphene.Interface):
 
 
 class CompositeIdHolder(graphene.Interface):
+
     id = LingvodocID()
+    author = graphene.Field('lingvodoc.schema.gql_user.User')
+
     # client_id = graphene.Int()
     # object_id = graphene.Int()
 
@@ -572,6 +576,27 @@ class CompositeIdHolder(graphene.Interface):
     # def resolve_object_id(self, info):
     #     return self.dbObject.object_id
 
+    @fetch_object('author')
+    def resolve_author(self, info):
+        """
+        Returns user whose client created the object.
+        """
+
+        from .gql_user import User
+
+        dbuser = (
+                
+            DBSession
+                .query(dbUser)
+                .filter(
+                    dbClient.id == self.dbObject.client_id,
+                    dbUser.id == dbClient.user_id)
+                .first())
+
+        user = User(id = dbuser.id)
+        user.dbObject = dbuser
+
+        return user
 
 class CreatedAt(graphene.Interface):
     created_at = graphene.Float() #DateTime()
