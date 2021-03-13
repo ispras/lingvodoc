@@ -87,7 +87,7 @@ class MergeBulk(graphene.Mutation):
     class Arguments:
         publish_any = graphene.Boolean(required=True)
         group_list = graphene.List(graphene.List(LingvodocID))
-        async = graphene.Boolean(required=True)
+        async_execution = graphene.Boolean(required=True)
 
     triumph = graphene.Boolean()
     result_list = graphene.List(LingvodocID)
@@ -96,11 +96,11 @@ class MergeBulk(graphene.Mutation):
     @client_id_check()
     def mutate(root, info, **args):
         group_list=args['group_list']
-        async=args['async']
+        async_execution = args['async']
         publish_any=args['publish_any']
         request = info.context.request
         old_group_list = [[{'client_id': xx[0], "object_id": xx[1]} for xx in x] for x in group_list]
-        if async:
+        if async_execution:
             merge_bulk_async(request, publish_any, old_group_list)
             result_list = list()
         else:
