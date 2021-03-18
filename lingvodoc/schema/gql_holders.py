@@ -559,7 +559,7 @@ class IdHolder(graphene.Interface):
 class CompositeIdHolder(graphene.Interface):
 
     id = LingvodocID()
-    author = graphene.Field('lingvodoc.schema.gql_user.User')
+    created_by = graphene.Field('lingvodoc.schema.gql_user.User')
 
     # client_id = graphene.Int()
     # object_id = graphene.Int()
@@ -576,8 +576,8 @@ class CompositeIdHolder(graphene.Interface):
     # def resolve_object_id(self, info):
     #     return self.dbObject.object_id
 
-    @fetch_object('author')
-    def resolve_author(self, info):
+    @fetch_object('created_by')
+    def resolve_created_by(self, info):
         """
         Returns user whose client created the object.
         """
