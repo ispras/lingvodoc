@@ -5942,18 +5942,36 @@ class CognateAnalysis(graphene.Mutation):
                 embedding_3d, strain_3d = (
                     CognateAnalysis.graph_3d_embedding(d_ij, verbose = __debug_flag__))
 
-                embedding_3d_pca = (
-                    sklearn.decomposition.PCA(n_components = 3)
-                        .fit_transform(embedding_3d))
+                # At least three points, standard PCA-based orientation.
+
+                if len(distance_data_array) >= 3:
+
+                    embedding_3d_pca = (
+                        sklearn.decomposition.PCA(n_components = 3)
+                            .fit_transform(embedding_3d))
+
+                # Only two points, so we take 2d embedding and extend it with zeros.
+
+                else:
+
+                    embedding_3d_pca = (
+
+                        numpy.hstack((
+                            embedding_2d_pca,
+                            numpy.zeros((embedding_2d_pca.shape[0], 1)))))
+
+                # Making 3d embedding actually 3d, if required.
 
                 if embedding_3d_pca.shape[1] <= 2:
 
-                  # Making 3d embedding actually 3d, if required.
+                    embedding_3d_pca = (
 
-                  embedding_3d_pca = numpy.hstack((
-                    embedding_3d_pca, numpy.zeros((embedding_3d_pca.shape[0], 1))))
+                        numpy.hstack((
+                            embedding_3d_pca,
+                            numpy.zeros((embedding_3d_pca.shape[0], 1)))))
 
-                distance_3d = sklearn.metrics.euclidean_distances(embedding_3d_pca)
+                distance_3d = (
+                    sklearn.metrics.euclidean_distances(embedding_3d_pca))
 
             else:
 
