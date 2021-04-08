@@ -7602,6 +7602,7 @@ def save_dictionary(
     locale_id,
     publish,
     sound_flag,
+    markup_flag,
     synchronous = False,
     debug_flag = False):
 
@@ -7639,6 +7640,7 @@ def save_dictionary(
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     my_args["published"] = publish
     my_args['sound_flag'] = sound_flag
+    my_args['markup_flag'] = markup_flag
     my_args['__debug_flag__'] = debug_flag
 
     res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
@@ -7650,6 +7652,7 @@ class SaveDictionary(graphene.Mutation):
         id = LingvodocID(required=True)
         mode = graphene.String(required=True)
         sound_flag = graphene.Boolean()
+        markup_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
@@ -7664,6 +7667,7 @@ class SaveDictionary(graphene.Mutation):
         dict_id = args['id']
         mode = args['mode']
         sound_flag = args.get('sound_flag', False)
+        markup_flag = args.get('markup_flag', False)
 
         client_id = authenticated_userid(request)
 
@@ -7693,6 +7697,7 @@ class SaveDictionary(graphene.Mutation):
             locale_id,
             publish,
             sound_flag,
+            markup_flag,
             args.get('synchronous', False),
             args.get('debug_flag', False))
 
