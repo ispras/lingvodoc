@@ -32,7 +32,7 @@ from pydub import AudioSegment
 
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy import and_, create_engine, func
+from sqlalchemy import and_, create_engine, func, literal
 
 from lingvodoc.models import (
     Client,
@@ -730,6 +730,7 @@ class Save_Context(object):
         session,
         cognates_flag = True,
         sound_flag = False,
+        markup_flag = False,
         storage = None,
         __debug_flag__ = False):
 
@@ -738,6 +739,7 @@ class Save_Context(object):
 
         self.cognates_flag = cognates_flag
         self.sound_flag = sound_flag
+        self.markup_flag = markup_flag
 
         self.stream = io.BytesIO()
         self.workbook = xlsxwriter.Workbook(self.stream, {'in_memory': True})
@@ -800,6 +802,13 @@ class Save_Context(object):
                 sound_object_id BIGINT,
                 ''')
 
+            markup_fid_str = (
+
+                '''
+                markup_client_id BIGINT,
+                markup_object_id BIGINT,
+                ''')
+
             self.session.execute('''
 
                 create temporary table
@@ -810,7 +819,7 @@ class Save_Context(object):
                   transcription_client_id BIGINT,
                   transcription_object_id BIGINT,
                   translation_client_id BIGINT,
-                  translation_object_id BIGINT,{sound_str}
+                  translation_object_id BIGINT,{sound_str}{markup_str}
 
                   primary key (
                     perspective_client_id,
@@ -841,7 +850,10 @@ class Save_Context(object):
                         self.eid_pid_table_name,
 
                     sound_str =
-                        sound_fid_str if sound_flag else ''))
+                        sound_fid_str if sound_flag else '',
+
+                    markup_str =
+                        markup_fid_str if markup_flag else ''))
 
             # Some commonly used etymological SQL queries.
 
@@ -880,6 +892,13 @@ class Save_Context(object):
                 ''',
                 Tp.sound_client_id,
                 Tp.sound_object_id
+                ''')
+
+            markup_fid_str = (
+
+                ''',
+                Tp.markup_client_id,
+                Tp.markup_object_id
                 ''')
 
             sound_cte_str = (
@@ -934,6 +953,163 @@ class Save_Context(object):
                 S.parent_object_id = T.entry_object_id
                 ''')
 
+            markup_cte_str = (
+                    
+                ''',
+
+                markup_cte as (
+
+                  select
+                  E.parent_client_id,
+                  E.parent_object_id,
+                  jsonb_agg(
+                    jsonb_build_array(
+                      E.content,
+                      extract(epoch from E.created_at))) content_list
+
+                  from
+                  eid_pid_fid_cte T,
+                  public.entity E,
+                  publishingentity P
+                  
+                  where
+                  E.parent_client_id = T.entry_client_id and
+                  E.parent_object_id = T.entry_object_id and
+                  E.field_client_id = T.markup_client_id and
+                  E.field_object_id = T.markup_object_id and
+                  E.content is not null and
+                  E.marked_for_deletion is false and
+                  P.client_id = E.client_id and
+                  P.object_id = E.object_id and
+                  P.accepted = true{0}
+                  
+                  group by
+                  E.parent_client_id,
+                  E.parent_object_id)
+
+                ''')
+
+            markup_select_str = (
+
+                ''',
+                M.content_list
+                ''')
+
+            markup_join_str = (
+
+                '''
+                left outer join
+                markup_cte M
+                on
+                M.parent_client_id = T.entry_client_id and
+                M.parent_object_id = T.entry_object_id
+                ''')
+
+            sound_markup_cte_str = (
+                    
+                ''',
+
+                sound_markup_cte_a as (
+
+                  select
+                  Es.parent_client_id,
+                  Es.parent_object_id,
+                  Es.client_id,
+                  Es.object_id,
+                  Es.content,
+                  Es.created_at,
+                  jsonb_agg(
+                    jsonb_build_array(
+                      Em.content,
+                      extract(epoch from Em.created_at))) markup_list
+
+                  from
+                  eid_pid_fid_cte T
+
+                  inner join
+                  public.entity Es
+
+                  on
+                  Es.parent_client_id = T.entry_client_id and
+                  Es.parent_object_id = T.entry_object_id and
+                  Es.field_client_id = T.sound_client_id and
+                  Es.field_object_id = T.sound_object_id and
+                  Es.content is not null and
+                  Es.marked_for_deletion is false
+
+                  inner join
+                  publishingentity Ps
+
+                  on
+                  Ps.client_id = Es.client_id and
+                  Ps.object_id = Es.object_id and
+                  Ps.accepted = true{1}
+
+                  left outer join public.entity Em
+
+                  on
+                  Em.parent_client_id = T.entry_client_id and
+                  Em.parent_object_id = T.entry_object_id and
+                  Em.field_client_id = T.markup_client_id and
+                  Em.field_object_id = T.markup_object_id and
+                  Em.content is not null and
+                  Em.marked_for_deletion is false and
+                  Em.self_client_id = Es.client_id and
+                  Em.self_object_id = Es.object_id
+
+                  left outer join publishingentity Pm
+
+                  on
+                  Pm.client_id = Em.client_id and
+                  Pm.object_id = Em.object_id and
+                  Pm.accepted = true{2}
+                  
+                  group by
+                  Es.parent_client_id,
+                  Es.parent_object_id,
+                  Es.client_id,
+                  Es.object_id),
+
+                sound_markup_cte_b as (
+
+                  select
+                  parent_client_id,
+                  parent_object_id,
+                  jsonb_agg(
+                    jsonb_build_array(
+                      content,
+                      extract(epoch from created_at),
+                      markup_list)) content_list
+
+                  from
+                  sound_markup_cte_a
+                  
+                  group by
+                  parent_client_id,
+                  parent_object_id)
+
+                ''')
+
+            sound_markup_select_str = (
+
+                ''',
+                SM.content_list
+                ''')
+
+            sound_markup_join_str = (
+
+                '''
+                left outer join
+                sound_markup_cte_b SM
+                on
+                SM.parent_client_id = T.entry_client_id and
+                SM.parent_object_id = T.entry_object_id
+                ''')
+
+            sound_only_flag = sound_flag and not markup_flag
+            markup_only_flag = markup_flag and not sound_flag
+            sound_markup_flag = sound_flag and markup_flag
+
             self.sql_etymology_str_b = ('''
 
                 with
@@ -948,7 +1124,7 @@ class Save_Context(object):
                   Tp.transcription_client_id,
                   Tp.transcription_object_id,
                   Tp.translation_client_id,
-                  Tp.translation_object_id{sound_fid_str}
+                  Tp.translation_object_id{sound_fid_str}{markup_fid_str}
 
                   from
                   {eid_pid_table_name} Te,
@@ -1010,7 +1186,7 @@ class Save_Context(object):
                   
                   group by
                   E.parent_client_id,
-                  E.parent_object_id){sound_cte_str}
+                  E.parent_object_id){sound_markup_cte_str}
 
                 select
                 T.entry_client_id,
@@ -1018,7 +1194,7 @@ class Save_Context(object):
                 T.perspective_client_id,
                 T.perspective_object_id,
                 Xc.content_list,
-                Xl.content_list{sound_select_str}
+                Xl.content_list{sound_markup_select_str}
 
                 from
                 eid_pid_fid_cte T
@@ -1033,7 +1209,7 @@ class Save_Context(object):
                 translation_cte Xl
                 on
                 Xl.parent_client_id = T.entry_client_id and
-                Xl.parent_object_id = T.entry_object_id{sound_join_str};
+                Xl.parent_object_id = T.entry_object_id{sound_markup_join_str};
 
                 '''.format(
 
@@ -1046,26 +1222,37 @@ class Save_Context(object):
                     sound_fid_str =
                         sound_fid_str if sound_flag else '',
                         
-                    sound_cte_str =
-                        sound_cte_str if sound_flag else '',
+                    markup_fid_str =
+                        markup_fid_str if markup_flag else '',
                         
-                    sound_select_str =
-                        sound_select_str if sound_flag else '',
+                    sound_markup_cte_str =
+                        sound_cte_str if sound_only_flag else
+                        markup_cte_str if markup_only_flag else
+                        sound_markup_cte_str if sound_markup_flag else '',
                         
-                    sound_join_str =
-                        sound_join_str if sound_flag else ''))
+                    sound_markup_select_str =
+                        sound_select_str if sound_only_flag else
+                        markup_select_str if markup_only_flag else
+                        sound_markup_select_str if sound_markup_flag else '',
+
+                    sound_markup_join_str =
+                        sound_join_str if sound_only_flag else
+                        markup_join_str if markup_only_flag else 
+                        sound_markup_join_str if sound_markup_flag else ''))
 
             self.format_gray = (
                 self.workbook.add_format({'bg_color': '#e6e6e6'}))
 
-        # If we need to export sounds, we will need some sound fields info.
+        # If we need to export sounds and/or markups, we will need some sound/markup fields info.
 
-        if sound_flag:
+        if sound_flag or markup_flag:
 
             self.storage = storage
 
             self.storage_f = (
                 as_storage_file if __debug_flag__ else storage_file)
+
+        if sound_flag:
 
             self.sound_type_id = (
 
@@ -1082,6 +1269,27 @@ class Save_Context(object):
                         TranslationGist.type == 'Service',
                         TranslationAtom.marked_for_deletion == False,
                         TranslationAtom.content == 'Sound',
+                        TranslationAtom.locale_id == 2)
+                    
+                    .first())
+
+        if markup_flag:
+
+            self.markup_type_id = (
+
+                self.session
+
+                    .query(
+                        TranslationGist.client_id,
+                        TranslationGist.object_id)
+
+                    .join(TranslationAtom)
+
+                    .filter(
+                        TranslationGist.marked_for_deletion == False,
+                        TranslationGist.type == 'Service',
+                        TranslationAtom.marked_for_deletion == False,
+                        TranslationAtom.content == 'Markup',
                         TranslationAtom.locale_id == 2)
                     
                     .first())
@@ -1190,7 +1398,28 @@ class Save_Context(object):
 
         # Getting field data.
 
-        if self.sound_flag:
+        if self.sound_flag and self.markup_flag:
+
+            self.field_condition = (
+
+                or_(
+
+                    tuple_(
+                        DictionaryPerspectiveToField.field_client_id,
+                        DictionaryPerspectiveToField.field_object_id)
+
+                        .in_(
+                            sqlalchemy.text('select * from text_field_id_view')),
+
+                    and_(
+                        Field.data_type_translation_gist_client_id == self.sound_type_id[0],
+                        Field.data_type_translation_gist_object_id == self.sound_type_id[1]),
+
+                    and_(
+                        Field.data_type_translation_gist_client_id == self.markup_type_id[0],
+                        Field.data_type_translation_gist_object_id == self.markup_type_id[1])))
+
+        elif self.sound_flag:
 
             self.field_condition = (
 
@@ -1206,6 +1435,23 @@ class Save_Context(object):
                     and_(
                         Field.data_type_translation_gist_client_id == self.sound_type_id[0],
                         Field.data_type_translation_gist_object_id == self.sound_type_id[1])))
+
+        elif self.markup_flag:
+
+            self.field_condition = (
+
+                or_(
+
+                    tuple_(
+                        DictionaryPerspectiveToField.field_client_id,
+                        DictionaryPerspectiveToField.field_object_id)
+
+                        .in_(
+                            sqlalchemy.text('select * from text_field_id_view')),
+
+                    and_(
+                        Field.data_type_translation_gist_client_id == self.markup_type_id[0],
+                        Field.data_type_translation_gist_object_id == self.markup_type_id[1])))
 
         else:
 
@@ -1265,6 +1511,14 @@ class Save_Context(object):
                 for to_field, field in field_info_list
                 if field.data_type_translation_gist_id == self.sound_type_id)
 
+        if self.markup_flag:
+
+            self.markup_field_id_set = set(
+
+                field.id
+                for to_field, field in field_info_list
+                if field.data_type_translation_gist_id == self.markup_type_id)
+
         # Etymology field, if required.
 
         self.etymology_field = (
@@ -1278,9 +1532,49 @@ class Save_Context(object):
                 field_client_id=66,
                 field_object_id=25).first())
 
+        # To be sure, recursively ordering fields by subfield links, while preserving order.
+
+        subfield_dict = collections.defaultdict(list)
+
+        for field in self.fields:
+            subfield_dict[field.self_id].append(field)
+
+        field_set = set()
+        field_list = []
+
+        def f(field):
+
+            if field in field_set:
+                return
+
+            field_set.add(field)
+            field_list.append(field)
+
+            for subfield in subfield_dict[field.id]:
+                f(subfield)
+
+        # NOTE: not just 'in subfield_dict[(None, None)]', as we request only a subset of fields and we can
+        # get a subfield without a higher field, e.g. a markup field without its sound field.
+
+        for field in self.fields:
+            f(field)
+
+        # Showing field ordering, if required.
+
+        if __debug_flag__:
+
+            field_info_list = [
+                (field.field.get_translation(), field.id, field.self_id, field.field_id, field.position)
+                for field in field_list]
+
+            log.debug(
+                '\nfield info:\n' +
+                pprint.pformat(
+                    field_info_list, width = 192))
+
         self.field_to_column = {
             field_ids_to_str(field): counter
-            for counter, field in enumerate(self.fields)}
+            for counter, field in enumerate(field_list)}
 
         # Making more space.
 
@@ -1292,7 +1586,7 @@ class Save_Context(object):
             if self.cognates_flag:
 
                 self.worksheet.set_column(
-                    len(self.fields), len(self.fields) + 2, 13)
+                    len(self.fields), len(self.fields) + 4, 13)
 
         # Listing fields.
 
@@ -1313,7 +1607,11 @@ class Save_Context(object):
         self.row += 1
 
         self.perspective_fail_set = set()
+
         self.perspective_snd_fail_set = set()
+        self.perspective_mrkp_fail_set = set()
+
+        self.perspective_snd_mrkp_fail_set = set()
 
     def update_dictionary_info(
         self, perspective_id_set):
@@ -1330,7 +1628,7 @@ class Save_Context(object):
 
             if perspective_info:
 
-                order_key, name_str, xcript_fid, xlat_fid, snd_fid = perspective_info
+                order_key, name_str, xcript_fid, xlat_fid, snd_fid, mrkp_fid = perspective_info
 
                 if xcript_fid is None or xlat_fid is None:
 
@@ -1338,10 +1636,24 @@ class Save_Context(object):
                         (order_key, name_str))
 
                 elif (
+                    self.sound_flag and self.markup_flag and
+                    (snd_fid is None or mrkp_fid is None)):
+
+                    self.perspective_snd_mrkp_fail_set.add(
+                        (order_key, name_str))
+
+                elif (
                     self.sound_flag and
                     snd_fid is None):
 
                     self.perspective_snd_fail_set.add(
+                        (order_key, name_str))
+
+                elif (
+                    self.markup_flag and
+                    mrkp_fid is None):
+
+                    self.perspective_mrkp_fail_set.add(
                         (order_key, name_str))
 
             else:
@@ -1444,13 +1756,15 @@ class Save_Context(object):
                 pprint.pformat(
                     field_name_info_list, width = 192))
 
-            # Choosing perspective transcription and translation fields.
+            # Choosing perspective's transcription, translation, sound and markup fields.
             #
             # At first, we look for standard fields.
 
             transcription_fid = None
             translation_fid = None
+
             sound_fid = None
+            markup_fid = None
 
             for field_cid, field_oid, name_dict in field_name_info_list:
 
@@ -1463,17 +1777,24 @@ class Save_Context(object):
                 elif field_cid == 66 and field_oid == 12:
                     sound_fid = (field_cid, field_oid)
 
+                elif field_cid == 66 and field_oid == 23:
+                    markup_fid = (field_cid, field_oid)
+
             # If we don't have standard fields, we look through fields by names.
 
             if transcription_fid is None or translation_fid is None:
 
                 en_xcript_fid = None
                 en_xlat_fid = None
+
                 en_snd_fid = None
+                en_mrkp_fid = None
 
                 ru_xcript_fid = None
                 ru_xlat_fid = None
+
                 ru_snd_fid = None
+                ru_mrkp_fid = None
 
                 for field_cid, field_oid, name_dict in field_name_info_list:
 
@@ -1491,6 +1812,9 @@ class Save_Context(object):
                         elif en_name == 'sound':
                             en_snd_fid = (field_cid, field_oid)
 
+                        elif en_name == 'markup':
+                            en_mrkup_fid = (field_cid, field_oid)
+
                     if '1' in name_dict:
 
                         ru_name = (
@@ -1505,17 +1829,24 @@ class Save_Context(object):
                         elif ru_name == 'звук':
                             ru_snd_fid = (field_cid, field_oid)
 
+                        elif ru_name == 'разметка':
+                            ru_mrkp_fid = (field_cid, field_oid)
+
                 if en_xcript_fid is not None and en_xlat_fid is not None:
 
                     transcription_fid = en_xcript_fid
                     translation_fid = en_xlat_fid
+
                     sound_fid = en_snd_fid
+                    markup_fid = en_mrkp_fid
 
                 elif ru_xcript_fid is not None and ru_xlat_fid is not None:
 
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
+
                     sound_fid = ru_snd_fid
+                    markup_fid = ru_mrkp_fid
 
             # If we don't have fields with standard names, maybe this is paradigmatic perspective with
             # paradigmatic fields?
@@ -1524,11 +1855,15 @@ class Save_Context(object):
 
                 en_xcript_fid = None
                 en_xlat_fid = None
+
                 en_snd_fid = None
+                en_mrkp_fid = None
 
                 ru_xcript_fid = None
                 ru_xlat_fid = None
+
                 ru_snd_fid = None
+                ru_mrkp_fid = None
 
                 for field_cid, field_oid, name_dict in field_name_info_list:
 
@@ -1546,6 +1881,9 @@ class Save_Context(object):
                         elif en_name == 'soundofparadigmaticforms':
                             en_snd_fid = (field_cid, field_oid)
 
+                        elif en_name == 'paradigmmarkup':
+                            en_mrkp_fid = (field_cid, field_oid)
+
                     if '1' in name_dict:
 
                         ru_name = (
@@ -1560,21 +1898,28 @@ class Save_Context(object):
                         elif ru_name == 'звукпарадигматическихформ':
                             ru_snd_fid = (field_cid, field_oid)
 
+                        elif ru_name == 'разметкапарадигмы':
+                            ru_mrkp_fid = (field_cid, field_oid)
+
                 if en_xcript_fid is not None and en_xlat_fid is not None:
 
                     transcription_fid = en_xcript_fid
                     translation_fid = en_xlat_fid
+
                     sound_fid = en_snd_fid
+                    markup_fid = en_mrkp_fid
 
                 elif ru_xcript_fid is not None and ru_xlat_fid is not None:
 
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
+
                     sound_fid = ru_snd_fid
+                    markup_fid = ru_mrkp_fid
 
             # Finally, if it is a Starling-related perspective, we can try Starling-specific fields.
             #
-            # No sound field for such a perspective.
+            # No sound / markup fields for such a perspective.
 
             if ((transcription_fid is None or translation_fid is None) and
                 perspective_name_str.lower().find('starling') != -1):
@@ -1619,14 +1964,67 @@ class Save_Context(object):
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
 
-            # Ok, failed get transcription & translation fields, we should remember it.
+            # Ok, failed to get transcription & translation fields, we should remember it.
 
             if transcription_fid is None or translation_fid is None:
 
                 self.perspective_fail_set.add(
                     (order_key, name_str))
 
+            # Got transcription & translation fields, what about sound and/or markup?
+
             else:
+
+                # If we are going to show both sound and markup fields for cognates, we require that the
+                # markup field is a subfield of the sound field.
+
+                if self.sound_flag and self.markup_flag:
+
+                    if sound_fid is not None and markup_fid is not None:
+
+                        Sound = aliased(DictionaryPerspectiveToField, name = 'Sound')
+                        Markup = aliased(DictionaryPerspectiveToField, name = 'Markup')
+
+                        sound_markup_check = (
+
+                            self.session
+
+                                .query(
+
+                                    self.session
+                                    
+                                        .query(
+                                            literal(1))
+
+                                        .filter(
+                                            Sound.parent_client_id == perspective.client_id,
+                                            Sound.parent_object_id == perspective.object_id,
+                                            Sound.marked_for_deletion == False,
+                                            Sound.field_client_id == sound_fid[0],
+                                            Sound.field_object_id == sound_fid[1],
+                                            Markup.parent_client_id == perspective.client_id,
+                                            Markup.parent_object_id == perspective.object_id,
+                                            Markup.marked_for_deletion == False,
+                                            Markup.field_client_id == markup_fid[0],
+                                            Markup.field_object_id == markup_fid[1],
+                                            Markup.self_client_id == Sound.client_id,
+                                            Markup.self_object_id == Sound.object_id)
+
+                                        .exists())
+
+                                .scalar())
+
+                        if not sound_markup_check:
+
+                            sound_fid = None
+                            markup_fid = None
+
+                    if sound_fid is None or markup_fid is None:
+
+                        self.perspective_snd_mrkp_fail_set.add(
+                            (order_key, name_str))
+
+                # Either a single sound or a single markup field.
 
                 if (self.sound_flag and
                     sound_fid is None):
@@ -1634,24 +2032,43 @@ class Save_Context(object):
                     self.perspective_snd_fail_set.add(
                         (order_key, name_str))
 
+                if (self.markup_flag and
+                    markup_fid is None):
+
+                    self.perspective_mrkp_fail_set.add(
+                        (order_key, name_str))
+
                 format_str = (
-                    '({}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag else
+                    '({}, {}, {}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag and self.markup_flag else
+                    '({}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag or self.markup_flag else
                     '({}, {}, {}, {}, {}, {})')
 
-                insert_list.append(
+                format_arg_list = [
+                    perspective.client_id,
+                    perspective.object_id,
+                    transcription_fid[0],
+                    transcription_fid[1],
+                    translation_fid[0],
+                    translation_fid[1]]
 
-                    format_str.format(
-                        perspective.client_id,
-                        perspective.object_id,
-                        transcription_fid[0],
-                        transcription_fid[1],
-                        translation_fid[0],
-                        translation_fid[1],
+                if self.sound_flag:
+
+                    format_arg_list.extend([
                         sound_fid[0] if sound_fid is not None else 'null',
-                        sound_fid[1] if sound_fid is not None else 'null'))
+                        sound_fid[1] if sound_fid is not None else 'null'])
+
+                if self.markup_flag:
+
+                    format_arg_list.extend([
+                        markup_fid[0] if markup_fid is not None else 'null',
+                        markup_fid[1] if markup_fid is not None else 'null'])
+
+                insert_list.append(
+                    format_str.format(
+                        *format_arg_list))
 
             self.perspective_info_dict[perspective.id] = (
-                order_key, name_str, transcription_fid, translation_fid, sound_fid)
+                order_key, name_str, transcription_fid, translation_fid, sound_fid, markup_fid)
 
         # Updating perspectives' transcription / transpation field info, if required.
 
@@ -1705,7 +2122,11 @@ class Save_Context(object):
                 .execute(
                     self.sql_etymology_str_b.format(
                         '' if published is None else
-                            ' and P.published = {}'.format(published)))
+                            ' and P.published = {}'.format(published),
+                        '' if published is None else
+                            ' and Ps.published = {}'.format(published),
+                        '' if published is None else
+                            ' and Pm.published = {}'.format(published)))
 
                 .fetchall())
 
@@ -1725,6 +2146,8 @@ class Save_Context(object):
 
                 result_item[:6])
 
+            sound_markup_list = result_item[-1]
+
             perspective_info = (
                     
                 self.perspective_info_dict.get(
@@ -1733,8 +2156,9 @@ class Save_Context(object):
             if perspective_info is None:
                 continue
 
-            sound_list = (
-                result_item[-1] if self.sound_flag else [])
+            order_key, name_str, _, _, _, _ = perspective_info
+
+            # Getting ready to compose etymology info to inserted into XLSX.
 
             if transcription_list is None:
                 transcription_list = []
@@ -1742,24 +2166,78 @@ class Save_Context(object):
             if translation_list is None:
                 translation_list = []
 
-            if sound_list is None:
-                sound_list = []
+            if sound_markup_list is None:
+                sound_markup_list = []
+
+            zip_arg_list = [
+
+                [name_str],
+
+                [t.strip()
+                    for t in transcription_list],
+
+                ['\'' + t.strip() + '\''
+                    for t in translation_list]]
+
+            # Processing sound and/or markup links.
+
+            if self.sound_flag and self.markup_flag:
+
+                sound_cell_list = []
+                markup_cell_list = []
+
+                for s_content, s_created_at, markup_content_list in sound_markup_list:
+
+                    sound_cell_list.append(
+                        [self.get_sound_link(s_content, s_created_at)])
+
+                    markup_link_list = (
+
+                        [[self.get_markup_link(*args)]
+                            for args in markup_content_list
+                            if args[0] is not None])
+
+                    markup_cell_list.extend(markup_link_list)
+
+                    if not markup_link_list:
+                        markup_cell_list.append('')
+
+                    elif len(markup_link_list) > 1:
+                        sound_cell_list.extend([''] * (len(markup_link_list) - 1))
+
+                zip_arg_list.extend([
+                    sound_cell_list,
+                    markup_cell_list])
+
+            elif self.sound_flag:
+
+                zip_arg_list.extend([
+
+                    [[self.get_sound_link(*args)]
+                        for args in sound_markup_list],
+
+                    []])
+
+            elif self.markup_flag:
+
+                zip_arg_list.extend([
+
+                    [[self.get_markup_link(*args)]
+                        for args in sound_markup_list],
+
+                    []])
+
+            else:
+
+                zip_arg_list.extend([[], []])
 
             # Preparing info of another cognate lexical entry.
-
-            order_key, name_str, _, _, _ = perspective_info
 
             row_list = (
                     
                 tuple(
                     itertools.zip_longest(
-                        [name_str],
-                        [t.strip()
-                            for t in transcription_list],
-                        ['\'' + t.strip() + '\''
-                            for t in translation_list],
-                        [[self.get_sound_link(*args)]
-                            for args in sound_list],
+                        *zip_arg_list,
                         fillvalue = '')))
 
             info_list.append((
@@ -1783,7 +2261,8 @@ class Save_Context(object):
         self,
         entry,
         published = None,
-        accepted = True):
+        accepted = True,
+        __debug_flag__ = False):
         """
         Save data of a lexical entry of the current perspective.
         """
@@ -1806,20 +2285,82 @@ class Save_Context(object):
             if accepted is not None:
                 entities = entities.filter(PublishingEntity.accepted == accepted)
 
-        # Processing all entities of the entry.
+        # Arranging entities by subentity relation.
 
-        for entity in entities:
+        entity_list = entities.all()
+        subentity_dict = collections.defaultdict(list)
 
-            ent_field_ids = field_ids_to_str(entity)
+        for entity in entity_list:
+            subentity_dict[entity.self_id].append(entity)
 
-            # Processing text and sound entities.
+        def f(entity):
+            """
+            Recursively processes entities and subentities.
+            """
 
-            if ent_field_ids in self.field_to_column:
+            ent_field_ids = (
+                field_ids_to_str(entity))
+
+            # Adding etymologycal info, if required.
+
+            if ent_field_ids == "66_25":
+
+                if (self.etymology_field and
+                    len(rows_to_write) == len(self.fields)):
+
+                    entry_id = (entry.client_id, entry.object_id)
+
+                    if entry_id in self.etymology_dict:
+
+                        etymology_info = (
+                            self.etymology_dict[entry_id])
+
+                    else:
+
+                        etymology_info = (
+                                
+                            self.get_etymology_info(
+                                entity.content, published))
+
+                    # Dictionary name, transcriptions and translations of all linked entries.
+
+                    start_index = (
+                        len(rows_to_write))
+
+                    rows_to_write.extend(
+                        ([], [], [], [], []))
+
+                    for _, cognate_entry_id, row_list in etymology_info:
+
+                        if cognate_entry_id == entry_id:
+                            continue
+
+                        cell_format = None
+
+                        if row_list and not row_list[0][1]:
+
+                            cell_format = self.format_gray
+
+                        for cell_list in row_list:
+
+                            for index, value in enumerate(cell_list):
+                                rows_to_write[start_index + index].append((value, cell_format))
+
+                return {}
+
+            # Text, sound / markup entity.
+
+            row_count_dict = collections.Counter()
+
+            column = (
+                self.field_to_column.get(ent_field_ids))
+
+            if column is not None:
 
                 if (self.sound_flag and
                     entity.field_id in self.sound_field_id_set):
 
-                    # Sound entity, getting sound file link.
+                    # Sound entity, getting sound file link, wrapping it in a list to show it's a link.
 
                     sound_link = (
                             
@@ -1827,64 +2368,62 @@ class Save_Context(object):
                             entity.content,
                             entity.created_at))
 
-                    (rows_to_write[
-                        self.field_to_column[ent_field_ids]]
-                    
-                        .append([sound_link]))
+                    rows_to_write[column].append([sound_link])
+
+                elif (self.markup_flag and
+                    entity.field_id in self.markup_field_id_set):
+
+                    # Markup entity, getting markup file link, wrapping it in a list to show it's a link.
+
+                    markup_link = (
+                            
+                        self.get_markup_link(
+                            entity.content,
+                            entity.created_at))
+
+                    rows_to_write[column].append([markup_link])
 
                 else:
 
                     # Text entity, simply getting its text content.
 
-                    (rows_to_write[
-                        self.field_to_column[ent_field_ids]]
-                    
-                        .append(entity.content))
+                    rows_to_write[column].append(entity.content)
 
-            # Adding etymologycal info, if required.
+                row_count_dict[column] += 1
 
-            elif (
-                ent_field_ids == "66_25" and
-                self.etymology_field and
-                len(rows_to_write) == len(self.fields)):
+            # Now processing subentities, if we have any, and aligning column content if subentities'
+            # data takes more than one row.
 
-                entry_id = (entry.client_id, entry.object_id)
+            for subentity in subentity_dict[entity.id]:
 
-                if entry_id in self.etymology_dict:
+                for subcolumn, subcount in f(subentity).items():
+                    row_count_dict[subcolumn] += subcount
 
-                    etymology_info = (
-                        self.etymology_dict[entry_id])
+            row_count = (
+                max(row_count_dict.values(), default = 0))
 
-                else:
+            for column, count in row_count_dict.items():
 
-                    etymology_info = (
-                            
-                        self.get_etymology_info(
-                            entity.content, published))
+                if count < row_count:
 
-                # Dictionary name, transcriptions and translations of all linked entries.
+                    rows_to_write[column].extend(
+                        [''] * (row_count - count))
 
-                start_index = (
-                    len(rows_to_write))
+                    row_cound_dict[column] = row_count
 
-                rows_to_write.extend(
-                    ([], [], [], []))
+            return row_count_dict
 
-                for _, cognate_entry_id, row_list in etymology_info:
+        # Recursively processing all entities of the entry, starting with top-level ones.
 
-                    if cognate_entry_id == entry_id:
-                        continue
+        for entity in subentity_dict[(None, None)]:
+            f(entity)
 
-                    cell_format = None
+        if __debug_flag__:
 
-                    if row_list and not row_list[0][1]:
-
-                        cell_format = self.format_gray
-
-                    for cell_list in row_list:
-
-                        for index, value in enumerate(cell_list):
-                            rows_to_write[start_index + index].append((value, cell_format))
+            log.debug(
+                '\nrows_to_write:\n' +
+                pprint.pformat(
+                    rows_to_write, width = 192))
 
         # Writing out lexical entry data, if we have any.
 
@@ -1897,7 +2436,7 @@ class Save_Context(object):
 
                 for index, cell in enumerate(cell_list):
 
-                    # Tuple means with format, list means a local link.
+                    # Tuple means with format.
 
                     if isinstance(cell, tuple):
 
@@ -1912,6 +2451,8 @@ class Save_Context(object):
 
                             self.worksheet.write(
                                 self.row, index, value, cell_format)
+
+                    # List means a local link.
 
                     elif isinstance(cell, list):
 
@@ -2018,6 +2559,46 @@ class Save_Context(object):
 
         return zip_info.filename
 
+    def get_markup_link(
+        self,
+        markup_url,
+        created_at):
+        """
+        Processes linked markup file, adding it to the archive if necessary.
+        """
+
+        with self.storage_f(
+            self.storage, markup_url) as markup_stream:
+
+            markup_bytes = markup_stream.read()
+
+        # Checking if we need to save the file, and if we need to rename it to avoid duplicate
+        # names.
+
+        zip_info = (
+                
+            self.get_zip_info(
+
+                path.basename(
+                    urllib.parse.urlparse(markup_url).path),
+
+                hashlib.sha256(
+                    markup_bytes).digest(),
+
+                datetime.datetime.utcfromtimestamp(
+                    created_at)))
+
+        # Saving markup file to the archive, if required.
+
+        if isinstance(zip_info, str):
+            return zip_info
+
+        zip_info.compress_type = zipfile.ZIP_DEFLATED
+
+        self.zip_file.writestr(zip_info, markup_bytes)
+
+        return zip_info.filename
+
 
 def compile_workbook(
     context,
@@ -2043,7 +2624,9 @@ def compile_workbook(
 
     for perspective in perspectives:
 
-        context.ready_perspective(perspective)
+        context.ready_perspective(
+            perspective,
+            __debug_flag__ = __debug_flag__)
 
         lexical_entries = session.query(LexicalEntry).join(Entity).join(PublishingEntity) \
             .filter(LexicalEntry.parent_client_id == perspective.client_id,
@@ -2058,7 +2641,8 @@ def compile_workbook(
 
             context.save_lexical_entry(
                 lex,
-                published)
+                published,
+                __debug_flag__ = __debug_flag__)
 
         # Writing out additional perspective info, if we have any.
 
@@ -2100,6 +2684,46 @@ def compile_workbook(
 
                 context.row += 1
 
+        # And for missing markup fields.
+
+        if context.perspective_mrkp_fail_set:
+
+            context.row += 1
+
+            context.worksheet.write(
+                context.row, 0,
+                'Perspective{} without appropriate markup field:'.format(
+                    '' if len(context.perspective_mrkp_fail_set) == 1 else 's'))
+
+            context.row += 1
+
+            for _, name_str in sorted(context.perspective_mrkp_fail_set):
+
+                context.worksheet.write(
+                    context.row, 0, name_str)
+
+                context.row += 1
+
+        # And for missing joint sound / markup field pairs.
+
+        if context.perspective_snd_mrkp_fail_set:
+
+            context.row += 1
+
+            context.worksheet.write(
+                context.row, 0,
+                'Perspective{} without appropriate sound and markup fields:'.format(
+                    '' if len(context.perspective_snd_mrkp_fail_set) == 1 else 's'))
+
+            context.row += 1
+
+            for _, name_str in sorted(context.perspective_snd_mrkp_fail_set):
+
+                context.worksheet.write(
+                    context.row, 0, name_str)
+
+                context.row += 1
+
     context.workbook.close()
 
 
@@ -2115,6 +2739,7 @@ def save_dictionary(
     locale_id,
     published,
     sound_flag,
+    markup_flag,
     __debug_flag__ = False
 ):  # :(
 
@@ -2141,10 +2766,11 @@ def save_dictionary(
                 session,
                 True,
                 sound_flag,
+                markup_flag,
                 storage,
                 __debug_flag__))
 
-        if sound_flag:
+        if sound_flag or markup_flag:
 
             temporary_zip_file = (
                     
@@ -2188,9 +2814,9 @@ def save_dictionary(
                 save_context.stream.seek(0)
                 copyfileobj(save_context.stream, xlsx_file)
 
-        # Either addint XLSX file to the Zip archive...
+        # Either adding XLSX file to the Zip archive...
 
-        if sound_flag:
+        if sound_flag or markup_flag:
 
             zip_info = (
 
