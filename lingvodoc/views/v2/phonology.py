@@ -542,12 +542,6 @@ class AudioPraatLike(object):
 
         self.formant_padding = int(math.floor(padding * factor))
 
-        # NOTE: we have to manually clear rfft's cache because otherwise it will grow indefinitely while
-        # processing many series of different lengths.
-
-        if len(numpy.fft.fftpack._real_fft_cache) >= 16:
-            numpy.fft.fftpack._real_fft_cache = {}
-
         # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
         # than 50 Hz.
 
