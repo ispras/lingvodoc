@@ -2409,7 +2409,7 @@ class Save_Context(object):
                     rows_to_write[column].extend(
                         [''] * (row_count - count))
 
-                    row_cound_dict[column] = row_count
+                    row_count_dict[column] = row_count
 
             return row_count_dict
 
