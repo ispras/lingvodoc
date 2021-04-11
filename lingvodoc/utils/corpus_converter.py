@@ -12,7 +12,7 @@ import warnings
 import logging
 import requests
 import pprint
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from pathvalidate import sanitize_filename
 from urllib import request
 from sqlalchemy.orm.exc import NoResultFound
@@ -344,7 +344,8 @@ def convert_five_tiers(dictionary_id,
                 cache_kwargs,
                 translation_gist_id,
                 language_id,
-                sound_url):
+                sound_url,
+                no_sound_flag):
 
     task_status.set(1, 1, "Preparing")
 
@@ -446,6 +447,8 @@ def convert_five_tiers(dictionary_id,
             DBSession.add(dictionary)
             DBSession.flush()
 
+            dictionary_id = dictionary.id
+
             dictionary_client_id = dictionary.client_id
             dictionary_object_id = dictionary.object_id
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -458,13 +461,17 @@ def convert_five_tiers(dictionary_id,
                 DBSession.flush()
             #dictionary_client_id, dictionary_object_id = dbdictionary_obj.client_id, dbdictionary_obj.object_id
 
-        sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
-        sound_url = None
-        if sound_entity:
-            sound_url = sound_entity.content
         no_sound = True
-        if sound_url:
-            no_sound = False
+
+        if not no_sound_flag:
+
+            sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
+            sound_url = None
+            if sound_entity:
+                sound_url = sound_entity.content
+            if sound_url:
+                no_sound = False
+
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
             try:
@@ -715,7 +722,7 @@ def convert_five_tiers(dictionary_id,
             sp_fields_dict[fieldname] = (field_ids[fieldname][0], field_ids[fieldname][1])
         sp_fields_dict["Paradigm Markup"] = (field_ids["Paradigm Markup"][0], field_ids["Paradigm Markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
-        dubl = []
+        dubl = set()
 
         # Getting field data types.
 
@@ -783,7 +790,32 @@ def convert_five_tiers(dictionary_id,
 
         current_percent = 60
 
+        # Showing what we've got from the corpus.
+
+        def f(value):
+
+            if isinstance(value, elan_parser.Word):
+                return value.get_tuple()
+
+            elif isinstance(value, list):
+                return [f(x) for x in value]
+
+            return (
+                OrderedDict(
+                    ((f(x), f(y)) for x, y in value.items())))
+
+        log.debug(
+            '\nfinal_dicts:\n' +
+            pprint.pformat(f(final_dicts), width = 192))
+
+        # Processing corpus info.
+
         for phrase_index, phrase in enumerate(final_dicts):
+
+            log.debug(
+                f'\nphrase {phrase_index}:\n' +
+                pprint.pformat(f(phrase), width = 192))
+
             curr_dict = {}
             paradigm_words = []
             for word_translation in phrase:
@@ -803,13 +835,32 @@ def convert_five_tiers(dictionary_id,
                                                                tier="Word of Paradigmatic forms",
                                                                time=main_tier_time)
                                               )
+                        log.debug(
+                            '\nparadigm_word:\n' +
+                            pprint.pformat(
+                                paradigm_words[-1].get_tuple(), width = 192))
                 else:
                     word = word_translation[0]
                     tier_name = word.tier
                     new = " ".join([i.text for i in word_translation if i.text is not None])
                     if new:
                         paradigm_words.append(elan_parser.Word(text=new, tier=tier_name, time=word.time))
+                        log.debug(
+                            '\nparadigm_word:\n' +
+                            pprint.pformat(
+                                paradigm_words[-1].get_tuple(), width = 192))
+
             par_row  = tuple([x.text for x in paradigm_words])
+
+            log.debug(
+                '\nparadigm_words:\n' +
+                pprint.pformat(f(paradigm_words), width = 192) +
+                '\npar_row:\n' +
+                pprint.pformat(par_row, width = 192))
+
+            sp_lexical_entry_client_id = None
+            sp_lexical_entry_object_id = None
+
             if par_row and par_row not in par_rows:
                 p_match_dict = defaultdict(list)
                 for pword in paradigm_words:
@@ -920,7 +971,6 @@ def convert_five_tiers(dictionary_id,
                                           storage=storage)
 
                         temp.flush()
-            p_match_dict.clear()
             paradigm_words[:] = []
             for word in curr_dict:
                 if curr_dict:
@@ -1041,11 +1091,19 @@ def convert_five_tiers(dictionary_id,
                                               content=base64.urlsafe_b64encode(audio_slice).decode(),
                                               storage=storage)
                             temp.flush()
+
                 fp_le_ids = (fp_lexical_entry_client_id, fp_lexical_entry_object_id)
                 sp_le_ids = (sp_lexical_entry_client_id, sp_lexical_entry_object_id)
+
+                # If we don't have a paradigm entry (e.g. when we have no paradigm text and no paradigm
+                # translation in the corpus), we obviously do not establish any links.
+
+                if sp_le_ids == (None, None):
+                    continue
+
                 dubl_tuple = (sp_le_ids, fp_le_ids)
                 if not dubl_tuple in dubl:
-                    dubl.append(dubl_tuple)
+                    dubl.add(dubl_tuple)
                     if max_sim:
                         if not (sp_le_ids, fp_le_ids) in links :
                             create_entity(sp_lexical_entry_client_id,
@@ -1467,6 +1525,8 @@ def convert_five_tiers(dictionary_id,
 
     task_status.set(10, 100, "Finished", "")
 
+    return dictionary_id
+
 
 def convert_all(dictionary_id,
                 client_id,
@@ -1479,6 +1539,7 @@ def convert_all(dictionary_id,
                 translation_gist_id,
                 language_id,
                 sound_url,
+                no_sound_flag = False,
                 synchronous = False):
 
     if not synchronous:
@@ -1488,8 +1549,12 @@ def convert_all(dictionary_id,
         initialize_cache(cache_kwargs)
 
     task_status = TaskStatus.get_from_cache(task_key)
+
     try:
-        convert_five_tiers(
+
+        result = (
+
+            convert_five_tiers(
                 dictionary_id,
                 client_id,
                 sqlalchemy_url,
@@ -1500,9 +1565,13 @@ def convert_all(dictionary_id,
                 cache_kwargs,
                 translation_gist_id,
                 language_id,
-                sound_url
-                    )
+                sound_url,
+                no_sound_flag))
+
     except Exception as err:
         task_status.set(None, -1, "Conversion failed: %s" % str(err))
         raise
+
     DBSession.flush()
+    return result
+
