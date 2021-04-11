@@ -161,7 +161,8 @@ def async_convert_five_tiers(dictionary_id,
                 cache_kwargs,
                 translation_gist_id=None,
                 language_id=None,
-                sound_url=None):
+                sound_url=None,
+                no_sound_flag=False):
 
     convert_all(dictionary_id,
                 client_id,
@@ -173,7 +174,8 @@ def async_convert_five_tiers(dictionary_id,
                 cache_kwargs,
                 translation_gist_id,
                 language_id,
-                sound_url)
+                sound_url,
+                no_sound_flag)
     return
 
 
@@ -211,9 +213,10 @@ class ConvertFiveTiers(graphene.Mutation):
         language_id = LingvodocID()
         translation_gist_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
+        no_sound_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
 
-
+    dictionary_id = LingvodocID()
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -237,6 +240,7 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
         cur_args["storage"] = request.registry.settings["storage"]
         cur_args["language_id"] = args.get('language_id')
+        cur_args["no_sound_flag"] = args.get('no_sound_flag', False)
 
         if not args.get("dictionary_id"):
             if "translation_gist_id" in args:
@@ -304,4 +308,8 @@ class ConvertFiveTiers(graphene.Mutation):
             convert_f = async_convert_five_tiers.delay
 
         res = convert_f(**cur_args)
-        return ConvertFiveTiers(triumph=True)
+
+        return (
+            ConvertFiveTiers(
+                triumph = True,
+                dictionary_id = res))
