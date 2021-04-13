@@ -98,11 +98,11 @@ transaction==1.6.1
 translationstring==1.3
 typepy==0.6.6
 typing==3.6.2
-uniparser-udmurt==2.1.0
 uniparser-erzya==1.1.0
-uniparser-moksha==1.1.0
 uniparser-komi-zyrian==1.1.1
 uniparser-meadow-mari==1.1.2
+uniparser-moksha==1.1.0
+uniparser-udmurt==2.1.0
 urllib3==1.25.10
 venusian==1.0
 waitress==0.9.0
