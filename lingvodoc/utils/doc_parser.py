@@ -1,11 +1,11 @@
 import json
 import re
 
-from udmparser.analyzer.analyze import analyze as analyze_udm
-from erzyanparser.analyzer.analyze import analyze as analyze_erzya
-from mokshanparser.analyzer.analyze import analyze as analyze_moksha
-from komizyryanparser.analyzer.analyze import analyze as analyze_komi_zyryan
-from meadowmariparser.analyzer.analyze import analyze as analyze_meadow_mari
+from uniparser_erzya import ErzyaAnalyzer
+from uniparser_meadow_mari import MeadowMariAnalyzer
+from uniparser_udmurt import UdmurtAnalyzer
+from uniparser_moksha import MokshaAnalyzer
+from uniparser_komi_zyrian import KomiZyrianAnalyzer
 from nltk.tokenize import RegexpTokenizer
 import csv
 import os
@@ -29,7 +29,7 @@ def dedoc_extract(file, dedoc_url):
 This is the main parsing function with all parameters
 Some of these parameters may be added further
 
-def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
+def analyze_wordlist(freqListFile, paradigmFile, lexFile, lexRulesFile,
             derivFile, conversionFile, cliticFile, delAnaFile,
             parsedFile, unparsedFile, errorFile,
             xmlOutput=True, verboseGrammar=False, parserVerbosity=0,
@@ -42,7 +42,6 @@ def analyze(freqListFile, paradigmFile, lexFile, lexRulesFile,
 
 
 def timarkh_uniparser(content_file, dedoc_url, lang):
-
     # Save dedoc module output for further result composing
     # Exclude sub tag with content as have no need in it
     dedoc_output = dedoc_extract(content_file, dedoc_url)
@@ -51,7 +50,7 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
     # Build the content for parsing by formatting the dedoc's output
     # Build a csv file with frequences of each word in the input document to pass it to the parsing function
     content_for_parsing = re.sub(r"(<.*?>)|nbsp", " ", dedoc_output)
-    tokenizer = RegexpTokenizer(r'\w+[-\w]+')
+    tokenizer = RegexpTokenizer(r'(?!\w+-[-\w]+)\w+|\w+-[\w]+')
     freq_dict = dict()
     for word in tokenizer.tokenize(content_for_parsing):
         if word.lower() not in freq_dict.keys():
@@ -72,15 +71,20 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
     open(unparsed_filename, 'w').close()
 
     if lang == 'udm':
-        analyze_udm(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+        udmurt = UdmurtAnalyzer(mode='strict')
+        udmurt.analyze_wordlist(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
     if lang == 'erzya':
-        analyze_erzya(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+        erzya = ErzyaAnalyzer(mode='strict')
+        erzya.analyze_wordlist(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
     if lang == 'moksha':
-        analyze_moksha(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+        moksha = MokshaAnalyzer(mode='strict')
+        moksha.analyze_wordlist(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
     if lang == 'komi_zyryan':
-        analyze_komi_zyryan(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+        komi_zyrian = KomiZyrianAnalyzer(mode='strict')
+        komi_zyrian.analyze_wordlist(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
     if lang == 'meadow_mari':
-        analyze_meadow_mari(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
+        meadow_mari = MeadowMariAnalyzer(mode='strict')
+        meadow_mari.analyze_wordlist(freqListFile=csv_filename, parsedFile=parsed_filename, unparsedFile=unparsed_filename)
 
     def insert_parser_results(parser_output, dedoc_output):
 
