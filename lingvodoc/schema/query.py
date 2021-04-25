@@ -543,6 +543,7 @@ class Query(graphene.ObjectType):
             debug_flag = graphene.Boolean()))
 
     version = graphene.String()
+    version_uniparser = ObjectVal()
 
     client_list = (
         graphene.Field(
@@ -584,6 +585,9 @@ class Query(graphene.ObjectType):
 
     def resolve_version(self, info):
         return lingvodoc.version.__version__
+
+    def resolve_version_uniparser(self, info):
+        return lingvodoc.version.uniparser_version_dict
 
     def resolve_eaf_search(
         self,

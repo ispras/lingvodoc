@@ -11,7 +11,9 @@ from setuptools import setup, find_packages
 from setuptools.command.develop import develop
 from setuptools.command.install import install
 
-from lingvodoc import get_git_version
+from lingvodoc import (
+    get_git_version,
+    get_uniparser_version)
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -77,11 +79,9 @@ class React_Interface_Mixin(object):
             lingvodoc_dir, 'assets'))
 
 
-class Git_Version_Mixin(object):
+class Version_Mixin(object):
     """
-    Tries to determine version from the Git repository state.
-
-    Absense of Git repository is silently ignored.
+    Tries to determine version from the Git repository state and pip installation state.
     """
 
     version_py_template = textwrap.dedent(
@@ -89,28 +89,38 @@ class Git_Version_Mixin(object):
         '''\
 
         # This file is overwritten on setup.
+        #
         # Please do not modify it and ignore its changes in version control.
-        __version__ = '{}'
+
+        __version__ = {}
+
+        uniparser_version_dict = {}
 
         ''')
 
     def run(self):
         """
-        Tries to determine version from the Git repository state, saves it to 'lingvodoc/version.py' if
-        successful.
+        Tries to determine version info from the Git repository and pip installation state, saves it to
+        'lingvodoc/version.py' if required.
         """
 
         version_str = (
             get_git_version(here))
 
-        if version_str is not None:
+        version_uniparser_dict = (
+            get_uniparser_version())
+
+        if (version_str is not None or
+            version_uniparser_dict is not None):
 
             with open(
                 os.path.join(here, 'lingvodoc', 'version.py'), 'w',
                 encoding = 'utf-8') as version_py_file:
 
                 version_py_file.write(
-                    self.version_py_template.format(version_str))
+                    self.version_py_template.format(
+                        repr(version_str),
+                        repr(version_uniparser_dict)))
 
         # Continuing with setup.
 
@@ -127,12 +137,13 @@ class develop_with_interface(
     __react_path_attr__ = 'egg_path'
 
     user_options = (
-        develop.user_options + React_Interface_Mixin.user_options)
+        develop.user_options +
+        React_Interface_Mixin.user_options)
 
 
 class install_with_interface(
     React_Interface_Mixin,
-    Git_Version_Mixin,
+    Version_Mixin,
     install):
     """
     Extends 'install' setup.py command with ability to install React-based interface and update version from
