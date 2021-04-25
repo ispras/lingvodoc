@@ -8,6 +8,7 @@ import distutils.util
 import logging
 import os.path
 import re
+import subprocess
 
 try:
     import git
@@ -32,6 +33,10 @@ from .acl import (
     groupfinder
 )
 import multiprocess
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 
 def get_git_version(repository_dir):
@@ -115,7 +120,7 @@ def get_git_version(repository_dir):
 
     else:
 
-        # No tagged version, using just the fallback commit hash/
+        # No tagged version, using just the fallback commit hash.
 
         assert (
             head_commit.hexsha.startswith(
@@ -198,18 +203,60 @@ def get_git_version(repository_dir):
     return version_str
 
 
+def get_uniparser_version():
+    """
+    Gets versions of some uniparser-* packages.
+    """
+
+    try:
+
+        result = (
+
+            subprocess.check_output([
+                'pip',
+                'show', 
+                'uniparser-erzya',
+                'uniparser-komi-zyrian',
+                'uniparser-meadow-mari',
+                'uniparser-moksha',
+                'uniparser-udmurt']))
+
+    except:
+
+        return None
+
+    version_str_list = (
+
+        re.findall(
+            r'Name: (.*)(\n\r?|\r\n?)Version: (.*)',
+            result.decode('utf-8')))
+
+    version_str_dict = {
+        name_str: version_str
+        for name_str, _, version_str in version_str_list}
+
+    log.debug(
+        f'\nversion_str_dict: {version_str_dict}')
+
+    return version_str_dict or None
+
+
 # Updating version with current Git repository info, if we have any, setting up package version.
 
 import lingvodoc.version
 
 version_str = (
     get_git_version(os.path.join(
-      os.path.dirname(__file__), '..')))
+        os.path.dirname(__file__), '..')))
 
 if version_str is not None:
-  lingvodoc.version.__version__ = version_str
+    lingvodoc.version.__version__ = version_str
 
 __version__ = lingvodoc.version.__version__
+
+# Getting version of some uniparser-* packages.
+
+lingvodoc.version.uniparser_version_dict = get_uniparser_version()
 
 
 # def add_route_custom(config, name, pattern, api_version=[]):
