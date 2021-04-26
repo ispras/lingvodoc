@@ -213,7 +213,7 @@ def get_uniparser_version():
         result = (
 
             subprocess.check_output([
-                'pip',
+                'pip3',
                 'show', 
                 'uniparser-erzya',
                 'uniparser-komi-zyrian',
