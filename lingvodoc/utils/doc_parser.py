@@ -40,7 +40,6 @@ def analyze_wordlist(freqListFile, paradigmFile, lexFile, lexRulesFile,
 
 # Parses an odt file with udmurtian text, returns an html string with parsed words wrapped into tags
 
-
 def timarkh_uniparser(content_file, dedoc_url, lang):
     # Save dedoc module output for further result composing
     # Exclude sub tag with content as have no need in it
@@ -50,13 +49,22 @@ def timarkh_uniparser(content_file, dedoc_url, lang):
     # Build the content for parsing by formatting the dedoc's output
     # Build a csv file with frequences of each word in the input document to pass it to the parsing function
     content_for_parsing = re.sub(r"(<.*?>)|nbsp", " ", dedoc_output)
-    tokenizer = RegexpTokenizer(r'(?!\w+-[-\w]+)\w+|\w+-[\w]+')
+    tokenizer = RegexpTokenizer(r'(?!\w+(?:-\w+)+)\w+|\w+(?:-\w+)+')
     freq_dict = dict()
     for word in tokenizer.tokenize(content_for_parsing):
-        if word.lower() not in freq_dict.keys():
-            freq_dict[word.lower()] = 1
+        lowered = word.lower()
+        if lowered not in freq_dict.keys():
+            freq_dict[lowered] = 1
         else:
-            freq_dict[word.lower()] += 1
+            freq_dict[lowered] += 1
+        if lowered.find("-") != -1:
+            parts = lowered.split("-")
+            for part in parts:
+                if part not in freq_dict.keys():
+                    freq_dict[part] = 1
+                else:
+                    freq_dict[part] += 1
+
     csv_file_id, csv_filename = tempfile.mkstemp()
     csv_file = open(csv_filename, 'w+', newline='')
     writer = csv.writer(csv_file, delimiter='\t')
