@@ -6,4 +6,6 @@
 *.xlsx
 *.zip
 .git
+docker/dbdump/*
+docker/frontend/*
 pyramid.log*

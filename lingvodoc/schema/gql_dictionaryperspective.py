@@ -49,6 +49,7 @@ from lingvodoc.schema.gql_user import User
 from lingvodoc.utils.search import translation_gist_search
 from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (
+    create_dictionary_persp_to_field,
     create_perspective,
     create_gists_with_atoms,
     edit_role,
@@ -767,6 +768,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
         import_source = graphene.String()
         import_hash = graphene.String()
         is_template = graphene.Boolean()
+        fields = graphene.List(ObjectVal)
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -792,6 +794,9 @@ class CreateDictionaryPerspective(graphene.Mutation):
         import_hash = args.get('import_hash')
         additional_metadata = args.get('additional_metadata')
         is_template = args.get("is_template")
+
+        field_info_list = args.get('fields')
+
         dbperspective = create_perspective(id=id,
                                 parent_id=parent_id,
                                 translation_gist_id=translation_gist_id,
@@ -800,8 +805,53 @@ class CreateDictionaryPerspective(graphene.Mutation):
                                 import_hash=import_hash,
                                 is_template=is_template
                                 )
-        perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+
+        perspective_id = (
+            (dbperspective.client_id, dbperspective.object_id))
+
+        perspective = DictionaryPerspective(id = perspective_id)
         perspective.dbObject = dbperspective
+
+        # Creating fields, if required.
+
+        if field_info_list:
+
+            log.debug(
+                '\nfield_info_list:\n' +
+                pprint.pformat(
+                    field_info_list, width = 192))
+
+            counter = 0
+            fake_id_dict = {}
+
+            for field_info in field_info_list:
+
+                counter += 1
+
+                self_id = field_info['self_id']
+
+                if self_id is not None:
+
+                    if self_id not in fake_id_dict:
+                        raise ResponseError(f'Unknown fake id \'{self_id}\'.')
+
+                    self_id = fake_id_dict[self_id]
+
+                persp_to_field = (
+
+                    create_dictionary_persp_to_field(
+                        id = (client_id, None),
+                        parent_id = perspective_id,
+                        field_id = field_info['field_id'],
+                        self_id = self_id,
+                        link_id = field_info['link_id'],
+                        position = counter))
+
+                if 'id' in field_info:
+
+                    fake_id_dict[field_info['id']] = (
+                        (persp_to_field.client_id, persp_to_field.object_id))
+
         return CreateDictionaryPerspective(perspective=perspective, triumph=True)
 
 
