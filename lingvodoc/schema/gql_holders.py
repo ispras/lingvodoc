@@ -122,8 +122,7 @@ def client_id_check():
             authenticated = info.context.client_id
             if client_id:
                 if not check_client_id(authenticated, client_id):
-                    raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                                   authenticated)
+                    raise KeyError("Clients of mismatched users.", authenticated, client_id)
             else:
                 client = DBSession.query(dbClient).filter_by(id=authenticated).first()
                 if not client:

@@ -159,7 +159,7 @@ class UpdateParserResult(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
+#   @client_id_check()
     def mutate(root, info, **args):
         id = args.get('id')
         content = args.get('content')
