@@ -11,8 +11,14 @@ from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.schema.gql_holders import LingvodocID, LingvodocObjectType, AdditionalMetadata, CreatedAt, \
     MarkedForDeletion, fetch_object, client_id_check, CompositeIdHolder, ObjectVal, ResponseError
-from lingvodoc.models import DBSession, ParserResult as dbParserResult, \
-    Entity as dbEntity, Parser as dbParser, Client
+from lingvodoc.models import (
+    DBSession,
+    ParserResult as dbParserResult,
+    Entity as dbEntity,
+    Parser as dbParser,
+    Client,
+    LexicalEntry as dbLexicalEntry
+)
 from lingvodoc.schema.gql_parser import Parser
 from lingvodoc.utils.creation import create_parser_result, async_create_parser_result
 from lingvodoc.schema.gql_parser import ParameterType
@@ -140,14 +146,52 @@ class DeleteParserResult(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(root, info, **args):
+
         id = args.get('id')
         parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1]).first()
         if not parser_result:
             raise ResponseError("No such parser result in the system")
+
+        # If not an admin, checking for permissions.
+
+        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           info.context["client_id"])
+        else:
+            user_id = Client.get_user_by_client_id(client.id).id
+
+        if user_id != 1:
+
+            perspective_id = (
+
+                DBSession
+
+                    .query(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id)
+
+                    .filter(
+                        dbLexicalEntry.client_id == dbEntity.parent_client_id,
+                        dbLexicalEntry.object_id == dbEntity.parent_object_id,
+                        dbEntity.client_id == parser_result.entity_client_id,
+                        dbEntity.object_id == parser_result.entity_object_id)
+
+                    .first())
+
+            if not perspective_id:
+
+                raise KeyError(
+                    'Failed to get perspective of the parser result.',
+                    (parser_result.client_id, parser_result.object_id))
+
+            info.context.acl_check(
+                'delete', 'lexical_entries_and_entities', perspective_id)
+
         parser_result.marked_for_deletion = True
         transaction.commit()
+
         return DeleteParserResult(triumph=True)
 
 
@@ -159,13 +203,51 @@ class UpdateParserResult(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-#   @client_id_check()
     def mutate(root, info, **args):
+
         id = args.get('id')
         content = args.get('content')
         parser_result = DBSession.query(dbParserResult).filter_by(client_id=id[0], object_id=id[1]).first()
         if not parser_result or parser_result.marked_for_deletion:
             raise ResponseError("No such parser result in the system")
+
+        # If not an admin, checking for permissions.
+
+        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           info.context["client_id"])
+        else:
+            user_id = Client.get_user_by_client_id(client.id).id
+
+        if user_id != 1:
+
+            perspective_id = (
+
+                DBSession
+
+                    .query(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id)
+
+                    .filter(
+                        dbLexicalEntry.client_id == dbEntity.parent_client_id,
+                        dbLexicalEntry.object_id == dbEntity.parent_object_id,
+                        dbEntity.client_id == parser_result.entity_client_id,
+                        dbEntity.object_id == parser_result.entity_object_id)
+
+                    .first())
+
+            if not perspective_id:
+
+                raise KeyError(
+                    'Failed to get perspective of the parser result.',
+                    (parser_result.client_id, parser_result.object_id))
+
+            info.context.acl_check('edit', 'perspective', perspective_id)
+
         parser_result.content = content[:]
         transaction.commit()
+
         return UpdateParserResult(triumph=True)
+
