@@ -7782,7 +7782,7 @@ class MoveColumn(graphene.Mutation):
                                                                          marked_for_deletion=False).first()
         if not perspective:
             raise ResponseError('No such perspective')
-        info.context.acl_check('edit', 'lexical_entries_and_entities',
+        info.context.acl_check('edit', 'perspective',
                            (perspective.client_id, perspective.object_id))
 
         lexes = DBSession.query(dbLexicalEntry).join(dbEntity).join(dbPublishingEntity).filter(
