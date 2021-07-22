@@ -1,6 +1,7 @@
 import time
-from dogpile.cache.api import NO_VALUE
-from dogpile.cache import make_region
+# from dogpile.cache.api import NO_VALUE
+# from dogpile.cache import make_region
+from redis import Redis
 
 from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
@@ -54,9 +55,9 @@ def initialize_cache(args):
         MEMOIZE = lambda func: func
         CACHE = MockCache()
         return
-    region = make_region().configure(**args)
-    MEMOIZE = cache_responses(region)
-    CACHE = CommonCache(region)
+    # region = make_region().configure(**args)
+    # MEMOIZE = cache_responses(region)
+    CACHE = CommonCache(Redis(**args))
 
 
 class TaskStatus():
@@ -141,5 +142,3 @@ class TaskStatus():
                     CACHE.set("current_tasks:" + self.user_id, dill.dumps(current_tasks))
                     CACHE.rem(self.key)
         return None
-
-
