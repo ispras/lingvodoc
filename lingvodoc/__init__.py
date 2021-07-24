@@ -1097,16 +1097,16 @@ def main(global_config, **settings):
     # TODO: Find a more neat way
     try:
         cache_kwargs = dict()
-        for k, v in parser.items('cache:dogpile'):
+        for k, v in parser.items('cache:redis:args'):
             cache_kwargs[k] = v
-        cache_args = dict()
-        for k, v in parser.items('cache:dogpile:args'):
-            cache_args[k] = v
-        cache_kwargs['arguments'] = cache_args
-        if 'expiration_time' in cache_kwargs:
-            cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
-        if 'redis_expiration_time' in cache_kwargs:
-            cache_kwargs['redis_expiration_time'] = int(cache_kwargs['redis_expiration_time'])
+#       cache_args = dict()
+#       for k, v in parser.items('cache:redis:args'):
+#           cache_args[k] = v
+#       cache_kwargs['arguments'] = cache_args
+#       if 'expiration_time' in cache_kwargs:
+#           cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
+#       if 'redis_expiration_time' in cache_kwargs:
+#           cache_kwargs['redis_expiration_time'] = int(cache_kwargs['redis_expiration_time'])
     except NoSectionError:
         log.warn("No 'cache:dogpile' or/and 'cache:dogpile:args' sections in config; disabling caching")
         initialize_cache(None)
