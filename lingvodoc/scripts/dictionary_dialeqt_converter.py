@@ -42,6 +42,7 @@ from lingvodoc.models import (
 )
 from lingvodoc.utils.search import get_id_to_field_dict
 
+from lingvodoc.cache.caching import CACHE
 
 def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
     return DBSession.query(LexicalEntry) \
@@ -384,8 +385,9 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     else:
         entity.content = content
     entity.publishingentity.accepted = True
-    DBSession.add(entity)
-    DBSession.flush()
+    CACHE.set(objects = [entity, ])
+    # DBSession.add(entity)
+    # DBSession.flush()
     return (entity.client_id, entity.object_id)
 
 def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes,
@@ -459,7 +461,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                 else:
                     filename = 'noname.TextGrid'
                 markup_hashes.add(markup_hash)
-    
+
                 if not markup_update_flag:
                     le_id = ids_map[int(word_id)]
                 else:
@@ -1523,7 +1525,7 @@ def convert_all(
             DBSession.configure(bind=engine)
 
         status = (
-                
+
             convert_db_new(
                 dictionary_client_id,
                 dictionary_object_id,

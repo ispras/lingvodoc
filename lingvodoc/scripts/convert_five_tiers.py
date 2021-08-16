@@ -39,6 +39,7 @@ from lingvodoc.models import (
 
 )
 from lingvodoc.utils.search import get_id_to_field_dict
+from lingvodoc.cache.caching import CACHE
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -291,7 +292,8 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         entity.content = content
     entity.publishingentity.accepted = True
 
-    DBSession.add(entity)
+    # DBSession.add(entity)
+    CACHE.set(objects = [entity, ])
     return (entity.client_id, entity.object_id)
 
 

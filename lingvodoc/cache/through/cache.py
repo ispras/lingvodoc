@@ -60,27 +60,28 @@ class ThroughCache(ICache):
             return result
 
 
-        try:
-            result = dict()
-            for obj_type, ids in objects:
-                result[obj_type] = []
-                for lingvodoc_id in ids:
-                    key = f"auto:{obj_type.__name__}:{lingvodoc_id[0]}:{lingvodoc_id[1]}"
-                    cached = self.cache.get(key)
+        # try:
+        result = dict()
+        for obj_type in objects:
+            result[obj_type] = []
+            for lingvodoc_id in objects[obj_type]:
+                key = f"auto:{obj_type.__name__}:{lingvodoc_id[0]}:{lingvodoc_id[1]}"
+                log.warn(key)
+                cached = self.cache.get(key)
+                if cached is None:
+                    cached = DBSession.query(obj_type) \
+                                    .filter_by(client_id=lingvodoc_id[0], object_id=lingvodoc_id[1]) \
+                                    .first()
                     if cached is None:
-                        cached = DBSession.query(obj_type) \
-                                        .filter_by(client_id=lingvodoc_id[0], object_id=lingvodoc_id[1]) \
-                                        .first()
-                        if cached is None:
-                            pass
-                        else:
-                            self.cache.set(key, dill.dumps(cached))
+                        pass
                     else:
-                        cached = dill.loads(cached)
-                    result[obj_type].append(cached)
-        except Exception as e:
-            log.error(f'Exception during getting from cache : {e}')
-            return None
+                        self.cache.set(key, dill.dumps(cached))
+                else:
+                    cached = dill.loads(cached)
+                result[obj_type].append(cached)
+        # except Exception as e:
+        #     log.error(f'Exception during getting from cache : {e}')
+        #     return None
         if len(result) == 1:
             result = result.popitem()[1]
             if len(result) == 1:
@@ -90,7 +91,7 @@ class ThroughCache(ICache):
 
 
     # TODO: add try/catch handlers.
-    def set(self, key = None, value = None, key_value = dict(), objects = list(), transaction = False):
+    def set(self, key = None, value = None, key_value = None, objects = list(), transaction = False):
         """
         Inserts objects to cache and database
 
@@ -106,39 +107,45 @@ class ThroughCache(ICache):
         if key is not None:
             self.cache.set(key, dill.dumps(value))
             return
-        self.cache.mset(dict(map(lambda key, value: (key, dill.dumps(value)), key_value.items())))
+        if key_value is not None:
+            self.cache.mset(
+                dict(
+                    map(lambda key_value_pair: (key_value_pair[0], dill.dumps(key_value_pair[1]) ),
+                        key_value.items()
+                    )
+                )
+            )
 
 
         if transaction:
-            DBSession.begin()
-            accepted_for_caching = dict()
-
-        result = []
-        for obj in objects:
-            if not transaction:
-                DBSession.begin()
-            key = f'{obj.__class__.__name__}:{obj[0]}:{obj[1]}'
             try:
-                DBSession.add(obj)
-                if not transaction:
-                    DBSession.commit()
-                    self.cache.set(key, dill.dumps(obj))
-                    result.append(True)
-                else:
-                    accepted_for_caching[key] = dill.dumps(obj)
-            except:
-                result.append(False)
-                DBSession.rollback()
-                log.warn(f"Error in saving {key} to database")
-
-        if transaction:
-            try:
-                DBSession.commit()
+                accepted_for_caching = dict(
+                    map(
+                        lambda obj:
+                            (f'auto:{obj.__class__.__name__}:{obj.client_id}:{obj.object_id}', dill.dumps(obj)),
+                        objects
+                    )
+                )
+                DBSession.add_all(objects)
+                DBSession.flush()
                 self.cache.mset(accepted_for_caching)
                 return True
             except:
                 return False
-        return result
+        else:
+            result = []
+            for obj in objects:
+                key = f'auto:{obj.__class__.__name__}:{obj.client_id}:{obj.object_id}'
+                log.warn(key)
+                try:
+                    DBSession.add(obj)
+                    DBSession.flush()
+                    self.cache.set(key, dill.dumps(obj))
+                    result.append(True)
+                except:
+                    result.append(False)
+                    log.warn(f"Error in saving {key} to database")
+            return result
 
     def rem(self, keys):
         """

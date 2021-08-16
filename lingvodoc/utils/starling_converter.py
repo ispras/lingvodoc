@@ -61,6 +61,7 @@ from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
 from lingvodoc.scripts.convert_five_tiers import convert_all
 from lingvodoc.queue.celery import celery
 
+from lingvodoc.cache.caching import CACHE
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -143,7 +144,7 @@ def csv_to_columns(path, url):
         try:
 
             csv_file = (
-                    
+
                 open(path,
                     encoding = 'utf-8-sig',
                     errors = 'ignore',
@@ -268,8 +269,9 @@ def create_entity(id=None,
         dbentity.upper_level = upper_level
     dbentity.publishingentity.accepted = True
     if save_object:
-        DBSession.add(dbentity)
-        DBSession.flush()
+        CACHE.set(objects = [dbentity, ])
+        # DBSession.add(dbentity)
+        # DBSession.flush()
     return dbentity
 
 def graphene_to_dicts(starling_dictionaries):
@@ -487,7 +489,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 parent_id = starling_dictionary.get("parent_id")
 
                 dbdictionary_obj = (
-                        
+
                     create_dbdictionary(
                         id = obj_id.id_pair(client_id),
                         parent_id = parent_id,
@@ -628,7 +630,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                 registry=None,
                                 request=None,
                                 save_object=False)
-                            DBSession.add(new_ent)
+                            CACHE.set(objects = [new_ent, ])
+                            # DBSession.add(new_ent)
                     i+=1
             task_status.set(5, 70, "link, spread" )
             tag_list = list()
@@ -673,8 +676,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                     content=None,
                                                     registry=None,
                                                     request=None,
-                                                    save_object=False)
-                            DBSession.add(new_ent)
+                                                    save_object=True)
+                            # DBSession.add(new_ent)
                             le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
                             # etymology tag
                             #"""
@@ -688,11 +691,13 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=link_lexical_entry[0], parent_object_id=link_lexical_entry[1], content=tag)
                                     # additional_metadata num_col
                                     tag_entity.publishingentity.accepted = True
-                                    DBSession.add(tag_entity)
+                                    # DBSession.add(tag_entity)
+                                    CACHE.set(objects = [tag_entity, ])
                                 tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
                                     field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=lexical_entry_ids[0], parent_object_id=lexical_entry_ids[1], content=tag)
                                 tag_entity.publishingentity.accepted = True
-                                DBSession.add(tag_entity)
+                                # DBSession.add(tag_entity)
+                                CACHE.set(objects = [tag_entity, ])
 
 
 
@@ -721,14 +726,15 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         registry=None,
                                         request=None,
                                         save_object=False)
-                                    DBSession.add(new_ent)
+                                    # DBSession.add(new_ent)
+                                    CACHE.set(objects = [new_ent, ])
                         #i+=1
             DBSession.flush()
 
     except Exception as exception:
 
         traceback_string = (
-                
+
             ''.join(
                 traceback.format_exception(
                     exception, exception, exception.__traceback__))[:-1])

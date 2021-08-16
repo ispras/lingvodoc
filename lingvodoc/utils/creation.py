@@ -41,6 +41,7 @@ from lingvodoc.models import (
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils.search import translation_gist_search
 
+from lingvodoc.cache.caching import CACHE
 
 import logging
 log = logging.getLogger(__name__)
@@ -386,8 +387,9 @@ def create_entity(id=None,
         dbentity.content = content
 
     if save_object:
-        DBSession.add(dbentity)
-        DBSession.flush()
+        CACHE.set(objects = [dbentity, ])
+        # DBSession.add(dbentity)
+        # DBSession.flush()
     return dbentity
 
 def create_lexicalentry(id, perspective_id, save_object=False):
@@ -825,4 +827,5 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     #     BaseGroup.action == 'create').one()
                     # if user in group.users:
                     tag_entity.publishingentity.accepted = True
-                    DBSession.add(tag_entity)
+                    # DBSession.add(tag_entity)
+                    CACHE.set(objects = [tag_entity, ])

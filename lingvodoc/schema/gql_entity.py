@@ -67,7 +67,7 @@ from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
 
 from lingvodoc.utils.elan_functions import eaf_wordlist
 
-
+from lingvodoc.cache.caching import CACHE
 # Setting up logging.
 log = logging.getLogger(__name__)
 
@@ -367,8 +367,10 @@ class CreateEntity(graphene.Mutation):
 
             # if args.get('is_translatable', None): # TODO: fix it
             #     field.is_translatable = bool(args['is_translatable'])
-        DBSession.add(dbentity)
-        DBSession.flush()
+        #CACHE set_entity
+        CACHE.set(objects = [dbentity, ])
+        # DBSession.add(dbentity)
+        # DBSession.flush()
         entity = Entity(id = [dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return CreateEntity(entity=entity, triumph=True)
@@ -488,7 +490,13 @@ class UpdateEntity(graphene.Mutation):
         if accepted is not None:
             dbpublishingentity.accepted = accepted
 
-        dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        #CACHE get_entity
+        dbentity = CACHE.get(objects =
+            {
+                Entity : (client_id, object_id)
+            }
+        )
+        # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
         entity = Entity(id=[dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return UpdateEntity(entity=entity, triumph=True)
@@ -736,16 +744,16 @@ class ApproveAllForUser(graphene.Mutation):
                 # A single specified language.
 
                 marked_for_deletion = (
-                        
+
                     DBSession
-                    
+
                         .query(
                             dbLanguage.marked_for_deletion)
-                    
+
                         .filter_by(
                             client_id = language_id[0],
                             object_id = language_id[1])
-                        
+
                         .scalar())
 
                 if marked_for_deletion is None:
@@ -871,7 +879,13 @@ class DeleteEntity(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
-        dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        #CACHE get_entity
+        dbentity = CACHE.get(objects =
+            {
+                dbEntity : ((client_id, object_id),)
+            }
+        )
+        # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbentity or dbentity.marked_for_deletion:
             raise ResponseError(message="No such entity in the system")
         lexical_entry = dbentity.parent
@@ -882,6 +896,7 @@ class DeleteEntity(graphene.Mutation):
         if 'desktop' in settings:
             real_delete_entity(dbentity, settings)
         else:
+            #CACHE delete_entity
             del_object(dbentity, "delete_entity", info.context.get('client_id'))
         entity = Entity(id=[client_id, object_id])
         entity.dbObject = dbentity
@@ -930,6 +945,7 @@ class BulkCreateEntity(graphene.Mutation):
                 raise ResponseError(message="Bad lexical_entry object")
             if not check_lingvodoc_id(parent_id):
                 raise KeyError("Wrong parent_id")
+            #CACHE get_lexicalentry
             lexical_entry = DBSession.query(dbLexicalEntry) \
                 .filter_by(client_id=parent_id[0], object_id=parent_id[1]).one()
             info.context.acl_check('create', 'lexical_entries_and_entities',
@@ -954,11 +970,13 @@ class BulkCreateEntity(graphene.Mutation):
             content = entity_obj.get("content")
             registry = entity_obj.get("registry")
 
+            #CACHE внутри функции вставить set_entity
             dbentity = create_entity(ids, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
                                      filename, content, registry, request, True)
 
             dbentities_list.append(dbentity)
 
+        #CACHE set_entity
         DBSession.bulk_save_objects(dbentities_list)
         DBSession.flush()
         for dbentity in dbentities_list:
@@ -1037,8 +1055,9 @@ class UpdateEntityContent(graphene.Mutation):
         dbentity.content = content
             # if args.get('is_translatable', None): # TODO: fix it
             #     field.is_translatable = bool(args['is_translatable'])
-        DBSession.add(dbentity)
-        DBSession.flush()
+        # DBSession.add(dbentity)
+        # DBSession.flush()
+
         entity = Entity(id = [dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return UpdateEntityContent(entity=entity, triumph=True)

@@ -322,6 +322,8 @@ import lingvodoc.version
 
 from lingvodoc.schema.gql_parserresult import ExecuteParser
 
+from lingvodoc.cache.caching import CACHE
+
 # Setting up logging.
 log = logging.getLogger(__name__)
 
@@ -1708,9 +1710,9 @@ class Query(graphene.ObjectType):
         # See get_hidden() in models.py.
 
         hidden_id = (
-                
+
             DBSession
-            
+
                 .query(
                     dbTranslationGist.client_id,
                     dbTranslationGist.object_id)
@@ -1721,7 +1723,7 @@ class Query(graphene.ObjectType):
                     dbTranslationGist.type == 'Service',
                     dbTranslationAtom.content == 'Hidden',
                     dbTranslationAtom.locale_id == 2)
-                
+
                 .first())
 
         # NOTE: due to no-op nature of publishing entity checks (see note below), removing joins
@@ -1751,7 +1753,7 @@ class Query(graphene.ObjectType):
         if perspective_id:
 
             results_cursor = (
-                    
+
                 results_cursor.filter(
                     dbPerspective.client_id == perspective_id[0],
                     dbPerspective.object_id == perspective_id[1]))
@@ -1759,7 +1761,7 @@ class Query(graphene.ObjectType):
         # NOTE:
         #
         # Well, intention is clear, but this does not work and is actually a no-op.
-        # 
+        #
         # To work, should be:
         #
         #   results_cursor = results_cursor.filter(...)
@@ -1809,13 +1811,13 @@ class Query(graphene.ObjectType):
             if can_add_tags:
 
                 group_query = (
-                        
+
                     group_query
-                    
+
                         .filter(or_(
                             dbBaseGroup.action == 'create',
                             dbBaseGroup.action == 'view'))
-                        
+
                         .group_by(dbBaseGroup.action)
                         .subquery())
 
@@ -1838,15 +1840,15 @@ class Query(graphene.ObjectType):
                 group_condition = group_query.exists()
 
             results_cursor = (
-                    
+
                 results_cursor.filter(
-                    
+
                     or_(
 
                         and_(
                             dbPerspective.state_translation_gist_client_id == published_id[0],
                             dbPerspective.state_translation_gist_object_id == published_id[1]),
-                        
+
                         group_condition)))
 
         if field:
@@ -2212,7 +2214,7 @@ class Query(graphene.ObjectType):
         # Getting lexical entry group info.
 
         marked_for_deletion = (
-                
+
             DBSession
                 .query(dbLexicalEntry.marked_for_deletion)
 
@@ -2236,7 +2238,7 @@ class Query(graphene.ObjectType):
                     :field_object_id,
                     :client_id,
                     :object_id)
-                    
+
                 '''
 
         else:
@@ -2250,11 +2252,11 @@ class Query(graphene.ObjectType):
                     :object_id,
                     :publish,
                     :accept)
-                    
+
                 '''
 
         entry_query = (
-            
+
             DBSession
                 .query(dbLexicalEntry)
                 .filter(
@@ -2264,7 +2266,7 @@ class Query(graphene.ObjectType):
                         dbLexicalEntry.object_id)
 
                     .in_(sqlalchemy.text(sql_str)))
-                
+
                 .params({
                     'field_client_id': field_client_id,
                     'field_object_id': field_object_id,
@@ -2416,7 +2418,7 @@ class Query(graphene.ObjectType):
             new_parser_result.dbObject = result
             return_list.append(new_parser_result)
         return return_list
-    
+
     def resolve_parser_result(self, info, id):
         client_id, object_id = id
         result = DBSession.query(dbParserResult).filter_by(client_id=client_id,
@@ -2517,11 +2519,12 @@ class StarlingEtymology(graphene.Mutation):
                     first_tag = dbEntity(client_id = client.id, parent=first_lex, content=tag, field=etymology_field)
                     first_tag.publishingentity.accepted = True
                     first_tag.publishingentity.published = True
-                    DBSession.add(first_tag)
+                    # DBSession.add(first_tag)
                     second_tag = dbEntity(client_id = client.id, parent=second_lex, content=tag, field=etymology_field)
                     second_tag.publishingentity.accepted = True
                     second_tag.publishingentity.published = True
-                    DBSession.add(second_tag)
+                    # DBSession.add(second_tag)
+                    CACHE.set(objects = [first_tag, second_tag])
 
         return StarlingEtymology(triumph=True)
 
@@ -2759,7 +2762,7 @@ class PhonemicAnalysis(graphene.Mutation):
                     ('utf8', 'utf-8'), ('utf16', 'utf-16')):
 
                     input_file_name = (
-                            
+
                         pathvalidate.sanitize_filename(
                             'input {0}.{1}'.format(
                                 phonemic_name_str, extension)))
@@ -3555,13 +3558,13 @@ class CognateAnalysis(graphene.Mutation):
                 continue
 
             row_list = (
-                
+
                 DBSession.execute(sql_str, {
                     'field_client_id': tag_field_id[0],
                     'field_object_id': tag_field_id[1],
                     'client_id': entry_id[0],
                     'object_id': entry_id[1]})
-                
+
                 .fetchall())
 
             entry_id_set = set(
@@ -3906,7 +3909,7 @@ class CognateAnalysis(graphene.Mutation):
                     table_index, 'distance result', n_col, n_row, d_output_str)
 
                 matrix_title = row_list[0][0]
-                
+
                 if not matrix_title:
                     continue
 
@@ -4090,7 +4093,7 @@ class CognateAnalysis(graphene.Mutation):
                     len(begin_str) : -len(end_str)])
 
             word_entry_id = (
-                    
+
                 entry_id_dict[(
                     perspective_source_index,
                     word)])
@@ -4608,14 +4611,14 @@ class CognateAnalysis(graphene.Mutation):
         if __debug_flag__:
 
             tag_data_digest = (
-                    
+
                 hashlib.md5(
 
                     repr(list(group_field_id) +
                         [perspective_info[0] for perspective_info in perspective_info_list])
 
                     .encode('utf-8'))
-                
+
                 .hexdigest())
 
             result_file_name = (
@@ -5089,7 +5092,7 @@ class CognateAnalysis(graphene.Mutation):
                 (index,
                     transcription_list,
                     translation_list) = (
-                            
+
                     entry_data_list[:3])
 
                 group_entry_id_list[index].append(entry_id)
@@ -5134,7 +5137,7 @@ class CognateAnalysis(graphene.Mutation):
                     transcription_list,
                     translation_list,
                     acoustic_list)) in (
-                    
+
                 enumerate(group_zipper)):
 
                 transcription_str = '|'.join(transcription_list)
@@ -5228,7 +5231,7 @@ class CognateAnalysis(graphene.Mutation):
                     pprint.pformat(suggestions_result_list, width = 144)))
 
         result_input = (
-                
+
             ''.join(
                 ''.join(text + '\0' for text in text_list)
 
@@ -5286,7 +5289,7 @@ class CognateAnalysis(graphene.Mutation):
                             source_perspective_index,
                             match_translations_value,
                             int(only_orphans_flag))))
-            
+
             cognate_name_str = (
                 'cognate' + mode_name_str)
 
@@ -5410,7 +5413,7 @@ class CognateAnalysis(graphene.Mutation):
         output_buffer = ctypes.create_unicode_buffer(output_buffer_size + 256)
 
         if mode == 'multi':
-            
+
             result = analysis_f(
                 input_buffer,
                 perspective_count_array,
@@ -5604,7 +5607,7 @@ class CognateAnalysis(graphene.Mutation):
         if mode == 'suggestions':
 
             suggestion_list = (
-                    
+
                 CognateAnalysis.parse_suggestions(
                     language_str,
                     output_binary,
@@ -5757,7 +5760,7 @@ class CognateAnalysis(graphene.Mutation):
                 language_str,
                 pprint.pformat(
                     d_output_binary_list, width = 144)))
-        
+
         # Indicating task's final stage, if required.
 
         if task_status is not None:
@@ -5766,7 +5769,7 @@ class CognateAnalysis(graphene.Mutation):
         # Parsing analysis results and exporting them as an Excel file.
 
         workbook_stream, distance_matrix_list = (
-                
+
             CognateAnalysis.export_xlsx(
                 language_str,
                 mode,
@@ -5901,7 +5904,7 @@ class CognateAnalysis(graphene.Mutation):
                 distance_header_array,
                 distance_data_array,
                 d_ij))
-            
+
             # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
             # orient it left-right.
 
@@ -5926,7 +5929,7 @@ class CognateAnalysis(graphene.Mutation):
                 distance_2d = numpy.zeros((1, 1))
 
             # Showing what we computed.
-            
+
             log.debug(
                 '\ncognate_analysis {0}:'
                 '\nembedding 2d:\n{1}'
@@ -5987,7 +5990,7 @@ class CognateAnalysis(graphene.Mutation):
                 distance_3d = numpy.zeros((1, 1))
 
             # Showing what we've get.
-            
+
             log.debug(
                 '\ncognate_analysis {0}:'
                 '\nembedding 3d:\n{1}'
@@ -6337,7 +6340,7 @@ class CognateAnalysis(graphene.Mutation):
           }
         }
         """
-        
+
         # Administrator / perspective author check.
 
         client_id = info.context.request.authenticated_userid
@@ -6348,7 +6351,7 @@ class CognateAnalysis(graphene.Mutation):
         user = Client.get_user_by_client_id(client_id)
 
         author_client_id_set = (
-                
+
             set(
                 client_id
                 for (client_id, _), _, _ in args['perspective_info_list']))
@@ -6357,7 +6360,7 @@ class CognateAnalysis(graphene.Mutation):
 
             DBSession
 
-                .query(                    
+                .query(
 
                     DBSession
                         .query(literal(1))
@@ -8054,7 +8057,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
             A.locale_id = 2 and
             lower(regexp_replace(A.content, '\W+', '', 'g')) =
               'phonemictranscription') and
-         
+
           exists (
 
             select 1
@@ -8090,7 +8093,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
             A.locale_id = 1 and
             lower(regexp_replace(A.content, '\W+', '', 'g')) =
               'фонологическаятранскрипция') and
-         
+
           exists (
 
             select 1
@@ -8126,7 +8129,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
             A.locale_id = 2 and
             lower(regexp_replace(A.content, '\W+', '', 'g')) =
               'transcriptionofparadigmaticforms') and
-         
+
           exists (
 
             select 1
@@ -8162,7 +8165,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
             A.locale_id = 1 and
             lower(regexp_replace(A.content, '\W+', '', 'g')) =
               'транскрипцияпарадигматическихформ') and
-         
+
           exists (
 
             select 1
@@ -8201,7 +8204,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
               A.locale_id = 2 and
               lower(regexp_replace(A.content, '\W+', '', 'g')) =
                 'protoform') and
-         
+
             exists (
 
               select 1
@@ -8237,7 +8240,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
               A.locale_id = 1 and
               lower(regexp_replace(A.content, '\W+', '', 'g')) =
                 'праформа') and
-           
+
             exists (
 
               select 1
@@ -8261,12 +8264,12 @@ class XlsxBulkDisconnect(graphene.Mutation):
         L.marked_for_deletion = false and
 
         exists (
-          
+
           select 1
-          
+
           from
           public.entity E
-          
+
           where
           E.parent_client_id = L.client_id and
           E.parent_object_id = L.object_id and
@@ -8280,22 +8283,22 @@ class XlsxBulkDisconnect(graphene.Mutation):
     sql_tag_str = ('''
 
         (
-  
+
           select distinct
           E.content
-  
+
           from
           lexicalentry L,
           public.entity E
-  
+
           where
-  
+
           L.parent_client_id = {} and
           L.parent_object_id = {} and
           L.marked_for_deletion = false{}
-  
+
           and
-  
+
           E.parent_client_id = L.client_id and
           E.parent_object_id = L.object_id and
           E.field_client_id = 66 and
@@ -8305,7 +8308,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
         ''')
 
     sql_xcript_str = ('''
-    
+
         and
 
         (
@@ -8327,7 +8330,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
         ''')
 
     sql_xlat_str = ('''
-    
+
         and
 
         (
@@ -8439,7 +8442,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
                       (E.field_client_id, E.field_object_id) in ({}) and
                       E.content = :content_{})
                     '''
-                    
+
                     .format(
                         ', '.join(map(str, field_id_set)),
                         i))
@@ -8457,7 +8460,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
         else:
 
             sql_str_a = (
-                    
+
                 '(select * from {})'.format(
                     tag_table_name))
 
@@ -8479,7 +8482,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
                 sql_str_c))
 
         result_list = (
-                
+
             DBSession
 
                 .execute(
@@ -8509,7 +8512,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
         if len(result_set) < len(result_list):
 
             log.warning(
-                    
+
                 '\n' +
 
                 str(
@@ -8517,7 +8520,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
                         .text(sql_str)
                         .bindparams(**param_dict)
                         .compile(compile_kwargs = {'literal_binds': True})) +
-                
+
                 '\nresult_list: {}'
                 '\nresult_set: {}'.format(
                     result_list,
@@ -8605,7 +8608,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
                     re.match(
                         r'^(.*)_(\d+)_(\d+)$',
                         sheet_name)
-                    
+
                         .groups())
 
                 perspective_id = (
@@ -8650,7 +8653,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
                                 dbTranslationAtom.parent_object_id == dbField.translation_gist_object_id,
                                 dbTranslationAtom.marked_for_deletion == False,
                                 dbTranslationAtom.content == field_name)
-                            
+
                             .distinct()
 
                             .all())
@@ -8827,7 +8830,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
                 for entry_info in entry_info_list:
 
                     id_list = (
-                            
+
                         XlsxBulkDisconnect.get_entry_id(
                             perspective_id,
                             entry_info,
@@ -8856,7 +8859,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
 
                         pprint.pformat(
                             skip_list, width = 192),
-                        
+
                         len(entry_info_list),
                         len(entry_id_list),
                         len(skip_list)))
@@ -8875,17 +8878,17 @@ class XlsxBulkDisconnect(graphene.Mutation):
                         continue
 
                     result_list = (
-                        
+
                         DBSession
-                        
+
                             .execute(
                                 'select * from linked_group(66, 25, {}, {})'.format(
                                     *entry_id))
-                        
+
                             .fetchall())
 
                     cognate_id_set = (
-                            
+
                         set(
                             (entry_cid, entry_oid)
                             for entry_cid, entry_oid in result_list))
@@ -9012,7 +9015,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
                     disconnect_count))
 
             return (
-                    
+
                 XlsxBulkDisconnect(
                     entry_info_count = entry_info_count,
                     skip_count = skip_count,
@@ -9023,7 +9026,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
         except Exception as exception:
 
             traceback_string = (
-                    
+
                 ''.join(
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
@@ -9032,7 +9035,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
             log.warning(traceback_string)
 
             return (
-                    
+
                 ResponseError(
                     message = 'Exception:\n' + traceback_string))
 
@@ -9152,7 +9155,7 @@ class NewUnstructuredData(graphene.Mutation):
             id_str = NewUnstructuredData.get_random_unstructured_data_id()
 
             unstructured_data = (
-                    
+
                 dbUnstructuredData(
                     id = id_str,
                     client_id = client_id,
@@ -9170,7 +9173,7 @@ class NewUnstructuredData(graphene.Mutation):
         except Exception as exception:
 
             traceback_string = (
-                    
+
                 ''.join(
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
@@ -9179,7 +9182,7 @@ class NewUnstructuredData(graphene.Mutation):
             log.warning(traceback_string)
 
             return (
-                    
+
                 ResponseError(
                     message = 'Exception:\n' + traceback_string))
 
@@ -9368,5 +9371,3 @@ if __name__ == '__main__':
         input_buffer, dictionary_count, line_count, output_buffer, 1)
 
     print(result)
-
-

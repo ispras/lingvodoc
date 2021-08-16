@@ -46,6 +46,8 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary)
 from lingvodoc.utils.search import get_id_to_field_dict
 
+from lingvodoc.cache.caching import CACHE
+
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -300,7 +302,8 @@ def create_entity(
         entity.content = content
     entity.publishingentity.accepted = True
 
-    DBSession.add(entity)
+    # DBSession.add(entity)
+    CACHE.set(objects = [entity, ])
 
     # means that the function was called from CopyField and so need to be sure that sound has been copied before copying markups
     if byte_content:
@@ -417,7 +420,7 @@ def convert_five_tiers(dictionary_id,
             # Getting license from the markup's dictionary.
 
             license = (
-            
+
                 DBSession
                     .query(Dictionary.additional_metadata['license'].astext)
                     .filter(
@@ -433,7 +436,7 @@ def convert_five_tiers(dictionary_id,
             state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
 
             dictionary = (
-                    
+
                 Dictionary(
                     client_id = client_id,
                     state_translation_gist_object_id = state_translation_gist_object_id,
@@ -729,7 +732,7 @@ def convert_five_tiers(dictionary_id,
         field_data_type_list = (
 
             DBSession
-            
+
                 .query(
                     Field.client_id,
                     Field.object_id,
@@ -1206,7 +1209,7 @@ def convert_five_tiers(dictionary_id,
 
         pa_word_fid = field_ids['Word of Paradigmatic forms']
         pa_xcript_fid = field_ids['Transcription of Paradigmatic forms']
-        pa_xlat_fid = field_ids['Translation of Paradigmatic forms'] 
+        pa_xlat_fid = field_ids['Translation of Paradigmatic forms']
 
         if second_perspective:
 
@@ -1275,7 +1278,7 @@ def convert_five_tiers(dictionary_id,
 
                 le_xlat_dict[
                     translation_text.strip().lower()] = (
-                            
+
                     t.parent_id)
 
         # Updated words and transcriptions in the second perspective.
@@ -1482,7 +1485,7 @@ def convert_five_tiers(dictionary_id,
                 if not translation_text in new_lex_entries:
 
                     lexentr = (
-                            
+
                         LexicalEntry(
                             client_id=client_id,
                             parent=first_perspective))
@@ -1508,7 +1511,7 @@ def convert_five_tiers(dictionary_id,
 
                     le_xlat_dict[
                         translation_text.strip().lower()] = (
-                                
+
                         lexentr_id)
 
                     establish_link(
@@ -1574,4 +1577,3 @@ def convert_all(dictionary_id,
 
     DBSession.flush()
     return result
-

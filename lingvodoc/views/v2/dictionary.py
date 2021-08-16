@@ -68,6 +68,8 @@ from lingvodoc.views.v2.utils import unimplemented
 from lingvodoc.views.v2.delete import real_delete_dictionary
 from pdb import set_trace
 
+from lingvodoc.cache.caching import CACHE
+
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -636,7 +638,8 @@ def dictionary_copy(request):
             entity_copy.publishingentity.published = entity.publishingentity.published
             entity_copy.publishingentity.accepted = entity.publishingentity.accepted
 
-            DBSession.add(entity_copy)
+            # DBSession.add(entity_copy)
+            CACHE.set(objects = [entity_copy, ])
             DBSession.flush()
 
             id_id_copy = (entity_copy.client_id, entity_copy.object_id)
