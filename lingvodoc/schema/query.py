@@ -6662,6 +6662,8 @@ class Phonology(graphene.Mutation):
         limit_exception=graphene.Int()
         limit_no_vowel=graphene.Int()
         limit_result=graphene.Int()
+        no_cache=graphene.Boolean()
+        interval_only=graphene.Boolean()
         group_by_description=graphene.Boolean(required=True)
         maybe_translation_field=LingvodocID()
         only_first_translation=graphene.Boolean(required=True)
@@ -6673,6 +6675,7 @@ class Phonology(graphene.Mutation):
         generate_csv=graphene.Boolean()
         link_field_list=graphene.List(LingvodocID)
         link_perspective_list=graphene.List(graphene.List(LingvodocID))
+        use_fast_track=graphene.Boolean()
         synchronous=graphene.Boolean()
         debug_flag=graphene.Boolean()
 
