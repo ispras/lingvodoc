@@ -1,9 +1,12 @@
 from ..models import (
     DBSession,
     Field,
-    TranslationAtom
+    TranslationAtom,
+    DictionaryPerspectiveToField,
+    Entity
 )
 from sqlalchemy import and_, exc
+import transaction
 import logging
 
 DEFAULT_LOCALE_ID = 1
@@ -120,7 +123,7 @@ def same_locale_fields(session=DBSession, locale_id = DEFAULT_LOCALE_ID):
     return res
 
 
-def translations_r_cmp(tr_a, tr_b):
+def _equal_translations_r(tr_a, tr_b):
     for locale_id in tr_a:
         tmp = tr_b.get(locale_id, None)
         if not tmp or tr_a[locale_id].content != tmp.content:
@@ -128,12 +131,20 @@ def translations_r_cmp(tr_a, tr_b):
     return True
 
 
-def fields_cmp(data_a, data_b):
+def _equal_field_types(field_a, field_b):
+    return field_a.data_type_translation_gist_object_id == field_b.data_type_translation_gist_object_id and \
+           field_a.data_type_translation_gist_client_id == field_b.data_type_translation_gist_client_id
+
+
+def _equal_fields(data_a, data_b):
     tr_a = data_a['translations']
     tr_b = data_b['translations']
-    return translations_r_cmp(tr_a, tr_b) and translations_r_cmp(tr_b, tr_a) and\
-           data_a['field'].data_type_translation_gist_object_id == data_b['field'].data_type_translation_gist_object_id and \
-           data_a['field'].data_type_translation_gist_client_id == data_b['field'].data_type_translation_gist_client_id
+    fld_a = data_a['field']
+    fld_b = data_b['field']
+
+    return _equal_translations_r(tr_a, tr_b) and\
+        _equal_translations_r(tr_b, tr_a) and\
+        _equal_field_types(fld_a, fld_b)
 
 
 def exact_same_fields(session=DBSession):
@@ -165,7 +176,7 @@ def exact_same_fields(session=DBSession):
             unique_field_flag = True
             for idx_list in tmp_list:
 
-                if fields_cmp(field_dst[field_hash][i], field_dst[field_hash][idx_list[0]]):
+                if _equal_fields(field_dst[field_hash][i], field_dst[field_hash][idx_list[0]]):
                     idx_list.append(i)
                     unique_field_flag = False
 
@@ -177,3 +188,64 @@ def exact_same_fields(session=DBSession):
                 res.append([field_dst[field_hash][idx] for idx in idx_list])
 
     return res
+
+
+def _collapse_field_in_table(from_field, to_field, table, session, commit=False):
+    session.query(table) \
+        .filter(and_(table.field_client_id == from_field.client_id,
+                     table.field_object_id == from_field.object_id)) \
+        .update({'field_client_id': to_field.client_id, 'field_object_id': to_field.object_id})
+
+    if commit:
+        transaction.commit()
+
+
+def collapse_field(from_field, to_field, session=DBSession, commit=False):
+    if not _equal_field_types(from_field, to_field):
+        log.warning('Rejected collapse of fields with different data types at ' + __name__)
+        return
+
+    try:
+        log.info('Collapse of field ' + str(from_field.__dict__) + ' to_field '
+                 + str(to_field.__dict__) + 'started at ' + __name__)
+
+        _collapse_field_in_table(from_field, to_field, table=DictionaryPerspectiveToField,
+                                 session=session, commit=False)
+
+        _collapse_field_in_table(from_field, to_field, table=Entity,
+                                 session=session, commit=False)
+
+        session.query(Field).filter(and_(Field.client_id == from_field.client_id,
+                                         Field.object_id == from_field.object_id))\
+            .update({'marked_for_deletion': True})
+
+        if commit:
+            log.info('Successful field collapse at ' + __name__)
+            transaction.commit()
+
+    except exc.SQLAlchemyError as ex:
+        log.warning('Failed to collapse field' + str(from_field.__dict__) +
+                    ' into field ' + str(to_field.__dict__) + ' at ' + __name__)
+        log.warning(ex)
+
+        if commit:
+            transaction.abort()
+
+
+
+def collapse_field_mapping(field_mapping, session=DBSession, commit_all_at_once=False):
+    try:
+        for field_id in field_mapping:
+            from_field = field_mapping[field_id]['from']
+            to_field = field_mapping[field_id]['to']
+            collapse_field(from_field, to_field, session, not commit_all_at_once)
+
+        if commit_all_at_once:
+            transaction.commit()
+
+    except exc.SQLAlchemyError as ex:
+        log.warning('Failed to collapse field mapping at ' + __name__)
+        log.warning(ex)
+
+        if commit_all_at_once:
+            transaction.abort()
