@@ -289,9 +289,15 @@ class Dictionary(LingvodocObjectType):  # tested
             
             .scalar())
 
-        return max(
-            self.dbObject.created_at,
-            result)
+        if result is not None:
+
+            return max(
+                self.dbObject.created_at,
+                result)
+
+        else:
+
+            return self.dbObject.created_at
 
     def published_cte_str(
         self,

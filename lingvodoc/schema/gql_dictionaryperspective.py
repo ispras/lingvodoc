@@ -528,9 +528,15 @@ class DictionaryPerspective(LingvodocObjectType):
             
             .scalar())
 
-        return max(
-            self.dbObject.created_at,
-            result)
+        if result is not None:
+
+            return max(
+                self.dbObject.created_at,
+                result)
+
+        else:
+
+            return self.dbObject.created_at
 
     @fetch_object()
     def resolve_is_hidden_for_client(self, info):
