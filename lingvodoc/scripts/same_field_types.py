@@ -192,22 +192,30 @@ def exact_same_fields(session=DBSession):
 
 def _collapse_field_in_table(from_field, to_field, table, session, commit=False):
     session.query(table) \
-        .filter(and_(table.field_client_id == from_field.client_id,
-                     table.field_object_id == from_field.object_id)) \
-        .update({'field_client_id': to_field.client_id, 'field_object_id': to_field.object_id})
+        .filter(and_(table.field_client_id == from_field['client_id'],
+                     table.field_object_id == from_field['object_id'])) \
+        .update({'field_client_id': to_field['client_id'], 'field_object_id': to_field['object_id']})
 
     if commit:
         transaction.commit()
 
 
 def collapse_field(from_field, to_field, session=DBSession, commit=False):
-    if not _equal_field_types(from_field, to_field):
-        log.warning('Rejected collapse of fields with different data types at ' + __name__)
-        return
+    '''
+    from_field and to_field are:
+        dict {
+            'client_id': int,
+            'object_id': int
+        }
+
+    By the end of function execution every use of from_field in database
+    will be replaced by to_field, from_field will be marked for deletion
+    '''
 
     try:
-        log.info('Collapse of field ' + str(from_field.__dict__) + ' to_field '
-                 + str(to_field.__dict__) + 'started at ' + __name__)
+        log.info('Collapse of field (' + str(from_field['client_id']) + ', ' + str(from_field['object_id']) +
+                 ') to_field (' + str(to_field['client_id']) + ', ' + str(to_field['object_id']) +
+                 ') started at ' + __name__)
 
         _collapse_field_in_table(from_field, to_field, table=DictionaryPerspectiveToField,
                                  session=session, commit=False)
@@ -215,8 +223,8 @@ def collapse_field(from_field, to_field, session=DBSession, commit=False):
         _collapse_field_in_table(from_field, to_field, table=Entity,
                                  session=session, commit=False)
 
-        session.query(Field).filter(and_(Field.client_id == from_field.client_id,
-                                         Field.object_id == from_field.object_id))\
+        session.query(Field).filter(and_(Field.client_id == from_field['client_id'],
+                                         Field.object_id == from_field['object_id']))\
             .update({'marked_for_deletion': True})
 
         if commit:
@@ -224,20 +232,39 @@ def collapse_field(from_field, to_field, session=DBSession, commit=False):
             transaction.commit()
 
     except exc.SQLAlchemyError as ex:
-        log.warning('Failed to collapse field' + str(from_field.__dict__) +
-                    ' into field ' + str(to_field.__dict__) + ' at ' + __name__)
+        log.warning('Failed to collapse field (' + str(from_field['client_id']) + ', ' +
+                    str(from_field['object_id']) + ') to_field (' + str(to_field['client_id']) +
+                    ', ' + str(to_field['object_id']) + ') at ' + __name__)
         log.warning(ex)
 
         if commit:
             transaction.abort()
 
 
-
 def collapse_field_mapping(field_mapping, session=DBSession, commit_all_at_once=False):
+    '''
+    field_mapping is:
+        list [
+            dict {
+                'from': dict {
+                        'client_id': int,
+                        'object_id': int
+                    },
+                'to': dict {
+                        'client_id': int,
+                        'object_id': int
+                    }
+            },
+            ...
+        ]
+
+    By the end of function execution every use of 'from' fields in database
+    will be replaced by 'to' fields, 'from' fields will be marked for deletion
+    '''
     try:
-        for field_id in field_mapping:
-            from_field = field_mapping[field_id]['from']
-            to_field = field_mapping[field_id]['to']
+        for field_pair in field_mapping:
+            from_field = field_pair['from']
+            to_field = field_pair['to']
             collapse_field(from_field, to_field, session, not commit_all_at_once)
 
         if commit_all_at_once:
@@ -249,3 +276,45 @@ def collapse_field_mapping(field_mapping, session=DBSession, commit_all_at_once=
 
         if commit_all_at_once:
             transaction.abort()
+
+
+def generate_field_mapping(field_groups):
+    '''
+    Returns mapping for collapse_field_mapping made from field groups:
+        list [
+            dict {
+                'from': dict {
+                        'client_id': int,
+                        'object_id': int
+                    },
+                'to': dict {
+                        'client_id': int,
+                        'object_id': int
+                    }
+            },
+            ...
+        ]
+    '''
+    res = []
+    for group in field_groups:
+        earliest_date = group[0]['field'].created_at
+        earliest_idx = 0
+        for i in range(0, len(group)):
+            if earliest_date > group[i]['field'].created_at:
+                earliest_date = group[i]['field'].created_at
+                earliest_idx = i
+
+        to_field = {'client_id': group[earliest_idx]['field'].client_id,
+                    'object_id': group[earliest_idx]['field'].object_id}
+
+        for i in range(0, len(group)):
+            if i != earliest_idx:
+                res.append({
+                    'from': {
+                        'client_id': group[i]['field'].client_id,
+                        'object_id': group[i]['field'].object_id
+                    },
+                    'to': to_field
+                })
+
+    return res
