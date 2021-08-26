@@ -224,7 +224,12 @@ class CreateEntity(graphene.Mutation):
         if not user:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
 
-        parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        parent = CACHE.get(objects =
+            {
+                dbLexicalEntry : (parent_client_id, parent_object_id)
+            }
+        )
         if not parent:
             raise ResponseError(message="No such lexical entry in the system")
 
@@ -247,9 +252,14 @@ class CreateEntity(graphene.Mutation):
         data_type = tr_atom.content.lower()
 
         if args.get('self_id'):
-            self_client_id, self_object_id = args.get('self_id')
-            upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
-                                                            object_id=self_object_id).first()
+            # self_client_id, self_object_id = args.get('self_id')
+            # upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
+            #                                                 object_id=self_object_id).first()
+            upper_level = CACHE.get(objects =
+                {
+                    dbEntity : aargs.get('self_id')
+                }
+            )
             if not upper_level:
                 raise ResponseError(message="No such upper level in the system")
         dbentity = dbEntity(client_id=client_id,
@@ -351,9 +361,10 @@ class CreateEntity(graphene.Mutation):
                 raise ResponseError(
                     message="The field is of link type. You should provide client_id and object id in the content")
             if args.get("link_perspective_id"):
-                link_persp_client_id, link_persp_object_id = args.get('link_perspective_id')
-                if not DBSession.query(dbPerspective)\
-                        .filter_by(client_id=link_persp_client_id, object_id=link_persp_object_id).first():
+                # link_persp_client_id, link_persp_object_id = args.get('link_perspective_id')
+                # if not DBSession.query(dbPerspective)\
+                #         .filter_by(client_id=link_persp_client_id, object_id=link_persp_object_id).first():
+                if not CACHE.get(objects = { dbPerspective : args.get('link_perspective_id') }):
                     raise ResponseError(message="link_perspective not found")
                 dbentity.additional_metadata['link_perspective_id'] = [link_persp_client_id, link_persp_object_id]
 
@@ -493,7 +504,7 @@ class UpdateEntity(graphene.Mutation):
         #CACHE get_entity
         dbentity = CACHE.get(objects =
             {
-                Entity : (client_id, object_id)
+                dbEntity : (client_id, object_id)
             }
         )
         # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
@@ -972,13 +983,14 @@ class BulkCreateEntity(graphene.Mutation):
 
             #CACHE внутри функции вставить set_entity
             dbentity = create_entity(ids, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
-                                     filename, content, registry, request, True)
+                                     filename, content, registry, request, False)
 
             dbentities_list.append(dbentity)
 
         #CACHE set_entity
-        DBSession.bulk_save_objects(dbentities_list)
-        DBSession.flush()
+        # DBSession.bulk_save_objects(dbentities_list)
+        # DBSession.flush()
+        CACHE.set(objects = dbentities_list)
         for dbentity in dbentities_list:
             entity =  Entity(id=[dbentity.client_id, dbentity.object_id])
             entity.dbObject = dbentity
@@ -1016,7 +1028,12 @@ class UpdateEntityContent(graphene.Mutation):
         old_client_id, object_id = args.get('id')
         client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
         content = args.get("content")
-        dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_client_id, object_id=object_id).first()
+        dbentity_old = CACHE.get(objects =
+            {
+                dbEntity : (old_client_id, object_id)
+            }
+        )
+        # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_client_id, object_id=object_id).first()
         if not dbentity_old or dbentity_old.marked_for_deletion:
             raise ResponseError(message="No such entity in the system")
         if dbentity_old.field.data_type != "Text":
@@ -1036,8 +1053,13 @@ class UpdateEntityContent(graphene.Mutation):
         if not user:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
 
-        parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentity_old.parent_client_id,
-                                                           object_id=dbentity_old.parent_object_id).first()
+        # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentity_old.parent_client_id,
+        #                                                    object_id=dbentity_old.parent_object_id).first()
+        parent = CACHE.get(objects =
+            {
+                dbLexicalEntry : (dbentity_old.parent_client_id, dbentity_old.parent_object_id)
+            }
+        )
         if not parent:
             raise ResponseError(message="No such lexical entry in the system")
 
@@ -1057,7 +1079,7 @@ class UpdateEntityContent(graphene.Mutation):
             #     field.is_translatable = bool(args['is_translatable'])
         # DBSession.add(dbentity)
         # DBSession.flush()
-
+        CACHE.set(objects = [dbentity, ])
         entity = Entity(id = [dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return UpdateEntityContent(entity=entity, triumph=True)
@@ -1095,9 +1117,9 @@ class BulkUpdateEntityContent(graphene.Mutation):
         client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
 
         dbentities_old = list()
-
-        for old_id in old_ids:
-            dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_id[0], object_id=old_id[1]).first()
+        dbentiies = CACHE.get( {dbEntity : old_ids} )
+        for old_id, dbentity_old in zip(old_ids, dbentities):
+            # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_id[0], object_id=old_id[1]).first()
 
             if not dbentity_old or dbentity_old.marked_for_deletion:
                 raise ResponseError(message="No entity" + format(old_id) + " in the system")
@@ -1125,8 +1147,13 @@ class BulkUpdateEntityContent(graphene.Mutation):
             if not user:
                 raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
 
-            parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentities_old[i].parent_client_id,
-                                                               object_id=dbentities_old[i].parent_object_id).first()
+            # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentities_old[i].parent_client_id,
+            #                                                    object_id=dbentities_old[i].parent_object_id).first()
+            parent = CACHE.get(objects=
+                {
+                    dbLexicalEntry : (parent_client_id, parent_object_id)
+                }
+            )
             if not parent:
                 raise ResponseError(message="No such lexical entry in the system")
 
@@ -1146,8 +1173,9 @@ class BulkUpdateEntityContent(graphene.Mutation):
             #     field.is_translatable = bool(args['is_translatable'])
             dbentities_new.append(dbentity)
 
-        DBSession.bulk_save_objects(dbentities_new)
-        DBSession.flush()
+        # DBSession.bulk_save_objects(dbentities_new)
+        # DBSession.flush()
+        CACHE.set(objects = dbentities_new)
 
         entities = list()
         for dbentity in dbentities_new:

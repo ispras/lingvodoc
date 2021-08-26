@@ -73,6 +73,7 @@ from sqlalchemy.sql.expression import Grouping
 
 from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
+from lingvodoc.cache.caching import CACHE
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -216,9 +217,9 @@ class DictionaryPerspective(LingvodocObjectType):
         # See get_hidden() in models.py.
 
         hidden_id = (
-                
+
             DBSession
-            
+
                 .query(
                     dbTranslationGist.client_id,
                     dbTranslationGist.object_id)
@@ -229,7 +230,7 @@ class DictionaryPerspective(LingvodocObjectType):
                     dbTranslationGist.type == 'Service',
                     dbTranslationAtom.content == 'Hidden',
                     dbTranslationAtom.locale_id == 2)
-                
+
                 .first())
 
         # Checking if either the perspective or its dictionary has 'Hidden' status.
@@ -252,7 +253,7 @@ class DictionaryPerspective(LingvodocObjectType):
                     .filter(
                         dbDictionary.client_id == self.dbObject.parent_client_id,
                         dbDictionary.object_id == self.dbObject.parent_object_id)
-                    
+
                     .scalar())
 
         if not is_hidden:
@@ -430,11 +431,11 @@ class DictionaryPerspective(LingvodocObjectType):
 
         # select
         #   max((value ->> 'deleted_at') :: float)
-        #   
+        #
         #   from
         #     ObjectTOC,
         #     jsonb_each(additional_metadata)
-        #   
+        #
         #   where
         #     client_id = <client_id> and
         #     object_id = <object_id>;
@@ -464,32 +465,32 @@ class DictionaryPerspective(LingvodocObjectType):
 
               max(
                 greatest(
-  
+
                   extract(epoch from L.created_at),
-  
+
                   (select
                     max((value ->> 'deleted_at') :: float)
-  
+
                     from
                       jsonb_each(OL.additional_metadata)),
-                  
+
                   (select
-  
+
                     max(
                       greatest(
-                        
+
                         extract(epoch from E.created_at),
-  
+
                         (select
                           max((value ->> 'deleted_at') :: float)
-  
+
                           from
                             jsonb_each(OE.additional_metadata))))
-  
+
                     from
                       public.entity E,
                       ObjectTOC OE
-  
+
                     where
                       E.parent_client_id = L.client_id and
                       E.parent_object_id = L.object_id and
@@ -521,11 +522,11 @@ class DictionaryPerspective(LingvodocObjectType):
                   func.greatest(
                       deleted_at_query.label('deleted_at'),
                       Grouping(sqlalchemy.text(sql_str))))
-                
+
             .params({
                 'client_id': self.dbObject.client_id,
                 'object_id': self.dbObject.object_id})
-            
+
             .scalar())
 
         return max(
@@ -1083,7 +1084,7 @@ class UpdatePerspectiveAtom(graphene.Mutation):
             atom_id = args['atom_id']
 
             dbtranslationatom = (
-                    
+
                 DBSession
                     .query(dbTranslationAtom)
                     .filter_by(
@@ -1094,7 +1095,7 @@ class UpdatePerspectiveAtom(graphene.Mutation):
         else:
 
             dbtranslationatom = (
-                    
+
                 DBSession
                     .query(dbTranslationAtom)
                     .filter_by(
@@ -1210,4 +1211,3 @@ class UndeleteDictionaryPerspective(graphene.Mutation):
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return UndeleteDictionaryPerspective(perspective=perspective, triumph=True)
-
