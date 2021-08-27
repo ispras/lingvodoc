@@ -5,14 +5,17 @@ from ..models import (
     DictionaryPerspectiveToField,
     Entity
 )
-from sqlalchemy import and_, exc
+from sqlalchemy import and_, exc, create_engine
 import transaction
 import logging
 
 DEFAULT_LOCALE_ID = 1
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.WARNING)
+stream = logging.StreamHandler()
+log.setLevel(logging.INFO)
+stream.setLevel(logging.INFO)
+log.addHandler(stream)
 
 
 def get_fields_data(session):
@@ -318,3 +321,188 @@ def generate_field_mapping(field_groups):
                 })
 
     return res
+
+
+# Just some handy string converters
+def _str_field_data(field_data, sep=' ', end=''):
+    return str(field_data['field'].client_id) + sep + str(field_data['field'].object_id) + sep +\
+           ' '.join([str(i) + ' '  + str(field_data['translations'][i].content) for i in field_data['translations']])\
+           + end
+
+
+def _str_fields_data_dict(fields_data_dict, sep='\n\t', end='\n'):
+    res = ''
+    for field_data_id in fields_data_dict:
+        res += str(field_data_id) + sep + _str_field_data(fields_data_dict[field_data_id], sep=' ', end=sep)
+    res += end
+    return res
+
+
+def _str_fields_data_list(fields_data_list, sep='\n', end='\n'):
+    res = ''
+    for data in fields_data_list:
+        res += _str_field_data(data, sep=' ', end=sep)
+    res += end
+    return res
+
+
+def _str_field_dst(field_dst):
+    res = ''
+    for field_hash in field_dst:
+        res += str(field_hash) + '\n\t' + _str_fields_data_list(field_dst[field_hash], sep='\n\t')
+    return res
+
+
+def _str_same_fields(res):
+    str_res = ''
+    for l in res:
+        str_res += _str_fields_data_list(l)
+    return str_res
+
+
+def main(session=DBSession):
+    mapping = [
+        {
+            'from': {'client_id': 3924, 'object_id': 5},
+            'to': {'client_id': 66, 'object_id': 12}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 8},
+            'to': {'client_id': 66, 'object_id': 12}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 11},
+            'to': {'client_id': 66, 'object_id': 12}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 180},
+            'to': {'client_id': 66, 'object_id': 12}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 183},
+            'to': {'client_id': 66, 'object_id': 12}
+        }, {
+            'from': {'client_id': 1244, 'object_id': 119},
+            'to': {'client_id': 671, 'object_id': 14204}
+        }, {
+            'from': {'client_id': 1207, 'object_id': 382},
+            'to': {'client_id': 1072, 'object_id': 21}
+        }, {
+            'from': {'client_id': 1327, 'object_id': 4},
+            'to': {'client_id': 1321, 'object_id': 9}
+        }, {
+            'from': {'client_id': 1347, 'object_id': 4},
+            'to': {'client_id': 1346, 'object_id': 7}
+        }, {
+            'from': {'client_id': 1346, 'object_id': 31},
+            'to': {'client_id': 1346, 'object_id': 10}
+        }, {
+            'from': {'client_id': 1346, 'object_id': 154},
+            'to': {'client_id': 1346, 'object_id': 148}
+        }, {
+            'from': {'client_id': 1346, 'object_id': 70},
+            'to': {'client_id': 1346, 'object_id': 67}
+        }, {
+            'from': {'client_id': 1346, 'object_id': 142},
+            'to': {'client_id': 1346, 'object_id': 139}
+        }, {
+            'from': {'client_id': 2187, 'object_id': 37},
+            'to': {'client_id': 2187, 'object_id': 27}
+        }, {
+            'from': {'client_id': 1479, 'object_id': 796},
+            'to': {'client_id': 1479, 'object_id': 793}
+        }, {
+            'from': {'client_id': 1589, 'object_id': 13},
+            'to': {'client_id': 1589, 'object_id': 10}
+        }, {
+            'from': {'client_id': 3498, 'object_id': 5},
+            'to': {'client_id': 2888, 'object_id': 10}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 144},
+            'to': {'client_id': 3924, 'object_id': 141}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 147},
+            'to': {'client_id': 3924, 'object_id': 141}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 150},
+            'to': {'client_id': 3924, 'object_id': 141}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 156},
+            'to': {'client_id': 3924, 'object_id': 153}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 159},
+            'to': {'client_id': 3924, 'object_id': 153}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 162},
+            'to': {'client_id': 3924, 'object_id': 153}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 165},
+            'to': {'client_id': 3924, 'object_id': 153}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 173},
+            'to': {'client_id': 3924, 'object_id': 153}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 177},
+            'to': {'client_id': 3924, 'object_id': 153}
+        }, {
+            'from': {'client_id': 3924, 'object_id': 169},
+            'to': {'client_id': 3924, 'object_id': 153}
+        }, {
+            'from': {'client_id': 1643, 'object_id': 166},
+            'to': {'client_id': 66, 'object_id': 6}
+        }, {
+            'from': {'client_id': 748, 'object_id': 1392},
+            'to': {'client_id': 66, 'object_id': 6}
+        }, {
+            'from': {'client_id': 1349, 'object_id': 73},
+            'to': {'client_id': 2187, 'object_id': 4}
+        }, {
+            'from': {'client_id': 2187, 'object_id': 27},
+            'to': {'client_id': 2187, 'object_id': 4}
+        }, {
+            'from': {'client_id': 748, 'object_id': 1397},
+            'to': {'client_id': 1, 'object_id': 212}
+        }, {
+            'from': {'client_id': 1642, 'object_id': 540},
+            'to': {'client_id': 1642, 'object_id': 537}
+        }, {
+            'from': {'client_id': 3498, 'object_id': 13},
+            'to': {'client_id': 3498, 'object_id': 58}
+        }, {
+            'from': {'client_id': 3498, 'object_id': 17},
+            'to': {'client_id': 3498, 'object_id': 54}
+        }, {
+            'from': {'client_id': 1372, 'object_id': 9103},
+            'to': {'client_id': 1207, 'object_id': 385}
+        }
+    ]
+
+    # Logging info about fields marked for collapse and fields intact
+    fields_dict = get_fields_data(session)
+    fields_log_list = []
+    for field_id in fields_dict:
+        flag = False
+        for d in mapping:
+            if field_id[0] == d['from']['client_id'] and field_id[1] == d['from']['object_id']:
+                flag = True
+                break
+        if not flag:
+            fields_log_list.append(('[intact] ', fields_dict[field_id]))
+        else:
+            fields_log_list.append(('[marked] ', fields_dict[field_id]))
+
+    def field_data_locale_key(x):
+        tmp = x[1]['translations'].get(DEFAULT_LOCALE_ID, None)
+        if not tmp:
+            return ' '
+        return tmp.content
+
+    fields_log_list.sort(key=field_data_locale_key)
+    log.info('Marked fields will be deleted')
+    for f in fields_log_list:
+        log.info(f[0] + _str_field_data(f[1]))
+    # End of logging
+
+    #collapse_field_mapping(mapping, session)
+
+
+if __name__ == '__main__':
+    engine = create_engine('postgresql+psycopg2://postgres:password@pg:5432/lingvodoc', echo=True)
+    DBSession.configure(bind=engine)
+    main(DBSession)
