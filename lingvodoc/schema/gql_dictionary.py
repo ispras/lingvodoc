@@ -1350,7 +1350,11 @@ class UndeleteDictionary(graphene.Mutation):
 
         # Restoring grant membership, if required.
 
-        additional_info = objecttoc_obj.additional_metadata.get('__additional_info__')
+        additional_metadata = (
+            objecttoc_obj.additional_metadata)
+
+        additional_info = (
+            additional_metadata and additional_metadata.get('__additional_info__'))
 
         if additional_info:
             
