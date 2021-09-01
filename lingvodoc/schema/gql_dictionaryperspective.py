@@ -900,7 +900,12 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         object_id = id[1]
         parent_id = args.get('parent_id')
         additional_metadata = args.get('additional_metadata')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : (client_id, object_id)
+            }
+        )
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="Error: No such perspective in the system")
 
@@ -913,9 +918,14 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         if translation_gist_object_id:
             dbperspective.translation_gist_object_id = translation_gist_object_id  # TODO: refactor like dictionaries
         if parent_id:
-            parent_client_id, parent_object_id = parent_id
-            dbparent_dictionary = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id,
-                                                                          object_id=parent_object_id).first()
+            # parent_client_id, parent_object_id = parent_id
+            # dbparent_dictionary = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id,
+            #                                                               object_id=parent_object_id).first()
+            dbparent_dictionary = CACHE.get(objects=
+                {
+                    dbDictionary : parent_id
+                }
+            )
             if not dbparent_dictionary:
                 raise ResponseError(message="Error: No such dictionary in the system")
             dbperspective.parent_client_id = parent_client_id
@@ -923,6 +933,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
 
         update_metadata(dbperspective, additional_metadata)
 
+        CACHE.set(objects = [dbperspective,])
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return UpdateDictionaryPerspective(perspective=perspective, triumph=True)
@@ -951,7 +962,12 @@ class UpdatePerspectiveStatus(graphene.Mutation):
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : (client_id, object_id)
+            }
+        )
         if dbperspective and not dbperspective.marked_for_deletion:
             dbperspective.state_translation_gist_client_id = state_translation_gist_client_id
             dbperspective.state_translation_gist_object_id = state_translation_gist_object_id
@@ -961,6 +977,7 @@ class UpdatePerspectiveStatus(graphene.Mutation):
             perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
                                                 status=atom.content)
             perspective.dbObject = dbperspective
+            CACHE.set(objects = [dbperspective,])
             return UpdatePerspectiveStatus(perspective=perspective, triumph=True)
 
 class AddPerspectiveRoles(graphene.Mutation):
@@ -988,7 +1005,12 @@ class AddPerspectiveRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : args.get('id')
+            }
+        )
         client_id = info.context.get('client_id')
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
@@ -1000,6 +1022,7 @@ class AddPerspectiveRoles(graphene.Mutation):
                 edit_role(dbperspective, user_id, role_id, client_id, perspective_default=True, organization=True)
         perspective = Dictionary(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
+        CACHE.set(objects = [dbperspective,])
         return AddPerspectiveRoles(perspective=perspective, triumph=True)
 
 
@@ -1020,8 +1043,13 @@ class DeletePerspectiveRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id,
-                                                                 object_id=perspective_object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id,
+        #                                                          object_id=perspective_object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : args.get('id')
+            }
+        )
         client_id = info.context.get('client_id')
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
@@ -1035,6 +1063,7 @@ class DeletePerspectiveRoles(graphene.Mutation):
                           action="delete")
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
+        CACHE.set(objects = [dbperspective,])
         return DeletePerspectiveRoles(perspective=perspective, triumph=True)
 
 
@@ -1074,7 +1103,12 @@ class UpdatePerspectiveAtom(graphene.Mutation):
     def mutate(root, info, **args):
         content = args.get('content')
         client_id, object_id = args.get('id')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : (client_id, object_id)
+            }
+        )
         if not dbperspective:
             raise ResponseError(message="No such perspective in the system")
         locale_id = args.get("locale_id")
