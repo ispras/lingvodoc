@@ -101,7 +101,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
         #     object_id = perspective_object_id).first()
         perspective = CACHE.get(objects=
             {
-                DictionaryPerspective : perspective_id
+                DictionaryPerspective : (perspective_id, )
             }
         )
 
@@ -436,7 +436,7 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
         #     object_id = dictionary_object_id).first()
         dictionary = CACHE.get(objects =
             {
-                Dictionary : dictionary_id
+                Dictionary : (dictionary_id, )
             }
         )
 

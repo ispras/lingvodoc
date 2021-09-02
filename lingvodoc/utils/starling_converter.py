@@ -229,7 +229,7 @@ def create_entity(id=None,
         #                                                   object_id=self_object_id).first()
         upper_level = CACHE.get(objects = 
             {
-                dbEntity : self_id
+                dbEntity : (self_id, )
             }
         )
 

@@ -119,7 +119,7 @@ def update_perspective_fields(req,
     #                                                                object_id=perspective_object_id).first()
     perspective = CACHE.get(objects =
         {
-            DictionaryPerspective : (perspective_client_id, perspective_object_id), )
+            DictionaryPerspective : ((perspective_client_id, perspective_object_id), )
         }
     )
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']

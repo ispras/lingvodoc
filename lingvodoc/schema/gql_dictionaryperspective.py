@@ -73,8 +73,6 @@ from sqlalchemy.sql.expression import Grouping
 
 from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
-from lingvodoc.cache.caching import CACHE
-
 # Setting up logging.
 log = logging.getLogger(__name__)
 
@@ -903,7 +901,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         dbperspective = CACHE.get(objects =
             {
-                dbPerspective : (client_id, object_id)
+                dbPerspective : ((client_id, object_id), )
             }
         )
         if not dbperspective or dbperspective.marked_for_deletion:
@@ -923,7 +921,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
             #                                                               object_id=parent_object_id).first()
             dbparent_dictionary = CACHE.get(objects=
                 {
-                    dbDictionary : parent_id
+                    dbDictionary : (parent_id, )
                 }
             )
             if not dbparent_dictionary:
@@ -965,7 +963,7 @@ class UpdatePerspectiveStatus(graphene.Mutation):
         # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         dbperspective = CACHE.get(objects =
             {
-                dbPerspective : (client_id, object_id)
+                dbPerspective : ((client_id, object_id), )
             }
         )
         if dbperspective and not dbperspective.marked_for_deletion:
@@ -1008,7 +1006,7 @@ class AddPerspectiveRoles(graphene.Mutation):
         # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
         dbperspective = CACHE.get(objects =
             {
-                dbPerspective : args.get('id')
+                dbPerspective : (args.get('id'), )
             }
         )
         client_id = info.context.get('client_id')
@@ -1047,7 +1045,7 @@ class DeletePerspectiveRoles(graphene.Mutation):
         #                                                          object_id=perspective_object_id).first()
         dbperspective = CACHE.get(objects =
             {
-                dbPerspective : args.get('id')
+                dbPerspective : (args.get('id'), )
             }
         )
         client_id = info.context.get('client_id')
@@ -1106,7 +1104,7 @@ class UpdatePerspectiveAtom(graphene.Mutation):
         # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         dbperspective = CACHE.get(objects =
             {
-                dbPerspective : (client_id, object_id)
+                dbPerspective : ((client_id, object_id), )
             }
         )
         if not dbperspective:

@@ -129,7 +129,7 @@ def update_perspective_fields(req,
     #                                                                object_id=perspective_object_id).first()
     perspective = CACHE.get(objects =
         {
-            DictionaryPerspective : (perspective_client_id,  perspective_object_id)
+            DictionaryPerspective : ((perspective_client_id,  perspective_object_id), )
         }
     )
 
@@ -408,7 +408,7 @@ def convert_five_tiers(dictionary_id,
         # markup_entity = DBSession.query(Entity).filter_by(client_id=markup_id[0], object_id=markup_id[1]).first()
         markup_entity = CACHE.get(objects =
             {
-                Entity : markup_id
+                Entity : (markup_id, )
             }
         )
 
@@ -483,7 +483,7 @@ def convert_five_tiers(dictionary_id,
             # sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
             sound_entity = CACHE.get(objects =
                 {
-                    Entity : (markup_entity.self_client_id, markup_entity.self_object_id)
+                    Entity : ((markup_entity.self_client_id, markup_entity.self_object_id), )
                 }
             )
 
@@ -535,7 +535,7 @@ def convert_five_tiers(dictionary_id,
         #                                                object_id=dictionary_object_id).first()
         parent = CACHE.get(objects =
             {
-                Dictionary : (dictionary_client_id, dictionary_object_id)
+                Dictionary : ((dictionary_client_id, dictionary_object_id), )
             }
         )
 
@@ -666,7 +666,7 @@ def convert_five_tiers(dictionary_id,
                                   subject_client_id=second_perspective.client_id)
                 if user not in new_group.users:
                     new_group.users.append(user)
-                if owner not in new_group.users:+
+                if owner not in new_group.users:
                     new_group.users.append(owner)
                 DBSession.add(new_group)
 

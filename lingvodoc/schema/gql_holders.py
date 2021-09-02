@@ -453,7 +453,7 @@ def del_object(
             __additional_info__ = kwargs or None))
 
     tmp_object.mark_deleted(message)
-    if update_cache and CACHE.get(objects = { tmp_object.__class__ : tmp_object }):
+    if update_cache and CACHE.get(objects = { tmp_object.__class__ : (tmp_object, ) }):
         CACHE.set(objects = [tmp_object, ])
 
 def undel_object(
@@ -500,7 +500,7 @@ def undel_object(
             __additional_info__ = kwargs or None))
 
     tmp_object.mark_undeleted(message)
-    if update_cache and CACHE.get(objects = { tmp_object.__class__ : tmp_object }):
+    if update_cache and CACHE.get(objects = { tmp_object.__class__ : (tmp_object, ) }):
         CACHE.set(objects = [tmp_object, ])
 
 
@@ -536,7 +536,7 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                     # example: (id: [2,3])
                     # cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
                     #                                                      object_id=cls.id[1]).first()
-                    cls.dbObject = CACHE.get(objects = {cls.dbType : cls.id})
+                    cls.dbObject = CACHE.get(objects = {cls.dbType : (cls.id, )})
                     if cls.dbObject is None:
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)

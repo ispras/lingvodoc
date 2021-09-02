@@ -230,7 +230,7 @@ def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
         #     client_id = perspective_id[0], object_id = perspective_id[1]).first()
         perspective = CACHE.get(objects=
             {
-                DictionaryPerspective : perspective_id
+                DictionaryPerspective : (perspective_id, )
             }
         )
 
@@ -249,7 +249,7 @@ def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
         #     object_id = perspective.parent_object_id).first()
         dictionary = CACHE.get(objects =
             {
-                Dictionary : (perspective.parent_client_id, perspective.parent_object_id)
+                Dictionary : ((perspective.parent_client_id, perspective.parent_object_id), )
             }
         )
 

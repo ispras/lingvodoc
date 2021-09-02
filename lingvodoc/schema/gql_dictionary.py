@@ -563,7 +563,7 @@ class Dictionary(LingvodocObjectType):  # tested
         # dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         dictionary = CACHE.get(objects =
             {
-                dbDictionary : (client_id, object_id)
+                dbDictionary : ((client_id, object_id), )
             }
         )
         if not dictionary or dictionary.marked_for_deletion:
@@ -928,7 +928,7 @@ class UpdateDictionary(graphene.Mutation):
         # db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         db_dictionary = CACHE.get(objects =
             {
-                dbDictionary : ids
+                dbDictionary : (ids, )
             }
         )
         if not db_dictionary or db_dictionary.marked_for_deletion:
@@ -1061,7 +1061,7 @@ class UpdateDictionaryStatus(graphene.Mutation):
         # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         dbdictionary = CACHE.get(objects =
             {
-                dbDictionary : (client_id, object_id)
+                dbDictionary : ((client_id, object_id), )
             }
         )
         if dbdictionary and not dbdictionary.marked_for_deletion:
@@ -1118,7 +1118,7 @@ mutation up{
         # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         dbdictionary = CACHE.get(objects =
             {
-                dbDictionary : (client_id, object_id)
+                dbDictionary : ((client_id, object_id), )
             }
         )
         if not dbdictionary:
@@ -1225,7 +1225,7 @@ class AddDictionaryRoles(graphene.Mutation):
         # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         dbdictionary = CACHE.get(objects =
             {
-                dbDictionary : args.get('id')
+                dbDictionary : (args.get('id'), )
             }
         )
         client_id = info.context.get('client_id')
@@ -1270,7 +1270,7 @@ class DeleteDictionaryRoles(graphene.Mutation):
         # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         dbdictionary = CACHE.get(objects =
             {
-                dbDictionary : args.get('id')
+                dbDictionary : (args.get('id'), )
             }
         )
 
@@ -1328,7 +1328,7 @@ class DeleteDictionary(graphene.Mutation):
         # dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         dbdictionary = CACHE.get(objects =
             {
-                dbDictionary : args.get('id')
+                dbDictionary : (args.get('id'), )
             }
         )
 
@@ -1377,7 +1377,7 @@ class UndeleteDictionary(graphene.Mutation):
         # dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         dbdictionary = CACHE.get(objects =
             {
-                dbDictionary : args.get('id')
+                dbDictionary : (args.get('id'), )
             }
         )
 

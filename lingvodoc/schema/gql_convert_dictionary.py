@@ -133,7 +133,7 @@ class ConvertDictionary(graphene.Mutation):
                                                                # object_id=args["dictionary_id"][1]).first()
                 dictionary_obj = CACHE.get(objects =
                     {
-                        dbDictionary : args["dictionary_id"]
+                        dbDictionary : (args["dictionary_id"], )
                     }
                 )
                 gist = DBSession.query(dbTranslationGist).\
@@ -282,7 +282,7 @@ class ConvertFiveTiers(graphene.Mutation):
             #                                           object_id=args["dictionary_id"][1]).first()
             dictionary_obj = CACHE.get(objects =
                 {
-                    dbDictionary : args["dictionary_id"]
+                    dbDictionary : (args["dictionary_id"], )
                 }
             )
             if not dictionary_obj:
@@ -299,7 +299,7 @@ class ConvertFiveTiers(graphene.Mutation):
                 #                                                object_id=args["dictionary_id"][1]).first()
                 dictionary_obj = CACHE.get(objects =
                     {
-                        dbDictionary : args["dictionary_id"]
+                        dbDictionary : (args["dictionary_id"], )
                     }
                 )
                 gist = DBSession.query(dbTranslationGist).\

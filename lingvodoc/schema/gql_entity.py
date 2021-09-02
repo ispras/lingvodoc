@@ -227,7 +227,7 @@ class CreateEntity(graphene.Mutation):
         # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         parent = CACHE.get(objects =
             {
-                dbLexicalEntry : (parent_client_id, parent_object_id)
+                dbLexicalEntry : ((parent_client_id, parent_object_id), )
             }
         )
         if not parent:
@@ -257,7 +257,7 @@ class CreateEntity(graphene.Mutation):
             #                                                 object_id=self_object_id).first()
             upper_level = CACHE.get(objects =
                 {
-                    dbEntity : aargs.get('self_id')
+                    dbEntity : (args.get('self_id'), )
                 }
             )
             if not upper_level:
@@ -364,7 +364,7 @@ class CreateEntity(graphene.Mutation):
                 # link_persp_client_id, link_persp_object_id = args.get('link_perspective_id')
                 # if not DBSession.query(dbPerspective)\
                 #         .filter_by(client_id=link_persp_client_id, object_id=link_persp_object_id).first():
-                if not CACHE.get(objects = { dbPerspective : args.get('link_perspective_id') }):
+                if not CACHE.get(objects = { dbPerspective : (args.get('link_perspective_id'), ) }):
                     raise ResponseError(message="link_perspective not found")
                 dbentity.additional_metadata['link_perspective_id'] = [link_persp_client_id, link_persp_object_id]
 
@@ -504,7 +504,7 @@ class UpdateEntity(graphene.Mutation):
         #CACHE get_entity
         dbentity = CACHE.get(objects =
             {
-                dbEntity : (client_id, object_id)
+                dbEntity : ((client_id, object_id), )
             }
         )
         # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
@@ -957,8 +957,13 @@ class BulkCreateEntity(graphene.Mutation):
             if not check_lingvodoc_id(parent_id):
                 raise KeyError("Wrong parent_id")
             #CACHE get_lexicalentry
-            lexical_entry = DBSession.query(dbLexicalEntry) \
-                .filter_by(client_id=parent_id[0], object_id=parent_id[1]).one()
+            # lexical_entry = DBSession.query(dbLexicalEntry) \
+            #     .filter_by(client_id=parent_id[0], object_id=parent_id[1]).one()
+            lexical_entry = CACHE.get(objects =
+                {
+                    dbLexicalEntry : (parent_id, )
+                }
+            )
             info.context.acl_check('create', 'lexical_entries_and_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
@@ -1030,7 +1035,7 @@ class UpdateEntityContent(graphene.Mutation):
         content = args.get("content")
         dbentity_old = CACHE.get(objects =
             {
-                dbEntity : (old_client_id, object_id)
+                dbEntity : ((old_client_id, object_id), )
             }
         )
         # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_client_id, object_id=object_id).first()
@@ -1057,7 +1062,7 @@ class UpdateEntityContent(graphene.Mutation):
         #                                                    object_id=dbentity_old.parent_object_id).first()
         parent = CACHE.get(objects =
             {
-                dbLexicalEntry : (dbentity_old.parent_client_id, dbentity_old.parent_object_id)
+                dbLexicalEntry : ((dbentity_old.parent_client_id, dbentity_old.parent_object_id), )
             }
         )
         if not parent:
@@ -1117,7 +1122,7 @@ class BulkUpdateEntityContent(graphene.Mutation):
         client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
 
         dbentities_old = list()
-        dbentiies = CACHE.get( {dbEntity : old_ids} )
+        dbentities = CACHE.get( {dbEntity : old_ids} )
         for old_id, dbentity_old in zip(old_ids, dbentities):
             # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_id[0], object_id=old_id[1]).first()
 
@@ -1151,7 +1156,7 @@ class BulkUpdateEntityContent(graphene.Mutation):
             #                                                    object_id=dbentities_old[i].parent_object_id).first()
             parent = CACHE.get(objects=
                 {
-                    dbLexicalEntry : (parent_client_id, parent_object_id)
+                    dbLexicalEntry : ((parent_client_id, parent_object_id), )
                 }
             )
             if not parent:

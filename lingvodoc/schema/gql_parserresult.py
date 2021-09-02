@@ -116,7 +116,7 @@ class ExecuteParser(graphene.Mutation):
         #     filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
         entity = CACHE.get(objects =
             {
-                dbEntity : entity_id
+                dbEntity : (entity_id, )
             }
         )
         if not entity:

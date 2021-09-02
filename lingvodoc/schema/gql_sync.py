@@ -157,7 +157,7 @@ def download_dictionary(dict_id, request, user_id, locale_id):
         #                                                        object_id=dict_id[1]).first()
         dictionary_obj = CACHE.get(objects =
             {
-                dbDictionary : args["dictionary_id"]
+                dbDictionary : (args["dictionary_id"], )
             }
         )
         if not dictionary_obj:

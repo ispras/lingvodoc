@@ -287,7 +287,7 @@ class AcceptUserRequest(graphene.Mutation):
                     #         object_id = dict_id[1]).first())
                     dictionary = CACHE.get(objects =
                         {
-                            dbDictionary : args["dict_id"]
+                            dbDictionary : (args["dict_id"], )
                         }
                     )
 
@@ -626,7 +626,7 @@ class AddDictionaryToOrganization(graphene.Mutation):
         #         object_id = dictionary_id[1]).first())
         dictionary = CACHE.get(objects =
             {
-                dbDictionary : args["dictionary_id"]
+                dbDictionary : (args["dictionary_id"], )
             }
         )
         if not dictionary:

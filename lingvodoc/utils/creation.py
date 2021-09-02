@@ -292,7 +292,7 @@ def create_entity(id=None,
     # parent = DBSession.query(LexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     parent = CACHE.get(objects =
         {
-            LexicalEntry : parent_id
+            LexicalEntry : (parent_id, )
         }
     )
     if not parent:
@@ -318,7 +318,7 @@ def create_entity(id=None,
         #                                                   object_id=self_object_id).first()
         upper_level = CACHE.get(objects =
             {
-                Entity : self_id
+                Entity : (self_id, )
             }
         )
         if not upper_level:
@@ -413,7 +413,7 @@ def create_lexicalentry(id, perspective_id, save_object=False):
     #     filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
     perspective = CACHE.get(objects =
         {
-            DictionaryPerspective : perspective_id
+            DictionaryPerspective : (perspective_id, )
         }
     )
     if not perspective:
@@ -448,7 +448,7 @@ def async_create_parser_result_method(id, parser_id, entity_id,
     # entity = DBSession.query(Entity).filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
     entity = CACHE.get(objects =
         {
-            Entity : entity_id
+            Entity : (entity_id, )
         }
     )
     content_filename = entity.content.split('/')[-1]
@@ -477,7 +477,7 @@ def create_parser_result(id, parser_id, entity_id, dedoc_url, arguments=None, sa
     #     filter_by(client_id=entity_client_id, object_id=entity_object_id).first()
     entity = CACHE.get(objects =
         {
-            Entity : entity_id
+            Entity : (entity_id, )
         }
     )
     parser = DBSession.query(Parser). \

@@ -258,7 +258,7 @@ class DeleteLexicalEntry(graphene.Mutation):
         # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         dblexicalentry = CACHE.get(objects =
             {
-                dbLexicalEntry : lex_id
+                dbLexicalEntry : (lex_id, )
             }
         )
         if not dblexicalentry or dblexicalentry.marked_for_deletion:
@@ -288,7 +288,7 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
         task_id = str(uuid4())
         lexical_entries = CACHE.get(
             {
-                dbLexicalEntry : ids
+                dbLexicalEntry : (ids, )
             }
         )
         for dblexicalentry in lexical_entries:
@@ -388,7 +388,7 @@ class ConnectLexicalEntries(graphene.Mutation):
             #     filter_by(client_id=par[0], object_id=par[1]).first()
             parent = CACHE.get(
                 {
-                    dbLexicalEntry : par
+                    dbLexicalEntry : (par, )
                 }
             )
             if not parent:
@@ -411,7 +411,7 @@ class ConnectLexicalEntries(graphene.Mutation):
             #     filter_by(client_id=par[0], object_id=par[1]).first()
             parent = CACHE.get(
                 {
-                    dbLexicalEntry : par
+                    dbLexicalEntry : (par, )
                 }
             )
             if parent not in lexical_entries:
