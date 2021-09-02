@@ -326,8 +326,8 @@ def generate_field_mapping(field_groups):
 # Just some handy string converters
 def _str_field_data(field_data, sep=' ', end=''):
     return str(field_data['field'].client_id) + sep + str(field_data['field'].object_id) + sep +\
-           ' '.join([str(i) + ' '  + str(field_data['translations'][i].content) for i in field_data['translations']])\
-           + end
+            str(field_data['field'].created_at) + sep + '|' + sep + ' '.join([str(i) + ' '  +\
+            str(field_data['translations'][i].content) for i in field_data['translations']]) + end
 
 
 def _str_fields_data_dict(fields_data_dict, sep='\n\t', end='\n'):
@@ -462,11 +462,11 @@ def main(session=DBSession):
             'from': {'client_id': 1642, 'object_id': 540},
             'to': {'client_id': 1642, 'object_id': 537}
         }, {
-            'from': {'client_id': 3498, 'object_id': 13},
-            'to': {'client_id': 3498, 'object_id': 58}
+            'from': {'client_id': 3498, 'object_id': 58},
+            'to': {'client_id': 3498, 'object_id': 13}
         }, {
-            'from': {'client_id': 3498, 'object_id': 17},
-            'to': {'client_id': 3498, 'object_id': 54}
+            'from': {'client_id': 3498, 'object_id': 54},
+            'to': {'client_id': 3498, 'object_id': 17}
         }, {
             'from': {'client_id': 1372, 'object_id': 9103},
             'to': {'client_id': 1207, 'object_id': 385}
@@ -494,9 +494,14 @@ def main(session=DBSession):
         return tmp.content
 
     fields_log_list.sort(key=field_data_locale_key)
-    log.info('Marked fields will be deleted')
+    log.info('\nMarked fields will be deleted')
     for f in fields_log_list:
         log.info(f[0] + _str_field_data(f[1]))
+
+    log.info('\nLogging field mapping info:')
+    for pair in mapping:
+        log.info('from: ' + _str_field_data(fields_dict[(pair['from']['client_id'], pair['from']['object_id'])]) + '\n'\
+                 + 'to:   ' + _str_field_data(fields_dict[(pair['to']['client_id'], pair['to']['object_id'])]) + '\n')
     # End of logging
 
     #collapse_field_mapping(mapping, session)
