@@ -224,9 +224,15 @@ def create_entity(id=None,
 
 
     if self_id:
-        self_client_id, self_object_id = self_id
-        upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
-                                                          object_id=self_object_id).first()
+        # self_client_id, self_object_id = self_id
+        # upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
+        #                                                   object_id=self_object_id).first()
+        upper_level = CACHE.get(objects = 
+            {
+                dbEntity : self_id
+            }
+        )
+
         if not upper_level:
             raise ResponseError(message="No such upper level in the system")
 

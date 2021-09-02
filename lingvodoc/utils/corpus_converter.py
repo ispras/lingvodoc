@@ -125,8 +125,14 @@ def update_perspective_fields(req,
                               perspective_object_id,
                               client):
     response = dict()
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
-                                                                   object_id=perspective_object_id).first()
+    # perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
+    #                                                                object_id=perspective_object_id).first()
+    perspective = CACHE.get(objects =
+        {
+            DictionaryPerspective : (perspective_client_id,  perspective_object_id)
+        }
+    )
+
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -399,7 +405,13 @@ def convert_five_tiers(dictionary_id,
         sp_structure = set([field_ids[x] for x in sp_fields])
         DBSession.flush()
 
-        markup_entity = DBSession.query(Entity).filter_by(client_id=markup_id[0], object_id=markup_id[1]).first()
+        # markup_entity = DBSession.query(Entity).filter_by(client_id=markup_id[0], object_id=markup_id[1]).first()
+        markup_entity = CACHE.get(objects =
+            {
+                Entity : markup_id
+            }
+        )
+
         if not markup_entity:
             raise KeyError("No such file")
 
@@ -468,7 +480,13 @@ def convert_five_tiers(dictionary_id,
 
         if not no_sound_flag:
 
-            sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
+            # sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
+            sound_entity = CACHE.get(objects =
+                {
+                    Entity : (markup_entity.self_client_id, markup_entity.self_object_id)
+                }
+            )
+
             sound_url = None
             if sound_entity:
                 sound_url = sound_entity.content
@@ -513,8 +531,14 @@ def convert_five_tiers(dictionary_id,
 
         origin_metadata= {"origin_id": (origin_client_id, origin_object_id)}
 
-        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
-                                                       object_id=dictionary_object_id).first()
+        # parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
+        #                                                object_id=dictionary_object_id).first()
+        parent = CACHE.get(objects =
+            {
+                Dictionary : (dictionary_client_id, dictionary_object_id)
+            }
+        )
+
         if not parent:
             return {'error': str("No such dictionary in the system")}
         if not check_dictionary_perm(user.id, dictionary_client_id, dictionary_object_id):
@@ -642,7 +666,7 @@ def convert_five_tiers(dictionary_id,
                                   subject_client_id=second_perspective.client_id)
                 if user not in new_group.users:
                     new_group.users.append(user)
-                if owner not in new_group.users:
+                if owner not in new_group.users:+
                     new_group.users.append(owner)
                 DBSession.add(new_group)
 

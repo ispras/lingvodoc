@@ -115,8 +115,13 @@ def update_perspective_fields(req,
                               perspective_object_id,
                               client):
     response = dict()
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
-                                                                   object_id=perspective_object_id).first()
+    # perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
+    #                                                                object_id=perspective_object_id).first()
+    perspective = CACHE.get(objects =
+        {
+            DictionaryPerspective : (perspective_client_id, perspective_object_id), )
+        }
+    )
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -216,7 +221,12 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content= None, filename=None,
                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):
-    parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
+    # parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
+    parent = CACHE.get(objects =
+        {
+            LexicalEntry : ((le_client_id, le_object_id),)
+        }
+    )
     if not parent:
         return {'error': str("No such lexical entry in the system")}
     upper_level = None
@@ -229,8 +239,13 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         Field.client_id == field_client_id, Field.object_id == field_object_id).first()
     data_type = tr_atom.content.lower()
     if up_lvl:
-        upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
-                                                              object_id=up_lvl[1]).first()
+        # upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
+        #                                                       object_id=up_lvl[1]).first()
+        upper_level = CACHE.get(objects =
+            {
+                LexicalEntry : (up_lvl,)
+            }
+        )
     entity = Entity(client_id=client.id,
                     field_client_id=field_client_id,
                     field_object_id=field_object_id,
@@ -421,8 +436,13 @@ def convert_five_tiers(
 
         origin_metadata= {"origin_id": (origin_client_id, origin_object_id)}
 
-        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
-                                                       object_id=dictionary_object_id).first()
+        # parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
+        #                                                object_id=dictionary_object_id).first()
+        parent = CACHE.get(objects =
+            {
+                Dictionary : ((dictionary_client_id, dictionary_object_id),)
+            }
+        )
         if not parent:
             return {'error': str("No such dictionary in the system")}
         if not check_dictionary_perm(user.id, dictionary_client_id, dictionary_object_id):
