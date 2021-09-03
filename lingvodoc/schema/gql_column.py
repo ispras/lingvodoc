@@ -177,8 +177,14 @@ class UpdateColumn(graphene.Mutation):
         position = args.get('position')
         if field_id:
             field_object.field_client_id, field_object.field_object_id = field_id
+
+        # Attaching or de-attaching as a nested field.
+
         if self_id:
-            field_object.self_client_id, field_object.self_object_id = self_id
+
+            field_object.self_client_id, field_object.self_object_id = (
+                self_id if self_id[0] > 0 else (None, None))
+
         if link_id:
             field_object.link_client_id, field_object.link_object_id = link_id
         if position:
