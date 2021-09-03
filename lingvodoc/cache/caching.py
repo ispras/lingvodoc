@@ -5,7 +5,7 @@ from redis import Redis
 
 from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
-from lingvodoc.cache.through.cache import ThroughCache, DBSession
+from lingvodoc.cache.through.cache import ThroughCache#, DBSession
 
 import uuid
 import dill

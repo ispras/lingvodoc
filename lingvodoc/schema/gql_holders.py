@@ -534,9 +534,9 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
                 elif type(cls.id) is list:
                     # example: (id: [2,3])
-                    # cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
-                    #                                                      object_id=cls.id[1]).first()
-                    cls.dbObject = CACHE.get(objects = {cls.dbType : (cls.id, )})
+                    cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
+                                                                         object_id=cls.id[1]).first()
+                    # cls.dbObject = CACHE.get(objects = {cls.dbType : (cls.id, )})
                     if cls.dbObject is None:
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)

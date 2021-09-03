@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 from zope.sqlalchemy import ZopeTransactionExtension
 from sqlalchemy.orm import scoped_session, sessionmaker
-DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+
 
 '''
 TODO:
@@ -49,6 +49,7 @@ class ThroughCache(ICache):
         :return:
         """
         self.cache = redis
+        self.DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
     def get(self, keys = None, objects = dict()):
         """
@@ -98,7 +99,7 @@ class ThroughCache(ICache):
                 log.warn(key)
                 cached = self.cache.get(key)
                 if cached is None:
-                    cached = DBSession.query(obj_type) \
+                    cached = self.DBSession.query(obj_type) \
                                     .filter_by(client_id=lingvodoc_id[0], object_id=lingvodoc_id[1]) \
                                     .first()
                     if cached is None:
@@ -107,7 +108,15 @@ class ThroughCache(ICache):
                         self.cache.set(key, dill.dumps(cached))
                 else:
                     # potentially race condition following data loss
-                    cached = DBSession.merge(dill.loads(cached), load=False)
+                    # cached = DBSession.merge(dill.loads(cached), load=False)
+                    cached = dill.loads(cached)
+                    try:
+                        self.DBSession.add(cached)
+                    except:
+                        cached = self.DBSession.query(obj_type) \
+                                        .filter_by(client_id=lingvodoc_id[0], object_id=lingvodoc_id[1]) \
+                                        .first()
+                        
                 result[obj_type].append(cached)
         # except Exception as e:
         #     log.error(f'Exception during getting from cache : {e}')
@@ -156,8 +165,8 @@ class ThroughCache(ICache):
                         objects
                     )
                 )
-                DBSession.add_all(objects)
-                DBSession.flush()
+                self.DBSession.add_all(objects)
+                self.DBSession.flush()
                 self.cache.mset(accepted_for_caching)
                 return True
             except:
@@ -168,8 +177,8 @@ class ThroughCache(ICache):
                 key = f'auto:{obj.__class__.__name__}:{obj.client_id}:{obj.object_id}'
                 log.warn(key)
                 try:
-                    DBSession.add(obj)
-                    DBSession.flush()
+                    self.DBSession.add(obj)
+                    self.DBSession.flush()
                     self.cache.set(key, dill.dumps(obj))
                     result.append(True)
                 except:

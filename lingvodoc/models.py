@@ -77,8 +77,8 @@ ENGLISH_LOCALE = 2
 
 log = logging.getLogger(__name__)
 
-# DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
-DBSession = caching.DBSession
+DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+# DBSession = caching.DBSession
 
 Base = declarative_base()
 
