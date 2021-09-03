@@ -13,6 +13,35 @@ from zope.sqlalchemy import ZopeTransactionExtension
 from sqlalchemy.orm import scoped_session, sessionmaker
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
+'''
+TODO:
+    0) Make true bulk get query
+    1) Add caching lists of childs
+    2) Add caching types with 1 id instead of 2
+    3) Add caching not marked_deleted objects
+    ? 4) Prettify current interface for getting/saving one object(maybe without backward compability)
+    ? 5) Add caching for already supported classes(list of caching and supported for caching classes below)
+
+Classes supported:
+    Entity                  implemented
+    LexicalEntry            implemented
+    DictionaryPerspective   implemented
+    Dictionary              implemented
+
+    PublishingEntity
+    TranslationAtom
+    TranslationGist
+    Language
+    Field
+    DictionaryPerspectiveToField
+    ParserResult
+    Parser
+    UserBlobs
+
+Task 1 can be implemented via extra classes with any structure you want to with signal field 'NO_DATABASE'
+Task 2 can be implemented using CompositeIdMixin and IdMixin, maybe with another signal field
+'''
+
 class ThroughCache(ICache):
     def __init__(self, redis):
         """
@@ -77,7 +106,8 @@ class ThroughCache(ICache):
                     else:
                         self.cache.set(key, dill.dumps(cached))
                 else:
-                    cached = dill.loads(cached)
+                    # potentially race condition following data loss
+                    cached = DBSession.merge(dill.loads(cached), load=False)
                 result[obj_type].append(cached)
         # except Exception as e:
         #     log.error(f'Exception during getting from cache : {e}')
