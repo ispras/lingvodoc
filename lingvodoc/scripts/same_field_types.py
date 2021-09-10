@@ -1,20 +1,23 @@
-from ..models import (
+import logging
+import argparse
+import sys
+
+from lingvodoc.models import (
     DBSession,
     Field,
     TranslationAtom,
     DictionaryPerspectiveToField,
     Entity
 )
-from sqlalchemy import and_, exc, create_engine
 import transaction
-import logging
+
+from sqlalchemy import and_, exc
+from pyramid.paster import bootstrap, setup_logging
 
 DEFAULT_LOCALE_ID = 1
 
 log = logging.getLogger(__name__)
 stream = logging.StreamHandler()
-log.setLevel(logging.INFO)
-stream.setLevel(logging.INFO)
 log.addHandler(stream)
 
 
@@ -193,17 +196,14 @@ def exact_same_fields(session=DBSession):
     return res
 
 
-def _collapse_field_in_table(from_field, to_field, table, session, commit=False):
+def _collapse_field_in_table(from_field, to_field, table, session):
     session.query(table) \
         .filter(and_(table.field_client_id == from_field['client_id'],
                      table.field_object_id == from_field['object_id'])) \
         .update({'field_client_id': to_field['client_id'], 'field_object_id': to_field['object_id']})
 
-    if commit:
-        transaction.commit()
 
-
-def collapse_field(from_field, to_field, session=DBSession, commit=False):
+def collapse_field(from_field, to_field, session=DBSession):
     '''
     from_field and to_field are:
         dict {
@@ -221,30 +221,25 @@ def collapse_field(from_field, to_field, session=DBSession, commit=False):
                  ') started at ' + __name__)
 
         _collapse_field_in_table(from_field, to_field, table=DictionaryPerspectiveToField,
-                                 session=session, commit=False)
+                                 session=session)
 
         _collapse_field_in_table(from_field, to_field, table=Entity,
-                                 session=session, commit=False)
+                                 session=session)
 
         session.query(Field).filter(and_(Field.client_id == from_field['client_id'],
                                          Field.object_id == from_field['object_id']))\
             .update({'marked_for_deletion': True})
 
-        if commit:
-            log.info('Successful field collapse at ' + __name__)
-            transaction.commit()
 
     except exc.SQLAlchemyError as ex:
         log.warning('Failed to collapse field (' + str(from_field['client_id']) + ', ' +
                     str(from_field['object_id']) + ') to_field (' + str(to_field['client_id']) +
                     ', ' + str(to_field['object_id']) + ') at ' + __name__)
         log.warning(ex)
-
-        if commit:
-            transaction.abort()
+        raise
 
 
-def collapse_field_mapping(field_mapping, session=DBSession, commit_all_at_once=False):
+def collapse_field_mapping(field_mapping, session=DBSession):
     '''
     field_mapping is:
         list [
@@ -268,17 +263,12 @@ def collapse_field_mapping(field_mapping, session=DBSession, commit_all_at_once=
         for field_pair in field_mapping:
             from_field = field_pair['from']
             to_field = field_pair['to']
-            collapse_field(from_field, to_field, session, not commit_all_at_once)
-
-        if commit_all_at_once:
-            transaction.commit()
+            collapse_field(from_field, to_field, session)
 
     except exc.SQLAlchemyError as ex:
         log.warning('Failed to collapse field mapping at ' + __name__)
         log.warning(ex)
-
-        if commit_all_at_once:
-            transaction.abort()
+        raise
 
 
 def generate_field_mapping(field_groups):
@@ -360,7 +350,19 @@ def _str_same_fields(res):
     return str_res
 
 
-def main():
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'config_uri',
+        help='Configuration file, e.g., development.ini',
+    )
+    return parser.parse_args(argv[1:])
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+
     mapping = [
         {
             'from': {'client_id': 3924, 'object_id': 5},
@@ -379,7 +381,10 @@ def main():
             'to': {'client_id': 66, 'object_id': 12}
         }, {
             'from': {'client_id': 1244, 'object_id': 119},
-            'to': {'client_id': 671, 'object_id': 14204}
+            'to': {'client_id': 66, 'object_id': 8}
+        }, {
+            'from': {'client_id': 671, 'object_id': 14204},
+            'to': {'client_id': 66, 'object_id': 8}
         }, {
             'from': {'client_id': 1207, 'object_id': 382},
             'to': {'client_id': 1072, 'object_id': 21}
@@ -414,14 +419,17 @@ def main():
             'from': {'client_id': 3498, 'object_id': 5},
             'to': {'client_id': 2888, 'object_id': 10}
         }, {
+            'from': {'client_id': 3924, 'object_id': 141},
+            'to': {'client_id': 66, 'object_id': 6}
+        }, {
             'from': {'client_id': 3924, 'object_id': 144},
-            'to': {'client_id': 3924, 'object_id': 141}
+            'to': {'client_id': 66, 'object_id': 6}
         }, {
             'from': {'client_id': 3924, 'object_id': 147},
-            'to': {'client_id': 3924, 'object_id': 141}
+            'to': {'client_id': 66, 'object_id': 6}
         }, {
             'from': {'client_id': 3924, 'object_id': 150},
-            'to': {'client_id': 3924, 'object_id': 141}
+            'to': {'client_id': 66, 'object_id': 6}
         }, {
             'from': {'client_id': 3924, 'object_id': 156},
             'to': {'client_id': 3924, 'object_id': 153}
@@ -473,12 +481,17 @@ def main():
         }
     ]
 
-    engine = create_engine('postgresql+psycopg2://postgres:password@pg:5432/lingvodoc', echo=True)
-    DBSession.configure(bind=engine)
-    session = DBSession
+    args = parse_args(argv)
+    #setup_logging(args.config_uri)
+    env = bootstrap(args.config_uri)
+
+    log.setLevel(logging.INFO)
+    stream.setLevel(logging.INFO)
 
     # Logging info about fields marked for collapse and fields intact
+    session = DBSession
     fields_dict = get_fields_data(session)
+
     fields_log_list = []
     for field_id in fields_dict:
         flag = False
@@ -508,8 +521,15 @@ def main():
                  + 'to:   ' + _str_field_data(fields_dict[(pair['to']['client_id'], pair['to']['object_id'])]) + '\n')
     # End of logging
 
-    #collapse_field_mapping(mapping, session)
-
+    #try:
+    #    collapse_field_mapping(mapping, session)
+    #except exc.SQLAlchemyError as ex:
+    #    log.warning('Failed to collapse fields at ' + __name__)
+    #    log.warning(ex)
+    #
+    #    transaction.abort()
+    #else:
+    #    transaction.commit()
 
 
 if __name__ == '__main__':
