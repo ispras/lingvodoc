@@ -360,7 +360,7 @@ def _str_same_fields(res):
     return str_res
 
 
-def main(session=DBSession):
+def main():
     mapping = [
         {
             'from': {'client_id': 3924, 'object_id': 5},
@@ -473,6 +473,10 @@ def main(session=DBSession):
         }
     ]
 
+    engine = create_engine('postgresql+psycopg2://postgres:password@pg:5432/lingvodoc', echo=True)
+    DBSession.configure(bind=engine)
+    session = DBSession
+
     # Logging info about fields marked for collapse and fields intact
     fields_dict = get_fields_data(session)
     fields_log_list = []
@@ -507,7 +511,6 @@ def main(session=DBSession):
     #collapse_field_mapping(mapping, session)
 
 
+
 if __name__ == '__main__':
-    engine = create_engine('postgresql+psycopg2://postgres:password@pg:5432/lingvodoc', echo=True)
-    DBSession.configure(bind=engine)
-    main(DBSession)
+    main()
