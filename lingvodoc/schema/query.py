@@ -6338,12 +6338,16 @@ class CognateAnalysis(graphene.Mutation):
         }
         """
         
-        # Administrator / perspective author check.
+        # Administrator / perspective author / editing permission check.
+
+        error_str = (
+            'Only administrator, perspective author and users with perspective editing permissions '
+            'can perform cognate analysis.')
 
         client_id = info.context.request.authenticated_userid
 
         if not client_id:
-            raise ResponseError('Only administrator and perspective authors can perform cognate analysis.')
+            raise ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
 
@@ -6369,9 +6373,10 @@ class CognateAnalysis(graphene.Mutation):
                 .scalar())
 
         if (user.id != 1 and
-            not author_id_check):
+            not author_id_check and
+            not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
 
-            raise ResponseError('Only administrator and perspective authors can perform cognate analysis.')
+            raise ResponseError(error_str)
 
         # Getting arguments.
 

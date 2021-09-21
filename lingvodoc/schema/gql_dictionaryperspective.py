@@ -186,6 +186,7 @@ class DictionaryPerspective(LingvodocObjectType):
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID), mode=graphene.String())
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     roles = graphene.Field(UserAndOrganizationsRoles)
+    role_check = graphene.Boolean(subject = graphene.String(required = True), action = graphene.String(required = True))
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     is_template = graphene.Boolean()
     counter = graphene.Int(mode=graphene.String())
@@ -687,6 +688,15 @@ class DictionaryPerspective(LingvodocObjectType):
         roles_users = [{"user_id": x, "roles_ids": roles_users[x]} for x in roles_users]
         roles_organizations = [{"user_id": x, "roles_ids": roles_organizations[x]} for x in roles_organizations]
         return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
+
+    @fetch_object()
+    def resolve_role_check(self, info, subject = '', action = ''):
+
+        # Checking for specified permission for the current user for the perspective.
+
+        return (
+            info.context.acl_check_if(
+                action, subject, (self.dbObject.client_id, self.dbObject.object_id)))
 
     @fetch_object()
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
