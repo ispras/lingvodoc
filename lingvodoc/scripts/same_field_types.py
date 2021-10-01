@@ -15,34 +15,34 @@ from lingvodoc.models import (
 )
 import transaction
 
-from sqlalchemy import and_, exc, func, tuple_
+from sqlalchemy import and_, exc, func
 from pyramid.paster import bootstrap, setup_logging
 
 DEFAULT_LOCALE_ID = 1
-
+# Setting up logger
 log = logging.getLogger(__name__)
 stream = logging.StreamHandler()
 log.addHandler(stream)
 
 
-def get_fields_translation_data(session=DBSession):
+# Beginning of obtaining fields data functions
+def _get_fields_translation_data(session=DBSession):
     """
-    Obtaining Field table with all translations(TranslationAtom)
-    of it's name from DB session and returning it as:
+        Obtaining Field table with all translations(TranslationAtom)
+        of it's name from DB session and returning it as:
 
-        dict {
-            (client_id, object_id): dict {
-                'field': models.Field,
-                'translations': dict {
-                    (int) locale_id: models.TranslationAtom,
-                    ...
-                }
-            },
-            ...
-        }
+            dict {
+                (client_id, object_id): dict {
+                    'field': models.Field,
+                    'translations': dict {
+                        locale_id: models.TranslationAtom,
+                        ...
+                    }
+                },
+                ...
+            }
 
     """
-
     query = session.query(Field, TranslationAtom)
     query = query.join(TranslationAtom, and_(TranslationAtom.parent_client_id == Field.translation_gist_client_id,
                                              TranslationAtom.parent_object_id == Field.translation_gist_object_id))
@@ -67,328 +67,26 @@ def get_fields_translation_data(session=DBSession):
     return fields_data
 
 
-def _field_distribution_by_locale(session, locale_id=DEFAULT_LOCALE_ID):
-    '''
-    Returning Fields with all translations grouped by Field's data type
-    name and Field's translation from chosen locale (field_hash as a whole)
+def _mark_fields_transl_dict(fields_transl_dict, mapping):
+    """
+    Marking fields returned by _get_fields_translation_data
+    with id of field it will be merged to using given collapse mapping
+
+    Result:
 
         dict {
-            field_hash: dict {
-                'field': models.Field
+            (client_id, object_id): dict {
+                'field': models.Field,
                 'translations': dict {
                     locale_id: models.TranslationAtom,
                     ...
-                }
-            }
+                },
+                'merged_to': (client_id, object_id)
+            },
             ...
         }
 
-    '''
-
-    fields_data = get_fields_translation_data(session)
-    field_dst = dict()
-
-    for field_id in fields_data:
-        # field_hash = (fields[field_id]['type_id'], fields[field_id]['translations'].get(locale_id, ''))
-        translation = fields_data[field_id]['translations'].get(locale_id, None)
-        if translation:
-            field_hash = (fields_data[field_id]['field'].data_type_translation_gist_client_id,
-                          fields_data[field_id]['field'].data_type_translation_gist_object_id,
-                          translation.content)
-            if not field_dst.get(field_hash, None):
-                field_dst[field_hash] = []
-            data = fields_data[field_id]
-            field_dst[field_hash].append(data)
-
-    return field_dst
-
-
-def same_locale_fields(session=DBSession, locale_id=DEFAULT_LOCALE_ID):
-    '''
-    Returning groupings of similar Fields based on their name
-    in chosen locale and data type
-
-        list [
-            list [
-                dict {
-                    'field': models.Field
-                    'translations': dict {
-                        locale_id: models.TranslationAtom,
-                        ...
-                    }
-                },
-                ...
-            ],
-            ...
-        ]
-
-    '''
-    field_dst = _field_distribution_by_locale(session, locale_id)
-    res = []
-
-    for field_hash in field_dst:
-        if len(field_dst[field_hash]) > 1:
-            res.append([data for data in field_dst[field_hash]])
-
-    return res
-
-
-def _equal_translations_r(tr_a, tr_b):
-    for locale_id in tr_a:
-        tmp = tr_b.get(locale_id, None)
-        if not tmp or tr_a[locale_id].content != tmp.content:
-            return False
-    return True
-
-
-def _equal_field_types(field_a, field_b):
-    return field_a.data_type_translation_gist_object_id == field_b.data_type_translation_gist_object_id and \
-           field_a.data_type_translation_gist_client_id == field_b.data_type_translation_gist_client_id
-
-
-def _equal_fields(data_a, data_b):
-    tr_a = data_a['translations']
-    tr_b = data_b['translations']
-    fld_a = data_a['field']
-    fld_b = data_b['field']
-
-    return _equal_translations_r(tr_a, tr_b) and \
-           _equal_translations_r(tr_b, tr_a) and \
-           _equal_field_types(fld_a, fld_b)
-
-
-def exact_same_fields(session=DBSession):
-    '''
-    Returning groupings of Fields with completely
-    identical names and data types
-
-        list [
-            list [
-                dict {
-                    'field': models.Field
-                    'translations': dict {
-                        locale_id: models.TranslationAtom,
-                        ...
-                    }
-                },
-                ...
-            ],
-            ...
-        ]
-
-    '''
-    field_dst = _field_distribution_by_locale(session)
-    res = []
-
-    for field_hash in field_dst:
-        tmp_list = []
-        for i in range(0, len(field_dst[field_hash])):
-            unique_field_flag = True
-            for idx_list in tmp_list:
-
-                if _equal_fields(field_dst[field_hash][i], field_dst[field_hash][idx_list[0]]):
-                    idx_list.append(i)
-                    unique_field_flag = False
-
-            if unique_field_flag:
-                tmp_list.append([i])
-
-        for idx_list in tmp_list:
-            if len(idx_list) > 1:
-                res.append([field_dst[field_hash][idx] for idx in idx_list])
-
-    return res
-
-
-def _collapse_field(from_field, to_field, session):
-    '''
-    from_field and to_field are:
-        dict {
-            'client_id': int,
-            'object_id': int
-        }
-
-    By the end of function execution every use of from_field in database
-    will be replaced by to_field, from_field will be marked for deletion
-    '''
-
-    try:
-        log.info('Collapse of field (' + str(from_field['client_id']) + ', ' + str(from_field['object_id']) +
-                 ') to_field (' + str(to_field['client_id']) + ', ' + str(to_field['object_id']) +
-                 ') started at ' + __name__)
-
-        session.query(DictionaryPerspectiveToField) \
-            .filter(and_(DictionaryPerspectiveToField.field_client_id == from_field['client_id'],
-                         DictionaryPerspectiveToField.field_object_id == from_field['object_id'])) \
-            .update(
-            {
-                'field_client_id': to_field['client_id'],
-                'field_object_id': to_field['object_id']
-            }
-        )
-
-        session.query(Entity) \
-            .filter(and_(Entity.field_client_id == from_field['client_id'],
-                         Entity.field_object_id == from_field['object_id'])) \
-            .update(
-            {
-                'field_client_id': to_field['client_id'],
-                'field_object_id': to_field['object_id'],
-                'additional_metadata': {
-                    'merged_from_field': [from_field['client_id'], from_field['object_id']]
-                }
-            }
-        )
-
-        session.query(Field).filter(and_(Field.client_id == from_field['client_id'],
-                                         Field.object_id == from_field['object_id'])) \
-            .update(
-            {
-                'marked_for_deletion': True,
-                'additional_metadata': {
-                    'merged_from_field': [to_field['client_id'], to_field['object_id']]
-                }
-            }
-        )
-
-
-    except exc.SQLAlchemyError as ex:
-        log.warning('Failed to collapse field (' + str(from_field['client_id']) + ', ' +
-                    str(from_field['object_id']) + ') to_field (' + str(to_field['client_id']) +
-                    ', ' + str(to_field['object_id']) + ') at ' + __name__)
-        log.warning(ex)
-        raise
-
-
-def collapse_field_mapping(field_mapping, session=DBSession):
-    '''
-    field_mapping is:
-        list [
-            dict {
-                'from': dict {
-                        'client_id': int,
-                        'object_id': int
-                    },
-                'to': dict {
-                        'client_id': int,
-                        'object_id': int
-                    }
-            },
-            ...
-        ]
-
-    By the end of function execution every use of 'from' fields in database
-    will be replaced by 'to' fields, 'from' fields will be marked for deletion
-    '''
-    try:
-        for field_pair in field_mapping:
-            from_field = field_pair['from']
-            to_field = field_pair['to']
-            _collapse_field(from_field, to_field, session)
-
-    except exc.SQLAlchemyError as ex:
-        log.warning('Failed to collapse field mapping at ' + __name__)
-        log.warning(ex)
-        raise
-
-
-def generate_field_mapping(field_groups):
-    '''
-    Returns mapping for collapse_field_mapping made from field groups:
-        list [
-            dict {
-                'from': dict {
-                        'client_id': int,
-                        'object_id': int
-                    },
-                'to': dict {
-                        'client_id': int,
-                        'object_id': int
-                    }
-            },
-            ...
-        ]
-    '''
-    res = []
-    for group in field_groups:
-        earliest_date = group[0]['field'].created_at
-        earliest_idx = 0
-        for i in range(0, len(group)):
-            if earliest_date > group[i]['field'].created_at:
-                earliest_date = group[i]['field'].created_at
-                earliest_idx = i
-
-        to_field = {'client_id': group[earliest_idx]['field'].client_id,
-                    'object_id': group[earliest_idx]['field'].object_id}
-
-        for i in range(0, len(group)):
-            if i != earliest_idx:
-                res.append({
-                    'from': {
-                        'client_id': group[i]['field'].client_id,
-                        'object_id': group[i]['field'].object_id
-                    },
-                    'to': to_field
-                })
-
-    return res
-
-
-# Just some handy string converters
-def _str_field_data(field_data, sep=' ', end=''):
-    res = str(field_data['field'].client_id) + sep + \
-          str(field_data['field'].object_id) + sep + \
-          datetime.utcfromtimestamp(field_data['field'].created_at).strftime('%Y-%m-%d %H:%M:%S') + sep + \
-          '|' + sep + \
-          ' '.join([str(i) + ' ' + str(field_data['translations'][i].content) for i in field_data['translations']]) + \
-          end
-    if field_data.get('merged_to', None) is None:
-        res = '[intact] ' + res
-    else:
-        res = '[merged] ' + res
-    return res
-
-
-def _str_fields_data_dict(fields_data_dict, sep='\n\t', end='\n'):
-    res = ''
-    for field_data_id in fields_data_dict:
-        res += str(field_data_id) + sep + _str_field_data(fields_data_dict[field_data_id], sep=' ', end=sep)
-    res += end
-    return res
-
-
-def _str_fields_data_list(fields_data_list, sep='\n', end='\n'):
-    res = ''
-    for data in fields_data_list:
-        res += _str_field_data(data, sep=' ', end=sep)
-    res += end
-    return res
-
-
-def _str_field_dst(field_dst):
-    res = ''
-    for field_hash in field_dst:
-        res += str(field_hash) + '\n\t' + _str_fields_data_list(field_dst[field_hash], sep='\n\t')
-    return res
-
-
-def _str_same_fields(res):
-    str_res = ''
-    for l in res:
-        str_res += _str_fields_data_list(l)
-    return str_res
-
-
-def parse_args(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        'config_uri',
-        help='Configuration file, e.g., development.ini',
-    )
-    return parser.parse_args(argv[1:])
-
-
-def _mark_fields_transl_dict(fields_transl_dict, mapping):
+    """
     for field_id in fields_transl_dict:
         flag = False
         merged_to_id = 0
@@ -401,43 +99,30 @@ def _mark_fields_transl_dict(fields_transl_dict, mapping):
             fields_transl_dict[field_id]['merged_to'] = merged_to_id
 
 
-def log_field_info(mapping, session=DBSession):
-    fields_transl_dict = get_fields_translation_data(session)
-    _mark_fields_transl_dict(fields_transl_dict, mapping)
-
-    def field_data_locale_key(x):
-        tmp = x['translations'].get(DEFAULT_LOCALE_ID, None)
-        if not tmp:
-            return ' '
-        return tmp.content
-
-    fields_log_list = [fields_transl_dict[key] for key in fields_transl_dict]
-    fields_log_list.sort(key=field_data_locale_key)
-    log.info('\nMarked fields will be deleted')
-    for f in fields_log_list:
-        log.info(_str_field_data(f))
-
-    log.info('\nLogging field mapping info:')
-    for pair in mapping:
-        from_id = (pair['from']['client_id'], pair['from']['object_id'])
-        to_id = (pair['to']['client_id'], pair['to']['object_id'])
-        from_field = fields_transl_dict.get(from_id, None)
-        to_field = fields_transl_dict.get(to_id, None)
-        if from_field and to_field:
-            log.info('from: ' + _str_field_data(from_field) + '\n' \
-                     + 'to:   ' + _str_field_data(to_field) + '\n')
-        else:
-            if not from_field:
-                log.info('Could not obtain field ' + str(from_id))
-            if not to_field:
-                log.info('Could no obtain field ' + str(to_id) + '\n')
-
-
-def _dictionary_perspective_url(client_id, object_id):
-    return 'http://lingvodoc.ru/dictionary/1/1/perspective/' + str(client_id) + '/' + str(object_id) + '/view'
-
-
 def _get_fields_usage_data(session):
+    """
+    Obtaining metrics of field usage in lingvodoc,
+    the metrics are quantity of all/deleted dictionary perspectives using this field
+    (also with URLs) and quantity of lexical entries in such dictionary perspectives
+    Result:
+
+        dict {
+            (client_id, object_id): dict {
+                'URLs': list['url_string', ...],
+                'metrics': dict {
+                    'dp': dict {
+                        'sum': quantity of all parent dictionary perspectives,
+                        'deleted': quantity of deleted parent dictionary perspectives
+                    },
+                    'le': dict {
+                        'sum': quantity of lexical entries of all parent dictionary perspectives,
+                        'deleted': quantity of lexical entries of deleted parent dictionary perspectives
+                    }
+                }
+            }
+        }
+
+    """
     f_client_id = Field.client_id.label('field_client_id')
     f_object_id = Field.object_id.label('field_object_id')
     dp_client_id = DictionaryPerspective.client_id.label('dictionary_perspective_client_id')
@@ -450,7 +135,7 @@ def _get_fields_usage_data(session):
                                                 and_(DictionaryPerspectiveToField.field_client_id == Field.client_id,
                                                      DictionaryPerspectiveToField.field_object_id == Field.object_id))
     subquery = subquery.filter(DictionaryPerspective.marked_for_deletion == False,
-                                    Field.marked_for_deletion == False)
+                               Field.marked_for_deletion == False)
     subquery = subquery.join(DictionaryPerspective,
                              and_(DictionaryPerspectiveToField.parent_client_id == DictionaryPerspective.client_id,
                                   DictionaryPerspectiveToField.parent_object_id == DictionaryPerspective.object_id))
@@ -517,7 +202,7 @@ def _get_fields_usage_data(session):
                           func.count('*'), 'subquery.dictionary_perspective_marked_for_deletion')
     query = query.select_from(LexicalEntry)
     query = query.join(subquery, and_('subquery.dictionary_perspective_client_id = lexicalentry.parent_client_id',
-                       'subquery.dictionary_perspective_object_id = lexicalentry.parent_object_id'))
+                                      'subquery.dictionary_perspective_object_id = lexicalentry.parent_object_id'))
     query = query.filter('lexicalentry.marked_for_deletion = false')
     query = query.group_by('subquery.field_client_id', 'subquery.field_object_id',
                            'subquery.dictionary_perspective_marked_for_deletion')
@@ -539,8 +224,360 @@ def _get_fields_usage_data(session):
     return fields_usage
 
 
+def _field_distribution_by_locale(session, locale_id=DEFAULT_LOCALE_ID):
+    """
+    Returning Fields with all translations grouped by Field's data type
+    name and Field's translation from chosen locale (field_hash as a whole)
+
+        dict {
+            field_hash: dict {
+                'field': models.Field
+                'translations': dict {
+                    locale_id: models.TranslationAtom,
+                    ...
+                }
+            }
+            ...
+        }
+
+    """
+
+    fields_data = _get_fields_translation_data(session)
+    field_dst = dict()
+
+    for field_id in fields_data:
+        translation = fields_data[field_id]['translations'].get(locale_id, None)
+        if translation:
+            field_hash = (fields_data[field_id]['field'].data_type_translation_gist_client_id,
+                          fields_data[field_id]['field'].data_type_translation_gist_object_id,
+                          translation.content)
+            if not field_dst.get(field_hash, None):
+                field_dst[field_hash] = []
+            data = fields_data[field_id]
+            field_dst[field_hash].append(data)
+
+    return field_dst
+
+
+def same_locale_fields(session=DBSession, locale_id=DEFAULT_LOCALE_ID):
+    """
+    Returning groupings of similar Fields based on their name
+    in chosen locale and data type
+
+        list [
+            list [
+                dict {
+                    'field': models.Field
+                    'translations': dict {
+                        locale_id: models.TranslationAtom,
+                        ...
+                    }
+                },
+                ...
+            ],
+            ...
+        ]
+
+    """
+    field_dst = _field_distribution_by_locale(session, locale_id)
+    res = []
+
+    for field_hash in field_dst:
+        if len(field_dst[field_hash]) > 1:
+            res.append([data for data in field_dst[field_hash]])
+
+    return res
+
+
+def _equal_translations_r(tr_a, tr_b):
+    for locale_id in tr_a:
+        tmp = tr_b.get(locale_id, None)
+        if not tmp or tr_a[locale_id].content != tmp.content:
+            return False
+    return True
+
+
+def _equal_field_types(field_a, field_b):
+    return field_a.data_type_translation_gist_object_id == field_b.data_type_translation_gist_object_id and \
+           field_a.data_type_translation_gist_client_id == field_b.data_type_translation_gist_client_id
+
+
+def _equal_fields(data_a, data_b):
+    tr_a = data_a['translations']
+    tr_b = data_b['translations']
+    fld_a = data_a['field']
+    fld_b = data_b['field']
+
+    return _equal_translations_r(tr_a, tr_b) and _equal_translations_r(tr_b, tr_a) and _equal_field_types(fld_a, fld_b)
+
+
+def exact_same_fields(session=DBSession):
+    """
+    Returning groupings of Fields with completely
+    identical names and data types
+
+        list [
+            list [
+                dict {
+                    'field': models.Field
+                    'translations': dict {
+                        locale_id: models.TranslationAtom,
+                        ...
+                    }
+                },
+                ...
+            ],
+            ...
+        ]
+
+    """
+    field_dst = _field_distribution_by_locale(session)
+    res = []
+
+    for field_hash in field_dst:
+        tmp_list = []
+        for i in range(0, len(field_dst[field_hash])):
+            unique_field_flag = True
+            for idx_list in tmp_list:
+
+                if _equal_fields(field_dst[field_hash][i], field_dst[field_hash][idx_list[0]]):
+                    idx_list.append(i)
+                    unique_field_flag = False
+
+            if unique_field_flag:
+                tmp_list.append([i])
+
+        for idx_list in tmp_list:
+            if len(idx_list) > 1:
+                res.append([field_dst[field_hash][idx] for idx in idx_list])
+
+    return res
+
+
+def generate_field_mapping(field_groups):
+    """
+    Returns mapping for collapse_field_mapping made from field groups:
+        list [
+            dict {
+                'from': dict {
+                        'client_id': int,
+                        'object_id': int
+                    },
+                'to': dict {
+                        'client_id': int,
+                        'object_id': int
+                    }
+            },
+            ...
+        ]
+
+    """
+    res = []
+    for group in field_groups:
+        earliest_date = group[0]['field'].created_at
+        earliest_idx = 0
+        for i in range(0, len(group)):
+            if earliest_date > group[i]['field'].created_at:
+                earliest_date = group[i]['field'].created_at
+                earliest_idx = i
+
+        to_field = {'client_id': group[earliest_idx]['field'].client_id,
+                    'object_id': group[earliest_idx]['field'].object_id}
+
+        for i in range(0, len(group)):
+            if i != earliest_idx:
+                res.append({
+                    'from': {
+                        'client_id': group[i]['field'].client_id,
+                        'object_id': group[i]['field'].object_id
+                    },
+                    'to': to_field
+                })
+
+    return res
+# End of obtaining fields data functions
+
+
+# Beginning of field collapse functions
+def _collapse_field(from_field, to_field, session):
+    """
+    from_field and to_field are:
+        dict {
+            'client_id': int,
+            'object_id': int
+        }
+
+    By the end of function execution every use of from_field in database
+    will be replaced by to_field, from_field will be marked for deletion,
+    field.additional_metadata will contain the destination field id
+
+    """
+
+    try:
+        log.info('Collapse of field (' + str(from_field['client_id']) + ', ' + str(from_field['object_id']) +
+                 ') to_field (' + str(to_field['client_id']) + ', ' + str(to_field['object_id']) +
+                 ') started at ' + __name__)
+
+        session.query(DictionaryPerspectiveToField) \
+            .filter(and_(DictionaryPerspectiveToField.field_client_id == from_field['client_id'],
+                         DictionaryPerspectiveToField.field_object_id == from_field['object_id'])) \
+            .update(
+            {
+                'field_client_id': to_field['client_id'],
+                'field_object_id': to_field['object_id']
+            }
+        )
+
+        session.query(Entity) \
+            .filter(and_(Entity.field_client_id == from_field['client_id'],
+                         Entity.field_object_id == from_field['object_id'])) \
+            .update(
+            {
+                'field_client_id': to_field['client_id'],
+                'field_object_id': to_field['object_id'],
+                'additional_metadata': {
+                    'merged_from_field': [from_field['client_id'], from_field['object_id']]
+                }
+            }
+        )
+
+        session.query(Field).filter(and_(Field.client_id == from_field['client_id'],
+                                         Field.object_id == from_field['object_id'])) \
+            .update(
+            {
+                'marked_for_deletion': True,
+                'additional_metadata': {
+                    'merged_from_field': [to_field['client_id'], to_field['object_id']]
+                }
+            }
+        )
+
+    except exc.SQLAlchemyError as ex:
+        log.warning('Failed to collapse field (' + str(from_field['client_id']) + ', ' +
+                    str(from_field['object_id']) + ') to_field (' + str(to_field['client_id']) +
+                    ', ' + str(to_field['object_id']) + ') at ' + __name__)
+        log.warning(ex)
+        raise
+
+
+def collapse_field_mapping(field_mapping, session=DBSession):
+    """
+    field_mapping is:
+        list [
+            dict {
+                'from': dict {
+                        'client_id': int,
+                        'object_id': int
+                    },
+                'to': dict {
+                        'client_id': int,
+                        'object_id': int
+                    }
+            },
+            ...
+        ]
+
+    By the end of function execution every use of 'from' fields in database
+    will be replaced by 'to' fields, 'from' fields will be marked for deletion
+
+    """
+    try:
+        for field_pair in field_mapping:
+            from_field = field_pair['from']
+            to_field = field_pair['to']
+            _collapse_field(from_field, to_field, session)
+
+    except exc.SQLAlchemyError as ex:
+        log.warning('Failed to collapse field mapping at ' + __name__)
+        log.warning(ex)
+        raise
+# End of field collapse functions
+
+
+# Beginning of logging functions
+def _str_field_data(field_data, sep=' ', end=''):
+    """
+    Field data string converter for log_field_info
+
+    Field data is:
+        (client_id, object_id): dict {
+            'field': models.Field,
+            'translations': dict {
+                locale_id: models.TranslationAtom,
+                ...
+            },
+            (optional) 'merged_to': (client_id, object_id)
+        }
+    """
+    res = str(field_data['field'].client_id) + sep + str(field_data['field'].object_id) + sep + datetime.\
+        utcfromtimestamp(field_data['field'].created_at).strftime('%Y-%m-%d %H:%M:%S') + sep + '|' + sep + ' '.\
+        join([str(i) + ' ' + str(field_data['translations'][i].content) for i in field_data['translations']]) + end
+    if field_data.get('merged_to', None) is None:
+        res = '[intact] ' + res
+    else:
+        res = '[merged] ' + res
+    return res
+
+
+def _dictionary_perspective_url(client_id, object_id):
+    return 'https://lingvodoc.ru/dictionary/1/1/perspective/' + str(client_id) + '/' + str(object_id) + '/view'
+
+
+def log_field_info(mapping, session=DBSession):
+    """
+    Field logging function, the output consists of two part,
+    Part I logs info about all undeleted fields in lingvodoc ordered by DEFAULT_LOCALE_ID locale as:
+
+        Marked fields will be deleted:
+        _str_field_data(field)
+        ...
+
+    Part II logs info about all parings of fields from mapping as:
+
+        Logging field mapping info:
+        from: _str_field_data(from_field)
+        to: _str_field_data(to_field)
+
+        ...
+
+    """
+    fields_transl_dict = _get_fields_translation_data(session)
+    _mark_fields_transl_dict(fields_transl_dict, mapping)
+
+    def field_data_locale_key(x):
+        tmp = x['translations'].get(DEFAULT_LOCALE_ID, None)
+        if not tmp:
+            return ' '
+        return tmp.content
+
+    fields_log_list = [fields_transl_dict[key] for key in fields_transl_dict]
+    fields_log_list.sort(key=field_data_locale_key)
+    log.info('\nMarked fields will be deleted')
+    for f in fields_log_list:
+        log.info(_str_field_data(f))
+
+    log.info('\nLogging field mapping info:')
+    for pair in mapping:
+        from_id = (pair['from']['client_id'], pair['from']['object_id'])
+        to_id = (pair['to']['client_id'], pair['to']['object_id'])
+        from_field = fields_transl_dict.get(from_id, None)
+        to_field = fields_transl_dict.get(to_id, None)
+        if from_field and to_field:
+            log.info('from: ' + _str_field_data(from_field) + '\n'
+                     + 'to:   ' + _str_field_data(to_field) + '\n')
+        else:
+            if not from_field:
+                log.info('Could not obtain field ' + str(from_id))
+            if not to_field:
+                log.info('Could no obtain field ' + str(to_id) + '\n')
+
+
 def log_csv_field_info(path, mapping, session=DBSession):
-    fields_transl_dict = get_fields_translation_data(session)
+    """
+    Logs field info with all translations and metrics mentioned in _get_fields_usage_data(session) into csv,
+    exact column are listed below
+    """
+    fields_transl_dict = _get_fields_translation_data(session)
     _mark_fields_transl_dict(fields_transl_dict, mapping)
     fields_usage_dict = _get_fields_usage_data(session)
 
@@ -554,20 +591,24 @@ def log_csv_field_info(path, mapping, session=DBSession):
         locale_list = sorted([*locale_set])
         locale_header = ['locale #' + str(x) for x in locale_list]
 
-        header = ['id', 'merged_to', *locale_header, 'created_at', 'dict_perspective_count',
-                  'lexical_entry_count', 'URLs']
+        # Exact columns
+        header = ['client_id', 'object_id', 'merged_to_client_id', 'merged_to_object_id', *locale_header, 'created_at',
+                  'dict_perspectives_sum', 'dict_perspectives_deleted', 'lexical_entries_sum',
+                  'lexical_entries_deleted', 'URLs']
         writer.writerow(header)
 
         none_str = '-'
         for field_id in fields_transl_dict:
-            row = [str(field_id)]
+            row = [field_id[0], field_id[1]]
             field_transl = fields_transl_dict[field_id]
 
             merged_to = field_transl.get('merged_to', None)
             if merged_to is None:
                 row.append(none_str)
+                row.append(none_str)
             else:
-                row.append(str(merged_to))
+                row.append(merged_to[0])
+                row.append(merged_to[1])
 
             for locale in locale_list:
                 translation = field_transl['translations'].get(locale, None)
@@ -582,15 +623,29 @@ def log_csv_field_info(path, mapping, session=DBSession):
 
             field_usage = fields_usage_dict.get(field_id, None)
             if field_usage is None:
-                row.append('0/0')
-                row.append('0/0')
-                row.append('')
+                row.append(0)
+                row.append(0)
+                row.append(0)
+                row.append(0)
+                row.append(none_str)
             else:
-                row.append(str(field_usage['metrics']['dp']['sum']) + '/' + str(field_usage['metrics']['dp']['deleted']))
-                row.append(str(field_usage['metrics']['le']['sum']) + '/' + str(field_usage['metrics']['le']['deleted']))
+                row.append(field_usage['metrics']['dp']['sum'])
+                row.append(field_usage['metrics']['dp']['deleted'])
+                row.append(field_usage['metrics']['le']['sum'])
+                row.append(field_usage['metrics']['le']['deleted'])
                 row.append(' '.join(field_usage['URLs'][:10:]))
 
             writer.writerow(row)
+# End of logging functions
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'config_uri',
+        help='Configuration file, e.g., development.ini',
+    )
+    return parser.parse_args(argv[1:])
 
 
 def main(argv=None):
@@ -716,6 +771,7 @@ def main(argv=None):
     ]
 
     args = parse_args(argv)
+    # Uncomment following line to mess up logging format
     # setup_logging(args.config_uri)
     env = bootstrap(args.config_uri)
 
@@ -728,6 +784,9 @@ def main(argv=None):
     log_field_info(mapping, session)
     log_csv_field_info('/tmp/log.csv', mapping, session)
 
+    # WARNING - DANGEROUS OPERATION
+    # TO COLLAPSE FIELDS MENTIONED IN MAPPING UNCOMMENT FOLLOWING CODE
+    #
     # try:
     #     collapse_field_mapping(mapping, session)
     # except exc.SQLAlchemyError as ex:
