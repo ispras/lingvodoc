@@ -525,7 +525,7 @@ def _dictionary_perspective_url(client_id, object_id):
 
 def log_field_info(mapping, session=DBSession):
     """
-    Field logging function, the output consists of two part,
+    Field logging function, the output consists of two parts,
     Part I logs info about all undeleted fields in lingvodoc ordered by DEFAULT_LOCALE_ID locale as:
 
         Marked fields will be deleted:
@@ -643,7 +643,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'config_uri',
-        help='Configuration file, e.g., development.ini',
+        help='Configuration file, e.g., /api/docker/docker.ini',
     )
     return parser.parse_args(argv[1:])
 
@@ -787,15 +787,14 @@ def main(argv=None):
     # WARNING - DANGEROUS OPERATION
     # TO COLLAPSE FIELDS MENTIONED IN MAPPING UNCOMMENT FOLLOWING CODE
     #
-    # try:
-    #     collapse_field_mapping(mapping, session)
-    # except exc.SQLAlchemyError as ex:
-    #     log.warning('Failed to collapse fields at ' + __name__)
-    #     log.warning(ex)
-    #
-    #     transaction.abort()
-    # else:
-    #     transaction.commit()
+    try:
+        collapse_field_mapping(mapping, session)
+    except exc.SQLAlchemyError as ex:
+        log.warning('Failed to collapse fields at ' + __name__)
+        log.warning(ex)
+        transaction.abort()
+    else:
+        transaction.commit()
 
 
 if __name__ == '__main__':
