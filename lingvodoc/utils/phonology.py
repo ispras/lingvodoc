@@ -226,8 +226,13 @@ def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
 
         # Getting perspective and perspective's dictionary info.
 
-        perspective = DBSession.query(DictionaryPerspective).filter_by(
-            client_id = perspective_id[0], object_id = perspective_id[1]).first()
+        # perspective = DBSession.query(DictionaryPerspective).filter_by(
+        #     client_id = perspective_id[0], object_id = perspective_id[1]).first()
+        perspective = CACHE.get(objects=
+            {
+                DictionaryPerspective : (perspective_id, )
+            }
+        )
 
         if not perspective:
 
@@ -239,9 +244,15 @@ def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
             client_id = perspective.translation_gist_client_id,
             object_id = perspective.translation_gist_object_id).first()
 
-        dictionary = DBSession.query(Dictionary).filter_by(
-            client_id = perspective.parent_client_id,
-            object_id = perspective.parent_object_id).first()
+        # dictionary = DBSession.query(Dictionary).filter_by(
+        #     client_id = perspective.parent_client_id,
+        #     object_id = perspective.parent_object_id).first()
+        dictionary = CACHE.get(objects =
+            {
+                Dictionary : ((perspective.parent_client_id, perspective.parent_object_id), )
+            }
+        )
+
 
         if not dictionary:
 
@@ -298,4 +309,3 @@ def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
             task_status.set(4, 100, 'Finished (ERROR), external error')
 
         raise ResponseError(message = 'External error')
-

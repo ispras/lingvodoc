@@ -26,6 +26,7 @@ from lingvodoc.utils.corpus_converter import convert_all
 from lingvodoc.queue.celery import celery
 import transaction
 
+from lingvodoc.cache.caching import CACHE
 
 class ConvertDictionary(graphene.Mutation):
     """
@@ -101,7 +102,7 @@ class ConvertDictionary(graphene.Mutation):
             translation_gist_id = args.get('translation_gist_id')
             translation_gist_id = create_gists_with_atoms(tr_atoms, translation_gist_id, [client_id, None], gist_type="Dictionary")
 
-            # We have to commit, because eventually in 
+            # We have to commit, because eventually in
             # lingvodoc.scripts.dictionary_dialeqt_converter.convert_db_new
             # we will start a new transaction via 'with transaction.manager' line at
             # dictionary_dialeqt_converter.py:599,
@@ -128,8 +129,13 @@ class ConvertDictionary(graphene.Mutation):
                 task = TaskStatus(user_id, "Dialeqt dictionary conversion", gist.get_translation(locale_id), 10)
 
             else:
-                dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
-                                                               object_id=args["dictionary_id"][1]).first()
+                # dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
+                                                               # object_id=args["dictionary_id"][1]).first()
+                dictionary_obj = CACHE.get(objects =
+                    {
+                        dbDictionary : (args["dictionary_id"], )
+                    }
+                )
                 gist = DBSession.query(dbTranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()
@@ -272,8 +278,13 @@ class ConvertFiveTiers(graphene.Mutation):
                 raise ResponseError(message="dictionary_id or translation_atoms missed")
 
         else:
-            dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
-                                                      object_id=args["dictionary_id"][1]).first()
+            # dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
+            #                                           object_id=args["dictionary_id"][1]).first()
+            dictionary_obj = CACHE.get(objects =
+                {
+                    dbDictionary : (args["dictionary_id"], )
+                }
+            )
             if not dictionary_obj:
                 ResponseError(message="Dictionary not found")
             gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
@@ -281,11 +292,16 @@ class ConvertFiveTiers(graphene.Mutation):
 
 
             if gist:
-                task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
+                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
 
             else:
-                dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
-                                                               object_id=args["dictionary_id"][1]).first()
+                # dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
+                #                                                object_id=args["dictionary_id"][1]).first()
+                dictionary_obj = CACHE.get(objects =
+                    {
+                        dbDictionary : (args["dictionary_id"], )
+                    }
+                )
                 gist = DBSession.query(dbTranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()

@@ -42,6 +42,7 @@ from lingvodoc.models import (
 )
 from lingvodoc.utils.search import get_id_to_field_dict
 
+from lingvodoc.cache.caching import CACHE
 
 def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
     return DBSession.query(LexicalEntry) \
@@ -95,9 +96,14 @@ def create_group_entity(request, client, user):  # tested
         if not field:
             return {'error': str("No such field in the system")}
 
-        for par in req['connections']:
-            parent = DBSession.query(LexicalEntry).\
-                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+        parents = CACHE.get(objects=
+            {
+                LexicalEntry : ((par['client_id'], par['object_id']) for par in req['connections'])
+            }
+        )
+        for parent in parents:
+            # parent = DBSession.query(LexicalEntry).\
+            #     filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             if not parent:
                 return {'error': str("No such lexical entry in the system")}
             par_tags = find_all_tags(parent, field_client_id, field_object_id)
@@ -111,9 +117,9 @@ def create_group_entity(request, client, user):  # tested
                     random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
             tags.append(tag)
         lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
-        for par in req['connections']:
-            parent = DBSession.query(LexicalEntry).\
-                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+        for parent in parents:
+            # parent = DBSession.query(LexicalEntry).\
+            #     filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 
@@ -229,8 +235,13 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids, po
 
 def update_perspective_fields(req, perspective_client_id, perspective_object_id, client):
     response = dict()
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
-                                                                   object_id=perspective_object_id).first()
+    # perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
+    #                                                                object_id=perspective_object_id).first()
+    perspective = CACHE.get(objects=
+        {
+            DictionaryPerspective : ((perspective_client_id, perspective_object_id), )
+        }
+    )
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -305,7 +316,12 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content= None, filename=None,
                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):
-    parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
+    # parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
+    parent = CACHE.get(objects =
+        {
+            LexicalEntry : ((le_client_id, le_object_id), )
+        }
+    )
     if not parent:
         return {'error': str("No such lexical entry in the system")}
     upper_level = None
@@ -318,8 +334,13 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         Field.client_id == field_client_id, Field.object_id == field_object_id).first()
     data_type = tr_atom.content.lower()
     if up_lvl:
-        upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
-                                                              object_id=up_lvl[1]).first()
+        # upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
+        #                                                       object_id=up_lvl[1]).first()
+        upper_level = CACHE.get(objects=
+            {
+                Entity : (up_lvl, )
+            }
+        )
     if additional_metadata is not None:
         entity = Entity(client_id=client.id,
                         field_client_id=field_client_id,
@@ -384,8 +405,9 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     else:
         entity.content = content
     entity.publishingentity.accepted = True
-    DBSession.add(entity)
-    DBSession.flush()
+    CACHE.set(objects = [entity, ])
+    # DBSession.add(entity)
+    # DBSession.flush()
     return (entity.client_id, entity.object_id)
 
 def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes,
@@ -459,7 +481,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                 else:
                     filename = 'noname.TextGrid'
                 markup_hashes.add(markup_hash)
-    
+
                 if not markup_update_flag:
                     le_id = ids_map[int(word_id)]
                 else:
@@ -749,8 +771,13 @@ def convert_db_new(
         authors_list = sorted(authors_set)
         if authors_list:
             perspective_metadata = {"authors": authors_list}
-        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
-                                                       object_id=dictionary_object_id).first()
+        # parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
+        #                                                object_id=dictionary_object_id).first()
+        parent = CACHE.get(objects=
+            {
+                Dictionary : ((dictionary_client_id, dictionary_object_id), )
+            }
+        )
 
         if not parent:
             return {'error': str("No such dictionary in the system")}
@@ -1523,7 +1550,7 @@ def convert_all(
             DBSession.configure(bind=engine)
 
         status = (
-                
+
             convert_db_new(
                 dictionary_client_id,
                 dictionary_object_id,
