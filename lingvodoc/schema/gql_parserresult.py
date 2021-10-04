@@ -23,8 +23,6 @@ from lingvodoc.schema.gql_parser import Parser
 from lingvodoc.utils.creation import create_parser_result, async_create_parser_result
 from lingvodoc.schema.gql_parser import ParameterType
 
-from lingvodoc.cache.caching import CACHE
-
 class ParserResult(LingvodocObjectType):
     dbType = dbParserResult
     arguments = ObjectVal()
@@ -112,13 +110,8 @@ class ExecuteParser(graphene.Mutation):
                     arguments[parameter['name']] = tmp_filename
 
 
-        # entity = DBSession.query(dbEntity). \
-        #     filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
-        entity = CACHE.get(objects =
-            {
-                dbEntity : (entity_id, )
-            }
-        )
+        entity = DBSession.query(dbEntity). \
+            filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
         if not entity:
             raise ResponseError(message="No such entity in the system")
 
@@ -257,3 +250,4 @@ class UpdateParserResult(graphene.Mutation):
         transaction.commit()
 
         return UpdateParserResult(triumph=True)
+

@@ -1,7 +1,7 @@
 import urllib
 
 import graphene
-from lingvodoc.cache.caching import TaskStatus, CACHE
+from lingvodoc.cache.caching import TaskStatus
 from sqlalchemy import and_, create_engine
 from sqlalchemy.orm import aliased
 
@@ -29,9 +29,8 @@ def create_n_entries_in_persp(n, pid, client):
         perspective_id = pid
         dblexentry = create_lexicalentry(id, perspective_id, True)
         lexentries_list.append(dblexentry)
-    # DBSession.bulk_save_objects(lexentries_list)
-    CACHE.set(lexentries_list)
-    # DBSession.flush()
+    DBSession.bulk_save_objects(lexentries_list)
+    DBSession.flush()
     result = list()
     for lexentry in lexentries_list:
         result.append(lexentry)
@@ -61,7 +60,7 @@ def copy_sound_or_markup_entity(
     content = response.read()
 
     created_entity_ids = (
-
+            
         corpus_create_entity(
             parent_client_id,
             parent_object_id,
@@ -163,13 +162,13 @@ def async_copy_single_field(one_pid, ftype, client, info,
                     task_status.set(4, 15+round((1 / len(query_result)) * 85), "Copied an entity")
 
         if len(dbentities_list) > 0:
-            # DBSession.bulk_save_objects(dbentities_list)
-            CACHE.set(objects = dbentities_list)
+            DBSession.bulk_save_objects(dbentities_list)
+
     except Exception as err:
         task_status.set(None, -1, "Copying failed: %s" % str(err))
         raise
 
-    # DBSession.flush()
+    DBSession.flush()
     task_status.set(5, 100, "Copying field finished")
 
 

@@ -379,11 +379,11 @@ def undelete_gist_with_atoms(
             atom_list = (
 
                 DBSession.query(dbTranslationAtom)
-
+                
                     .filter(
                         tuple_(dbTranslationAtom.client_id, dbTranslationAtom.object_id)
                             .in_(atom_id_list))
-
+                    
                     .all())
 
             for atom in atom_list:
@@ -413,7 +413,6 @@ def del_object(
     deleted_by,
     task_id=None,
     counter=1,
-    update_cache = True,
     **kwargs):
     """
     This function can delete perspective/dictionary/any object with child gist and translationatoms.
@@ -444,7 +443,7 @@ def del_object(
 
     # delete object
     message = (
-
+            
         delete_message(
             function_name,
             deleted_by,
@@ -453,8 +452,7 @@ def del_object(
             __additional_info__ = kwargs or None))
 
     tmp_object.mark_deleted(message)
-    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }):
-        CACHE.set(objects = [tmp_object, ])
+
 
 def undel_object(
     tmp_object,
@@ -462,7 +460,6 @@ def undel_object(
     deleted_by,
     task_id=None,
     counter=1,
-    update_cache = True,
     **kwargs):
     """
     Reverse for del_object(), should be modified accordingly whenever del_object() is modified.
@@ -491,7 +488,7 @@ def undel_object(
 
     # delete object
     message = (
-
+            
         undelete_message(
             function_name,
             deleted_by,
@@ -500,8 +497,6 @@ def undel_object(
             __additional_info__ = kwargs or None))
 
     tmp_object.mark_undeleted(message)
-    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }):
-        CACHE.set(objects = [tmp_object, ])
 
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
@@ -536,7 +531,6 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                     # example: (id: [2,3])
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
                                                                          object_id=cls.id[1]).first()
-                    # cls.dbObject = CACHE.get(objects = {cls.dbType : (cls.id, )})
                     if cls.dbObject is None:
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
@@ -590,7 +584,7 @@ class CompositeIdHolder(graphene.Interface):
         from .gql_user import User
 
         dbuser = (
-
+                
             DBSession
                 .query(dbUser)
                 .filter(
@@ -1025,3 +1019,4 @@ class UnstructuredData(LingvodocObjectType):
     @fetch_object('additional_metadata')
     def resolve_additional_metadata(self, info):
         return self.dbObject.additional_metadata
+

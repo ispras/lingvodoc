@@ -45,8 +45,6 @@ from lingvodoc.views.v2.utils import message, unimplemented
 from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.schema.gql_holders import ResponseError
 
-from lingvodoc.cache.caching import CACHE
-
 log = logging.getLogger(__name__)
 
 
@@ -96,14 +94,9 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
         # Ok, now working, starting with perspective check.
 
-        # perspective = DBSession.query(DictionaryPerspective).filter_by(
-        #     client_id = perspective_client_id,
-        #     object_id = perspective_object_id).first()
-        perspective = CACHE.get(objects=
-            {
-                DictionaryPerspective : (perspective_id, )
-            }
-        )
+        perspective = DBSession.query(DictionaryPerspective).filter_by(
+            client_id = perspective_client_id,
+            object_id = perspective_object_id).first()
 
         if not perspective:
             raise ResponseError(message='No such perspective {0}/{1}.'.format(
@@ -431,14 +424,9 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
         # Ok, now working, starting with dictionary check.
 
-        # dictionary = DBSession.query(Dictionary).filter_by(
-        #     client_id = dictionary_client_id,
-        #     object_id = dictionary_object_id).first()
-        dictionary = CACHE.get(objects =
-            {
-                Dictionary : (dictionary_id, )
-            }
-        )
+        dictionary = DBSession.query(Dictionary).filter_by(
+            client_id = dictionary_client_id,
+            object_id = dictionary_object_id).first()
 
         if not dictionary:
             raise ResponseError(message='No such dictionary {0}/{1}.'.format(

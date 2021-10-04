@@ -46,7 +46,6 @@ from sqlalchemy import (
     case
 )
 
-from lingvodoc.cache.caching import CACHE
 
 class Subject(graphene.ObjectType):
     """
@@ -192,7 +191,7 @@ class AcceptUserRequest(graphene.Mutation):
 
                     dict_ids = {'client_id': userrequest.subject['client_id'],
                                 'object_id': userrequest.subject['object_id']}
-                    # Seems like must be cached, but current caching model doesn't support it
+
                     cur_dict = DBSession.query(dbDictionary).filter_by(client_id=dict_ids['client_id'],
                                                                      object_id=dict_ids['object_id'],
                                                                        marked_for_deletion=False).first()
@@ -281,15 +280,10 @@ class AcceptUserRequest(graphene.Mutation):
 
                     org_id = userrequest.subject['org_id']
 
-                    # dictionary = (
-                    #     DBSession.query(dbDictionary).filter_by(
-                    #         client_id = dict_id[0],
-                    #         object_id = dict_id[1]).first())
-                    dictionary = CACHE.get(objects =
-                        {
-                            dbDictionary : (args["dict_id"], )
-                        }
-                    )
+                    dictionary = (
+                        DBSession.query(dbDictionary).filter_by(
+                            client_id = dict_id[0],
+                            object_id = dict_id[1]).first())
 
                     if not dictionary:
                         raise ResponseError('No such dictionary.')
@@ -620,15 +614,11 @@ class AddDictionaryToOrganization(graphene.Mutation):
 
         info.context.acl_check('edit', 'dictionary', dictionary_id)
 
-        # dictionary = (
-        #     DBSession.query(dbDictionary).filter_by(
-        #         client_id = dictionary_id[0],
-        #         object_id = dictionary_id[1]).first())
-        dictionary = CACHE.get(objects =
-            {
-                dbDictionary : (args["dictionary_id"], )
-            }
-        )
+        dictionary = (
+            DBSession.query(dbDictionary).filter_by(
+                client_id = dictionary_id[0],
+                object_id = dictionary_id[1]).first())
+
         if not dictionary:
             raise ResponseError('No such dictionary.')
 
@@ -650,7 +640,7 @@ class AddDictionaryToOrganization(graphene.Mutation):
             raise ResponseError('No such organization.')
 
         admin_list = []
-
+        
         if organization.additional_metadata:
             admin_list = organization.additional_metadata.get('admins', [])
 

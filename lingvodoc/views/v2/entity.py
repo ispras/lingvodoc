@@ -38,8 +38,6 @@ import os
 from webob.multidict import MultiDict, NoVars
 from lingvodoc.utils.elan_functions import eaf_wordlist
 
-from lingvodoc.cache.caching import CACHE
-
 @view_config(route_name='get_entity_indict', renderer='json', request_method='GET')
 @view_config(route_name='get_entity', renderer='json', request_method='GET', permission='view')
 def view_entity(request):
@@ -221,12 +219,11 @@ def create_entity(request):  # tested
             except (KeyError, TypeError):
                 request.response.status = HTTPBadRequest.code
                 return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
-
+        
         else:
             entity.content = req['content']
         # return None
-        CACHE.set(objects = [entity, ])
-        # DBSession.add(entity)
+        DBSession.add(entity)
         request.response.status = HTTPOk.code
         response['client_id'] = entity.client_id
         response['object_id'] = entity.object_id
