@@ -43,7 +43,7 @@ from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
 from uuid import uuid4
 
-from lingvodoc.cache.caching import CACHE
+
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -255,12 +255,7 @@ class DeleteLexicalEntry(graphene.Mutation):
     def mutate(root, info, **args):
         lex_id = args.get('id')
         client_id, object_id = lex_id
-        # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-        dblexicalentry = CACHE.get(objects =
-            {
-                dbLexicalEntry : (lex_id, )
-            }
-        )
+        dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         if not dblexicalentry or dblexicalentry.marked_for_deletion:
             raise ResponseError(message="Error: No such entry in the system")
         info.context.acl_check('delete', 'lexical_entries_and_entities',
@@ -286,14 +281,9 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
     def mutate(root, info, **args):
         ids = args.get('ids')
         task_id = str(uuid4())
-        lexical_entries = CACHE.get(
-            {
-                dbLexicalEntry : (ids, )
-            }
-        )
-        for dblexicalentry in lexical_entries:
-            # client_id, object_id = lex_id
-            # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+        for lex_id in ids:
+            client_id, object_id = lex_id
+            dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
             if not dblexicalentry or dblexicalentry.marked_for_deletion:
                 raise ResponseError(message="Error: No such entry in the system")
             info.context.acl_check('delete', 'lexical_entries_and_entities',
@@ -316,9 +306,8 @@ def create_n_entries_in_persp(n, pid, client):
         perspective_id = pid
         dblexentry = create_lexicalentry(id, perspective_id, True)
         lexentries_list.append(dblexentry)
-    # DBSession.bulk_save_objects(lexentries_list)
-    # DBSession.flush()
-    CACHE.set(objects = lexentries_list)
+    DBSession.bulk_save_objects(lexentries_list)
+    DBSession.flush()
     result = list()
     for lexentry in lexentries_list:
         result.append(LexicalEntry(id=[lexentry.client_id, lexentry.object_id]))
@@ -348,9 +337,8 @@ class BulkCreateLexicalEntry(graphene.Mutation):
             dblexentry = create_lexicalentry(id, perspective_id, False)
             lexentries_list.append(dblexentry)
 
-        # DBSession.bulk_save_objects(lexentries_list)
-        # DBSession.flush()
-        CACHE.set(objects = lexentries_list)
+        DBSession.bulk_save_objects(lexentries_list)
+        DBSession.flush()
         return BulkCreateLexicalEntry(triumph=True)
 
 
@@ -384,13 +372,8 @@ class ConnectLexicalEntries(graphene.Mutation):
             raise ResponseError("wrong field data type")
         connections = args['connections']
         for par in connections:
-            # parent = DBSession.query(dbLexicalEntry).\
-            #     filter_by(client_id=par[0], object_id=par[1]).first()
-            parent = CACHE.get(
-                {
-                    dbLexicalEntry : (par, )
-                }
-            )
+            parent = DBSession.query(dbLexicalEntry).\
+                filter_by(client_id=par[0], object_id=par[1]).first()
             if not parent:
                 raise ResponseError("No such lexical entry in the system")
             par_tags = find_all_tags(parent, field_id[0], field_id[1], False, False)
@@ -407,13 +390,8 @@ class ConnectLexicalEntries(graphene.Mutation):
             tags.append(tag)
         lexical_entries = find_lexical_entries_by_tags(tags, field_id[0], field_id[1], False, False)
         for par in connections:
-            # parent = DBSession.query(dbLexicalEntry).\
-            #     filter_by(client_id=par[0], object_id=par[1]).first()
-            parent = CACHE.get(
-                {
-                    dbLexicalEntry : (par, )
-                }
-            )
+            parent = DBSession.query(dbLexicalEntry).\
+                filter_by(client_id=par[0], object_id=par[1]).first()
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 
@@ -527,9 +505,9 @@ class DeleteGroupingTags(graphene.Mutation):
             return {'error': str("Wrong type of field")}
 
         perspective_id = (
-
+                
             DBSession
-
+            
                 .query(
                     dbLexicalEntry.parent_client_id,
                     dbLexicalEntry.parent_object_id)

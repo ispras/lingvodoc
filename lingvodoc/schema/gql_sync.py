@@ -48,8 +48,6 @@ from pyramid.request import Request
 from pyramid.response import Response
 from lingvodoc.utils.search import recursive_sort
 
-from lingvodoc.cache.caching import CACHE
-
 log = logging.getLogger(__name__)
 
 
@@ -153,13 +151,8 @@ def download_dictionary(dict_id, request, user_id, locale_id):
     my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
     my_args["cookies"] = json.loads(request.cookies.get('server_cookies'))
     try:
-        # dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
-        #                                                        object_id=dict_id[1]).first()
-        dictionary_obj = CACHE.get(objects =
-            {
-                dbDictionary : (args["dictionary_id"], )
-            }
-        )
+        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
+                                                               object_id=dict_id[1]).first()
         if not dictionary_obj:
             dict_json = make_request(my_args["central_server"] + 'dictionary/%s/%s' % (
                 dict_id[0],

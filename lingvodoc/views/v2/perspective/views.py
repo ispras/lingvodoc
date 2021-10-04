@@ -74,8 +74,6 @@ from lingvodoc.utils.search import fulfill_permissions_on_perspectives, FakeObje
 from lingvodoc.views.v2.delete import real_delete_perspective
 from pdb import set_trace
 
-from lingvodoc.cache.caching import CACHE
-
 log = logging.getLogger(__name__)
 
 
@@ -2316,8 +2314,7 @@ def create_entities_bulk(request):
                 else:
                     entity.content = req['content']
                 # return None
-                CACHE.set(objects = [entity, ])
-                # DBSession.add(entity)
+                DBSession.add(entity)
             inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
         request.response.status = HTTPOk.code
         return inserted_items

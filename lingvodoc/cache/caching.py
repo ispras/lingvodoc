@@ -5,7 +5,6 @@ from redis import Redis
 
 from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
-from lingvodoc.cache.through.cache import ThroughCache#, DBSession
 
 import uuid
 import dill
@@ -15,7 +14,6 @@ import dill
 MEMOIZE = lambda x: x
 CACHE = None
 
-# DBSession = DBSession
 
 def create_region(args):
     region = make_region().configure(**args)
@@ -59,8 +57,8 @@ def initialize_cache(args):
         return
     # region = make_region().configure(**args)
     # MEMOIZE = cache_responses(region)
-    # CACHE = CommonCache(Redis(**args))
-    CACHE = ThroughCache(Redis(**args))
+    CACHE = CommonCache(Redis(**args))
+
 
 class TaskStatus():
     def __init__(self, user_id, task_family, task_details, total_stages):
