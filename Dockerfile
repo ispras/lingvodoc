@@ -28,3 +28,6 @@ RUN \
   pip3 install --upgrade setuptools==44.0 && \
   pip3 install -r server-requirements.txt && \
   pip3 install alembic gunicorn==19.7.1
+RUN \
+  locale-gen en_US.UTF-8 && update-locale && \
+  apt install -y lttoolbox apertium-dev apertium-lex-tools hfst libhfst-dev cg3-dev
