@@ -287,7 +287,7 @@ def apertium_parser(content_file, dedoc_url, apertium_path, lang):
                 if offset > 2:
                     match_found = False
                     break
-                i += 1
+                offset += 1
             if not match_found:
                 continue
             i += offset
