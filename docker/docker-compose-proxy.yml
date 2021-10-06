@@ -73,6 +73,7 @@ services:
     container_name: ld
     volumes:
       - ./frontend/dist:/dist
+      - /opt/apertium:/opt/apertium
       - ./sock:/sock
       - /api/build/
       - ../:/api
