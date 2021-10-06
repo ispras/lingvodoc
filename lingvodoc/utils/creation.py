@@ -411,15 +411,15 @@ def create_lexicalentry(id, perspective_id, save_object=False):
 
 @celery.task
 def async_create_parser_result(id, parser_id, entity_id,
-                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url,
+                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url, apertium_path,
                                arguments, save_object):
     async_create_parser_result_method(id=id, parser_id=parser_id, entity_id=entity_id,
                                       task_key=task_key, cache_kwargs=cache_kwargs,
-                                      sqlalchemy_url=sqlalchemy_url, dedoc_url=dedoc_url,
+                                      sqlalchemy_url=sqlalchemy_url, dedoc_url=dedoc_url, apertium_path=apertium_path,
                                       arguments=arguments, save_object=save_object)
 
 def async_create_parser_result_method(id, parser_id, entity_id,
-                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url,
+                               task_key, cache_kwargs, sqlalchemy_url, dedoc_url, apertium_path,
                                arguments, save_object):
 
     from lingvodoc.cache.caching import initialize_cache
@@ -433,7 +433,7 @@ def async_create_parser_result_method(id, parser_id, entity_id,
 
     try:
 
-        create_parser_result(id=id, parser_id=parser_id, entity_id=entity_id, dedoc_url=dedoc_url,
+        create_parser_result(id=id, parser_id=parser_id, entity_id=entity_id, dedoc_url=dedoc_url, apertium_path=apertium_path,
                              arguments=arguments, save_object=save_object)
 
     except Exception as err:
@@ -445,7 +445,7 @@ def async_create_parser_result_method(id, parser_id, entity_id,
 # Downloads a document by the URL in an entity's content and saves the result of its parsing
 
 
-def create_parser_result(id, parser_id, entity_id, dedoc_url, arguments=None, save_object=True):
+def create_parser_result(id, parser_id, entity_id, dedoc_url, apertium_path, arguments=None, save_object=True):
 
     client_id, object_id = id
     parser_client_id, parser_object_id = parser_id
@@ -476,7 +476,11 @@ def create_parser_result(id, parser_id, entity_id, dedoc_url, arguments=None, sa
     os.rename(tmp_filename, tmp_filename + extension)
     tmp_filename = tmp_filename + extension
 
-    result = parse_method(tmp_filename, dedoc_url, **arguments)
+    if parser.method.find("timarkh") != -1:
+        result = parse_method(tmp_filename, dedoc_url, **arguments)
+
+    if parser.method.find("apertium") != -1:
+        result = parse_method(tmp_filename, dedoc_url, apertium_path, **arguments)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,

@@ -124,6 +124,16 @@ class ExecuteParser(graphene.Mutation):
             cur_args["dedoc_url"] = request.registry.settings["dedoc_url"]
         except KeyError:
             raise ResponseError(message="Dedoc server url was not provided in configuration")
+        if parser.method.find("apertium") == -1:
+            cur_args["apertium_path"] = ""
+        else:
+            msg = "The path to the folder with Apertium parsers was not provided in configuration"
+            try:
+                cur_args["apertium_path"] = request.registry.settings["apertium_path"]
+            except KeyError:
+                raise ResponseError(message=msg)
+            if len(cur_args["apertium_path"]) == 0:
+                raise ResponseError(message=msg)
 
         async_execution = args.get("async_execution")
         if async_execution == None or async_execution == True:

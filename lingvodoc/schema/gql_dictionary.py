@@ -289,9 +289,15 @@ class Dictionary(LingvodocObjectType):  # tested
             
             .scalar())
 
-        return max(
-            self.dbObject.created_at,
-            result)
+        if result is not None:
+
+            return max(
+                self.dbObject.created_at,
+                result)
+
+        else:
+
+            return self.dbObject.created_at
 
     def published_cte_str(
         self,
@@ -1344,7 +1350,11 @@ class UndeleteDictionary(graphene.Mutation):
 
         # Restoring grant membership, if required.
 
-        additional_info = objecttoc_obj.additional_metadata.get('__additional_info__')
+        additional_metadata = (
+            objecttoc_obj.additional_metadata)
+
+        additional_info = (
+            additional_metadata and additional_metadata.get('__additional_info__'))
 
         if additional_info:
             
