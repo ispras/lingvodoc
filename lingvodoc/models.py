@@ -78,6 +78,8 @@ ENGLISH_LOCALE = 2
 log = logging.getLogger(__name__)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+
+
 # DBSession = caching.DBSession
 
 Base = declarative_base()
@@ -1682,8 +1684,8 @@ class PerspectiveEntityAcl(ACLMixin):
         levoneent = CACHE.get(
             {
                 Entity : (client_id, object_id)
-            }
-        )
+            },
+        DBSession=DBSession)
         # levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = levoneent.parent.parent
         return acl_by_groups(perspective.object_id, perspective.client_id, self.subject)

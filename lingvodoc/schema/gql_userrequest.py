@@ -287,9 +287,9 @@ class AcceptUserRequest(graphene.Mutation):
                     #         object_id = dict_id[1]).first())
                     dictionary = CACHE.get(objects =
                         {
-                            dbDictionary : (args["dict_id"], )
-                        }
-                    )
+                            dbDictionary : (dict_id, )
+                        },
+                    DBSession=DBSession)
 
                     if not dictionary:
                         raise ResponseError('No such dictionary.')
@@ -627,8 +627,8 @@ class AddDictionaryToOrganization(graphene.Mutation):
         dictionary = CACHE.get(objects =
             {
                 dbDictionary : (args["dictionary_id"], )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not dictionary:
             raise ResponseError('No such dictionary.')
 

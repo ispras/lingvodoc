@@ -120,8 +120,8 @@ def update_perspective_fields(req,
     perspective = CACHE.get(objects =
         {
             DictionaryPerspective : ((perspective_client_id, perspective_object_id), )
-        }
-    )
+        },
+    DBSession=DBSession)
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -225,8 +225,8 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     parent = CACHE.get(objects =
         {
             LexicalEntry : ((le_client_id, le_object_id),)
-        }
-    )
+        },
+    DBSession=DBSession)
     if not parent:
         return {'error': str("No such lexical entry in the system")}
     upper_level = None
@@ -244,8 +244,8 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         upper_level = CACHE.get(objects =
             {
                 LexicalEntry : (up_lvl,)
-            }
-        )
+            },
+        DBSession=DBSession)
     entity = Entity(client_id=client.id,
                     field_client_id=field_client_id,
                     field_object_id=field_object_id,
@@ -308,7 +308,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     entity.publishingentity.accepted = True
 
     # DBSession.add(entity)
-    CACHE.set(objects = [entity, ])
+    CACHE.set(objects = [entity, ], DBSession=DBSession)
     return (entity.client_id, entity.object_id)
 
 
@@ -441,8 +441,8 @@ def convert_five_tiers(
         parent = CACHE.get(objects =
             {
                 Dictionary : ((dictionary_client_id, dictionary_object_id),)
-            }
-        )
+            },
+        DBSession=DBSession)
         if not parent:
             return {'error': str("No such dictionary in the system")}
         if not check_dictionary_perm(user.id, dictionary_client_id, dictionary_object_id):

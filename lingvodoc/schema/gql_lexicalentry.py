@@ -259,8 +259,8 @@ class DeleteLexicalEntry(graphene.Mutation):
         dblexicalentry = CACHE.get(objects =
             {
                 dbLexicalEntry : (lex_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not dblexicalentry or dblexicalentry.marked_for_deletion:
             raise ResponseError(message="Error: No such entry in the system")
         info.context.acl_check('delete', 'lexical_entries_and_entities',
@@ -286,11 +286,11 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
     def mutate(root, info, **args):
         ids = args.get('ids')
         task_id = str(uuid4())
-        lexical_entries = CACHE.get(
+        lexical_entries = CACHE.get(objects =
             {
                 dbLexicalEntry : (ids, )
-            }
-        )
+            },
+        DBSession=DBSession)
         for dblexicalentry in lexical_entries:
             # client_id, object_id = lex_id
             # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
@@ -318,7 +318,7 @@ def create_n_entries_in_persp(n, pid, client):
         lexentries_list.append(dblexentry)
     # DBSession.bulk_save_objects(lexentries_list)
     # DBSession.flush()
-    CACHE.set(objects = lexentries_list)
+    CACHE.set(objects = lexentries_list, DBSession=DBSession)
     result = list()
     for lexentry in lexentries_list:
         result.append(LexicalEntry(id=[lexentry.client_id, lexentry.object_id]))
@@ -350,7 +350,7 @@ class BulkCreateLexicalEntry(graphene.Mutation):
 
         # DBSession.bulk_save_objects(lexentries_list)
         # DBSession.flush()
-        CACHE.set(objects = lexentries_list)
+        CACHE.set(objects = lexentries_list, DBSession=DBSession)
         return BulkCreateLexicalEntry(triumph=True)
 
 
@@ -386,11 +386,11 @@ class ConnectLexicalEntries(graphene.Mutation):
         for par in connections:
             # parent = DBSession.query(dbLexicalEntry).\
             #     filter_by(client_id=par[0], object_id=par[1]).first()
-            parent = CACHE.get(
+            parent = CACHE.get(objects =
                 {
                     dbLexicalEntry : (par, )
-                }
-            )
+                },
+            DBSession=DBSession)
             if not parent:
                 raise ResponseError("No such lexical entry in the system")
             par_tags = find_all_tags(parent, field_id[0], field_id[1], False, False)
@@ -409,11 +409,11 @@ class ConnectLexicalEntries(graphene.Mutation):
         for par in connections:
             # parent = DBSession.query(dbLexicalEntry).\
             #     filter_by(client_id=par[0], object_id=par[1]).first()
-            parent = CACHE.get(
+            parent = CACHE.get(objects =
                 {
                     dbLexicalEntry : (par, )
-                }
-            )
+                },
+            DBSession=DBSession)
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 

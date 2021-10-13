@@ -231,8 +231,8 @@ def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
         perspective = CACHE.get(objects=
             {
                 DictionaryPerspective : (perspective_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not perspective:
 
@@ -250,8 +250,8 @@ def gql_sound_and_markup(request, locale_id, perspective_id, published_mode):
         dictionary = CACHE.get(objects =
             {
                 Dictionary : ((perspective.parent_client_id, perspective.parent_object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
 
 
         if not dictionary:

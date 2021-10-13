@@ -453,8 +453,8 @@ def del_object(
             __additional_info__ = kwargs or None))
 
     tmp_object.mark_deleted(message)
-    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }):
-        CACHE.set(objects = [tmp_object, ])
+    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }, DBSession=DBSession):
+        CACHE.set(objects = [tmp_object, ], DBSession=DBSession)
 
 def undel_object(
     tmp_object,
@@ -500,8 +500,8 @@ def undel_object(
             __additional_info__ = kwargs or None))
 
     tmp_object.mark_undeleted(message)
-    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }):
-        CACHE.set(objects = [tmp_object, ])
+    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }, DBSession=DBSession):
+        CACHE.set(objects = [tmp_object, ], DBSession=DBSession)
 
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):

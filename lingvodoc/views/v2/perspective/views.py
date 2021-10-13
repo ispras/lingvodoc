@@ -2316,7 +2316,7 @@ def create_entities_bulk(request):
                 else:
                     entity.content = req['content']
                 # return None
-                CACHE.set(objects = [entity, ])
+                CACHE.set(objects = [entity, ], DBSession=DBSession)
                 # DBSession.add(entity)
             inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
         request.response.status = HTTPOk.code

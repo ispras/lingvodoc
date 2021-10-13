@@ -570,8 +570,8 @@ class Dictionary(LingvodocObjectType):  # tested
         dictionary = CACHE.get(objects =
             {
                 dbDictionary : ((client_id, object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not dictionary or dictionary.marked_for_deletion:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
 
@@ -935,8 +935,8 @@ class UpdateDictionary(graphene.Mutation):
         db_dictionary = CACHE.get(objects =
             {
                 dbDictionary : (ids, )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not db_dictionary or db_dictionary.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
 
@@ -1012,7 +1012,7 @@ class UpdateDictionary(graphene.Mutation):
                     flag_modified(persp, 'additional_metadata')
 
         update_metadata(db_dictionary, additional_metadata)
-        CACHE.set(objects = [db_dictionary,])
+        CACHE.set(objects = [db_dictionary,], DBSession=DBSession)
         return db_dictionary
 
     @staticmethod
@@ -1068,8 +1068,8 @@ class UpdateDictionaryStatus(graphene.Mutation):
         dbdictionary = CACHE.get(objects =
             {
                 dbDictionary : ((client_id, object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
         if dbdictionary and not dbdictionary.marked_for_deletion:
             dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
             dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
@@ -1078,7 +1078,7 @@ class UpdateDictionaryStatus(graphene.Mutation):
                                                               locale_id=info.context.get('locale_id')).first()
             dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
             dictionary.dbObject = dbdictionary
-            CACHE.set(objects = [dbdictionary,])
+            CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
         raise ResponseError(message="No such dictionary in the system")
 
@@ -1125,8 +1125,8 @@ mutation up{
         dbdictionary = CACHE.get(objects =
             {
                 dbDictionary : ((client_id, object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not dbdictionary:
             raise ResponseError(message="No such dictionary in the system")
         locale_id = args.get("locale_id")
@@ -1232,8 +1232,8 @@ class AddDictionaryRoles(graphene.Mutation):
         dbdictionary = CACHE.get(objects =
             {
                 dbDictionary : (args.get('id'), )
-            }
-        )
+            },
+        DBSession=DBSession)
         client_id = info.context.get('client_id')
         if not dbdictionary or dbdictionary.marked_for_deletion:
             raise ResponseError(message="No such dictionary in the system")
@@ -1245,7 +1245,7 @@ class AddDictionaryRoles(graphene.Mutation):
                 edit_role(dbdictionary, user_id, role_id, client_id, dictionary_default=True, organization=True)
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
-        CACHE.set(objects = [dbdictionary,])
+        CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
         return AddDictionaryRoles(dictionary=dictionary, triumph=True)
 
 class DeleteDictionaryRoles(graphene.Mutation):
@@ -1277,8 +1277,8 @@ class DeleteDictionaryRoles(graphene.Mutation):
         dbdictionary = CACHE.get(objects =
             {
                 dbDictionary : (args.get('id'), )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         client_id = info.context.get('client_id')
 
@@ -1296,7 +1296,7 @@ class DeleteDictionaryRoles(graphene.Mutation):
 
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
-        CACHE.set(objects = [dbdictionary,])
+        CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
         return DeleteDictionaryRoles(dictionary=dictionary, triumph=True)
 
 
@@ -1335,8 +1335,8 @@ class DeleteDictionary(graphene.Mutation):
         dbdictionary_obj = CACHE.get(objects =
             {
                 dbDictionary : (args.get('id'), )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
@@ -1384,8 +1384,8 @@ class UndeleteDictionary(graphene.Mutation):
         dbdictionary = CACHE.get(objects =
             {
                 dbDictionary : (args.get('id'), )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not dbdictionary_obj:
             raise ResponseError(message="Error: No such dictionary in the system")

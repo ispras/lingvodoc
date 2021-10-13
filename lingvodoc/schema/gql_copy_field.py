@@ -30,7 +30,7 @@ def create_n_entries_in_persp(n, pid, client):
         dblexentry = create_lexicalentry(id, perspective_id, True)
         lexentries_list.append(dblexentry)
     # DBSession.bulk_save_objects(lexentries_list)
-    CACHE.set(lexentries_list)
+    CACHE.set(objects = lexentries_list, DBSession=DBSession)
     # DBSession.flush()
     result = list()
     for lexentry in lexentries_list:
@@ -164,7 +164,7 @@ def async_copy_single_field(one_pid, ftype, client, info,
 
         if len(dbentities_list) > 0:
             # DBSession.bulk_save_objects(dbentities_list)
-            CACHE.set(objects = dbentities_list)
+            CACHE.set(objects = dbentities_list, DBSession = DBSession)
     except Exception as err:
         task_status.set(None, -1, "Copying failed: %s" % str(err))
         raise

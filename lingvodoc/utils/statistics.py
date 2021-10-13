@@ -102,8 +102,8 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
         perspective = CACHE.get(objects=
             {
                 DictionaryPerspective : (perspective_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not perspective:
             raise ResponseError(message='No such perspective {0}/{1}.'.format(
@@ -437,8 +437,8 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
         dictionary = CACHE.get(objects =
             {
                 Dictionary : (dictionary_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not dictionary:
             raise ResponseError(message='No such dictionary {0}/{1}.'.format(

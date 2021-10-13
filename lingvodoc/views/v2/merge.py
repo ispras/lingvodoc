@@ -1817,7 +1817,7 @@ class Merge_Context(object):
         if entity_data.get('published', False):
             merge_entity.publishingentity.published = True
 
-        CACHE.set(objects = [merge_entity, ])
+        CACHE.set(objects = [merge_entity, ], DBSession=DBSession)
         # DBSession.add(merge_entity)
 
         log.debug(
@@ -2020,7 +2020,7 @@ class Merge_Context(object):
                     del additional_metadata['merged_by']
 
                 merge_entity = Entity(**entity_kwargs)
-                CACHE.set(objects = [merge_entity, ])
+                CACHE.set(objects = [merge_entity, ], DBSession=DBSession)
                 # DBSession.add(merge_entity)
 
                 log.debug(
@@ -2128,7 +2128,7 @@ class Merge_Context(object):
                     del additional_metadata['merged_by']
 
                 merge_entity = Entity(**entity_kwargs)
-                CACHE.set(objects = [merge_entity, ])
+                CACHE.set(objects = [merge_entity, ], DBSession=DBSession)
                 # DBSession.add(merge_entity)
 
                 log.debug(

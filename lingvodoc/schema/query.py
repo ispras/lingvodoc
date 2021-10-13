@@ -2524,7 +2524,7 @@ class StarlingEtymology(graphene.Mutation):
                     second_tag.publishingentity.accepted = True
                     second_tag.publishingentity.published = True
                     # DBSession.add(second_tag)
-                    CACHE.set(objects = [first_tag, second_tag])
+                    CACHE.set(objects = [first_tag, second_tag], DBSession=DBSession)
 
         return StarlingEtymology(triumph=True)
 
@@ -6340,7 +6340,7 @@ class CognateAnalysis(graphene.Mutation):
           }
         }
         """
-        
+
         # Administrator / perspective author / editing permission check.
 
         error_str = (

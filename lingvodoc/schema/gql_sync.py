@@ -158,8 +158,8 @@ def download_dictionary(dict_id, request, user_id, locale_id):
         dictionary_obj = CACHE.get(objects =
             {
                 dbDictionary : (args["dictionary_id"], )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not dictionary_obj:
             dict_json = make_request(my_args["central_server"] + 'dictionary/%s/%s' % (
                 dict_id[0],

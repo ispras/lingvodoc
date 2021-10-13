@@ -293,8 +293,8 @@ def create_entity(id=None,
     parent = CACHE.get(objects =
         {
             LexicalEntry : (parent_id, )
-        }
-    )
+        },
+    DBSession=DBSession)
     if not parent:
         raise ResponseError(message="No such lexical entry in the system")
 
@@ -319,8 +319,8 @@ def create_entity(id=None,
         upper_level = CACHE.get(objects =
             {
                 Entity : (self_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not upper_level:
             raise ResponseError(message="No such upper level in the system")
 
@@ -397,7 +397,7 @@ def create_entity(id=None,
         dbentity.content = content
 
     if save_object:
-        CACHE.set(objects = [dbentity, ])
+        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
         # DBSession.add(dbentity)
         # DBSession.flush()
     return dbentity
@@ -414,8 +414,8 @@ def create_lexicalentry(id, perspective_id, save_object=False):
     perspective = CACHE.get(objects =
         {
             DictionaryPerspective : (perspective_id, )
-        }
-    )
+        },
+    DBSession=DBSession)
     if not perspective:
         raise ResponseError(message="No such perspective in the system")
 
@@ -424,7 +424,7 @@ def create_lexicalentry(id, perspective_id, save_object=False):
     if save_object:
         # DBSession.add(dblexentry)
         # DBSession.flush()
-        CACHE.set(objects=[dblexentry,])
+        CACHE.set(objects=[dblexentry,], DBSession=DBSession)
     return dblexentry
 
 @celery.task
@@ -449,8 +449,8 @@ def async_create_parser_result_method(id, parser_id, entity_id,
     entity = CACHE.get(objects =
         {
             Entity : (entity_id, )
-        }
-    )
+        },
+    DBSession=DBSession)
     content_filename = entity.content.split('/')[-1]
     task_status.set(1, 5, "Parsing of file " + content_filename + " started")
 
@@ -478,8 +478,8 @@ def create_parser_result(id, parser_id, entity_id, dedoc_url, arguments=None, sa
     entity = CACHE.get(objects =
         {
             Entity : (entity_id, )
-        }
-    )
+        },
+    DBSession=DBSession)
     parser = DBSession.query(Parser). \
         filter_by(client_id=parser_client_id, object_id=parser_object_id).first()
     if not parser:
@@ -813,8 +813,8 @@ def create_group_entity(request, client, user, obj_id):  # tested
         parents = CACHE.get(objects =
             {
                 LexicalEntry : ((par['client_id'], par['object_id']) for par in req['connections'])
-            }
-        )
+            },
+        DBSession=DBSession)
         for parent in parents:
             # parent = DBSession.query(LexicalEntry).\
             #     filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
@@ -856,4 +856,4 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     # if user in group.users:
                     tag_entity.publishingentity.accepted = True
                     # DBSession.add(tag_entity)
-                    CACHE.set(objects = [tag_entity, ])
+                    CACHE.set(objects = [tag_entity, ], DBSession=DBSession)

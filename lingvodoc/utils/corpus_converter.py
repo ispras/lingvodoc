@@ -130,8 +130,8 @@ def update_perspective_fields(req,
     perspective = CACHE.get(objects =
         {
             DictionaryPerspective : ((perspective_client_id,  perspective_object_id), )
-        }
-    )
+        },
+    DBSession=DBSession)
 
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
@@ -309,7 +309,7 @@ def create_entity(
     entity.publishingentity.accepted = True
 
     # DBSession.add(entity)
-    CACHE.set(objects = [entity, ])
+    CACHE.set(objects = [entity, ], DBSession=DBSession)
 
     # means that the function was called from CopyField and so need to be sure that sound has been copied before copying markups
     if byte_content:
@@ -409,8 +409,8 @@ def convert_five_tiers(dictionary_id,
         markup_entity = CACHE.get(objects =
             {
                 Entity : (markup_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not markup_entity:
             raise KeyError("No such file")
@@ -484,8 +484,8 @@ def convert_five_tiers(dictionary_id,
             sound_entity = CACHE.get(objects =
                 {
                     Entity : ((markup_entity.self_client_id, markup_entity.self_object_id), )
-                }
-            )
+                },
+            DBSession=DBSession)
 
             sound_url = None
             if sound_entity:
@@ -536,8 +536,8 @@ def convert_five_tiers(dictionary_id,
         parent = CACHE.get(objects =
             {
                 Dictionary : ((dictionary_client_id, dictionary_object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not parent:
             return {'error': str("No such dictionary in the system")}

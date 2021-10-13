@@ -225,7 +225,7 @@ def create_entity(request):  # tested
         else:
             entity.content = req['content']
         # return None
-        CACHE.set(objects = [entity, ])
+        CACHE.set(objects = [entity, ], DBSession=DBSession)
         # DBSession.add(entity)
         request.response.status = HTTPOk.code
         response['client_id'] = entity.client_id

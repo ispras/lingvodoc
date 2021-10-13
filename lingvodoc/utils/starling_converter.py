@@ -227,11 +227,11 @@ def create_entity(id=None,
         # self_client_id, self_object_id = self_id
         # upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
         #                                                   object_id=self_object_id).first()
-        upper_level = CACHE.get(objects = 
+        upper_level = CACHE.get(objects =
             {
                 dbEntity : (self_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not upper_level:
             raise ResponseError(message="No such upper level in the system")
@@ -275,7 +275,7 @@ def create_entity(id=None,
         dbentity.upper_level = upper_level
     dbentity.publishingentity.accepted = True
     if save_object:
-        CACHE.set(objects = [dbentity, ])
+        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
         # DBSession.add(dbentity)
         # DBSession.flush()
     return dbentity
@@ -636,7 +636,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                 registry=None,
                                 request=None,
                                 save_object=False)
-                            CACHE.set(objects = [new_ent, ])
+                            CACHE.set(objects = [new_ent, ], DBSession=DBSession)
                             # DBSession.add(new_ent)
                     i+=1
             task_status.set(5, 70, "link, spread" )
@@ -698,12 +698,12 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                     # additional_metadata num_col
                                     tag_entity.publishingentity.accepted = True
                                     # DBSession.add(tag_entity)
-                                    CACHE.set(objects = [tag_entity, ])
+                                    CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
                                 tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
                                     field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=lexical_entry_ids[0], parent_object_id=lexical_entry_ids[1], content=tag)
                                 tag_entity.publishingentity.accepted = True
                                 # DBSession.add(tag_entity)
-                                CACHE.set(objects = [tag_entity, ])
+                                CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
 
 
 
@@ -733,7 +733,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         request=None,
                                         save_object=False)
                                     # DBSession.add(new_ent)
-                                    CACHE.set(objects = [new_ent, ])
+                                    CACHE.set(objects = [new_ent, ], DBSession=DBSession)
                         #i+=1
             DBSession.flush()
 

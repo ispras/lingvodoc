@@ -99,8 +99,8 @@ def create_group_entity(request, client, user):  # tested
         parents = CACHE.get(objects=
             {
                 LexicalEntry : ((par['client_id'], par['object_id']) for par in req['connections'])
-            }
-        )
+            },
+        DBSession=DBSession)
         for parent in parents:
             # parent = DBSession.query(LexicalEntry).\
             #     filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
@@ -240,8 +240,8 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
     perspective = CACHE.get(objects=
         {
             DictionaryPerspective : ((perspective_client_id, perspective_object_id), )
-        }
-    )
+        },
+    DBSession=DBSession)
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -320,8 +320,8 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     parent = CACHE.get(objects =
         {
             LexicalEntry : ((le_client_id, le_object_id), )
-        }
-    )
+        },
+    DBSession=DBSession)
     if not parent:
         return {'error': str("No such lexical entry in the system")}
     upper_level = None
@@ -339,8 +339,8 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         upper_level = CACHE.get(objects=
             {
                 Entity : (up_lvl, )
-            }
-        )
+            },
+        DBSession=DBSession)
     if additional_metadata is not None:
         entity = Entity(client_id=client.id,
                         field_client_id=field_client_id,
@@ -405,7 +405,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     else:
         entity.content = content
     entity.publishingentity.accepted = True
-    CACHE.set(objects = [entity, ])
+    CACHE.set(objects = [entity, ], DBSession=DBSession)
     # DBSession.add(entity)
     # DBSession.flush()
     return (entity.client_id, entity.object_id)
@@ -776,8 +776,8 @@ def convert_db_new(
         parent = CACHE.get(objects=
             {
                 Dictionary : ((dictionary_client_id, dictionary_object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
 
         if not parent:
             return {'error': str("No such dictionary in the system")}

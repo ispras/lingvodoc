@@ -134,8 +134,8 @@ class ConvertDictionary(graphene.Mutation):
                 dictionary_obj = CACHE.get(objects =
                     {
                         dbDictionary : (args["dictionary_id"], )
-                    }
-                )
+                    },
+                DBSession=DBSession)
                 gist = DBSession.query(dbTranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()
@@ -283,8 +283,8 @@ class ConvertFiveTiers(graphene.Mutation):
             dictionary_obj = CACHE.get(objects =
                 {
                     dbDictionary : (args["dictionary_id"], )
-                }
-            )
+                },
+            DBSession=DBSession)
             if not dictionary_obj:
                 ResponseError(message="Dictionary not found")
             gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
@@ -300,8 +300,9 @@ class ConvertFiveTiers(graphene.Mutation):
                 dictionary_obj = CACHE.get(objects =
                     {
                         dbDictionary : (args["dictionary_id"], )
-                    }
-                )
+                    },
+                DBSession=DBSession)
+
                 gist = DBSession.query(dbTranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()

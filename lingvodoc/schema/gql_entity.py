@@ -228,8 +228,8 @@ class CreateEntity(graphene.Mutation):
         parent = CACHE.get(objects =
             {
                 dbLexicalEntry : ((parent_client_id, parent_object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not parent:
             raise ResponseError(message="No such lexical entry in the system")
 
@@ -258,8 +258,8 @@ class CreateEntity(graphene.Mutation):
             upper_level = CACHE.get(objects =
                 {
                     dbEntity : (args.get('self_id'), )
-                }
-            )
+                },
+            DBSession=DBSession)
             if not upper_level:
                 raise ResponseError(message="No such upper level in the system")
         dbentity = dbEntity(client_id=client_id,
@@ -364,7 +364,7 @@ class CreateEntity(graphene.Mutation):
                 # link_persp_client_id, link_persp_object_id = args.get('link_perspective_id')
                 # if not DBSession.query(dbPerspective)\
                 #         .filter_by(client_id=link_persp_client_id, object_id=link_persp_object_id).first():
-                if not CACHE.get(objects = { dbPerspective : (args.get('link_perspective_id'), ) }):
+                if not CACHE.get(objects = { dbPerspective : (args.get('link_perspective_id'), ) }, DBSession=DBSession):
                     raise ResponseError(message="link_perspective not found")
                 dbentity.additional_metadata['link_perspective_id'] = [link_persp_client_id, link_persp_object_id]
 
@@ -379,7 +379,7 @@ class CreateEntity(graphene.Mutation):
             # if args.get('is_translatable', None): # TODO: fix it
             #     field.is_translatable = bool(args['is_translatable'])
         #CACHE set_entity
-        CACHE.set(objects = [dbentity, ])
+        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
         # DBSession.add(dbentity)
         # DBSession.flush()
         entity = Entity(id = [dbentity.client_id, dbentity.object_id])
@@ -505,8 +505,8 @@ class UpdateEntity(graphene.Mutation):
         dbentity = CACHE.get(objects =
             {
                 dbEntity : ((client_id, object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
         # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
         entity = Entity(id=[dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
@@ -894,8 +894,8 @@ class DeleteEntity(graphene.Mutation):
         dbentity = CACHE.get(objects =
             {
                 dbEntity : ((client_id, object_id),)
-            }
-        )
+            },
+        DBSession=DBSession)
         # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
         if not dbentity or dbentity.marked_for_deletion:
             raise ResponseError(message="No such entity in the system")
@@ -962,8 +962,8 @@ class BulkCreateEntity(graphene.Mutation):
             lexical_entry = CACHE.get(objects =
                 {
                     dbLexicalEntry : (parent_id, )
-                }
-            )
+                },
+            DBSession=DBSession)
             info.context.acl_check('create', 'lexical_entries_and_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
@@ -995,7 +995,7 @@ class BulkCreateEntity(graphene.Mutation):
         #CACHE set_entity
         # DBSession.bulk_save_objects(dbentities_list)
         # DBSession.flush()
-        CACHE.set(objects = dbentities_list)
+        CACHE.set(objects = dbentities_list, DBSession=DBSession)
         for dbentity in dbentities_list:
             entity =  Entity(id=[dbentity.client_id, dbentity.object_id])
             entity.dbObject = dbentity
@@ -1036,8 +1036,8 @@ class UpdateEntityContent(graphene.Mutation):
         dbentity_old = CACHE.get(objects =
             {
                 dbEntity : ((old_client_id, object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
         # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_client_id, object_id=object_id).first()
         if not dbentity_old or dbentity_old.marked_for_deletion:
             raise ResponseError(message="No such entity in the system")
@@ -1063,8 +1063,8 @@ class UpdateEntityContent(graphene.Mutation):
         parent = CACHE.get(objects =
             {
                 dbLexicalEntry : ((dbentity_old.parent_client_id, dbentity_old.parent_object_id), )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not parent:
             raise ResponseError(message="No such lexical entry in the system")
 
@@ -1084,7 +1084,7 @@ class UpdateEntityContent(graphene.Mutation):
             #     field.is_translatable = bool(args['is_translatable'])
         # DBSession.add(dbentity)
         # DBSession.flush()
-        CACHE.set(objects = [dbentity, ])
+        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
         entity = Entity(id = [dbentity.client_id, dbentity.object_id])
         entity.dbObject = dbentity
         return UpdateEntityContent(entity=entity, triumph=True)
@@ -1122,7 +1122,7 @@ class BulkUpdateEntityContent(graphene.Mutation):
         client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
 
         dbentities_old = list()
-        dbentities = CACHE.get( {dbEntity : old_ids} )
+        dbentities = CACHE.get(objects = {dbEntity : old_ids}, DBSession=DBSession)
         for old_id, dbentity_old in zip(old_ids, dbentities):
             # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_id[0], object_id=old_id[1]).first()
 
@@ -1157,8 +1157,8 @@ class BulkUpdateEntityContent(graphene.Mutation):
             parent = CACHE.get(objects=
                 {
                     dbLexicalEntry : ((parent_client_id, parent_object_id), )
-                }
-            )
+                },
+            DBSession=DBSession)
             if not parent:
                 raise ResponseError(message="No such lexical entry in the system")
 
@@ -1180,7 +1180,7 @@ class BulkUpdateEntityContent(graphene.Mutation):
 
         # DBSession.bulk_save_objects(dbentities_new)
         # DBSession.flush()
-        CACHE.set(objects = dbentities_new)
+        CACHE.set(objects = dbentities_new, DBSession=DBSession)
 
         entities = list()
         for dbentity in dbentities_new:

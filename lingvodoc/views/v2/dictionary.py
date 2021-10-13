@@ -639,7 +639,7 @@ def dictionary_copy(request):
             entity_copy.publishingentity.accepted = entity.publishingentity.accepted
 
             # DBSession.add(entity_copy)
-            CACHE.set(objects = [entity_copy, ])
+            CACHE.set(objects = [entity_copy, ], DBSession=DBSession)
             DBSession.flush()
 
             id_id_copy = (entity_copy.client_id, entity_copy.object_id)

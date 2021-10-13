@@ -117,8 +117,8 @@ class ExecuteParser(graphene.Mutation):
         entity = CACHE.get(objects =
             {
                 dbEntity : (entity_id, )
-            }
-        )
+            },
+        DBSession=DBSession)
         if not entity:
             raise ResponseError(message="No such entity in the system")
 

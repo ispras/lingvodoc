@@ -1,4 +1,4 @@
-__author__ = 'alexander'
+__author__ = 'winking-maniac'
 
 import dill
 # from lingvodoc.models import DBSession, Entity
@@ -49,9 +49,10 @@ class ThroughCache(ICache):
         :return:
         """
         self.cache = redis
+        # self.DBSession = dbsession
         self.DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
-    def get(self, keys = None, objects = dict()):
+    def get(self, keys = None, objects = dict(), DBSession = None):
         """
         Gets objects from cache and database, if needed
 
@@ -77,7 +78,7 @@ class ThroughCache(ICache):
         """
         if isinstance(keys, str):
             cached = self.cache.get(keys)
-            if cached is None:
+            if not cached:
                 return None
             return dill.loads(cached)
         elif isinstance(keys, list):
@@ -89,6 +90,10 @@ class ThroughCache(ICache):
                 result.append(dill.loads(cached))
             return result
 
+        if not DBSession:
+            err_msg = 'DBSession cannot be None'
+            log.error(err_msg)
+            # raise ValueError(err_msg)
 
         # try:
         result = dict()
@@ -96,13 +101,13 @@ class ThroughCache(ICache):
             result[obj_type] = []
             for lingvodoc_id in objects[obj_type]:
                 key = f"auto:{obj_type.__name__}:{lingvodoc_id[0]}:{lingvodoc_id[1]}"
-                log.warn(key)
+                log.debug(key)
                 cached = self.cache.get(key)
                 if cached is None:
-                    cached = self.DBSession.query(obj_type) \
+                    cached = DBSession.query(obj_type) \
                                     .filter_by(client_id=lingvodoc_id[0], object_id=lingvodoc_id[1]) \
                                     .first()
-                    if cached is None:
+                    if not cached:
                         pass
                     else:
                         self.cache.set(key, dill.dumps(cached))
@@ -111,12 +116,12 @@ class ThroughCache(ICache):
                     # cached = DBSession.merge(dill.loads(cached), load=False)
                     cached = dill.loads(cached)
                     try:
-                        self.DBSession.add(cached)
+                        DBSession.add(cached)
                     except:
-                        cached = self.DBSession.query(obj_type) \
+                        cached = DBSession.query(obj_type) \
                                         .filter_by(client_id=lingvodoc_id[0], object_id=lingvodoc_id[1]) \
                                         .first()
-                        
+
                 result[obj_type].append(cached)
         # except Exception as e:
         #     log.error(f'Exception during getting from cache : {e}')
@@ -130,7 +135,7 @@ class ThroughCache(ICache):
 
 
     # TODO: add try/catch handlers.
-    def set(self, key = None, value = None, key_value = None, objects = list(), transaction = False):
+    def set(self, key = None, value = None, key_value = None, objects = list(), transaction = False, DBSession = None):
         """
         Inserts objects to cache and database
 
@@ -156,6 +161,9 @@ class ThroughCache(ICache):
             )
 
 
+        if not DBSession:
+            err_msg = 'DBSession cannot be None'
+            log.error(err_msg)
         if transaction:
             try:
                 accepted_for_caching = dict(
@@ -165,8 +173,8 @@ class ThroughCache(ICache):
                         objects
                     )
                 )
-                self.DBSession.add_all(objects)
-                self.DBSession.flush()
+                DBSession.add_all(objects)
+                DBSession.flush()
                 self.cache.mset(accepted_for_caching)
                 return True
             except:
@@ -175,10 +183,10 @@ class ThroughCache(ICache):
             result = []
             for obj in objects:
                 key = f'auto:{obj.__class__.__name__}:{obj.client_id}:{obj.object_id}'
-                log.warn(key)
+                log.debug(key)
                 try:
-                    self.DBSession.add(obj)
-                    self.DBSession.flush()
+                    DBSession.add(obj)
+                    DBSession.flush()
                     self.cache.set(key, dill.dumps(obj))
                     result.append(True)
                 except:
