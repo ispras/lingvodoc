@@ -168,11 +168,11 @@ class Dictionary(LingvodocObjectType):  # tested
 
         # select
         #   max((value ->> 'deleted_at') :: float)
-        #   
+        #
         #   from
         #     ObjectTOC,
         #     jsonb_each(additional_metadata)
-        #   
+        #
         #   where
         #     client_id = <client_id> and
         #     object_id = <object_id>;
@@ -202,55 +202,55 @@ class Dictionary(LingvodocObjectType):  # tested
 
               max(
                 greatest(
-  
+
                   extract(epoch from P.created_at),
-  
+
                   (select
                     max((value ->> 'deleted_at') :: float)
-  
+
                     from
                       jsonb_each(OP.additional_metadata)),
-                  
+
                   (select
-  
+
                     max(
                       greatest(
-  
+
                         extract(epoch from L.created_at),
-  
+
                         (select
                           max((value ->> 'deleted_at') :: float)
-  
+
                           from
                             jsonb_each(OL.additional_metadata)),
-                        
+
                         (select
-  
+
                           max(
                             greatest(
-                              
+
                               extract(epoch from E.created_at),
-  
+
                               (select
                                 max((value ->> 'deleted_at') :: float)
-  
+
                                 from
                                   jsonb_each(OE.additional_metadata))))
-  
+
                           from
                             public.entity E,
                             ObjectTOC OE
-  
+
                           where
                             E.parent_client_id = L.client_id and
                             E.parent_object_id = L.object_id and
                             OE.client_id = E.client_id and
                             OE.object_id = E.object_id)))
-  
+
                     from
                       lexicalentry L,
                       ObjectTOC OL
-  
+
                     where
                       L.parent_client_id = P.client_id and
                       L.parent_object_id = P.object_id and
@@ -282,11 +282,11 @@ class Dictionary(LingvodocObjectType):  # tested
                 func.greatest(
                     deleted_at_query.label('deleted_at'),
                     Grouping(sqlalchemy.text(sql_str))))
-                
+
             .params({
                 'client_id': self.dbObject.client_id,
                 'object_id': self.dbObject.object_id})
-            
+
             .scalar())
 
         if result is not None:
@@ -374,7 +374,7 @@ class Dictionary(LingvodocObjectType):  # tested
         __debug_flag__ = False):
 
         translation_gist_query = (DBSession
-        
+
             .query(
                 dbTranslationGist.client_id,
                 dbTranslationGist.object_id)
@@ -396,7 +396,7 @@ class Dictionary(LingvodocObjectType):  # tested
 
         # NOTE: we have to use
         # in_(DBSession.query(translation_gist_cte))
-        # and not just 
+        # and not just
         # in_(translation_gist_cte),
         # because otherwise translation_gist_cte won't be used as a proper WITH CTE and will be just
         # inserted literally two times.
@@ -431,7 +431,7 @@ class Dictionary(LingvodocObjectType):  # tested
                         self.dbObject.state_translation_gist_object_id)
 
                         .in_(DBSession.query(translation_gist_cte)),
-                        
+
                     perspective_query.exists())))
 
         if __debug_flag__:
@@ -566,7 +566,12 @@ class Dictionary(LingvodocObjectType):  # tested
     @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
     def resolve_roles(self, info):
         client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
-        dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dictionary = CACHE.get(objects =
+            {
+                dbDictionary : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if not dictionary or dictionary.marked_for_deletion:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
 
@@ -925,8 +930,13 @@ class UpdateDictionary(graphene.Mutation):
                           ):
         if not ids:
             raise ResponseError(message="dict id not found")
-        client_id, object_id = ids
-        db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # client_id, object_id = ids
+        # db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        db_dictionary = CACHE.get(objects =
+            {
+                dbDictionary : (ids, )
+            },
+        DBSession=DBSession)
         if not db_dictionary or db_dictionary.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
 
@@ -1002,6 +1012,7 @@ class UpdateDictionary(graphene.Mutation):
                     flag_modified(persp, 'additional_metadata')
 
         update_metadata(db_dictionary, additional_metadata)
+        CACHE.set(objects = [db_dictionary,], DBSession=DBSession)
         return db_dictionary
 
     @staticmethod
@@ -1053,7 +1064,12 @@ class UpdateDictionaryStatus(graphene.Mutation):
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if dbdictionary and not dbdictionary.marked_for_deletion:
             dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
             dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
@@ -1062,6 +1078,7 @@ class UpdateDictionaryStatus(graphene.Mutation):
                                                               locale_id=info.context.get('locale_id')).first()
             dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
             dictionary.dbObject = dbdictionary
+            CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
         raise ResponseError(message="No such dictionary in the system")
 
@@ -1104,7 +1121,12 @@ mutation up{
         client_id, object_id = args.get('id')
 
 
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if not dbdictionary:
             raise ResponseError(message="No such dictionary in the system")
         locale_id = args.get("locale_id")
@@ -1114,7 +1136,7 @@ mutation up{
             atom_id = args['atom_id']
 
             dbtranslationatom = (
-                    
+
                 DBSession
                     .query(dbTranslationAtom)
                     .filter_by(
@@ -1206,7 +1228,12 @@ class AddDictionaryRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
         client_id = info.context.get('client_id')
         if not dbdictionary or dbdictionary.marked_for_deletion:
             raise ResponseError(message="No such dictionary in the system")
@@ -1218,6 +1245,7 @@ class AddDictionaryRoles(graphene.Mutation):
                 edit_role(dbdictionary, user_id, role_id, client_id, dictionary_default=True, organization=True)
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
+        CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
         return AddDictionaryRoles(dictionary=dictionary, triumph=True)
 
 class DeleteDictionaryRoles(graphene.Mutation):
@@ -1245,7 +1273,13 @@ class DeleteDictionaryRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
+
         client_id = info.context.get('client_id')
 
         if not dbdictionary or dbdictionary.marked_for_deletion:
@@ -1262,6 +1296,7 @@ class DeleteDictionaryRoles(graphene.Mutation):
 
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
+        CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
         return DeleteDictionaryRoles(dictionary=dictionary, triumph=True)
 
 
@@ -1296,7 +1331,12 @@ class DeleteDictionary(graphene.Mutation):
 
         ids = args.get('id')
         client_id, object_id = ids
-        dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary_obj = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
 
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
@@ -1340,7 +1380,13 @@ class UndeleteDictionary(graphene.Mutation):
     def mutate(root, info, **args):
         ids = args.get('id')
         client_id, object_id = ids
-        dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
+
         if not dbdictionary_obj:
             raise ResponseError(message="Error: No such dictionary in the system")
         if not dbdictionary_obj.marked_for_deletion:
@@ -1357,7 +1403,7 @@ class UndeleteDictionary(graphene.Mutation):
             additional_metadata and additional_metadata.get('__additional_info__'))
 
         if additional_info:
-            
+
             grant_id_list = additional_info.get('grant_id_list')
 
             if grant_id_list:
@@ -1399,4 +1445,3 @@ class UndeleteDictionary(graphene.Mutation):
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
         return UndeleteDictionary(dictionary=dictionary, triumph=True)
-

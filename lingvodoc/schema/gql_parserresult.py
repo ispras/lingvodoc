@@ -23,6 +23,8 @@ from lingvodoc.schema.gql_parser import Parser
 from lingvodoc.utils.creation import create_parser_result, async_create_parser_result
 from lingvodoc.schema.gql_parser import ParameterType
 
+from lingvodoc.cache.caching import CACHE
+
 class ParserResult(LingvodocObjectType):
     dbType = dbParserResult
     arguments = ObjectVal()
@@ -110,8 +112,13 @@ class ExecuteParser(graphene.Mutation):
                     arguments[parameter['name']] = tmp_filename
 
 
-        entity = DBSession.query(dbEntity). \
-            filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
+        # entity = DBSession.query(dbEntity). \
+        #     filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
+        entity = CACHE.get(objects =
+            {
+                dbEntity : (entity_id, )
+            },
+        DBSession=DBSession)
         if not entity:
             raise ResponseError(message="No such entity in the system")
 
@@ -124,16 +131,6 @@ class ExecuteParser(graphene.Mutation):
             cur_args["dedoc_url"] = request.registry.settings["dedoc_url"]
         except KeyError:
             raise ResponseError(message="Dedoc server url was not provided in configuration")
-        if parser.method.find("apertium") == -1:
-            cur_args["apertium_path"] = ""
-        else:
-            msg = "The path to the folder with Apertium parsers was not provided in configuration"
-            try:
-                cur_args["apertium_path"] = request.registry.settings["apertium_path"]
-            except KeyError:
-                raise ResponseError(message=msg)
-            if len(cur_args["apertium_path"]) == 0:
-                raise ResponseError(message=msg)
 
         async_execution = args.get("async_execution")
         if async_execution == None or async_execution == True:
@@ -260,4 +257,3 @@ class UpdateParserResult(graphene.Mutation):
         transaction.commit()
 
         return UpdateParserResult(triumph=True)
-

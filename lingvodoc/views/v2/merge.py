@@ -71,6 +71,7 @@ from lingvodoc.views.v2.utils import (
     unimplemented
 )
 
+from lingvodoc.cache.caching import CACHE
 
 log = logging.getLogger(__name__)
 
@@ -629,7 +630,7 @@ def match_simple(entry_data_list, entity_type_primary, entity_type_secondary, th
         primary_client_id, primary_object_id = fields_static[entity_type_primary]
 
         primary_filter = (lambda entity_data:
-            entity_data['field_client_id'] == primary_client_id and 
+            entity_data['field_client_id'] == primary_client_id and
             entity_data['field_object_id'] == primary_object_id and
             not entity_data['marked_for_deletion'])
 
@@ -644,7 +645,7 @@ def match_simple(entry_data_list, entity_type_primary, entity_type_secondary, th
         secondary_client_id, secondary_object_id = fields_static[entity_type_secondary]
 
         secondary_filter = (lambda entity_data:
-            entity_data['field_client_id'] == secondary_client_id and 
+            entity_data['field_client_id'] == secondary_client_id and
             entity_data['field_object_id'] == secondary_object_id and
             not entity_data['marked_for_deletion'])
 
@@ -1590,7 +1591,7 @@ class Merge_Context(object):
             for entry_id in entry_id_list)
 
         entry_list = (DBSession
-                
+
             .query(LexicalEntry)
 
             .filter(
@@ -1816,7 +1817,8 @@ class Merge_Context(object):
         if entity_data.get('published', False):
             merge_entity.publishingentity.published = True
 
-        DBSession.add(merge_entity)
+        CACHE.set(objects = [merge_entity, ], DBSession=DBSession)
+        # DBSession.add(merge_entity)
 
         log.debug(
             '{0}: {1} entit{2} of type \'{3}\' with content '
@@ -2018,7 +2020,8 @@ class Merge_Context(object):
                     del additional_metadata['merged_by']
 
                 merge_entity = Entity(**entity_kwargs)
-                DBSession.add(merge_entity)
+                CACHE.set(objects = [merge_entity, ], DBSession=DBSession)
+                # DBSession.add(merge_entity)
 
                 log.debug(
                     '{0}: group {1}/{2}, replaced entity {3}/{4}, self-link '
@@ -2125,7 +2128,8 @@ class Merge_Context(object):
                     del additional_metadata['merged_by']
 
                 merge_entity = Entity(**entity_kwargs)
-                DBSession.add(merge_entity)
+                CACHE.set(objects = [merge_entity, ], DBSession=DBSession)
+                # DBSession.add(merge_entity)
 
                 log.debug(
                     '{0}: group {1}/{2}, merged lexical entry {3}/{4}, incoming '
@@ -2413,7 +2417,7 @@ class Merge_Context(object):
 
             if (merge_entity.additional_metadata['hash'] ==
                 'd14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f'):
-            
+
                 merge_entity.additional_metadata['hash'] = \
                     hash_content_dict[merge_entity.content]
 
@@ -2496,7 +2500,7 @@ def merge_bulk_try(
         # Processing lexical entries group by group.
 
         merge_context = (
-                
+
             Merge_Context(
                 'merge_bulk',
                 request,
@@ -2515,7 +2519,7 @@ def merge_bulk_try(
     except Exception as exception:
 
         traceback_string = (
-                
+
             ''.join(traceback.format_exception(
                 exception, exception, exception.__traceback__))[:-1])
 
@@ -3128,4 +3132,3 @@ def hash_fix(request):
         transaction.abort()
 
         return {'error': message('\n' + traceback_string)}
-

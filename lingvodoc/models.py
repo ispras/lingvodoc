@@ -78,6 +78,10 @@ ENGLISH_LOCALE = 2
 log = logging.getLogger(__name__)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+
+
+# DBSession = caching.DBSession
+
 Base = declarative_base()
 
 
@@ -302,7 +306,7 @@ class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin, AdditionalMetadata
 
 
 class ObjectTOCMixin(object):
-    
+
     @declared_attr
     def objecttoc(cls):
 
@@ -819,7 +823,7 @@ class DataTypeMixin(PrimeTableArgs):
             return translation
 
         translation = (
-                
+
             DBSession
 
                 .query(TranslationAtom.content)
@@ -919,7 +923,7 @@ class LexicalEntry(CompositeIdMixin,
                                  self.marked_for_deletion, metadata, came_from)]
 
         res_list = (
-                
+
             self.track_multiple(
                 lexes_composite_list,
                 locale_id,
@@ -1254,7 +1258,7 @@ class Entity(CompositeIdMixin,
         super().__init__(**kwargs)
 
         publishingentity = (
-                
+
             PublishingEntity(
                 client_id = self.client_id,
                 object_id = self.object_id,
@@ -1677,7 +1681,12 @@ class PerspectiveEntityAcl(ACLMixin):
     def __acl__(self):
         object_id = self.request.matchdict.get('object_id', None)
         client_id = self.request.matchdict.get('client_id', None)
-        levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        levoneent = CACHE.get(
+            {
+                Entity : (client_id, object_id)
+            },
+        DBSession=DBSession)
+        # levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = levoneent.parent.parent
         return acl_by_groups(perspective.object_id, perspective.client_id, self.subject)
 
@@ -1734,4 +1743,3 @@ class UnstructuredData(
     id = Column(UnicodeText, primary_key = True)
     client_id = Column(SLBigInteger())
     data = Column(JSONB)
-
