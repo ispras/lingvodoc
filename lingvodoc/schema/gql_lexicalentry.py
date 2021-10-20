@@ -288,9 +288,9 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
         task_id = str(uuid4())
         lexical_entries = CACHE.get(objects =
             {
-                dbLexicalEntry : (ids, )
+                dbLexicalEntry : ids
             },
-        DBSession=DBSession)
+        DBSession=DBSession, keep_dims=True)
         for dblexicalentry in lexical_entries:
             # client_id, object_id = lex_id
             # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
