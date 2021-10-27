@@ -1381,11 +1381,12 @@ class UndeleteDictionary(graphene.Mutation):
         ids = args.get('id')
         client_id, object_id = ids
         # dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
-        dbdictionary = CACHE.get(objects =
+        dbdictionary_obj = CACHE.get(objects =
             {
                 dbDictionary : (args.get('id'), )
             },
         DBSession=DBSession)
+        
 
         if not dbdictionary_obj:
             raise ResponseError(message="Error: No such dictionary in the system")
