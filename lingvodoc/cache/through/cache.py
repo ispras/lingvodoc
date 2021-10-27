@@ -49,10 +49,9 @@ class ThroughCache(ICache):
         :return:
         """
         self.cache = redis
-        # self.DBSession = dbsession
-        self.DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+ # self.DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
-    def get(self, keys = None, objects = dict(), DBSession = None):
+    def get(self, keys = None, objects = dict(), DBSession=None, keep_dims=False):
         """
         Gets objects from cache and database, if needed
 
@@ -71,8 +70,14 @@ class ThroughCache(ICache):
                 int : ((1, 2), (3, 4), ...),              -->   [object1, object2, ...]
             }
 
+            keep_dims = False
             {
                 int : ((1, 2)),                           -->   object1
+            }
+
+            keep_dims = True
+            {
+                int : ((1, 2)),                           -->   [object1,]
             }
 
         """
@@ -95,7 +100,11 @@ class ThroughCache(ICache):
             log.error(err_msg)
             # raise ValueError(err_msg)
 
+        if DBSession is None:
+            log.error("Missing DBSession parameter in CACHE.get()")
+            return None
         # try:
+        log.warning(objects)
         result = dict()
         for obj_type in objects:
             result[obj_type] = []
@@ -128,14 +137,14 @@ class ThroughCache(ICache):
         #     return None
         if len(result) == 1:
             result = result.popitem()[1]
-            if len(result) == 1:
+            if len(result) == 1 and not keep_dims:
                 result = result[0]
         return result
 
 
 
     # TODO: add try/catch handlers.
-    def set(self, key = None, value = None, key_value = None, objects = list(), transaction = False, DBSession = None):
+    def set(self, key = None, value = None, key_value = None, objects = list(), transaction = False, DBSession=None):
         """
         Inserts objects to cache and database
 
@@ -161,9 +170,10 @@ class ThroughCache(ICache):
             )
 
 
-        if not DBSession:
-            err_msg = 'DBSession cannot be None'
-            log.error(err_msg)
+
+        if DBSession is None:
+            log.error("Missing DBSession parameter in CACHE.get()")
+            return None
         if transaction:
             try:
                 accepted_for_caching = dict(
