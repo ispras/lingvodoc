@@ -2790,7 +2790,8 @@ def merge_bulk_task_try(task_status, merge_context):
     """
     Helper function for asynchronous background merge task.
     """
-
+    # Needed to be uuncommitted if CACHE will be used
+    # from lingvodoc.cache.caching import CACHE
     try:
 
         task_status.set(1, 0,

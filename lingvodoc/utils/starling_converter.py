@@ -406,13 +406,17 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
     # pr = cProfile.Profile()
     # pr.enable()
     from lingvodoc.cache.caching import initialize_cache
+    initialize_cache(cache_kwargs)
+    global CACHE
+    from lingvodoc.cache.caching import CACHE
     try:
         with transaction.manager:
             n = 10
             timestamp = (
                 time.asctime(time.gmtime()) + ''.join(
                     random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
-            initialize_cache(cache_kwargs)
+
+
             task_status = TaskStatus.get_from_cache(task_key)
             task_status.set(1, 1, "Preparing")
             engine = create_engine(sqlalchemy_url)

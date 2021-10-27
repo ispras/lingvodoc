@@ -6746,7 +6746,8 @@ def async_phonological_statistical_distance(
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind = engine)
     initialize_cache(cache_kwargs)
-
+    global CACHE
+    from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
 
     with transaction.manager:

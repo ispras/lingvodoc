@@ -89,6 +89,8 @@ def async_copy_single_field(one_pid, ftype, client, info,
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
+    global CACHE
+    from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
 
     ftype = ftype.lower()

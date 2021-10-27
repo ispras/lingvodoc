@@ -1249,6 +1249,8 @@ def convert_all(dictionary_client_id,
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
+    global CACHE
+    from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
     try:
         convert_five_tiers(

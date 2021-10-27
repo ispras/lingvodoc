@@ -444,6 +444,8 @@ def async_create_parser_result_method(id, parser_id, entity_id,
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
+    global CACHE
+    from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
     # entity = DBSession.query(Entity).filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
     entity = CACHE.get(objects =

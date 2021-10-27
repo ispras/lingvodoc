@@ -46,9 +46,6 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary)
 from lingvodoc.utils.search import get_id_to_field_dict
 
-from lingvodoc.cache.caching import CACHE
-
-
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
@@ -360,6 +357,7 @@ def convert_five_tiers(dictionary_id,
 
     field_ids = {}
     with transaction.manager:
+
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -1574,6 +1572,8 @@ def convert_all(dictionary_id,
         engine = create_engine(sqlalchemy_url)
         DBSession.configure(bind=engine)
         initialize_cache(cache_kwargs)
+        global CACHE
+        from lingvodoc.cache.caching import CACHE
 
     task_status = TaskStatus.get_from_cache(task_key)
 

@@ -1539,7 +1539,8 @@ def convert_all(
     if not synchronous:
         from lingvodoc.cache.caching import initialize_cache
         initialize_cache(cache_kwargs)
-
+        global CACHE
+        from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
     status = None
 
