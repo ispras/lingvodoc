@@ -5,6 +5,7 @@ from redis import Redis
 
 from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
+from lingvodoc.cache.through.cache import ThroughCache
 
 import uuid
 import dill
@@ -57,7 +58,7 @@ def initialize_cache(args):
         return
     # region = make_region().configure(**args)
     # MEMOIZE = cache_responses(region)
-    CACHE = CommonCache(Redis(**args))
+    CACHE = ThroughCache(Redis(**args))
 
 
 class TaskStatus():

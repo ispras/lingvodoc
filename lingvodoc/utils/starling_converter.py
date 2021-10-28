@@ -61,6 +61,7 @@ from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
 from lingvodoc.scripts.convert_five_tiers import convert_all
 from lingvodoc.queue.celery import celery
 
+from lingvodoc.cache.caching import CACHE
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -143,7 +144,7 @@ def csv_to_columns(path, url):
         try:
 
             csv_file = (
-                    
+
                 open(path,
                     encoding = 'utf-8-sig',
                     errors = 'ignore',
@@ -223,9 +224,15 @@ def create_entity(id=None,
 
 
     if self_id:
-        self_client_id, self_object_id = self_id
-        upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
-                                                          object_id=self_object_id).first()
+        # self_client_id, self_object_id = self_id
+        # upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
+        #                                                   object_id=self_object_id).first()
+        upper_level = CACHE.get(objects =
+            {
+                dbEntity : (self_id, )
+            },
+        DBSession=DBSession)
+
         if not upper_level:
             raise ResponseError(message="No such upper level in the system")
 
@@ -268,8 +275,9 @@ def create_entity(id=None,
         dbentity.upper_level = upper_level
     dbentity.publishingentity.accepted = True
     if save_object:
-        DBSession.add(dbentity)
-        DBSession.flush()
+        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
+        # DBSession.add(dbentity)
+        # DBSession.flush()
     return dbentity
 
 def graphene_to_dicts(starling_dictionaries):
@@ -398,13 +406,17 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
     # pr = cProfile.Profile()
     # pr.enable()
     from lingvodoc.cache.caching import initialize_cache
+    initialize_cache(cache_kwargs)
+    global CACHE
+    from lingvodoc.cache.caching import CACHE
     try:
         with transaction.manager:
             n = 10
             timestamp = (
                 time.asctime(time.gmtime()) + ''.join(
                     random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
-            initialize_cache(cache_kwargs)
+
+
             task_status = TaskStatus.get_from_cache(task_key)
             task_status.set(1, 1, "Preparing")
             engine = create_engine(sqlalchemy_url)
@@ -487,7 +499,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 parent_id = starling_dictionary.get("parent_id")
 
                 dbdictionary_obj = (
-                        
+
                     create_dbdictionary(
                         id = obj_id.id_pair(client_id),
                         parent_id = parent_id,
@@ -628,7 +640,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                 registry=None,
                                 request=None,
                                 save_object=False)
-                            DBSession.add(new_ent)
+                            CACHE.set(objects = [new_ent, ], DBSession=DBSession)
+                            # DBSession.add(new_ent)
                     i+=1
             task_status.set(5, 70, "link, spread" )
             tag_list = list()
@@ -673,8 +686,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                                     content=None,
                                                     registry=None,
                                                     request=None,
-                                                    save_object=False)
-                            DBSession.add(new_ent)
+                                                    save_object=True)
+                            # DBSession.add(new_ent)
                             le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
                             # etymology tag
                             #"""
@@ -688,11 +701,13 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=link_lexical_entry[0], parent_object_id=link_lexical_entry[1], content=tag)
                                     # additional_metadata num_col
                                     tag_entity.publishingentity.accepted = True
-                                    DBSession.add(tag_entity)
+                                    # DBSession.add(tag_entity)
+                                    CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
                                 tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
                                     field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=lexical_entry_ids[0], parent_object_id=lexical_entry_ids[1], content=tag)
                                 tag_entity.publishingentity.accepted = True
-                                DBSession.add(tag_entity)
+                                # DBSession.add(tag_entity)
+                                CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
 
 
 
@@ -721,14 +736,15 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                                         registry=None,
                                         request=None,
                                         save_object=False)
-                                    DBSession.add(new_ent)
+                                    # DBSession.add(new_ent)
+                                    CACHE.set(objects = [new_ent, ], DBSession=DBSession)
                         #i+=1
             DBSession.flush()
 
     except Exception as exception:
 
         traceback_string = (
-                
+
             ''.join(
                 traceback.format_exception(
                     exception, exception, exception.__traceback__))[:-1])
