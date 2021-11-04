@@ -17,7 +17,7 @@ RUN apt-get update && apt install -y python3-dev python3-setuptools \
     postgresql-server-dev-13 postgresql-client-13 libpq-dev \
     fonts-sil-gentium fonts-sil-gentium-basic fonts-sil-gentiumplus \
     fonts-sil-gentiumplus-compact libfreetype6-dev libxft-dev \
-    ffmpeg
+    ffmpeg libxml2-dev libxslt-dev
 RUN \
   wget https://github.com/ispras/lingvodoc-ext-oslon/archive/master.zip -O /tmp/master.zip && \
   unzip /tmp/master.zip -d /tmp/ && \
