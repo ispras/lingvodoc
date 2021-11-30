@@ -7,6 +7,8 @@ import time
 import random
 import string
 import urllib
+import requests
+import re
 
 import transaction
 from pathvalidate import sanitize_filename
@@ -506,11 +508,16 @@ def create_parser_result(id, parser_id, entity_id, dedoc_url, apertium_path, arg
     os.rename(tmp_filename, tmp_filename + extension)
     tmp_filename = tmp_filename + extension
 
-    if parser.method.find("timarkh") != -1:
-        result = parse_method(tmp_filename, dedoc_url, **arguments)
+    files = {'file': open(tmp_filename, "rb")}
+    data = {'return_html': True}
+    r = requests.post(url=dedoc_url, files=files, data=data)
+    dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
 
-    if parser.method.find("apertium") != -1:
-        result = parse_method(tmp_filename, dedoc_url, apertium_path, **arguments)
+    if parser.method.find("timarkh") != -1:
+        result = parse_method(dedoc_output, **arguments)
+
+    elif parser.method.find("apertium") != -1:
+        result = parse_method(dedoc_output, apertium_path, **arguments)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,
