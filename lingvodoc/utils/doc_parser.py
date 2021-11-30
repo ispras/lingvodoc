@@ -238,7 +238,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
 
 def timarkh_udm(dedoc_output):
-    return timarkh_uniparser(dedoc_output, 'udm')
+    return timarkh_uniparser(dedoc_output, 'udm', disambiguate=True)
 
 def timarkh_erzya(dedoc_output):
     return timarkh_uniparser(dedoc_output, 'erzya')
@@ -250,7 +250,7 @@ def timarkh_komi_zyryan(dedoc_output):
     return timarkh_uniparser(dedoc_output, 'komi_zyryan')
 
 def timarkh_meadow_mari(dedoc_output):
-    return timarkh_uniparser(dedoc_output, 'meadow_mari')
+    return timarkh_uniparser(dedoc_output, 'meadow_mari', disambiguate=True)
 
 def apertium_tat_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'tat')
