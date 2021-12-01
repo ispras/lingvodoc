@@ -5182,7 +5182,7 @@ class CognateAnalysis(graphene.Mutation):
 
         # If we have no data at all, we return empty result.
 
-        if len(result_list) <= 1:
+        if len(result_list) <= 1 and not_suggestions:
 
             return CognateAnalysis(
                 triumph = True,

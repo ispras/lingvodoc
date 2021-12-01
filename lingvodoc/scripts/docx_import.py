@@ -651,8 +651,8 @@ def main_import(args):
         if len(source_cell_list) != column_count * row_count:
 
             log.error(
-                '\nTable ({}): rows and / or columns are uneven, '
-                '{} rows, {} columns, {3} != {1} * {2} cells.'.format(
+                '\nTable ({0}): rows and / or columns are uneven, '
+                '{1} rows, {2} columns, {3} != {1} * {2} cells.'.format(
                     table_index,
                     row_count,
                     column_count,
