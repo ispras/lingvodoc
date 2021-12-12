@@ -567,55 +567,39 @@ def parse_by_paragraphs(
     return state_list
 
 
-def main_import(args):
+class Docx2EafError(Exception):
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+def docx2eaf(
+    docx_path,
+    eaf_file_path,
+    separate_by_paragraphs_flag = False,
+    modify_docx_flag = False,
+    all_tables_flag = False,
+    check_file_path = None,
+    check_docx_file_path = None,
+    limit = None,
+    __debug_flag__ = False,
+    __debug_beam_flag__ = False,
+    __debug_eaf_flag__ = False):
     """
-    Test import of 5-tier data from a Docx file.
+    Converts .docx file of the right structure to a 5-tier .eaf corpus file.
     """
-
-    opt_list, arg_list = (
-        getopt.gnu_getopt(args, '', [
-            'all-tables',
-            'check-docx-file=',
-            'check-file=',
-            'debug',
-            'debug-beam',
-            'debug-eaf',
-            'eaf-file=',
-            'limit=',
-            'modify-docx-file',
-            'no-db',
-            'separate-by-paragraphs']))
-
-    opt_dict = dict(opt_list)
-
-    # Parsing command-line options.
-
-    docx_path = arg_list[0]
-
-    check_file_path = opt_dict.get('--check-file')
-    check_docx_file_path = opt_dict.get('--check-docx-file')
-    eaf_file_path = opt_dict.get('--eaf-file')
-
-    limit = (
-        ast.literal_eval(opt_dict['--limit'])
-            if '--limit' in opt_dict else None)
-
-    modify_docx_flag = '--modify-docx-file' in opt_dict
-    separate_by_paragraphs_flag = '--separate-by-paragraphs' in opt_dict
-
-    __debug_flag__ = '--debug' in opt_dict
-    __debug_beam_flag__ = '--debug-beam' in opt_dict
-    __debug_eaf_flag__ = '--debug-eaf' in opt_dict
-
-    # Processing specified Docx file.
 
     log.debug(
         '\ndocx_path: {0}'.format(docx_path))
 
-    document = docx.Document(docx_path)
+    try:
+        document = docx.Document(docx_path)
+
+    except docx.opc.exceptions.PackageNotFoundError:
+        raise Docx2EafError('input file is not a .docx format file')
 
     if len(document.tables) <= 0:
-        raise NotImplementedError
+        raise Docx2EafError('.docx file does not have any tables')
 
     # Accessing info of the first table, or all tables, depending on the options.
     #
@@ -626,7 +610,7 @@ def main_import(args):
 
     table_list = (
             
-        document.tables if '--all-tables' in opt_dict else
+        document.tables if all_tables_flag else
         document.tables[:1])
 
     for table_index, table in enumerate(table_list):
@@ -650,7 +634,8 @@ def main_import(args):
 
         if len(source_cell_list) != column_count * row_count:
 
-            log.error(
+            error_str = (
+
                 '\nTable ({0}): rows and / or columns are uneven, '
                 '{1} rows, {2} columns, {3} != {1} * {2} cells.'.format(
                     table_index,
@@ -658,7 +643,9 @@ def main_import(args):
                     column_count,
                     len(source_cell_list)))
 
-            raise NotImplementedError
+            log.error(error_str)
+
+            raise Docx2EafError(error_str)
 
         row_list.extend(
 
@@ -778,10 +765,9 @@ def main_import(args):
 
     # Saving parsing alignment as Docx file, if required.
 
-    if check_docx_file_path is not None:
-
-        if separate_by_paragraphs_flag:
-            raise NotImplementedError
+    if (check_docx_file_path is not None and
+        not separate_by_paragraphs_flag and
+        not all_tables_flag):
 
         check_docx = docx.Document()
 
@@ -1074,6 +1060,63 @@ def main_import(args):
             # Saving Docx file updates.
 
             document.save(docx_path)
+
+
+def main_import(args):
+    """
+    Test import of 5-tier data from a Docx file.
+    """
+
+    opt_list, arg_list = (
+        getopt.gnu_getopt(args, '', [
+            'all-tables',
+            'check-docx-file=',
+            'check-file=',
+            'debug',
+            'debug-beam',
+            'debug-eaf',
+            'eaf-file=',
+            'limit=',
+            'modify-docx-file',
+            'no-db',
+            'separate-by-paragraphs']))
+
+    opt_dict = dict(opt_list)
+
+    # Parsing command-line options.
+
+    docx_path = arg_list[0]
+
+    check_file_path = opt_dict.get('--check-file')
+    check_docx_file_path = opt_dict.get('--check-docx-file')
+    eaf_file_path = opt_dict.get('--eaf-file')
+
+    limit = (
+        ast.literal_eval(opt_dict['--limit'])
+            if '--limit' in opt_dict else None)
+
+    modify_docx_flag = '--modify-docx-file' in opt_dict
+    separate_by_paragraphs_flag = '--separate-by-paragraphs' in opt_dict
+    all_tables_flag = '--all-tables' in opt_dict
+
+    __debug_flag__ = '--debug' in opt_dict
+    __debug_beam_flag__ = '--debug-beam' in opt_dict
+    __debug_eaf_flag__ = '--debug-eaf' in opt_dict
+
+    # Processing specified Docx file.
+
+    docx2eaf(
+        docx_path,
+        eaf_file_path,
+        separate_by_paragraphs_flag,
+        modify_docx_flag,
+        all_tables_flag,
+        check_file_path,
+        check_docx_file_path,
+        limit,
+        __debug_flag__,
+        __debug_beam_flag__,
+        __debug_eaf_flag__)
 
 
 def main_eaf(args):

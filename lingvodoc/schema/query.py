@@ -293,6 +293,8 @@ matplotlib.use('Agg', warn = False)
 from matplotlib.collections import LineCollection
 from matplotlib import pyplot
 
+import minio
+
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d import proj3d
 
@@ -323,6 +325,8 @@ import lingvodoc.version
 from lingvodoc.schema.gql_parserresult import ExecuteParser
 
 from lingvodoc.cache.caching import CACHE
+
+import lingvodoc.scripts.docx_import as docx_import
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -9196,6 +9200,234 @@ class NewUnstructuredData(graphene.Mutation):
                     message = 'Exception:\n' + traceback_string))
 
 
+class Docx2Eaf(graphene.Mutation):
+    """
+    Tries to convert a table-containing .docx to .eaf.
+
+    curl 'http://localhost:6543/graphql'
+      -H 'Cookie: locale_id=2; auth_tkt=5f65a2fb86f96c48db0606867ec26d973abab88eb85112734e1f20b4b3438c3b7a606df37da360e59a0a8d248ade82ca93bdc3c349a6d6bb69e82fb35b793d0761b465414211!userid_type:int; client_id=4211'
+      -H 'Content-Type: multipart/form-data'
+      -F operations='{
+         "query": "mutation docx2eaf($docxFile: Upload, $separateFlag: Boolean) {
+           docx2eaf(docx_file: $docxFile, separate_flag: $separateFlag, debug_flag: true) {
+             triumph eaf_url alignment_url check_txt_url check_docx_url message } }",
+         "variables": { "docxFile": null, "separateFlag": false } }'
+      -F map='{ "0": ["variables.docx_file"] }'
+      -F 0=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+    """
+
+    class Arguments:
+
+        docx_file = Upload()
+        separate_flag = graphene.Boolean()
+        all_tables_flag = graphene.Boolean()
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    eaf_url = graphene.String()
+    alignment_url = graphene.String()
+    check_txt_url = graphene.String()
+    check_docx_url = graphene.String()
+
+    message = graphene.String()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+
+                return (
+
+                    Docx2Eaf(
+                        triumph = False,
+                        message = 'Only registered users can convert .docx to .eaf.'))
+
+            request = info.context.request
+
+            if '0' not in request.POST:
+                return ResponseError('.docx file is required.')
+
+            multipart = request.POST.pop('0')
+
+            docx_file_name = multipart.filename
+            docx_file = multipart.file
+
+            separate_flag = args.get('separate_flag', False)
+            all_tables_flag = args.get('all_tables_flag', False)
+
+            __debug_flag__ = args.get('debug_flag', False)
+
+            log.debug(
+                '\n{}\n{}'.format(
+                    docx_file_name,
+                    type(docx_file)))
+
+            if __debug_flag__:
+
+                with open('docx2eaf_input.docx', 'wb') as input_file:
+
+                    shutil.copyfileobj(docx_file, input_file)
+                    docx_file.seek(0)
+
+            url_list = []
+
+            with tempfile.TemporaryDirectory() as tmp_dir_path:
+
+                tmp_docx_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2eaf_input.docx'))
+
+                tmp_eaf_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2eaf_output.eaf'))
+
+                tmp_check_txt_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2eaf_check.txt'))
+
+                tmp_check_docx_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2eaf_check.docx'))
+
+                with open(tmp_docx_file_path, 'wb') as tmp_docx_file:
+                    shutil.copyfileobj(docx_file, tmp_docx_file)
+
+                result = (
+
+                    docx_import.docx2eaf(
+                        tmp_docx_file_path,
+                        tmp_eaf_file_path,
+                        separate_by_paragraphs_flag = separate_flag,
+                        modify_docx_flag = True,
+                        all_tables_flag = all_tables_flag,
+                        check_file_path = tmp_check_txt_file_path,
+                        check_docx_file_path = tmp_check_docx_file_path,
+                        __debug_flag__ = __debug_flag__))
+
+                # Saving local copies, if required.
+
+                if __debug_flag__:
+
+                    shutil.copyfile(tmp_eaf_file_path, 'docx2eaf_output.eaf')
+                    shutil.copyfile(tmp_check_txt_file_path, 'docx2eaf_check.txt')
+
+                    if not separate_flag and not all_tables_flag:
+                        shutil.copyfile(tmp_check_docx_file_path, 'docx2eaf_check.docx')
+
+                # Saving processed files.
+
+                storage = (
+                    request.registry.settings['storage'])
+
+                storage_temporary = storage['temporary']
+
+                host = storage_temporary['host']
+                bucket = storage_temporary['bucket']
+
+                minio_client = (
+                        
+                    minio.Minio(
+                        host,
+                        access_key = storage_temporary['access_key'],
+                        secret_key = storage_temporary['secret_key'],
+                        secure = True))
+
+                current_time = time.time()
+
+                input_file_name = (
+
+                    pathvalidate.sanitize_filename(
+                        os.path.splitext(os.path.basename(docx_file_name))[0]))
+
+                for file_path, suffix in (
+
+                    (tmp_eaf_file_path, '.eaf'),
+                    (tmp_docx_file_path, ' alignment.docx'),
+                    (tmp_check_txt_file_path, ' check.txt'),
+                    (tmp_check_docx_file_path, ' check.docx')):
+
+                    if ((separate_flag or all_tables_flag) and
+                        (suffix == ' check.docx' or suffix == ' alignment.docx')):
+
+                        url_list.append(None)
+                        continue
+
+                    object_name = (
+
+                        storage_temporary['prefix'] +
+                    
+                        '/'.join((
+                            'docx2eaf',
+                            '{:.6f}'.format(current_time),
+                            input_file_name + suffix)))
+
+                    (etag, version_id) = (
+
+                        minio_client.fput_object(
+                            bucket,
+                            object_name,
+                            file_path))
+
+                    url = (
+
+                        '/'.join((
+                            'https:/',
+                            host,
+                            bucket,
+                            object_name)))
+
+                    log.debug(
+                        '\nobject_name:\n{}'
+                        '\netag:\n{}'
+                        '\nversion_id:\n{}'
+                        '\nurl:\n{}'.format(
+                            object_name,
+                            etag,
+                            version_id,
+                            url))
+
+                    url_list.append(url)
+
+                log.debug(
+                    '\nurl_list:\n' +
+                    pprint.pformat(url_list, width = 192))
+
+            return (
+
+                Docx2Eaf(
+                    triumph = True,
+                    eaf_url = url_list[0],
+                    alignment_url = url_list[1],
+                    check_txt_url = url_list[2],
+                    check_docx_url = url_list[3]))
+
+        except docx_import.Docx2EafError as exception:
+
+            return (
+
+                Docx2Eaf(
+                    triumph = False,
+                    message = exception.args[0]))
+
+        except Exception as exception:
+
+            traceback_string = (
+
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('docx2eaf: exception')
+            log.warning(traceback_string)
+
+            return (
+
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -9293,6 +9525,7 @@ class MyMutations(graphene.ObjectType):
     update_parser_result = UpdateParserResult.Field()
     xlsx_bulk_disconnect = XlsxBulkDisconnect.Field()
     new_unstructured_data = NewUnstructuredData.Field()
+    docx2eaf = Docx2Eaf.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
