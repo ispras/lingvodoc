@@ -179,6 +179,11 @@ def csv_to_columns(path, url):
         while header_list and not header_list[-1].strip():
             header_list.pop()
 
+        # Stripping whitespace for compatibility with gql_userblobs.py:179.
+
+        header_list = [
+            header.strip() for header in header_list]
+
         column_dict = {
             header: [] for header in header_list}
 
