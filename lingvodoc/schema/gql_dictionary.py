@@ -819,7 +819,7 @@ class CreateDictionary(graphene.Mutation):
                 persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
                                                                     persp_translation_gist_id,
                                                                     [client_id,object_id],
-                                                                    gist_type="Dictionary")
+                                                                    gist_type="Perspective")
                 parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=(client_id, None),
                                         parent_id=parent_id,  # TODO: use all object attrs
