@@ -33,6 +33,7 @@ from hashlib import md5
 import os
 import os.path
 import shutil
+import socket
 import traceback
 import urllib
 
@@ -611,7 +612,13 @@ def storage_file(storage_config, url):
         if os.path.exists(storage_file_path):
             return open(storage_file_path, 'rb')
 
-    return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
+    # A simple retry in case of an address error.
+
+    try:
+        return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
+
+    except socket.gaierror:
+        return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
 
 
 def as_storage_file(storage_config, url):
