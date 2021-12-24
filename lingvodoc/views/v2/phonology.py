@@ -4,6 +4,7 @@
 import base64
 import bisect
 import collections
+import configparser
 import csv
 import datetime
 from errno import EEXIST
@@ -21,6 +22,7 @@ import re
 from shutil import copyfileobj
 import sndhdr
 import string
+import subprocess
 import sys
 import tempfile
 import time
@@ -633,7 +635,7 @@ class AudioPraatLike(object):
 
         # If we are using samples only from vowel intervals.
 
-        if self.args.interval_only:
+        if self.args and self.args.interval_only:
 
             if self.fast_track_flag:
                 raise NotImplementedError
@@ -1083,7 +1085,8 @@ class AudioPraatLike(object):
 
                 # Plotting formants, if required.
 
-                if self.args.__debug_flag__ and self.fast_track_plot_flag:
+                if (self.args and self.args.__debug_flag__ and
+                    self.fast_track_plot_flag):
 
                     figure = pyplot.figure()
                     figure.set_size_inches(16, 10)
@@ -1893,7 +1896,7 @@ def process_sound_markup(
 
             # Processing markup, getting info we need.
 
-            tier_data_list, vowel_flag = process_textgrid(textgrid)
+            tier_data_list, vowel_flag, vowel_range_list = process_textgrid(textgrid)
 
             log.debug(
                 '{0}:\ntier_data_list:\n{1}\nvowel_flag: {2}'.format(
@@ -6005,6 +6008,43 @@ def cpu_time(reference_cpu_time = 0.0):
     return sum(os.times()[:4]) - reference_cpu_time
 
 
+def main_cache_delete_exceptions(args):
+    """
+    Removes cached phonology exceptions from the redis cache.
+    """
+
+    parser = configparser.ConfigParser()
+    parser.read(args[0])
+
+    caching.initialize_cache({
+        k: v for k, v in parser.items('cache:redis:args')})
+
+    cache_key_list = (
+
+        subprocess
+            .check_output(['redis-cli', '--scan', '--pattern', 'phonology:*'])
+            .decode('utf-8')
+            .split())
+
+    count = 0
+
+    for cache_key in cache_key_list:
+
+        cache_result = caching.CACHE.get(cache_key)
+
+        if (isinstance(cache_result, tuple) and
+            cache_result[0] == 'exception'):
+
+            print(cache_result[1])
+
+            caching.CACHE.rem(cache_key)
+            count += 1
+
+            print(cache_key)
+
+    print('{} cached exceptions removed'.format(count))
+
+
 def main_test_alpha(args):
     """
     Tests that intensity and formant computation works.
@@ -6331,6 +6371,7 @@ def main_praat_escape(args):
 # Some additional local computations.
 
 command_dict = {
+    'cache_delete_exceptions': main_cache_delete_exceptions,
     'praat_escape': main_praat_escape,
     'test_alpha': main_test_alpha,
     'test_profile': main_test_profile}
