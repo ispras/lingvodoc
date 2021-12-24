@@ -635,7 +635,7 @@ class AudioPraatLike(object):
 
         # If we are using samples only from vowel intervals.
 
-        if self.args.interval_only:
+        if self.args and self.args.interval_only:
 
             if self.fast_track_flag:
                 raise NotImplementedError
@@ -1085,7 +1085,8 @@ class AudioPraatLike(object):
 
                 # Plotting formants, if required.
 
-                if self.args.__debug_flag__ and self.fast_track_plot_flag:
+                if (self.args and self.args.__debug_flag__ and
+                    self.fast_track_plot_flag):
 
                     figure = pyplot.figure()
                     figure.set_size_inches(16, 10)
@@ -6033,6 +6034,8 @@ def main_cache_delete_exceptions(args):
 
         if (isinstance(cache_result, tuple) and
             cache_result[0] == 'exception'):
+
+            print(cache_result[1])
 
             caching.CACHE.rem(cache_key)
             count += 1

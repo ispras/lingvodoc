@@ -7062,8 +7062,8 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 x_min = min(x_min, formant_array[:,0].min())
                 x_max = max(x_max, formant_array[:,0].max())
 
-                y_min = min(y_min, formant_array[:,0].min())
-                y_max = max(y_max, formant_array[:,0].max())
+                y_min = min(y_min, formant_array[:,1].min())
+                y_max = max(y_max, formant_array[:,1].max())
 
             formant_data_list.append((vowel_counter, formant_array, mixture))
 
