@@ -172,13 +172,9 @@ class CreateUserBlob(graphene.Mutation):
 
                         csvfile.seek(0)
 
-                        dialect = csv.Sniffer().sniff(csvfile.read(4096))
-
-                        csvfile.seek(0)
-
                         starling_fields = [
                             field_str.strip()
-                            for field_str in next(csv.reader(csvfile, dialect))]
+                            for field_str in next(csv.reader(csvfile, 'excel'))]
 
                         while starling_fields and not starling_fields[-1]:
                             starling_fields.pop()

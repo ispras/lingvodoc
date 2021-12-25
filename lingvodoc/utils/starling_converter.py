@@ -162,13 +162,8 @@ def csv_to_columns(path, url):
             csv_file = (
                 io.StringIO(csv_str))
 
-        dialect = (
-            csv.Sniffer().sniff(csv_file.read(4096)))
-
-        csv_file.seek(0)
-
         csv_reader = (
-            csv.reader(csv_file, dialect))
+            csv.reader(csv_file, 'excel'))
 
         row_list = [row for row in csv_reader]
 

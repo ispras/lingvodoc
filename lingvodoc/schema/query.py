@@ -3820,7 +3820,9 @@ class CognateAnalysis(graphene.Mutation):
                     (filtered_2d_list, outlier_2d_list, mean_2d, ellipse_list,
                         filtered_3d_list, outlier_3d_list, mean_3d, sigma_2d, inverse_3d) = (
 
-                        phonology.chart_data(f_2d_list, f_3d_list))
+                        phonology.chart_data(
+                            [(f_2d, ('', '')) for f_2d in f_2d_list],
+                            [(f_3d, ('', '')) for f_3d in f_3d_list]))
 
                     chart_data_2d_list.append((
                         len(filtered_2d_list), len(f_2d_list), series_title,
@@ -3828,7 +3830,7 @@ class CognateAnalysis(graphene.Mutation):
 
                     # Updating F1/F2 maximum/minimum info.
 
-                    f1_list, f2_list = zip(*filtered_2d_list)
+                    f1_list, f2_list = zip(*(x[0] for x in filtered_2d_list))
 
                     min_f1_list, max_f1_list = min(f1_list), max(f1_list)
                     min_f2_list, max_f2_list = min(f2_list), max(f2_list)
