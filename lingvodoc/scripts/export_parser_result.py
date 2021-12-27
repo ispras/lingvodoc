@@ -241,9 +241,113 @@ def process_paragraph(paragraph_xml):
 
     return item_list, check_list, check_flag
 
-# Exporting processed data.
+def process_parser_result(
+    content,
+    check_flag,
+    format_flag):
+
+    paragraph_list = []
+    token_count = 0
+
+    root = ElementTree.fromstring(content)
+
+    # Processing each paragraph.
+
+    for paragraph_index, paragraph_xml in (
+        enumerate(root.iter('{http://www.w3.org/1999/xhtml}p'))):
+
+        paragraph_item_list, check_list, check_flag = (
+            process_paragraph(paragraph_xml))
+
+        if not paragraph_item_list:
+            continue
+
+        if check_flag:
+            print(check_list)
+
+        paragraph_text = (
+
+            ''.join(
+                item if isinstance(item, str) else item[0]
+                for item in paragraph_item_list))
+
+        # Requested info.
+
+        if format_flag:
+
+            token_list = []
+            variant_list = []
+
+            for item in paragraph_item_list:
+
+                # Text part which is not a parsed token.
+
+                if isinstance(item, str):
+
+                    token_str = re.sub(r'\s+', '', item)
+
+                    if token_str:
+
+                        token_list.append({'token': token_str})
+                        variant_list.append({'token': token_str})
+
+                # Parsed token with variants.
+
+                else:
+
+                    token_str = item[0]
+
+                    approved_list = [
+                        dict(variant_dict, token = token_str)
+                        for variant_dict in item[1]]
+
+                    other_list = [
+                        dict(variant_dict, token = token_str)
+                        for variant_dict in item[2]]
+
+                    token_list.append(
+                        approved_list[0] if approved_list else other_list[0])
+
+                    variant_list.append(
+                        approved_list + other_list)
+
+                    token_count += 1
+
+            paragraph_dict = {
+                'index': paragraph_index,
+                'text': paragraph_text,
+                'tokens': token_list,
+                'variants': variant_list}
+
+        # All info.
+
+        else:
+
+            approved_list = [
+                item[:2]
+                for item in paragraph_item_list
+                if not isinstance(item, str)]
+
+            variant_list = [
+                item
+                for item in paragraph_item_list
+                if not isinstance(item, str)]
+
+            paragraph_dict = {
+                'index': paragraph_index,
+                'text': paragraph_text,
+                'source': paragraph_item_list,
+                'tokens': approved_list,
+                'variants': variant_list}
+
+        paragraph_list.append(paragraph_dict)
+
+    return paragraph_list, token_count
 
 def main_processed():
+    """
+    Exports processed data.
+    """
 
     result = (
 
@@ -319,100 +423,12 @@ def main_processed():
                 with open(f'content_{parser_result_index:02d}.html', 'w') as content_file:
                     content_file.write(parser_result['content'])
 
-                paragraph_list = []
+                paragraph_list, parser_result_token_count = (
 
-                root = ElementTree.fromstring(parser_result['content'])
-
-                # Processing each paragraph.
-
-                for paragraph_index, paragraph_xml in (
-                    enumerate(root.iter('{http://www.w3.org/1999/xhtml}p'))):
-
-                    paragraph_item_list, check_list, check_flag = (
-                        process_paragraph(paragraph_xml))
-
-                    if not paragraph_item_list:
-                        continue
-
-                    if check_flag:
-                        print(check_list)
-
-                    paragraph_text = (
-
-                        ''.join(
-                            item if isinstance(item, str) else item[0]
-                            for item in paragraph_item_list))
-
-                    # Requested info.
-
-                    if format_flag:
-
-                        token_list = []
-                        variant_list = []
-
-                        for item in paragraph_item_list:
-
-                            # Text part which is not a parsed token.
-
-                            if isinstance(item, str):
-
-                                token_str = re.sub(r'\s+', '', item)
-
-                                if token_str:
-
-                                    token_list.append({'token': token_str})
-                                    variant_list.append({'token': token_str})
-
-                            # Parsed token with variants.
-
-                            else:
-
-                                token_str = item[0]
-
-                                approved_list = [
-                                    dict(variant_dict, token = token_str)
-                                    for variant_dict in item[1]]
-
-                                other_list = [
-                                    dict(variant_dict, token = token_str)
-                                    for variant_dict in item[2]]
-
-                                token_list.append(
-                                    approved_list[0] if approved_list else other_list[0])
-
-                                variant_list.append(
-                                    approved_list + other_list)
-
-                                token_count += 1
-
-                        paragraph_dict = {
-                            'index': paragraph_index,
-                            'text': paragraph_text,
-                            'tokens': token_list,
-                            'variants': variant_list}
-
-                    # All info.
-
-                    else:
-
-                        approved_list = [
-                            item[:2]
-                            for item in paragraph_item_list
-                            if not isinstance(item, str)]
-
-                        variant_list = [
-                            item
-                            for item in paragraph_item_list
-                            if not isinstance(item, str)]
-
-                        paragraph_dict = {
-                            'index': paragraph_index,
-                            'text': paragraph_text,
-                            'source': paragraph_item_list,
-                            'tokens': approved_list,
-                            'variants': variant_list}
-
-                    paragraph_list.append(paragraph_dict)
+                    process_parser_result(
+                        parser_result['content'],
+                        check_flag,
+                        format_flag))
 
                 # Ok, got another parser result.
 
@@ -423,6 +439,7 @@ def main_processed():
                     'paragraphs': paragraph_list}
 
                 parser_result_list.append(parser_result_dict)
+                token_count += parser_result_token_count
 
     # Saving.
 

@@ -19,6 +19,7 @@ import time
 import traceback
 import urllib.parse
 import uuid
+import zipfile
 
 import graphene
 import lingvodoc.utils as utils
@@ -33,7 +34,8 @@ from lingvodoc.schema.gql_entity import (
     UpdateEntityContent,
     BulkCreateEntity,
     ApproveAllForUser,
-    BulkUpdateEntityContent)
+    BulkUpdateEntityContent,
+    is_subject_for_parsing)
 from lingvodoc.schema.gql_column import (
     Column,
     CreateColumn,
@@ -259,6 +261,9 @@ from lingvodoc.views.v2.utils import anonymous_userid
 from sqlite3 import connect
 from lingvodoc.utils.merge import merge_suggestions
 import tempfile
+
+import lingvodoc.scripts.export_parser_result as export_parser_result
+import lingvodoc.scripts.valency as valency
 
 from lingvodoc.scripts.save_dictionary import (
     find_group_by_tags,
@@ -9430,6 +9435,449 @@ class Docx2Eaf(graphene.Mutation):
                     message = 'Exception:\n' + traceback_string))
 
 
+@celery.task
+def async_valency_compute(
+    perspective_id,
+    debug_flag,
+    full_name,
+    task_key,
+    storage,
+    cache_kwargs,
+    sqlalchemy_url):
+
+    # NOTE: copied from phonology.
+    #
+    # This is a no-op with current settings, we use it to enable logging inside celery tasks, because
+    # somehow this does it, and otherwise we couldn't set it up.
+
+    logging.debug('async_valency')
+
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind = engine)
+    initialize_cache(cache_kwargs)
+
+    task_status = TaskStatus.get_from_cache(task_key)
+
+    with transaction.manager:
+
+        try:
+
+            Valency.compute(
+                perspective_id,
+                debug_flag,
+                full_name,
+                task_key,
+                storage,
+                cache_kwargs,
+                sqlalchemy_url)
+
+        # Some unknown external exception.
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.warning(
+                'valency \'{}\' {}/{}: exception'.format(
+                    full_name,
+                    perspective_id[0],
+                    perspective_id[1]))
+
+            log.warning(traceback_string)
+
+            if task_status is not None:
+
+                task_status.set(1, 100,
+                    'ERROR, exception:\n' + traceback_string)
+
+
+class Valency(graphene.Mutation):
+    """
+    Extracts valency info.
+
+    curl 'http://localhost:6543/graphql' \
+      -H 'content-type: application/json' \
+      -H 'Cookie: auth_tkt=f697cdb8f16ec3ca6f01df92df4de1fec7a50978c849ad2c3f3980be87971b21c7ce3ba26a71caf3e5ad9dc985e1976914a509efe4c5ebd09e1d13ef9e78cfae61b6058b4217!userid_type:int; client_id=4217; locale_id=2' \
+      --data-raw '{"operationName":"valency","variables":{"perspectiveId":[3648,8]},"query":"mutation valency($perspectiveId: LingvodocID!) { valency(perspective_id: $perspectiveId, synchronous: true, debug_flag: true) { triumph }}"}'
+    """
+
+    class Arguments:
+
+        perspective_id = LingvodocID(required = True)
+
+        debug_flag = graphene.Boolean()
+        synchronous = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def compute(
+        perspective_id,
+        debug_flag,
+        full_name,
+        task_key,
+        storage,
+        cache_kwargs,
+        sqlalchemy_url):
+
+        log.debug(
+            '\nvalency \'{}\' {}/{}:'
+            '\n  debug_flag: {}'.format(
+                full_name,
+                perspective_id[0],
+                perspective_id[1],
+                debug_flag))
+
+        task_status = (
+            None if task_key is None else
+            TaskStatus.get_from_cache(task_key))
+
+        if task_status:
+            task_status.set(1, 0, 'Compiling corpus')
+
+        entry_dict = collections.defaultdict(dict)
+        entry_list = []
+
+        entity_list = (
+
+            DBSession
+
+                .query(
+                    dbEntity)
+
+                .filter(
+                    dbLexicalEntry.parent_client_id == perspective_id[0],
+                    dbLexicalEntry.parent_object_id == perspective_id[1],
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True)
+
+                .order_by(
+                    dbLexicalEntry.created_at,
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id,
+                    dbEntity.created_at,
+                    dbEntity.client_id,
+                    dbEntity.object_id)
+
+                .all())
+
+        # Processing entities.
+
+        for entity in entity_list:
+
+            entry_id = (
+                (entity.parent_client_id, entity.parent_object_id))
+
+            new_entry_flag = (
+                entry_id not in entry_dict)
+
+            entry_info_dict = entry_dict[entry_id]
+
+            if new_entry_flag:
+
+                entry_info_dict['parser_result_list'] = []
+                entry_list.append(entry_info_dict)
+
+            if entity.field_id == (674, 5):
+
+                entry_info_dict['comment'] = entity.content
+                continue
+
+            elif not is_subject_for_parsing(entity.content):
+                continue
+
+            parser_result_list = (
+
+                DBSession
+
+                    .query(dbParserResult)
+
+                    .filter_by(
+                        entity_client_id = entity.client_id,
+                        entity_object_id = entity.object_id,
+                        marked_for_deletion = False)
+
+                    .order_by(
+                        dbParserResult.created_at,
+                        dbParserResult.client_id,
+                        dbParserResult.object_id)
+
+                    .all())
+
+            # Processing all parser results of this entity.
+
+            for parser_result_index, parser_result in enumerate(parser_result_list):
+
+                paragraph_list, token_count = (
+
+                    export_parser_result.process_parser_result(
+                        parser_result.content,
+                        check_flag = debug_flag,
+                        format_flag = True))
+
+                entry_info_dict['parser_result_list'].append({
+                    'index': parser_result_index,
+                    'id': parser_result.id,
+                    'paragraphs': paragraph_list})
+
+        # Adding titles to parser results, if we have them.
+
+        parser_result_list = []
+
+        for entry_info_dict in entry_list:
+
+            title_str = (
+                entry_info_dict.get('comment'))
+
+            for parser_result in entry_info_dict['parser_result_list']:
+
+                parser_result['title'] = title_str
+                parser_result_list.append(parser_result)
+
+        # If we have no parser results, we won't do anything.
+
+        if not parser_result_list:
+
+            if task_status:
+                task_status.set(1, 100, 'Finished, no parser result data')
+
+            return
+
+        # Processing parser results.
+
+        if task_status:
+            task_status.set(1, 50, 'Processing data')
+
+        sentence_data = (
+            valency.corpus_to_sentences(parser_result_list))
+
+        arx_data = (
+            valency.corpus_to_arx(parser_result_list))
+
+        valence_data = (
+            valency.sentences_arx_to_valencies(sentence_data, arx_data))
+
+        result_data = (
+            valency.sentences_valencies_to_result(sentence_data, valence_data))
+
+        # Saving processed data as zipped JSON.
+
+        current_time = time.time()
+
+        date = datetime.datetime.utcfromtimestamp(current_time)
+
+        zip_date = (
+            date.year,
+            date.month,
+            date.day,
+            date.hour,
+            date.minute,
+            date.second)
+
+        storage_temporary = storage['temporary']
+
+        host = storage_temporary['host']
+        bucket = storage_temporary['bucket']
+
+        minio_client = (
+                
+            minio.Minio(
+                host,
+                access_key = storage_temporary['access_key'],
+                secret_key = storage_temporary['secret_key'],
+                secure = True))
+
+        url_list = []
+
+        for data_value, data_name in [
+            (parser_result_list, 'corpus'),
+            (sentence_data, 'sentences'),
+            (arx_data, 'arx'),
+            (valence_data, 'valencies'),
+            (result_data, 'result')]:
+
+            data_json_str = (
+
+                json.dumps(
+                    data_value,
+                    ensure_ascii = False,
+                    indent = 2))
+
+            temporary_file = (
+                    
+                tempfile.NamedTemporaryFile(
+                    delete = False))
+
+            zip_file = (
+
+                zipfile.ZipFile(
+                    temporary_file, 'w',
+                    compression = zipfile.ZIP_DEFLATED,
+                    compresslevel = 9))
+
+            zip_info = (
+                zipfile.ZipInfo(data_name + '.json', zip_date))
+
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+
+            zip_file.writestr(
+                zip_info, data_json_str)
+
+            zip_file.close()
+            temporary_file.close()
+
+            if debug_flag:
+
+                shutil.copy(
+                    temporary_file.name,
+                    '__valency__' + data_name + '.json.zip')
+
+            object_name = (
+
+                storage_temporary['prefix'] +
+            
+                '/'.join((
+                    'valency',
+                    '{:.6f}'.format(current_time),
+                    data_name + '.json.zip')))
+
+            (etag, version_id) = (
+
+                minio_client.fput_object(
+                    bucket,
+                    object_name,
+                    temporary_file.name))
+
+            os.remove(
+                temporary_file.name)
+
+            url = (
+
+                '/'.join((
+                    'https:/',
+                    host,
+                    bucket,
+                    object_name)))
+
+            url_list.append(url)
+
+            log.debug(
+                '\nobject_name: {}'
+                '\netag: {}'
+                '\nversion_id: {}'
+                '\nurl: {}'.format(
+                    object_name,
+                    etag,
+                    version_id,
+                    url))
+
+        if task_status:
+            task_status.set(1, 100, 'Finished', result_link_list = url_list)
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only registered users can compute valency information.'))
+
+            perspective_id = args['perspective_id']
+            debug_flag = args.get('debug_flag', False)
+
+            synchronous = args.get('synchronous', False)
+
+            perspective = (
+                DBSession.query(dbPerspective).filter_by(
+                    client_id = perspective_id[0], object_id = perspective_id[1]).first())
+
+            if not perspective:
+
+                return (
+
+                    ResponseError(
+                        message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
+
+            dictionary = perspective.parent
+
+            locale_id = info.context.get('locale_id') or 2
+
+            dictionary_name = dictionary.get_translation(locale_id)
+            perspective_name = perspective.get_translation(locale_id)
+
+            full_name = dictionary_name + ' \u203a ' + perspective_name
+
+            if dictionary.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Dictionary \'{}\' {}/{} is deleted.'.format(
+                            dictionary_name,
+                            perspective.parent_client_id,
+                            perspective.parent_object_id)))
+
+            if perspective.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Perspective \'{}\' {}/{} is deleted.'.format(
+                            full_name,
+                            perspective_id[0],
+                            perspective_id[1])))
+
+            if not synchronous:
+
+                task = TaskStatus(client.user_id, 'Valency', 'Valency: ' + full_name, 1)
+
+            settings = info.context.request.registry.settings
+
+            (Valency.compute if synchronous else async_valency_compute.delay)(
+                perspective_id,
+                debug_flag,
+                full_name,
+                task.key if not synchronous else None,
+                settings['storage'],
+                settings['cache_kwargs'],
+                settings['sqlalchemy.url'])
+
+            return (
+
+                Valency(
+                    triumph = True))
+
+        except Exception as exception:
+
+            traceback_string = (
+
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('valency: exception')
+            log.warning(traceback_string)
+
+            return (
+
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -9528,6 +9976,7 @@ class MyMutations(graphene.ObjectType):
     xlsx_bulk_disconnect = XlsxBulkDisconnect.Field()
     new_unstructured_data = NewUnstructuredData.Field()
     docx2eaf = Docx2Eaf.Field()
+    valency = Valency.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

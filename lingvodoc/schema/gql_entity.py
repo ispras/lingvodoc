@@ -109,6 +109,18 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
     return real_location, url
 
 
+def is_subject_for_parsing(content):
+
+    if not content:
+        return False
+
+    rfind_result = content.rfind('.')
+
+    return (
+        rfind_result >= 0 and
+        content[rfind_result + 1:] in ('doc', 'docx', 'odt'))
+
+
 # Read
 class Entity(LingvodocObjectType):
     """
@@ -129,12 +141,7 @@ class Entity(LingvodocObjectType):
 
     @fetch_object('is_subject_for_parsing')
     def resolve_is_subject_for_parsing(self, info):
-        supported_extensions = (".odt", ".doc", ".docx")
-        if self.dbObject.content:
-            extension = self.dbObject.content[self.dbObject.content.rfind('.'):]
-            if extension in supported_extensions:
-                return True
-        return False
+        return is_subject_for_parsing(self.dbObject.content)
 
     class Meta:
         interfaces = (CompositeIdHolder,
