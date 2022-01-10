@@ -45,7 +45,7 @@ matplotlib==1.5.3
 minio==6.0.0
 multiprocess
 nltk==3.5
-numpy==1.20.1
+numpy==1.22.0
 odfpy==1.4.0
 openpyxl==2.6.4
 packaging==20.3
