@@ -67,7 +67,7 @@ def insert_parser_output_to_text(text, parser_output):
     return result
 
 
-def timarkh_uniparser(dedoc_output, lang):
+def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
 
     wordlist = list()
     tokenizer = RegexpTokenizer(r'(?!\w+(?:-\w+)+)\w+|\w+(?:-\w+)+')
@@ -85,7 +85,10 @@ def timarkh_uniparser(dedoc_output, lang):
     if lang == 'meadow_mari':
         analyzer = MeadowMariAnalyzer(mode='strict')
 
-    parser_output = analyzer.analyze_words(wordlist, format="xml")
+    if has_disamb:
+        parser_output = analyzer.analyze_words(wordlist, format="xml", disambiguate=disambiguate)
+    else:
+        parser_output = analyzer.analyze_words(wordlist, format="xml")
     parser_output_str = print_to_str(parser_output)
 
     return insert_parser_output_to_text(dedoc_output, parser_output_str)
