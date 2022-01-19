@@ -71,8 +71,13 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
 
     wordlist = list()
     tokenizer = RegexpTokenizer(r'(?!\w+(?:-\w+)+)\w+|\w+(?:-\w+)+')
+    composite_words = dict()
+    i = 0
     for word in tokenizer.tokenize(re.sub(r"(<.*?>)|nbsp", " ", dedoc_output)):
         wordlist.append(word)
+        if '-' in word:
+            composite_words[i] = word
+        i += 1
 
     if lang == 'udm':
         analyzer = UdmurtAnalyzer(mode='strict')
@@ -84,6 +89,21 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
         analyzer = KomiZyrianAnalyzer(mode='strict')
     if lang == 'meadow_mari':
         analyzer = MeadowMariAnalyzer(mode='strict')
+
+    composite_words_values = list(composite_words.values())
+    if has_disamb:
+        composite_words_output = analyzer.analyze_words(composite_words_values, format="xml", disambiguate=disambiguate)
+    else:
+        composite_words_output = analyzer.analyze_words(composite_words_values, format="xml")
+    composite_words_output_str = print_to_str(composite_words_output)
+
+    offset = 0
+    for key in composite_words.keys():
+        search_pattern = '<w><ana lex="" gr="" parts="" gloss=""></ana>' + composite_words[key] + '</w>'
+        if composite_words_output_str.find(search_pattern) != -1:
+            parts = composite_words[key].split("-")
+            wordlist = wordlist[0:key+offset] + parts + wordlist[key+1+offset:]
+            offset += len(parts) - 1
 
     if has_disamb:
         parser_output = analyzer.analyze_words(wordlist, format="xml", disambiguate=disambiguate)
@@ -241,7 +261,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
 
 def timarkh_udm(dedoc_output):
-    return timarkh_uniparser(dedoc_output, 'udm', disambiguate=True)
+    return timarkh_uniparser(dedoc_output, 'udm', has_disamb=True, disambiguate=True)
 
 def timarkh_erzya(dedoc_output):
     return timarkh_uniparser(dedoc_output, 'erzya')
@@ -253,10 +273,7 @@ def timarkh_komi_zyryan(dedoc_output):
     return timarkh_uniparser(dedoc_output, 'komi_zyryan')
 
 def timarkh_meadow_mari(dedoc_output):
-    return timarkh_uniparser(dedoc_output, 'meadow_mari', disambiguate=True)
+    return timarkh_uniparser(dedoc_output, 'meadow_mari', has_disamb=True, disambiguate=True)
 
 def apertium_tat_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'tat')
-
-def apertium_kaz_rus(dedoc_output, apertium_path):
-    return apertium_parser(dedoc_output, apertium_path, 'kaz')
