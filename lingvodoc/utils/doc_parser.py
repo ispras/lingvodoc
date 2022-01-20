@@ -277,3 +277,6 @@ def timarkh_meadow_mari(dedoc_output):
 
 def apertium_tat_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'tat')
+
+def apertium_kaz_rus(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'kaz')
