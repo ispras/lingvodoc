@@ -115,28 +115,15 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
 
 def apertium_parser(dedoc_output, apertium_path, lang):
 
-    def reformat(biltrans_filename, morph_filename):
+    def reformat(biltrans_filename="", morph_filename="", bilingual=True):
 
         skip_list = ["guio", "cm", "sent", "lpar", "rpar", "lquot", "rquot"]
 
-        biltrans_file = open(biltrans_filename, "r", encoding="UTF-8")
-        morph_file = open(morph_filename, "r", encoding="UTF-8")
-
-        biltrans = biltrans_file.read()
-        morph = morph_file.read()
-
-        biltrans_elements = re.findall(r"\^(.+?)\$", biltrans)
-        morph_elements = re.findall(r"\^(.+?)\$", morph)
-        parsed = ""
-
-        def is_conform(lex_1, lex_2):
-            if lex_1.lower().find(lex_2.lower()) == -1 and lex_2.lower().find(lex_1.lower()) == -1:
-                return False
-            else:
-                return True
-
-        def biltrans_lex(i):
-            return biltrans_elements[i][0: biltrans_elements[i].find("<")].lower()
+        def to_skip(element):
+            for skip_elem in skip_list:
+                if element.find(skip_elem) != -1:
+                    return True
+            return False
 
         def gr(elem):
             gr_list = list()
@@ -146,7 +133,6 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
         def add_gr(gr_list):
             to_add = " gr=\""
-            gr_list = gr(biltrans_elements[i])
             if gr_list:
                 k = 0
                 N = len(gr_list)
@@ -163,15 +149,66 @@ def apertium_parser(dedoc_output, apertium_path, lang):
             to_add += "\""
             return to_add
 
+        def add_variant(lex, gr, trans, parts = " parts=\"\"", gloss = " gloss=\"\""):
+            return "<ana " + lex + gr + parts + gloss + trans + " ></ana>"
+
+        parsed = ""
+
+        morph_file = open(morph_filename, "r", encoding="UTF-8")
+        morph = morph_file.read()
+        morph_elements = re.findall(r"\^(.+?)\$", morph)
+
+        if not bilingual:
+
+            for morph_element in morph_elements:
+
+                if len(morph_element) == 0 or to_skip(morph_element):
+                    continue
+
+                new = ""
+                new += "<w>"
+
+                if morph_element.find("*") != -1:
+                    new += add_variant(" lex=\"\"", " gr=\"\"", " trans_ru=\"\"")
+                    continue
+
+                morph_slash_split_list = morph_element.split("/")
+                orig = morph_slash_split_list[0]
+
+                for lex_and_gr in morph_slash_split_list[1:]:
+                    if lex_and_gr.find('+') != -1:
+                        continue
+                    new_lex = "lex=" + "\"" + lex_and_gr[:lex_and_gr.find("<")].lower() + "\""
+                    new_gr = add_gr(gr(lex_and_gr))
+                    new += add_variant(new_lex, new_gr, " trans_ru=\"\"")
+
+                new += orig
+                new += "</w>"
+                new += "\n"
+
+                parsed += new
+
+            return parsed
+
+        biltrans_file = open(biltrans_filename, "r", encoding="UTF-8")
+        biltrans = biltrans_file.read()
+        biltrans_elements = re.findall(r"\^(.+?)\$", biltrans)
+
+        def is_conform(lex_1, lex_2):
+            if lex_1.lower().find(lex_2.lower()) == -1 and lex_2.lower().find(lex_1.lower()) == -1:
+                return False
+            else:
+                return True
+
+        def biltrans_lex(i):
+            return biltrans_elements[i][0: biltrans_elements[i].find("<")].lower()
+
         def trans(elem):
             trans_list = list()
             for match in re.findall(r"/(\w+)<", biltrans_elements[i]):
                 if match not in trans_list:
                     trans_list.append(match)
             return trans_list
-
-        def add_variant(lex, gr, trans, parts = " parts=\"\"", gloss = " gloss=\"\""):
-            return "<ana " + lex + gr + parts + gloss + trans + " ></ana>"
 
         i = -1
         for morph_element in morph_elements:
@@ -187,12 +224,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
                 new += add_variant(" lex=\"\"", " gr=\"\"", " trans_ru=\"\"")
                 continue
 
-            continue_flag = False
-            for skip_elem in skip_list:
-                if morph_element.find(skip_elem) != -1:
-                    continue_flag = True
-                    break
-            if continue_flag:
+            if to_skip(morph_element):
                 continue
 
             morph_slash_split_list = morph_element.split("/")
@@ -235,7 +267,13 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
         return parsed
 
-    biltrans_file_id, biltrans_filename = tempfile.mkstemp()
+    if lang in ['kaz', 'tat']:
+        bilingual = True
+    else:
+        bilingual = False
+
+    if bilingual:
+        biltrans_file_id, biltrans_filename = tempfile.mkstemp()
     morph_file_id, morph_filename = tempfile.mkstemp()
 
     dedoc_output_without_tags = re.sub(r"(<.*?>)|nbsp", " ", dedoc_output)
@@ -250,11 +288,18 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-kaz-rus kaz-rus-biltrans >> " + biltrans_filename)
         s2 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-kaz-rus kaz-rus-morph >> " + morph_filename)
 
+    if lang == 'sah':
+        s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-sah sah-morph >> " + morph_filename)
+        s2 = s1
+
     if s1 != 0 or s2 != 0:
         raise ValueError("An error occured during Apertium parser process running")
 
-    parser_output = reformat(biltrans_filename, morph_filename)
-    os.remove(biltrans_filename)
+    if bilingual:
+        parser_output = reformat(biltrans_filename=biltrans_filename, morph_filename=morph_filename)
+        os.remove(biltrans_filename)
+    else:
+        parser_output = reformat(morph_filename=morph_filename, bilingual=False)
     os.remove(morph_filename)
 
     return insert_parser_output_to_text(dedoc_output, parser_output)
@@ -280,3 +325,6 @@ def apertium_tat_rus(dedoc_output, apertium_path):
 
 def apertium_kaz_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'kaz')
+
+def apertium_sah(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'sah')
