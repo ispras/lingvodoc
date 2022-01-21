@@ -165,7 +165,6 @@ def apertium_parser(dedoc_output, apertium_path, lang):
                 if len(morph_element) == 0 or to_skip(morph_element):
                     continue
 
-                print("Morph element: " + morph_element, flush=True)
                 new = ""
                 new += "<w>"
 
@@ -179,20 +178,15 @@ def apertium_parser(dedoc_output, apertium_path, lang):
                 for lex_and_gr in morph_slash_split_list[1:]:
                     if lex_and_gr.find('+') != -1:
                         continue
-                    print("Lex_and_gr: " + lex_and_gr, flush=True)
                     new_lex = "lex=" + "\"" + lex_and_gr[:lex_and_gr.find("<")].lower() + "\""
                     new_gr = add_gr(gr(lex_and_gr))
-                    print("New_lex: " + new_lex, flush=True)
-                    print("New_gr: " + new_gr, flush=True)
                     new += add_variant(new_lex, new_gr, " trans_ru=\"\"")
 
                 new += orig
                 new += "</w>"
                 new += "\n"
-                print("New: " + new, flush=True)
 
                 parsed += new
-                print("Parsed: " + parsed, flush=True)
 
             return parsed
 
