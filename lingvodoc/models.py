@@ -540,8 +540,7 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, Ma
         return get_translation(
             locale_id,
             self.client_id,
-            self.object_id,
-            key_format_str = '%s:%s:%s')
+            self.object_id)
 
 
 class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, MarkedForDeletionMixin,

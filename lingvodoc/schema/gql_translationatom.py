@@ -27,7 +27,7 @@ from lingvodoc.models import (
 
 from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.utils.verification import check_client_id
-from lingvodoc.cache.caching import CACHE
+import lingvodoc.cache.caching as caching
 
 
 class TranslationAtom(LingvodocObjectType):
@@ -220,7 +220,8 @@ class UpdateTranslationAtom(graphene.Mutation):
             str(dbtranslationatom.parent_client_id),
             str(dbtranslationatom.parent_object_id),
             str(dbtranslationatom.locale_id))
-        CACHE.rem(key)
+        caching.CACHE.rem(key)
+
         if content:
             dbtranslationatom.content = content
         if locale_id:
@@ -283,7 +284,7 @@ class DeleteTranslationAtom(graphene.Mutation):
             str(dbtranslationatom.parent_client_id),
             str(dbtranslationatom.parent_object_id),
             str(dbtranslationatom.locale_id))
-        CACHE.rem(key)
+        caching.CACHE.rem(key)
         del_object(dbtranslationatom, "delete_translationatom", info.context.get('client_id'))
         return UpdateTranslationAtom(translationatom=dbtranslationatom, triumph=True)
 
