@@ -176,11 +176,11 @@ def apertium_parser(dedoc_output, apertium_path, lang):
                 orig = morph_slash_split_list[0]
 
                 for lex_and_gr in morph_slash_split_list[1:]:
-                    if lex_and_gr.find('+') != -1:
-                        continue
                     new_lex = "lex=" + "\"" + lex_and_gr[:lex_and_gr.find("<")].lower() + "\""
                     new_gr = add_gr(gr(lex_and_gr))
-                    new += add_variant(new_lex, new_gr, " trans_ru=\"\"")
+                    new_variant = add_variant(new_lex, new_gr, " trans_ru=\"\"")
+                    if new.find(new_variant) == -1:
+                        new += new_variant
 
                 new += orig
                 new += "</w>"
@@ -267,7 +267,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
         return parsed
 
-    if lang in ['kaz', 'tat']:
+    if lang in ['kaz', 'tat', 'bak-tat']:
         bilingual = True
     else:
         bilingual = False
@@ -276,7 +276,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         biltrans_file_id, biltrans_filename = tempfile.mkstemp()
     morph_file_id, morph_filename = tempfile.mkstemp()
 
-    dedoc_output_without_tags = re.sub(r"(<.*?>)|nbsp", " ", dedoc_output)
+    dedoc_output_without_tags = re.sub(r"(<.*?>)|&nbsp", "", dedoc_output)
 
     s1 = 0
     s2 = 0
@@ -288,8 +288,16 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-kaz-rus kaz-rus-biltrans >> " + biltrans_filename)
         s2 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-kaz-rus kaz-rus-morph >> " + morph_filename)
 
+    if lang == 'bak-tat':
+        s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-tat-bak bak-tat-biltrans >> " + biltrans_filename)
+        s2 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-tat-bak bak-tat-morph >> " + morph_filename)
+
     if lang == 'sah':
         s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-sah sah-morph >> " + morph_filename)
+        s2 = s1
+
+    if lang == 'bak':
+        s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-bak bak-morph >> " + morph_filename)
         s2 = s1
 
     if s1 != 0 or s2 != 0:
@@ -328,3 +336,9 @@ def apertium_kaz_rus(dedoc_output, apertium_path):
 
 def apertium_sah(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'sah')
+
+def apertium_bak_tat(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'bak-tat')
+
+def apertium_bak(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'bak')
