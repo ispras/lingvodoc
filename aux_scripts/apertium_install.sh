@@ -22,3 +22,7 @@ if ! [ -d "$1/apertium-tat-rus" ]; then git clone https://github.com/apertium/ap
 cd $1/apertium-tat-rus && ./autogen.sh && ./configure && make && make install;
 if ! [ -d "$1/apertium-sah" ]; then git clone https://github.com/apertium/apertium-sah $1/apertium-sah; fi;
 cd $1/apertium-sah && ./autogen.sh && ./configure && make && make install;
+if ! [ -d "$1/apertium-tat-bak" ]; then git clone https://github.com/apertium/apertium-tat-bak $1/apertium-tat-bak; fi;
+cd $1/apertium-tat-bak && ./autogen.sh && ./configure && make && make install;
+if ! [ -d "$1/apertium-bak" ]; then git clone https://github.com/apertium/apertium-bak $1/apertium-bak; fi;
+cd $1/apertium-bak && ./autogen.sh && ./configure && make && make install;
