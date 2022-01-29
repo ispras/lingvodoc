@@ -176,8 +176,6 @@ def apertium_parser(dedoc_output, apertium_path, lang):
                 orig = morph_slash_split_list[0]
 
                 for lex_and_gr in morph_slash_split_list[1:]:
-                    # if lex_and_gr.find('+') != -1:
-                        # lex_and_gr = lex_and_gr[0:lex_and_gr.find('+')]
                     new_lex = "lex=" + "\"" + lex_and_gr[:lex_and_gr.find("<")].lower() + "\""
                     new_gr = add_gr(gr(lex_and_gr))
                     new_variant = add_variant(new_lex, new_gr, " trans_ru=\"\"")
@@ -334,7 +332,7 @@ def apertium_tat_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'tat')
 
 def apertium_kaz_rus(dedoc_output, apertium_path):
-    return apertium_parser(dedoc_output, apertium_path, 'kaz-rus')
+    return apertium_parser(dedoc_output, apertium_path, 'kaz')
 
 def apertium_sah(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'sah')
