@@ -180,6 +180,9 @@ def check_permissions(info, parser_result):
                     dbEntity.object_id == parser_result.entity_object_id)
                 .first())
 
+        else:
+            return
+
         if not perspective_id:
             raise KeyError(
                     'Failed to get perspective of the parser result.',
