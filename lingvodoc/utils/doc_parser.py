@@ -50,6 +50,7 @@ def generate_html_wrap(word, ana_tag_list):
 
 def insert_parser_output_to_text(text, parser_output):
 
+    ESC_PAT = "$id$"
     soup = bs4.BeautifulSoup(parser_output, 'html.parser')
     w_tag_list = soup("w")
     search_start_index = 0
@@ -57,6 +58,9 @@ def insert_parser_output_to_text(text, parser_output):
     for w_tag in w_tag_list:
         word = w_tag.contents[-1]
         match_index = text.find(word, search_start_index)
+        if match_index - len(ESC_PAT) > 0 and match_index + len(word) + len(ESC_PAT) < len(text):
+            if text[match_index-len(ESC_PAT):match_index] == ESC_PAT and text[match_index+len(word):match_index+len(word)+len(ESC_PAT)] == ESC_PAT:
+                continue
         result_list.append(text[search_start_index:match_index])
         if (len(w_tag.contents) > 1):
             result_list.append(generate_html_wrap(word, w_tag.contents[0:-1]))
