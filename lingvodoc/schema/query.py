@@ -445,7 +445,8 @@ class Query(graphene.ObjectType):
     dictionary = graphene.Field(Dictionary, id=LingvodocID())
     perspectives = graphene.List(DictionaryPerspective,
         published=graphene.Boolean(),
-        only_with_phonology_data=graphene.Boolean())
+        only_with_phonology_data=graphene.Boolean(),
+        only_with_parser_result_data=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
     entity = graphene.Field(Entity, id=LingvodocID())
     language = graphene.Field(Language, id=LingvodocID())
@@ -1245,7 +1246,12 @@ class Query(graphene.ObjectType):
     def resolve_dictionary(self, info, id):
         return Dictionary(id=id)
 
-    def resolve_perspectives(self, info, published = None, only_with_phonology_data = None):
+    def resolve_perspectives(
+        self,
+        info,
+        published = None,
+        only_with_phonology_data = None,
+        only_with_parser_result_data = None):
         """
         example:
 
@@ -1323,6 +1329,34 @@ class Query(graphene.ObjectType):
                     dbPublishingSound.accepted == True)
 
             perspective_query = perspective_query.filter(phonology_query.exists())
+
+        # If required, filtering out perspectives without parser result data.
+
+        if only_with_parser_result_data:
+
+            parser_result_query = (
+
+                DBSession
+
+                    .query(literal(1))
+
+                    .filter(
+                        dbLexicalEntry.parent_client_id == dbPerspective.client_id,
+                        dbLexicalEntry.parent_object_id == dbPerspective.object_id,
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.marked_for_deletion == False,
+                        dbEntity.content.op('~*')('.*\.(doc|docx|odt)'),
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True,
+                        dbParserResult.entity_client_id == dbEntity.client_id,
+                        dbParserResult.entity_object_id == dbEntity.object_id,
+                        dbParserResult.marked_for_deletion == False))
+
+            perspective_query = perspective_query.filter(parser_result_query.exists())
 
         perspectives_list = []
 
@@ -9228,6 +9262,8 @@ class Docx2Eaf(graphene.Mutation):
         docx_file = Upload()
         separate_flag = graphene.Boolean()
         all_tables_flag = graphene.Boolean()
+        no_header_flag = graphene.Boolean()
+        no_parsing_flag = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
@@ -9267,6 +9303,8 @@ class Docx2Eaf(graphene.Mutation):
 
             separate_flag = args.get('separate_flag', False)
             all_tables_flag = args.get('all_tables_flag', False)
+            no_header_flag = args.get('no_header_flag', False)
+            no_parsing_flag = args.get('no_parsing_flag', False)
 
             __debug_flag__ = args.get('debug_flag', False)
 
@@ -9309,6 +9347,8 @@ class Docx2Eaf(graphene.Mutation):
                         separate_by_paragraphs_flag = separate_flag,
                         modify_docx_flag = True,
                         all_tables_flag = all_tables_flag,
+                        no_header_flag = no_header_flag,
+                        no_parsing_flag = no_parsing_flag,
                         check_file_path = tmp_check_txt_file_path,
                         check_docx_file_path = tmp_check_docx_file_path,
                         __debug_flag__ = __debug_flag__))
@@ -9512,29 +9552,9 @@ class Valency(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def compute(
+    def get_parser_result_data(
         perspective_id,
-        debug_flag,
-        full_name,
-        task_key,
-        storage,
-        cache_kwargs,
-        sqlalchemy_url):
-
-        log.debug(
-            '\nvalency \'{}\' {}/{}:'
-            '\n  debug_flag: {}'.format(
-                full_name,
-                perspective_id[0],
-                perspective_id[1],
-                debug_flag))
-
-        task_status = (
-            None if task_key is None else
-            TaskStatus.get_from_cache(task_key))
-
-        if task_status:
-            task_status.set(1, 0, 'Compiling corpus')
+        debug_flag):
 
         entry_dict = collections.defaultdict(dict)
         entry_list = []
@@ -9625,6 +9645,7 @@ class Valency(graphene.Mutation):
                 entry_info_dict['parser_result_list'].append({
                     'index': parser_result_index,
                     'id': parser_result.id,
+                    'hash': hashlib.sha256(parser_result.content.encode('utf-8')).digest(),
                     'paragraphs': paragraph_list})
 
         # Adding titles to parser results, if we have them.
@@ -9640,6 +9661,38 @@ class Valency(graphene.Mutation):
 
                 parser_result['title'] = title_str
                 parser_result_list.append(parser_result)
+
+        return parser_result_list
+
+    @staticmethod
+    def compute(
+        perspective_id,
+        debug_flag,
+        full_name,
+        task_key,
+        storage,
+        cache_kwargs,
+        sqlalchemy_url):
+
+        log.debug(
+            '\nvalency \'{}\' {}/{}:'
+            '\n  debug_flag: {}'.format(
+                full_name,
+                perspective_id[0],
+                perspective_id[1],
+                debug_flag))
+
+        task_status = (
+            None if task_key is None else
+            TaskStatus.get_from_cache(task_key))
+
+        if task_status:
+            task_status.set(1, 0, 'Compiling corpus')
+
+        parser_result_list = (
+
+            Valency.get_parser_result_data(
+                perspective_id, debug_flag))
 
         # If we have no parser results, we won't do anything.
 
@@ -9878,6 +9931,102 @@ class Valency(graphene.Mutation):
                     message = 'Exception:\n' + traceback_string))
 
 
+class CreateValencyData(graphene.Mutation):
+
+    class Arguments:
+
+        perspective_id = LingvodocID(required = True)
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only registered users can create valency data.'))
+
+            perspective_id = args['perspective_id']
+            debug_flag = args.get('debug_flag', False)
+
+            perspective = (
+                DBSession.query(dbPerspective).filter_by(
+                    client_id = perspective_id[0], object_id = perspective_id[1]).first())
+
+            if not perspective:
+
+                return (
+
+                    ResponseError(
+                        message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
+
+            dictionary = perspective.parent
+
+            locale_id = info.context.get('locale_id') or 2
+
+            dictionary_name = dictionary.get_translation(locale_id)
+            perspective_name = perspective.get_translation(locale_id)
+
+            if dictionary.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Dictionary \'{}\' {}/{} is deleted.'.format(
+                            dictionary_name,
+                            perspective.parent_client_id,
+                            perspective.parent_object_id)))
+
+            if perspective.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Perspective \'{}\' {}/{} is deleted.'.format(
+                            full_name,
+                            perspective_id[0],
+                            perspective_id[1])))
+
+            # Getting parser result data.
+
+            parser_result_list = (
+
+                Valency.get_parser_result_data(
+                    perspective_id, debug_flag))
+
+            raise NotImplementedError
+
+            return (
+
+                CreateValencyData(
+                    triumph = True))
+
+        except Exception as exception:
+
+            traceback_string = (
+
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('create_valency_data: exception')
+            log.warning(traceback_string)
+
+            return (
+
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -9977,6 +10126,7 @@ class MyMutations(graphene.ObjectType):
     new_unstructured_data = NewUnstructuredData.Field()
     docx2eaf = Docx2Eaf.Field()
     valency = Valency.Field()
+    create_valency_data = CreateValencyData.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

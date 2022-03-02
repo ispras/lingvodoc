@@ -240,6 +240,7 @@ class State(object):
         row_str,
         cell_list,
         row_index,
+        no_parsing_flag,
         __debug_flag__ = False):
         """
         Processing another data string, splitting into a state when it's a word string and another state
@@ -261,6 +262,9 @@ class State(object):
             copy.total_value = self.total_value + self.d1[-1]
 
             yield copy
+
+            if no_parsing_flag:
+                return
 
         # Second, assuming that this data string is a word string.
 
@@ -350,6 +354,7 @@ def beam_search_step(
     cell_list,
     row_index,
     beam_width,
+    no_parsing_flag,
     __debug_beam_flag__ = False):
     """
     Another step of alignment beam search.
@@ -366,8 +371,13 @@ def beam_search_step(
 
     for state in state_list:
 
-        for state_after in state.process_row(
-            cell_str, cell_list, row_index):
+        for state_after in (
+
+            state.process_row(
+                cell_str,
+                cell_list,
+                row_index,
+                no_parsing_flag)):
 
             index = state_after.row_index
 
@@ -413,6 +423,8 @@ def beam_search_step(
 def parse_table(
     row_list,
     limit = None,
+    no_header_flag = False,
+    no_parsing_flag = False,
     __debug_beam_flag__ = False):
     """
     Tries to parse snippet data represented as a table.
@@ -433,7 +445,11 @@ def parse_table(
 
     # Going through snippet data.
 
-    for row_index, cell_list in enumerate(row_list[1:], 1):
+    row_sequence = (
+        enumerate(row_list) if no_header_flag else
+        enumerate(row_list[1:], 1))
+
+    for row_index, cell_list in row_sequence:
 
         if limit and row_index > limit:
             break
@@ -448,12 +464,14 @@ def parse_table(
         # Updating alignment search on another row.
 
         state_list = (
+
             beam_search_step(
                 state_list,
                 cell_str,
                 cell_list,
                 row_index,
                 beam_width,
+                no_parsing_flag,
                 __debug_beam_flag__))
 
     # Returning final parsing search state.
@@ -579,6 +597,8 @@ def docx2eaf(
     separate_by_paragraphs_flag = False,
     modify_docx_flag = False,
     all_tables_flag = False,
+    no_header_flag = False,
+    no_parsing_flag = False,
     check_file_path = None,
     check_docx_file_path = None,
     limit = None,
@@ -664,25 +684,33 @@ def docx2eaf(
 
     # Processing this info.
 
-    header_list = row_list[0]
+    if not no_header_flag:
 
-    log.debug(
-        '\nheader: {0}'.format(header_list))
+        header_list = row_list[0]
+
+        log.debug(
+            '\nheader: {0}'.format(header_list))
 
     if separate_by_paragraphs_flag:
 
-        state_list = parse_by_paragraphs(
-            row_list,
-            limit,
-            __debug_flag__,
-            __debug_beam_flag__)
+        state_list = (
+
+            parse_by_paragraphs(
+                row_list,
+                limit,
+                __debug_flag__,
+                __debug_beam_flag__))
 
     else:
 
-        state_list = parse_table(
-            row_list,
-            limit,
-            __debug_beam_flag__)
+        state_list = (
+
+            parse_table(
+                row_list,
+                limit,
+                no_header_flag,
+                no_parsing_flag,
+                __debug_beam_flag__))
 
     # Showing final alignment search state, if required.
 
@@ -1079,6 +1107,8 @@ def main_import(args):
             'limit=',
             'modify-docx-file',
             'no-db',
+            'no-header',
+            'no-parsing',
             'separate-by-paragraphs']))
 
     opt_dict = dict(opt_list)
@@ -1097,7 +1127,10 @@ def main_import(args):
 
     modify_docx_flag = '--modify-docx-file' in opt_dict
     separate_by_paragraphs_flag = '--separate-by-paragraphs' in opt_dict
+
     all_tables_flag = '--all-tables' in opt_dict
+    no_header_flag = '--no-header' in opt_dict
+    no_parsing_flag = '--no-parsing' in opt_dict
 
     __debug_flag__ = '--debug' in opt_dict
     __debug_beam_flag__ = '--debug-beam' in opt_dict
@@ -1111,6 +1144,8 @@ def main_import(args):
         separate_by_paragraphs_flag,
         modify_docx_flag,
         all_tables_flag,
+        no_header_flag,
+        no_parsing_flag,
         check_file_path,
         check_docx_file_path,
         limit,
