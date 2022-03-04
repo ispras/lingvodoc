@@ -9645,7 +9645,7 @@ class Valency(graphene.Mutation):
                 entry_info_dict['parser_result_list'].append({
                     'index': parser_result_index,
                     'id': parser_result.id,
-                    'hash': hashlib.sha256(parser_result.content.encode('utf-8')).digest(),
+                    'hash': hashlib.sha256(parser_result.content.encode('utf-8')).hexdigest(),
                     'paragraphs': paragraph_list})
 
         # Adding titles to parser results, if we have them.
