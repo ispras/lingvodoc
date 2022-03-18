@@ -275,24 +275,10 @@ class ElanCheck:
         Accepting EAF if we have a top-level tier with required sub-tiers.
         """
 
-        # We certainly got to have a translation tier with two dependent transcription and word tiers.
+        # We got to have a translation tier with two dependent transcription and word tiers.
 
         if ('translation' not in self.tier_refs or
             not self.tier_refs['translation'].issuperset(('transcription', 'word'))):
-
-            return False
-
-        tier_edge_set = set()
-
-        for to_id, lingv_type_str in self.edge_dict['translation']:
-
-            tier_edge_set.add((
-                self.lingv_type[lingv_type_str],
-                to_id))
-
-        if not tier_edge_set.issuperset((
-            (('Symbolic_Association', 'false'), 'word'),
-            (('Symbolic_Association', 'false'), 'transcription'))):
 
             return False
 
@@ -300,21 +286,7 @@ class ElanCheck:
 
         for tier_id in self.top_tier_list:
 
-            if not self.tier_refs[tier_id].issuperset(('literary translation', 'translation')):
-                continue
-
-            tier_edge_set = set()
-
-            for to_id, lingv_type_str in self.edge_dict[tier_id]:
-
-                tier_edge_set.add((
-                    self.lingv_type[lingv_type_str],
-                    to_id))
-
-            if tier_edge_set.issuperset((
-                (('Symbolic_Association', 'false'), 'literary translation'),
-                (('Included_In', 'true'), 'translation'))):
-
+            if self.tier_refs[tier_id].issuperset(('literary translation', 'translation')):
                 return True
 
         return False
