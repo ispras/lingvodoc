@@ -3,7 +3,7 @@ __authors__ = [
     'Pavel Grashchenkov',
     'Ivan Beloborodov']
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 import copy
 import json
@@ -88,119 +88,137 @@ def corpus_to_arx(
 
     return verbs_counted
 
+def sentence_instance_gen(s):
+
+    cases = ['nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term']
+
+    v_ind = []
+
+    for t_index, t in enumerate(s):
+        if len(t) > 1:
+            grammar = t['gr'].split(',')
+            if 'V' in grammar:
+                v_ind.append(t_index)
+
+    for n, ind in enumerate(v_ind):
+
+        transl = s[ind]['trans_ru']
+        lex = s[ind]['lex']
+        prev_v = v_ind[n - 1] + 1 if n > 0 else 0
+        next_v = v_ind[n + 1] if n + 1 < len(v_ind) - 1 else len(s) - 1
+
+        for r in range(max(prev_v, ind - 5), min(next_v, ind + 5) + 1):
+
+            if len(s[r]) <= 1:
+                continue
+
+            indent = ind - r
+
+            # Two different 'acc0' because the second one is in Cyrillic.
+
+            gram = (
+                s[r]['gr']
+                    .replace(' ', '')
+                    .replace('acc0', 'acc')
+                    .replace('асс0', 'acc')
+                    .replace('sg.nom', 'sg,nom')
+                    .split(','))
+
+            if not (
+                ('N' in gram or 'PRO' in gram) and
+                len(gram) > 1 and
+                'rel_n' not in gram and
+                'attr' not in gram and
+                'term' not in gram and
+                'adv' not in gram and
+                'app' not in gram and
+                'какой' != s[r]['lex'] and
+                'чисто' != s[r]['lex'] and
+                'сё' != s[r]['lex'] and
+                'минут' != s[r]['lex']):
+
+                continue
+
+            try:
+                cs = [cas for cas in cases if cas in gram][0]
+            except IndexError:
+                continue
+
+            animacy = (
+                'anim' in gram or
+                'persn' in gram or
+                'famn' in gram or
+                'patrn' in gram or
+                'supernat' in gram)
+
+            yield lex, cs, indent, ind, r, animacy
+
 def sentences_arx_to_valencies(
     sentence_data_list,
     arx_data_dict):
 
     verbs = []
+    verb_case_dict = defaultdict(dict)
 
-    verb_di = {
-        'lex': '',
-        'trans_ru': '',
-        'frequency': 0,
-        'cases': [
-            {'case': 'nom', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'acc', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'dat', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'ins', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'gen', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'abl', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'car', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'egr', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'el', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'ill', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'loc', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'prol', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-            {'case': 'term', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0}]}
+    case_template_list = [
+        {'case': 'nom', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'acc', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'dat', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'ins', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'gen', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'abl', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'car', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'egr', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'el', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'ill', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'loc', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'prol', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'term', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0}]
 
     for key, value in arx_data_dict.items():
 
-        verbs.append({
+        if key in verb_case_dict:
+            raise NotImplementedError
+
+        case_data = []
+        case_dict = verb_case_dict[key]
+
+        for case_template in case_template_list:
+
+            case_c = copy.deepcopy(case_template)
+
+            case_data.append(case_c)
+            case_dict[case_c['case']] = case_c
+
+        verb_data = {
             'lex': key,
             'trans_ru': value[2],
             'frequency': value[0],
-            'cases': copy.deepcopy(verb_di['cases'])})
+            'cases': case_data}
 
-    cases = ['nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term']
+        verbs.append(verb_data)
 
     for i in sentence_data_list:
         for p in i['paragraphs']:
             for s in p['sentences']:
 
-                v_ind = []
+                for lex, cs, indent, _, _, animacy in sentence_instance_gen(s):
 
-                for t_index, t in enumerate(s):
-                    if len(t) > 1:
-                        grammar = t['gr'].split(',')
-                        if 'V' in grammar:
-                            v_ind.append(t_index)
+                    case_dict = verb_case_dict.get(lex)
 
-                for n, ind in enumerate(v_ind):
+                    if not case_dict:
+                        continue
 
-                    transl = s[ind]['trans_ru']
-                    lex = s[ind]['lex']
-                    prev_v = v_ind[n - 1] + 1 if n > 0 else 0
-                    next_v = v_ind[n + 1] if n + 1 < len(v_ind) - 1 else len(s) - 1
+                    case = case_dict.get(cs)
 
-                    for r in range(max(prev_v, ind - 5), min(next_v, ind + 5) + 1):
+                    if not case:
+                        continue
 
-                        if len(s[r]) <= 1:
-                            continue
-
-                        indent = ind - r
-
-                        # Two different 'acc0' because the second one is in Cyrillic.
-
-                        gram = (
-                            s[r]['gr']
-                                .replace(' ', '')
-                                .replace('acc0', 'acc')
-                                .replace('асс0', 'acc')
-                                .replace('sg.nom', 'sg,nom')
-                                .split(','))
-
-                        if not (
-                            ('N' in gram or 'PRO' in gram) and
-                            len(gram) > 1 and
-                            'rel_n' not in gram and
-                            'attr' not in gram and
-                            'term' not in gram and
-                            'adv' not in gram and
-                            'app' not in gram and
-                            'какой' != s[r]['lex'] and
-                            'чисто' != s[r]['lex'] and
-                            'сё' != s[r]['lex'] and
-                            'минут' != s[r]['lex']):
-
-                            continue
-
-                        try:
-                            cs = [cas for cas in cases if cas in gram][0]
-                        except IndexError:
-                            continue
-
-                        animacy = (
-                            'anim' in gram or
-                            'persn' in gram or
-                            'famn' in gram or
-                            'patrn' in gram or
-                            'supernat' in gram)
-
-                        for verb in verbs:
-
-                            if lex != verb['lex']:
-                                continue
-
-                            for case in verb['cases']:
-
-                                if case['case'] != cs:
-                                    continue
-
-                                for k in case.keys():
-                                    if k not in ['case', 'anim'] and int(k) == indent:
-                                        case[k] += 1
-                                    elif k == 'anim' and animacy:
-                                        case[k] += 1
+                    for k in case.keys():
+                        if k not in ['case', 'anim'] and int(k) == indent:
+                            case[k] += 1
+                        elif k == 'anim' and animacy:
+                            case[k] += 1
 
     return verbs
 

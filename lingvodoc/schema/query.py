@@ -200,7 +200,11 @@ from lingvodoc.models import (
     user_to_group_association,
     Parser as dbParser,
     ParserResult as dbParserResult,
-    UnstructuredData as dbUnstructuredData
+    UnstructuredData as dbUnstructuredData,
+    ValencyResultData as dbValencyResultData,
+    ValencySentenceData as dbValencySentenceData,
+    ValencyInstanceData as dbValencyInstanceData,
+    ValencyAnnotationData as dbValencyAnnotationData,
 )
 from pyramid.request import Request
 
@@ -215,6 +219,7 @@ from sqlalchemy import (
     create_engine,
     literal
 )
+from zope.sqlalchemy import mark_changed
 from lingvodoc.views.v2.utils import (
     view_field_from_object,
     storage_file,
@@ -571,6 +576,132 @@ class Query(graphene.ObjectType):
         graphene.Field(
             UnstructuredData,
             id = graphene.String(required = True)))
+
+    valency_data = (
+
+        graphene.Field(
+            ObjectVal,
+            perspective_id = LingvodocID(required = True),
+            offset = graphene.Int()))
+
+    def resolve_valency_data(
+        self, info, perspective_id, **args):
+
+        offset = args.get('offset', 0)
+
+        log.debug(
+            f'\nperspective_id: {perspective_id}'
+            f'\noffset: {offset}')
+
+        instance_query = (
+
+            DBSession
+
+                .query(
+                    dbValencyInstanceData)
+
+                .filter(
+                    dbValencyResultData.perspective_client_id == perspective_id[0],
+                    dbValencyResultData.perspective_object_id == perspective_id[1],
+                    dbValencySentenceData.result_id == dbValencyResultData.id,
+                    dbValencyInstanceData.sentence_id == dbValencySentenceData.id))
+
+        instance_count = (
+            instance_query.count())
+
+        instance_list = (
+            instance_query.offset(offset).limit(25).all())
+
+        instance_id_set = (
+            set(instance.id for instance in instance_list))
+
+        sentence_id_set = (
+            set(instance.sentence_id for instance in instance_list))
+
+        log.debug(
+            '\ninstance_id_set: {}'
+            '\nsentence_id_set: {}'.format(
+                instance_id_set,
+                sentence_id_set))
+
+        sentence_list = (
+
+            DBSession
+
+                .query(
+                    dbValencySentenceData)
+
+                .filter(
+                    dbValencySentenceData.id.in_(sentence_id_set))
+
+                .all())
+
+        annotation_list = (
+
+            DBSession
+
+                .query(
+                    dbValencyAnnotationData.instance_id,
+
+                    func.jsonb_agg(
+                        func.jsonb_build_array(
+                            dbValencyAnnotationData.user_id,
+                            dbValencyAnnotationData.accepted)))
+
+                .filter(
+                    dbValencyAnnotationData.instance_id.in_(instance_id_set))
+
+                .group_by(
+                    dbValencyAnnotationData.instance_id)
+
+                .all())
+
+        user_id_set = (
+
+            set(user_id
+                for _, user_annotation_list in annotation_list
+                for user_id, _ in user_annotation_list))
+
+        user_list = []
+
+        if user_id_set:
+
+            user_list = (
+
+                DBSession
+
+                    .query(
+                        dbUser.id, dbUser.name)
+
+                    .filter(
+                        dbUser.id.in_(user_id_set))
+
+                    .all())
+
+        instance_list = [
+            {'id': instance.id, 'sentence_id': instance.sentence_id, 'index': instance.index}
+            for instance in instance_list]
+
+        sentence_list = [
+            dict(sentence.data, id = sentence.id)
+            for sentence in sentence_list]
+
+        log.debug(
+            '\ninstance_list:\n{}'
+            '\nsentence_list:\n{}'
+            '\nannotation_list:\n{}'
+            '\nuser_list:\n{}'.format(
+                pprint.pformat(instance_list, width = 192),
+                pprint.pformat(sentence_list, width = 192),
+                pprint.pformat(annotation_list, width = 192),
+                pprint.pformat(user_list, width = 192)))
+
+        return {
+            'instance_count': instance_count,
+            'instance_list': instance_list,
+            'sentence_list': sentence_list,
+            'annotation_list': annotation_list,
+            'user_list': user_list}
 
     def resolve_unstructured_data(self, info, id):
         return UnstructuredData(id = id)
@@ -10003,7 +10134,114 @@ class CreateValencyData(graphene.Mutation):
                 Valency.get_parser_result_data(
                     perspective_id, debug_flag))
 
-            raise NotImplementedError
+            sentence_data_list = (
+                valency.corpus_to_sentences(parser_result_list))
+
+            # Initializing annotation data.
+
+            order_case_set = (
+
+                set([
+                    'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins',
+                    'car', 'term', 'loc', 'prol',
+                    'in', 'ill', 'el', 'egr']))
+
+            data_case_set = set()
+            instance_insert_list = []
+
+            for i in sentence_data_list:
+
+                parser_result_id = i['id']
+
+                valency_result_data = (
+
+                    dbValencyResultData(
+                        perspective_client_id = perspective_id[0],
+                        perspective_object_id = perspective_id[1],
+                        parser_result_client_id = parser_result_id[0],
+                        parser_result_object_id = parser_result_id[1],
+                        hash = i['hash']))
+
+                DBSession.add(valency_result_data)
+                DBSession.flush()
+
+                for p in i['paragraphs']:
+
+                    sentence_list = []
+
+                    for s in p['sentences']:
+
+                        instance_list = []
+
+                        for index, (lex, cs, indent, ind, r, animacy) in (
+                            enumerate(valency.sentence_instance_gen(s))):
+
+                            instance_list.append({
+                                'index': index,
+                                'location': (ind, r),
+                                'case': cs})
+                            
+                            data_case_set.add(cs)
+
+                        sentence_data = {
+                            'tokens': s,
+                            'instances': instance_list}
+
+                        sentence_list.append(
+                            sentence_data)
+
+                        valency_sentence_data = (
+
+                            dbValencySentenceData(
+                                result_id = valency_result_data.id,
+                                data = sentence_data,
+                                instance_count = len(instance_list)))
+
+                        DBSession.add(valency_sentence_data)
+                        DBSession.flush()
+
+                        for instance in instance_list:
+
+                            instance_insert_list.append({
+                                'sentence_id': valency_sentence_data.id,
+                                'index': instance['index'],
+                                'verb_lex': s[instance['location'][0]]['lex'],
+                                'case_str': instance['case']})
+
+                        log.debug(
+                            '\n' +
+                            pprint.pformat(
+                                (valency_result_data.id, len(instance_list), sentence_data),
+                                width = 192))
+
+                    p['sentences'] = sentence_list
+
+            query = (
+
+                dbValencyInstanceData.__table__
+                    .insert()
+                    .values(instance_insert_list))
+
+            DBSession.execute(query)
+
+            if debug_flag:
+
+                with open(
+                    'instance.json', 'w', encoding = 'utf-8') as instances_file:
+
+                    json.dump(
+                        sentence_data_list,
+                        instances_file,
+                        ensure_ascii = False,
+                        indent = 2)
+
+            valency_case_set = (
+                set(['nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term']))
+
+            log.debug(
+                f'\ndata_case_set:\n{data_case_set}'
+                f'\ndata_case_set - order_case_set:\n{data_case_set - order_case_set}'
+                f'\nvalency_case_set - data_case_set:\n{valency_case_set - data_case_set}')
 
             return (
 
@@ -10019,6 +10257,76 @@ class CreateValencyData(graphene.Mutation):
                         exception, exception, exception.__traceback__))[:-1])
 
             log.warning('create_valency_data: exception')
+            log.warning(traceback_string)
+
+            return (
+
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
+
+
+class SetValencyAnnotation(graphene.Mutation):
+
+    class Arguments:
+
+        instance_id = graphene.Int(required = True)
+        annotation_value = graphene.Boolean(required = True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only registered users can set valency annotations.'))
+
+            instance_id = args['instance_id']
+            annotation_value = args['annotation_value']
+
+            log.debug(
+                f'\ninstance_id: {instance_id}'
+                f'\nuser_id: {client.user_id}'
+                f'\nannotation_value: {annotation_value}')
+
+            sql_str = '''
+                insert into
+                valency_annotation_data
+                values (:instance_id, :user_id, :annotation_value)
+                on conflict on constraint valency_annotation_data_pkey
+                do update set accepted = :annotation_value;
+                '''
+
+            DBSession.execute(
+                sql_str, {
+                    'instance_id': instance_id,
+                    'user_id': client.user_id,
+                    'annotation_value': annotation_value})
+
+            mark_changed(DBSession())
+
+            return (
+
+                SetValencyAnnotation(
+                    triumph = True))
+
+        except Exception as exception:
+
+            traceback_string = (
+
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('set_valency_annotation: exception')
             log.warning(traceback_string)
 
             return (
@@ -10127,6 +10435,7 @@ class MyMutations(graphene.ObjectType):
     docx2eaf = Docx2Eaf.Field()
     valency = Valency.Field()
     create_valency_data = CreateValencyData.Field()
+    set_valency_annotation = SetValencyAnnotation.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 

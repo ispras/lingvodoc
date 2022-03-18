@@ -23,7 +23,8 @@ from lingvodoc.models import (
     DictionaryPerspectiveToField as dbColumn,
     PublishingEntity as dbPublishingEntity,
     ObjectTOC,
-    user_to_group_association
+    user_to_group_association,
+    ValencyResultData as dbValencyResultData,
     )
 
 from lingvodoc.schema.gql_holders import (
@@ -192,6 +193,7 @@ class DictionaryPerspective(LingvodocObjectType):
     last_modified_at = graphene.Float()
 
     is_hidden_for_client = graphene.Boolean()
+    has_valency_data = graphene.Boolean()
 
     dbType = dbPerspective
 
@@ -545,6 +547,31 @@ class DictionaryPerspective(LingvodocObjectType):
         """
 
         return self.check_is_hidden_for_client(info)
+
+    @fetch_object()
+    def resolve_has_valency_data(self, info):
+        """
+        If the perspective has valency annotation data.
+        """
+
+        exists_query = (
+
+            DBSession
+
+                .query(
+                    literal(1))
+
+                .filter(
+                    dbValencyResultData.perspective_client_id == self.dbObject.client_id,
+                    dbValencyResultData.perspective_object_id == self.dbObject.object_id)
+
+                .exists())
+
+        return (
+
+            DBSession
+                .query(exists_query)
+                .scalar())
 
     @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
