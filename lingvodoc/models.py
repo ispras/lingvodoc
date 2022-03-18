@@ -732,6 +732,28 @@ class EntityMixin(PrimeTableArgs):
     def entity_id(self):
         return (self.entity_client_id, self.entity_object_id)
 
+
+class PerspectiveMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (
+                   ForeignKeyConstraint(['perspective_client_id', 'perspective_object_id'],
+                                        ['dictionaryperspective' + '.client_id',
+                                         'dictionaryperspective' + '.object_id']),) + super().__table_args__
+
+    perspective_client_id = Column(SLBigInteger(), nullable=False)
+    perspective_object_id = Column(SLBigInteger(), nullable=False)
+
+    @declared_attr
+    def perspective(cls):
+        return relationship('DictionaryPerspective',
+                            backref=backref(cls.__tablename__.lower()))
+
+    @property
+    def perspective_id(self):
+        return (self.perspective_client_id, self.perspective_object_id)
+
+
 class ParserMixin(PrimeTableArgs):
     @declared_attr
     def __table_args__(cls):
@@ -751,6 +773,27 @@ class ParserMixin(PrimeTableArgs):
     @property
     def parser_id(self):
         return (self.parser_client_id, self.parser_object_id)
+
+
+class ParserResultMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (
+                   ForeignKeyConstraint(['parser_result_client_id', 'parser_result_object_id'],
+                                        ['parserresult' + '.client_id',
+                                         'parserresult' + '.object_id']),) + super().__table_args__
+
+    parser_result_client_id = Column(SLBigInteger(), nullable=False)
+    parser_result_object_id = Column(SLBigInteger(), nullable=False)
+
+    @declared_attr
+    def parser_result(cls):
+        return relationship('ParserResult',
+                            backref=backref(cls.__tablename__.lower()))
+
+    @property
+    def parser_result_id(self):
+        return (self.parser_result_client_id, self.parser_result_object_id)
 
 
 class ParentLinkMixin(PrimeTableArgs):
@@ -1742,3 +1785,48 @@ class UnstructuredData(
     id = Column(UnicodeText, primary_key = True)
     client_id = Column(SLBigInteger())
     data = Column(JSONB)
+
+
+class ValencyResultData(
+    Base,
+    IdMixin,
+    PerspectiveMixin,
+    ParserResultMixin):
+
+    __tablename__ = 'valency_result_data'
+
+    hash = Column(UnicodeText)
+
+
+class ValencySentenceData(
+    Base,
+    IdMixin):
+
+    __tablename__ = 'valency_sentence_data'
+
+    result_id = Column(SLBigInteger(), ForeignKey('valency_result_data.id'), nullable = False)
+    data = Column(JSONB)
+    instance_count = Column(Integer(), nullable = False)
+
+
+class ValencyInstanceData(
+    Base,
+    IdMixin):
+
+    __tablename__ = 'valency_instance_data'
+
+    sentence_id = Column(SLBigInteger(), ForeignKey('valency_sentence_data.id'), nullable = False)
+    index = Column(Integer(), nullable = False)
+    verb_lex = Column(UnicodeText, nullable = False)
+    case_str = Column(UnicodeText, nullable = False)
+
+
+class ValencyAnnotationData(
+    Base):
+
+    __tablename__ = 'valency_annotation_data'
+
+    instance_id = Column(SLBigInteger(), ForeignKey('valency_instance_data.id'), primary_key = True)
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'), primary_key = True)
+    accepted = Column(Boolean, default = None)
+
