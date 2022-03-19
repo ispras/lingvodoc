@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+import bisect
 import re
 import pympi
 
@@ -90,21 +92,94 @@ class Elan:
         if self.top_level_tier is None:
             raise NotImplementedError
 
+        translation_list = None
+
+        def find_by_time_slot(time_from, time_to):
+
+            nonlocal translation_list
+
+            if translation_list is None:
+
+                translation_list = (
+
+                    sorted(
+
+                        [(self.eafob.timeslots[data[0]], 
+                            self.eafob.timeslots[data[1]],
+                            data[2],
+                            id)
+
+                            for id, data in self.eafob.tiers['translation'][0].items()],
+
+                        key = lambda item: item[0]))
+
+            index = (
+
+                bisect.bisect_left(
+                    translation_list,
+                    (time_from, time_to)))
+
+            while index < len(translation_list):
+
+                translation = translation_list[index]
+
+                if time_from >= translation[0] and time_to <= translation[1]:
+                    return translation[3]
+
+                elif time_from > translation[1]:
+                    break
+
+            return None
+
         for element in self.xml_obj:
-            if element.tag == 'TIER':
-                tier_id = element.attrib['TIER_ID']
-                for elem1 in element:
-                    if elem1.tag == 'ANNOTATION':
-                        for elem2 in elem1:
-                            self.word_tier[elem2.attrib["ANNOTATION_ID"]] = tier_id
-                            if tier_id == "translation":
-                                self.main_tier_elements.append(elem2.attrib["ANNOTATION_ID"])
-                            self.word[elem2.attrib["ANNOTATION_ID"]] = [x for x in elem2][0].text
-                            if elem2.tag == 'REF_ANNOTATION':
-                                annot_ref = elem2.attrib['ANNOTATION_REF']
-                                if not annot_ref in self.result:
-                                    self.result[annot_ref] = []
-                                self.result[annot_ref].append(elem2.attrib["ANNOTATION_ID"])
+
+            if element.tag != 'TIER':
+                continue
+
+            tier_id = element.attrib['TIER_ID']
+            tier_parent_ref = element.attrib.get('PARENT_REF')
+
+            for elem1 in element:
+
+                if elem1.tag != 'ANNOTATION':
+                    continue
+
+                for elem2 in elem1:
+
+                    annotation_id = elem2.attrib["ANNOTATION_ID"]
+
+                    self.word_tier[annotation_id] = tier_id
+                    if tier_id == "translation":
+                        self.main_tier_elements.append(annotation_id)
+                    self.word[annotation_id] = [x for x in elem2][0].text
+
+                    if elem2.tag == 'REF_ANNOTATION':
+                        annot_ref = elem2.attrib['ANNOTATION_REF']
+                        if not annot_ref in self.result:
+                            self.result[annot_ref] = []
+                        self.result[annot_ref].append(annotation_id)
+
+                    # If we have an improperly linked 'transcription' or 'word' sub-tier of 'translation'
+                    # tier, wuth 'Included In' type instead of 'Symbolic Association', we still try to get
+                    # its contents.
+
+                    elif (
+                        elem2.tag == 'ALIGNABLE_ANNOTATION' and
+                        (tier_id.lower() == 'transcription' or tier_id.lower() == 'word') and
+                        tier_parent_ref.lower() == 'translation'):
+
+                        time_from = self.eafob.timeslots[elem2.attrib['TIME_SLOT_REF1']]
+                        time_to = self.eafob.timeslots[elem2.attrib['TIME_SLOT_REF2']]
+
+                        annot_ref = (
+                            find_by_time_slot(time_from, time_to))
+
+                        if annot_ref:
+
+                            if not annot_ref in self.result:
+                                self.result[annot_ref] = []
+
+                            self.result[annot_ref].append(annotation_id)
 
     def get_word_text(self, word):
         return list(word)[0].text
