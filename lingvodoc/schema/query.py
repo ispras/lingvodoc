@@ -10310,6 +10310,33 @@ class CreateValencyData(graphene.Mutation):
 
                 parser_result_id = i['id']
 
+                # Checking if we already have such parser result.
+
+                valency_result_data = (
+
+                    DBSession
+
+                        .query(dbValencyResultData)
+
+                        .filter_by(
+                            perspective_client_id = perspective_id[0],
+                            perspective_object_id = perspective_id[1],
+                            parser_result_client_id = parser_result_id[0],
+                            parser_result_object_id = parser_result_id[1])
+
+                        .first())
+
+                if valency_result_data:
+
+                    # The same hash, we just skip it.
+
+                    if valency_result_data.hash == i['hash']:
+                        continue
+
+                    # Not the same hash, we actually should update it, but for now we leave it for later.
+
+                    raise NotImplementedError
+
                 valency_result_data = (
 
                     dbValencyResultData(
@@ -10373,13 +10400,15 @@ class CreateValencyData(graphene.Mutation):
 
                     p['sentences'] = sentence_list
 
-            query = (
+            if instance_insert_list:
 
-                dbValencyInstanceData.__table__
-                    .insert()
-                    .values(instance_insert_list))
+                query = (
 
-            DBSession.execute(query)
+                    dbValencyInstanceData.__table__
+                        .insert()
+                        .values(instance_insert_list))
+
+                DBSession.execute(query)
 
             if debug_flag:
 
