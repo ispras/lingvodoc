@@ -22,6 +22,9 @@ import uuid
 import zipfile
 
 import graphene
+import graphene.types
+from graphql.language.ast import BooleanValue, IntValue, ListValue
+
 import lingvodoc.utils as utils
 from lingvodoc.utils.deletion import real_delete_entity
 from lingvodoc.utils.elan_functions import tgt_to_eaf
@@ -174,6 +177,8 @@ import lingvodoc.acl as acl
 import time
 import random
 import string
+
+import lingvodoc.models as models
 from lingvodoc.models import (
     DBSession,
     Dictionary as dbDictionary,
@@ -211,6 +216,8 @@ from pyramid.request import Request
 from lingvodoc.utils.proxy import try_proxy, ProxyPass
 
 import sqlalchemy
+import sqlalchemy.types
+
 from sqlalchemy import (
     func,
     and_,
@@ -582,16 +589,69 @@ class Query(graphene.ObjectType):
         graphene.Field(
             ObjectVal,
             perspective_id = LingvodocID(required = True),
-            offset = graphene.Int()))
+            offset = graphene.Int(),
+            verb_flag = graphene.Boolean(),
+            verb_prefix = graphene.String(),
+            case_flag = graphene.Boolean()))
 
     def resolve_valency_data(
         self, info, perspective_id, **args):
 
         offset = args.get('offset', 0)
 
+        verb_flag = args.get('verb_flag', False)
+        verb_prefix = args.get('verb_prefix', None)
+
+        case_flag = args.get('case_flag', False)
+
         log.debug(
             f'\nperspective_id: {perspective_id}'
             f'\noffset: {offset}')
+
+        # If required, getting case ordering mapping as a temporary table.
+
+        if case_flag:
+
+            case_list = [
+                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins',
+                'car', 'term', 'loc', 'prol',
+                'in', 'ill', 'el', 'egr']
+
+            case_table_name = (
+
+                'case_table_' +
+                str(uuid.uuid4()).replace('-', '_'))
+
+            case_value_str = (
+
+                ', '.join(
+                    f'(\'{case_str}\', {index})'
+                    for index, case_str in enumerate(case_list)))
+
+            DBSession.execute(f'''
+
+                create temporary table
+
+                {case_table_name} (
+                  case_str TEXT PRIMARY KEY,
+                  order_value INT NOT NULL)
+
+                on commit drop;
+
+                insert into {case_table_name}
+                values {case_value_str};
+
+                ''')
+
+            class tmpCaseOrder(models.Base):
+
+                __tablename__ = case_table_name
+
+                case_str = (
+                    sqlalchemy.Column(sqlalchemy.types.UnicodeText, primary_key = True))
+
+                order_value = (
+                    sqlalchemy.Column(sqlalchemy.types.Integer, nullable = False))
 
         instance_query = (
 
@@ -606,8 +666,50 @@ class Query(graphene.ObjectType):
                     dbValencySentenceData.result_id == dbValencyResultData.id,
                     dbValencyInstanceData.sentence_id == dbValencySentenceData.id))
 
+        if verb_prefix:
+
+            instance_query = (
+
+                instance_query.filter(
+                    dbValencyInstanceData.verb_lex.ilike(verb_prefix.replace('%', '\\%') + '%')))
+
         instance_count = (
             instance_query.count())
+
+        # Getting ready to sort by cases, if required.
+
+        if case_flag:
+
+            instance_query = (
+
+                instance_query.outerjoin(
+                    tmpCaseOrder,
+                    dbValencyInstanceData.case_str == tmpCaseOrder.case_str))
+
+        if verb_flag and case_flag:
+
+            instance_query = (
+
+                instance_query.order_by(
+                    dbValencyInstanceData.verb_lex,
+                    tmpCaseOrder.order_value,
+                    dbValencyInstanceData.id))
+
+        elif verb_flag:
+
+            instance_query = (
+
+                instance_query.order_by(
+                    dbValencyInstanceData.verb_lex,
+                    dbValencyInstanceData.id))
+
+        elif case_flag:
+
+            instance_query = (
+
+                instance_query.order_by(
+                    tmpCaseOrder.order_value,
+                    dbValencyInstanceData.id))
 
         instance_list = (
             instance_query.offset(offset).limit(25).all())
@@ -679,7 +781,13 @@ class Query(graphene.ObjectType):
                     .all())
 
         instance_list = [
-            {'id': instance.id, 'sentence_id': instance.sentence_id, 'index': instance.index}
+
+            {'id': instance.id,
+                'sentence_id': instance.sentence_id,
+                'index': instance.index,
+                'verb_lex': instance.verb_lex,
+                'case_str': instance.case_str}
+
             for instance in instance_list]
 
         sentence_list = [
@@ -696,12 +804,61 @@ class Query(graphene.ObjectType):
                 pprint.pformat(annotation_list, width = 192),
                 pprint.pformat(user_list, width = 192)))
 
-        return {
+        result_dict = {
             'instance_count': instance_count,
             'instance_list': instance_list,
             'sentence_list': sentence_list,
             'annotation_list': annotation_list,
             'user_list': user_list}
+
+        if verb_flag:
+
+            if verb_prefix:
+
+                verb_query = (
+
+                    DBSession
+
+                        .query(
+                            dbValencyInstanceData.verb_lex,
+                            dbValencyInstanceData.verb_lex.ilike(verb_prefix.replace('%', '\\%') + '%')))
+
+            else:
+
+                verb_query = (
+
+                    DBSession
+
+                        .query(
+                            dbValencyInstanceData.verb_lex))
+
+            verb_list = (
+
+                verb_query
+
+                    .filter(
+                        dbValencyResultData.perspective_client_id == perspective_id[0],
+                        dbValencyResultData.perspective_object_id == perspective_id[1],
+                        dbValencySentenceData.result_id == dbValencyResultData.id,
+                        dbValencyInstanceData.sentence_id == dbValencySentenceData.id)
+
+                    .distinct()
+
+                    .order_by(dbValencyInstanceData.verb_lex)
+
+                    .all())
+
+            if verb_prefix:
+
+                result_dict['verb_list'] = (
+                    [list(row) for row in verb_list])
+
+            else:
+
+                result_dict['verb_list'] = (
+                    [[row[0], True] for row in verb_list])
+
+        return result_dict
 
     def resolve_unstructured_data(self, info, id):
         return UnstructuredData(id = id)
@@ -10205,8 +10362,8 @@ class CreateValencyData(graphene.Mutation):
                             instance_insert_list.append({
                                 'sentence_id': valency_sentence_data.id,
                                 'index': instance['index'],
-                                'verb_lex': s[instance['location'][0]]['lex'],
-                                'case_str': instance['case']})
+                                'verb_lex': s[instance['location'][0]]['lex'].lower(),
+                                'case_str': instance['case'].lower()})
 
                         log.debug(
                             '\n' +
@@ -10267,10 +10424,34 @@ class CreateValencyData(graphene.Mutation):
 
 class SetValencyAnnotation(graphene.Mutation):
 
-    class Arguments:
+    class ValencyInstanceAnnotation(graphene.types.Scalar):
 
-        instance_id = graphene.Int(required = True)
-        annotation_value = graphene.Boolean(required = True)
+        @staticmethod
+        def identity(value):
+            return value
+
+        serialize = identity
+        parse_value = identity
+
+        @staticmethod
+        def parse_literal(ast):
+
+            if not isinstance(ast, ListValue) or len(ast.values) != 2:
+                return None
+
+            a_value, b_value = ast.values
+
+            if (not isinstance(a_value, IntValue) or
+                not isinstance(b_value, BooleanValue)):
+                return None
+
+            return [int(a_value.value), bool(b_value.value)]
+
+    class Arguments:
+        pass
+
+    Arguments.annotation_list = (
+        graphene.List(ValencyInstanceAnnotation, required = True))
 
     triumph = graphene.Boolean()
 
@@ -10289,27 +10470,35 @@ class SetValencyAnnotation(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can set valency annotations.'))
 
-            instance_id = args['instance_id']
-            annotation_value = args['annotation_value']
+            annotation_list = args['annotation_list']
 
             log.debug(
-                f'\ninstance_id: {instance_id}'
                 f'\nuser_id: {client.user_id}'
-                f'\nannotation_value: {annotation_value}')
+                f'\nannotation_list: {annotation_list}')
 
-            sql_str = '''
+            # NOTE:
+            #
+            # Directly formatting arguments in in general can be unsafe, but here it's ok because we are
+            # relying on GraphQL's argument validation.
+
+            value_list_str = (
+
+                ', '.join(
+                    '({}, {}, {})'.format(
+                        instance_id, client.user_id, 'true' if accepted else 'false')
+                    for instance_id, accepted in annotation_list))
+
+            sql_str = (
+
+                f'''
                 insert into
                 valency_annotation_data
-                values (:instance_id, :user_id, :annotation_value)
+                values {value_list_str}
                 on conflict on constraint valency_annotation_data_pkey
-                do update set accepted = :annotation_value;
-                '''
+                do update set accepted = excluded.accepted;
+                ''')
 
-            DBSession.execute(
-                sql_str, {
-                    'instance_id': instance_id,
-                    'user_id': client.user_id,
-                    'annotation_value': annotation_value})
+            DBSession.execute(sql_str)
 
             mark_changed(DBSession())
 

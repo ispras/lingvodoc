@@ -97,7 +97,7 @@ def downgrade():
 
         DROP INDEX valency_instance_data_sentence_id_index CASCADE;
         DROP INDEX valency_instance_data_verb_lex_index CASCADE;
-        DROP INDEX valency_instance_data_case_ord_index CASCADE;
+        DROP INDEX valency_instance_data_case_str_index CASCADE;
 
         DROP TABLE valency_result_data CASCADE;
         DROP TABLE valency_sentence_data CASCADE;
