@@ -1439,7 +1439,7 @@ class UndeleteDictionary(graphene.Mutation):
         settings = info.context["request"].registry.settings
 
         if 'desktop' in settings:
-            real_delete_dictionary(dbdictionary_obj, settings)
+            raise NotImplementedError
         else:
             undel_object(dbdictionary_obj, "undelete_dictionary", info.context.get('client_id'))
 

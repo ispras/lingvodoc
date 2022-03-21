@@ -286,6 +286,6 @@ class DeleteTranslationAtom(graphene.Mutation):
             str(dbtranslationatom.locale_id))
         caching.CACHE.rem(key)
         del_object(dbtranslationatom, "delete_translationatom", info.context.get('client_id'))
-        return UpdateTranslationAtom(translationatom=dbtranslationatom, triumph=True)
+        return DeleteTranslationAtom(translationatom=dbtranslationatom, triumph=True)
 
 
