@@ -619,9 +619,8 @@ class Query(graphene.ObjectType):
         if case_flag:
 
             case_list = [
-                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins',
-                'car', 'term', 'loc', 'prol',
-                'in', 'ill', 'el', 'egr']
+                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
+                'trans', 'sim', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
 
             case_table_name = (
 
@@ -10309,9 +10308,8 @@ class CreateValencyData(graphene.Mutation):
             order_case_set = (
 
                 set([
-                    'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins',
-                    'car', 'term', 'loc', 'prol',
-                    'in', 'ill', 'el', 'egr']))
+                    'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
+                    'comp', 'trans', 'sim', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']))
 
             data_case_set = set()
             instance_insert_list = []
@@ -10431,13 +10429,10 @@ class CreateValencyData(graphene.Mutation):
                         ensure_ascii = False,
                         indent = 2)
 
-            valency_case_set = (
-                set(['nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term']))
-
             log.debug(
                 f'\ndata_case_set:\n{data_case_set}'
                 f'\ndata_case_set - order_case_set:\n{data_case_set - order_case_set}'
-                f'\nvalency_case_set - data_case_set:\n{valency_case_set - data_case_set}')
+                f'\norder_case_set - data_case_set:\n{order_case_set - data_case_set}')
 
             return (
 

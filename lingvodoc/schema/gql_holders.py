@@ -893,6 +893,14 @@ class Metadata(graphene.ObjectType):
 
     license = graphene.String()
 
+    titleOfTheWork = graphene.String()
+    genre = graphene.String()
+    timeOfWriting = graphene.String()
+    quantitativeCharacteristic = graphene.String()
+    bibliographicDataOfTheSource = graphene.String()
+    translator = graphene.String()
+    bibliographicDataOfTheTranslation = graphene.String()
+
 
 # class LevelAndId(graphene.ObjectType):
 #     """
