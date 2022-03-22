@@ -590,23 +590,29 @@ class Query(graphene.ObjectType):
             ObjectVal,
             perspective_id = LingvodocID(required = True),
             offset = graphene.Int(),
+            limit = graphene.Int(),
             verb_flag = graphene.Boolean(),
             verb_prefix = graphene.String(),
             case_flag = graphene.Boolean()))
 
     def resolve_valency_data(
-        self, info, perspective_id, **args):
-
-        offset = args.get('offset', 0)
-
-        verb_flag = args.get('verb_flag', False)
-        verb_prefix = args.get('verb_prefix', None)
-
-        case_flag = args.get('case_flag', False)
+        self,
+        info,
+        perspective_id,
+        offset = 0,
+        limit = 25,
+        verb_flag = False,
+        verb_prefix = None,
+        case_flag = False,
+        **args):
 
         log.debug(
             f'\nperspective_id: {perspective_id}'
-            f'\noffset: {offset}')
+            f'\noffset: {offset}'
+            f'\nlimit: {limit}'
+            f'\nverb_flag: {verb_flag}'
+            f'\nverb_prefix: {verb_prefix}'
+            f'\ncase_flag: {case_flag}')
 
         # If required, getting case ordering mapping as a temporary table.
 
@@ -712,7 +718,11 @@ class Query(graphene.ObjectType):
                     dbValencyInstanceData.id))
 
         instance_list = (
-            instance_query.offset(offset).limit(25).all())
+
+            instance_query
+                .offset(offset)
+                .limit(limit)
+                .all())
 
         instance_id_set = (
             set(instance.id for instance in instance_list))
