@@ -90,7 +90,9 @@ def corpus_to_arx(
 
 def sentence_instance_gen(s):
 
-    cases = ['nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term']
+    cases = [
+        'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
+        'cns', 'com', 'lat', 'sim']
 
     v_ind = []
 
@@ -173,7 +175,12 @@ def sentences_arx_to_valencies(
         {'case': 'ill', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
         {'case': 'loc', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
         {'case': 'prol', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
-        {'case': 'term', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0}]
+        {'case': 'term', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'cns', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'com', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'lat', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+        {'case': 'sim', 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0},
+    ]
 
     for key, value in arx_data_dict.items():
 
@@ -232,6 +239,10 @@ def count_weights(dist, direct, jsonfile_verbs, verb_di_case_stat, add_anim, sel
             k_rate = 0
             n = 0
             for k in case.keys():
+
+                if verb_di_case_stat[case[k]] <= 0:
+                    continue
+
                 if k == 'case':
                     m = math.log(verb_di_case_stat['all_cases']/verb_di_case_stat[case[k]], 2)
     #                print('m\t', case[k], m)
@@ -284,7 +295,9 @@ def sentences_valencies_to_result(
     valence_data_list,
     verbose_flag = False):
 
-    cases = ['nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term']
+    cases = [
+        'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
+        'cns', 'com', 'lat', 'sim']
 
     case_counter = Counter()
 

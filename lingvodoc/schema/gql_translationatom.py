@@ -118,7 +118,19 @@ class CreateTranslationAtom(graphene.Mutation):
             if parent.marked_for_deletion:
                 raise ResponseError(message="Error: no such translationgist in the system.")
 
-            existing_atom = DBSession.query(dbTranslationAtom).filter_by(parent=parent, locale_id=locale_id).first()
+            existing_atom = (
+
+                DBSession
+
+                    .query(dbTranslationAtom)
+
+                    .filter_by(
+                        parent = parent,
+                        locale_id = locale_id,
+                        marked_for_deletion = False)
+                    
+                    .first())
+
             if existing_atom:
                 raise ResponseError(message="TranslationAtom with this locale already exists")
             dbtranslationatom = dbTranslationAtom(client_id=client_id,
