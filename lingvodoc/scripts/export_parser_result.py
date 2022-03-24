@@ -2,11 +2,17 @@
 # Standard library imports.
 
 import json
+import logging
 import pdb
 import pprint
 import re
 import requests
+
+import xml.dom as dom
 import xml.etree.ElementTree as ElementTree
+
+# Setting up logging.
+log = logging.getLogger(__name__)
 
 format_flag = True
 
@@ -149,11 +155,10 @@ def process_paragraph(paragraph_xml):
                 if (sub_element.tag != 'span' and
                     not sub_element.tag.endswith('}span')):
 
-                    raise NotImplementedError
+                    text_list.append(
+                        ''.join(sub_element.itertext()))
 
-                if len(list(sub_element)) > 0:
-
-                    raise NotImplementedError
+                    continue
 
                 sub_class_list = (
                     sub_element.attrib['class'].split())
@@ -163,8 +168,11 @@ def process_paragraph(paragraph_xml):
                     print(f'sub_class_list: {sub_class_list}')
                     raise NotImplementedError
 
+                sub_element_json = (
+                    json.loads(''.join(sub_element.itertext())))
+
                 ((approved_list if 'approved' in sub_class_list else other_list)
-                    .append(json.loads(sub_element.text)))
+                    .append(sub_element_json))
 
                 if sub_element.tail:
                     text_list.append(sub_element.tail)
@@ -191,7 +199,7 @@ def process_paragraph(paragraph_xml):
 
             return
 
-        # Just the text.
+        # Getting text, looking at subelements.
 
         if element.text:
             item_list.append(element.text)
@@ -243,7 +251,7 @@ def process_paragraph(paragraph_xml):
 
 def process_parser_result(
     content,
-    check_flag,
+    debug_flag,
     format_flag):
 
     paragraph_list = []
@@ -256,14 +264,29 @@ def process_parser_result(
     for paragraph_index, paragraph_xml in (
         enumerate(root.iter('{http://www.w3.org/1999/xhtml}p'))):
 
+        if debug_flag:
+
+            paragraph_str = (
+
+                dom.minidom
+                    .parseString(ElementTree.tostring(paragraph_xml))
+                    .toprettyxml(indent = '  '))
+
+            with open(
+                '__paragraph__.xml', 'w') as paragraph_file:
+
+                paragraph_file.write(paragraph_str)
+
         paragraph_item_list, check_list, check_flag = (
             process_paragraph(paragraph_xml))
 
         if not paragraph_item_list:
             continue
 
-        if check_flag:
-            print(check_list)
+        if debug_flag:
+
+            log.debug(
+                '\ncheck_list:\n' + str(check_list))
 
         paragraph_text = (
 
@@ -285,6 +308,17 @@ def process_parser_result(
                 if isinstance(item, str):
 
                     token_str = re.sub(r'\s+', '', item)
+
+                    if token_str:
+
+                        token_list.append({'token': token_str})
+                        variant_list.append({'token': token_str})
+
+                # Parsed token without variants.
+
+                elif not item[1] and not item[2]:
+
+                    token_str = re.sub(r'\s+', '', item[0])
 
                     if token_str:
 
@@ -427,8 +461,8 @@ def main_processed():
 
                     process_parser_result(
                         parser_result['content'],
-                        check_flag,
-                        format_flag))
+                        debug_flag = True,
+                        format_flag = format_flag))
 
                 # Ok, got another parser result.
 

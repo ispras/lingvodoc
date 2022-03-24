@@ -9936,7 +9936,7 @@ class Valency(graphene.Mutation):
 
                     export_parser_result.process_parser_result(
                         parser_result.content,
-                        check_flag = debug_flag,
+                        debug_flag = debug_flag,
                         format_flag = True))
 
                 entry_info_dict['parser_result_list'].append({
