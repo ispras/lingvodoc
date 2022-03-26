@@ -95,7 +95,7 @@ def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex.dbObject = cur_lexical_entry
     return lex
 
-def entries_with_entities(lexes, accept, delete, mode, publish):
+def entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = True):
     if mode == 'debug':
         return [gql_lexicalentry(lex, None) for lex in lexes]
     lex_id_to_obj = dict()
@@ -116,8 +116,9 @@ def entries_with_entities(lexes, accept, delete, mode, publish):
     entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                       publish=publish,
                                                       accept=accept,
-                                                      delete=delete)
-    entities_list = list([x for x in entities])
+                                                      delete=delete,
+                                                      check_perspective=check_perspective)
+    entities_list = list(entities)
     ent_iter = itertools.chain(entities_list)
     result_lexes = list()
     for lex_ids, entity_with_published in itertools.groupby(ent_iter, key=group_by_lex):
@@ -128,7 +129,7 @@ def entries_with_entities(lexes, accept, delete, mode, publish):
         if (lexical_entry.client_id, lexical_entry.object_id) == lex_ids:
             result_lexes.append((lexical_entry, gql_entities_list))
     for new_lex in lex_id_to_obj:
-        result_lexes.append((lex_id_to_obj[new_lex], None))
+        result_lexes.append((lex_id_to_obj[new_lex], []))
     lexical_entries = [gql_lexicalentry(cur_lexical_entry=lex[0], cur_entities=lex[1]) for lex in result_lexes]
 
     return lexical_entries
@@ -660,7 +661,8 @@ class DictionaryPerspective(LingvodocObjectType):
         #       'яяяяяя')],
         #     else_=dbEntity.content))) \
         #     .group_by(dbLexicalEntry)
-        lexical_entries = entries_with_entities(lexes, accept, delete, mode, publish)
+        lexical_entries = (
+            entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = False))
 
         # If we were asked for specific lexical entries, we try to return them in creation order.
 

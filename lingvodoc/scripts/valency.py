@@ -92,7 +92,7 @@ def sentence_instance_gen(s):
 
     cases = [
         'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
-        'cns', 'comp', 'com', 'lat', 'sim', 'ad', 'trans', 'allat', 'ab', 'in']
+        'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
 
     v_ind = []
 
@@ -164,7 +164,7 @@ def sentences_arx_to_valencies(
 
     cases = [
         'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
-        'cns', 'comp', 'com', 'lat', 'sim', 'ad', 'trans', 'allat', 'ab', 'in']
+        'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
 
     case_template_list = [
         {'case': case, 'anim': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, '-1': 0, '-2': 0, '-3': 0, '-4': 0, '-5': 0}
@@ -285,7 +285,7 @@ def sentences_valencies_to_result(
 
     cases = [
         'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
-        'cns', 'comp', 'com', 'lat', 'sim', 'ad', 'trans', 'allat', 'ab', 'in']
+        'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
 
     case_counter = Counter()
 

@@ -620,7 +620,7 @@ class Query(graphene.ObjectType):
 
             case_list = [
                 'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
-                'trans', 'sim', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
+                'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
 
             case_table_name = (
 
@@ -714,6 +714,13 @@ class Query(graphene.ObjectType):
 
                 instance_query.order_by(
                     tmpCaseOrder.order_value,
+                    dbValencyInstanceData.id))
+
+        else:
+
+            instance_query = (
+
+                instance_query.order_by(
                     dbValencyInstanceData.id))
 
         instance_list = (
@@ -10309,7 +10316,8 @@ class CreateValencyData(graphene.Mutation):
 
                 set([
                     'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
-                    'comp', 'trans', 'sim', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']))
+                    'comp', 'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr', 'lat',
+                    'allat']))
 
             data_case_set = set()
             instance_insert_list = []
