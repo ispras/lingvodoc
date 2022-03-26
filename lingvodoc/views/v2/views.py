@@ -1258,12 +1258,22 @@ def graphql(request):
             request.response.status = HTTPBadRequest.code
             return {'errors': [{"message": 'wrong content type'}]}
         if not batch:
+            t_start_real, t_start_process = (time.time(), time.process_time())
             result = schema.execute(request_string,
                                     context_value=Context({
                                         'client_id': client_id,
                                         'locale_id': locale_id,
                                         'request': request}),
                                     variable_values=variable_values)
+            t_end_real, t_end_process = (time.time(), time.process_time())
+            t_elapsed_real = t_end_real - t_start_real
+            t_elapsed_process = t_end_process - t_start_process
+            log.debug(
+                '\nschema.execute() elapsed time real, process: '
+                f'{t_elapsed_real:.6f}s, {t_elapsed_process:.6f}s')
+            request.response.headerlist.append((
+                'Server-Timing',
+                f'real;dur={t_elapsed_real:.6f}, process;dur={t_elapsed_process:.6f}'))
             if result.errors:
                 for error in result.errors:
                     if hasattr(error, 'original_error'):
@@ -1274,7 +1284,10 @@ def graphql(request):
             if result.errors:
                 sp.rollback()
                 return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
-            return {"data": result.data}
+            return {
+                'data': result.data,
+                'time_real': t_elapsed_real,
+                'time_process': t_elapsed_process}
 
     except ProxyPass as e:
         return e.response_body
