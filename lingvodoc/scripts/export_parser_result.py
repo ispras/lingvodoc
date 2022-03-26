@@ -11,6 +11,8 @@ import requests
 import xml.dom as dom
 import xml.etree.ElementTree as ElementTree
 
+import bs4
+
 # Setting up logging.
 log = logging.getLogger(__name__)
 
@@ -117,9 +119,42 @@ def main_raw():
             ensure_ascii = False,
             indent = 2)
 
-# Processing paragraph.
+def process_item_list(item_list):
 
-def process_paragraph(paragraph_xml):
+    source_item_list = item_list
+    item_list = []
+
+    for item in source_item_list:
+
+        if (isinstance(item, str) and
+            item_list and
+            isinstance(item_list[-1], str)):
+
+            item_list[-1] += item
+
+        else:
+
+            item_list.append(item)
+
+    if (item_list and
+        isinstance(item_list[0], str)):
+
+        item_list[0] = item_list[0].strip()
+
+        if not item_list[0]:
+            item_list.pop(0)
+
+    if (item_list and
+        isinstance(item_list[-1], str)):
+
+        item_list[-1] = item_list[-1].strip()
+
+        if not item_list[-1]:
+            item_list.pop(-1)
+
+    return item_list
+
+def process_paragraph_et(paragraph_xml):
 
     item_list = []
 
@@ -216,50 +251,120 @@ def process_paragraph(paragraph_xml):
 
     # Post-processing by joining strings and removing unnecessary whitespace.
 
-    source_item_list = item_list
-    item_list = []
-
-    for item in source_item_list:
-
-        if (isinstance(item, str) and
-            item_list and
-            isinstance(item_list[-1], str)):
-
-            item_list[-1] += item
-
-        else:
-
-            item_list.append(item)
-
-    if (item_list and
-        isinstance(item_list[0], str)):
-
-        item_list[0] = item_list[0].strip()
-
-        if not item_list[0]:
-            item_list.pop(0)
-
-    if (item_list and
-        isinstance(item_list[-1], str)):
-
-        item_list[-1] = item_list[-1].strip()
-
-        if not item_list[-1]:
-            item_list.pop(-1)
+    item_list = (
+        process_item_list(item_list))
 
     return item_list, check_list, check_flag
 
-def process_parser_result(
-    content,
-    debug_flag,
-    format_flag):
+def process_paragraph_bs(
+    paragraph_html,
+    debug_flag):
 
-    paragraph_list = []
-    token_count = 0
+    item_list = []
+
+    check_list = []
+    check_flag = False
+
+    def f(element):
+        """
+        Recursive element processing.
+        """
+
+        if debug_flag:
+            log.debug('\n' + element.prettify())
+
+        nonlocal check_flag
+
+        # Parsing result.
+
+        if element.name == 'span':
+
+            class_list = element.attrs['class']
+
+            text_list = []
+
+            approved_list = []
+            other_list = []
+
+            # Looking through variants.
+
+            for content in element.children:
+
+                if isinstance(content, bs4.NavigableString):
+
+                    text_list.append(str(content))
+                    continue
+
+                elif not isinstance(content, bs4.Tag):
+
+                    continue
+                
+                if (content.name != 'span'):
+
+                    text_list.append(content.get_text())
+                    continue
+
+                sub_class_list =  content.attrs['class']
+
+                if 'result' not in sub_class_list:
+                    
+                    print(f'sub_class_list: {sub_class_list}')
+                    raise NotImplementedError
+
+                sub_element_json = (
+                    json.loads(content.get_text()))
+
+                ((approved_list if 'approved' in sub_class_list else other_list)
+                    .append(sub_element_json))
+
+            # Saving gathered info.
+
+            result_text = ''.join(text_list)
+
+            if ('verified' not in class_list or
+                len(approved_list) != 1):
+
+                check_flag = True
+                check_list.append([result_text])
+
+            else:
+
+                check_list.append(result_text)
+
+            item_list.append(
+                [result_text, approved_list, other_list])
+
+            if element.tail:
+                item_list.append(element.tail)
+
+            return
+
+        # Getting text, looking at subelements.
+
+        for content in element.children:
+
+            if isinstance(content, bs4.NavigableString):
+                item_list.append(str(content))
+
+            elif isinstance(content, bs4.Tag):
+                f(content)
+
+    # Processing paragraph HTML.
+
+    f(paragraph_html)
+
+    # Post-processing by joining strings and removing unnecessary whitespace.
+
+    item_list = (
+        process_item_list(item_list))
+
+    return item_list, check_list, check_flag
+
+def iterate_element_tree(
+    content,
+    debug_flag):
 
     root = ElementTree.fromstring(content)
-
-    # Processing each paragraph.
 
     for paragraph_index, paragraph_xml in (
         enumerate(root.iter('{http://www.w3.org/1999/xhtml}p'))):
@@ -277,8 +382,57 @@ def process_parser_result(
 
                 paragraph_file.write(paragraph_str)
 
-        paragraph_item_list, check_list, check_flag = (
-            process_paragraph(paragraph_xml))
+        yield (
+            paragraph_index,
+            process_paragraph_et(paragraph_xml))
+
+def iterate_beautiful_soup(
+    content,
+    debug_flag):
+
+    soup = bs4.BeautifulSoup(content, 'html.parser')
+
+    if debug_flag:
+
+        with open(
+            '__content__.html', 'w') as content_file:
+
+            content_file.write(
+                soup.prettify())
+
+    for paragraph_index, paragraph_html in (
+        enumerate(soup.find_all('p'))):
+
+        if debug_flag:
+
+            with open(
+                '__paragraph__.html', 'w') as paragraph_file:
+
+                paragraph_file.write(
+                    paragraph_html.prettify())
+
+        yield (
+            paragraph_index,
+            process_paragraph_bs(
+                paragraph_html, debug_flag))
+
+def process_content(
+    content,
+    debug_flag,
+    format_flag,
+    iterate_f):
+
+    paragraph_list = []
+    token_count = 0
+
+    # Processing each paragraph.
+
+    for (
+        paragraph_index,
+        (paragraph_item_list, check_list, check_flag)) in (
+
+        iterate_f(
+            content, debug_flag)):
 
         if not paragraph_item_list:
             continue
@@ -307,7 +461,7 @@ def process_parser_result(
 
                 if isinstance(item, str):
 
-                    token_str = re.sub(r'\s+', '', item)
+                    token_str = re.sub(r'\s+', ' ', item.strip())
 
                     if token_str:
 
@@ -318,7 +472,7 @@ def process_parser_result(
 
                 elif not item[1] and not item[2]:
 
-                    token_str = re.sub(r'\s+', '', item[0])
+                    token_str = re.sub(r'\s+', ' ', item[0].strip())
 
                     if token_str:
 
@@ -374,9 +528,42 @@ def process_parser_result(
                 'tokens': approved_list,
                 'variants': variant_list}
 
+        if debug_flag:
+
+            log.debug(
+                '\nparagraph_dict:\n' +
+                pprint.pformat(paragraph_dict, width = 192))
+
         paragraph_list.append(paragraph_dict)
 
     return paragraph_list, token_count
+
+def process_parser_result(
+    content,
+    debug_flag,
+    format_flag):
+
+    try:
+
+        return (
+
+            process_content(
+                content,
+                debug_flag,
+                format_flag,
+                iterate_element_tree))
+
+    except:
+
+        pass
+
+    return (
+
+        process_content(
+            content,
+            debug_flag,
+            format_flag,
+            iterate_beautiful_soup))
 
 def main_processed():
     """
