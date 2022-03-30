@@ -154,7 +154,9 @@ def process_item_list(item_list):
 
     return item_list
 
-def process_paragraph_et(paragraph_xml):
+def process_paragraph_et(
+    paragraph_xml,
+    debug_flag):
 
     item_list = []
 
@@ -166,11 +168,29 @@ def process_paragraph_et(paragraph_xml):
         Recursive element processing.
         """
 
+        if debug_flag:
+
+            element_str = (
+
+                ElementTree.tostring(
+                    element, encoding = 'unicode'))
+
+            if element.tail:
+                element_str = element_str[ : -len(element.tail) ]
+
+            log.debug(
+                '\n' + 
+                dom.minidom
+                    .parseString(element_str)
+                    .toprettyxml(indent = '  '))
+
         nonlocal check_flag
 
         # Parsing result.
 
-        if element.tag == 'span' or element.tag.endswith('}span'):
+        if (element.tag == 'span' or
+            element.tag.endswith('}span') or
+            element.tag.endswith(':span')):
 
             class_list = (
                 element.attrib['class'].split())
@@ -188,7 +208,8 @@ def process_paragraph_et(paragraph_xml):
             for sub_element in element:
                 
                 if (sub_element.tag != 'span' and
-                    not sub_element.tag.endswith('}span')):
+                    not sub_element.tag.endswith('}span') and
+                    not element.tag.endswith(':span')):
 
                     text_list.append(
                         ''.join(sub_element.itertext()))
@@ -198,9 +219,13 @@ def process_paragraph_et(paragraph_xml):
                 sub_class_list = (
                     sub_element.attrib['class'].split())
 
-                if 'result' not in sub_class_list:
+                if ('result' not in sub_class_list and
+                    sub_element.attrib.keys() != {'class', 'id'}):
                     
-                    print(f'sub_class_list: {sub_class_list}')
+                    log.debug(
+                        f'\nsub_class_list: {sub_class_list}'
+                        f'\nsub_element.attrib.keys(): {sub_element.attrib.keys()}')
+
                     raise NotImplementedError
 
                 sub_element_json = (
@@ -366,6 +391,13 @@ def iterate_element_tree(
 
     root = ElementTree.fromstring(content)
 
+    if debug_flag:
+
+        with open(
+            '__content__.xml', 'w') as content_file:
+
+            content_file.write(content)
+
     for paragraph_index, paragraph_xml in (
         enumerate(root.iter('{http://www.w3.org/1999/xhtml}p'))):
 
@@ -384,7 +416,8 @@ def iterate_element_tree(
 
         yield (
             paragraph_index,
-            process_paragraph_et(paragraph_xml))
+            process_paragraph_et(
+                paragraph_xml, debug_flag))
 
 def iterate_beautiful_soup(
     content,
