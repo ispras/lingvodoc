@@ -731,7 +731,7 @@ class Query(graphene.ObjectType):
                     dbValencyInstanceData.id == accept_subquery.c.instance_id))
 
             order_by_list.append(
-                func.coalesce(accept_subquery.c.accept_value) != accept_value)
+                func.coalesce(accept_subquery.c.accept_value, False) != accept_value)
 
         order_by_list.append(
             dbValencyInstanceData.id)
