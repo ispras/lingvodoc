@@ -591,9 +591,10 @@ class Query(graphene.ObjectType):
             perspective_id = LingvodocID(required = True),
             offset = graphene.Int(),
             limit = graphene.Int(),
-            verb_flag = graphene.Boolean(),
             verb_prefix = graphene.String(),
-            case_flag = graphene.Boolean()))
+            case_flag = graphene.Boolean(),
+            accept_value = graphene.Boolean(),
+            debug_flag = graphene.Boolean()))
 
     def resolve_valency_data(
         self,
@@ -601,18 +602,23 @@ class Query(graphene.ObjectType):
         perspective_id,
         offset = 0,
         limit = 25,
-        verb_flag = False,
         verb_prefix = None,
         case_flag = False,
+        accept_value = None,
+        debug_flag = False,
         **args):
 
         log.debug(
             f'\nperspective_id: {perspective_id}'
             f'\noffset: {offset}'
             f'\nlimit: {limit}'
-            f'\nverb_flag: {verb_flag}'
             f'\nverb_prefix: {verb_prefix}'
-            f'\ncase_flag: {case_flag}')
+            f'\ncase_flag: {case_flag}'
+            f'\naccept_value: {accept_value}'
+            f'\ndebug_flag: {debug_flag}')
+
+        verb_flag = verb_prefix is not None
+        accept_flag = accept_value is not None
 
         # If required, getting case ordering mapping as a temporary table.
 
@@ -681,7 +687,14 @@ class Query(graphene.ObjectType):
         instance_count = (
             instance_query.count())
 
-        # Getting ready to sort by cases, if required.
+        # Getting ready to sort, if required.
+
+        order_by_list = []
+
+        if verb_flag:
+
+            order_by_list.append(
+                dbValencyInstanceData.verb_lex)
 
         if case_flag:
 
@@ -691,44 +704,54 @@ class Query(graphene.ObjectType):
                     tmpCaseOrder,
                     dbValencyInstanceData.case_str == tmpCaseOrder.case_str))
 
-        if verb_flag and case_flag:
+            order_by_list.append(
+                tmpCaseOrder.order_value)
+
+        if accept_flag:
+
+            accept_subquery = (
+
+                DBSession
+
+                    .query(
+                        dbValencyAnnotationData.instance_id,
+
+                        func.bool_or(dbValencyAnnotationData.accepted)
+                            .label('accept_value'))
+
+                    .group_by(
+                        dbValencyAnnotationData.instance_id)
+
+                    .subquery())
 
             instance_query = (
 
-                instance_query.order_by(
-                    dbValencyInstanceData.verb_lex,
-                    tmpCaseOrder.order_value,
-                    dbValencyInstanceData.id))
+                instance_query.outerjoin(
+                    accept_subquery,
+                    dbValencyInstanceData.id == accept_subquery.c.instance_id))
 
-        elif verb_flag:
+            order_by_list.append(
+                func.coalesce(accept_subquery.c.accept_value) != accept_value)
 
-            instance_query = (
+        order_by_list.append(
+            dbValencyInstanceData.id)
 
-                instance_query.order_by(
-                    dbValencyInstanceData.verb_lex,
-                    dbValencyInstanceData.id))
+        # Getting annotation instances and related info.
 
-        elif case_flag:
-
-            instance_query = (
-
-                instance_query.order_by(
-                    tmpCaseOrder.order_value,
-                    dbValencyInstanceData.id))
-
-        else:
-
-            instance_query = (
-
-                instance_query.order_by(
-                    dbValencyInstanceData.id))
-
-        instance_list = (
+        instance_query = (
 
             instance_query
+                .order_by(*order_by_list)
                 .offset(offset)
-                .limit(limit)
-                .all())
+                .limit(limit))
+
+        if debug_flag:
+
+            log.debug(
+                '\n' +
+                str(instance_query.statement.compile(compile_kwargs = {'literal_binds': True})))
+
+        instance_list = instance_query.all()
 
         instance_id_set = (
             set(instance.id for instance in instance_list))
@@ -826,6 +849,8 @@ class Query(graphene.ObjectType):
             'sentence_list': sentence_list,
             'annotation_list': annotation_list,
             'user_list': user_list}
+
+        # Getting all verbs, without filtering, if required.
 
         if verb_flag:
 
