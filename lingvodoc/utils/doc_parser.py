@@ -73,6 +73,8 @@ def insert_parser_output_to_text(text, parser_output):
 
 def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
 
+    print(dedoc_output, flush=True)
+
     wordlist = list()
     tokenizer = RegexpTokenizer(r'(?!\w+(?:-\w+)+)\w+|\w+(?:-\w+)+')
     composite_words = dict()
@@ -119,7 +121,7 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
 
 def apertium_parser(dedoc_output, apertium_path, lang):
 
-    def reformat(biltrans_filename="", morph_filename="", bilingual=True):
+    def reformat(biltrans_filename="", morph_filename="", multi_filename="", bilingual=False, multi=False):
 
         skip_list = ["guio", "cm", "sent", "lpar", "rpar", "lquot", "rquot"]
 
@@ -164,8 +166,15 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
         if not bilingual:
 
+            if multi:
+                multi_file = open(multi_filename, "r", encoding="UTF-8")
+                multi = multi_file.read()
+                multi_elements = re.findall(r"\^(.+?)\$", multi)
+
+            i = -1
             for morph_element in morph_elements:
 
+                i += 1
                 if len(morph_element) == 0 or to_skip(morph_element):
                     continue
 
@@ -181,10 +190,15 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
                 for lex_and_gr in morph_slash_split_list[1:]:
                     new_lex = "lex=" + "\"" + lex_and_gr[:lex_and_gr.find("<")].lower() + "\""
-                    new_gr = add_gr(gr(lex_and_gr))
+                    if not multi:
+                        new_gr = add_gr(gr(lex_and_gr))
+                    else:
+                        new_gr = add_gr(gr(multi_elements[i]))
                     new_variant = add_variant(new_lex, new_gr, " trans_ru=\"\"")
                     if new.find(new_variant) == -1:
                         new += new_variant
+                    if multi:
+                        break
 
                 new += orig
                 new += "</w>"
@@ -276,8 +290,17 @@ def apertium_parser(dedoc_output, apertium_path, lang):
     else:
         bilingual = False
 
+    if lang in ['sah']:
+        multi = True
+    else:
+        multi = False
+
     if bilingual:
         biltrans_file_id, biltrans_filename = tempfile.mkstemp()
+
+    if multi:
+        multi_file_id, multi_filename = tempfile.mkstemp()
+
     morph_file_id, morph_filename = tempfile.mkstemp()
 
     dedoc_output_without_tags = re.sub(r"(<.*?>)|&nbsp", "", dedoc_output)
@@ -298,7 +321,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
     if lang == 'sah':
         s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-sah sah-morph >> " + morph_filename)
-        s2 = s1
+        s2 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-sah sah-multi >> " + multi_filename)
 
     if lang == 'bak':
         s1 = os.system("echo \"" + dedoc_output_without_tags + "\" | apertium -d " + apertium_path + "/apertium-bak bak-morph >> " + morph_filename)
@@ -308,10 +331,13 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         raise ValueError("An error occured during Apertium parser process running")
 
     if bilingual:
-        parser_output = reformat(biltrans_filename=biltrans_filename, morph_filename=morph_filename)
+        parser_output = reformat(biltrans_filename=biltrans_filename, morph_filename=morph_filename, bilingual=True)
         os.remove(biltrans_filename)
+    elif multi:
+        parser_output = reformat(multi_filename=multi_filename, morph_filename=morph_filename, multi=True)
+        os.remove(multi_filename)
     else:
-        parser_output = reformat(morph_filename=morph_filename, bilingual=False)
+        parser_output = reformat(morph_filename=morph_filename)
     os.remove(morph_filename)
 
     return insert_parser_output_to_text(dedoc_output, parser_output)
