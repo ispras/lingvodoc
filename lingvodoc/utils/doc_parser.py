@@ -73,8 +73,6 @@ def insert_parser_output_to_text(text, parser_output):
 
 def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
 
-    print(dedoc_output, flush=True)
-
     wordlist = list()
     tokenizer = RegexpTokenizer(r'(?!\w+(?:-\w+)+)\w+|\w+(?:-\w+)+')
     composite_words = dict()
