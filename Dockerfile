@@ -30,4 +30,5 @@ RUN \
   pip3 install alembic gunicorn==19.7.1
 RUN \
   locale-gen en_US.UTF-8 && update-locale && \
-  apt install -y lttoolbox apertium-dev apertium-lex-tools hfst libhfst-dev cg3-dev
+  ( curl -sS https://apertium.projectjj.com/apt/install-nightly.sh | bash ) && \
+  apt install -y lttoolbox apertium-dev apertium-lex-tools apertium-separable hfst libhfst-dev cg3 cg3-dev autoconf
