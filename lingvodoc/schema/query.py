@@ -8934,10 +8934,10 @@ class XlsxBulkDisconnect(graphene.Mutation):
 
             request = info.context.request
 
-            if '0' not in request.POST:
+            if '1' not in request.POST:
                 return ResponseError('XLSX file is required.')
 
-            multipart = request.POST.pop('0')
+            multipart = request.POST.pop('1')
 
             xlsx_file_name = multipart.filename
             xlsx_file = multipart.file
@@ -9622,10 +9622,10 @@ class Docx2Eaf(graphene.Mutation):
 
             request = info.context.request
 
-            if '0' not in request.POST:
+            if '1' not in request.POST:
                 return ResponseError('.docx file is required.')
 
-            multipart = request.POST.pop('0')
+            multipart = request.POST.pop('1')
 
             docx_file_name = multipart.filename
             docx_file = multipart.file

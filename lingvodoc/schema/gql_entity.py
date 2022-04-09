@@ -318,7 +318,7 @@ class CreateEntity(graphene.Mutation):
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-            blob = info.context.request.POST.pop("0")
+            blob = info.context.request.POST.pop("1")
             filename=blob.filename
             content = blob.file.read()
             #filename=

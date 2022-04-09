@@ -1189,18 +1189,18 @@ def graphql(request):
             if not data:
                 return {'errors': [{"message": 'empty request'}]}
             elif not "operations" in data:
-                return {'errors': [{"message": 'operations key not nound'}]}
+                return {'errors': [{"message": 'operations key not found'}]}
             elif not "query" in data["operations"]:
-                return {'errors': [{"message": 'query key not nound in operations'}]}
-            elif not "0" in data:
-                return {'errors': [{"message": '0 key not nound'}]}
+                return {'errors': [{"message": 'query key not found in operations'}]}
+            elif not "1" in data:
+                return {'errors': [{"message": '1 key not found'}]}
 
             request_string = request.POST.pop("operations")
             request_string = request_string.rstrip()
             # body = request_string.decode('utf-8')
             json_req = json.loads(request_string)
             if "query" not in json_req:
-                return {'errors': [{"message": 'query key not nound'}]}
+                return {'errors': [{"message": 'query key not found'}]}
             request_string = json_req["query"]
             request_string = request_string.rstrip()
             if "variables" in json_req:
@@ -1227,14 +1227,14 @@ def graphql(request):
                 batch = True
             if not batch:
                 if "query" not in json_req:
-                    return {'errors': [{"message": 'query key not nound'}]}
+                    return {'errors': [{"message": 'query key not found'}]}
                 request_string = json_req["query"]
                 if "variables" in json_req:
                     variable_values = json_req["variables"]
             else:
                 for query in json_req:
                     if "query" not in query:
-                        return {'errors': [{"message": 'query key not nound'}]}
+                        return {'errors': [{"message": 'query key not found'}]}
                     request_string = query["query"]
                     if "variables" in query:
                         variable_values = query["variables"]
