@@ -614,17 +614,21 @@ def get_user_info(request):  # tested
     for organization in user.organizations:
         organizations += [{'organization_id':organization.id}]
     response['organizations'] = organizations
-    roles = list()
-    for group in user.groups:
-        role = dict()
-        role['name'] = group.parent.name
-        role['subject_override'] = group.subject_override
-        if group.subject_client_id:
-            role['subject_client_id'] = group.subject_client_id
-        if group.subject_object_id:
-            role['subject_object_id'] = group.subject_object_id
-        roles.append(role)
-    response['roles'] = roles
+
+    if request.params.get('roles'):
+
+        roles = list()
+        for group in user.groups:
+            role = dict()
+            role['name'] = group.parent.name
+            role['subject_override'] = group.subject_override
+            if group.subject_client_id:
+                role['subject_client_id'] = group.subject_client_id
+            if group.subject_object_id:
+                role['subject_object_id'] = group.subject_object_id
+            roles.append(role)
+        response['roles'] = roles
+
     request.response.status = HTTPOk.code
     return response
 
