@@ -112,25 +112,49 @@ def csv_to_columns(path, url):
                     .read()
                     .decode('utf-8-sig', 'ignore'))
 
+        split_count = 0
+
         lines = list()
         for x in csv_file.split("\n"):
+
             if not x:
                 continue
-            lines.append(x.rstrip().split('#####'))
+
+            value_list = x.rstrip().split('#####')
+            split_count += len(value_list) - 1
+
+            lines.append(value_list)
             #n = len(x.rstrip().split('|'))
+
+        # If we hadn't seen the special Starling separator '#####', we assume that it's actually not
+        # Starling.
+        #
+        # In case it's Starling with a single column, we assume that in that case we can process it as a
+        # standard CSV file no problem.
+
+        if split_count <= 0:
+            raise ValueError()
+
         #lines = [x.rstrip().split('|') for x in csv_file.split("\n") if x.rstrip().split('|')]
-        column_dict = dict()
+        column_dict = collections.defaultdict(list)
         columns = lines[0]
 
         for line in lines[1:]:
+
             if len(line) != len(columns):
                 continue
+
             col_num = 0
+
             for column in columns:
-                if not column in column_dict:
-                    column_dict[column] = []
-                column_dict[column].append(line[col_num])
+
+                column_dict[f'{col_num}:{column}'].append(line[col_num])
+
+                if column == 'NUMBER':
+                    column_dict[column].append(line[col_num])
+
                 col_num += 1
+
         # hack #1
 
         column_dict["NUMBER"] = [int(x) for x in column_dict["NUMBER"]] #list(range(1, len(column_dict["NUMBER"]) + 1))
@@ -180,18 +204,19 @@ def csv_to_columns(path, url):
             header.strip() for header in header_list]
 
         column_dict = {
-            header: [] for header in header_list}
+            f'{header_index}:{header}': []
+            for header_index, header in enumerate(header_list)}
 
         column_dict['NUMBER'] = []
 
         # BAD HACK, just mocking up a 'NUMBER' column based on row indices.
 
-        for index, row in enumerate(row_list[1:]):
+        for row_index, row in enumerate(row_list[1:]):
 
-            for column, value in zip(header_list, row):
-                column_dict[column].append(value)
+            for column_index, value in enumerate(row):
+                column_dict[f'{column_index}:{header_list[column_index]}'].append(value)
 
-            column_dict['NUMBER'].append(index)
+            column_dict['NUMBER'].append(row_index)
 
         csv_file.close()
 
@@ -529,7 +554,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
                 # perspective:field_id
 
-                fields_fix = list()
+                fields_fix = set()
                 for field in fields:
                     starling_type = field.get("starling_type")
                     field_id = tuple(field.get("field_id"))
@@ -540,7 +565,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             keep_field_dict[blob_id][field_id] = starling_name
                             continue
                         else:
-                            fields_fix.append(field_id)
+                            fields_fix.add(field_id)
                         persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
                                          parent_id=perspective_id,
                                          field_id=field_id,
@@ -557,7 +582,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             keep_field_dict[blob_id][field_id] = starling_name
                             continue
                         else:
-                            fields_fix.append(field_id)
+                            fields_fix.add(field_id)
                         # copy
                         persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
                                          parent_id=perspective_id,
