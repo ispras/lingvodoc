@@ -108,41 +108,71 @@ class CreateUserBlob(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, info, **args):
+
+        client_id = info.context.get('client_id')
+        client = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+        if not client:
+            return ResponseError('Only signed in users can upload files.')
+
+        user = DBSession.query(dbUser).filter_by(id = client.user_id).first()
+
+        if not user:
+            return ResponseError(f'Invalid user id {client.user_id}.')
+
+        if not user.is_active and user.id != 1:
+            return ResponseError('Inactive non-administrator users can\'t upload files.')
+
+        user_for_blob = user
+
         id = args.get('id')
-        client_id = id[0] if id else info.context["client_id"]
+
+        if id and id[0] != client_id:
+
+            client_id = id[0]
+            client_args = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+            if not client_args:
+                return ResponseError(f'Invalid client id {client_id}.')
+
+            if client_args.user_id != client.user_id:
+
+                if user.id != 1:
+                    return ResponseError('Non-administrator users can\'t upload files for other users.')
+
+                user_args = DBSession.query(dbUser).filter_by(id = client_args.user_id).first()
+
+                if not user_args:
+                    return ResponseError(f'Invalid user id {client_args.user_id}.')
+
+                user_for_blob = user_args
+
         object_id = id[1] if id else None
         
         if not "1" in info.context.request.POST:
             raise ResponseError(message="file not found")
+
         multiparted = info.context.request.POST.pop("1")
-        # multiparted = info.context.request.POST.pop("opearations")
         filename = multiparted.filename
-        input_file = multiparted.file#multiparted.file
+        input_file = multiparted.file
 
         class Object(object):
             pass
 
         blob = Object()
         blob.client_id = client_id
-        client = DBSession.query(dbClient).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         #if args.get("data_type"):
         blob.data_type = args.get("data_type")
 
         blob.filename = filename
 
-
-
-        current_user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-
         blob_object = dbUserBlobs(object_id=object_id,
                                 client_id=blob.client_id,
                                 name=filename,
                                 data_type=blob.data_type,
-                                user_id=current_user.id,
+                                user_id=user_for_blob.id,
                                 content=None,
                                 real_storage_path=None)
-
 
         blob_object.real_storage_path, blob_object.content = create_object(info.context.request, input_file, blob_object, blob.data_type,
                                                                            blob.filename, json_input=False)
@@ -191,9 +221,8 @@ class CreateUserBlob(graphene.Mutation):
             except Exception as e:
                 raise ResponseError(message=str(e))
 
-        current_user.userblobs.append(blob_object)
+        user_for_blob.userblobs.append(blob_object)
         DBSession.add(blob_object)
-        #DBSession.add(current_user)
         DBSession.flush()
         userblob = UserBlobs(id = [blob_object.client_id, blob_object.object_id]) # TODO: more args
         return CreateUserBlob(userblob=userblob, triumph=True)
@@ -221,8 +250,36 @@ class DeleteUserBlob(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, **args):
+
+        client_id = info.context.get('client_id')
+        client = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+        if not client:
+            return ResponseError('Only signed in users can delete files.')
+
+        user = DBSession.query(dbUser).filter_by(id = client.user_id).first()
+
+        if not user:
+            return ResponseError(f'Invalid user id {client.user_id}.')
+
+        if not user.is_active and user.id != 1:
+            return ResponseError('Inactive non-administrator users can\'t delete files.')
+
         id = args.get('id')
-        client_id = id[0] if id else info.context["client_id"]
+
+        if id and id[0] != client_id:
+
+            client_id = id[0]
+            client_args = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+            if not client_args:
+                return ResponseError(f'Invalid client id {client_id}.')
+
+            if client_args.user_id != client.user_id:
+
+                if user.id != 1:
+                    return ResponseError('Non-administrator users can\'t delete another users\' files.')
+
         object_id = id[1] if id else None
 
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
