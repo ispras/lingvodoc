@@ -38,6 +38,7 @@ from pyramid.view import view_config
 from sqlalchemy import (
     or_
 )
+import sqlalchemy.exc
 import logging
 import json
 from lingvodoc.utils.creation import add_user_to_group
@@ -687,7 +688,16 @@ def edit_user_info(request):  # TODO: test
     email = req.get('email')
     if email:
         if user.email:
-            user.email.email = email
+            try:
+                (DBSession
+                    .query(Email)
+                    .filter_by(id = user.email.id)
+                    .update(values = {'email': email}))
+            except sqlalchemy.exc.IntegrityError:
+                request.response.status = HTTPConflict.code
+                return {
+                    'status': request.response.status,
+                    'error': 'The user with this email is already registered'}
         else:
             new_email = Email(user=user, email=email)
             DBSession.add(new_email)
