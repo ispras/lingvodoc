@@ -482,8 +482,16 @@ class Query(graphene.ObjectType):
                                             adopted_type=LingvodocID(),
                                             with_entimology=graphene.Boolean())
     translationgists = graphene.List(TranslationGist, gists_type=graphene.String())
-    translation_search = graphene.List(TranslationGist, searchstring=graphene.String(),
-                                       translation_type=graphene.String())
+
+    translation_search = (
+        graphene.List(
+            TranslationGist,
+            searchstring = graphene.String(),
+            translation_type = graphene.String(),
+            deleted = graphene.Boolean(),
+            order_by_type = graphene.Boolean(),
+            no_result_error_flag = graphene.Boolean()))
+
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
@@ -1892,7 +1900,14 @@ class Query(graphene.ObjectType):
 
         return gists_list
 
-    def resolve_translation_search(self, info, searchstring, translation_type=None):
+    def resolve_translation_search(
+        self,
+        info,
+        searchstring = None,
+        translation_type = None,
+        deleted = None,
+        order_by_type = False,
+        no_result_error_flag = True):
         """
         query TranslationsList {
             translation_search(searchstring: "словарь") {
@@ -1905,19 +1920,58 @@ class Query(graphene.ObjectType):
             }
         }
         """
-        translationatoms = DBSession.query(dbTranslationAtom).filter(dbTranslationAtom.content.like('%' + searchstring + '%'))
+
+        gist_query = (
+
+            DBSession.query(
+                dbTranslationGist))
+
+        if deleted is not None:
+
+            gist_query = (
+
+                gist_query.filter(
+                    dbTranslationGist.marked_for_deletion == deleted))
+
+        if searchstring:
+
+            gist_id_query = (
+
+                DBSession
+
+                    .query(
+                        dbTranslationAtom.parent_client_id,
+                        dbTranslationAtom.parent_object_id)
+
+                    .filter(dbTranslationAtom.content.like('%' + searchstring + '%')))
+
+            gist_query = (
+
+                gist_query.filter(
+
+                    tuple_(
+                        dbTranslationGist.client_id, 
+                        dbTranslationGist.object_id)
+
+                        .in_(gist_id_query)))
+
         if translation_type:
-            translationatoms = translationatoms.join(dbTranslationGist).filter(dbTranslationGist.type == translation_type).all()
-        else:
-            translationatoms = translationatoms.all()
 
-        translationgists = list()
-        for translationatom in translationatoms:
-            parent = translationatom.parent
-            if parent not in translationgists:
-                translationgists.append(parent)
+            gist_query = (
 
-        if translationgists:
+                gist_query
+                    .filter(dbTranslationGist.type == translation_type))
+
+        if order_by_type and not translation_type:
+
+            gist_query = (
+
+                gist_query
+                    .order_by(dbTranslationGist.type))
+
+        translationgists = gist_query.all()
+
+        if translationgists or not no_result_error_flag:
             translationgists_list = list()
             for translationgist in translationgists:
                 # translationatoms_list = list()
@@ -1934,6 +1988,7 @@ class Query(graphene.ObjectType):
                                                          # type=translationgist.type,
                                                          # created_at=translationgist.created_at,
                                                          # translationatoms=translationatoms_list)
+                translationgist_object.dbObject = translationgist
                 translationgists_list.append(translationgist_object)
             return translationgists_list
         raise ResponseError(message="Error: no result")
