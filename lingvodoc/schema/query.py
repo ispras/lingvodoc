@@ -494,6 +494,7 @@ class Query(graphene.ObjectType):
 
     translation_service_search = graphene.Field(TranslationGist, searchstring=graphene.String())
     advanced_translation_search = graphene.List(TranslationGist, searchstrings=graphene.List(graphene.String))
+    optimized_translation_search = graphene.List(graphene.String, searchstrings=graphene.List(graphene.String))
     all_locales = graphene.List(ObjectVal)
     user_blobs = graphene.List(UserBlobs, data_type=graphene.String(), is_global=graphene.Boolean())
     userrequest = graphene.Field(UserRequest, id=graphene.Int())
@@ -2032,54 +2033,198 @@ class Query(graphene.ObjectType):
             }
         }
         """
+
+        debug_flag = False
+
         if not searchstrings:
-            raise ResponseError(message="Error: no search strings")
+            raise ResponseError(message = "Error: no search strings")
 
+        search_table_name = (
 
+            'search_table_' +
+            str(uuid.uuid4()).replace('-', '_'))
 
+        DBSession.execute(f'''
 
-        atoms_query = DBSession.query(dbTranslationAtom).join(dbTranslationGist). \
-                filter(dbTranslationAtom.locale_id == 2,
-                       dbTranslationGist.type == 'Service',
-                       dbTranslationGist.marked_for_deletion==False,
-                       dbTranslationAtom.marked_for_deletion==False)
-        atoms = atoms_query.all()
+            create temporary table
 
-        string_to_gist = dict()
-        for atom in atoms:
-            if atom.content in searchstrings:
-                string_to_gist[atom.content] = atom.parent
+            {search_table_name} (
+              index INT PRIMARY KEY,
+              search_string TEXT NOT NULL)
 
-        translationgists_list = list()
-        for ss in searchstrings:
-            if ss in string_to_gist:
-                translationgist = string_to_gist[ss]
-                gql_translationgist = TranslationGist(id=[translationgist.client_id, translationgist.object_id] , translation=ss)
-                gql_translationgist.dbObject = translationgist
-                translationgists_list.append(gql_translationgist)
-            else:
-                translationgists_list.append(None)
-        # for ss in searchstrings:
-        #     gist = DBSession.query(atoms).filter(dbTranslationAtom.content=="Link").first()
-        #     translationgist = DBSession.query(dbTranslationGist) \
-        #             .join(dbTranslationAtom). \
-        #         filter(dbTranslationAtom.content == ss,
-        #                dbTranslationAtom.locale_id == 2,
-        #                dbTranslationGist.type == 'Service',
-        #                dbTranslationGist.marked_for_deletion==False,
-        #                dbTranslationAtom.marked_for_deletion==False) \
-        #         .first()
-        #     if translationgist:
-        #         gql_translationgist = TranslationGist(id=[translationgist.client_id, translationgist.object_id])
-        #         gql_translationgist.dbObject = translationgist
-        #         translationgists_list.append(gql_translationgist)
-        #     else:
-        #         translationgists_list.append(None)
+            on commit drop;
 
+            ''')
 
+        class tmpSearchString(models.Base):
 
-        return translationgists_list
-        # raise ResponseError(message="Error: no result")
+            __tablename__ = search_table_name
+
+            index = (
+                sqlalchemy.Column(sqlalchemy.types.Integer, primary_key = True))
+
+            search_string = (
+                sqlalchemy.Column(sqlalchemy.types.UnicodeText, nullable = False))
+
+        insert_list = [
+            {'index': index, 'search_string': search_string}
+            for index, search_string in enumerate(searchstrings)]
+
+        insert_query = (
+
+            tmpSearchString.__table__
+                .insert()
+                .values(insert_list))
+
+        if debug_flag:        
+
+            log.debug(
+                '\ninsert_query:\n' +
+                str(insert_query.compile(compile_kwargs = {'literal_binds': True})))
+        
+        DBSession.execute(insert_query)
+
+        gist_query = (
+
+            DBSession
+
+                .query(
+                    tmpSearchString.index,
+                    dbTranslationGist)
+
+                .filter(
+                    dbTranslationGist.type == 'Service',
+                    dbTranslationGist.marked_for_deletion == False,
+                    dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
+                    dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
+                    dbTranslationAtom.locale_id == 2,
+                    dbTranslationAtom.marked_for_deletion == False,
+                    dbTranslationAtom.content == tmpSearchString.search_string)
+
+                .distinct(
+                    tmpSearchString.index)
+
+                .order_by(
+                    tmpSearchString.index,
+                    dbTranslationGist.client_id,
+                    dbTranslationGist.object_id))
+
+        if debug_flag:        
+
+            log.debug(
+                '\ngist_query:\n' +
+                str(gist_query.statement.compile(compile_kwargs = {'literal_binds': True})))
+
+        gist_list = gist_query.all()
+
+        result_list = [None] * len(searchstrings)
+
+        for index, gist in gist_list:
+
+            gql_gist = (
+
+                TranslationGist(
+                    id = [gist.client_id, gist.object_id],
+                    translation = searchstrings[index]))
+
+            gql_gist.dbObject = gist
+
+            result_list[index] = gql_gist
+
+        return result_list
+
+    def resolve_optimized_translation_search(self, info, searchstrings):
+
+        if not searchstrings:
+            raise ResponseError(message = "Error: no search strings")
+
+        search_table_name = (
+
+            'search_table_' +
+            str(uuid.uuid4()).replace('-', '_'))
+
+        DBSession.execute(f'''
+
+            create temporary table
+
+            {search_table_name} (
+              index INT PRIMARY KEY,
+              search_string TEXT NOT NULL)
+
+            on commit drop;
+
+            ''')
+
+        insert_sql_str_list = [
+
+            f'insert into {search_table_name} values ',
+            '(0, \'{}\')'.format(searchstrings[0].replace('\'', '\'\''))]
+
+        for index, search_string in enumerate(searchstrings[1:], 1):
+
+            insert_sql_str_list.append(
+                ', ({}, \'{}\')'.format(index, search_string.replace('\'', '\'\'')))
+
+        insert_sql_str_list.append(';')
+
+        DBSession.execute(
+            ''.join(insert_sql_str_list))
+
+        locale_id = (
+            info.context.get('locale_id'))
+
+        row_list = (
+
+            DBSession
+
+                .execute(f'''
+
+                    select
+                    distinct on (S.index)
+                    S.index,
+                    A2.content
+
+                    from
+                    {search_table_name} S
+
+                    left outer join
+                    translationatom A1
+                    on
+                    A1.content = S.search_string
+
+                    left outer join
+                    translationgist G
+                    on
+                    A1.parent_client_id = G.client_id and
+                    A1.parent_object_id = G.object_id
+
+                    left outer join
+                    translationatom A2
+                    on
+                    A2.parent_client_id = G.client_id and
+                    A2.parent_object_id = G.object_id
+
+                    where
+                    G.type = 'Service' and
+                    G.marked_for_deletion = false and
+                    A1.locale_id = 2 and
+                    A1.marked_for_deletion = false and
+                    A2.locale_id = {locale_id} and
+                    A2.marked_for_deletion = false
+
+                    order by
+                    S.index, G.client_id, G.object_id, A2.client_id, A2.object_id;
+
+                    ''')
+
+                .fetchall())
+
+        result_list = [None] * len(searchstrings)
+
+        for index, result in row_list:
+            result_list[index] = result
+
+        return result_list
 
     def resolve_userblob(self, info, id):
         return UserBlobs(id=id)
