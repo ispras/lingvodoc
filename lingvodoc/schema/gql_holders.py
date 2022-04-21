@@ -901,6 +901,8 @@ class Metadata(graphene.ObjectType):
     translator = graphene.String()
     bibliographicDataOfTheTranslation = graphene.String()
 
+    toc_mark = graphene.Boolean()
+
 
 # class LevelAndId(graphene.ObjectType):
 #     """
