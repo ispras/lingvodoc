@@ -487,6 +487,7 @@ class Query(graphene.ObjectType):
         graphene.List(
             TranslationGist,
             searchstring = graphene.String(),
+            search_case_insensitive = graphene.Boolean(),
             translation_type = graphene.String(),
             deleted = graphene.Boolean(),
             order_by_type = graphene.Boolean(),
@@ -1905,6 +1906,7 @@ class Query(graphene.ObjectType):
         self,
         info,
         searchstring = None,
+        search_case_insensitive = False,
         translation_type = None,
         deleted = None,
         order_by_type = False,
@@ -1936,6 +1938,10 @@ class Query(graphene.ObjectType):
 
         if searchstring:
 
+            search_op = (
+                dbTranslationAtom.content.ilike if search_case_insensitive else
+                dbTranslationAtom.content.like)
+
             gist_id_query = (
 
                 DBSession
@@ -1944,7 +1950,7 @@ class Query(graphene.ObjectType):
                         dbTranslationAtom.parent_client_id,
                         dbTranslationAtom.parent_object_id)
 
-                    .filter(dbTranslationAtom.content.like('%' + searchstring + '%')))
+                    .filter(search_op('%' + searchstring + '%')))
 
             gist_query = (
 
