@@ -604,6 +604,7 @@ class Query(graphene.ObjectType):
             verb_prefix = graphene.String(),
             case_flag = graphene.Boolean(),
             accept_value = graphene.Boolean(),
+            sort_order_list = graphene.List(graphene.String),
             debug_flag = graphene.Boolean()))
 
     def resolve_valency_data(
@@ -615,6 +616,7 @@ class Query(graphene.ObjectType):
         verb_prefix = None,
         case_flag = False,
         accept_value = None,
+        sort_order_list = None,
         debug_flag = False,
         **args):
 
@@ -625,7 +627,11 @@ class Query(graphene.ObjectType):
             f'\nverb_prefix: {verb_prefix}'
             f'\ncase_flag: {case_flag}'
             f'\naccept_value: {accept_value}'
+            f'\nsort_order_list: {sort_order_list}'
             f'\ndebug_flag: {debug_flag}')
+
+        if sort_order_list is None:
+            sort_order_list = ['verb', 'case', 'accept']
 
         verb_flag = verb_prefix is not None
         accept_flag = accept_value is not None
@@ -701,47 +707,55 @@ class Query(graphene.ObjectType):
 
         order_by_list = []
 
-        if verb_flag:
+        for sort_type in sort_order_list:
 
-            order_by_list.append(
-                dbValencyInstanceData.verb_lex)
+            if sort_type == 'verb':
 
-        if case_flag:
+                if verb_flag:
 
-            instance_query = (
+                    order_by_list.append(
+                        dbValencyInstanceData.verb_lex)
 
-                instance_query.outerjoin(
-                    tmpCaseOrder,
-                    dbValencyInstanceData.case_str == tmpCaseOrder.case_str))
+            elif sort_type == 'case':
 
-            order_by_list.append(
-                tmpCaseOrder.order_value)
+                if case_flag:
 
-        if accept_flag:
+                    instance_query = (
 
-            accept_subquery = (
+                        instance_query.outerjoin(
+                            tmpCaseOrder,
+                            dbValencyInstanceData.case_str == tmpCaseOrder.case_str))
 
-                DBSession
+                    order_by_list.append(
+                        tmpCaseOrder.order_value)
 
-                    .query(
-                        dbValencyAnnotationData.instance_id,
+            elif sort_type == 'accept':
 
-                        func.bool_or(dbValencyAnnotationData.accepted)
-                            .label('accept_value'))
+                if accept_flag:
 
-                    .group_by(
-                        dbValencyAnnotationData.instance_id)
+                    accept_subquery = (
 
-                    .subquery())
+                        DBSession
 
-            instance_query = (
+                            .query(
+                                dbValencyAnnotationData.instance_id,
 
-                instance_query.outerjoin(
-                    accept_subquery,
-                    dbValencyInstanceData.id == accept_subquery.c.instance_id))
+                                func.bool_or(dbValencyAnnotationData.accepted)
+                                    .label('accept_value'))
 
-            order_by_list.append(
-                func.coalesce(accept_subquery.c.accept_value, False) != accept_value)
+                            .group_by(
+                                dbValencyAnnotationData.instance_id)
+
+                            .subquery())
+
+                    instance_query = (
+
+                        instance_query.outerjoin(
+                            accept_subquery,
+                            dbValencyInstanceData.id == accept_subquery.c.instance_id))
+
+                    order_by_list.append(
+                        func.coalesce(accept_subquery.c.accept_value, False) != accept_value)
 
         order_by_list.append(
             dbValencyInstanceData.id)
