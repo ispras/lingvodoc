@@ -13,10 +13,13 @@ from lingvodoc.schema.gql_holders import (
     del_object,
     ResponseError,
     LingvodocID,
+    fetch_object,
 )
+from lingvodoc.schema.gql_field import Field
 from lingvodoc.models import (
     DBSession,
     DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
+    Field as dbField,
 )
 
 from lingvodoc.utils.creation import create_dictionary_persp_to_field
@@ -39,6 +42,8 @@ class Column(LingvodocObjectType):
     """
     dbType = dbDictionaryPerspectiveToField
 
+    field = graphene.Field(Field)
+
     class Meta:
         interfaces = (CreatedAt,
                       CompositeIdHolder,
@@ -48,7 +53,23 @@ class Column(LingvodocObjectType):
                       ParentLink,
                       MarkedForDeletion,
                       Position)
-    pass
+
+    @fetch_object('field_id')
+    def resolve_field(self, info):
+
+        field = (
+
+            DBSession
+
+                .query(dbField)
+
+                .filter_by(
+                    client_id = self.dbObject.field_client_id,
+                    object_id = self.dbObject.field_object_id)
+
+                .first())
+
+        return Field(id = [field.client_id, field.object_id])
 
 
 class CreateColumn(graphene.Mutation):
