@@ -4,7 +4,9 @@ from lingvodoc.views.v2.utils import (
     view_field_from_object
 )
 from lingvodoc.utils.verification import check_client_id
+import sqlalchemy.exc
 from sqlalchemy.exc import IntegrityError
+import psycopg2.errors
 
 from pyramid.response import Response
 from pyramid.view import view_config
@@ -1274,16 +1276,50 @@ def graphql(request):
             request.response.headerlist.append((
                 'Server-Timing',
                 f'real;dur={t_elapsed_real:.6f}, process;dur={t_elapsed_process:.6f}'))
+
             if result.errors:
                 for error in result.errors:
                     if hasattr(error, 'original_error'):
                         if type(error.original_error) == ProxyPass:
                             return json.loads(error.original_error.response_body.decode("utf-8"))
+
             if result.invalid:
-                return {'errors': [{"message": str(e)} for e in result.errors]}
+
+                return {
+                    'errors': [{'message': str(e)} for e in result.errors],
+                    'time_real': t_elapsed_real,
+                    'time_process': t_elapsed_process}
+
             if result.errors:
-                sp.rollback()
-                return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
+
+                # If we had an attempt to proceed with failed transaction because of another error, we don't
+                # need its superfluous error info.
+
+                if len(result.errors) > 1:
+
+                    errors = [
+
+                        error
+                        for error in result.errors
+
+                        if (not isinstance(
+                                error.original_error,
+                                sqlalchemy.exc.InternalError) or
+
+                            not isinstance(
+                                error.original_error.orig,
+                                psycopg2.errors.InFailedSqlTransaction))]
+
+                else:
+
+                    errors = result.errors
+
+                return {
+                    'data': None,
+                    'errors': [{'message': str(e)} for e in errors],
+                    'time_real': t_elapsed_real,
+                    'time_process': t_elapsed_process}
+
             return {
                 'data': result.data,
                 'time_real': t_elapsed_real,
