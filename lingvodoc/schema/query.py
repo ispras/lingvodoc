@@ -488,6 +488,7 @@ class Query(graphene.ObjectType):
             TranslationGist,
             searchstring = graphene.String(),
             search_case_insensitive = graphene.Boolean(),
+            search_regular_expression = graphene.Boolean(),
             translation_type = graphene.String(),
             deleted = graphene.Boolean(),
             order_by_type = graphene.Boolean(),
@@ -1921,6 +1922,7 @@ class Query(graphene.ObjectType):
         info,
         searchstring = None,
         search_case_insensitive = False,
+        search_regular_expression = False,
         translation_type = None,
         deleted = None,
         order_by_type = False,
@@ -1952,9 +1954,23 @@ class Query(graphene.ObjectType):
 
         if searchstring:
 
-            search_op = (
-                dbTranslationAtom.content.ilike if search_case_insensitive else
-                dbTranslationAtom.content.like)
+            if search_regular_expression:
+
+                search_filter = (
+
+                    dbTranslationAtom.content.op('~*') if search_case_insensitive else
+                    dbTranslationAtom.content.op('~'))(
+
+                        searchstring)
+
+            else:
+
+                search_filter = (
+
+                    dbTranslationAtom.content.ilike if search_case_insensitive else
+                    dbTranslationAtom.content.like)(
+
+                        '%' + searchstring + '%')
 
             gist_id_query = (
 
@@ -1964,7 +1980,7 @@ class Query(graphene.ObjectType):
                         dbTranslationAtom.parent_client_id,
                         dbTranslationAtom.parent_object_id)
 
-                    .filter(search_op('%' + searchstring + '%')))
+                    .filter(search_filter))
 
             gist_query = (
 
