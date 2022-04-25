@@ -320,6 +320,7 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 import numpy
 import openpyxl
 import pathvalidate
+import psycopg2.errors
 import pydub
 import pylab
 import pympi
@@ -2006,7 +2007,16 @@ class Query(graphene.ObjectType):
                 gist_query
                     .order_by(dbTranslationGist.type))
 
-        translationgists = gist_query.all()
+        try:
+
+            translationgists = gist_query.all()
+
+        except sqlalchemy.exc.DataError as data_error:
+
+            if isinstance(data_error.orig, psycopg2.errors.InvalidRegularExpression):
+                return ResponseError('InvalidRegularExpression')
+
+            raise
 
         if translationgists or not no_result_error_flag:
             translationgists_list = list()
