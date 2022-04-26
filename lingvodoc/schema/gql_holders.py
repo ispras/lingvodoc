@@ -816,7 +816,7 @@ class About(graphene.Interface):
     def resolve_about_translations(self, info):
 
         if self.dbObject:
-            return dbObject.get_about_translations()
+            return self.dbObject.get_about_translations()
 
 
 # PublishedEntity interface
