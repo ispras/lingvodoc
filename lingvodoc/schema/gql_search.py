@@ -645,7 +645,7 @@ def search_mechanism(
         for search_string in search_block:
             inner_and = list()
             cur_dbEntity = all_entities_cte.c
-            if 'field_id' in search_string:
+            if search_string.get('field_id'):
                 inner_and.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
                 inner_and.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
             else:
@@ -914,7 +914,7 @@ def search_mechanism_simple(
         or_block = list()
         for search_string in search_block:
             inner_and_block = list()
-            if 'field_id' in search_string:
+            if search_string.get('field_id'):
                 inner_and_block.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
                 inner_and_block.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
             else:
