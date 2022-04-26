@@ -116,7 +116,6 @@ class Dictionary(LingvodocObjectType):  # tested
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
-    status = graphene.Field(graphene.String, locale_id = graphene.Int())
     last_modified_at = graphene.Float()
 
     # If the dictionary in 'Published' or 'Limited access' state and has at least one 'Published' or
@@ -142,22 +141,6 @@ class Dictionary(LingvodocObjectType):  # tested
     @property
     def persp_class(self):
         return self._meta.fields['persp'].type
-
-    @fetch_object('status')
-    def resolve_status(self, info, locale_id = None):
-
-        if locale_id is None:
-            locale_id = int(info.context.get('locale_id'))
-
-        atom = DBSession.query(dbTranslationAtom.content).filter_by(
-            parent_client_id=self.dbObject.state_translation_gist_client_id,
-            parent_object_id=self.dbObject.state_translation_gist_object_id,
-            marked_for_deletion=False,
-            locale_id=locale_id).first()
-        if atom:
-            return atom[0]
-        else:
-            return None
 
     @fetch_object('last_modified_at')
     def resolve_last_modified_at(self, info):
@@ -1162,6 +1145,10 @@ mutation up{
                     str(dbtranslationatom.parent_client_id),
                     str(dbtranslationatom.parent_object_id),
                     str(dbtranslationatom.locale_id))
+                CACHE.rem(key)
+                key = "translations:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id))
                 CACHE.rem(key)
                 if content:
                     dbtranslationatom.content = content

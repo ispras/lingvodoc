@@ -538,6 +538,10 @@ class UpdateLanguageAtom(graphene.Mutation):
                     str(dbtranslationatom.parent_object_id),
                     str(dbtranslationatom.locale_id))
                 CACHE.rem(key)
+                key = "translations:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id))
+                CACHE.rem(key)
                 if content:
                     dbtranslationatom.content = content
             else:

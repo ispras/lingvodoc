@@ -476,7 +476,8 @@ def get_translation(
 
     all_translations = session.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(
         parent_client_id=client_id,
-        parent_object_id=object_id).all()
+        parent_object_id=object_id,
+        marked_for_deletion=False).all()
     all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
 
     if not all_translations_dict:
@@ -510,6 +511,50 @@ def get_translation(
     return default if default is not None else "Translation missing for all locales"
 
 
+def get_translations(
+    client_id,
+    object_id,
+    session = DBSession,
+    key_format_str = 'translations:%s:%s'):
+    """
+    Standard translations retrieval with caching.
+    """
+
+    CACHE = caching.CACHE
+
+    key_str = (
+        key_format_str % (str(client_id), str(object_id)))
+
+    translations = CACHE.get(key_str)
+    if translations:
+        log.info("Got cached %s " % str(key_str))
+        return translations
+    log.debug("No cached value, getting from DB: %s " % str(key_str))
+
+    all_translations = (
+
+        session
+
+            .query(
+                TranslationAtom.locale_id,
+                TranslationAtom.content)
+
+            .filter_by(
+                parent_client_id = client_id,
+                parent_object_id = object_id,
+                marked_for_deletion = False)
+
+            .all())
+
+    all_translations_dict = {
+        str(locale_id): translation
+        for locale_id, translation in all_translations}
+
+    CACHE.set(key = key_str, value = all_translations_dict)
+
+    return all_translations_dict or None
+
+
 class TranslationMixin(PrimeTableArgs):
     translation_gist_client_id = Column(SLBigInteger(), nullable=False)
     translation_gist_object_id = Column(SLBigInteger(), nullable=False)
@@ -528,6 +573,13 @@ class TranslationMixin(PrimeTableArgs):
             self.translation_gist_object_id,
             session)
 
+    def get_translations(self, session = DBSession):
+
+        return get_translations(
+            self.translation_gist_client_id,
+            self.translation_gist_object_id,
+            session)
+
 
 class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedForDeletionMixin):
     """
@@ -539,6 +591,12 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, Ma
 
         return get_translation(
             locale_id,
+            self.client_id,
+            self.object_id)
+
+    def get_translations(self):
+
+        return get_translations(
             self.client_id,
             self.object_id)
 
@@ -591,6 +649,12 @@ class StateMixin(PrimeTableArgs):
             parent_client_id=self.state_translation_gist_client_id,
             parent_object_id=self.state_translation_gist_object_id,
             locale_id=2).scalar()
+
+    def get_state_translations(self):
+
+        return get_translations(
+            self.state_translation_gist_client_id,
+            self.state_translation_gist_object_id)
 
 
 class Dictionary(CompositeIdMixin,
@@ -873,6 +937,7 @@ class DataTypeMixin(PrimeTableArgs):
                 .filter_by(
                     parent_client_id=self.data_type_translation_gist_client_id,
                     parent_object_id=self.data_type_translation_gist_object_id,
+                    marked_for_deletion=False,
                     locale_id=2)
 
                 .scalar())
@@ -1419,6 +1484,12 @@ class AboutMixin(PrimeTableArgs):
             self.about_translation_gist_object_id,
             default = '')
 
+    def get_about_translations(self):
+
+        return get_translations(
+            self.about_translation_gist_client_id,
+            self.about_translation_gist_object_id)
+
 
 class Organization(
     Base,
@@ -1500,6 +1571,12 @@ class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, Add
 
         return get_translation(
             locale_id,
+            self.issuer_translation_gist_client_id,
+            self.issuer_translation_gist_object_id)
+
+    def get_issuer_translations(self):
+
+        return get_translations(
             self.issuer_translation_gist_client_id,
             self.issuer_translation_gist_object_id)
 

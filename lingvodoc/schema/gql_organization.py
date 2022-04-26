@@ -55,7 +55,7 @@ class Organization(LingvodocObjectType):
                       AdditionalMetadata,
                       TranslationHolder,
                       TranslationGistHolder,
-                      About
+                      About,
                     )
 
     @fetch_object('members')
