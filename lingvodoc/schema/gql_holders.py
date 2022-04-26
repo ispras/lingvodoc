@@ -325,6 +325,11 @@ def undelete_message(*args, **kwargs):
 def delete_gist_with_atoms(
     deleted_by, gist, task_id, subject = None, reason = "Manually deleted", **kwargs):
 
+    key = "translations:%s:%s" % (
+        str(gist.client_id),
+        str(gist.object_id))
+    CACHE.rem(key)
+
     atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
                                                          marked_for_deletion=False).all()
 
@@ -693,12 +698,39 @@ class UserId(graphene.Interface):
 
 
 class StateHolder(graphene.Interface):
+
     state_translation_gist_id = LingvodocID()
+
+    status = graphene.Field(graphene.String, locale_id = graphene.Int())
+    status_translations = ObjectVal()
 
     @fetch_object("state_translation_gist_id")
     def resolve_state_translation_gist_id(self, info):
         return (self.dbObject.state_translation_gist_client_id,
                 self.dbObject.state_translation_gist_object_id)
+
+    @fetch_object('status')
+    def resolve_status(self, info, locale_id = None):
+
+        if locale_id is None:
+            locale_id = int(info.context.get('locale_id'))
+
+        atom = DBSession.query(dbTranslationAtom.content).filter_by(
+            parent_client_id=self.dbObject.state_translation_gist_client_id,
+            parent_object_id=self.dbObject.state_translation_gist_object_id,
+            marked_for_deletion=False,
+            locale_id=locale_id).first()
+        if atom:
+            return atom[0]
+        else:
+            return None
+
+    @fetch_object('status_translations')
+    def resolve_status_translations(self, info):
+
+        if self.dbObject:
+            return self.dbObject.get_state_translations()
+
 
 class TableName(graphene.Interface):
     table_name = graphene.String()
@@ -747,13 +779,20 @@ class TypeHolder(graphene.Interface):
 
 
 class TranslationHolder(graphene.Interface):
+
     translation = graphene.String(locale_id=graphene.Int())
+    translations = ObjectVal()
 
     @fetch_object("translation")
     def resolve_translation(self, info, locale_id = None):
         if self.dbObject:
             return str(self.dbObject.get_translation( # TODO: fix it
                 locale_id if locale_id is not None else info.context.get('locale_id')))
+
+    @fetch_object("translations")
+    def resolve_translations(self, info):
+        if self.dbObject:
+            return self.dbObject.get_translations()
 
 
 # rare interfaces
@@ -764,6 +803,7 @@ class TranslationHolder(graphene.Interface):
 class About(graphene.Interface):
 
     about = graphene.String()
+    about_translations = ObjectVal()
 
     @fetch_object("about")
     def resolve_about(self, info, locale_id = None):
@@ -771,6 +811,13 @@ class About(graphene.Interface):
         if self.dbObject:
             return str(self.dbObject.get_about_translation( # TODO: fix it
                 locale_id if locale_id is not None else info.context.get('locale_id')))
+
+    @fetch_object("about_translations")
+    def resolve_about_translations(self, info):
+
+        if self.dbObject:
+            return dbObject.get_about_translations()
+
 
 # PublishedEntity interface
 

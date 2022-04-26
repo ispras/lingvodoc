@@ -177,7 +177,6 @@ class DictionaryPerspective(LingvodocObjectType):
     """
     data_type = graphene.String()
 
-    status = graphene.Field(graphene.String, locale_id = graphene.Int())
     import_source = graphene.String()
     import_hash = graphene.String()
 
@@ -330,23 +329,6 @@ class DictionaryPerspective(LingvodocObjectType):
     @fetch_object('is_template')
     def resolve_is_template(self, info):
         return self.dbObject.is_template
-
-    @fetch_object('status') # tested
-    def resolve_status(self, info, locale_id = None):
-
-        if locale_id is None:
-            locale_id = int(info.context.get('locale_id'))
-
-        atom = DBSession.query(dbTranslationAtom.content).filter_by(
-            parent_client_id=self.dbObject.state_translation_gist_client_id,
-            parent_object_id=self.dbObject.state_translation_gist_object_id,
-            marked_for_deletion=False,
-            locale_id=locale_id
-        ).first()
-        if atom:
-            return atom[0]
-        else:
-            return None
 
     @fetch_object() # tested
     def resolve_tree(self, info):
@@ -1187,6 +1169,10 @@ class UpdatePerspectiveAtom(graphene.Mutation):
                     str(dbtranslationatom.parent_client_id),
                     str(dbtranslationatom.parent_object_id),
                     str(dbtranslationatom.locale_id))
+                CACHE.rem(key)
+                key = "translations:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id))
                 CACHE.rem(key)
                 if content:
                     dbtranslationatom.content = content
