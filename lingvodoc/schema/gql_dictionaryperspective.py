@@ -101,13 +101,28 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
     lex_id_to_obj = dict()
     lexes_composite_list = list()
 
-    for lex_obj in (
-        lexes if isinstance(lexes, list) else
-        lexes.yield_per(100).all()):
+    if check_perspective:
 
-        lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
-                                    lex_obj.parent_client_id, lex_obj.parent_object_id))
-        lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
+        for lex_obj in (
+            lexes if isinstance(lexes, list) else
+            lexes.yield_per(100).all()):
+
+            lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
+                                        lex_obj.parent_client_id, lex_obj.parent_object_id))
+            lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
+
+    else:
+
+        # If we don't need to check for perspective deletion, we don't need perspective ids.
+
+        for lex_obj in (
+            lexes if isinstance(lexes, list) else
+            lexes.yield_per(100).all()):
+
+            entry_id = (lex_obj.client_id, lex_obj.object_id)
+
+            lexes_composite_list.append(entry_id)
+            lex_id_to_obj[entry_id] = lex_obj
 
     if mode == 'not_accepted':
         accept = False
@@ -118,19 +133,27 @@ def entries_with_entities(lexes, accept, delete, mode, publish, check_perspectiv
                                                       accept=accept,
                                                       delete=delete,
                                                       check_perspective=check_perspective)
-    entities_list = list(entities)
-    ent_iter = itertools.chain(entities_list)
-    result_lexes = list()
-    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key=group_by_lex):
-        gql_entities_list = [gql_entity_with_published(cur_entity=x[0], cur_publishing=x[1])
-                             for x in entity_with_published]
-        lexical_entry = lex_id_to_obj[lex_ids]
-        del lex_id_to_obj[lex_ids]
+
+    ent_iter = itertools.chain(list(entities))
+    lexical_entries = list()
+
+    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key = group_by_lex):
+
+        gql_entities_list = [
+            gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
+            for x in entity_with_published]
+
+        lexical_entry = lex_id_to_obj.pop(lex_ids)
+
         if (lexical_entry.client_id, lexical_entry.object_id) == lex_ids:
-            result_lexes.append((lexical_entry, gql_entities_list))
-    for new_lex in lex_id_to_obj:
-        result_lexes.append((lex_id_to_obj[new_lex], []))
-    lexical_entries = [gql_lexicalentry(cur_lexical_entry=lex[0], cur_entities=lex[1]) for lex in result_lexes]
+
+            lexical_entries.append(
+                gql_lexicalentry(cur_lexical_entry = lexical_entry, cur_entities = gql_entities_list))
+
+    for new_lex in lex_id_to_obj.values():
+
+        lexical_entries.append(
+            gql_lexicalentry(cur_lexical_entry = new_lex, cur_entities = []))
 
     return lexical_entries
 

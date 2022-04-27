@@ -12,7 +12,7 @@ except:
 
 
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.expression import Executable, ClauseElement, _literal_as_text
+from sqlalchemy.sql.expression import Executable, ClauseElement, _literal_as_text, FromClause
 
 
 class explain(Executable, ClauseElement):
@@ -84,6 +84,61 @@ def explain_analyze(statement):
     """
 
     return explain(statement, analyze = True)
+
+
+class values(FromClause):
+    """
+    PostgreSQL VALUES for selecting from and for using in CTE.
+
+    See StackOverflow answer https://stackoverflow.com/a/18900176/2016856,
+    mostly copied from https://github.com/sqlalchemy/sqlalchemy/wiki/PGValues.
+    """
+
+    named_with_column = True
+
+    def __init__(self, columns, value_list, alias = None):
+
+        self._column_args = columns
+        self.list = value_list
+
+        self.name = alias
+        self.alias_name = alias
+
+    def _populate_column_collection(self):
+
+        for c in self._column_args:
+            c._make_proxy(self)
+
+    @property
+    def _from_objects(self):
+        return [self]
+
+
+@compiles(values)
+def compile_values(element, compiler, asfrom = False, **kwargs):
+
+    columns = element.columns
+
+    v = "VALUES %s" % ", ".join(
+        "(%s)"
+        % ", ".join(
+            compiler.render_literal_value(elem, column.type)
+            for elem, column in zip(tup, columns)
+        )
+        for tup in element.list
+    )
+
+    if asfrom:
+        if element.alias_name:
+            v = "(%s) AS %s (%s)" % (
+                v,
+                element.alias_name,
+                (", ".join(c.name for c in element.columns)),
+            )
+        else:
+            v = "(%s)" % v
+
+    return v
 
 
 def get_resident_memory():

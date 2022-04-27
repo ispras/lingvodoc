@@ -55,7 +55,8 @@ from lingvodoc.models import (
     Field as dbField,
     TranslationGist as dbTranslationGist,
     TranslationAtom as dbTranslationAtom,
-    DictionaryPerspectiveToField as dbDictionaryPerspectiveToField)
+    DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
+    SLBigInteger)
 from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.schema.gql_dictionary import Dictionary
 from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective, entries_with_entities
@@ -67,6 +68,7 @@ from lingvodoc.utils.search import (
     translation_gist_search
 )
 
+from lingvodoc.utils import values
 import lingvodoc.utils as utils
 
 from lingvodoc.views.v2.utils import (
@@ -75,15 +77,18 @@ from lingvodoc.views.v2.utils import (
 )
 
 from sqlalchemy import (
-    func,
     and_,
+    Boolean,
+    cast,
+    exists,
+    func,
+    not_,
     or_,
     tuple_,
-    not_,
-    exists,
     union
 )
 from sqlalchemy.orm.util import aliased
+from sqlalchemy.sql import column
 from itertools import chain
 
 from poioapi.eaf_search import eaf_search
@@ -258,11 +263,29 @@ def save_xlsx_data(
     group_dict = collections.defaultdict(list)
     group_list = []
 
+    standard_language_id_query = (
+
+        DBSession
+
+            .query(
+                dbLanguage.client_id, 
+                dbLanguage.object_id)
+
+            .filter(
+                dbLanguage.marked_for_deletion == False,
+                cast(dbLanguage.additional_metadata['toc_mark'], Boolean)))
+
+    standard_language_id_set = (
+        set(tuple(id) for id in standard_language_id_query.all()))
+
+    standard_language_id_set.update(
+        utils.standard_language_id_set)
+
     def f(
         language_id,
         standard_id = None):
 
-        if language_id in utils.standard_language_id_set:
+        if language_id in standard_language_id_set:
 
             standard_id = language_id
             group_list.append(standard_id)
@@ -362,8 +385,9 @@ def search_mechanism(
     etymology,
     diacritics,
     yield_batch_count,
-    category_fields,
+    category_field_cte_query,
     xlsx_context = None,
+    load_entities = True,
     __debug_flag__ = False):
 
     """
@@ -379,7 +403,7 @@ def search_mechanism(
         # If we are in debug mode, we try to load already computed search data to reduce debugging time.
 
         dictionary_id_list = sorted(dictionaries.all())
-        field_id_list = sorted(category_fields)
+        field_id_list = sorted(category_field_cte_query.all())
 
         search_list = [
 
@@ -450,8 +474,15 @@ def search_mechanism(
 
             # Compiling search results.
 
-            result_lexical_entries = entries_with_entities(
-                lexical_entry_list, accept = True, delete = False, mode = None, publish = True)
+            result_lexical_entries = (
+
+                entries_with_entities(
+                    lexical_entry_list,
+                    accept = True,
+                    delete = False,
+                    mode = None,
+                    publish = True,
+                    check_perspective = False))
 
             res_perspectives = [
                 graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in perspective_list]
@@ -461,14 +492,24 @@ def search_mechanism(
 
             return [], result_lexical_entries, res_perspectives, res_dictionaries
 
-    lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
-        .join(dbDictionaryPerspective.parent).filter(
-        dbLexicalEntry.parent_client_id==dbDictionaryPerspective.client_id,
-        dbLexicalEntry.parent_object_id==dbDictionaryPerspective.object_id,
-        dbDictionaryPerspective.marked_for_deletion==False,
-        dbLexicalEntry.marked_for_deletion==False,
-        tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(
-            DBSession.query(dictionaries.cte())))
+    lexes = (
+
+        DBSession
+
+            .query(
+                dbLexicalEntry.client_id,
+                dbLexicalEntry.object_id)
+
+            .filter(
+                dbLexicalEntry.marked_for_deletion == False,
+                dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
+                dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
+                dbDictionaryPerspective.marked_for_deletion == False,
+
+                tuple_(
+                    dbDictionaryPerspective.parent_client_id,
+                    dbDictionaryPerspective.parent_object_id)
+                    .in_(DBSession.query(dictionaries.cte()))))
 
     if adopted is not None or etymology is not None:
         lexes.join(dbLexicalEntry.entity)
@@ -491,7 +532,7 @@ def search_mechanism(
     # get all_entity_content_filter
 
     all_entity_content_filter = list()
-    all_block_fields = list()
+    all_block_field_set = set()
     fields_flag = True
 
     if diacritics == 'ignore':
@@ -506,8 +547,10 @@ def search_mechanism(
 
     if category == 0:
         for search_block in search_strings:
-            all_block_fields+=[tuple(sb.get("field_id")) for sb in search_block if
-                            sb.get("field_id") and tuple(sb.get("field_id")) in category_fields]
+
+            all_block_field_set.update(
+                tuple(sb.get("field_id")) for sb in search_block if sb.get("field_id"))
+
             for search_string in search_block:
                 if not search_string.get("field_id"):
                     fields_flag = False
@@ -595,16 +638,40 @@ def search_mechanism(
 
     # all_entity_content_filter = and_(or_(*all_entity_content_filter))
 
-    if fields_flag and category==0:
+    if fields_flag and category == 0:
 
-        all_entity_content_filter=and_(or_(*all_entity_content_filter),
+        all_block_field_cte = ids_to_id_cte(all_block_field_set)
 
-            tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(all_block_fields)
-        )
+        all_block_field_query = (
+
+            DBSession
+
+                .query(all_block_field_cte)
+
+                .filter(
+                    tuple_(
+                        all_block_field_cte.client_id,
+                        all_block_field_cte.object_id)
+
+                        .in_(category_field_cte_query)))
+
+        all_entity_content_filter = (
+
+            and_(
+                or_(*all_entity_content_filter),
+
+                tuple_(dbEntity.field_client_id, dbEntity.field_object_id)
+                    .in_(all_block_field_query)))
+
     else:
-        all_entity_content_filter=and_(or_(*all_entity_content_filter),
-            tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(category_fields)
-        )
+
+        all_entity_content_filter = (
+
+            and_(
+                or_(*all_entity_content_filter),
+
+                tuple_(dbEntity.field_client_id, dbEntity.field_object_id)
+                    .in_(category_field_cte_query)))
 
     # filter unused entitities
     field_filter = True
@@ -649,8 +716,9 @@ def search_mechanism(
                 inner_and.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
                 inner_and.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
             else:
-                inner_and.append(tuple_(cur_dbEntity.field_client_id,
-                                        cur_dbEntity.field_object_id).in_(category_fields))
+                inner_and.append(
+                    tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id)
+                        .in_(category_field_cte_query))
 
             matching_type = search_string.get('matching_type')
             if not matching_type in ("full_string", "substring", "regexp", "exclude"):
@@ -776,33 +844,43 @@ def search_mechanism(
 
     # Searching for and getting lexical entries.
 
-    all_results = set()
+    resolved_search = None
 
     if full_or_block:
 
-        results_query = (
+        entry_id_query = (
             full_or_block[0])
 
         if len(full_or_block) > 1:
 
-            results_query = (
+            entry_id_query = (
 
-                results_query.union(
+                entry_id_query.union(
                     *full_or_block[1:]))
 
-        all_results = (
+        entry_query = (
 
-            set(
-                tuple(x)
-                for x in results_query.all()))
+            DBSession
 
-        # Showing overall query.
+                .query(dbLexicalEntry)
+
+                .filter(
+                    dbLexicalEntry.marked_for_deletion == False,
+
+                    tuple_(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                        .in_(entry_id_query)))
+
+        # Showing overall entry query.
 
         log.debug(
-            '\nresults_query:\n' +
-            str(results_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+            '\nentry_query:\n' +
+            str(entry_query.statement.compile(compile_kwargs = {"literal_binds": True})))
 
-    if not all_results:
+        resolved_search = entry_query.all()
+
+    if not resolved_search:
 
         # Saving search results data, if required.
 
@@ -815,17 +893,75 @@ def search_mechanism(
 
         return [], [], [], []
 
-    resolved_search = DBSession.query(dbLexicalEntry)\
-        .filter(dbLexicalEntry.marked_for_deletion==False,
-                tuple_(dbLexicalEntry.client_id,
-                       dbLexicalEntry.object_id).in_(all_results))
+    if load_entities:
 
-    result_lexical_entries = entries_with_entities(resolved_search, accept=True, delete=False, mode=None, publish=True)
+        result_lexical_entries = (
 
-    #result_lexical_entries = [graphene_obj(x, LexicalEntry) for x in resolved_search.all()]
-    tmp_perspectives = set([le.dbObject.parent for le in result_lexical_entries])
+            # Don't need to check for perspective deletion, we explicitly look only in undeleted dictionaries
+            # and undeleted perspectives.
+
+            entries_with_entities(
+                resolved_search,
+                accept = True,
+                delete = False,
+                mode = None,
+                publish = True,
+                check_perspective = False))
+
+    else:
+
+        result_lexical_entries = [graphene_obj(entry, LexicalEntry) for entry in resolved_search]
+
+    perspective_ids = (
+        set(le.dbObject.parent_id for le in result_lexical_entries))
+
+    if len(perspective_ids) > 2:
+        perspective_ids = ids_to_id_cte(perspective_ids)
+
+    tmp_perspectives_query = (
+
+        DBSession
+
+            .query(
+                dbDictionaryPerspective)
+
+            .filter(
+                tuple_(
+                    dbDictionaryPerspective.client_id,
+                    dbDictionaryPerspective.object_id)
+                    .in_(perspective_ids)))
+
+    log.debug(
+        '\ntmp_perspectives_query:\n' +
+        str(tmp_perspectives_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+    tmp_perspectives = tmp_perspectives_query.all()
     res_perspectives = [graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in tmp_perspectives]
-    tmp_dictionaries = set([le.dbObject.parent for le in res_perspectives])
+
+    dictionary_ids = (
+        set(le.dbObject.parent_id for le in res_perspectives))
+
+    if len(dictionary_ids) > 2:
+        dictionary_ids = ids_to_id_cte(dictionary_ids)
+
+    tmp_dictionaries_query = (
+
+        DBSession
+
+            .query(
+                dbDictionary)
+
+            .filter(
+                tuple_(
+                    dbDictionary.client_id,
+                    dbDictionary.object_id)
+                    .in_(dictionary_ids)))
+
+    log.debug(
+        '\ntmp_dictionaries_query:\n' +
+        str(tmp_dictionaries_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+    tmp_dictionaries = tmp_dictionaries_query.all()
     res_dictionaries = [graphene_obj(dbdict, Dictionary) for dbdict in tmp_dictionaries]
 
     # Saving search results data, if required.
@@ -837,7 +973,9 @@ def search_mechanism(
 
             search_data = (
 
-                sorted(list(all_results)),
+                sorted(
+                    (entry.client_id, entry.object_id)
+                    for entry in resolved_search),
 
                 sorted(
                     (perspective.client_id, perspective.object_id)
@@ -918,7 +1056,9 @@ def search_mechanism_simple(
                 inner_and_block.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
                 inner_and_block.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
             else:
-                inner_and_block.append(tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id).in_(category_fields))
+                inner_and_block.append(
+                    tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id)
+                        .in_(category_fields_cte_query))
 
             matching_type = search_string.get('matching_type')
             if matching_type == "full_string":
@@ -1082,6 +1222,31 @@ def save_xlsx(info, xlsx_context, xlsx_filename):
         xlsx_filename])
 
 
+def ids_to_id_cte(ids):
+
+    id_values = (
+
+        values(
+            [column('client_id', SLBigInteger), column('object_id', SLBigInteger)],
+            ids,
+            'ids'))
+
+    return (
+
+        DBSession
+
+            .query(
+                id_values.c.client_id,
+                id_values.c.object_id)
+
+            .cte())
+
+
+def ids_to_id_cte_query(ids):
+
+    return DBSession.query(ids_to_id_cte(ids))
+
+
 class AdvancedSearch(LingvodocObjectType):
     entities = graphene.List(Entity)
     lexical_entries = graphene.List(LexicalEntry)
@@ -1106,6 +1271,7 @@ class AdvancedSearch(LingvodocObjectType):
         search_metadata,
         xlsx_export = False,
         cognates_flag = True,
+        load_entities = True,
         __debug_flag__ = False):
 
         try:
@@ -1114,16 +1280,37 @@ class AdvancedSearch(LingvodocObjectType):
             dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
                 marked_for_deletion=False)
             d_filter = []
+
             if dicts_to_filter:
-                d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+
+                dictionary_ids = dicts_to_filter
+
+                if len(dictionary_ids) > 2:
+                    dictionary_ids = ids_to_id_cte_query(dictionary_ids)
+
+                d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionary_ids))
+
             if languages:
+
                 if dicts_to_filter:
+
                     dictionaries = dictionaries.join(dbLanguage)
+
+                    language_ids = languages
+
+                    if len(language_ids) > 2:
+                        language_ids = ids_to_id_cte_query(language_ids)
+
                     d_filter.append(
                         and_(
-                            tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages),
-                            dbLanguage.marked_for_deletion == False)
-                    )
+
+                            tuple_(
+                                dbDictionary.parent_client_id,
+                                dbDictionary.parent_object_id)
+                                .in_(language_ids),
+
+                            dbLanguage.marked_for_deletion == False))
+
             dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
 
             if publish:
@@ -1232,14 +1419,15 @@ class AdvancedSearch(LingvodocObjectType):
 
 
             text_data_type = translation_gist_search('Text')
-            text_fields = DBSession.query(dbField.client_id, dbField.object_id).\
+
+            text_field_query = DBSession.query(dbField.client_id, dbField.object_id).\
                 filter(dbField.data_type_translation_gist_client_id == text_data_type.client_id,
-                       dbField.data_type_translation_gist_object_id == text_data_type.object_id).all()
+                       dbField.data_type_translation_gist_object_id == text_data_type.object_id)
 
             markup_data_type = translation_gist_search('Markup')
-            markup_fields = DBSession.query(dbField.client_id, dbField.object_id). \
+            markup_field_query = DBSession.query(dbField.client_id, dbField.object_id). \
                 filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
-                       dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()
+                       dbField.data_type_translation_gist_object_id == markup_data_type.object_id)
 
             # Setting up export to an XLSX file, if required.
 
@@ -1264,9 +1452,10 @@ class AdvancedSearch(LingvodocObjectType):
                     adopted=adopted,
                     etymology=etymology,
                     diacritics=diacritics,
-                    category_fields=text_fields,
+                    category_field_cte_query=DBSession.query(text_field_query.cte()),
                     yield_batch_count=yield_batch_count,
                     xlsx_context=xlsx_context,
+                    load_entities=load_entities,
                     __debug_flag__=__debug_flag__
                 )
 
@@ -1281,9 +1470,10 @@ class AdvancedSearch(LingvodocObjectType):
                     adopted=adopted,
                     etymology=etymology,
                     diacritics=diacritics,
-                    category_fields=markup_fields,
+                    category_field_cte_query=DBSession.query(markup_field_query.cte()),
                     yield_batch_count=yield_batch_count,
                     xlsx_context=xlsx_context,
+                    load_entities=load_entities,
                     __debug_flag__=__debug_flag__
                 )
                 res_entities += tmp_entities

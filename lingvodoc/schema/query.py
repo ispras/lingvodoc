@@ -537,6 +537,7 @@ class Query(graphene.ObjectType):
                                      simple=graphene.Boolean(),
                                      xlsx_export=graphene.Boolean(),
                                      cognates_flag=graphene.Boolean(),
+                                     load_entities=graphene.Boolean(),
                                      debug_flag=graphene.Boolean())
     advanced_search_simple = graphene.Field(AdvancedSearchSimple,
                                      languages=graphene.List(LingvodocID),
@@ -1308,6 +1309,7 @@ class Query(graphene.ObjectType):
         simple=True,
         xlsx_export=False,
         cognates_flag=True,
+        load_entities=True,
         debug_flag=False):
 
         if mode == 'all':
@@ -1363,6 +1365,7 @@ class Query(graphene.ObjectType):
             search_metadata,
             xlsx_export,
             cognates_flag,
+            load_entities,
             debug_flag)
 
     def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
