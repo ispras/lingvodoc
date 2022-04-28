@@ -650,8 +650,8 @@ def search_mechanism(
 
                 .filter(
                     tuple_(
-                        all_block_field_cte.client_id,
-                        all_block_field_cte.object_id)
+                        all_block_field_cte.c.client_id,
+                        all_block_field_cte.c.object_id)
 
                         .in_(category_field_cte_query)))
 
@@ -916,7 +916,7 @@ def search_mechanism(
         set(le.dbObject.parent_id for le in result_lexical_entries))
 
     if len(perspective_ids) > 2:
-        perspective_ids = ids_to_id_cte(perspective_ids)
+        perspective_ids = ids_to_id_query(perspective_ids)
 
     tmp_perspectives_query = (
 
@@ -942,7 +942,7 @@ def search_mechanism(
         set(le.dbObject.parent_id for le in res_perspectives))
 
     if len(dictionary_ids) > 2:
-        dictionary_ids = ids_to_id_cte(dictionary_ids)
+        dictionary_ids = ids_to_id_query(dictionary_ids)
 
     tmp_dictionaries_query = (
 
@@ -1222,7 +1222,7 @@ def save_xlsx(info, xlsx_context, xlsx_filename):
         xlsx_filename])
 
 
-def ids_to_id_cte(ids):
+def ids_to_id_query(ids):
 
     id_values = (
 
@@ -1237,10 +1237,11 @@ def ids_to_id_cte(ids):
 
             .query(
                 id_values.c.client_id,
-                id_values.c.object_id)
+                id_values.c.object_id))
 
-            .cte())
+def ids_to_id_cte(ids):
 
+    return ids_to_id_query(ids).cte()
 
 def ids_to_id_cte_query(ids):
 
