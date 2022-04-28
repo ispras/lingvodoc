@@ -140,18 +140,26 @@ class CreateTranslationAtom(graphene.Mutation):
                                                   content=content)
             DBSession.add(dbtranslationatom)
             DBSession.flush()
+
+            key = "translations:%s:%s" % (
+                str(dbtranslationatom.parent_client_id),
+                str(dbtranslationatom.parent_object_id))
+            caching.CACHE.rem(key)
+
             if not object_id:
+
                 basegroups = []
                 basegroups += [DBSession.query(dbBaseGroup).filter_by(name="Can edit translationatom").first()]
-                if not object_id:
-                    groups = []
-                    for base in basegroups:
-                        group = dbGroup(subject_client_id=dbtranslationatom.client_id,
-                                        subject_object_id=dbtranslationatom.object_id,
-                                        parent=base)
-                        groups += [group]
-                    for group in groups:
-                        add_user_to_group(user, group)
+
+                groups = []
+                for base in basegroups:
+                    group = dbGroup(subject_client_id=dbtranslationatom.client_id,
+                                    subject_object_id=dbtranslationatom.object_id,
+                                    parent=base)
+                    groups += [group]
+                for group in groups:
+                    add_user_to_group(user, group)
+
             return dbtranslationatom
 
     @staticmethod
