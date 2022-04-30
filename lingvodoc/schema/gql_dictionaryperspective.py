@@ -24,7 +24,7 @@ from lingvodoc.models import (
     PublishingEntity as dbPublishingEntity,
     ObjectTOC,
     user_to_group_association,
-    ValencyResultData as dbValencyResultData,
+    ValencySourceData as dbValencySourceData,
     )
 
 from lingvodoc.schema.gql_holders import (
@@ -568,8 +568,8 @@ class DictionaryPerspective(LingvodocObjectType):
                     literal(1))
 
                 .filter(
-                    dbValencyResultData.perspective_client_id == self.dbObject.client_id,
-                    dbValencyResultData.perspective_object_id == self.dbObject.object_id)
+                    dbValencySourceData.perspective_client_id == self.dbObject.client_id,
+                    dbValencySourceData.perspective_object_id == self.dbObject.object_id)
 
                 .exists())
 

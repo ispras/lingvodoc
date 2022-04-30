@@ -29,6 +29,9 @@ class Word:
         self.tier = tier
         self.time = time
 
+    def __repr__(self):
+        return f'<{repr(self.index)}, {repr(self.text)}, {repr(self.tier)}, {self.time}>'
+
     def strip(self, string):
         if type(string) is str:
             return hyphen_to_dash(string.strip())
