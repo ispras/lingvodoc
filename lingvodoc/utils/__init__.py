@@ -2,6 +2,7 @@
 __author__ = 'student'
 
 
+import json
 import os
 import re
 
@@ -12,6 +13,7 @@ except:
 
 
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.expression import Executable, ClauseElement, _literal_as_text, FromClause
 
 
@@ -139,6 +141,31 @@ def compile_values(element, compiler, asfrom = False, **kwargs):
             v = "(%s)" % v
 
     return v
+
+
+def render_statement(statement):
+    """
+    Renders SQLAlchemy query as a string with any parameters substituted, including proper handling of any JSONB
+    dictionary parameter literals.
+
+    Based on, among other things, on https://stackoverflow.com/a/9898141/2016856.
+    """
+
+    dialect = statement.bind.dialect
+    compiler = statement._compiler(dialect)
+
+    class Compiler(type(compiler)):
+
+        def render_literal_value(self, value, type, *args, **kwargs):
+
+            if (isinstance(value, dict) and
+                isinstance(type, postgresql.JSONB)):
+
+                return repr(json.dumps(value)) + ' :: jsonb'
+
+            return super().render_literal_value(value, type, *args, **kwargs)
+
+    return Compiler(dialect, statement).process(statement, literal_binds = True)
 
 
 def get_resident_memory():

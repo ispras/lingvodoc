@@ -88,30 +88,40 @@ def corpus_to_arx(
 
     return verbs_counted
 
-def sentence_instance_gen(s):
+def sentence_instance_gen(
+    token_list,
+    additional_check_flag = True):
 
     cases = [
         'nom', 'acc', 'dat', 'ins', 'gen', 'abl', 'car', 'egr', 'el', 'ill', 'loc', 'prol', 'term',
         'cns', 'comp', 'com', 'lat', 'sim', 'par', 'ad', 'trans', 'allat', 'ab', 'in']
 
+    lex_skip_set = {
+        'какой', 'чисто', 'сё', 'минут'}
+
     v_ind = []
 
-    for t_index, t in enumerate(s):
-        if len(t) > 1:
+    for t_index, t in enumerate(token_list):
+
+        if (len(t) > 1 and
+           'gr' in t):
+
             grammar = t['gr'].split(',')
+
             if 'V' in grammar:
                 v_ind.append(t_index)
 
     for n, ind in enumerate(v_ind):
 
-        transl = s[ind]['trans_ru']
-        lex = s[ind]['lex']
+        lex = token_list[ind].get('lex')
         prev_v = v_ind[n - 1] + 1 if n > 0 else 0
-        next_v = v_ind[n + 1] if n + 1 < len(v_ind) - 1 else len(s) - 1
+        next_v = v_ind[n + 1] if n + 1 < len(v_ind) - 1 else len(token_list) - 1
 
         for r in range(max(prev_v, ind - 5), min(next_v, ind + 5) + 1):
 
-            if len(s[r]) <= 1:
+            if (len(token_list[r]) <= 1 or
+                'gr' not in token_list[r]):
+
                 continue
 
             indent = ind - r
@@ -119,27 +129,26 @@ def sentence_instance_gen(s):
             # Two different 'acc0' because the second one is in Cyrillic.
 
             gram = (
-                s[r]['gr']
+                token_list[r]['gr']
                     .replace(' ', '')
                     .replace('acc0', 'acc')
                     .replace('асс0', 'acc')
                     .replace('sg.nom', 'sg,nom')
                     .split(','))
 
-            if not (
-                ('N' in gram or 'PRO' in gram) and
-                len(gram) > 1 and
-                'rel_n' not in gram and
-                'attr' not in gram and
-                'term' not in gram and
-                'adv' not in gram and
-                'app' not in gram and
-                'какой' != s[r]['lex'] and
-                'чисто' != s[r]['lex'] and
-                'сё' != s[r]['lex'] and
-                'минут' != s[r]['lex']):
+            if additional_check_flag:
 
-                continue
+                if not (
+                    ('N' in gram or 'PRO' in gram) and
+                    len(gram) > 1 and
+                    'rel_n' not in gram and
+                    'attr' not in gram and
+                    'term' not in gram and
+                    'adv' not in gram and
+                    'app' not in gram and
+                    token_list[r].get('lex') not in lex_skip_set):
+
+                    continue
 
             try:
                 cs = [cas for cas in cases if cas in gram][0]

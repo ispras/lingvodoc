@@ -206,7 +206,9 @@ from lingvodoc.models import (
     Parser as dbParser,
     ParserResult as dbParserResult,
     UnstructuredData as dbUnstructuredData,
-    ValencyResultData as dbValencyResultData,
+    ValencySourceData as dbValencySourceData,
+    ValencyParserData as dbValencyParserData,
+    ValencyEafData as dbValencyEafData,
     ValencySentenceData as dbValencySentenceData,
     ValencyInstanceData as dbValencyInstanceData,
     ValencyAnnotationData as dbValencyAnnotationData,
@@ -224,7 +226,8 @@ from sqlalchemy import (
     or_,
     tuple_,
     create_engine,
-    literal
+    literal,
+    union
 )
 from zope.sqlalchemy import mark_changed
 from lingvodoc.views.v2.utils import (
@@ -246,7 +249,7 @@ from lingvodoc.utils.phonology import (
     gql_phonology_link_perspective_data,
     gql_sound_and_markup)
 
-from lingvodoc.utils import starling_converter
+from lingvodoc.utils import starling_converter, render_statement
 
 from lingvodoc.utils.search import (
     translation_gist_search,
@@ -459,7 +462,7 @@ class Query(graphene.ObjectType):
     perspectives = graphene.List(DictionaryPerspective,
         published=graphene.Boolean(),
         only_with_phonology_data=graphene.Boolean(),
-        only_with_parser_result_data=graphene.Boolean())
+        only_with_valency_data=graphene.Boolean())
     perspective = graphene.Field(DictionaryPerspective, id=LingvodocID())
     entity = graphene.Field(Entity, id=LingvodocID())
     language = graphene.Field(Language, id=LingvodocID())
@@ -643,10 +646,6 @@ class Query(graphene.ObjectType):
 
         if case_flag:
 
-            case_list = [
-                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
-                'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
-
             case_table_name = (
 
                 'case_table_' +
@@ -656,7 +655,8 @@ class Query(graphene.ObjectType):
 
                 ', '.join(
                     f'(\'{case_str}\', {index})'
-                    for index, case_str in enumerate(case_list)))
+                    for index, case_str in (
+                        enumerate(CreateValencyData.case_list))))
 
             DBSession.execute(f'''
 
@@ -691,9 +691,9 @@ class Query(graphene.ObjectType):
                     dbValencyInstanceData)
 
                 .filter(
-                    dbValencyResultData.perspective_client_id == perspective_id[0],
-                    dbValencyResultData.perspective_object_id == perspective_id[1],
-                    dbValencySentenceData.result_id == dbValencyResultData.id,
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1],
+                    dbValencySentenceData.source_id == dbValencySourceData.id,
                     dbValencyInstanceData.sentence_id == dbValencySentenceData.id))
 
         if verb_prefix:
@@ -905,9 +905,9 @@ class Query(graphene.ObjectType):
                 verb_query
 
                     .filter(
-                        dbValencyResultData.perspective_client_id == perspective_id[0],
-                        dbValencyResultData.perspective_object_id == perspective_id[1],
-                        dbValencySentenceData.result_id == dbValencyResultData.id,
+                        dbValencySourceData.perspective_client_id == perspective_id[0],
+                        dbValencySourceData.perspective_object_id == perspective_id[1],
+                        dbValencySentenceData.source_id == dbValencySourceData.id,
                         dbValencyInstanceData.sentence_id == dbValencySentenceData.id)
 
                     .distinct()
@@ -1089,20 +1089,27 @@ class Query(graphene.ObjectType):
         entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
         if not entity:
             raise KeyError("No such file")
-        resp = requests.get(entity.content)
-        if not resp:
+
+        try:
+
+            storage = (
+                info.context.request.registry.settings['storage'])
+
+            with storage_file(
+                storage, entity.content) as content_stream:
+
+                content = content_stream.read()
+
+        except:
             raise ResponseError("Cannot access file")
-        content = resp.content
-        result = False
+
         with tempfile.NamedTemporaryFile() as temp:
             markup = tgt_to_eaf(content, entity.additional_metadata)
             temp.write(markup.encode("utf-8"))
+            temp.flush()
             elan_check = elan_parser.ElanCheck(temp.name)
             elan_check.parse()
-            if elan_check.check():
-                result = True
-            temp.flush()
-        return result
+            return elan_check.check()
 
     """
         from urllib import request
@@ -1609,7 +1616,7 @@ class Query(graphene.ObjectType):
         info,
         published = None,
         only_with_phonology_data = None,
-        only_with_parser_result_data = None):
+        only_with_valency_data = None):
         """
         example:
 
@@ -1627,8 +1634,14 @@ class Query(graphene.ObjectType):
         """
 
         perspective_query = (
-            DBSession.query(dbPerspective).filter(
-                dbPerspective.marked_for_deletion == False))
+
+            DBSession
+
+                .query(
+                    dbPerspective)
+
+                .filter(
+                    dbPerspective.marked_for_deletion == False))
 
         if published:
 
@@ -1656,6 +1669,9 @@ class Query(graphene.ObjectType):
                          dbPerspective.state_translation_gist_client_id == limited_client_id)))
 
         # If required, filtering out pespectives without phonology data.
+        #
+        # Experiments have shown that filtering is faster through id in select group by than through exists
+        # subquery. For previous exists-based filterting see the file's history.
 
         if only_with_phonology_data:
 
@@ -1665,42 +1681,64 @@ class Query(graphene.ObjectType):
             dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
             dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
 
-            phonology_query = DBSession.query(
-                dbPerspective, dbLexicalEntry, dbMarkup, dbSound).filter(
-                    dbLexicalEntry.parent_client_id == dbPerspective.client_id,
-                    dbLexicalEntry.parent_object_id == dbPerspective.object_id,
-                    dbLexicalEntry.marked_for_deletion == False,
-                    dbMarkup.parent_client_id == dbLexicalEntry.client_id,
-                    dbMarkup.parent_object_id == dbLexicalEntry.object_id,
-                    dbMarkup.marked_for_deletion == False,
-                    dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
-                    dbPublishingMarkup.client_id == dbMarkup.client_id,
-                    dbPublishingMarkup.object_id == dbMarkup.object_id,
-                    dbPublishingMarkup.published == True,
-                    dbPublishingMarkup.accepted == True,
-                    dbSound.client_id == dbMarkup.self_client_id,
-                    dbSound.object_id == dbMarkup.self_object_id,
-                    dbSound.marked_for_deletion == False,
-                    dbPublishingSound.client_id == dbSound.client_id,
-                    dbPublishingSound.object_id == dbSound.object_id,
-                    dbPublishingSound.published == True,
-                    dbPublishingSound.accepted == True)
+            phonology_query = (
 
-            perspective_query = perspective_query.filter(phonology_query.exists())
+                DBSession
 
-        # If required, filtering out perspectives without parser result data.
+                    .query(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id)
 
-        if only_with_parser_result_data:
+                    .filter(
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbMarkup.parent_client_id == dbLexicalEntry.client_id,
+                        dbMarkup.parent_object_id == dbLexicalEntry.object_id,
+                        dbMarkup.marked_for_deletion == False,
+                        dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
+                        dbPublishingMarkup.client_id == dbMarkup.client_id,
+                        dbPublishingMarkup.object_id == dbMarkup.object_id,
+                        dbPublishingMarkup.published == True,
+                        dbPublishingMarkup.accepted == True,
+                        dbSound.client_id == dbMarkup.self_client_id,
+                        dbSound.object_id == dbMarkup.self_object_id,
+                        dbSound.marked_for_deletion == False,
+                        dbPublishingSound.client_id == dbSound.client_id,
+                        dbPublishingSound.object_id == dbSound.object_id,
+                        dbPublishingSound.published == True,
+                        dbPublishingSound.accepted == True)
+
+                    .group_by(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id))
+
+            perspective_query = (
+
+                perspective_query.filter(
+
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
+
+                        .in_(
+                            DBSession.query(
+                                phonology_query.cte()))))
+
+        # If required, filtering out perspectives without valency data.
+        #
+        # NOTE: We explicitly need a union, if we try to use an or condition, due to something or other in
+        # PostgreSQL's planner query execution time jumps from 2 to 180 seconds, like what?
+
+        if only_with_valency_data:
 
             parser_result_query = (
 
                 DBSession
 
-                    .query(literal(1))
+                    .query(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id)
 
                     .filter(
-                        dbLexicalEntry.parent_client_id == dbPerspective.client_id,
-                        dbLexicalEntry.parent_object_id == dbPerspective.object_id,
                         dbLexicalEntry.marked_for_deletion == False,
                         dbEntity.parent_client_id == dbLexicalEntry.client_id,
                         dbEntity.parent_object_id == dbLexicalEntry.object_id,
@@ -1712,9 +1750,52 @@ class Query(graphene.ObjectType):
                         dbPublishingEntity.accepted == True,
                         dbParserResult.entity_client_id == dbEntity.client_id,
                         dbParserResult.entity_object_id == dbEntity.object_id,
-                        dbParserResult.marked_for_deletion == False))
+                        dbParserResult.marked_for_deletion == False)
 
-            perspective_query = perspective_query.filter(parser_result_query.exists())
+                    .group_by(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id))
+
+            eaf_corpus_query = (
+
+                DBSession
+
+                    .query(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id)
+
+                    .filter(
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.marked_for_deletion == False,
+                        dbEntity.content.ilike('%.eaf'),
+                        dbEntity.additional_metadata.contains({'data_type': 'elan markup'}),
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+
+                    .group_by(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id))
+
+            perspective_query = (
+
+                perspective_query.filter(
+
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
+
+                        .in_(
+                            union(
+                                DBSession.query(parser_result_query.cte()),
+                                DBSession.query(eaf_corpus_query.cte())))))
+
+        log.debug(
+            '\nperspective_query:\n' +
+            render_statement(perspective_query.statement))
 
         perspectives_list = []
 
@@ -10511,12 +10592,833 @@ class Valency(graphene.Mutation):
 
 class CreateValencyData(graphene.Mutation):
 
+    case_list = [
+        'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
+        'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
+
     class Arguments:
 
         perspective_id = LingvodocID(required = True)
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
+
+    @staticmethod
+    def align(
+        token_list,
+        word_list,
+        debug_flag):
+        """
+        Aligns words to text tokens via Levenshtein matching.
+        """
+
+        token_chr_list = []
+
+        for i, token in enumerate(token_list):
+            for j, chr in enumerate(token):
+
+                token_chr_list.append((i, j, chr.lower()))
+
+        word_chr_list = []
+
+        for i, word in enumerate(word_list):
+            for j, chr in enumerate(word or ''):
+
+                word_chr_list.append((i, j, chr.lower()))
+
+        if debug_flag:
+
+            log.debug(
+                f'\ntoken_chr_list: {token_chr_list}'
+                f'\nword_chr_list: {word_chr_list}'
+                f'\n{"".join(token_list)}'
+                f'\n{"".join(word or "" for word in word_list)}')
+
+        # Standard 2-row Wagner-Fischer with addition of substitution tracking.
+
+        value_list = [
+            (i, None)
+            for i in range(len(token_chr_list) + 1)]
+
+        for i in range(len(word_chr_list)):
+
+            before_list = value_list
+            value_list = [(i + 1, None)]
+
+            for j in range(len(token_chr_list)):
+
+                delete_source = before_list[j + 1]
+                delete_value = (delete_source[0] + 1, delete_source[1])
+
+                insert_source = value_list[j]
+                insert_value = (insert_source[0] + 1, insert_source[1])
+
+                substitute_source = before_list[j]
+                substitute_cost = substitute_source[0]
+
+                if token_chr_list[j][2] != word_chr_list[i][2]:
+                    substitute_cost += 1
+
+                substitute_value = (
+
+                    substitute_cost,
+                    (token_chr_list[j][:2], word_chr_list[i][:2], substitute_source[1]))
+
+                value_list.append(
+                    min(delete_value, insert_value, substitute_value))
+
+        result = (
+            value_list[len(token_chr_list)])
+
+        log.debug(f'\n{result[0]}')
+
+        # Matching words to tokens by number of substitution and token ordering.
+
+        map_tuple = result[1]
+        map_list = []
+
+        while map_tuple:
+
+            map_list.append(map_tuple[:2])
+            map_tuple = map_tuple[2]
+
+        log_list = []
+
+        map_counter = (
+            collections.defaultdict(collections.Counter))
+
+        for index_from, index_to in reversed(map_list):
+
+            if debug_flag:
+
+                token = token_list[index_from[0]]
+                word = word_list[index_to[0]]
+
+                log_list.append(
+                    f'\n{index_from}, {index_to}: '
+                    f'{token[: index_from[1]]}[{token[index_from[1]]}]{token[index_from[1] + 1 :]} / '
+                    f'{word[: index_to[1]]}[{word[index_to[1]]}]{word[index_to[1] + 1 :]}')
+
+            map_counter[index_to[0]][index_from[0]] += 1
+
+        if debug_flag:
+
+            log.debug(
+                ''.join(log_list))
+
+        word_token_dict = {}
+        token_already_set = set()
+
+        for word_index in range(len(word_list)):
+
+            token_result = (
+
+                max(
+                    ((count, -token_index)
+                        for token_index, count in map_counter[word_index].items()
+                        if token_index not in token_already_set),
+                    default = None))
+
+            if token_result is not None:
+
+                token_count, token_index_value = token_result
+
+                token_index = -token_index_value
+
+                word_token_dict[word_index] = token_index
+                token_already_set.add(token_index)
+
+        if debug_flag:
+
+            log.debug(
+                ''.join(
+                    f'\n{repr(word_list[word_index])} ({word_index}) -> '
+                    f'{repr(token_list[token_index])} ({token_index})'
+                    for word_index, token_index in word_token_dict.items()))
+
+        return (
+            result[0], word_token_dict)
+
+    @staticmethod
+    def process(
+        info,
+        perspective_id,
+        debug_flag):
+
+        # Getting parser result data.
+
+        parser_result_list = (
+
+            Valency.get_parser_result_data(
+                perspective_id, debug_flag))
+
+        sentence_data_list = (
+            valency.corpus_to_sentences(parser_result_list))
+
+        if debug_flag:
+
+            parser_result_file_name = (
+                f'create valency {perspective_id[0]} {perspective_id[1]} parser result.json')
+
+            with open(
+                parser_result_file_name, 'w') as parser_result_file:
+
+                json.dump(
+                    parser_result_list,
+                    parser_result_file,
+                    ensure_ascii = False,
+                    indent = 2)
+
+            sentence_data_file_name = (
+                f'create valency {perspective_id[0]} {perspective_id[1]} sentence data.json')
+
+            with open(
+                sentence_data_file_name, 'w') as sentence_data_file:
+
+                json.dump(
+                    sentence_data_list,
+                    sentence_data_file,
+                    ensure_ascii = False,
+                    indent = 2)
+
+        # Initializing annotation data from parser results.
+
+        order_case_set = (
+
+            set([
+                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
+                'comp', 'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr', 'lat',
+                'allat']))
+
+        data_case_set = set()
+        instance_insert_list = []
+
+        for i in sentence_data_list:
+
+            parser_result_id = i['id']
+
+            # Checking if we already have such parser result valency data.
+
+            valency_parser_data = (
+
+                DBSession
+
+                    .query(
+                        dbValencyParserData)
+
+                    .filter(
+                        dbValencySourceData.perspective_client_id == perspective_id[0],
+                        dbValencySourceData.perspective_object_id == perspective_id[1],
+                        dbValencySourceData.id == dbValencyParserData.id,
+                        dbValencyParserData.parser_result_client_id == parser_result_id[0],
+                        dbValencyParserData.parser_result_object_id == parser_result_id[1])
+
+                    .first())
+
+            if valency_parser_data:
+
+                # The same hash, we just skip it.
+
+                if valency_parser_data.hash == i['hash']:
+                    continue
+
+                # Not the same hash, we actually should update it, but for now we leave it for later.
+
+                raise NotImplementedError
+
+            valency_source_data = (
+
+                dbValencySourceData(
+                    perspective_client_id = perspective_id[0],
+                    perspective_object_id = perspective_id[1]))
+
+            DBSession.add(valency_source_data)
+            DBSession.flush()
+
+            valency_parser_data = (
+
+                dbValencyParserData(
+                    id = valency_source_data.id,
+                    parser_result_client_id = parser_result_id[0],
+                    parser_result_object_id = parser_result_id[1],
+                    hash = i['hash']))
+
+            DBSession.add(valency_parser_data)
+            DBSession.flush()
+
+            for p in i['paragraphs']:
+
+                for s in p['sentences']:
+
+                    instance_list = []
+
+                    for index, (lex, cs, indent, ind, r, animacy) in (
+                        enumerate(valency.sentence_instance_gen(s))):
+
+                        instance_list.append({
+                            'index': index,
+                            'location': (ind, r),
+                            'case': cs})
+                        
+                        data_case_set.add(cs)
+
+                    sentence_data = {
+                        'tokens': s,
+                        'instances': instance_list}
+
+                    valency_sentence_data = (
+
+                        dbValencySentenceData(
+                            source_id = valency_source_data.id,
+                            data = sentence_data,
+                            instance_count = len(instance_list)))
+
+                    DBSession.add(valency_sentence_data)
+                    DBSession.flush()
+
+                    for instance in instance_list:
+
+                        instance_insert_list.append({
+                            'sentence_id': valency_sentence_data.id,
+                            'index': instance['index'],
+                            'verb_lex': s[instance['location'][0]]['lex'].lower(),
+                            'case_str': instance['case'].lower()})
+
+                    log.debug(
+                        '\n' +
+                        pprint.pformat(
+                            (valency_source_data.id, len(instance_list), sentence_data),
+                            width = 192))
+
+        # Getting ELAN corpus data, processing each ELAN file.
+
+        entity_list = (
+        
+            DBSession
+
+                .query(
+                    dbEntity)
+
+                .filter(
+                    dbLexicalEntry.parent_client_id == perspective_id[0],
+                    dbLexicalEntry.parent_object_id == perspective_id[1],
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbEntity.content.ilike('%.eaf'),
+                    dbEntity.additional_metadata.contains({'data_type': 'elan markup'}),
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True)
+
+                .order_by(
+                    dbLexicalEntry.created_at,
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id,
+                    dbEntity.created_at,
+                    dbEntity.client_id,
+                    dbEntity.object_id)
+
+                .all())
+
+        storage = (
+            info.context.request.registry.settings['storage'])
+
+        storage_f = (
+            as_storage_file if debug_flag else storage_file)
+
+        delimiter_re = '[-\xad\xaf\x96\u2013\x97\u2014.]'
+
+        verb_gloss_str_list = [
+
+            'PRS',
+            'FUT',
+            f'1{delimiter_re}?PST',
+            f'2{delimiter_re}?PST',
+
+            'IMP',
+            'COND',
+            'SBJV',
+
+            'CAUS',
+            'REFL',
+            'IMPERS',
+            'ITER',
+
+            'OPT',
+            'INF']
+
+        verb_re = (
+
+            re.compile(
+                f'{delimiter_re}\\b({"|".join(verb_gloss_str_list)})\\b',
+                re.IGNORECASE))
+
+        case_re = (
+
+            re.compile(
+                f'{delimiter_re}\\b({"|".join(CreateValencyData.case_list)})\\b',
+                re.IGNORECASE))
+
+        for entity in entity_list:
+
+            # Checking if we already have such EAF corpus valency data.
+
+            valency_eaf_data = (
+
+                DBSession
+
+                    .query(dbValencyEafData)
+
+                    .filter(
+                        dbValencySourceData.perspective_client_id == perspective_id[0],
+                        dbValencySourceData.perspective_object_id == perspective_id[1],
+                        dbValencySourceData.id == dbValencyEafData.id,
+                        dbValencyEafData.entity_client_id == entity.client_id,
+                        dbValencyEafData.entity_object_id == entity.object_id)
+
+                    .first())
+
+            if valency_eaf_data:
+
+                # The same hash, we just skip it.
+
+                if valency_eaf_data.hash == entity.additional_metadata['hash']:
+                    continue
+
+                # Not the same hash, we actually should update it, but for now we leave it for later.
+
+                raise NotImplementedError
+
+            valency_source_data = (
+
+                dbValencySourceData(
+                    perspective_client_id = perspective_id[0],
+                    perspective_object_id = perspective_id[1]))
+
+            DBSession.add(valency_source_data)
+            DBSession.flush()
+
+            valency_eaf_data = (
+
+                dbValencyEafData(
+                    id = valency_source_data.id,
+                    entity_client_id = entity.client_id,
+                    entity_object_id = entity.object_id,
+                    hash = entity.additional_metadata['hash']))
+
+            DBSession.add(valency_eaf_data)
+            DBSession.flush()
+
+            create_valency_str = (
+                f'create valency '
+                f'{perspective_id[0]} {perspective_id[1]} '
+                f'{entity.client_id} {entity.object_id}')
+
+            # Getting and parsing corpus file.
+
+            try:
+                with storage_f(storage, entity.content) as eaf_stream:
+                    content = eaf_stream.read()
+
+            except:
+                raise ResponseError(f'Cannot access {entity.content}')
+
+            with tempfile.NamedTemporaryFile() as temporary_file:
+
+                temporary_file.write(
+                    tgt_to_eaf(content, entity.additional_metadata).encode('utf-8'))
+
+                temporary_file.flush()
+
+                elan_check = elan_parser.ElanCheck(temporary_file.name)
+                elan_check.parse()
+
+                if not elan_check.check():
+                    continue
+
+                elan_reader = elan_parser.Elan(temporary_file.name)
+                elan_reader.parse()
+
+                eaf_data = elan_reader.proc()
+
+                # Saving corpus file if required.
+
+                if debug_flag:
+
+                    shutil.copyfile(
+                        temporary_file.name,
+                        f'{create_valency_str}.eaf')
+
+            if debug_flag:
+
+                log.debug(
+                    '\n' +
+                    pprint.pformat(eaf_data, width = 192))
+
+                with open(
+                    f'{create_valency_str}.pprint', 'w') as pprint_file:
+
+                    pprint_file.write(
+                        pprint.pformat(eaf_data, width = 192))
+
+            # Processing extracted data.
+
+            for eaf_item in eaf_data:
+
+                if len(eaf_item) < 3:
+                    continue
+
+                if debug_flag:
+
+                    log.debug(
+                        '\neaf_item:\n{}\n{}\n{}'.format(
+                            pprint.pformat(eaf_item[0], width = 192),
+                            pprint.pformat(eaf_item[1], width = 192),
+                            pprint.pformat(eaf_item[2], width = 192)))
+
+                if not isinstance(eaf_item[2], collections.OrderedDict):
+                    continue
+
+                # Text tokenization.
+
+                if (len(eaf_item[0]) < 1 or
+                    eaf_item[0][0].tier != 'text'):
+
+                    raise NotImplementedError
+
+                if eaf_item[0][0].text is None:
+                    continue
+
+                text_source_str = (
+
+                    ' '.join(
+                        item.text
+                        for item in eaf_item[0]
+                        if item.text))
+
+                token_list = []
+
+                for text_str in re.split(r'\s+', text_source_str):
+
+                    last_index = 0
+
+                    for match in re.finditer(r'\b\S+\b', text_str):
+
+                        if match.start() > last_index:
+                            token_list.append(text_str[last_index : match.start()])
+
+                        if match.end() > match.start():
+                            token_list.append(match.group())
+
+                        last_index = match.end()
+
+                    if last_index < len(text_str):
+                        token_list.append(text_str[last_index :])
+
+                xlat_list = []
+                xcript_list = []
+                word_list = []
+
+                for key, value in eaf_item[2].items():
+
+                    if (key.text is None and
+                        all(item.text is None for item in value)):
+
+                        continue
+
+                    if key.tier != 'translation':
+
+                        log.warn(f'\nkey: {key}')
+                        raise NotImplementedError
+
+                    xlat = key.text
+
+                    xcript = None
+                    word = None
+
+                    for item in value:
+
+                        if item.tier == 'transcription':
+                            xcript = item.text
+
+                        elif item.tier == 'word':
+                            word = item.text
+
+                    xlat_list.append(xlat)
+                    xcript_list.append(xcript)
+                    word_list.append(word)
+
+                log.debug(
+                    f'\ntext: {repr(eaf_item[0][0].text)}'
+                    f'\ntoken_list: {token_list}'
+                    f'\nxcript_list: {xcript_list}'
+                    f'\nword_list: {word_list}')
+
+                # Aligning words to text tokens.
+
+                xcript_alignment = (
+
+                    CreateValencyData.align(
+                        token_list, xcript_list, debug_flag))
+
+                word_alignment = (
+
+                    CreateValencyData.align(
+                        token_list, word_list, debug_flag))
+
+                (distance, word_token_dict) = (
+
+                    min(
+                        word_alignment,
+                        xcript_alignment,
+                        key = lambda x: (x[0], -len(x[1]))))
+
+                log.debug(
+                    f'\ndistance: {distance}'
+                    f'\nword_token_dict: {word_token_dict}' +
+                    ''.join(
+                        f'\n{repr(word_list[word_index])} ({word_index}) -> '
+                        f'{repr(token_list[token_index])} ({token_index})'
+                        for word_index, token_index in word_token_dict.items()))
+
+                token_word_dict = {
+                    token_index: word_index
+                    for word_index, token_index in word_token_dict.items()}
+
+                # Constructing phrase's data.
+
+                token_data_list = []
+
+                for i, token in enumerate(token_list):
+
+                    token_dict = {'token': token}
+                    token_data_list.append(token_dict)
+
+                    word_index = token_word_dict.get(i)
+
+                    if word_index is None:
+                        continue
+
+                    xlat = xlat_list[word_index]
+
+                    token_dict.update({
+                        'translation': xlat,
+                        'transcription': xcript_list[word_index],
+                        'word': word_list[word_index]})
+
+                    if xlat is None:
+                        continue
+
+                    if verb_re.search(xlat) is not None:
+                        token_dict['gr'] = 'V'
+
+                    case_match = case_re.search(xlat)
+
+                    if case_match is not None:
+
+                        case_str = (
+                            case_match.group(1).lower())
+
+                        if 'gr' in token_dict:
+                            token_dict['gr'] += ',' + case_str
+
+                        else:
+                            token_dict['gr'] = case_str
+
+                instance_list = []
+
+                for index, (lex, cs, indent, ind, r, animacy) in (
+
+                    enumerate(
+                        valency.sentence_instance_gen(
+                            token_data_list, False))):
+
+                    instance_list.append({
+                        'index': index,
+                        'location': (ind, r),
+                        'case': cs})
+
+                    data_case_set.add(cs)
+
+                sentence_data = {
+                    'tokens': token_data_list,
+                    'instances': instance_list}
+
+                valency_sentence_data = (
+
+                    dbValencySentenceData(
+                        source_id = valency_source_data.id,
+                        data = sentence_data,
+                        instance_count = len(instance_list)))
+
+                DBSession.add(valency_sentence_data)
+                DBSession.flush()
+
+                for instance in instance_list:
+
+                    token = (
+                        token_data_list[instance['location'][0]])
+
+                    verb_lex = (
+                        token['word'] or
+                        token['token'] or
+                        token['transcription'])
+
+                    if not verb_lex:
+                        continue
+
+                    instance_insert_list.append({
+                        'sentence_id': valency_sentence_data.id,
+                        'index': instance['index'],
+                        'verb_lex': verb_lex.lower(),
+                        'case_str': instance['case'].lower()})
+
+                log.debug(
+                    '\n' +
+                    pprint.pformat(
+                        (valency_source_data.id, len(instance_list), sentence_data),
+                        width = 192))
+
+        if instance_insert_list:
+
+            query = (
+
+                dbValencyInstanceData.__table__
+                    .insert()
+                    .values(instance_insert_list))
+
+            DBSession.execute(query)
+
+        if debug_flag:
+
+            with open(
+                'instance.json', 'w', encoding = 'utf-8') as instances_file:
+
+                json.dump(
+                    sentence_data_list,
+                    instances_file,
+                    ensure_ascii = False,
+                    indent = 2)
+
+        log.debug(
+            f'\ndata_case_set:\n{data_case_set}'
+            f'\ndata_case_set - order_case_set:\n{data_case_set - order_case_set}'
+            f'\norder_case_set - data_case_set:\n{order_case_set - data_case_set}')
+
+        return len(instance_insert_list)
+
+    @staticmethod
+    def test(
+        info, debug_flag):
+
+        parser_result_query = (
+
+            DBSession
+
+                .query(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
+
+                .filter(
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbEntity.content.op('~*')('.*\.(doc|docx|odt)'),
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True,
+                    dbParserResult.entity_client_id == dbEntity.client_id,
+                    dbParserResult.entity_object_id == dbEntity.object_id,
+                    dbParserResult.marked_for_deletion == False)
+
+                .group_by(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id))
+
+        eaf_corpus_query = (
+
+            DBSession
+
+                .query(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
+
+                .filter(
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.marked_for_deletion == False,
+                    dbEntity.content.ilike('%.eaf'),
+                    dbEntity.additional_metadata.contains({'data_type': 'elan markup'}),
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True)
+
+                .group_by(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id))
+
+        valency_data_query = (
+
+            DBSession
+
+                .query(
+                    dbValencySourceData.perspective_client_id,
+                    dbValencySourceData.perspective_object_id)
+
+                .distinct())
+
+        perspective_list = (
+
+            DBSession
+
+                .query(
+                    dbPerspective)
+
+                .filter(
+                    dbPerspective.marked_for_deletion == False,
+
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
+
+                        .notin_(
+                            DBSession.query(valency_data_query.cte())),
+
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
+
+                        .in_(
+                            union(
+                                DBSession.query(parser_result_query.cte()),
+                                DBSession.query(eaf_corpus_query.cte()))))
+
+                .order_by(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
+
+                .all())
+
+        import random
+        random.shuffle(perspective_list)
+
+        for perspective in perspective_list:
+
+            log.debug(
+                f'\nperspective_id: {perspective.id}')
+
+            CreateValencyData.process(
+                info, perspective.id, debug_flag)
+
+            if utils.get_resident_memory() > 2 * 2**30:
+                break
 
     @staticmethod
     def mutate(root, info, **args):
@@ -10554,15 +11456,20 @@ class CreateValencyData(graphene.Mutation):
             dictionary_name = dictionary.get_translation(locale_id)
             perspective_name = perspective.get_translation(locale_id)
 
+            full_name = dictionary_name + ' \u203a ' + perspective_name
+
             if dictionary.marked_for_deletion:
 
                 return (
 
                     ResponseError(message =
-                        'Dictionary \'{}\' {}/{} is deleted.'.format(
+                        'Dictionary \'{}\' {}/{} of perspective \'{}\' {}/{} is deleted.'.format(
                             dictionary_name,
-                            perspective.parent_client_id,
-                            perspective.parent_object_id)))
+                            dictionary.client_id,
+                            dictionary.object_id,
+                            perspective_name,
+                            perspective.client_id,
+                            perspective.object_id)))
 
             if perspective.marked_for_deletion:
 
@@ -10571,150 +11478,19 @@ class CreateValencyData(graphene.Mutation):
                     ResponseError(message =
                         'Perspective \'{}\' {}/{} is deleted.'.format(
                             full_name,
-                            perspective_id[0],
-                            perspective_id[1])))
+                            perspective.client_id,
+                            perspective.object_id)))
 
-            # Getting parser result data.
+            CreateValencyData.process(
+                info,
+                perspective_id,
+                debug_flag)
 
-            parser_result_list = (
+            if True:
 
-                Valency.get_parser_result_data(
-                    perspective_id, debug_flag))
-
-            sentence_data_list = (
-                valency.corpus_to_sentences(parser_result_list))
-
-            # Initializing annotation data.
-
-            order_case_set = (
-
-                set([
-                    'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
-                    'comp', 'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr', 'lat',
-                    'allat']))
-
-            data_case_set = set()
-            instance_insert_list = []
-
-            for i in sentence_data_list:
-
-                parser_result_id = i['id']
-
-                # Checking if we already have such parser result.
-
-                valency_result_data = (
-
-                    DBSession
-
-                        .query(dbValencyResultData)
-
-                        .filter_by(
-                            perspective_client_id = perspective_id[0],
-                            perspective_object_id = perspective_id[1],
-                            parser_result_client_id = parser_result_id[0],
-                            parser_result_object_id = parser_result_id[1])
-
-                        .first())
-
-                if valency_result_data:
-
-                    # The same hash, we just skip it.
-
-                    if valency_result_data.hash == i['hash']:
-                        continue
-
-                    # Not the same hash, we actually should update it, but for now we leave it for later.
-
-                    raise NotImplementedError
-
-                valency_result_data = (
-
-                    dbValencyResultData(
-                        perspective_client_id = perspective_id[0],
-                        perspective_object_id = perspective_id[1],
-                        parser_result_client_id = parser_result_id[0],
-                        parser_result_object_id = parser_result_id[1],
-                        hash = i['hash']))
-
-                DBSession.add(valency_result_data)
-                DBSession.flush()
-
-                for p in i['paragraphs']:
-
-                    sentence_list = []
-
-                    for s in p['sentences']:
-
-                        instance_list = []
-
-                        for index, (lex, cs, indent, ind, r, animacy) in (
-                            enumerate(valency.sentence_instance_gen(s))):
-
-                            instance_list.append({
-                                'index': index,
-                                'location': (ind, r),
-                                'case': cs})
-                            
-                            data_case_set.add(cs)
-
-                        sentence_data = {
-                            'tokens': s,
-                            'instances': instance_list}
-
-                        sentence_list.append(
-                            sentence_data)
-
-                        valency_sentence_data = (
-
-                            dbValencySentenceData(
-                                result_id = valency_result_data.id,
-                                data = sentence_data,
-                                instance_count = len(instance_list)))
-
-                        DBSession.add(valency_sentence_data)
-                        DBSession.flush()
-
-                        for instance in instance_list:
-
-                            instance_insert_list.append({
-                                'sentence_id': valency_sentence_data.id,
-                                'index': instance['index'],
-                                'verb_lex': s[instance['location'][0]]['lex'].lower(),
-                                'case_str': instance['case'].lower()})
-
-                        log.debug(
-                            '\n' +
-                            pprint.pformat(
-                                (valency_result_data.id, len(instance_list), sentence_data),
-                                width = 192))
-
-                    p['sentences'] = sentence_list
-
-            if instance_insert_list:
-
-                query = (
-
-                    dbValencyInstanceData.__table__
-                        .insert()
-                        .values(instance_insert_list))
-
-                DBSession.execute(query)
-
-            if debug_flag:
-
-                with open(
-                    'instance.json', 'w', encoding = 'utf-8') as instances_file:
-
-                    json.dump(
-                        sentence_data_list,
-                        instances_file,
-                        ensure_ascii = False,
-                        indent = 2)
-
-            log.debug(
-                f'\ndata_case_set:\n{data_case_set}'
-                f'\ndata_case_set - order_case_set:\n{data_case_set - order_case_set}'
-                f'\norder_case_set - data_case_set:\n{order_case_set - data_case_set}')
+                CreateValencyData.test(
+                    info,
+                    debug_flag)
 
             return (
 
@@ -10731,6 +11507,8 @@ class CreateValencyData(graphene.Mutation):
 
             log.warning('create_valency_data: exception')
             log.warning(traceback_string)
+
+            transaction.abort()
 
             return (
 

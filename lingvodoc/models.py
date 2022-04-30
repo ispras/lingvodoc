@@ -1864,13 +1864,44 @@ class UnstructuredData(
     data = Column(JSONB)
 
 
-class ValencyResultData(
+class ValencySourceData(
     Base,
     IdMixin,
-    PerspectiveMixin,
+    PerspectiveMixin):
+
+    __tablename__ = 'valency_source_data'
+
+
+class ValencyParserData(
+    Base,
+    IdMixin,
     ParserResultMixin):
 
-    __tablename__ = 'valency_result_data'
+    __tablename__ = 'valency_parser_data'
+
+    @declared_attr
+    def __table_args__(cls):
+
+        return (
+            (ForeignKeyConstraint(['id'], ['valency_source_data.id']),) +
+            super().__table_args__)
+
+    hash = Column(UnicodeText)
+
+
+class ValencyEafData(
+    Base,
+    IdMixin,
+    EntityMixin):
+
+    __tablename__ = 'valency_eaf_data'
+
+    @declared_attr
+    def __table_args__(cls):
+
+        return (
+            (ForeignKeyConstraint(['id'], ['valency_source_data.id']),) +
+            super().__table_args__)
 
     hash = Column(UnicodeText)
 
@@ -1881,7 +1912,7 @@ class ValencySentenceData(
 
     __tablename__ = 'valency_sentence_data'
 
-    result_id = Column(SLBigInteger(), ForeignKey('valency_result_data.id'), nullable = False)
+    source_id = Column(SLBigInteger(), ForeignKey('valency_source_data.id'), nullable = False)
     data = Column(JSONB)
     instance_count = Column(Integer(), nullable = False)
 
