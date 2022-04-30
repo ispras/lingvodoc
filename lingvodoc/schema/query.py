@@ -11486,7 +11486,7 @@ class CreateValencyData(graphene.Mutation):
                 perspective_id,
                 debug_flag)
 
-            if True:
+            if False:
 
                 CreateValencyData.test(
                     info,
