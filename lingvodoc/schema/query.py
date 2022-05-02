@@ -1780,6 +1780,14 @@ class Query(graphene.ObjectType):
                         dbLexicalEntry.parent_client_id,
                         dbLexicalEntry.parent_object_id))
 
+            # .EAF corpora condition is temporary disabled until we'll have more clarity
+            # on details of valency instance extraction from .EAF corpora.
+
+            union_list = [
+                DBSession.query(parser_result_query.cte()),
+#               DBSession.query(eaf_corpus_query.cte()),
+            ]
+
             perspective_query = (
 
                 perspective_query.filter(
@@ -1789,9 +1797,7 @@ class Query(graphene.ObjectType):
                         dbPerspective.object_id)
 
                         .in_(
-                            union(
-                                DBSession.query(parser_result_query.cte()),
-                                DBSession.query(eaf_corpus_query.cte())))))
+                            union(*union_list))))
 
         log.debug(
             '\nperspective_query:\n' +
@@ -10740,9 +10746,10 @@ class CreateValencyData(graphene.Mutation):
             result[0], word_token_dict)
 
     @staticmethod
-    def process(
-        info,
+    def process_parser(
         perspective_id,
+        data_case_set,
+        instance_insert_list,
         debug_flag):
 
         # Getting parser result data.
@@ -10782,16 +10789,6 @@ class CreateValencyData(graphene.Mutation):
                     indent = 2)
 
         # Initializing annotation data from parser results.
-
-        order_case_set = (
-
-            set([
-                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
-                'comp', 'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr', 'lat',
-                'allat']))
-
-        data_case_set = set()
-        instance_insert_list = []
 
         for i in sentence_data_list:
 
@@ -10889,6 +10886,14 @@ class CreateValencyData(graphene.Mutation):
                         pprint.pformat(
                             (valency_source_data.id, len(instance_list), sentence_data),
                             width = 192))
+
+    @staticmethod
+    def process_eaf(
+        info,
+        perspective_id,
+        data_case_set,
+        instance_insert_list,
+        debug_flag):
 
         # Getting ELAN corpus data, processing each ELAN file.
 
@@ -11281,6 +11286,38 @@ class CreateValencyData(graphene.Mutation):
                     pprint.pformat(
                         (valency_source_data.id, len(instance_list), sentence_data),
                         width = 192))
+
+    @staticmethod
+    def process(
+        info,
+        perspective_id,
+        debug_flag):
+
+        order_case_set = (
+
+            set([
+                'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com',
+                'comp', 'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr', 'lat',
+                'allat']))
+
+        data_case_set = set()
+        instance_insert_list = []
+
+        CreateValencyData.process_parser(
+            perspective_id,
+            data_case_set,
+            instance_insert_list,
+            debug_flag)
+
+        # Temporary disabled until we'll have more clarity on details
+        # of valency instance extraction from .EAF corpora.
+
+#       CreateValencyData.process_eaf(
+#           info,
+#           perspective_id,
+#           data_case_set,
+#           instance_insert_list,
+#           debug_flag)
 
         if instance_insert_list:
 
