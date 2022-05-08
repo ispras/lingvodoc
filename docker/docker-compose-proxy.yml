@@ -18,13 +18,15 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: postgres
       POSTGRES_DB: lingvodoc
+    volumes:
+      - ./dbdump:/docker-entrypoint-initdb.d
     ports:
       - "25432:5432"
   nginx:
     image: nginx:latest
     container_name: ngx
     ports:
-      - "1080:80"
+      - "80:80"
     volumes:
       - ./frontend/dist:/dist
       - ./nginx:/etc/nginx/conf.d
@@ -37,11 +39,12 @@ services:
     image: nginx:latest
     container_name: ngx-proxy
     ports:
-      - "2080:80"
+      - "1080:80"
     volumes:
       - ./frontend-proxy/dist:/dist
       - ./nginx:/etc/nginx/conf.d
       - ./sock-proxy:/sock
+      - /tmp:/tmp
     depends_on:
       - pg-proxy
       - api-proxy
@@ -81,7 +84,7 @@ services:
 
     env_file:
       - ./locale_env.sh
-    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --paster /api/docker/docker.ini"
+    command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --paster /api/docker/docker.ini"
     ports:
       - "16543:6543"
   api-proxy:
@@ -96,12 +99,14 @@ services:
     container_name: ld-proxy
     volumes:
       - ./frontend-proxy/dist:/dist
+      - /opt/apertium:/opt/apertium
       - ./sock-proxy:/sock
       - /api/build/
       - ../:/api
+      - /tmp:/tmp
 
     env_file:
       - ./locale_env.sh
-    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg-proxy && alembic --config /api/docker/docker-alembic-proxy.ini upgrade head && gunicorn --paster /api/docker/docker-proxy.ini"
+    command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg-proxy && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic-proxy.ini upgrade head && gunicorn --paster /api/docker/docker-proxy.ini"
     ports:
       - "26543:6543"
