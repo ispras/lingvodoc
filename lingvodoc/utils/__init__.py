@@ -12,9 +12,14 @@ except:
     pass
 
 
+from sqlalchemy import cast
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.sql import column
 from sqlalchemy.sql.expression import Executable, ClauseElement, _literal_as_text, FromClause
+
+
+from lingvodoc.models import DBSession, SLBigInteger
 
 
 class explain(Executable, ClauseElement):
@@ -121,26 +126,100 @@ def compile_values(element, compiler, asfrom = False, **kwargs):
 
     columns = element.columns
 
-    v = "VALUES %s" % ", ".join(
-        "(%s)"
-        % ", ".join(
-            compiler.render_literal_value(elem, column.type)
-            for elem, column in zip(tup, columns)
+    if len(columns) > 1:
+
+        v = "VALUES %s" % ", ".join(
+            "(%s)"
+            % ", ".join(
+                compiler.render_literal_value(elem, column.type)
+                for elem, column in zip(tup, columns)
+            )
+            for tup in element.list
         )
-        for tup in element.list
-    )
+
+    else:
+
+        column = list(columns)[0]
+
+        v = "VALUES %s" % ", ".join(
+            "(%s)"
+            % compiler.render_literal_value(value, column.type)
+            for value in element.list
+        )
 
     if asfrom:
-        if element.alias_name:
-            v = "(%s) AS %s (%s)" % (
-                v,
-                element.alias_name,
-                (", ".join(c.name for c in element.columns)),
-            )
-        else:
-            v = "(%s)" % v
+
+        alias = (
+            element.alias_name or '_alias_')
+
+        v = "(%s) AS %s (%s)" % (
+            v,
+            alias,
+            (", ".join(c.name for c in element.columns)),
+        )
 
     return v
+
+
+def values_query(
+    value_list,
+    column_info_list,
+    alias = None):
+
+    column_list = []
+
+    try:
+        iter(column_info_list)
+
+    except TypeError:
+        column_info_list = [column_info_list]
+
+    for index, column_info in enumerate(column_info_list):
+
+        try:
+
+            column_list.append(
+                column(*column_info))
+
+        except TypeError:
+
+            column_list.append(
+                column(f'_column_{index}_', column_info))
+
+    values_clause = (
+
+        values(
+            column_list,
+            value_list,
+            alias or '_values_'))
+
+    return (
+
+        DBSession.query(
+            *values_clause.columns))
+
+
+def ids_to_id_query(ids, explicit_cast = False):
+
+    id_values = (
+
+        values(
+            [column('client_id', SLBigInteger), column('object_id', SLBigInteger)],
+            ids,
+            'ids'))
+
+    c_client_id = id_values.c.client_id
+    c_object_id = id_values.c.object_id
+    
+    if explicit_cast:
+
+        c_client_id = cast(c_client_id, SLBigInteger).label('client_id')
+        c_object_id = cast(c_object_id, SLBigInteger).label('object_id')
+
+    return (
+
+        DBSession.query(
+            c_client_id, c_object_id))
 
 
 def render_statement(statement):
