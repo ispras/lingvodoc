@@ -24,7 +24,8 @@ from sqlalchemy import (
     UniqueConstraint,
     and_,
     or_,
-    tuple_
+    tuple_,
+    Sequence,
 )
 
 from sqlalchemy.types import (
@@ -1937,4 +1938,19 @@ class ValencyAnnotationData(
     instance_id = Column(SLBigInteger(), ForeignKey('valency_instance_data.id'), primary_key = True)
     user_id = Column(SLBigInteger(), ForeignKey('user.id'), primary_key = True)
     accepted = Column(Boolean, default = None)
+
+
+ValencyMergeIdSequence = Sequence('valency_merge_id_seq')
+
+
+class ValencyMergeData(
+    Base,
+    PerspectiveMixin):
+
+    __tablename__ = 'valency_merge_data'
+
+    # Primary key is actually (perspective_client_id, perspective_object_id, verb_lex).
+
+    verb_lex = Column(UnicodeText, nullable = False, primary_key = True)
+    merge_id = Column(SLBigInteger(), nullable = False)
 
