@@ -134,9 +134,26 @@ def client_id_check():
 
     return decorator
 
+
 class LingvodocObjectType(graphene.ObjectType):
+
     dbObject = None
     ErrorHappened = None
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        # Re-initializing fields with unique placeholder value, see graphene/types/objecttype.py, to better
+        # distinguish non-set and set values, as some set values can be legitimately None.
+
+        fields = self._meta.fields.items()
+
+        for (name, field) in fields:
+
+            if getattr(self, name, None) is None:
+                setattr(self, name, gql_placeholder_value)
+
 
 class LingvodocID(Scalar):
     """
@@ -509,6 +526,13 @@ def undel_object(
         CACHE.set(objects = [tmp_object, ], DBSession=DBSession)
 
 
+#
+# Special unique placeholder value signifying that the field has no value. We need that because the default,
+# None, is actually valid for some fields.
+#
+gql_placeholder_value = object()
+
+
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
     """
     This magic decorator, which the resolve_* functions have, sets the dbObject atribute
@@ -530,6 +554,20 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                 context.acl_check('view', ACLSubject, cls.id)
             if cls.ErrorHappened:
                 return None
+
+            if (attrib_name is not None and
+                ACLSubject is None):
+
+                try:
+
+                    value = getattr(cls, attrib_name)
+
+                    if value is not gql_placeholder_value:
+                        return value
+
+                except AttributeError:
+                    pass
+
             if not cls.dbObject:
                 if isinstance(cls.id, (int, str)):
                     # example: (id: 1),  (id: 'ihGLq')
@@ -537,7 +575,7 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                     if cls.dbObject is None:
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
-                elif type(cls.id) is list:
+                elif isinstance(cls.id, (list, tuple)):
                     # example: (id: [2,3])
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
                                                                          object_id=cls.id[1]).first()
