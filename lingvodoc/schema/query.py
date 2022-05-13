@@ -2204,6 +2204,46 @@ class Query(graphene.ObjectType):
         }
         """
 
+        # Analyzing query.
+
+        atoms_flag = False
+        atoms_deleted = None
+
+        for field in info.field_asts:
+
+            if field.name.value != 'translation_search':
+                continue
+
+            for subfield in field.selection_set.selections:
+
+                if subfield.name.value != 'translationatoms':
+                    continue
+
+                atoms_flag = True
+
+                def f(argument):
+
+                    try:
+
+                        return argument.value.value
+
+                    except AttributeError:
+
+                        return (
+                            info.variable_values.get(
+                                argument.value.name.value, None))
+
+                for argument in subfield.arguments:
+
+                    if argument.name.value != 'deleted':
+
+                        atoms_flag = False
+                        break
+
+                    atoms_deleted = f(argument)
+
+        # Getting ready to get gists.
+
         gist_query = (
 
             DBSession.query(
@@ -2263,6 +2303,38 @@ class Query(graphene.ObjectType):
                 gist_query
                     .filter(dbTranslationGist.type == translation_type))
 
+        # If we need to get atoms, we'll use the gist query as subquery before we add ordering to it.
+
+        if atoms_flag:
+
+            gist_subquery = (
+                gist_query.subquery())
+
+            atom_query = (
+
+                DBSession
+
+                    .query(
+                        dbTranslationAtom)
+
+                    .filter(
+
+                        tuple_(
+                            dbTranslationAtom.parent_client_id,
+                            dbTranslationAtom.parent_object_id)
+
+                            .in_(
+                                DBSession.query(
+                                    gist_subquery.c.client_id,
+                                    gist_subquery.c.object_id))))
+
+            if atoms_deleted is not None:
+
+                atom_query = (
+
+                    atom_query.filter(
+                        dbTranslationAtom.marked_for_deletion == atoms_deleted))
+
         if order_by_type and not translation_type:
 
             gist_query = (
@@ -2272,7 +2344,7 @@ class Query(graphene.ObjectType):
 
         try:
 
-            translationgists = gist_query.all()
+            gist_list = gist_query.all()
 
         except sqlalchemy.exc.DataError as data_error:
 
@@ -2281,26 +2353,40 @@ class Query(graphene.ObjectType):
 
             raise
 
-        if translationgists or not no_result_error_flag:
-            translationgists_list = list()
-            for translationgist in translationgists:
-                # translationatoms_list = list()
-                # for translationatom in translationgist.translationatom:
-                #     translationatom_object = TranslationAtom(id=[translationatom.client_id, translationatom.object_id],
-                #                                              parent_id=[translationatom.parent_client_id,
-                #                                                         translationatom.parent_object_id],
-                #                                              content=translationatom.content,
-                #                                              locale_id=translationatom.locale_id,
-                #                                              created_at=translationatom.created_at
-                #                                              )
-                #     translationatoms_list.append(translationatom_object)
-                translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id])
-                                                         # type=translationgist.type,
-                                                         # created_at=translationgist.created_at,
-                                                         # translationatoms=translationatoms_list)
-                translationgist_object.dbObject = translationgist
-                translationgists_list.append(translationgist_object)
-            return translationgists_list
+        if gist_list or not no_result_error_flag:
+
+            gql_gist_list = []
+
+            if atoms_flag:
+                gql_gist_dict = {}
+
+            for gist in gist_list:
+
+                id = gist.id
+
+                gql_gist = TranslationGist(id = id)
+                gql_gist.dbObject = gist
+
+                gql_gist_list.append(gql_gist)
+
+                if atoms_flag:
+
+                    gql_gist.translationatoms = []
+                    gql_gist_dict[id] = gql_gist
+
+            # Getting atoms info if required.
+
+            if atoms_flag:
+
+                for atom in atom_query.all():
+
+                    gql_atom = TranslationAtom(id = atom.id)
+                    gql_atom.dbObject = atom
+
+                    gql_gist_dict[atom.parent_id].translationatoms.append(gql_atom)
+
+            return gql_gist_list
+
         raise ResponseError(message="Error: no result")
 
     def resolve_translation_service_search(self, info, searchstring):
