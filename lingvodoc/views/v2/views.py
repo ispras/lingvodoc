@@ -1147,7 +1147,7 @@ def gql_placeholder_middleware(
 
             .then(
                 lambda value:
-                    None if value == gql_placeholder_value else value))
+                    None if value is gql_placeholder_value else value))
 
 
 # TODO: Remove it
