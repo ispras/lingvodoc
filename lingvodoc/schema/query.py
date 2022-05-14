@@ -918,43 +918,51 @@ class Query(graphene.ObjectType):
                 instance_id_set,
                 sentence_id_set))
 
-        sentence_list = (
+        sentence_list = []
 
-            DBSession
+        if sentence_id_set:
 
-                .query(
-                    dbValencySentenceData)
+            sentence_list = (
 
-                .filter(
-                    dbValencySentenceData.id.in_(
+                DBSession
 
-                        utils.values_query(
-                            sentence_id_set, models.SLBigInteger)))
+                    .query(
+                        dbValencySentenceData)
 
-                .all())
+                    .filter(
+                        dbValencySentenceData.id.in_(
 
-        annotation_list = (
+                            utils.values_query(
+                                sentence_id_set, models.SLBigInteger)))
 
-            DBSession
+                    .all())
 
-                .query(
-                    dbValencyAnnotationData.instance_id,
+        annotation_list = []
 
-                    func.jsonb_agg(
-                        func.jsonb_build_array(
-                            dbValencyAnnotationData.user_id,
-                            dbValencyAnnotationData.accepted)))
+        if instance_id_set:
 
-                .filter(
-                    dbValencyAnnotationData.instance_id.in_(
+            annotation_list = (
 
-                        utils.values_query(
-                            instance_id_set, models.SLBigInteger)))
+                DBSession
 
-                .group_by(
-                    dbValencyAnnotationData.instance_id)
+                    .query(
+                        dbValencyAnnotationData.instance_id,
 
-                .all())
+                        func.jsonb_agg(
+                            func.jsonb_build_array(
+                                dbValencyAnnotationData.user_id,
+                                dbValencyAnnotationData.accepted)))
+
+                    .filter(
+                        dbValencyAnnotationData.instance_id.in_(
+
+                            utils.values_query(
+                                instance_id_set, models.SLBigInteger)))
+
+                    .group_by(
+                        dbValencyAnnotationData.instance_id)
+
+                    .all())
 
         user_id_set = (
 
@@ -995,36 +1003,40 @@ class Query(graphene.ObjectType):
             dict(sentence.data, id = sentence.id)
             for sentence in sentence_list]
 
-        merge_id_subquery = (
+        merge_list = []
 
-            DBSession
+        if instance_verb_lex_set:
 
-                .query(
-                    lex_id_cte.c.merge_id)
+            merge_id_subquery = (
 
-                .filter(
-                    lex_id_cte.c.verb_lex.in_(
+                DBSession
 
-                        utils.values_query(
-                            instance_verb_lex_set, models.String)))
+                    .query(
+                        lex_id_cte.c.merge_id)
 
-                .subquery())
+                    .filter(
+                        lex_id_cte.c.verb_lex.in_(
 
-        merge_list = (
+                            utils.values_query(
+                                instance_verb_lex_set, models.String)))
 
-            DBSession
+                    .subquery())
 
-                .query(
-                    id_lex_list_cte.c.verb_lex_list)
+            merge_list = (
 
-                .filter(
-                    id_lex_list_cte.c.merge_id.in_(
-                        merge_id_subquery))
+                DBSession
 
-                .all())
+                    .query(
+                        id_lex_list_cte.c.verb_lex_list)
 
-        merge_list = [
-            item[0] for item in merge_list]
+                    .filter(
+                        id_lex_list_cte.c.merge_id.in_(
+                            merge_id_subquery))
+
+                    .all())
+
+            merge_list = [
+                item[0] for item in merge_list]
 
         log.debug(
 
