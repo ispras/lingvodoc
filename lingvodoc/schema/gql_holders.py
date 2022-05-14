@@ -142,17 +142,17 @@ class LingvodocObjectType(graphene.ObjectType):
 
     def __init__(self, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
-
-        # Re-initializing fields with unique placeholder value, see graphene/types/objecttype.py, to better
+        # We are going to initialize not set field values with the unique placeholder value to better
         # distinguish non-set and set values, as some set values can be legitimately None.
+        #
+        # See graphene/types/objecttype.py for ObjectType.__init__.
 
-        fields = self._meta.fields.items()
+        for (name, field) in self._meta.fields.items():
+        
+            if name not in kwargs:
+                kwargs[name] = gql_placeholder_value
 
-        for (name, field) in fields:
-
-            if getattr(self, name, None) is None:
-                setattr(self, name, gql_placeholder_value)
+        super().__init__(*args, **kwargs)
 
 
 class LingvodocID(Scalar):
