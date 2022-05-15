@@ -11386,7 +11386,7 @@ class CreateValencyData(graphene.Mutation):
 
                 # Not the same hash, we actually should update it, but for now we leave it for later.
 
-                raise NotImplementedError
+                continue
 
             valency_source_data = (
 
@@ -11563,7 +11563,7 @@ class CreateValencyData(graphene.Mutation):
 
                 # Not the same hash, we actually should update it, but for now we leave it for later.
 
-                raise NotImplementedError
+                continue
 
             valency_source_data = (
 
