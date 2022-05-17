@@ -11518,7 +11518,13 @@ class CreateValencyData(graphene.Mutation):
             'ITER',
 
             'OPT',
-            'INF']
+            'INF',
+
+            'NPST',
+            'NST',
+            'PST1',
+            'PST2',
+            'PST3']
 
         verb_re = (
 
@@ -11591,6 +11597,9 @@ class CreateValencyData(graphene.Mutation):
                 f'{entity.client_id} {entity.object_id}')
 
             # Getting and parsing corpus file.
+
+            log.debug(
+                f'\nentity.content:\n{entity.content}')
 
             try:
                 with storage_f(storage, entity.content) as eaf_stream:
@@ -11727,6 +11736,7 @@ class CreateValencyData(graphene.Mutation):
                 log.debug(
                     f'\ntext: {repr(eaf_item[0][0].text)}'
                     f'\ntoken_list: {token_list}'
+                    f'\nxlat_list: {xlat_list}'
                     f'\nxcript_list: {xcript_list}'
                     f'\nword_list: {word_list}')
 
