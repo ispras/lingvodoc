@@ -181,40 +181,41 @@ import string
 
 import lingvodoc.models as models
 from lingvodoc.models import (
+    BaseGroup as dbBaseGroup,
+    Client,
     DBSession,
     Dictionary as dbDictionary,
     DictionaryPerspective as dbPerspective,
-    Language as dbLanguage,
-    Organization as dbOrganization,
-    Field as dbField,
-    Group as dbGroup,
-    BaseGroup as dbBaseGroup,
-    User as dbUser,
-    Entity as dbEntity,
-    LexicalEntry as dbLexicalEntry,
     DictionaryPerspectiveToField as dbPerspectiveToField,
-    Locale as dbLocale,
-    TranslationAtom as dbTranslationAtom,
-    TranslationGist as dbTranslationGist,
+    ENGLISH_LOCALE,
     Email as dbEmail,
-    UserBlobs as dbUserBlobs,
-    UserRequest as dbUserRequest,
+    Entity as dbEntity,
+    Field as dbField,
     Grant as dbGrant,
-    DictionaryPerspective as dbDictionaryPerspective,
-    Client,
-    PublishingEntity as dbPublishingEntity,
-    user_to_group_association,
+    Group as dbGroup,
+    Language as dbLanguage,
+    LexicalEntry as dbLexicalEntry,
+    Locale as dbLocale,
+    Organization as dbOrganization,
     Parser as dbParser,
     ParserResult as dbParserResult,
+    PublishingEntity as dbPublishingEntity,
+    RUSSIAN_LOCALE,
+    TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
     UnstructuredData as dbUnstructuredData,
-    ValencySourceData as dbValencySourceData,
-    ValencyParserData as dbValencyParserData,
-    ValencyEafData as dbValencyEafData,
-    ValencySentenceData as dbValencySentenceData,
-    ValencyInstanceData as dbValencyInstanceData,
+    User as dbUser,
+    UserBlobs as dbUserBlobs,
+    UserRequest as dbUserRequest,
     ValencyAnnotationData as dbValencyAnnotationData,
-    ValencyMergeIdSequence as dbValencyMergeIdSequence,
+    ValencyEafData as dbValencyEafData,
+    ValencyInstanceData as dbValencyInstanceData,
     ValencyMergeData as dbValencyMergeData,
+    ValencyMergeIdSequence as dbValencyMergeIdSequence,
+    ValencyParserData as dbValencyParserData,
+    ValencySentenceData as dbValencySentenceData,
+    ValencySourceData as dbValencySourceData,
+    user_to_group_association,
 )
 from pyramid.request import Request
 
@@ -292,9 +293,6 @@ from lingvodoc.scripts.save_dictionary import (
 
 from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
 import json
-
-RUSSIAN_LOCALE = 1
-ENGLISH_LOCALE = 2
 
 from pyramid.httpexceptions import (
     HTTPError,
@@ -1385,9 +1383,9 @@ class Query(graphene.ObjectType):
             raise KeyError("Something wrong with the base", resp.json['error'])
 
 
-        dblimited = DBSession.query(dbDictionaryPerspective).filter(
-            and_(dbDictionaryPerspective.state_translation_gist_client_id == limited_gist_client_id,
-                 dbDictionaryPerspective.state_translation_gist_object_id == limited_gist_object_id)
+        dblimited = DBSession.query(dbPerspective).filter(
+            and_(dbPerspective.state_translation_gist_client_id == limited_gist_client_id,
+                 dbPerspective.state_translation_gist_object_id == limited_gist_object_id)
         )
 
         # limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
@@ -1400,9 +1398,9 @@ class Query(graphene.ObjectType):
             # fulfill_permissions_on_perspectives(intermediate, pers, limited_perms)
 
 
-        dbpublished = DBSession.query(dbDictionaryPerspective).filter(
-            and_(dbDictionaryPerspective.state_translation_gist_client_id == published_gist_client_id,
-                 dbDictionaryPerspective.state_translation_gist_object_id == published_gist_object_id)
+        dbpublished = DBSession.query(dbPerspective).filter(
+            and_(dbPerspective.state_translation_gist_client_id == published_gist_client_id,
+                 dbPerspective.state_translation_gist_object_id == published_gist_object_id)
         )
         existing = list()
         view = list()
@@ -1422,12 +1420,12 @@ class Query(graphene.ObjectType):
         user_id = user.user_id
         editor_basegroup = DBSession.query(dbBaseGroup).filter(
             and_(dbBaseGroup.subject == "lexical_entries_and_entities", dbBaseGroup.action == "create")).first()
-        editable_perspectives = DBSession.query(dbDictionaryPerspective).join(dbGroup, and_(
-            dbDictionaryPerspective.client_id == dbGroup.subject_client_id,
-            dbDictionaryPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+        editable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+            dbPerspective.client_id == dbGroup.subject_client_id,
+            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
             and_(dbUser.id == user_id,
                  dbGroup.base_group_id == editor_basegroup.id,
-                 dbDictionaryPerspective.marked_for_deletion == False)).all()
+                 dbPerspective.marked_for_deletion == False)).all()
         edit = list()
         for dbperspective in editable_perspectives:
             perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
@@ -1437,9 +1435,9 @@ class Query(graphene.ObjectType):
 
         reader_basegroup = DBSession.query(dbBaseGroup).filter(
             and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "view")).first()
-        readable_perspectives = DBSession.query(dbDictionaryPerspective).join(dbGroup, and_(
-            dbDictionaryPerspective.client_id == dbGroup.subject_client_id,
-            dbDictionaryPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+        readable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+            dbPerspective.client_id == dbGroup.subject_client_id,
+            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
             and_(dbUser.id == user_id, dbGroup.base_group_id == reader_basegroup.id)).all()
 
         view = list()
@@ -1453,9 +1451,9 @@ class Query(graphene.ObjectType):
         publisher_basegroup = DBSession.query(dbBaseGroup).filter(
             and_(dbBaseGroup.subject == "approve_entities", dbBaseGroup.action == "create")).first()
 
-        approvable_perspectives = DBSession.query(dbDictionaryPerspective).join(dbGroup, and_(
-            dbDictionaryPerspective.client_id == dbGroup.subject_client_id,
-            dbDictionaryPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
+        approvable_perspectives = DBSession.query(dbPerspective).join(dbGroup, and_(
+            dbPerspective.client_id == dbGroup.subject_client_id,
+            dbPerspective.object_id == dbGroup.subject_object_id)).join(dbGroup.users).filter(
             and_(dbUser.id == user_id, dbGroup.base_group_id == publisher_basegroup.id)).all()
         publish = list()
         for dbperspective in approvable_perspectives:
@@ -1779,11 +1777,11 @@ class Query(graphene.ObjectType):
 
                             DBSession
                                 .query(dbDictionary.client_id, dbDictionary.object_id)
-                                .join(dbDictionaryPerspective)
+                                .join(dbPerspective)
                                 .filter(
                                     tuple_(
-                                        dbDictionaryPerspective.client_id,
-                                        dbDictionaryPerspective.object_id)
+                                        dbPerspective.client_id,
+                                        dbPerspective.object_id)
                                         .in_(group_tuples[i : i + 1000]))
                                 .all())
 
@@ -3461,14 +3459,14 @@ class StarlingEtymology(graphene.Mutation):
                 random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(10)))
         for complex_element in args['complex_list']:
             starling_ids = complex_element['starling_perspective_id']
-            starling_perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=starling_ids[0],
+            starling_perspective = DBSession.query(dbPerspective).filter_by(client_id=starling_ids[0],
                                                                                       object_id=starling_ids[1],
                                                                                       marked_for_deletion=False).first()
             if not starling_perspective:
                 raise ResponseError(message='no such starling perspective')
             for persp_and_field in complex_element['perspectives_and_fields']:
                 persp_ids = persp_and_field['perspective_id']
-                cur_persp = DBSession.query(dbDictionaryPerspective).filter_by(client_id=persp_ids[0],
+                cur_persp = DBSession.query(dbPerspective).filter_by(client_id=persp_ids[0],
                                                                                object_id=persp_ids[1],
                                                                                marked_for_deletion=False).first()
                 field_id = persp_and_field['field_id']
@@ -3556,7 +3554,7 @@ class PhonemicAnalysis(graphene.Mutation):
 
         try:
 
-            perspective = DBSession.query(dbDictionaryPerspective).filter_by(
+            perspective = DBSession.query(dbPerspective).filter_by(
                 client_id = perspective_cid, object_id = perspective_oid).first()
 
             perspective_name = perspective.get_translation(locale_id)
@@ -3706,7 +3704,7 @@ class PhonemicAnalysis(graphene.Mutation):
 
             if __debug_flag__ or __intermediate_flag__:
 
-                perspective = DBSession.query(dbDictionaryPerspective).filter_by(
+                perspective = DBSession.query(dbPerspective).filter_by(
                     client_id = perspective_cid, object_id = perspective_oid).first()
 
                 perspective_name = (
@@ -5712,7 +5710,7 @@ class CognateAnalysis(graphene.Mutation):
 
             # Getting and saving perspective info.
 
-            perspective = DBSession.query(dbDictionaryPerspective).filter_by(
+            perspective = DBSession.query(dbPerspective).filter_by(
                 client_id = perspective_id[0], object_id = perspective_id[1]).first()
 
             perspective_name = perspective.get_translation(locale_id)
@@ -7797,7 +7795,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
         for perspective_id in id_list:
 
-            perspective = DBSession.query(dbDictionaryPerspective).filter_by(
+            perspective = DBSession.query(dbPerspective).filter_by(
                 client_id = perspective_id[0], object_id = perspective_id[1]).first()
 
             dictionary = perspective.parent
@@ -8770,7 +8768,7 @@ class MoveColumn(graphene.Mutation):
         # if user_id != 1:
         #     raise ResponseError(message="not admin")
         # counter = 0
-        perspective = DBSession.query(dbDictionaryPerspective).filter_by(client_id=perspective_id[0],
+        perspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_id[0],
                                                                          object_id=perspective_id[1],
                                                                          marked_for_deletion=False).first()
         if not perspective:
@@ -8904,7 +8902,7 @@ class AddRolesBulk(graphene.Mutation):
                     edit_role(dictionary, user_id, basegroup_id, request_client_id,
                         dictionary_default = True, action = 'add')
 
-                perspective_list = DBSession.query(dbDictionaryPerspective).filter_by(
+                perspective_list = DBSession.query(dbPerspective).filter_by(
                     parent_client_id = dictionary.client_id,
                     parent_object_id = dictionary.object_id,
                     marked_for_deletion = False).all()

@@ -18,21 +18,14 @@ from sqlalchemy import create_engine
 
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.models import (
-    Dictionary as dbDictionary,
-    Entity as dbEntity,
-    TranslationAtom as dbTranslationAtom,
-    TranslationGist as dbTranslationGist,
-    DBSession,
     Client as dbClient,
-    Language as dbLanguage,
+    DBSession,
+    ENGLISH_LOCALE,
+    Entity as dbEntity,
+    LexicalEntry as dbLexicalEntry,
+    RUSSIAN_LOCALE,
     User as dbUser,
-    Field as dbField,
-    DictionaryPerspective as dbDictionaryPerspective,
-    BaseGroup as dbBaseGroup,
-    Group as dbGroup,
-    Organization as dbOrganization,
     UserBlobs as dbUserBlobs,
-    LexicalEntry as dbLexicalEntry
 )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
@@ -90,151 +83,178 @@ log = logging.getLogger(__name__)
 """
 
 
+def csv_to_columns_starling(path, url):
+
+    try:
+
+        csv_file = (
+
+            open(path, 'rb')
+                .read()
+                .decode('utf-8-sig', 'ignore'))
+
+    except FileNotFoundError:
+
+        csv_file = (
+
+            urllib.request.urlopen(
+                urllib.parse.quote(url, safe = '/:'))
+                .read()
+                .decode('utf-8-sig', 'ignore'))
+
+    split_count = 0
+
+    lines = list()
+    for x in csv_file.split("\n"):
+
+        if not x:
+            continue
+
+        value_list = x.rstrip().split('#####')
+        split_count += len(value_list) - 1
+
+        lines.append(value_list)
+        #n = len(x.rstrip().split('|'))
+
+    # If we hadn't seen the special Starling separator '#####', we assume that it's actually not
+    # Starling.
+    #
+    # In case it's Starling with a single column, we assume that in that case we can process it as a
+    # standard CSV file no problem.
+
+    if split_count <= 0:
+        raise ValueError()
+
+    #lines = [x.rstrip().split('|') for x in csv_file.split("\n") if x.rstrip().split('|')]
+    column_dict = collections.defaultdict(list)
+    columns = lines[0]
+
+    for line in lines[1:]:
+
+        if len(line) != len(columns):
+            continue
+
+        col_num = 0
+
+        for column in columns:
+
+            column_dict[f'{col_num}:{column}'].append(line[col_num])
+
+            if column == 'NUMBER':
+                column_dict[column].append(line[col_num])
+
+            col_num += 1
+
+    # hack #1
+
+    column_dict["NUMBER"] = [int(x) for x in column_dict["NUMBER"]] #list(range(1, len(column_dict["NUMBER"]) + 1))
+
+    return column_dict, True
+
+
+def csv_to_columns_excel(path, url):
+
+    debug_flag = False
+
+    try:
+
+        csv_file = (
+
+            open(path,
+                encoding = 'utf-8-sig',
+                errors = 'ignore',
+                newline = ''))
+
+    except FileNotFoundError:
+
+        csv_str = (
+
+            urllib.request.urlopen(
+                urllib.parse.quote(url, safe = '/:'))
+                .read()
+                .decode('utf-8-sig', 'ignore'))
+
+        if debug_flag:
+
+            with open('__excel__.csv', 'w') as csv_file:
+                csv_file.write(csv_str)
+
+        csv_file = (
+            io.StringIO(csv_str))
+
+    csv_reader = (
+        csv.reader(csv_file, 'excel'))
+
+    row_list = [row for row in csv_reader]
+
+    # Assuming first row contains field headers.
+
+    header_list = row_list[0]
+
+    while header_list and not header_list[-1].strip():
+        header_list.pop()
+
+    # Stripping whitespace for compatibility with gql_userblobs.py:179.
+
+    header_list = [
+        header.strip() for header in header_list]
+
+    column_dict = {
+        f'{header_index}:{header}': []
+        for header_index, header in enumerate(header_list)}
+
+    column_dict['NUMBER'] = []
+
+    # BAD HACK, just mocking up a 'NUMBER' column based on row indices.
+
+    for row_index, row in enumerate(row_list[1:]):
+
+        for column_index, value in enumerate(row):
+            column_dict[f'{column_index}:{header_list[column_index]}'].append(value)
+
+        column_dict['NUMBER'].append(row_index)
+
+    csv_file.close()
+
+    return column_dict, False
+
+
 def csv_to_columns(path, url):
 
     # First trying as if it is a special Starling CSV-like format.
 
     try:
 
-        try:
-            csv_file = (
-
-                open(path, 'rb')
-                    .read()
-                    .decode('utf-8-sig', 'ignore'))
-
-        except FileNotFoundError:
-
-            csv_file = (
-
-                urllib.request.urlopen(
-                    urllib.parse.quote(url, safe = '/:'))
-                    .read()
-                    .decode('utf-8-sig', 'ignore'))
-
-        split_count = 0
-
-        lines = list()
-        for x in csv_file.split("\n"):
-
-            if not x:
-                continue
-
-            value_list = x.rstrip().split('#####')
-            split_count += len(value_list) - 1
-
-            lines.append(value_list)
-            #n = len(x.rstrip().split('|'))
-
-        # If we hadn't seen the special Starling separator '#####', we assume that it's actually not
-        # Starling.
-        #
-        # In case it's Starling with a single column, we assume that in that case we can process it as a
-        # standard CSV file no problem.
-
-        if split_count <= 0:
-            raise ValueError()
-
-        #lines = [x.rstrip().split('|') for x in csv_file.split("\n") if x.rstrip().split('|')]
-        column_dict = collections.defaultdict(list)
-        columns = lines[0]
-
-        for line in lines[1:]:
-
-            if len(line) != len(columns):
-                continue
-
-            col_num = 0
-
-            for column in columns:
-
-                column_dict[f'{col_num}:{column}'].append(line[col_num])
-
-                if column == 'NUMBER':
-                    column_dict[column].append(line[col_num])
-
-                col_num += 1
-
-        # hack #1
-
-        column_dict["NUMBER"] = [int(x) for x in column_dict["NUMBER"]] #list(range(1, len(column_dict["NUMBER"]) + 1))
-
-        return column_dict, True
-
-    # If failed, we try as if it is an Excel-generated CSV file.
+        return csv_to_columns_starling(path, url)
 
     except:
 
+        # If failed, we try as if it is an Excel-generated CSV file.
+
         try:
 
-            csv_file = (
+            return csv_to_columns_excel(path, url)
 
-                open(path,
-                    encoding = 'utf-8-sig',
-                    errors = 'ignore',
-                    newline = ''))
+        except:
 
-        except FileNotFoundError:
+            # If we fail again, we assume that this is not a Lingvodoc-valid CSV file.
 
-            csv_str = (
-
-                urllib.request.urlopen(
-                    urllib.parse.quote(url, safe = '/:'))
-                    .read()
-                    .decode('utf-8-sig', 'ignore'))
-
-            csv_file = (
-                io.StringIO(csv_str))
-
-        csv_reader = (
-            csv.reader(csv_file, 'excel'))
-
-        row_list = [row for row in csv_reader]
-
-        # Assuming first row contains field headers.
-
-        header_list = row_list[0]
-
-        while header_list and not header_list[-1].strip():
-            header_list.pop()
-
-        # Stripping whitespace for compatibility with gql_userblobs.py:179.
-
-        header_list = [
-            header.strip() for header in header_list]
-
-        column_dict = {
-            f'{header_index}:{header}': []
-            for header_index, header in enumerate(header_list)}
-
-        column_dict['NUMBER'] = []
-
-        # BAD HACK, just mocking up a 'NUMBER' column based on row indices.
-
-        for row_index, row in enumerate(row_list[1:]):
-
-            for column_index, value in enumerate(row):
-                column_dict[f'{column_index}:{header_list[column_index]}'].append(value)
-
-            column_dict['NUMBER'].append(row_index)
-
-        csv_file.close()
-
-        return column_dict, False
+            return None, None
 
 
-def create_entity(id=None,
-        parent_id=None,
-        additional_metadata=None,
-        field_id=None,
-        self_id=None,
-        link_id=None,
-        locale_id=2,
-        filename=None,
-        content=None,
-        registry=None,
-        request=None,
-        save_object=False):
+def create_entity(
+    id = None,
+    parent_id = None,
+    additional_metadata = None,
+    field_id = None,
+    self_id = None,
+    link_id = None,
+    locale_id = ENGLISH_LOCALE,
+    filename = None,
+    content = None,
+    registry = None,
+    request = None,
+    save_object = False):
 
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
@@ -510,7 +530,17 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 blob_id = tuple(starling_dictionary.get("blob_id"))
                 blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
 
+                # Getting CSV data, checking if the CSV file is not Lingvodoc-valid.
+
                 column_dict, starling_flag = csv_to_columns(blob.real_storage_path, blob.content)
+                
+                if column_dict is None:
+
+                    task_status.set(None, -1,
+                        f'Convertion failed, invalid CSV file \'{blob.name}\'.')
+
+                    return
+
                 perspective_column_dict[blob_id] = column_dict, starling_flag
 
                 atoms_to_create = starling_dictionary.get("translation_atoms")
@@ -533,7 +563,18 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         additional_metadata = {
                             'license': starling_dictionary.get('license') or 'proprietary'}))
 
-                atoms_to_create = [{"locale_id": 2, "content": "starling_source"}]
+                if starling_flag:
+
+                    atoms_to_create = [
+                        {"locale_id": ENGLISH_LOCALE, "content": "CSV (Starling) data"},
+                        {"locale_id": RUSSIAN_LOCALE, "content": "CSV (Starling) данные"}]
+
+                else:
+
+                    atoms_to_create = [
+                        {"locale_id": ENGLISH_LOCALE, "content": "CSV (Excel) data"},
+                        {"locale_id": RUSSIAN_LOCALE, "content": "CSV (Excel) данные"}]
+
                 persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
                                                                     None,
                                                                     (old_client_id, None),
@@ -652,19 +693,25 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                     for starling_column_name in starlingname_to_column:
                         field_id = starlingname_to_column[starling_column_name]
                         col_data = csv_data[starling_column_name][i]
+
                         if col_data:
-                            new_ent = create_entity(id=obj_id.id_pair(client_id),
-                                parent_id=lexentr_tuple,
-                                additional_metadata=None,
-                                field_id=field_id,
-                                self_id=None,
-                                link_id=None, #
-                                locale_id=2,
-                                filename=None,
-                                content=col_data,
-                                registry=None,
-                                request=None,
-                                save_object=False)
+
+                            new_ent = (
+
+                                create_entity(
+                                    id = obj_id.id_pair(client_id),
+                                    parent_id = lexentr_tuple,
+                                    additional_metadata = None,
+                                    field_id = field_id,
+                                    self_id = None,
+                                    link_id = None,
+                                    locale_id = ENGLISH_LOCALE,
+                                    filename = None,
+                                    content = col_data,
+                                    registry = None,
+                                    request = None,
+                                    save_object = False))
+
                             CACHE.set(objects = [new_ent, ], DBSession=DBSession)
                             # DBSession.add(new_ent)
                     i+=1
@@ -700,18 +747,24 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             link_lexical_entry = persp_to_lexentry[new_blob_link][le_numb]
                             lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
                             perspective = blob_to_perspective[new_blob_link]
-                            new_ent = create_entity(id=obj_id.id_pair(client_id),
-                                                    parent_id=lexical_entry_ids,
-                                                    additional_metadata={"link_perspective_id":[perspective.client_id, perspective.object_id]},
-                                                    field_id=relation_field_id,
-                                                    self_id=None,
-                                                    link_id=link_lexical_entry, #
-                                                    locale_id=2,
-                                                    filename=None,
-                                                    content=None,
-                                                    registry=None,
-                                                    request=None,
-                                                    save_object=True)
+
+                            new_ent = (
+
+                                create_entity(
+                                    id = obj_id.id_pair(client_id),
+                                    parent_id = lexical_entry_ids,
+                                    additional_metadata = {
+                                        "link_perspective_id": perspective.id},
+                                    field_id = relation_field_id,
+                                    self_id = None,
+                                    link_id = link_lexical_entry,
+                                    locale_id = ENGLISH_LOCALE,
+                                    filename = None,
+                                    content = None,
+                                    registry = None,
+                                    request = None,
+                                    save_object = True))
+
                             # DBSession.add(new_ent)
                             le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
                             # etymology tag
@@ -748,19 +801,25 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         if lexical_entry_ids in le_links:
                             for other_blob in le_links[lexical_entry_ids]:
                                 link_lexical_entry = le_links[lexical_entry_ids][other_blob]
+
                                 if word:
-                                    new_ent = create_entity(id=obj_id.id_pair(client_id),
-                                        parent_id=link_lexical_entry,
-                                        additional_metadata=None,
-                                        field_id=field_id,
-                                        self_id=None,
-                                        link_id=None, #
-                                        locale_id=2,
-                                        filename=None,
-                                        content=word,
-                                        registry=None,
-                                        request=None,
-                                        save_object=False)
+
+                                    new_ent = (
+
+                                        create_entity(
+                                            id = obj_id.id_pair(client_id),
+                                            parent_id = link_lexical_entry,
+                                            additional_metadata = None,
+                                            field_id = field_id,
+                                            self_id = None,
+                                            link_id = None,
+                                            locale_id = ENGLISH_LOCALE,
+                                            filename = None,
+                                            content = word,
+                                            registry = None,
+                                            request = None,
+                                            save_object = False))
+
                                     # DBSession.add(new_ent)
                                     CACHE.set(objects = [new_ent, ], DBSession=DBSession)
                         #i+=1
