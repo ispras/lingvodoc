@@ -8,27 +8,28 @@ from collections import  defaultdict
 
 from lingvodoc.cache.caching import CACHE
 from lingvodoc.models import (
-    DictionaryPerspective as dbPerspective,
+    BaseGroup as dbBaseGroup,
+    Client as dbClient,
+    DBSession,
     Dictionary as dbDictionary,
-    TranslationAtom as dbTranslationAtom,
-    TranslationGist as dbTranslationGist,
+    DictionaryPerspective as dbPerspective,
+    DictionaryPerspectiveToField as dbColumn,
+    Entity as dbEntity,
+    Group as dbGroup,
+    JSONB,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
-    Client as dbClient,
-    User as dbUser,
-    BaseGroup as dbBaseGroup,
-    Group as dbGroup,
-    Entity as dbEntity,
-    DBSession,
-    DictionaryPerspectiveToField as dbColumn,
-    PublishingEntity as dbPublishingEntity,
     ObjectTOC,
-    user_to_group_association,
-    ValencySourceData as dbValencySourceData,
-    ValencyParserData as dbValencyParserData,
-    ValencyEafData as dbValencyEafData,
     ParserResult as dbParserResult,
-    )
+    PublishingEntity as dbPublishingEntity,
+    TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
+    User as dbUser,
+    ValencyEafData as dbValencyEafData,
+    ValencyParserData as dbValencyParserData,
+    ValencySourceData as dbValencySourceData,
+    user_to_group_association,
+)
 
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
@@ -386,34 +387,6 @@ class DictionaryPerspective(LingvodocObjectType):
             result.append(gr_field_obj)
         return result
 
-    #@acl_check_by_id('view', 'approve_entities')
-    # @fetch_object()
-    # def resolve_lexical_entries(self, info, ids=None):
-    #     lex_list = list()
-    #     query = DBSession.query(dbLexicalEntry, dbEntity)
-    #     if ids is None:
-    #         query = query.filter(dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
-    #     else:
-    #         query = query.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids), dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
-    #     for lex in query.all():
-    #         lex_object = LexicalEntry(id=[lex.client_id, lex.object_id])
-    #         lex_object.dbObject = lex
-    #         lex_list.append(lex_object)
-    #     return lex_list
-
-
-    # @fetch_object()
-    # def resolve_counters(self, info):
-    #     lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
-    #     lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
-    #     all_count = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
-    #                              dbEntity.marked_for_deletion == False).count()
-    #     published_count = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
-    #                              dbEntity.marked_for_deletion == False).count()
-    #     not_accepted_count = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
-    #                              dbEntity.marked_for_deletion == False).count()
-    #     return PerspectiveCounters(all=all_count, published=published_count, not_accepted=not_accepted_count)
-
     @fetch_object()
     def resolve_counter(self, info, mode):
         lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
@@ -467,7 +440,8 @@ class DictionaryPerspective(LingvodocObjectType):
 
             .filter(
                 ObjectTOC.client_id == self.dbObject.client_id,
-                ObjectTOC.object_id == self.dbObject.object_id))
+                ObjectTOC.object_id == self.dbObject.object_id,
+                ObjectTOC.additional_metadata != JSONB.NULL))
 
         # Query for last modification time of the perspective's lexical entries and entities.
 
@@ -507,7 +481,8 @@ class DictionaryPerspective(LingvodocObjectType):
                       E.parent_client_id = L.client_id and
                       E.parent_object_id = L.object_id and
                       OE.client_id = E.client_id and
-                      OE.object_id = E.object_id)))
+                      OE.object_id = E.object_id and
+                      OE.additional_metadata != 'null' :: jsonb)))
 
             from
               lexicalentry L,
@@ -517,7 +492,8 @@ class DictionaryPerspective(LingvodocObjectType):
               L.parent_client_id = :client_id and
               L.parent_object_id = :object_id and
               OL.client_id = L.client_id and
-              OL.object_id = L.object_id
+              OL.object_id = L.object_id and
+              OL.additional_metadata != 'null' :: jsonb
 
             ''')
 

@@ -6,23 +6,27 @@ import pprint
 import graphene
 
 from lingvodoc.cache.caching import CACHE
+
 from lingvodoc.models import (
-    Dictionary as dbDictionary,
-    TranslationAtom as dbTranslationAtom,
-    DBSession,
-    Client as dbClient,
-    Language as dbLanguage,
-    DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
-    Group as dbGroup,
-    Grant as dbGrant,
+    Client as dbClient,
+    DBSession,
+    Dictionary as dbDictionary,
+    DictionaryPerspective as dbPerspective,
     Entity as dbEntity,
+    Grant as dbGrant,
+    Group as dbGroup,
+    JSONB,
+    Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
-    PublishingEntity as dbPublishingEntity,
-    TranslationGist as dbTranslationGist,
     ObjectTOC,
-    )
+    PublishingEntity as dbPublishingEntity,
+    TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
+)
+
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
+
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CommonFieldsComposite,
@@ -175,7 +179,8 @@ class Dictionary(LingvodocObjectType):  # tested
 
             .filter(
                 ObjectTOC.client_id == self.dbObject.client_id,
-                ObjectTOC.object_id == self.dbObject.object_id))
+                ObjectTOC.object_id == self.dbObject.object_id,
+                ObjectTOC.additional_metadata != JSONB.NULL))
 
         # Query for last modification time of the dictionary's perspectives, lexical entries and entities.
 
@@ -228,7 +233,8 @@ class Dictionary(LingvodocObjectType):  # tested
                             E.parent_client_id = L.client_id and
                             E.parent_object_id = L.object_id and
                             OE.client_id = E.client_id and
-                            OE.object_id = E.object_id)))
+                            OE.object_id = E.object_id and
+                            OE.additional_metadata != 'null' :: jsonb)))
 
                     from
                       lexicalentry L,
@@ -238,7 +244,8 @@ class Dictionary(LingvodocObjectType):  # tested
                       L.parent_client_id = P.client_id and
                       L.parent_object_id = P.object_id and
                       OL.client_id = L.client_id and
-                      OL.object_id = L.object_id)))
+                      OL.object_id = L.object_id and
+                      OL.additional_metadata != 'null' :: jsonb)))
 
             from
               dictionaryperspective P,
@@ -248,7 +255,8 @@ class Dictionary(LingvodocObjectType):  # tested
               P.parent_client_id = :client_id and
               P.parent_object_id = :object_id and
               OP.client_id = P.client_id and
-              OP.object_id = P.object_id
+              OP.object_id = P.object_id and
+              OP.additional_metadata != 'null' :: jsonb
 
             ''')
 
@@ -386,22 +394,22 @@ class Dictionary(LingvodocObjectType):  # tested
 
         perspective_query = (DBSession
 
-            .query(dbDictionaryPerspective)
+            .query(dbPerspective)
 
             .filter(
-                dbDictionaryPerspective.parent_client_id == self.dbObject.client_id,
-                dbDictionaryPerspective.parent_object_id == self.dbObject.object_id,
+                dbPerspective.parent_client_id == self.dbObject.client_id,
+                dbPerspective.parent_object_id == self.dbObject.object_id,
 
                 tuple_(
-                    dbDictionaryPerspective.state_translation_gist_client_id,
-                    dbDictionaryPerspective.state_translation_gist_object_id)
+                    dbPerspective.state_translation_gist_client_id,
+                    dbPerspective.state_translation_gist_object_id)
 
                     .in_(DBSession.query(translation_gist_cte))))
 
         if not self.dbObject.marked_for_deletion:
 
             perspective_query = perspective_query.filter(
-                dbDictionaryPerspective.marked_for_deletion == False)
+                dbPerspective.marked_for_deletion == False)
 
         published_query = (DBSession
 
@@ -502,7 +510,7 @@ class Dictionary(LingvodocObjectType):  # tested
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
         dictionary_client_id, dictionary_object_id = self.id  # self.dbObject.client_id, self.dbObject.object_id
 
-        child_persps_query = DBSession.query(dbDictionaryPerspective) \
+        child_persps_query = DBSession.query(dbPerspective) \
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id,
                        marked_for_deletion=False)
 
@@ -517,9 +525,9 @@ class Dictionary(LingvodocObjectType):  # tested
             dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
 
             phonology_query = DBSession.query(
-                dbDictionaryPerspective, dbLexicalEntry, dbMarkup, dbSound).filter(
-                    dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
-                    dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
+                dbPerspective, dbLexicalEntry, dbMarkup, dbSound).filter(
+                    dbLexicalEntry.parent_client_id == dbPerspective.client_id,
+                    dbLexicalEntry.parent_object_id == dbPerspective.object_id,
                     dbLexicalEntry.marked_for_deletion == False,
                     dbMarkup.parent_client_id == dbLexicalEntry.client_id,
                     dbMarkup.parent_object_id == dbLexicalEntry.object_id,
@@ -936,7 +944,7 @@ class UpdateDictionary(graphene.Mutation):
         if additional_metadata:
 
             if "location" in additional_metadata:
-                child_persps = DBSession.query(dbDictionaryPerspective)\
+                child_persps = DBSession.query(dbPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
@@ -952,7 +960,7 @@ class UpdateDictionary(graphene.Mutation):
                     flag_modified(persp, 'additional_metadata')
 
             if "authors" in additional_metadata:
-                child_persps = DBSession.query(dbDictionaryPerspective)\
+                child_persps = DBSession.query(dbPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
@@ -964,7 +972,7 @@ class UpdateDictionary(graphene.Mutation):
                     flag_modified(persp, 'additional_metadata')
             if "blobs" in additional_metadata:
                 additional_metadata['blobs'] = [{"client_id": i[0], "object_id": i[1]} for i in additional_metadata['blobs']]
-                child_persps = DBSession.query(dbDictionaryPerspective)\
+                child_persps = DBSession.query(dbPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
@@ -983,7 +991,7 @@ class UpdateDictionary(graphene.Mutation):
 
             if "sociolinguistics" in additional_metadata:
 
-                child_persps = DBSession.query(dbDictionaryPerspective) \
+                child_persps = DBSession.query(dbPerspective) \
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
