@@ -566,7 +566,13 @@ class Query(graphene.ObjectType):
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
     dictionary_dialeqt_get_info = graphene.Field(DialeqtInfo, blob_id=LingvodocID(required=True))
-    convert_five_tiers_validate = graphene.Boolean(markup_id=LingvodocID(required=True))
+
+    convert_five_tiers_validate = (
+
+        graphene.Field(
+            graphene.List(graphene.Boolean),
+            markup_id_list = graphene.List(LingvodocID, required=True)))
+
     merge_suggestions = graphene.Field(MergeSuggestions, perspective_id=LingvodocID(required=True),
                                        algorithm=graphene.String(required=True),
                                        entity_type_primary=graphene.String(),
@@ -1270,56 +1276,42 @@ class Query(graphene.ObjectType):
         return MergeSuggestions(user_has_permissions=result['user_has_permissions'],
                                 match_result=result['match_result'])
 
-    def resolve_convert_five_tiers_validate(self, info, markup_id):
-        client_id, object_id = markup_id
-        entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        if not entity:
-            raise KeyError("No such file")
+    def resolve_convert_five_tiers_validate(self, info, markup_id_list):
 
-        try:
+        result_list = []
 
-            storage = (
-                info.context.request.registry.settings['storage'])
+        for markup_id in markup_id_list:
 
-            with storage_file(
-                storage, entity.content) as content_stream:
+            client_id, object_id = markup_id
+            entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
 
-                content = content_stream.read()
+            if not entity:
+                return ResponseError(f'No entity {client_id} / {object_id}.')
 
-        except:
-            raise ResponseError("Cannot access file")
+            try:
 
-        with tempfile.NamedTemporaryFile() as temp:
-            markup = tgt_to_eaf(content, entity.additional_metadata)
-            temp.write(markup.encode("utf-8"))
-            temp.flush()
-            elan_check = elan_parser.ElanCheck(temp.name)
-            elan_check.parse()
-            return elan_check.check()
+                storage = (
+                    info.context.request.registry.settings['storage'])
 
-    """
-        from urllib import request
-        from urllib.parse import quote
-        #request = urllib.request #info.context.request
-        try:
-            result = False
-            file_name = eaf_url.split("/")[-1]
-            folder = "/".join(eaf_url.split("/")[:-1])
-            eaffile = request.urlopen("%s/%s" % (folder, quote(file_name)))
-        except HTTPError as e:
-            raise ResponseError(message=str(e))
-        except KeyError as e:
-            raise ResponseError(message=str(e))
-        with tempfile.NamedTemporaryFile() as temp:
-            markup = tgt_to_eaf(eaffile.read(), {"data_type": "praat"})
-            temp.write(markup)
-            elan_check = elan_parser.ElanCheck(temp.name)
-            elan_check.parse()
-            if elan_check.check():
-                result = True
-            temp.flush()
-        return result
-    """
+                with storage_file(
+                    storage, entity.content) as content_stream:
+
+                    content = content_stream.read()
+
+            except:
+                return ResponseError(f'Cannot access file \'{entity.content}\'.')
+
+            with tempfile.NamedTemporaryFile() as temp:
+                markup = tgt_to_eaf(content, entity.additional_metadata)
+                temp.write(markup.encode("utf-8"))
+                temp.flush()
+                elan_check = elan_parser.ElanCheck(temp.name)
+                elan_check.parse()
+
+                result_list.append(
+                    elan_check.check())
+
+        return result_list
 
     def resolve_dictionary_dialeqt_get_info(self, info, blob_id):  # TODO: test
         blob_client_id, blob_object_id = blob_id
@@ -3362,7 +3354,6 @@ class Query(graphene.ObjectType):
 
     def resolve_convert_markup(self, info, id):
 
-
         # TODO: permission check
         """
         query myQuery {
@@ -3374,12 +3365,23 @@ class Query(graphene.ObjectType):
         # user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         client_id, object_id = id
         entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
+
         if not entity:
-            raise KeyError("No such file")
-        resp = requests.get(entity.content)
-        if not resp:
-            raise ResponseError("Cannot access file")
-        content = resp.content
+            return ResponseError(f'No entity {client_id} / {object_id}.')
+
+        try:
+
+            storage = (
+                info.context.request.registry.settings['storage'])
+
+            with storage_file(
+                storage, entity.content) as content_stream:
+
+                content = content_stream.read()
+
+        except:
+            return ResponseError(f'Cannot access file \'{entity.content}\'.')
+
         return tgt_to_eaf(content, entity.additional_metadata)
 
 

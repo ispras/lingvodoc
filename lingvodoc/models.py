@@ -349,20 +349,35 @@ class CompositeIdMixin(object):
     client_id = Column(SLBigInteger(), primary_key=True)
 
     def __init__(self, **kwargs):
+
         if not kwargs.get("object_id", None):
             kwargs["object_id"] = get_client_counter(kwargs['client_id'])
-        if kwargs.get("session", None):
+
+        if kwargs.get('session', None):
+
             session = kwargs['session']
-        else:
-            session = DBSession
-        session.merge(ObjectTOC(client_id=kwargs['client_id'],
-                                object_id=kwargs['object_id'],
-                                table_name=self.__tablename__,
-                                marked_for_deletion=kwargs.get('marked_for_deletion', False)
-                                )
-                      )
-        if kwargs.get("session", None):
             del kwargs['session']
+
+        else:
+
+            session = DBSession
+
+        object_toc = (
+
+            ObjectTOC(
+                client_id = kwargs['client_id'],
+                object_id = kwargs['object_id'],
+                table_name = self.__tablename__,
+                marked_for_deletion = kwargs.get('marked_for_deletion', False)))
+
+        if kwargs.get('new_objecttoc'):
+            
+            session.add(object_toc)
+            del kwargs['new_objecttoc']
+
+        else:
+
+            session.merge(object_toc)
 
         super().__init__(**kwargs)
 
@@ -880,6 +895,10 @@ class ParentLinkMixin(PrimeTableArgs):
                             'and_(' + cls.__name__ + '.link_client_id  == ' + cls.__parentname__ + '.client_id, ' + cls.__name__ + '.link_object_id == ' + cls.__parentname__ + '.object_id)',
                             foreign_keys=[cls.link_client_id,
                                           cls.link_object_id])
+
+    @property
+    def link_id(self):
+        return (self.link_client_id, self.link_object_id)
 
 
 class DictionaryPerspectiveToField(CompositeIdMixin,
@@ -1538,6 +1557,11 @@ class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMi
                 return None
         else:
             return None
+
+    def next_object_id(self):
+
+        self.counter += 1
+        return self.counter
 
 
 class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedForDeletionMixin,

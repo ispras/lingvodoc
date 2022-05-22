@@ -157,32 +157,41 @@ class ConvertDictionary(graphene.Mutation):
 
 
 @celery.task
-def async_convert_five_tiers(dictionary_id,
-                client_id,
-                sqlalchemy_url,
-                storage,
-                markup_id,
-                locale_id,
-                task_key,
-                cache_kwargs,
-                translation_gist_id=None,
-                language_id=None,
-                sound_url=None,
-                no_sound_flag=False):
+def async_convert_five_tiers(
+    dictionary_id,
+    client_id,
+    sqlalchemy_url,
+    storage,
+    markup_id_list,
+    locale_id,
+    task_key,
+    cache_kwargs,
+    translation_gist_id = None,
+    language_id = None,
+    sound_url = None,
+    merge_by_meaning = True,
+    additional_entries = True,
+    additional_entries_all = True,
+    no_sound_flag = False,
+    debug_flag = False):
 
-    convert_all(dictionary_id,
-                client_id,
-                sqlalchemy_url,
-                storage,
-                markup_id,
-                locale_id,
-                task_key,
-                cache_kwargs,
-                translation_gist_id,
-                language_id,
-                sound_url,
-                no_sound_flag)
-    return
+    convert_all(
+        dictionary_id,
+        client_id,
+        sqlalchemy_url,
+        storage,
+        markup_id_list,
+        locale_id,
+        task_key,
+        cache_kwargs,
+        translation_gist_id,
+        language_id,
+        sound_url,
+        merge_by_meaning,
+        additional_entries,
+        additional_entries_all,
+        no_sound_flag,
+        debug_flag)
 
 
 class ConvertFiveTiers(graphene.Mutation):
@@ -214,12 +223,20 @@ class ConvertFiveTiers(graphene.Mutation):
     """
 
     class Arguments:
+
         dictionary_id = LingvodocID()
-        markup_id = LingvodocID(required=True)
+        markup_id_list = graphene.List(LingvodocID, required = True)
         language_id = LingvodocID()
+
         translation_gist_id = LingvodocID()
         translation_atoms = graphene.List(ObjectVal)
+
+        merge_by_meaning = graphene.Boolean()
+        additional_entries = graphene.Boolean()
+        additional_entries_all = graphene.Boolean()
+
         no_sound_flag = graphene.Boolean()
+        debug_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
 
     dictionary_id = LingvodocID()
@@ -240,13 +257,17 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args = dict()
         cur_args['client_id'] = client_id
         cur_args["dictionary_id"] = args.get("dictionary_id")
-        cur_args['markup_id'] = args['markup_id']
+        cur_args['markup_id_list'] = args['markup_id_list']
         cur_args["locale_id"] = locale_id
         cur_args['sound_url'] = args.get('sound_url')
         cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
         cur_args["storage"] = request.registry.settings["storage"]
         cur_args["language_id"] = args.get('language_id')
-        cur_args["no_sound_flag"] = args.get('no_sound_flag', False)
+        cur_args['merge_by_meaning'] = args.get('merge_by_meaning', True)
+        cur_args['additional_entries'] = args.get('additional_entries', True)
+        cur_args['additional_entries_all'] = args.get('additional_entries_all', True)
+        cur_args['no_sound_flag'] = args.get('no_sound_flag', False)
+        cur_args['debug_flag'] = args.get('debug_flag', False)
 
         if not args.get("dictionary_id"):
             if "translation_gist_id" in args:
@@ -319,9 +340,12 @@ class ConvertFiveTiers(graphene.Mutation):
         if synchronous:
 
             convert_f = convert_all
+
+            cur_args.setdefault('translation_gist_id')
             cur_args['synchronous'] = True
 
         else:
+
             convert_f = async_convert_five_tiers.delay
 
         res = convert_f(**cur_args)
@@ -330,3 +354,4 @@ class ConvertFiveTiers(graphene.Mutation):
             ConvertFiveTiers(
                 triumph = True,
                 dictionary_id = res))
+
