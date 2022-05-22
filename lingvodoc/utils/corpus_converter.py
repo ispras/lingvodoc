@@ -275,9 +275,9 @@ def convert_five_tiers(
     no_sound_flag,
     debug_flag = False):
 
-    task_status.set(1, 1, "Preparing")
+    task_status.set(
+        1, 1, "Preparing")
 
-    field_ids = {}
     with transaction.manager:
 
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -314,9 +314,11 @@ def convert_five_tiers(
                           "Sounds of Paradigmatic forms"
                          )
 
-        task_status.set(2, 5, "Checking fields")
+        task_status.set(
+            2, 5, "Checking fields")
 
-        field_ids = get_id_to_field_dict()
+        field_ids = (
+            get_id_to_field_dict())
 
         fp_fields = (
             "Word",
@@ -679,7 +681,7 @@ def convert_five_tiers(
             le_word_dict = defaultdict(set)
             le_xcript_dict = defaultdict(set)
 
-        # Checking all existing lexical entries.
+        # Checking text data of all existing lexical entries.
 
         for x in lexes:
 
@@ -743,11 +745,10 @@ def convert_five_tiers(
             response = translation_service_search('WiP')
             wip_state_id = (response['client_id'], response['object_id'])
 
-        """
-        # FIRST PERSPECTIVE
-        """
+        # First perspective.
 
-        task_status.set(3, 8, "Handling lexical entries perspective")
+        task_status.set(
+            3, 8, "Handling lexical entries perspective")
 
         new_fp_flag = (
             first_perspective is None)
@@ -785,11 +786,10 @@ def convert_five_tiers(
 
         first_perspective_id = first_perspective.id
 
-        """
-        # SECOND PERSPECTIVE
-        """
+        # Second perspective.
 
-        task_status.set(4, 12, "Handling paradigms perspective")
+        task_status.set(
+            4, 12, "Handling paradigms perspective")
 
         new_sp_flag = (
             second_perspective is None)
@@ -1174,17 +1174,23 @@ def convert_five_tiers(
                     no_sound = False
 
             with warnings.catch_warnings():
+
                 warnings.filterwarnings('error')
+
                 try:
                     from pydub import AudioSegment
                 except Warning as e:
                     no_sound = True
+
             if not no_sound:
-                sound_format = "wav"
-                if sound_url.endswith(".mp3"):
-                    sound_format = "mp3"
-                if sound_url.endswith(".flac"):
-                    sound_format = "flac"
+
+                sound_format = 'wav'
+
+                if sound_url.endswith('.mp3'):
+                    sound_format = 'mp3'
+                if sound_url.endswith('.flac'):
+                    sound_format = 'flac'
+
                 with tempfile.NamedTemporaryFile() as temp:
 
                     try:
@@ -1199,13 +1205,13 @@ def convert_five_tiers(
 
                     with open(temp.name,'wb') as output:
                         output.write(sound_data)
-                    if sound_format == "wav":
+
+                    if sound_format == 'wav':
                         full_audio = AudioSegment.from_wav(temp.name)
-                    elif sound_format == "mp3":
+                    elif sound_format == 'mp3':
                         full_audio = AudioSegment.from_mp3(temp.name)
-                    elif sound_format == "flac":
-                        full_audio = AudioSegment.from_file(temp.name, "flac")
-                    temp.flush()
+                    elif sound_format == 'flac':
+                        full_audio = AudioSegment.from_file(temp.name, 'flac')
 
             try:
 
@@ -1215,14 +1221,19 @@ def convert_five_tiers(
                     content = content_stream.read()
 
             except:
+
                 raise KeyError(f'Cannot access markup file \'{markup_entity.content}\'.')
 
             result = False
+
             with tempfile.NamedTemporaryFile() as temp:
+
                 markup = tgt_to_eaf(content, markup_entity.additional_metadata)
-                temp.write(markup.encode("utf-8"))
+                temp.write(markup.encode('utf-8'))
+
                 converter = elan_parser.Elan(temp.name)
                 converter.parse()
+
                 final_dicts = converter.proc()
 
             # Showing what we've got from the corpus, if required.
@@ -2227,12 +2238,12 @@ def convert_five_tiers(
                 if debug_flag:
                     log.debug(f'\n{percent}%')
 
-    perform_insert()
+        perform_insert()
 
-    mark_changed(DBSession())
+        mark_changed(DBSession())
 
     task_status.set(
-        10, 100, "Finished", "")
+        10, 100, 'Finished')
 
     return dictionary_id
 
