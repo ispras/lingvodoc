@@ -1,3 +1,10 @@
+import base64
+import errno
+import hashlib
+import os
+import os.path
+from pathvalidate import sanitize_filename
+import shutil
 import urllib
 
 import graphene
@@ -19,8 +26,6 @@ from lingvodoc.models import (
 )
 from lingvodoc.schema.gql_holders import LingvodocID, ResponseError
 
-from lingvodoc.utils.corpus_converter import create_entity as corpus_create_entity
-
 def create_n_entries_in_persp(n, pid, client):
     lexentries_list = list()
     client = client
@@ -36,6 +41,123 @@ def create_n_entries_in_persp(n, pid, client):
     for lexentry in lexentries_list:
         result.append(lexentry)
     return result
+
+def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
+    filename = sanitize_filename(filename)
+    storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
+    if create_dir:
+        os.makedirs(storage_dir, exist_ok=True)
+    storage_path = os.path.join(storage_dir, filename)
+    return storage_path, filename
+
+def create_object(content, obj, data_type, filename, folder_name, storage):
+
+    storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
+    directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
+    try:
+        os.makedirs(directory)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    with open(storage_path, 'wb+') as f:
+        f.write(content)
+
+    real_location = storage_path
+
+    url = "".join((storage["prefix"],
+                  storage["static_route"],
+                  obj.__tablename__,
+                  '/',
+                  folder_name,
+                  '/',
+                  str(obj.client_id), '/',
+                  str(obj.object_id), '/',
+                  filename))
+    return real_location, url
+
+def corpus_create_entity(
+    le_client_id,
+    le_object_id,
+    field_client_id,
+    field_object_id,
+    data_type,
+    client_id,
+    content = None,
+    filename = None,
+    self_client_id = None,
+    self_object_id = None,
+    link_client_id = None,
+    link_object_id = None,
+    folder_name = None,
+    storage = None):
+
+    entity = dbEntity(client_id=client_id,
+                    field_client_id=field_client_id,
+                    field_object_id=field_object_id,
+                    parent_client_id=le_client_id,
+                    parent_object_id=le_object_id)
+
+    if self_client_id and self_object_id:
+        entity.self_client_id = self_client_id
+        entity.self_object_id = self_object_id
+
+    hash = None
+    real_location = None
+    url = None
+    if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+        ##entity.data_type = data_type
+        real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
+        entity.content = url
+        old_meta = entity.additional_metadata
+        need_hash = True
+        if old_meta:
+            new_meta = old_meta #json.loads(old_meta)
+            if new_meta.get('hash'):
+                need_hash = False
+        if need_hash:
+            hash = hashlib.sha224(content).hexdigest()
+
+            hash_dict = {'hash': hash}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(hash_dict)
+            else:
+                new_meta = hash_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+        old_meta = entity.additional_metadata
+        if data_type == "markup":
+            data_type_dict = {"data_type": "praat markup"}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(data_type_dict)
+            else:
+                new_meta = data_type_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+        if data_type == "sound":
+            data_type_dict = {"data_type": "sound"}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(data_type_dict)
+            else:
+                new_meta = data_type_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+    elif data_type == 'link':
+        try:
+            entity.link_client_id = link_client_id
+            entity.link_object_id = link_object_id
+        except (KeyError, TypeError):
+            return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
+    else:
+        entity.content = content
+    entity.publishingentity.accepted = True
+
+    # DBSession.add(entity)
+    CACHE.set(objects = [entity, ], DBSession=DBSession)
+
+    # means that the function was called from CopyField and so need to be sure that sound has been copied before copying markups
+    if byte_content:
+        DBSession.flush()
+    return (entity.client_id, entity.object_id)
 
 def copy_sound_or_markup_entity(
     entity,
@@ -73,7 +195,6 @@ def copy_sound_or_markup_entity(
             filename=filename,
             folder_name="graphql_files",
             storage=storage,
-            byte_content=True,
             self_client_id=self_client_id,
             self_object_id=self_object_id))
 
