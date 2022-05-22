@@ -23,7 +23,7 @@ import warnings
 from pyramid.httpexceptions import HTTPError
 
 import sqlalchemy
-from sqlalchemy import and_, create_engine, or_, tuple_
+from sqlalchemy import and_, create_engine, null, or_, tuple_
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -999,6 +999,10 @@ def convert_five_tiers(
             Constructructs data of a new entity, creating a data file if required.
             """
 
+            # Anything not specified will be inserted as SQL NULL; if we ever specify something, e.g.
+            # additional_metadata, we should specify it always so that the VALUES statement emitted by
+            # SQLAlchemy is consistent.
+
             entity_dict = {
                 'created_at': created_at(),
                 'client_id': client.id,
@@ -1007,10 +1011,9 @@ def convert_five_tiers(
                 'parent_object_id': entry_id[1],
                 'field_client_id': field_id[0],
                 'field_object_id': field_id[1],
-                'locale_id': None,
                 'marked_for_deletion': False,
                 'content': content,
-                'additional_metadata': None}
+                'additional_metadata': null()}
 
             if self_id is not None:
 
@@ -1073,8 +1076,7 @@ def convert_five_tiers(
                 'client_id': client_id,
                 'object_id': object_id,
                 'table_name': 'entity',
-                'marked_for_deletion': False,
-                'additional_metadata': None}
+                'marked_for_deletion': False}
 
             toc_insert_list.append(toc_dict)
 
@@ -1387,9 +1389,7 @@ def convert_five_tiers(
                             'object_id': extra_client.next_object_id(),
                             'parent_client_id': second_perspective_id[0],
                             'parent_object_id': second_perspective_id[1],
-                            'marked_for_deletion': False,
-                            'moved_to': None,
-                            'additional_metadata': None}
+                            'marked_for_deletion': False}
 
                         entry_insert_list.append(entry_dict)
 
@@ -1397,8 +1397,7 @@ def convert_five_tiers(
                             'client_id': extra_client_id,
                             'object_id': entry_dict['object_id'],
                             'table_name': 'lexicalentry',
-                            'marked_for_deletion': False,
-                            'additional_metadata': None}
+                            'marked_for_deletion': False}
 
                         toc_insert_list.append(toc_dict)
                                 
@@ -1609,9 +1608,7 @@ def convert_five_tiers(
                                 'object_id': extra_client.next_object_id(),
                                 'parent_client_id': first_perspective_id[0],
                                 'parent_object_id': first_perspective_id[1],
-                                'marked_for_deletion': False,
-                                'moved_to': None,
-                                'additional_metadata': None}
+                                'marked_for_deletion': False}
 
                             entry_insert_list.append(entry_dict)
 
@@ -1619,8 +1616,7 @@ def convert_five_tiers(
                                 'client_id': extra_client_id,
                                 'object_id': entry_dict['object_id'],
                                 'table_name': 'lexicalentry',
-                                'marked_for_deletion': False,
-                                'additional_metadata': None}
+                                'marked_for_deletion': False}
 
                             toc_insert_list.append(toc_dict)
                                     
@@ -2206,9 +2202,7 @@ def convert_five_tiers(
                         'object_id': extra_client.next_object_id(),
                         'parent_client_id': first_perspective_id[0],
                         'parent_object_id': first_perspective_id[1],
-                        'marked_for_deletion': False,
-                        'moved_to': None,
-                        'additional_metadata': None}
+                        'marked_for_deletion': False}
 
                     entry_insert_list.append(entry_dict)
 
@@ -2216,8 +2210,7 @@ def convert_five_tiers(
                         'client_id': extra_client_id,
                         'object_id': entry_dict['object_id'],
                         'table_name': 'lexicalentry',
-                        'marked_for_deletion': False,
-                        'additional_metadata': None}
+                        'marked_for_deletion': False}
 
                     toc_insert_list.append(toc_dict)
                             
