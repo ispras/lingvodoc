@@ -270,10 +270,17 @@ def convert_five_tiers(
     language_id,
     sound_url,
     merge_by_meaning,
+    merge_by_meaning_all,
     additional_entries,
     additional_entries_all,
     no_sound_flag,
     debug_flag = False):
+
+    merge_by_meaning_all = (
+        merge_by_meaning_all and merge_by_meaning)
+
+    additional_entries_all = (
+        additional_entries_all and additional_entries)
 
     task_status.set(
         1, 1, "Preparing")
@@ -674,7 +681,7 @@ def convert_five_tiers(
         le_content_text_entity_dict = defaultdict(list)
         le_parent_id_text_entity_counter = Counter()
 
-        if merge_by_meaning:
+        if merge_by_meaning_all:
 
             le_meaning_dict = {}
 
@@ -696,7 +703,7 @@ def convert_five_tiers(
             le_content_text_entity_dict[content].append(x)
             le_parent_id_text_entity_counter[entry_id] += 1
 
-            if not merge_by_meaning:
+            if not merge_by_meaning_all:
                 continue
 
             # If we merge by meaning, we compile additional lexical entries info.
@@ -1139,7 +1146,7 @@ def convert_five_tiers(
         # meaning, we would merge to the existing ones if possible.
 
         lex_rows = (
-            le_meaning_dict if merge_by_meaning else {})
+            le_meaning_dict if merge_by_meaning_all else {})
 
         par_rows = {}
 
@@ -1504,7 +1511,7 @@ def convert_five_tiers(
                     # If we merge lexical entries by meaning, we get the lexical entry identifier from
                     # translation.
 
-                    if merge_by_meaning:
+                    if merge_by_meaning_all:
 
                         translation_list = [
 
@@ -1645,7 +1652,7 @@ def convert_five_tiers(
                                     field_data_type_dict[field_id],
                                     text)
 
-                                if (merge_by_meaning and
+                                if (merge_by_meaning_all and
                                     (text := text .strip())):
 
                                     le_check_dict = (
@@ -1664,7 +1671,7 @@ def convert_five_tiers(
                     # If we check lexical entry identity only by meaning, we should add to it any
                     # transcriptions and words it doesn't have.
 
-                    elif merge_by_meaning:
+                    elif merge_by_meaning_all:
 
                         for other_word in column:
 
@@ -1912,7 +1919,7 @@ def convert_five_tiers(
         conj_dict = {}
 
         lex_entry_dict = (
-            nom_dict if merge_by_meaning else {})
+            nom_dict if merge_by_meaning_all else {})
 
         le_word_dict = defaultdict(set)
         le_xcript_dict = defaultdict(set)
@@ -1959,20 +1966,22 @@ def convert_five_tiers(
 
                 conj_dict[content_key] = entry_id
 
-            # Checking for nominative / infinitive / canonical form info.
+            # Checking for nominative / infinitive / canonical form info, if required.
 
-            if mark_search:
+            if merge_by_meaning:
 
-                content_text = (
-                    content_text [ : mark_search.start()] .strip())
+                if mark_search:
 
-            content_key = (
-                content_text.lower())
+                    content_text = (
+                        content_text [ : mark_search.start()] .strip())
 
-            if ((merge_by_meaning or nom_search) and
-                content_key not in nom_dict):
+                content_key = (
+                    content_text.lower())
 
-                nom_dict[content_key] = entry_id
+                if ((merge_by_meaning_all or nom_search) and
+                    content_key not in nom_dict):
+
+                    nom_dict[content_key] = entry_id
 
         # Updated words and transcriptions in the second perspective.
 
@@ -2148,21 +2157,23 @@ def convert_five_tiers(
 
                     create_le_flag = True
 
-                    nom_key = (
+                    if merge_by_meaning:
 
-                        translation_text
-                            [ : mark_search.start()] .strip() .lower())
+                        nom_key = (
 
-                    fp_le_id = (
-                        nom_dict.get(nom_key))
+                            translation_text
+                                [ : mark_search.start()] .strip() .lower())
 
-                    if fp_le_id is not None:
+                        fp_le_id = (
+                            nom_dict.get(nom_key))
 
-                        establish_link(
-                            fp_le_id,
-                            sp_le_id)
+                        if fp_le_id is not None:
 
-                        create_le_flag = False
+                            establish_link(
+                                fp_le_id,
+                                sp_le_id)
+
+                            create_le_flag = False
 
             if create_le_flag:
 
@@ -2177,7 +2188,17 @@ def convert_five_tiers(
                 translation_key = (
                     translation_text.lower())
 
-                if not translation_key in lex_entry_dict:
+                fp_lexical_entry_id = (
+                    lex_entry_dict.get(translation_key))
+
+                if (fp_lexical_entry_id is not None and
+                    merge_by_meaning):
+
+                    establish_link(
+                        fp_lexical_entry_id,
+                        sp_le_id)
+
+                else:
 
                     entry_dict = {
                         'created_at': created_at(),
@@ -2215,12 +2236,6 @@ def convert_five_tiers(
 
                     establish_link(
                         fp_lexical_entry_id,
-                        sp_le_id)
-
-                else:
-
-                    establish_link(
-                        lex_entry_dict[translation_key],
                         sp_le_id)
 
             percent = (
@@ -2261,6 +2276,7 @@ def convert_all(
     language_id,
     sound_url,
     merge_by_meaning = True,
+    merge_by_meaning_all = True,
     additional_entries = True,
     additional_entries_all = True,
     no_sound_flag = False,
@@ -2295,6 +2311,7 @@ def convert_all(
                 language_id,
                 sound_url,
                 merge_by_meaning,
+                merge_by_meaning_all,
                 additional_entries,
                 additional_entries_all,
                 no_sound_flag,

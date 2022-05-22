@@ -170,6 +170,7 @@ def async_convert_five_tiers(
     language_id = None,
     sound_url = None,
     merge_by_meaning = True,
+    merge_by_meaning_all = True,
     additional_entries = True,
     additional_entries_all = True,
     no_sound_flag = False,
@@ -188,6 +189,7 @@ def async_convert_five_tiers(
         language_id,
         sound_url,
         merge_by_meaning,
+        merge_by_meaning_all,
         additional_entries,
         additional_entries_all,
         no_sound_flag,
@@ -232,6 +234,7 @@ class ConvertFiveTiers(graphene.Mutation):
         translation_atoms = graphene.List(ObjectVal)
 
         merge_by_meaning = graphene.Boolean()
+        merge_by_meaning_all = graphene.Boolean()
         additional_entries = graphene.Boolean()
         additional_entries_all = graphene.Boolean()
 
@@ -264,6 +267,7 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args["storage"] = request.registry.settings["storage"]
         cur_args["language_id"] = args.get('language_id')
         cur_args['merge_by_meaning'] = args.get('merge_by_meaning', True)
+        cur_args['merge_by_meaning_all'] = args.get('merge_by_meaning_all', True)
         cur_args['additional_entries'] = args.get('additional_entries', True)
         cur_args['additional_entries_all'] = args.get('additional_entries_all', True)
         cur_args['no_sound_flag'] = args.get('no_sound_flag', False)
