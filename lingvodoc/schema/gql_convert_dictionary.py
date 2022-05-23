@@ -280,7 +280,7 @@ class ConvertFiveTiers(graphene.Mutation):
                 if cur_args["translation_gist_id"]:
                     gist = DBSession.query(dbTranslationGist).filter_by(client_id=cur_args["translation_gist_id"][0],
                                                                       object_id=cur_args["translation_gist_id"][1]).first()
-                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
+                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 8)
                 else:
                     gist=None
             elif "translation_atoms" in args:
@@ -296,9 +296,8 @@ class ConvertFiveTiers(graphene.Mutation):
                 gist = DBSession.query(dbTranslationGist).filter_by(client_id=translation_gist_id[0],
                                                                  object_id=translation_gist_id[1]).first()
 
-
                 if gist:
-                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
+                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 8)
             else:
                 raise ResponseError(message="dictionary_id or translation_atoms missed")
 
@@ -315,9 +314,8 @@ class ConvertFiveTiers(graphene.Mutation):
             gist = DBSession.query(dbTranslationGist).filter_by(client_id=dictionary_obj.translation_gist_client_id,
                                                              object_id=dictionary_obj.translation_gist_object_id).first()
 
-
             if gist:
-                    task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
+                task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 8)
 
             else:
                 # dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=args["dictionary_id"][0],
@@ -331,13 +329,8 @@ class ConvertFiveTiers(graphene.Mutation):
                 gist = DBSession.query(dbTranslationGist).\
                     filter_by(client_id=dictionary_obj.translation_gist_client_id,
                               object_id=dictionary_obj.translation_gist_object_id).first()
-                task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 10)
+                task = TaskStatus(user_id, "Corpus conversion", gist.get_translation(locale_id), 8)
 
-
-
-
-
-        #task = TaskStatus(user_id, "Eaf dictionary conversion", gist.get_translation(locale_id), 10)
         cur_args["task_key"] = task.key
         cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
 

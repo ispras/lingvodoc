@@ -12251,6 +12251,330 @@ class CreateValencyData(graphene.Mutation):
                     message = 'Exception:\n' + traceback_string))
 
 
+class SaveValencyData(graphene.Mutation):
+
+    class Arguments:
+
+        perspective_id = LingvodocID(required = True)
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+    data_url = graphene.String()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only registered users can create valency data.'))
+
+            perspective_id = args['perspective_id']
+            debug_flag = args.get('debug_flag', False)
+
+            perspective = (
+                DBSession.query(dbPerspective).filter_by(
+                    client_id = perspective_id[0], object_id = perspective_id[1]).first())
+
+            if not perspective:
+
+                return (
+
+                    ResponseError(
+                        message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
+
+            dictionary = perspective.parent
+
+            locale_id = info.context.get('locale_id') or 2
+
+            dictionary_name = dictionary.get_translation(locale_id)
+            perspective_name = perspective.get_translation(locale_id)
+
+            full_name = dictionary_name + ' \u203a ' + perspective_name
+
+            if dictionary.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Dictionary \'{}\' {}/{} of perspective \'{}\' {}/{} is deleted.'.format(
+                            dictionary_name,
+                            dictionary.client_id,
+                            dictionary.object_id,
+                            perspective_name,
+                            perspective.client_id,
+                            perspective.object_id)))
+
+            if perspective.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Perspective \'{}\' {}/{} is deleted.'.format(
+                            full_name,
+                            perspective.client_id,
+                            perspective.object_id)))
+
+            # Getting valency annotation data.
+
+            annotation_list = (
+
+                DBSession
+
+                    .query(
+                        dbValencyAnnotationData)
+
+                    .filter(
+                        dbValencyAnnotationData.accepted != None,
+                        dbValencyAnnotationData.instance_id == dbValencyInstanceData.id,
+                        dbValencyInstanceData.sentence_id == dbValencySentenceData.id,
+                        dbValencySentenceData.source_id == dbValencySourceData.id,
+                        dbValencySourceData.perspective_client_id == perspective_id[0],
+                        dbValencySourceData.perspective_object_id == perspective_id[1])
+
+                    .all())
+
+            instance_id_set = set()
+            user_id_set = set()
+
+            for annotation in annotation_list:
+
+                instance_id_set.add(annotation.instance_id)
+                user_id_set.add(annotation.user_id)
+
+            instance_list = []
+
+            if instance_id_set:
+
+                instance_list = (
+
+                    DBSession
+
+                        .query(
+                            dbValencyInstanceData)
+
+                        .filter(
+                            dbValencyInstanceData.id.in_(
+
+                                utils.values_query(
+                                    instance_id_set, models.SLBigInteger)))
+
+                        .all())
+
+            user_list = []
+
+            if user_id_set:
+
+                user_list = (
+
+                    DBSession
+
+                        .query(
+                            dbUser.id, dbUser.name)
+
+                        .filter(
+                            dbUser.id.in_(
+
+                                utils.values_query(
+                                    user_id_set, models.SLBigInteger)))
+
+                        .all())
+
+            sentence_id_set = (
+                set(instance.sentence_id for instance in instance_list))
+
+            sentence_list = []
+
+            if sentence_id_set:
+
+                sentence_list = (
+
+                    DBSession
+
+                        .query(
+                            dbValencySentenceData)
+
+                        .filter(
+                            dbValencySentenceData.id.in_(
+
+                                utils.values_query(
+                                    sentence_id_set, models.SLBigInteger)))
+
+                        .all())
+
+            # Preparing valency annotation data.
+
+            sentence_data_list = []
+
+            for sentence in sentence_list:
+
+                sentence_data = sentence.data
+                sentence_data['id'] = sentence.id
+
+                sentence_data_list.append(sentence_data)
+
+            instance_data_list = [
+
+                {'id': instance.id,
+                    'sentence_id': instance.sentence_id,
+                    'index': instance.index,
+                    'verb_lex': instance.verb_lex,
+                    'case_str': instance.case_str}
+
+                    for instance in instance_list]
+
+            annotation_data_list = [
+
+                {'instance_id': annotation.instance_id,
+                    'user_id': annotation.user_id,
+                    'accepted': annotation.accepted}
+
+                    for annotation in annotation_list]
+
+            user_data_list = [
+
+                {'id': user.id,
+                    'name': user.name}
+
+                    for user in user_list]
+
+            data_dict = {
+                'sentence_list': sentence_data_list,
+                'instance_list': instance_data_list,
+                'annotation_list': annotation_data_list,
+                'user_list': user_data_list}
+
+            # Saving valency annotation data as zipped JSON.
+
+            current_time = (
+                time.time())
+
+            current_date = (
+                datetime.datetime.utcfromtimestamp(current_time))
+
+            zip_date = (
+                current_date.year,
+                current_date.month,
+                current_date.day,
+                current_date.hour,
+                current_date.minute,
+                current_date.second)
+
+            storage_temporary = (
+                info.context.request.registry.settings['storage']['temporary'])
+
+            host = storage_temporary['host']
+            bucket = storage_temporary['bucket']
+
+            minio_client = (
+                    
+                minio.Minio(
+                    host,
+                    access_key = storage_temporary['access_key'],
+                    secret_key = storage_temporary['secret_key'],
+                    secure = True))
+
+            temporary_file = (
+                    
+                tempfile.NamedTemporaryFile(
+                    delete = False))
+
+            zip_file = (
+
+                zipfile.ZipFile(
+                    temporary_file,
+                    'w',
+                    compression = zipfile.ZIP_DEFLATED,
+                    compresslevel = 9))
+
+            zip_info = (
+
+                zipfile.ZipInfo(
+                    'data.json', zip_date))
+
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+
+            with zip_file.open(
+                zip_info, 'w') as binary_data_file:
+
+                with io.TextIOWrapper(
+                    binary_data_file, 'utf-8') as text_data_file:
+
+                    json.dump(
+                        data_dict,
+                        text_data_file,
+                        ensure_ascii = False,
+                        sort_keys = True,
+                        indent = 2)
+
+            zip_file.close()
+            temporary_file.close()
+
+            if debug_flag:
+
+                shutil.copy(
+                    temporary_file.name,
+                    '__data__.json.zip')
+
+            object_name = (
+
+                storage_temporary['prefix'] +
+            
+                '/'.join((
+                    'valency_data',
+                    '{:.6f}'.format(current_time),
+                    'data.json.zip')))
+
+            (etag, version_id) = (
+
+                minio_client.fput_object(
+                    bucket,
+                    object_name,
+                    temporary_file.name))
+
+            os.remove(
+                temporary_file.name)
+
+            url = (
+
+                '/'.join((
+                    'https:/',
+                    host,
+                    bucket,
+                    object_name)))
+
+            return (
+
+                SaveValencyData(
+                    triumph = True,
+                    data_url = url))
+
+        except Exception as exception:
+
+            traceback_string = (
+
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('save_valency_data: exception')
+            log.warning(traceback_string)
+
+            transaction.abort()
+
+            return (
+
+                ResponseError(
+                    message = 'Exception:\n' + traceback_string))
+
+
 class SetValencyAnnotation(graphene.Mutation):
 
     class ValencyInstanceAnnotation(graphene.types.Scalar):
@@ -12453,6 +12777,7 @@ class MyMutations(graphene.ObjectType):
     docx2eaf = Docx2Eaf.Field()
     valency = Valency.Field()
     create_valency_data = CreateValencyData.Field()
+    save_valency_data = SaveValencyData.Field()
     set_valency_annotation = SetValencyAnnotation.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)

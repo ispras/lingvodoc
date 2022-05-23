@@ -72,6 +72,17 @@ EAF_TIERS = {
 }
 
 
+# All tasks start from stage 1, progress 0, 'Starting the task', see caching.py.
+
+percent_preparing = 1
+percent_check_fields = 2
+percent_le_perspective = 4
+percent_pa_perspective = 7
+percent_uploading = 10
+percent_adding = 70
+percent_finished = 100
+
+
 log = logging.getLogger(__name__)
 
 
@@ -283,7 +294,7 @@ def convert_five_tiers(
         additional_entries_all and additional_entries)
 
     task_status.set(
-        1, 1, "Preparing")
+        2, percent_preparing, "Preparing")
 
     with transaction.manager:
 
@@ -322,7 +333,7 @@ def convert_five_tiers(
                          )
 
         task_status.set(
-            2, 5, "Checking fields")
+            3, percent_check_fields, "Checking fields")
 
         field_ids = (
             get_id_to_field_dict())
@@ -519,7 +530,8 @@ def convert_five_tiers(
 
             task_status.set(
                 None, -1,
-                f'Wrong permissions: dictionary ({dictionary_id[0]}, {dictionary_id[1]})')
+                f'Wrong permissions: dictionary '
+                f'({dictionary_id[0]}, {dictionary_id[1]})')
 
             return
 
@@ -755,7 +767,7 @@ def convert_five_tiers(
         # First perspective.
 
         task_status.set(
-            3, 8, "Handling lexical entries perspective")
+            4, percent_le_perspective, "Handling lexical entries perspective")
 
         new_fp_flag = (
             first_perspective is None)
@@ -796,7 +808,7 @@ def convert_five_tiers(
         # Second perspective.
 
         task_status.set(
-            4, 12, "Handling paradigms perspective")
+            5, percent_pa_perspective, "Handling paradigms perspective")
 
         new_sp_flag = (
             second_perspective is None)
@@ -1087,13 +1099,45 @@ def convert_five_tiers(
                     f'{repr(data_type)}, '
                     f'{repr(content)}')
 
-        def perform_insert():
+        current_percent = 0
+
+        def task_percent(
+            task_stage,
+            task_percent,
+            task_message):
+
+            nonlocal current_percent
+
+            percent = (
+                int(math.floor(task_percent)))
+
+            if percent > current_percent:
+
+                task_status.set(
+                    task_stage, percent, task_message)
+
+                current_percent = percent
+
+                if debug_flag:
+
+                    log.debug(f'\n{percent}%')
+
+        def perform_insert(
+            task_stage,
+            percent_from,
+            percent_to,
+            task_message):
             """
             Performs insert of the data of new entries and entities in the DB.
             """
 
+            percent_step = (
+                (percent_to - percent_from) / 4)
+
             if debug_flag:
-                log.debug(f'\n{len(toc_insert_list)} objecttoc')
+
+                log.debug(
+                    f'\n{len(toc_insert_list)} objecttoc')
 
             if toc_insert_list:
 
@@ -1106,7 +1150,14 @@ def convert_five_tiers(
                 toc_insert_list.clear()
 
             if debug_flag:
-                log.debug(f'\n{len(entry_insert_list)} lexicalentry')
+
+                log.debug(
+                    f'\n{len(entry_insert_list)} lexicalentry')
+
+            task_percent(
+                task_stage,
+                percent_from + percent_step,
+                task_message)
 
             if entry_insert_list:
 
@@ -1119,7 +1170,14 @@ def convert_five_tiers(
                 entry_insert_list.clear()
 
             if debug_flag:
-                log.debug(f'\n{len(entity_insert_list)} entity')
+
+                log.debug(
+                    f'\n{len(entity_insert_list)} entity')
+
+            task_percent(
+                task_stage,
+                percent_from + 2 * percent_step,
+                task_message)
 
             if entity_insert_list:
 
@@ -1132,7 +1190,14 @@ def convert_five_tiers(
                 entity_insert_list.clear()
 
             if debug_flag:
-                log.debug(f'\n{len(publish_insert_list)} publishingentity')
+
+                log.debug(
+                    f'\n{len(publish_insert_list)} publishingentity')
+
+            task_percent(
+                task_stage,
+                percent_from + 3 * percent_step,
+                task_message)
 
             if publish_insert_list:
 
@@ -1144,6 +1209,11 @@ def convert_five_tiers(
 
                 publish_insert_list.clear()
 
+            task_percent(
+                task_stage,
+                percent_from + 4 * percent_step,
+                task_message)
+
         # Getting ready for parsing and processing markup; if we are going to merge lexical entries by
         # meaning, we would merge to the existing ones if possible.
 
@@ -1154,10 +1224,8 @@ def convert_five_tiers(
 
         dubl_set = set()
 
-        task_status.set(
-            8, 30, "Uploading sounds and words")
-
-        current_percent = 30
+        task_percent(
+            6, percent_uploading, 'Uploading sounds and words')
 
         # Parsing and processing markup, in order if markup ids we received.
 
@@ -1806,25 +1874,35 @@ def convert_five_tiers(
                                 backref_dtype,
                                 link_id = sp_lexical_entry_id)
 
-                # Checking if need to update task progress.
+                # Checking if we need to update task progress.
 
-                percent = (
+                percent_delta = (
+                    (percent_adding - percent_uploading) / 2)
 
-                    30 + int(math.floor(
-                        markup_id_index * 60 / len(markup_id_list) +
-                        phrase_index * (60 / len(markup_id_list)) / len(final_dicts))))
+                percent_delta_markup = (
+                    percent_delta / len(markup_id_list))
 
-                if percent > current_percent:
+                percent_delta_phrase = (
+                    percent_delta_markup / len(final_dicts))
 
-                    task_status.set(
-                        8, percent, "Uploading sounds and words")
+                task_percent(
 
-                    current_percent = percent
+                    6,
 
-                    if debug_flag:
-                        log.debug(f'\n{percent}%')
+                    percent_uploading +
+                        markup_id_index * percent_delta_markup +
+                        (phrase_index + 1) * percent_delta_phrase,
 
-        perform_insert()
+                    'Uploading sounds and words')
+
+        percent_from = (
+            (percent_uploading + percent_adding) / 2)
+
+        task_percent(
+            6, percent_from, 'Uploading sounds and words')
+
+        perform_insert(
+            6, percent_from, percent_adding, 'Uploading sounds and words')
 
         # Current data of lexical entries and paradigms.
 
@@ -1906,10 +1984,8 @@ def convert_five_tiers(
 
         # Info of words and transcriptions in the first perspective.
 
-        task_status.set(
-            9, 90, "Uploading translations with marks")
-
-        current_percent = 90
+        task_percent(
+            7, percent_adding, 'Uploading translations with marks')
 
         nom_dict = {}
         conj_dict = {}
@@ -2231,27 +2307,35 @@ def convert_five_tiers(
                         fp_lexical_entry_id,
                         sp_le_id)
 
-            percent = (
+            # Checking if we need to update task progress.
 
-                90 + int(math.floor(
-                    t_index * 10 / len(p_lexes_with_text_after_update))))
+            percent_delta = (
 
-            if percent > current_percent:
+                (percent_finished - percent_adding) /
+                    (2 * len(p_lexes_with_text_after_update)))
 
-                task_status.set(
-                    9, percent, 'Uploading translations with marks')
+            task_percent(
 
-                current_percent = percent
+                7,
 
-                if debug_flag:
-                    log.debug(f'\n{percent}%')
+                percent_adding +
+                    t_index * percent_delta,
 
-        perform_insert()
+                'Uploading translations with marks')
+
+        percent_from = (
+            (percent_adding + percent_finished) / 2)
+
+        task_percent(
+            7, percent_from, 'Uploading translations with marks')
+
+        perform_insert(
+            7, percent_from, percent_finished, 'Uploading translations with marks')
 
         mark_changed(DBSession())
 
     task_status.set(
-        10, 100, 'Finished')
+        8, percent_finished, 'Finished')
 
     return dictionary_id
 
