@@ -594,7 +594,7 @@ def anonymous_userid(request):
     return base64.b64encode(md5(unique_string.encode('utf-8')).digest())[:7]
 
 
-storage_url_prefix = 'http://lingvodoc.ispras.ru/objects/'
+ispras_url_prefix = 'http://lingvodoc.ispras.ru/objects/'
 
 
 def storage_file(storage_config, url):
@@ -603,22 +603,44 @@ def storage_file(storage_config, url):
     then as a download stream.
     """
 
-    if url.startswith(storage_url_prefix):
+    storage_file_path = None
+
+    if url.startswith(ispras_url_prefix):
 
         storage_file_path = os.path.join(
             storage_config['path'],
-            url[len(storage_url_prefix):])
+            url[len(ispras_url_prefix):])
 
-        if os.path.exists(storage_file_path):
-            return open(storage_file_path, 'rb')
+    else:
+
+        local_url_prefix = (
+            storage_config['prefix'] +
+            storage_config['static_route'])
+
+        if url.startswith(local_url_prefix):
+
+            storage_file_path = os.path.join(
+                storage_config['path'],
+                url[len(local_url_prefix):])
+
+    if (storage_file_path is not None and
+        os.path.exists(storage_file_path)):
+
+        return open(storage_file_path, 'rb')
 
     # A simple retry in case of an address error.
 
     try:
-        return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
+
+        return (
+            urllib.request.urlopen(
+                urllib.parse.quote(url, safe = '/:')))
 
     except socket.gaierror:
-        return urllib.request.urlopen(urllib.parse.quote(url, safe = '/:'))
+
+        return (
+            urllib.request.urlopen(
+                urllib.parse.quote(url, safe = '/:')))
 
 
 def as_storage_file(storage_config, url):
@@ -629,25 +651,54 @@ def as_storage_file(storage_config, url):
     Used for testing and debugging.
     """
 
-    if not url.startswith(storage_url_prefix):
-        raise NotImplementedError
+    storage_file_path = None
 
-    storage_file_path = os.path.join(
-        storage_config['path'],
-        url[len(storage_url_prefix):])
+    if url.startswith(ispras_url_prefix):
 
-    os.makedirs(
-        os.path.dirname(storage_file_path),
-        exist_ok = True)
+        storage_file_path = os.path.join(
+            storage_config['path'],
+            url[len(ispras_url_prefix):])
 
-    if not os.path.exists(storage_file_path):
+    else:
 
-        with open(storage_file_path, 'wb') as storage_file, \
-            urllib.request.urlopen(urllib.parse.quote(url, safe = '/:')) as url_file:
+        local_url_prefix = (
+            storage_config['prefix'] +
+            storage_config['static_route'])
 
-            shutil.copyfileobj(url_file, storage_file)
+        if url.startswith(local_url_prefix):
 
-    return open(storage_file_path, 'rb')
+            storage_file_path = os.path.join(
+                storage_config['path'],
+                url[len(local_url_prefix):])
+
+    if storage_file_path is not None:
+
+        if not os.path.exists(storage_file_path):
+
+            os.makedirs(
+                os.path.dirname(storage_file_path),
+                exist_ok = True)
+
+            with open(storage_file_path, 'wb') as storage_file, \
+                urllib.request.urlopen(urllib.parse.quote(url, safe = '/:')) as url_file:
+
+                shutil.copyfileobj(url_file, storage_file)
+
+        return open(storage_file_path, 'rb')
+
+    # A simple retry in case of an address error.
+
+    try:
+
+        return (
+            urllib.request.urlopen(
+                urllib.parse.quote(url, safe = '/:')))
+
+    except socket.gaierror:
+
+        return (
+            urllib.request.urlopen(
+                urllib.parse.quote(url, safe = '/:')))
 
 
 def translation_service_search(searchstring):

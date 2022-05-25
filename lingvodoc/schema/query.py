@@ -305,8 +305,6 @@ from lingvodoc.utils.creation import create_entity, edit_role
 from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_holders import del_object
 
-import cchardet as chardet
-
 from celery.utils.log import get_task_logger
 
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
