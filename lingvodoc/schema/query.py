@@ -2209,6 +2209,18 @@ class Query(graphene.ObjectType):
         atoms_flag = False
         atoms_deleted = None
 
+        def f(argument):
+
+            try:
+
+                return argument.value.value
+
+            except AttributeError:
+
+                return (
+                    info.variable_values.get(
+                        argument.value.name.value, None))
+
         for field in info.field_asts:
 
             if field.name.value != 'translation_search':
@@ -2220,18 +2232,6 @@ class Query(graphene.ObjectType):
                     continue
 
                 atoms_flag = True
-
-                def f(argument):
-
-                    try:
-
-                        return argument.value.value
-
-                    except AttributeError:
-
-                        return (
-                            info.variable_values.get(
-                                argument.value.name.value, None))
 
                 for argument in subfield.arguments:
 

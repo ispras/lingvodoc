@@ -293,7 +293,7 @@ from lingvodoc.utils.search import get_id_to_field_dict
 import itertools
 from time import ctime
 import operator
-from lingvodoc.schema.gql_holders import delete_message, del_object, gql_placeholder_value
+from lingvodoc.schema.gql_holders import delete_message, del_object
 from lingvodoc.utils.creation import update_metadata
 from uuid import uuid4
 
@@ -1137,19 +1137,6 @@ def change_user_password(request):
     return {"success": True}
 
 
-def gql_placeholder_middleware(
-    next, root, info, **kwargs): 
-
-    return (
-
-        next(
-            root, info, **kwargs)
-
-            .then(
-                lambda value:
-                    None if value is gql_placeholder_value else value))
-
-
 # TODO: Remove it
 @view_config(route_name='graphql', renderer='json')
 def graphql(request):
@@ -1261,8 +1248,7 @@ def graphql(request):
                                                 'request': request,
                                                 'headers': request.headers,
                                                 'cookies': dict(request.cookies)}),
-                                            variable_values=variable_values,
-                                            middleware=[gql_placeholder_middleware])
+                                            variable_values=variable_values)
                     if result.invalid:
                         return {'errors': [{"message": str(e)} for e in result.errors]}
                     if result.errors:
@@ -1281,8 +1267,7 @@ def graphql(request):
                                         'client_id': client_id,
                                         'locale_id': locale_id,
                                         'request': request}),
-                                    variable_values=variable_values,
-                                    middleware=[gql_placeholder_middleware])
+                                    variable_values=variable_values)
             t_end_real, t_end_process = (time.time(), time.process_time())
             t_elapsed_real = t_end_real - t_start_real
             t_elapsed_process = t_end_process - t_start_process
