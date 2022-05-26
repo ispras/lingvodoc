@@ -140,20 +140,6 @@ class LingvodocObjectType(graphene.ObjectType):
     dbObject = None
     ErrorHappened = None
 
-    def __init__(self, *args, **kwargs):
-
-        # We are going to initialize not set field values with the unique placeholder value to better
-        # distinguish non-set and set values, as some set values can be legitimately None.
-        #
-        # See graphene/types/objecttype.py for ObjectType.__init__.
-
-        for (name, field) in self._meta.fields.items():
-        
-            if name not in kwargs:
-                kwargs[name] = gql_placeholder_value
-
-        super().__init__(*args, **kwargs)
-
 
 class LingvodocID(Scalar):
     """
@@ -527,10 +513,10 @@ def undel_object(
 
 
 #
-# Special unique placeholder value signifying that the field has no value. We need that because the default,
-# None, is actually valid for some fields.
+# Special unique placeholder value signifying that the field has None value. We need that because None
+# itself is used to mark field as having no value.
 #
-gql_placeholder_value = object()
+gql_none_value = object()
 
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
@@ -562,8 +548,8 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
 
                     value = getattr(cls, attrib_name)
 
-                    if value is not gql_placeholder_value:
-                        return value
+                    if value is not None:
+                        return (None if value is gql_none_value else value)
 
                 except AttributeError:
                     pass
