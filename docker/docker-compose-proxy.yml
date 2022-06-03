@@ -49,7 +49,7 @@ services:
       - pg-proxy
       - api-proxy
   redis:
-    image: 'bitnami/redis:latest'
+    image: 'redis:latest'
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     labels:
@@ -57,7 +57,7 @@ services:
     ports:
       - '16379:6379'
   redis-proxy:
-    image: 'bitnami/redis:latest'
+    image: 'redis:latest'
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     labels:
