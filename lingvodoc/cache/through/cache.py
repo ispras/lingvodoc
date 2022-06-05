@@ -9,9 +9,6 @@ from lingvodoc.cache.api.cache import ICache
 import logging
 log = logging.getLogger(__name__)
 
-from zope.sqlalchemy import ZopeTransactionExtension
-from sqlalchemy.orm import scoped_session, sessionmaker
-
 
 '''
 TODO:
@@ -49,7 +46,6 @@ class ThroughCache(ICache):
         :return:
         """
         self.cache = redis
- # self.DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
     def get(self, keys = None, objects = dict(), DBSession=None, keep_dims=False):
         """

@@ -359,7 +359,7 @@ class DictionaryPerspective(LingvodocObjectType):
     def resolve_is_template(self, info):
         return self.dbObject.is_template
 
-    @fetch_object() # tested
+    @fetch_object('tree') # tested
     def resolve_tree(self, info):
         result = list()
         iteritem = self.dbObject
@@ -377,7 +377,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
         return result
 
-    @fetch_object() # tested
+    @fetch_object('columns') # tested
     def resolve_columns(self, info):
         columns = DBSession.query(dbColumn).filter_by(parent=self.dbObject, marked_for_deletion=False).order_by(dbColumn.position).all()
         result = list()
@@ -407,7 +407,7 @@ class DictionaryPerspective(LingvodocObjectType):
         counter = counter_query.group_by(dbLexicalEntry).count()
         return counter
 
-    @fetch_object()
+    @fetch_object('last_modified_at')
     def resolve_last_modified_at(self, info):
         """
         Perspective's last modification time, defined as latest time of creation or deletion of the

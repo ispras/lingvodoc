@@ -561,7 +561,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         translation_gist_id = dictionary_translation_gist_id,
                         add_group = True,
                         additional_metadata = {
-                            'license': starling_dictionary.get('license') or 'proprietary'}))
+                            'license': starling_dictionary.get('license') or 'proprietary',
+                            'source_blob_id': blob_id}))
 
                 if starling_flag:
 

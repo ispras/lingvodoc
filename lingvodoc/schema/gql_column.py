@@ -54,7 +54,7 @@ class Column(LingvodocObjectType):
                       MarkedForDeletion,
                       Position)
 
-    @fetch_object('field_id')
+    @fetch_object('field')
     def resolve_field(self, info):
 
         field = (
@@ -69,7 +69,10 @@ class Column(LingvodocObjectType):
 
                 .first())
 
-        return Field(id = [field.client_id, field.object_id])
+        gql_field = Field(id = field.id)
+        gql_field.dbObject = field
+
+        return gql_field
 
 
 class CreateColumn(graphene.Mutation):

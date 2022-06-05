@@ -55,8 +55,7 @@ from lingvodoc.models import (
     Field as dbField,
     TranslationGist as dbTranslationGist,
     TranslationAtom as dbTranslationAtom,
-    DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
-    SLBigInteger)
+    DictionaryPerspectiveToField as dbDictionaryPerspectiveToField)
 from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.schema.gql_dictionary import Dictionary
 from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective, entries_with_entities
@@ -68,8 +67,13 @@ from lingvodoc.utils.search import (
     translation_gist_search
 )
 
-from lingvodoc.utils import values
 import lingvodoc.utils as utils
+
+from lingvodoc.utils import (
+    ids_to_id_query,
+    ids_to_id_cte,
+    ids_to_id_cte_query,
+)
 
 from lingvodoc.views.v2.utils import (
     storage_file,
@@ -88,7 +92,6 @@ from sqlalchemy import (
     union
 )
 from sqlalchemy.orm.util import aliased
-from sqlalchemy.sql import column
 from itertools import chain
 
 from poioapi.eaf_search import eaf_search
@@ -1222,32 +1225,6 @@ def save_xlsx(info, xlsx_context, xlsx_filename):
         xlsx_filename])
 
 
-def ids_to_id_query(ids):
-
-    id_values = (
-
-        values(
-            [column('client_id', SLBigInteger), column('object_id', SLBigInteger)],
-            ids,
-            'ids'))
-
-    return (
-
-        DBSession
-
-            .query(
-                id_values.c.client_id,
-                id_values.c.object_id))
-
-def ids_to_id_cte(ids):
-
-    return ids_to_id_query(ids).cte()
-
-def ids_to_id_cte_query(ids):
-
-    return DBSession.query(ids_to_id_cte(ids))
-
-
 class AdvancedSearch(LingvodocObjectType):
     entities = graphene.List(Entity)
     lexical_entries = graphene.List(LexicalEntry)
@@ -1722,7 +1699,7 @@ class EafSearch(LingvodocObjectType):
         info,
         perspective_id = None,
         search_query = None,
-        __debug_flag__ = True):
+        __debug_flag__ = False):
 
         log.debug(
             '\neaf_search'

@@ -46,7 +46,6 @@ import json
 import requests
 from pyramid.request import Request
 from pyramid.response import Response
-from lingvodoc.utils.search import recursive_sort
 
 from lingvodoc.utils.merge import merge_bulk_async, merge_bulk
 
