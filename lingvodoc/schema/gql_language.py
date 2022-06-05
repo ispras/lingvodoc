@@ -31,6 +31,8 @@ from lingvodoc.schema.gql_holders import (
 from lingvodoc.schema.gql_translationgist import TranslationGistInterface
 from .gql_dictionary import Dictionary
 
+import lingvodoc.utils as utils
+
 from lingvodoc.utils.creation import (
     create_dblanguage,
     create_gists_with_atoms,
@@ -46,7 +48,10 @@ from sqlalchemy import (
     or_,
     and_,
     tuple_,
-    not_
+    not_,
+    literal,
+    cast,
+    Boolean
 )
 
 
@@ -71,7 +76,8 @@ class Language(LingvodocObjectType):
 
     dictionaries = graphene.List(Dictionary,
         deleted=graphene.Boolean(),
-        published=graphene.Boolean())
+        published=graphene.Boolean(),
+        category=graphene.Int())
 
     languages = graphene.List('lingvodoc.schema.gql_language.Language',
         deleted=graphene.Boolean())
@@ -81,6 +87,15 @@ class Language(LingvodocObjectType):
 
     tree = graphene.List('lingvodoc.schema.gql_language.Language')
 
+    dictionary_count = (
+
+        graphene.Int(
+            recursive = graphene.Boolean(),
+            category = graphene.Int(),
+            published = graphene.Boolean()))
+
+    in_toc = graphene.Boolean()
+
     class Meta:
         interfaces = (CommonFieldsComposite, TranslationHolder, TranslationGistInterface)
 
@@ -88,25 +103,37 @@ class Language(LingvodocObjectType):
     def resolve_locale_exists(self):
         return self.dbObject.locale
 
-    @fetch_object()
-    def resolve_dictionaries(self, info, deleted = None, published = None):
+    @fetch_object('dictionaries')
+    def resolve_dictionaries(self, info, deleted = None, published = None, category = None):
 
         # Dictionaries of the language, in standard order, from newest to oldest.
 
-        dictionary_query = (DBSession
+        dictionary_query = (
+
+            DBSession
                 
-            .query(dbDictionary)
-            
-            .filter(
-                and_(dbDictionary.parent_object_id == self.dbObject.object_id,
-                     dbDictionary.parent_client_id == self.dbObject.client_id))
+                .query(dbDictionary)
                 
-            .order_by(dbDictionary.created_at.desc()))
+                .filter(
+                    dbDictionary.parent_client_id == self.id[0],
+                    dbDictionary.parent_object_id == self.id[1])
+                    
+                .order_by(
+                    dbDictionary.created_at.desc()))
 
         if deleted is not None:
 
-            dictionary_query = dictionary_query.filter(
-                dbDictionary.marked_for_deletion == deleted)
+            dictionary_query = (
+
+                dictionary_query.filter(
+                    dbDictionary.marked_for_deletion == deleted))
+
+        if category is not None:
+
+            dictionary_query = (
+
+                dictionary_query.filter(
+                    dbDictionary.category == category))
 
         # Do we need to filter dictionaries by their published state?
 
@@ -135,7 +162,7 @@ class Language(LingvodocObjectType):
 
             perspective_query = (DBSession
 
-                .query(dbPerspective)
+                .query(literal(1))
 
                 .filter(
                     dbPerspective.parent_client_id == dbDictionary.client_id,
@@ -206,12 +233,18 @@ class Language(LingvodocObjectType):
 
         return result
 
-    @fetch_object()
+    @fetch_object('languages')
     def resolve_languages(self, info, deleted = None):
 
-        query = DBSession.query(dbLanguage).filter(
-            and_(dbLanguage.parent_object_id == self.dbObject.object_id,
-                 dbLanguage.parent_client_id == self.dbObject.client_id))
+        query = (
+
+            DBSession
+
+                .query(dbLanguage)
+
+                .filter(
+                    dbLanguage.parent_client_id == self.id[0],
+                    dbLanguage.parent_object_id == self.id[1]))
 
         if deleted is not None:
             query = query.filter(dbLanguage.marked_for_deletion == deleted)
@@ -225,7 +258,7 @@ class Language(LingvodocObjectType):
 
         return result
 
-    @fetch_object()
+    @fetch_object('tree')
     def resolve_tree(self, info):
         result = list()
         iteritem = self.dbObject
@@ -235,6 +268,107 @@ class Language(LingvodocObjectType):
             iteritem = iteritem.parent
 
         return result
+
+    @fetch_object('dictionary_count')
+    def resolve_dictionary_count(
+        self,
+        info,
+        recursive = False,
+        category = None,
+        published = None):
+
+        if published is not None:
+            raise NotImplementedError
+
+        category_str = (
+            '' if category is None else
+            f'\nand category = {category}')
+
+        if recursive:
+
+            sql_str = f'''
+
+                with recursive
+
+                ids_cte (client_id, object_id) as (
+
+                  values ({self.id[0]} :: bigint, {self.id[1]} :: bigint)
+
+                  union
+
+                  select
+                    L.client_id,
+                    L.object_id
+
+                  from
+                    language L,
+                    ids_cte I
+
+                  where
+                    L.parent_client_id = I.client_id and
+                    L.parent_object_id = I.object_id and
+                    L.marked_for_deletion = false
+                )
+
+                select count(*)
+
+                from dictionary
+
+                where
+                  (parent_client_id, parent_object_id) in (select * from ids_cte) and
+                  marked_for_deletion = false{category_str};
+
+                '''
+
+        else:
+
+            sql_str = f'''
+
+                select
+                  count(*)
+
+                from
+                  dictionary
+
+                where
+                  parent_client_id = {self.id[0]} and
+                  parent_object_id = {self.id[1]} and
+                  marked_for_deletion = false{category_str};
+
+                '''
+
+        return (
+            DBSession
+                .execute(sql_str)
+                .fetchall()
+                    [0][0])
+
+    @fetch_object('in_toc')
+    def resolve_in_toc(self, info):
+
+        if tuple(self.id) in utils.standard_language_id_set:
+            return True
+
+        return (
+
+            DBSession
+
+                .query(
+
+                    DBSession
+
+                        .query(
+                            literal(1))
+
+                        .filter(
+                            dbLanguage.client_id == self.id[0],
+                            dbLanguage.object_id == self.id[1],
+                            dbLanguage.marked_for_deletion == False,
+                            cast(dbLanguage.additional_metadata['toc_mark'], Boolean))
+
+                        .exists())
+
+                .scalar())
 
 
 class CreateLanguage(graphene.Mutation):

@@ -3,12 +3,17 @@ import datetime
 import time
 from json import loads
 import logging
+
+import lingvodoc.models as models
+
 from lingvodoc.models import (
+    Client,
+    DBSession,
+    Email as dbEmail,
     Grant as dbGrant,
     User as dbUser,
-    Client,
-    DBSession
 )
+
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     DateTime,
@@ -26,9 +31,14 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     TranslationHolder
 )
+
 from lingvodoc.schema.gql_user import User
-from sqlalchemy.orm.attributes import flag_modified
+
+import lingvodoc.utils as utils
 from lingvodoc.utils.creation import create_gists_with_atoms
+
+from sqlalchemy.orm import joinedload
+from sqlalchemy.orm.attributes import flag_modified
 
 
 # Setting up logging.
@@ -61,6 +71,7 @@ class Grant(LingvodocObjectType):
     owners = graphene.List(User)
 
     issuer = graphene.String()
+    issuer_translations = ObjectVal()
 
     class Meta:
         interfaces = (CreatedAt,
@@ -69,30 +80,32 @@ class Grant(LingvodocObjectType):
                       AdditionalMetadata,
                       TranslationHolder
                     )
-    pass
+
+    @staticmethod
+    def from_date(date):
+
+        return (
+            datetime.datetime
+                .strptime(date, '%Y-%m-%d')
+                .replace(tzinfo = datetime.timezone.utc)
+                .timestamp())
 
     @fetch_object("issuer")
     def resolve_issuer(self, info):
         context = info.context
         return str(self.dbObject.get_issuer_translation(context.get('locale_id')))
 
+    @fetch_object("issuer_translations")
+    def resolve_issuer_translations(self, info):
+        return self.dbObject.get_issuer_translations()
+
     @fetch_object("begin")
     def resolve_begin(self, info):
-
-        return (
-            datetime.datetime
-                .strptime(self.dbObject.begin, '%Y-%m-%d')
-                .replace(tzinfo = datetime.timezone.utc)
-                .timestamp())
+        return Grant.from_date(self.dbObject.begin)
 
     @fetch_object("end")
     def resolve_end(self, info):
-
-        return (
-            datetime.datetime
-                .strptime(self.dbObject.end, '%Y-%m-%d')
-                .replace(tzinfo = datetime.timezone.utc)
-                .timestamp())
+        return Grant.from_date(self.dbObject.end)
 
     @fetch_object("issuer_translation_gist_id")
     def resolve_issuer_translation_gist_id(self, info):
@@ -112,11 +125,57 @@ class Grant(LingvodocObjectType):
 
     @fetch_object("owners")
     def resolve_owners(self, info):
-        owners_list = list()
-        for userid in self.dbObject.owners:
-            user = User(id=userid)
-            owners_list.append(user)
-        return owners_list
+
+        __debug_flag__ = False
+
+        # Analyzing query.
+
+        if __debug_flag__:
+
+            log.debug(f'\ninfo.field_asts:\n{info.field_asts}')
+
+        email_flag = False
+
+        for field in info.field_asts:
+
+            if field.name.value != 'owners':
+                continue
+
+            for subfield in field.selection_set.selections:
+
+                if subfield.name.value == 'email':
+
+                    email_flag = True
+                    break
+
+        user_query = (
+
+            DBSession
+                .query(dbUser)
+
+                .filter(
+
+                    dbUser.id.in_(
+                        utils.values_query(
+                            self.dbObject.owners, models.SLBigInteger))))
+
+        gql_user_list = []
+
+        if email_flag:
+
+            user_query = (
+
+                user_query.options(
+                    joinedload(dbUser.email)))
+
+        for user in user_query:
+
+            gql_user = User(id = user.id)
+            gql_user.dbObject = user
+
+            gql_user_list.append(gql_user)
+
+        return gql_user_list
 
 class CreateGrant(graphene.Mutation):
     """

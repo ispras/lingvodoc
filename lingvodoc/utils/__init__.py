@@ -65,7 +65,7 @@ def pg_explain(element, compiler, **kwargs):
 
     text += compiler.process(element.statement, **kwargs)
 
-    # Allow EXPLAIN for INSERT / UPDATE / DELETE, turn off  compiler flags that would otherwise start
+    # Allow EXPLAIN for INSERT / UPDATE / DELETE, turn off compiler flags that would otherwise start
     # treating this like INSERT / UPDATE / DELETE (gets confused with RETURNING or autocloses cursor
     # which we don't want).
 
@@ -221,6 +221,14 @@ def ids_to_id_query(ids, explicit_cast = False):
         DBSession.query(
             c_client_id, c_object_id))
 
+def ids_to_id_cte(ids, **kwargs):
+
+    return ids_to_id_query(ids).cte(**kwargs)
+
+def ids_to_id_cte_query(ids):
+
+    return DBSession.query(ids_to_id_cte(ids))
+
 
 def render_statement(statement):
     """
@@ -230,7 +238,10 @@ def render_statement(statement):
     Based on, among other things, on https://stackoverflow.com/a/9898141/2016856.
     """
 
-    dialect = statement.bind.dialect
+    dialect = (
+        statement.bind.dialect if statement.bind else
+        postgresql.dialect())
+
     compiler = statement._compiler(dialect)
 
     class Compiler(type(compiler)):

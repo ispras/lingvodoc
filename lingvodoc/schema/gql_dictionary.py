@@ -39,11 +39,12 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     acl_check_by_id,
     LingvodocID,
-    UserAndOrganizationsRoles
+    UserAndOrganizationsRoles,
+    published_translation_gist_id_cte_query
 )
 
 import sqlalchemy
-from sqlalchemy import and_, cast, column, extract, func, or_, tuple_
+from sqlalchemy import and_, cast, column, extract, func, or_, tuple_, literal
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql.expression import Grouping
@@ -178,8 +179,8 @@ class Dictionary(LingvodocObjectType):  # tested
                 func.jsonb_each(ObjectTOC.additional_metadata))
 
             .filter(
-                ObjectTOC.client_id == self.dbObject.client_id,
-                ObjectTOC.object_id == self.dbObject.object_id,
+                ObjectTOC.client_id == self.id[0],
+                ObjectTOC.object_id == self.id[1],
                 ObjectTOC.additional_metadata != JSONB.NULL))
 
         # Query for last modification time of the dictionary's perspectives, lexical entries and entities.
@@ -275,8 +276,8 @@ class Dictionary(LingvodocObjectType):  # tested
                     Grouping(sqlalchemy.text(sql_str))))
 
             .params({
-                'client_id': self.dbObject.client_id,
-                'object_id': self.dbObject.object_id})
+                'client_id': self.id[0],
+                'object_id': self.id[1]})
 
             .scalar())
 
@@ -289,6 +290,58 @@ class Dictionary(LingvodocObjectType):  # tested
         else:
 
             return self.dbObject.created_at
+
+    def published_search(
+        self,
+        __debug_flag__ = False):
+
+        db_published_gist = translation_gist_search('Published')
+
+        published_client_id = db_published_gist.client_id
+        published_object_id = db_published_gist.object_id
+
+        db_limited_gist = translation_gist_search('Limited access')
+
+        limited_client_id = db_limited_gist.client_id
+        limited_object_id = db_limited_gist.object_id
+
+        if (
+            (self.dbObject.state_translation_gist_client_id != published_client_id or
+                self.dbObject.state_translation_gist_object_id != published_object_id) and
+            (self.dbObject.state_translation_gist_client_id != limited_client_id or
+                self.dbObject.state_translation_gist_object_id != limited_object_id)):
+
+            return False
+
+        perspective_query = (
+
+            DBSession
+
+                .query(literal(1))
+
+                .filter(
+                    dbPerspective.parent_client_id == self.id[0],
+                    dbPerspective.parent_object_id == self.id[1])
+
+                .filter(
+                    or_(
+                        and_(dbPerspective.state_translation_gist_client_id == published_client_id,
+                            dbPerspective.state_translation_gist_object_id == published_object_id),
+                        and_(dbPerspective.state_translation_gist_client_id == limited_client_id,
+                            dbPerspective.state_translation_gist_object_id == limited_object_id))))
+
+        if not self.dbObject.marked_for_deletion:
+
+            perspective_query = (
+
+                perspective_query.filter(
+                    dbPerspective.marked_for_deletion == False))
+
+        return (
+
+            DBSession
+                .query(perspective_query.exists())
+                .scalar())
 
     def published_cte_str(
         self,
@@ -340,8 +393,8 @@ class Dictionary(LingvodocObjectType):  # tested
                     'P.marked_for_deletion = false and'))
 
         param_dict = {
-            'client_id': self.dbObject.client_id,
-            'object_id': self.dbObject.object_id,
+            'client_id': self.id[0],
+            'object_id': self.id[1],
             'state_translation_gist_client_id': self.dbObject.state_translation_gist_client_id,
             'state_translation_gist_object_id': self.dbObject.state_translation_gist_object_id}
 
@@ -364,47 +417,26 @@ class Dictionary(LingvodocObjectType):  # tested
         self,
         __debug_flag__ = False):
 
-        translation_gist_query = (DBSession
-
-            .query(
-                dbTranslationGist.client_id,
-                dbTranslationGist.object_id)
-
-            .filter(
-                dbTranslationGist.marked_for_deletion == False,
-                dbTranslationGist.type == 'Service',
-                dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
-                dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
-                dbTranslationAtom.locale_id == 2,
-                dbTranslationAtom.marked_for_deletion == False,
-
-                or_(
-                    dbTranslationAtom.content == 'Published',
-                    dbTranslationAtom.content == 'Limited access')))
-
-        translation_gist_cte = (
-            translation_gist_query.cte('translation_gist_id_set'))
-
         # NOTE: we have to use
-        # in_(DBSession.query(translation_gist_cte))
+        # in_(published_translation_gist_id_cte_query)
         # and not just
-        # in_(translation_gist_cte),
-        # because otherwise translation_gist_cte won't be used as a proper WITH CTE and will be just
-        # inserted literally two times.
+        # in_(published_translation_gist_id_cte),
+        # because otherwise published_translation_gist_id_cte won't be used as a proper WITH CTE and will be
+        # just inserted literally two times.
 
         perspective_query = (DBSession
 
             .query(dbPerspective)
 
             .filter(
-                dbPerspective.parent_client_id == self.dbObject.client_id,
-                dbPerspective.parent_object_id == self.dbObject.object_id,
+                dbPerspective.parent_client_id == self.id[0],
+                dbPerspective.parent_object_id == self.id[1],
 
                 tuple_(
                     dbPerspective.state_translation_gist_client_id,
                     dbPerspective.state_translation_gist_object_id)
 
-                    .in_(DBSession.query(translation_gist_cte))))
+                    .in_(published_translation_gist_id_cte_query)))
 
         if not self.dbObject.marked_for_deletion:
 
@@ -421,7 +453,7 @@ class Dictionary(LingvodocObjectType):  # tested
                         self.dbObject.state_translation_gist_client_id,
                         self.dbObject.state_translation_gist_object_id)
 
-                        .in_(DBSession.query(translation_gist_cte)),
+                        .in_(published_translation_gist_id_cte_query),
 
                     perspective_query.exists())))
 
@@ -444,13 +476,42 @@ class Dictionary(LingvodocObjectType):  # tested
 
         if __debug_flag__:
 
+            import time
+
+            t0 = time.time()
+
+            for i in range(256):
+                self.published_search()
+
+            t1 = time.time()
+
+            for i in range(256):
+                self.published_cte_str()
+
+            t2 = time.time()
+
+            for i in range(256):
+                self.published_cte_orm()
+
+            t3 = time.time()
+
+            log.warn(
+                f'\nt1 - t0: {t1 - t0:.6f}s'
+                f'\nt2 - t1: {t2 - t1:.6f}s'
+                f'\nt3 - t2: {t3 - t2:.6f}s')
+
+            result_search = self.published_search(True)
+
             result_str = self.published_cte_str(True)
             result_orm = self.published_cte_orm(True)
 
-            log.debug((result_str, result_orm))
+            log.warn((result_search, result_str, result_orm))
+
             return result_orm
 
-        return self.published_cte_orm()
+        # Testing shows that direct query is the most optimal.
+
+        return self.published_cte_str()
 
     @fetch_object()
     def resolve_tree(self, info):
@@ -475,7 +536,7 @@ class Dictionary(LingvodocObjectType):  # tested
         if starting_time is None or ending_time is None:
             raise ResponseError(message="Time period is not chosen")
         locale_id = info.context.get('locale_id')
-        current_statistics = statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
+        current_statistics = statistics.stat_dictionary(self.id,
                                    starting_time,
                                    ending_time,
                                    locale_id=locale_id
@@ -504,11 +565,11 @@ class Dictionary(LingvodocObjectType):  # tested
 
         return new_format_statistics
 
-    @fetch_object()
+    @fetch_object('perspectives')
     def resolve_perspectives(self, info, only_with_phonology_data = None):
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
-        dictionary_client_id, dictionary_object_id = self.id  # self.dbObject.client_id, self.dbObject.object_id
+        dictionary_client_id, dictionary_object_id = self.id
 
         child_persps_query = DBSession.query(dbPerspective) \
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id,
@@ -524,28 +585,47 @@ class Dictionary(LingvodocObjectType):  # tested
             dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
             dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
 
-            phonology_query = DBSession.query(
-                dbPerspective, dbLexicalEntry, dbMarkup, dbSound).filter(
-                    dbLexicalEntry.parent_client_id == dbPerspective.client_id,
-                    dbLexicalEntry.parent_object_id == dbPerspective.object_id,
-                    dbLexicalEntry.marked_for_deletion == False,
-                    dbMarkup.parent_client_id == dbLexicalEntry.client_id,
-                    dbMarkup.parent_object_id == dbLexicalEntry.object_id,
-                    dbMarkup.marked_for_deletion == False,
-                    dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
-                    dbPublishingMarkup.client_id == dbMarkup.client_id,
-                    dbPublishingMarkup.object_id == dbMarkup.object_id,
-                    dbPublishingMarkup.published == True,
-                    dbPublishingMarkup.accepted == True,
-                    dbSound.client_id == dbMarkup.self_client_id,
-                    dbSound.object_id == dbMarkup.self_object_id,
-                    dbSound.marked_for_deletion == False,
-                    dbPublishingSound.client_id == dbSound.client_id,
-                    dbPublishingSound.object_id == dbSound.object_id,
-                    dbPublishingSound.published == True,
-                    dbPublishingSound.accepted == True)
+            phonology_query = (
 
-            child_persps_query = child_persps_query.filter(phonology_query.exists())
+                DBSession
+
+                    .query(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id)
+
+                    .filter(
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbMarkup.parent_client_id == dbLexicalEntry.client_id,
+                        dbMarkup.parent_object_id == dbLexicalEntry.object_id,
+                        dbMarkup.marked_for_deletion == False,
+                        dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
+                        dbPublishingMarkup.client_id == dbMarkup.client_id,
+                        dbPublishingMarkup.object_id == dbMarkup.object_id,
+                        dbPublishingMarkup.published == True,
+                        dbPublishingMarkup.accepted == True,
+                        dbSound.client_id == dbMarkup.self_client_id,
+                        dbSound.object_id == dbMarkup.self_object_id,
+                        dbSound.marked_for_deletion == False,
+                        dbPublishingSound.client_id == dbSound.client_id,
+                        dbPublishingSound.object_id == dbSound.object_id,
+                        dbPublishingSound.published == True,
+                        dbPublishingSound.accepted == True)
+
+                    .group_by(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id))
+
+            child_persps_query = (
+
+                child_persps_query.filter(
+
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
+
+                        .in_(
+                            DBSession.query(
+                                phonology_query.cte()))))
 
         perspectives = list()
         for persp in child_persps_query.all():
@@ -556,7 +636,7 @@ class Dictionary(LingvodocObjectType):  # tested
 
     @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
     def resolve_roles(self, info):
-        client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
+        client_id, object_id = self.id
         # dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
         dictionary = CACHE.get(objects =
             {

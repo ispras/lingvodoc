@@ -12,7 +12,7 @@ from graphene.types import Scalar
 from graphene.types.json import JSONString as JSONtype
 from graphene.types.generic import GenericScalar
 
-from sqlalchemy import tuple_
+from sqlalchemy import or_, tuple_
 
 from lingvodoc.models import (
     ObjectTOC,
@@ -635,15 +635,17 @@ class CompositeIdHolder(graphene.Interface):
 class CreatedAt(graphene.Interface):
     created_at = graphene.Float() #DateTime()
 
+    @staticmethod
+    def from_timestamp(value):
+
+        if isinstance(value, (int, float)):
+            return value
+
+        return value.replace(tzinfo = datetime.timezone.utc).timestamp()
+
     @fetch_object("created_at")
     def resolve_created_at(self, info):
-
-        created_at = self.dbObject.created_at
-
-        if isinstance(created_at, (int, float)):
-            return created_at
-
-        return created_at.replace(tzinfo = datetime.timezone.utc).timestamp()
+        CreatedAt.from_timestamp(self.dbObject.created_at)
 
 
 class DeletedAt(graphene.Interface):
@@ -728,7 +730,7 @@ class StateHolder(graphene.Interface):
     status = graphene.Field(graphene.String, locale_id = graphene.Int())
     status_translations = ObjectVal()
 
-    @fetch_object("state_translation_gist_id")
+    @fetch_object('state_translation_gist_id')
     def resolve_state_translation_gist_id(self, info):
         return (self.dbObject.state_translation_gist_client_id,
                 self.dbObject.state_translation_gist_object_id)
@@ -809,14 +811,16 @@ class TranslationHolder(graphene.Interface):
 
     @fetch_object("translation")
     def resolve_translation(self, info, locale_id = None):
-        if self.dbObject:
-            return str(self.dbObject.get_translation( # TODO: fix it
+
+        return (
+            self.dbObject.get_translation( # TODO: fix it
                 locale_id if locale_id is not None else info.context.get('locale_id')))
 
     @fetch_object("translations")
     def resolve_translations(self, info):
-        if self.dbObject:
-            return self.dbObject.get_translations()
+
+        return (
+            self.dbObject.get_translations())
 
 
 # rare interfaces
@@ -975,32 +979,39 @@ class Metadata(graphene.ObjectType):
     toc_mark = graphene.Boolean()
 
 
-# class LevelAndId(graphene.ObjectType):
-#     """
-#     graphene object that have all metadata attributes
-#     if new attributes of metadata are added, then this class has to be updated
-#     """
-#     parent_id = LingvodocID()
-#     language_id = LingvodocID()
+metadata_key_set = {
 
+    key
+    for key in Metadata.__dict__
+    if not key.startswith('_')}
 
-# def get_value_by_key(db_object, additional_metadata_string, metadata_key):
-#     """
-#
-#     :param db_object: self.dbObject with metadata or None
-#     :param additional_metadata_string: self.additional_metadata_string dictionary or None
-#     :param metadata_key: metadata first-level key
-#     :return: value by metadata_key or None if params are not set
-#     """
-#     if additional_metadata_string:
-#         if metadata_key in additional_metadata_string:
-#             return additional_metadata_string[metadata_key]
-#     if db_object:
-#         meta = db_object.additional_metadata
-#         if meta:
-#             if metadata_key in meta:
-#                 return meta[metadata_key]
+metadata_list_key_dict = {
+    'blobs': [],
+    'previous_objects': [],
+    'younger_siblings': [],
+    'starling_fields': [],
+    'participant': [],
+    'tag_list': [],
+    'authors': [],
+    'years': [],
+    'humanSettlement': [],
+    'admins': [],
+    'interrogator': [],
+    'processing': []}
 
+metadata_list_key_list = [
+    'blobs',
+    'previous_objects',
+    'younger_siblings',
+    'starling_fields',
+    'participant',
+    'tag_list',
+    'authors',
+    'years',
+    'humanSettlement',
+    'admins',
+    'interrogator',
+    'processing']
 
 
 class AdditionalMetadata(graphene.Interface):
@@ -1015,32 +1026,32 @@ class AdditionalMetadata(graphene.Interface):
 
     additional_metadata = graphene.Field(Metadata)
 
-    @fetch_object()
-    def resolve_additional_metadata(self, info):
-        db_object = self.dbObject
+    @staticmethod
+    def from_object(metadata_dict):
 
-        # initializes dict with None, for keys nonexistent in dbObject.additional_metadata
-        # list of keys is taken from Metadata attributes
+        if not metadata_dict:
+            return Metadata(**metadata_list_key_dict)
 
-        def default_value(i):
-            if type(getattr(Metadata, i)) == graphene.List:
-                return []
-            return None
+        metadata_dict = {
+            key: value
+            for key, value in metadata_dict.items()
+            if key in metadata_key_set}
 
-        metadata_dict = {i: default_value(i) for i in Metadata().__class__.__dict__ if not i.startswith("_")}
+        participant = (
+            metadata_dict.get('participant'))
 
-        if db_object.additional_metadata:
-            new_meta = {key: db_object.additional_metadata[key] for key in db_object.additional_metadata if key in metadata_dict}
-            metadata_dict.update(new_meta)
+        if participant:
 
-        if "participant" in metadata_dict:
-            if metadata_dict["participant"]:
-                old_id_meta = metadata_dict["participant"]
-                metadata_dict["participant"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
-        if "blobs" in metadata_dict:
-            if metadata_dict["blobs"]:
-                old_id_meta = metadata_dict["blobs"]
-                metadata_dict["blobs"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
+            metadata_dict['participant'] = [
+                [x['client_id'], x['object_id']] for x in participant]
+
+        blobs = (
+            metadata_dict.get('blobs'))
+
+        if blobs:
+
+            metadata_dict['blobs'] = [
+                [x['client_id'], x['object_id']] for x in blobs]
 
         # New 'authors' metadata is a list of author strings, while some old dictionaries (in particular,
         # ones converted from Dialeqt files via old convertion code) has 'authors' metadata which is a
@@ -1048,15 +1059,26 @@ class AdditionalMetadata(graphene.Interface):
         #
         # So if 'authors' is a string, we assume that it's comma-separated and split it.
 
-        if ('authors' in metadata_dict and
-            isinstance(metadata_dict['authors'], str)):
+        authors = metadata_dict.get('authors')
 
-            metadata_dict['authors'] = re.split(r'\s*,', metadata_dict['authors'])
+        if isinstance(authors, str):
 
-        metadata_object = Metadata(**metadata_dict)
-        return metadata_object
+            metadata_dict['authors'] = (
+                re.split(r'\s*,', authors))
 
-#  end of metadata section
+        for key in metadata_list_key_list:
+
+            if key not in metadata_dict:
+                metadata_dict[key] = []
+
+        return Metadata(**metadata_dict)
+
+    @fetch_object("additional_metadata")
+    def resolve_additional_metadata(self, info):
+
+        return (
+            AdditionalMetadata.from_object(
+                self.dbObject.additional_metadata))
 
 
 class CommonFieldsComposite(
@@ -1113,3 +1135,59 @@ class UnstructuredData(LingvodocObjectType):
     @fetch_object('additional_metadata')
     def resolve_additional_metadata(self, info):
         return self.dbObject.additional_metadata
+
+
+def get_published_translation_gist_id_query(session = DBSession):
+
+    return (
+
+        session
+
+            .query(
+                dbTranslationGist.client_id,
+                dbTranslationGist.object_id)
+
+            .filter(
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationGist.type == 'Service',
+                dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
+                dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
+                dbTranslationAtom.locale_id == 2,
+                dbTranslationAtom.marked_for_deletion == False,
+
+                or_(
+                    dbTranslationAtom.content == 'Published',
+                    dbTranslationAtom.content == 'Limited access')))
+
+
+published_translation_gist_id_query = (
+    get_published_translation_gist_id_query())
+
+
+def get_published_translation_gist_id_cte(query = None, session = DBSession):
+
+    if query is None:
+        query = get_published_translation_gist_id_query(session)
+
+    return query.cte()
+
+
+published_translation_gist_id_cte = (
+
+    get_published_translation_gist_id_cte(
+        published_translation_gist_id_query))
+
+
+def get_published_translation_gist_id_cte_query(cte = None, session = DBSession):
+
+    if cte is None:
+        cte = get_published_translation_gist_id_cte(session)
+
+    return session.query(cte)
+
+
+published_translation_gist_id_cte_query = (
+
+    get_published_translation_gist_id_cte_query(
+        published_translation_gist_id_cte))
+

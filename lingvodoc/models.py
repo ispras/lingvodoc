@@ -581,6 +581,13 @@ class TranslationMixin(PrimeTableArgs):
                                      ['TranslationGist'.lower() + '.object_id',
                                       'TranslationGist'.lower() + '.client_id']),) + super().__table_args__
 
+    @property
+    def translation_gist_id(self):
+
+        return (
+            self.translation_gist_client_id,
+            self.translation_gist_object_id)
+
     def get_translation(self, locale_id = 2, session = DBSession):
 
         return get_translation(
