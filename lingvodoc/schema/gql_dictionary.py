@@ -40,7 +40,7 @@ from lingvodoc.schema.gql_holders import (
     acl_check_by_id,
     LingvodocID,
     UserAndOrganizationsRoles,
-    published_translation_gist_id_cte_query
+    get_published_translation_gist_id_cte_query
 )
 
 import sqlalchemy
@@ -417,12 +417,11 @@ class Dictionary(LingvodocObjectType):  # tested
         self,
         __debug_flag__ = False):
 
-        # NOTE: we have to use
-        # in_(published_translation_gist_id_cte_query)
-        # and not just
-        # in_(published_translation_gist_id_cte),
-        # because otherwise published_translation_gist_id_cte won't be used as a proper WITH CTE and will be
-        # just inserted literally two times.
+        # NOTE: we have to use pubished CTE query and not just published CTE because otherwise the CTE won't
+        # be used as proper via WITH and will be just inserted literally two times.
+
+        published_cte_query = (
+            get_published_translation_gist_id_cte_query())
 
         perspective_query = (DBSession
 
@@ -436,7 +435,7 @@ class Dictionary(LingvodocObjectType):  # tested
                     dbPerspective.state_translation_gist_client_id,
                     dbPerspective.state_translation_gist_object_id)
 
-                    .in_(published_translation_gist_id_cte_query)))
+                    .in_(published_cte_query)))
 
         if not self.dbObject.marked_for_deletion:
 
@@ -453,7 +452,7 @@ class Dictionary(LingvodocObjectType):  # tested
                         self.dbObject.state_translation_gist_client_id,
                         self.dbObject.state_translation_gist_object_id)
 
-                        .in_(published_translation_gist_id_cte_query),
+                        .in_(published_cte_query),
 
                     perspective_query.exists())))
 

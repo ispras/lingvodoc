@@ -155,8 +155,8 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID,
     ObjectVal,
     PermissionException,
-    published_translation_gist_id_cte_query,
-    published_translation_gist_id_query,
+    get_published_translation_gist_id_cte_query,
+    get_published_translation_gist_id_query,
     ResponseError,
     UnstructuredData,
     Upload,
@@ -1008,6 +1008,7 @@ class Language_Resolver(object):
         self.perspective_selection = None
         self.column_selection = None
 
+        self.published_query = None
         self.published_condition_count = 0
 
     def argument_value(self, argument):
@@ -1521,13 +1522,15 @@ class Language_Resolver(object):
                 dbDictionary.state_translation_gist_client_id,
                 dbDictionary.state_translation_gist_object_id))
 
-        # Query or CTE.
+        if self.published_query is None:
 
-        published_query = (
+            # Query or CTE.
 
-            published_translation_gist_id_query
-                if self.published_condition_count <= 1 else
-                published_translation_gist_id_cte_query)
+            self.published_query = (
+
+                get_published_translation_gist_id_query()
+                    if self.published_condition_count <= 1 else
+                    get_published_translation_gist_id_cte_query())
 
         return (
 
@@ -1535,7 +1538,7 @@ class Language_Resolver(object):
                 if published else
                 state_id_tuple.notin_)
 
-                (published_query))
+                (self.published_query))
 
     def translations_join(
         self,
@@ -5617,6 +5620,9 @@ class Query(graphene.ObjectType):
                 .query(dbDictionary)
                 .filter_by(marked_for_deletion = False))
 
+        published_cte_query = (
+            get_published_translation_gist_id_cte_query())
+
         if published:
 
             dbdicts = (
@@ -5628,7 +5634,7 @@ class Query(graphene.ObjectType):
                             dbDictionary.state_translation_gist_client_id,
                             dbDictionary.state_translation_gist_object_id)
 
-                            .in_(published_translation_gist_id_cte_query))
+                            .in_(published_cte_query))
 
                     .join(dbPerspective)
 
@@ -5639,7 +5645,7 @@ class Query(graphene.ObjectType):
                             dbPerspective.state_translation_gist_client_id,
                             dbPerspective.state_translation_gist_object_id)
 
-                            .in_(published_translation_gist_id_cte_query))
+                            .in_(published_cte_query))
 
                     .group_by(dbDictionary))
 

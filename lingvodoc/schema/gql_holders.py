@@ -1160,10 +1160,6 @@ def get_published_translation_gist_id_query(session = DBSession):
                     dbTranslationAtom.content == 'Limited access')))
 
 
-published_translation_gist_id_query = (
-    get_published_translation_gist_id_query())
-
-
 def get_published_translation_gist_id_cte(query = None, session = DBSession):
 
     if query is None:
@@ -1172,22 +1168,10 @@ def get_published_translation_gist_id_cte(query = None, session = DBSession):
     return query.cte()
 
 
-published_translation_gist_id_cte = (
-
-    get_published_translation_gist_id_cte(
-        published_translation_gist_id_query))
-
-
 def get_published_translation_gist_id_cte_query(cte = None, session = DBSession):
 
     if cte is None:
         cte = get_published_translation_gist_id_cte(session)
 
     return session.query(cte)
-
-
-published_translation_gist_id_cte_query = (
-
-    get_published_translation_gist_id_cte_query(
-        published_translation_gist_id_cte))
 
