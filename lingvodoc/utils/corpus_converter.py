@@ -25,6 +25,7 @@ from pyramid.httpexceptions import HTTPError
 import sqlalchemy
 from sqlalchemy import and_, create_engine, null, or_, tuple_
 
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.exc import NoResultFound
 
 from zope.sqlalchemy import mark_changed
@@ -365,6 +366,11 @@ def convert_five_tiers(
             tuple(markup_id)
             for markup_id in markup_id_list]
 
+        markup_id_query = (
+
+            ids_to_id_query(
+                markup_id_list))
+
         markup_entity_list = (
 
             DBSession
@@ -372,8 +378,12 @@ def convert_five_tiers(
                 .query(Entity)
 
                 .filter(
-                    tuple_(Entity.client_id, Entity.object_id)
-                        .in_(markup_id_list))
+
+                    tuple_(
+                        Entity.client_id, Entity.object_id)
+
+                        .in_(
+                            markup_id_query))
 
                 .all())
 
@@ -389,6 +399,41 @@ def convert_five_tiers(
                 if markup_id not in markup_entity_dict]
 
             raise KeyError(f'No markup entities {missing_id_list}.')
+
+        if not no_sound_flag:
+
+            sound_id_list = [
+                entity.self_id
+                for entity in markup_entity_list]
+
+            Sound = (
+                aliased(Entity, name = 'Sound'))
+
+            result_list = (
+
+                DBSession
+
+                    .query(
+                        Entity.client_id,
+                        Entity.object_id,
+                        Sound)
+
+                    .filter(
+                        Sound.client_id == Entity.self_client_id,
+                        Sound.object_id == Entity.self_object_id,
+
+                        tuple_(
+                            Entity.client_id, Entity.object_id)
+
+                            .in_(
+                                markup_id_query))
+
+                    .all())
+
+            sound_entity_dict = {
+                (result.client_id, result.object_id): result.Sound
+                for result in result_list
+                if result.Sound is not None}
 
         wip_state_id = None
 
@@ -1224,8 +1269,14 @@ def convert_five_tiers(
 
         dubl_set = set()
 
+        message_uploading = (
+
+            'Uploading sounds and words'
+                if not no_sound_flag and sound_entity_dict else
+                'Uploading words')
+
         task_percent(
-            6, percent_uploading, 'Uploading sounds and words')
+            6, percent_uploading, message_uploading)
 
         # Parsing and processing markup, in order if markup ids we received.
 
@@ -1237,16 +1288,12 @@ def convert_five_tiers(
 
             if not no_sound_flag:
 
-                # sound_entity = DBSession.query(Entity).filter_by(client_id=markup_entity.self_client_id, object_id=markup_entity.self_object_id).first()
-                sound_entity = CACHE.get(objects =
-                    {
-                        Entity : ((markup_entity.self_client_id, markup_entity.self_object_id), )
-                    },
-                DBSession=DBSession)
+                sound_entity = (
+                    sound_entity_dict.get(markup_id))
 
-                sound_url = None
-                if sound_entity:
-                    sound_url = sound_entity.content
+                sound_url = (
+                    sound_entity.content if sound_entity else None)
+
                 if sound_url:
                     no_sound = False
 
@@ -1893,16 +1940,16 @@ def convert_five_tiers(
                         markup_id_index * percent_delta_markup +
                         (phrase_index + 1) * percent_delta_phrase,
 
-                    'Uploading sounds and words')
+                    message_uploading)
 
         percent_from = (
             (percent_uploading + percent_adding) / 2)
 
         task_percent(
-            6, percent_from, 'Uploading sounds and words')
+            6, percent_from, message_uploading)
 
         perform_insert(
-            6, percent_from, percent_adding, 'Uploading sounds and words')
+            6, percent_from, percent_adding - 0.5, message_uploading)
 
         # Current data of lexical entries and paradigms.
 
@@ -2330,7 +2377,7 @@ def convert_five_tiers(
             7, percent_from, 'Uploading translations with marks')
 
         perform_insert(
-            7, percent_from, percent_finished, 'Uploading translations with marks')
+            7, percent_from, percent_finished - 0.5, 'Uploading translations with marks')
 
         mark_changed(DBSession())
 

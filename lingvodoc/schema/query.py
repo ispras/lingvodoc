@@ -156,7 +156,7 @@ from lingvodoc.schema.gql_holders import (
     ObjectVal,
     PermissionException,
     get_published_translation_gist_id_cte_query,
-    get_published_translation_gist_id_query,
+    get_published_translation_gist_id_subquery_query,
     ResponseError,
     UnstructuredData,
     Upload,
@@ -1525,10 +1525,15 @@ class Language_Resolver(object):
         if self.published_query is None:
 
             # Query or CTE.
+            #
+            # NOTE:
+            #
+            # Need to use a subquery query in case we join with translationgist / translationatom
+            # outside of it.
 
             self.published_query = (
 
-                get_published_translation_gist_id_query()
+                get_published_translation_gist_id_subquery_query()
                     if self.published_condition_count <= 1 else
                     get_published_translation_gist_id_cte_query())
 
@@ -6148,7 +6153,14 @@ class Query(graphene.ObjectType):
         if has_participant is None:
 
             organization_query = (
-                DBSession.query(*selection_list))
+
+                DBSession
+
+                    .query(
+                        *selection_list)
+
+                    .filter_by(
+                        marked_for_deletion = False))
 
             organization_c = dbOrganization
 

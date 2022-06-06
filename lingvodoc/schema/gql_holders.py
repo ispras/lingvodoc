@@ -1160,6 +1160,15 @@ def get_published_translation_gist_id_query(session = DBSession):
                     dbTranslationAtom.content == 'Limited access')))
 
 
+def get_published_translation_gist_id_subquery_query(session = DBSession):
+
+    return (
+
+        session.query(
+            get_published_translation_gist_id_query(session)
+                .subquery()))
+
+
 def get_published_translation_gist_id_cte(query = None, session = DBSession):
 
     if query is None:
