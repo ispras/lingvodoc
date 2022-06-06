@@ -412,7 +412,10 @@ def merge_suggestions_old(request):
     return json.dumps(results)
 
 
-def check_user_merge_permissions_direct(user_id, perspective_client_id, perspective_object_id):
+def check_user_merge_permissions_direct(
+    user_id,
+    perspective_client_id,
+    perspective_object_id):
     """
     Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
     create and delete them, by direct DB query.
@@ -420,7 +423,16 @@ def check_user_merge_permissions_direct(user_id, perspective_client_id, perspect
     NOTE: replaced by check_user_merge_permissions.
     """
 
+    if not user_id:
+        return False
+
     user = DBSession.query(User).filter_by(id = user_id).first()
+
+    if not user:
+        return False
+
+    if user.id == 1:
+        return True
 
     if not user.is_active:
         return False
@@ -475,13 +487,19 @@ def check_user_merge_permissions_direct(user_id, perspective_client_id, perspect
 
 
 def check_user_merge_permissions(
-    request, user,
-    dictionary_client_id, dictionary_object_id,
-    perspective_client_id, perspective_object_id):
+    request,
+    user,
+    dictionary_client_id,
+    dictionary_object_id,
+    perspective_client_id,
+    perspective_object_id):
     """
     Checks if the user has permissions required to merge lexical entries and entities, i.e. permissions to
     create and delete them, via perspective user role subrequest.
     """
+
+    if not user:
+        return False
 
     if user.id == 1:
         return True
