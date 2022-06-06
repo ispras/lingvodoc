@@ -1171,7 +1171,7 @@ def get_published_translation_gist_id_cte(query = None, session = DBSession):
 def get_published_translation_gist_id_cte_query(cte = None, session = DBSession):
 
     if cte is None:
-        cte = get_published_translation_gist_id_cte(session)
+        cte = get_published_translation_gist_id_cte(session = session)
 
     return session.query(cte)
 

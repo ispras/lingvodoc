@@ -2186,6 +2186,9 @@ class Language_Resolver(object):
             self.grant_or_organization or
             join_count > 1)
 
+        ls.join_flag = (
+            join_count >= 1)
+
         if ls.object_flag:
 
             ls.column_list = [dbLanguage]
@@ -2194,8 +2197,7 @@ class Language_Resolver(object):
 
             # For ToC inclusion checking, if required.
 
-            if (ls.in_toc_flag and
-                ls.cte_flag):
+            if ls.in_toc_flag:
 
                 ls('additional_metadata')
 
@@ -2459,7 +2461,8 @@ class Language_Resolver(object):
                         ls.c.object_id)
 
                         .in_(
-                            ids_to_id_query(id_list))))
+                            ids_to_id_query(
+                                self.args.id_list))))
 
         # Filtering by language table of contents status, if required.
 
@@ -2946,7 +2949,7 @@ class Language_Resolver(object):
                 if ls.object_flag:
 
                     language = (
-                        result[0] if ls.cte_flag else result)
+                        result[0] if ls.join_flag else result)
 
                     id = language.id
                     parent_id = language.parent_id
@@ -3021,7 +3024,7 @@ class Language_Resolver(object):
             for result in result_list:
 
                 language = (
-                    result[0] if ls.cte_flag else result)
+                    result[0] if ls.join_flag else result)
 
                 language_id = language.id
 
@@ -3384,6 +3387,9 @@ class Language_Resolver(object):
             ds.cte_flag = (
                 join_count > 1)
 
+            ds.join_flag = (
+                join_count >= 1)
+
             ds.cte = None
 
             if ds.cte_flag:
@@ -3465,7 +3471,7 @@ class Language_Resolver(object):
                 for result in result_list:
 
                     dictionary = (
-                        result[0] if ds.cte_flag else result)
+                        result[0] if ds.join_flag else result)
 
                     dictionary_id = dictionary.id
 
@@ -3702,6 +3708,9 @@ class Language_Resolver(object):
             ps.cte_flag = (
                 join_count > 1)
 
+            ps.join_flag = (
+                join_count >= 1)
+
             ps.cte = None
 
             if ps.cte_flag:
@@ -3783,7 +3792,7 @@ class Language_Resolver(object):
                 for result in result_list:
 
                     perspective = (
-                        result[0] if ps.cte_flag else result)
+                        result[0] if ps.join_flag else result)
 
                     gql_perspective = (
                         Perspective(id = perspective.id))
@@ -6069,6 +6078,9 @@ class Query(graphene.ObjectType):
 
         selection_dict = {
 
+            'additional_metadata': (
+                dbOrganization.additional_metadata,),
+
             'created_at': (
                 dbOrganization.created_at,),
 
@@ -6133,7 +6145,7 @@ class Query(graphene.ObjectType):
 
         # No participant filtering, getting every organization.
 
-        if not has_participant:
+        if has_participant is None:
 
             organization_query = (
                 DBSession.query(*selection_list))
@@ -6168,6 +6180,8 @@ class Query(graphene.ObjectType):
             organization_c = dbOrganization
 
         # Additional conditions on participants, we'll have to check them through a join.
+        #
+        # We have to use raw SQL due to SQLAlchemy being bad with PostgreSQL's jsonb_to_recordset.
 
         else:
 
@@ -6276,6 +6290,9 @@ class Query(graphene.ObjectType):
 
                         adapt_on_names = True))
 
+                organization_c = (
+                    sql_text)
+
             else:
 
                 sql_text = (
@@ -6287,11 +6304,11 @@ class Query(graphene.ObjectType):
 
                         .alias())
 
+                organization_c = (
+                    sql_text.c)
+
             organization_query = (
                 DBSession.query(sql_text))
-
-            organization_c = (
-                sql_text.c)
 
             if not has_participant:
                 raise NotImplementedError
@@ -6387,7 +6404,7 @@ class Query(graphene.ObjectType):
                                 .label('translations'))
 
                         .group_by(
-                            *organization_c))
+                            *([organization_c] if object_flag else organization_c)))
 
         # Getting about translations through a join, if required.
 
@@ -6459,7 +6476,7 @@ class Query(graphene.ObjectType):
                                 .label('about_translations'))
 
                         .group_by(
-                            organization_c.id))
+                            *([organization_c] if object_flag else organization_c)))
 
         # Getting organization info, preparing it for GraphQL.
 
@@ -6473,7 +6490,7 @@ class Query(graphene.ObjectType):
         if __debug_flag__:
 
             log.debug(
-                '\norganization_query:\n' +
+                '\n organization_query:\n ' +
                 render_statement(organization_query.statement))
 
         gql_organization_list = []
@@ -6500,17 +6517,29 @@ class Query(graphene.ObjectType):
 
                 if translations_flag:
 
-                    gql_organization.translations = result.translations
+                    translations = (
+                        result.translations)
+
+                    gql_organization.translations = (
+                        translations if translations is not None else gql_none_value)
 
                 if about_translations_flag:
 
-                    gql_organization.about_translations = result.about_translations
+                    translations = (
+                        result.about_translations)
+
+                    gql_organization.about_translations = (
+                        translations if translations is not None else gql_none_value)
 
                 for attribute in attribute_set:
 
                     value = getattr(organization, attribute)
 
-                    if attribute == 'created_at':
+                    if attribute == 'additional_metadata':
+
+                        value = AdditionalMetadata.from_object(value)
+
+                    elif attribute == 'created_at':
 
                         value = CreatedAt.from_timestamp(value)
 
@@ -6534,14 +6563,18 @@ class Query(graphene.ObjectType):
 
                     value = getattr(result, selection)
 
-                    if selection == 'created_at':
+                    if selection == 'additional_metadata':
+
+                        value = AdditionalMetadata.from_object(value)
+
+                    elif selection == 'created_at':
 
                         value = CreatedAt.from_timestamp(value)
 
                     setattr(
                         gql_organization,
                         selection,
-                        value)
+                        value if value is not None else gql_none_value)
 
                 gql_organization_list.append(gql_organization)
 
@@ -7500,6 +7533,9 @@ class Query(graphene.ObjectType):
 
         selection_dict = {
 
+            'additional_metadata': (
+                dbGrant.additional_metadata,),
+
             'begin': (
                 dbGrant.begin,),
 
@@ -7596,7 +7632,7 @@ class Query(graphene.ObjectType):
 
         # No participant filtering, getting every grant.
 
-        if not has_participant:
+        if has_participant is None:
 
             grant_query = (
                 DBSession.query(*selection_list))
@@ -7629,6 +7665,8 @@ class Query(graphene.ObjectType):
             grant_c = dbGrant
 
         # Additional conditions on participants, we'll have to check them through a join.
+        #
+        # We have to use raw SQL due to SQLAlchemy being bad with PostgreSQL's jsonb_to_recordset.
 
         else:
 
@@ -7734,6 +7772,9 @@ class Query(graphene.ObjectType):
 
                         adapt_on_names = True))
 
+                grant_c = (
+                    sql_text)
+
             else:
 
                 sql_text = (
@@ -7745,14 +7786,13 @@ class Query(graphene.ObjectType):
 
                         .alias())
 
+                grant_c = (
+                    sql_text.c)
+
             grant_query = (
                 DBSession.query(sql_text))
 
-            grant_c = (
-                sql_text)
-
             if not has_participant:
-
                 raise NotImplementedError
 
         # Establishing a CTE if we'll need it.
@@ -7846,7 +7886,7 @@ class Query(graphene.ObjectType):
                                 .label('translations'))
 
                         .group_by(
-                            grant_c.id))
+                            *([grant_c] if object_flag else grant_c)))
 
         # Getting issuer translations through a join, if required.
 
@@ -7918,7 +7958,7 @@ class Query(graphene.ObjectType):
                                 .label('issuer_translations'))
 
                         .group_by(
-                            grant_c.id))
+                            *([grant_c] if object_flag else grant_c)))
 
         # Getting grant info, preparing it for GraphQL.
 
@@ -7932,7 +7972,7 @@ class Query(graphene.ObjectType):
         if __debug_flag__:
 
             log.debug(
-                '\ngrant_query:\n' +
+                '\n grant_query:\n ' +
                 render_statement(grant_query.statement))
 
         gql_grant_list = []
@@ -7959,17 +7999,29 @@ class Query(graphene.ObjectType):
 
                 if translations_flag:
 
-                    gql_grant.translations = result.translations
+                    translations = (
+                        result.translations)
+
+                    gql_grant.translations = (
+                        translations if translations is not None else gql_none_value)
 
                 if issuer_translations_flag:
 
-                    gql_grant.issuer_translations = result.issuer_translations
+                    translations = (
+                        result.issuer_translations)
+
+                    gql_grant.issuer_translations = (
+                        translations if translations is not None else gql_none_value)
 
                 for attribute in attribute_set:
 
                     value = getattr(grant, attribute)
 
-                    if attribute == 'begin' or attribute == 'end':
+                    if attribute == 'additional_metadata':
+
+                        value = AdditionalMetadata.from_object(value)
+
+                    elif attribute == 'begin' or attribute == 'end':
 
                         value = Grant.from_date(value)
 
@@ -7997,7 +8049,11 @@ class Query(graphene.ObjectType):
 
                     value = getattr(result, selection)
 
-                    if selection == 'begin' or selection == 'end':
+                    if selection == 'additional_metadata':
+
+                        value = AdditionalMetadata.from_object(value)
+
+                    elif selection == 'begin' or selection == 'end':
 
                         value = Grant.from_date(value)
 
@@ -8008,7 +8064,7 @@ class Query(graphene.ObjectType):
                     setattr(
                         gql_grant,
                         selection,
-                        value)
+                        value if value is not None else gql_none_value)
 
                 gql_grant_list.append(gql_grant)
 
