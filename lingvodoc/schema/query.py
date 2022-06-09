@@ -3642,7 +3642,9 @@ class Language_Resolver(object):
 
                             DBSession.query(
                                 dictionary_table.c.client_id,
-                                dictionary_table.c.object_id))))
+                                dictionary_table.c.object_id)),
+
+                        dbPerspective.marked_for_deletion == False))
 
             ps.c = dbPerspective
 
