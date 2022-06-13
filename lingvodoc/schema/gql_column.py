@@ -1,4 +1,9 @@
+
+import logging
+
 import graphene
+from sqlalchemy.orm import aliased
+
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CompositeIdHolder,
@@ -18,11 +23,16 @@ from lingvodoc.schema.gql_holders import (
 from lingvodoc.schema.gql_field import Field
 from lingvodoc.models import (
     DBSession,
-    DictionaryPerspectiveToField as dbDictionaryPerspectiveToField,
+    DictionaryPerspectiveToField as dbColumn,
     Field as dbField,
 )
 
 from lingvodoc.utils.creation import create_dictionary_persp_to_field
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 class Column(LingvodocObjectType):
     """
@@ -40,7 +50,7 @@ class Column(LingvodocObjectType):
      #marked_for_deletion | boolean                     | NOT NULL
      #position            | integer                     | NOT NULL
     """
-    dbType = dbDictionaryPerspectiveToField
+    dbType = dbColumn
 
     field = graphene.Field(Field)
 
@@ -186,19 +196,25 @@ class UpdateColumn(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, **args):
+
         id = args.get("id")
         client_id, object_id = id
-        field_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
-                                                                                 object_id=object_id).first()
+
+        field_object = (
+            DBSession.query(dbColumn).filter_by(
+                client_id=client_id, object_id=object_id).first())
+
         if not field_object or field_object.marked_for_deletion:
             raise ResponseError(message="Error: No such field object in the system")
 
-        info.context.acl_check('edit', 'perspective',
-                                   (field_object.parent_client_id, field_object.parent_object_id))
+        info.context.acl_check(
+            'edit', 'perspective', field_object.parent_id)
+
         field_id = args.get('field_id')
         self_id = args.get('self_id')
         link_id = args.get('link_id')
         position = args.get('position')
+
         if field_id:
             field_object.field_client_id, field_object.field_object_id = field_id
 
@@ -211,10 +227,13 @@ class UpdateColumn(graphene.Mutation):
 
         if link_id:
             field_object.link_client_id, field_object.link_object_id = link_id
+
         if position:
             field_object.position = position
-        column = Column(id=[field_object.client_id, field_object.object_id])
+
+        column = Column(id = field_object.id)
         column.dbObject = field_object
+
         return UpdateColumn(column=column, triumph=True)
 
 
@@ -249,21 +268,108 @@ class DeleteColumn(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
 
-    column = graphene.Field(Column)
+    column_list = graphene.List(Column)
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **args):
-        id = args.get('id')
-        client_id, object_id = id
-        column_object = DBSession.query(dbDictionaryPerspectiveToField).filter_by(client_id=client_id,
-                                                                                 object_id=object_id).first()
-        perspective_ids = (column_object.parent_client_id, column_object.parent_object_id)
-        info.context.acl_check('edit', 'perspective', perspective_ids)
-        if not column_object or column_object.marked_for_deletion:
-            raise ResponseError(message="No such column object in the system")
-        del_object(column_object, "delete_column", info.context.get('client_id'))
-        column = Column(id=id)
-        column.dbObject = column_object
-        return DeleteColumn(column=column, triumph=True)
+    def mutate(root, info, id, **args):
+
+        __debug_flag__ = False
+
+        # Recursively getting the column with any other linked columns.
+
+        base_cte = (
+
+            DBSession
+
+                .query(
+                    dbColumn)
+
+                .filter_by(
+                    client_id = id[0],
+                    object_id = id[1])
+
+                .cte(
+                    recursive = True))
+
+        recursive_query = (
+
+            DBSession
+
+                .query(
+                    dbColumn)
+
+                # Additional filtration by parent id to make use of the index, right now we don't have an
+                # index by self id.
+
+                .filter(
+                    dbColumn.parent_client_id == base_cte.c.parent_client_id,
+                    dbColumn.parent_object_id == base_cte.c.parent_object_id,
+                    dbColumn.self_client_id == base_cte.c.client_id,
+                    dbColumn.self_object_id == base_cte.c.object_id))
+
+        source_cte = (
+
+            aliased(
+                dbColumn,
+                base_cte.union(
+                    recursive_query)))
+
+        column_list = (
+
+            DBSession
+
+                .query(
+                    source_cte)
+
+                .filter(
+                    source_cte.marked_for_deletion == False)
+
+                .all())
+
+        if __debug_flag__:
+
+            log.debug(
+                f'\n column_list:\n {column_list}')
+
+        if not column_list:
+
+            return (
+                ResponseError(
+                    f'No column {id[0]}/{id[1]} in the system.'))
+
+        if all(column.marked_for_deletion for column in column_list):
+
+            return (
+                ResponseError(
+                    f'Column {id[0]}/{id[0]} is deleted.'))
+
+        info.context.acl_check(
+            'edit', 'perspective', column_list[0].parent_id)
+
+        client_id = (
+            info.context.get('client_id'))
+
+        gql_column_list = []
+
+        for column in column_list:
+
+            if not column.marked_for_deletion:
+
+                del_object(
+                    column, 'delete_column', client_id)
+
+            gql_column = (
+                Column(id = column.id))
+
+            gql_column.dbObject = (
+                column)
+
+            gql_column_list.append(gql_column_list)
+
+        return (
+
+            DeleteColumn(
+                column_list = column_list,
+                triumph = True))
 
