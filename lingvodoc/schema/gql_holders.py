@@ -645,7 +645,7 @@ class CreatedAt(graphene.Interface):
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
-        CreatedAt.from_timestamp(self.dbObject.created_at)
+        return CreatedAt.from_timestamp(self.dbObject.created_at)
 
 
 class DeletedAt(graphene.Interface):
