@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import io
 import itertools
+from itertools import chain
 import logging
 import os
 import os.path
@@ -11,6 +12,7 @@ import pickle
 import pprint
 import re
 import traceback
+import uuid
 
 # Just in case, don't have that on Windows.
 
@@ -37,13 +39,16 @@ from lingvodoc.schema.gql_holders import (
     acl_check_by_id,
     ResponseError,
     LingvodocID,
-    ObjectVal
+    ObjectVal,
+    get_published_translation_gist_id_cte_query,
 )
+
+import lingvodoc.models as models
 from lingvodoc.models import (
     Organization as dbOrganization,
     Client,
     Dictionary as dbDictionary,
-    DictionaryPerspective as dbDictionaryPerspective,
+    DictionaryPerspective as dbPerspective,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
     Entity as dbEntity,
@@ -55,10 +60,18 @@ from lingvodoc.models import (
     Field as dbField,
     TranslationGist as dbTranslationGist,
     TranslationAtom as dbTranslationAtom,
-    DictionaryPerspectiveToField as dbDictionaryPerspectiveToField)
+    ENGLISH_LOCALE,
+    SLBigInteger,
+)
+
 from lingvodoc.schema.gql_entity import Entity
 from lingvodoc.schema.gql_dictionary import Dictionary
-from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective, entries_with_entities
+
+from lingvodoc.schema.gql_dictionaryperspective import (
+    DictionaryPerspective as Perspective,
+    entries_with_entities
+)
+
 from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.scripts.save_dictionary import Save_Context
 
@@ -80,23 +93,25 @@ from lingvodoc.views.v2.utils import (
     as_storage_file
 )
 
+import sqlalchemy
 from sqlalchemy import (
     and_,
     Boolean,
     cast,
     exists,
     func,
+    literal,
     not_,
     or_,
     tuple_,
     union
 )
+
+import sqlalchemy.dialects.postgresql as postgresql
 from sqlalchemy.orm.util import aliased
-from itertools import chain
+import sqlalchemy.sql.expression as expression
 
 from poioapi.eaf_search import eaf_search
-
-import re
 
 
 # Setting up logging.
@@ -457,10 +472,10 @@ def search_mechanism(
 
             perspective_list = (
 
-                DBSession.query(dbDictionaryPerspective)
+                DBSession.query(dbPerspective)
                 
                     .filter(
-                        tuple_(dbDictionaryPerspective.client_id, dbDictionaryPerspective.object_id).in_(
+                        tuple_(dbPerspective.client_id, dbPerspective.object_id).in_(
                             perspective_id_list))
                         
                     .all())
@@ -488,7 +503,7 @@ def search_mechanism(
                     check_perspective = False))
 
             res_perspectives = [
-                graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in perspective_list]
+                graphene_obj(dbpersp, Perspective) for dbpersp in perspective_list]
 
             res_dictionaries = [
                 graphene_obj(dbdict, Dictionary) for dbdict in dictionary_list]
@@ -505,13 +520,13 @@ def search_mechanism(
 
             .filter(
                 dbLexicalEntry.marked_for_deletion == False,
-                dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
-                dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
-                dbDictionaryPerspective.marked_for_deletion == False,
+                dbLexicalEntry.parent_client_id == dbPerspective.client_id,
+                dbLexicalEntry.parent_object_id == dbPerspective.object_id,
+                dbPerspective.marked_for_deletion == False,
 
                 tuple_(
-                    dbDictionaryPerspective.parent_client_id,
-                    dbDictionaryPerspective.parent_object_id)
+                    dbPerspective.parent_client_id,
+                    dbPerspective.parent_object_id)
                     .in_(DBSession.query(dictionaries.cte()))))
 
     if adopted is not None or etymology is not None:
@@ -549,12 +564,14 @@ def search_mechanism(
         xform_bag_func = func.lower_bag
 
     if category == 0:
+
         for search_block in search_strings:
 
             all_block_field_set.update(
                 tuple(sb.get("field_id")) for sb in search_block if sb.get("field_id"))
 
             for search_string in search_block:
+
                 if not search_string.get("field_id"):
                     fields_flag = False
 
@@ -595,8 +612,11 @@ def search_mechanism(
                             xform_func(search_string["search_string"])))
 
     elif category == 1:
+
         for search_block in search_strings:
+
             for search_string in search_block:
+
                 if not search_string.get("field_id"):
                     fields_flag = False
 
@@ -877,8 +897,8 @@ def search_mechanism(
 
         # Showing overall entry query.
 
-        log.debug(
-            '\nentry_query:\n' +
+        log.info(
+            '\n entry_query:\n ' +
             str(entry_query.statement.compile(compile_kwargs = {"literal_binds": True})))
 
         resolved_search = entry_query.all()
@@ -926,20 +946,20 @@ def search_mechanism(
         DBSession
 
             .query(
-                dbDictionaryPerspective)
+                dbPerspective)
 
             .filter(
                 tuple_(
-                    dbDictionaryPerspective.client_id,
-                    dbDictionaryPerspective.object_id)
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
                     .in_(perspective_ids)))
 
     log.debug(
-        '\ntmp_perspectives_query:\n' +
+        '\n tmp_perspectives_query:\n ' +
         str(tmp_perspectives_query.statement.compile(compile_kwargs = {"literal_binds": True})))
 
     tmp_perspectives = tmp_perspectives_query.all()
-    res_perspectives = [graphene_obj(dbpersp, DictionaryPerspective) for dbpersp in tmp_perspectives]
+    res_perspectives = [graphene_obj(dbpersp, Perspective) for dbpersp in tmp_perspectives]
 
     dictionary_ids = (
         set(le.dbObject.parent_id for le in res_perspectives))
@@ -961,7 +981,7 @@ def search_mechanism(
                     .in_(dictionary_ids)))
 
     log.debug(
-        '\ntmp_dictionaries_query:\n' +
+        '\n tmp_dictionaries_query:\n ' +
         str(tmp_dictionaries_query.statement.compile(compile_kwargs = {"literal_binds": True})))
 
     tmp_dictionaries = tmp_dictionaries_query.all()
@@ -1016,15 +1036,15 @@ def search_mechanism_simple(
                      dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
                 and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
                      dbDictionary.state_translation_gist_client_id == limited_client_id))). \
-            join(dbDictionaryPerspective) \
+            join(dbPerspective) \
             .filter(or_(
-            and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                 dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-            and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                 dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))). \
-            filter(dbDictionaryPerspective.marked_for_deletion == False)
+            and_(dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                 dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+            and_(dbPerspective.state_translation_gist_object_id == limited_object_id,
+                 dbPerspective.state_translation_gist_client_id == limited_client_id))). \
+            filter(dbPerspective.marked_for_deletion == False)
     lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
-        .join(dbDictionaryPerspective.parent) \
+        .join(dbPerspective.parent) \
         .filter(dbLexicalEntry.marked_for_deletion==False,
                 tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
 
@@ -1094,14 +1114,14 @@ def search_mechanism_simple(
         and_block.append(cur_dbEntity.parent_client_id == dbLexicalEntry.client_id)
         and_block.append(cur_dbEntity.parent_object_id == dbLexicalEntry.object_id)
         and_block.append(or_(*or_block))
-    and_block.append(dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id)
-    and_block.append(dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id)
-    and_block.append(dbDictionaryPerspective.parent_client_id == dbDictionary.client_id)
-    and_block.append(dbDictionaryPerspective.parent_object_id == dbDictionary.object_id)
+    and_block.append(dbLexicalEntry.parent_client_id == dbPerspective.client_id)
+    and_block.append(dbLexicalEntry.parent_object_id == dbPerspective.object_id)
+    and_block.append(dbPerspective.parent_client_id == dbDictionary.client_id)
+    and_block.append(dbPerspective.parent_object_id == dbDictionary.object_id)
     and_block = and_(*and_block)
     aliases_len = len(aliases)
     aliases.append(dbLexicalEntry)
-    aliases.append(dbDictionaryPerspective)
+    aliases.append(dbPerspective)
     aliases.append(dbDictionary)
 
     search = DBSession.query(*aliases).filter(and_block, tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
@@ -1125,72 +1145,45 @@ def search_mechanism_simple(
     tmp_lexical_entries = {entity[aliases_len ] for entity in resolved_search}
     res_lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in tmp_lexical_entries]
     tmp_perspectives = {entity[aliases_len + 1] for entity in resolved_search}
-    res_perspectives = [graphene_obj(ent, DictionaryPerspective) for ent in tmp_perspectives]
+    res_perspectives = [graphene_obj(ent, Perspective) for ent in tmp_perspectives]
     tmp_dictionaries = {entity[aliases_len + 2] for entity in resolved_search}
     res_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
 
     return [], res_lexical_entries, res_perspectives, res_dictionaries
 
 
-def dictionaries_with_audio_ids():
+def dictionaries_with_audio_id_cte():
 
+    return (
 
-    sound_field_id_list = get_sound_field_ids()
+        DBSession
 
-    sound_entities_cte = DBSession.query(dbEntity.parent_client_id, dbEntity.parent_object_id).filter(
-            tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(sound_field_id_list),
-            dbEntity.marked_for_deletion == False,
-            dbPublishingEntity.client_id == dbEntity.client_id,
-            dbPublishingEntity.object_id == dbEntity.object_id,
-            dbPublishingEntity.accepted == True).cte()
+            .query(
+                dbPerspective.parent_client_id,
+                dbPerspective.parent_object_id)
 
+            .filter(
+                dbPerspective.marked_for_deletion == False,
+                dbPerspective.client_id == dbLexicalEntry.parent_client_id,
+                dbPerspective.object_id == dbLexicalEntry.parent_object_id,
+                dbLexicalEntry.marked_for_deletion == False,
+                dbLexicalEntry.client_id == dbEntity.parent_client_id,
+                dbLexicalEntry.object_id == dbEntity.parent_object_id,
+                dbEntity.marked_for_deletion == False,
+                dbPublishingEntity.client_id == dbEntity.client_id,
+                dbPublishingEntity.object_id == dbEntity.object_id,
+                dbPublishingEntity.accepted == True,
+                dbField.client_id == dbEntity.field_client_id,
+                dbField.object_id == dbEntity.field_object_id,
+                dbField.marked_for_deletion == False,
+                dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+                dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+                dbTranslationAtom.locale_id == 2,
+                dbTranslationAtom.content == 'Sound')
 
-    lexical_entries_with_sound = DBSession.query(dbLexicalEntry.parent_client_id,
-                                                 dbLexicalEntry.parent_object_id).filter(
-            dbLexicalEntry.marked_for_deletion == False,
-            sound_entities_cte.c.parent_client_id == dbLexicalEntry.client_id,
-            sound_entities_cte.c.parent_object_id == dbLexicalEntry.object_id).cte()
-    sound_persps_cte = DBSession.query(lexical_entries_with_sound).distinct().cte()
-    sound_dicts_cte = DBSession.query(dbDictionaryPerspective.parent_client_id,
-                                      dbDictionaryPerspective.parent_object_id).filter(
-        tuple_(dbDictionaryPerspective.client_id,
-               dbDictionaryPerspective.object_id).in_(sound_persps_cte)).distinct().cte()
-    audio_dicts_ids = DBSession.query(sound_dicts_cte).all()
-    return audio_dicts_ids
+            .distinct()
 
-
-def get_sound_field_ids():
-    FieldTranslationAtom = aliased(dbTranslationAtom, name='FieldTranslationAtom')
-    sound_field_id_list = DBSession.query(
-        dbField.client_id, dbField.object_id).filter(
-        dbField.marked_for_deletion == False,
-        dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-        dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
-        dbTranslationAtom.locale_id == 2,
-        dbTranslationAtom.content == "Sound",
-        dbTranslationAtom.marked_for_deletion == False,
-        FieldTranslationAtom.parent_client_id == dbField.translation_gist_client_id,
-        FieldTranslationAtom.parent_object_id == dbField.translation_gist_object_id,
-        FieldTranslationAtom.locale_id == 2,
-        FieldTranslationAtom.marked_for_deletion == False).all()
-    return sound_field_id_list
-
-# def get_not_text_field_ids():
-#     FieldTranslationAtom = aliased(dbTranslationAtom, name='FieldTranslationAtom')
-#     sound_field_id_list = DBSession.query(
-#
-#         dbField.client_id, dbField.object_id).filter(
-#         dbField.marked_for_deletion == False,
-#         dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-#         dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
-#         dbTranslationAtom.locale_id == 2,
-#         dbTranslationAtom.content != "Text",
-#         dbTranslationAtom.marked_for_deletion == False,
-#         FieldTranslationAtom.parent_client_id == dbField.translation_gist_client_id,
-#         FieldTranslationAtom.parent_object_id == dbField.translation_gist_object_id,
-#         FieldTranslationAtom.locale_id == 2,
-#         FieldTranslationAtom.marked_for_deletion == False).all()
-#     return sound_field_id_list
+            .cte())
 
 
 def save_xlsx(info, xlsx_context, xlsx_filename):
@@ -1225,10 +1218,13 @@ def save_xlsx(info, xlsx_context, xlsx_filename):
         xlsx_filename])
 
 
+regexp_check_set = {'', '.*', '.+', '.', '..*', '.*.', '..+', '.+.', '..', '...', '....'}
+
+
 class AdvancedSearch(LingvodocObjectType):
     entities = graphene.List(Entity)
     lexical_entries = graphene.List(LexicalEntry)
-    perspectives = graphene.List(DictionaryPerspective)
+    perspectives = graphene.List(Perspective)
     dictionaries = graphene.List(Dictionary)
     xlsx_url = graphene.String()
 
@@ -1254,9 +1250,56 @@ class AdvancedSearch(LingvodocObjectType):
 
         try:
 
+            log.info(
+                f'\n advanced_search'
+                f'\n languages: {languages}'
+                f'\n dicts_to_filter: {dicts_to_filter}'
+                f'\n tag_list: {tag_list}'
+                f'\n category: {category}'
+                f'\n adopted: {adopted}'
+                f'\n etymology: {etymology}'
+                f'\n diacritics: {diacritics}'
+                f'\n search_strings: {search_strings}'
+                f'\n publish: {publish}'
+                f'\n accept: {accept}'
+                f'\n search_metadata: {search_metadata}'
+                f'\n xlsx_export: {xlsx_export}'
+                f'\n cognates_flag: {cognates_flag}'
+                f'\n load_entities: {load_entities}'
+                f'\n __debug_flag__: {__debug_flag__}')
+
+            # Checking for too permissive search conditions.
+
+            for block in search_strings:
+                for condition in block:
+
+                    matching_type = condition.get('matching_type')
+
+                    if matching_type == 'substring':
+
+                        if condition['search_string'] == '':
+                            return ResponseError('Empty search substrings are not allowed.')
+
+                    elif matching_type == 'regexp':
+
+                        if condition['search_string'] in regexp_check_set:
+                            return ResponseError('Too broad search regular expressions are not allowed.')
+
+            # Preparing the search.
+
             yield_batch_count = 200
-            dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
-                marked_for_deletion=False)
+
+            dictionaries = (
+
+                DBSession
+
+                    .query(
+                        dbDictionary.client_id,
+                        dbDictionary.object_id)
+
+                    .filter_by(
+                        marked_for_deletion = False))
+
             d_filter = []
 
             if dicts_to_filter:
@@ -1264,148 +1307,310 @@ class AdvancedSearch(LingvodocObjectType):
                 dictionary_ids = dicts_to_filter
 
                 if len(dictionary_ids) > 2:
-                    dictionary_ids = ids_to_id_cte_query(dictionary_ids)
+                    dictionary_ids = ids_to_id_query(dictionary_ids)
 
-                d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionary_ids))
+                d_filter.append(
+
+                    tuple_(
+                        dbDictionary.client_id,
+                        dbDictionary.object_id)
+
+                        .in_(
+                            dictionary_ids))
 
             if languages:
 
                 if dicts_to_filter:
 
-                    dictionaries = dictionaries.join(dbLanguage)
+                    dictionaries = (
+                        dictionaries.join(dbLanguage))
 
                     language_ids = languages
 
                     if len(language_ids) > 2:
-                        language_ids = ids_to_id_cte_query(language_ids)
+                        language_ids = ids_to_id_query(language_ids)
 
                     d_filter.append(
+
                         and_(
 
                             tuple_(
-                                dbDictionary.parent_client_id,
-                                dbDictionary.parent_object_id)
-                                .in_(language_ids),
+                                dbLanguage.client_id,
+                                dbLanguage.object_id)
+
+                                .in_(
+                                    language_ids),
 
                             dbLanguage.marked_for_deletion == False))
 
-            dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
+            dictionaries = (
+                dictionaries.filter(or_(*d_filter)))
 
             if publish:
-                db_published_gist = translation_gist_search('Published')
-                state_translation_gist_client_id = db_published_gist.client_id
-                state_translation_gist_object_id = db_published_gist.object_id
-                db_la_gist = translation_gist_search('Limited access')
-                limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+
+                published_query = (
+                    get_published_translation_gist_id_cte_query())
+
+                dbPerspectiveP = aliased(dbPerspective)
 
                 dictionaries = (
 
                     dictionaries
 
                         .filter(
-                            or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                                and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                                     dbDictionary.state_translation_gist_client_id == limited_client_id)))
 
-                        .join(dbDictionaryPerspective)
+                            tuple_(
+                                dbDictionary.state_translation_gist_client_id,
+                                dbDictionary.state_translation_gist_object_id)
+
+                                .in_(published_query))
+
+                        .join(dbPerspectiveP)
 
                         .filter(
-                            dbDictionaryPerspective.marked_for_deletion == False,
-                            or_(
-                                and_(dbDictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                                     dbDictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                                and_(dbDictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                                     dbDictionaryPerspective.state_translation_gist_client_id == limited_client_id))))
+                            dbPerspectiveP.marked_for_deletion == False,
+
+                            tuple_(
+                                dbPerspectiveP.state_translation_gist_client_id,
+                                dbPerspectiveP.state_translation_gist_object_id)
+
+                                .in_(published_query)))
+
+            if tag_list:
+
+                dictionaries = (
+
+                    dictionaries.filter(
+                        dbDictionary.additional_metadata['tag_list'].contains(tag_list)))
 
             if search_metadata:
-                meta_filter_ids = set()
-                not_found_flag = False
-                for meta_key in ["authors", "years"]:
-                    meta_data = search_metadata.get(meta_key)
-                    if meta_data:
-                        dicts_with_tags = set()
-                        for text_tag in meta_data:
-                            single_tag_dicts = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
-                                dbDictionary.marked_for_deletion == False,
-                                dbDictionary.additional_metadata[meta_key] != None,
-                                dbDictionary.additional_metadata[meta_key].contains([text_tag])).all()
-                            dicts_with_tags.update(single_tag_dicts)
-                        if dicts_with_tags:
-                            meta_filter_ids.update(dicts_with_tags)
-                        else:
-                            not_found_flag = True
-                kind = search_metadata.get("kind")
-                if kind:
-                    dicts_with_kind = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
-                        dbDictionary.marked_for_deletion == False,
-                        dbDictionary.additional_metadata["kind"] != None,
-                        dbDictionary.additional_metadata["kind"].astext == kind).all()
-                    if dicts_with_kind:
-                        meta_filter_ids.update(dicts_with_kind)
-                    else:
-                        not_found_flag = True
-                if "hasAudio" in search_metadata:
-                    has_audio = search_metadata["hasAudio"]
-                    if has_audio is not None:
-                        if has_audio:
-                            audio_dict_ids = dictionaries_with_audio_ids()
-                            dictionaries = dictionaries\
-                                .filter(
-                                    tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
-                                )
-                        else:
-                            audio_dict_ids = dictionaries_with_audio_ids()
-                            dictionaries = dictionaries\
-                                .filter(
-                                    not_(
-                                    tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(audio_dict_ids)
-                                    )
-                                )
 
-                if not_found_flag:
-                    dictionaries = []
-                else:
-                    if meta_filter_ids:
-                        dictionaries = dictionaries \
-                            .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(meta_filter_ids))
-            if tag_list:
-                tag_ids = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter(
-                    dbDictionary.marked_for_deletion == False,
-                    dbDictionary.additional_metadata["tag_list"] != None,
-                    dbDictionary.additional_metadata["tag_list"].contains(tag_list)).all()
-                dictionaries = dictionaries \
-                    .filter(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(tag_ids))
+                has_audio = (
+                    search_metadata.get('hasAudio'))
+
+                if has_audio is not None:
+
+                    # Using CTE and exists predicate because otherwise, as testing shows, in particular when
+                    # looking through dictionaries _without_ audio we have not optimal query plans and
+                    # unnecessary long execution times.
+
+                    audio_dict_id_cte = (
+                        dictionaries_with_audio_id_cte())
+
+                    exists_query = (
+
+                        DBSession
+
+                            .query(literal(1))
+
+                            .filter(
+                                audio_dict_id_cte.c.parent_client_id == dbDictionary.client_id,
+                                audio_dict_id_cte.c.parent_object_id == dbDictionary.object_id)
+
+                            .exists())
+
+                    dictionaries = (
+
+                        dictionaries.filter(
+                            exists_query if has_audio else not_(exists_query)))
+
+                # Going to check if we need to stop because of any non-existing metadata tags.
+
+                meta_condition_list = []
+                meta_key_value_list = []
+
+                for meta_key in ['authors', 'humanSettlement', 'years']:
+
+                    meta_value_list = search_metadata.get(meta_key)
+
+                    if not meta_value_list:
+                        continue
+
+                    meta_condition_list.append(
+                        dbDictionary.additional_metadata[meta_key].op('?|')(
+                            postgresql.array(meta_value_list)))
+
+                    meta_key_value_list.append(
+                        (meta_key, meta_value_list))
+
+                kind = search_metadata.get('kind')
+
+                if kind:
+
+                    meta_condition_list.append(
+                        dbDictionary.additional_metadata['kind'].astext == kind)
+
+                # If we don't have any dictionaries for any of the metadata conditions, we return no
+                # results.
+
+                for dictionary_condition in meta_condition_list:
+
+                    result = (
+
+                        DBSession
+
+                            .query(
+
+                                DBSession
+
+                                    .query(
+                                        literal(1))
+
+                                    .filter(
+                                        dbDictionary.marked_for_deletion == False,
+                                        dictionary_condition)
+
+                                    .exists())
+
+                            .scalar())
+
+                    if not result:
+
+                        return (
+
+                            cls(
+                                entities = [],
+                                lexical_entries = [],
+                                perspectives = [],
+                                dictionaries = []))
+
+                # Processing metadata tags conditions. If it's just another single condition, we add it on.
+
+                if len(meta_condition_list) == 1:
+
+                    dictionaries = (
+
+                        dictionaries.filter(
+                            meta_condition_list[0]))
+
+                # For multiple conditions we'll have to use a base CTE.
+
+                elif len(meta_condition_list) > 1:
+
+                    dictionary_cte = (
+
+                        dictionaries
+                            .add_columns(dbDictionary.additional_metadata)
+                            .cte())
+
+                    meta_condition_list = []
+
+                    for meta_key, meta_value_list in meta_key_value_list:
+
+                        meta_condition_list.append(
+                            dictionary_cte.c.additional_metadata[meta_key].op('?|')(
+                                postgresql.array(meta_value_list)))
+
+                    if kind:
+
+                        meta_condition_list.append(
+                            dictionary_cte.c.additional_metadata['kind'].astext == kind)
+
+                    query_list = [
+
+                        DBSession
+
+                            .query(
+                                dictionary_cte.c.client_id,
+                                dictionary_cte.c.object_id)
+
+                            .filter(
+                                condition)
+
+                        for condition in meta_condition_list]
+
+                    dictionaries = (
+                        query_list[0].union(*query_list[1:]))
+
+            # If we don't actually have a search query, it means that we should return just the dictionaries
+            # and perspectives, which were possibly filtered through additional conditions earlier.
+
+            if not search_strings:
+
+                log.info(
+                    '\n dictionary_query:\n ' +
+                    str(dictionaries.statement.compile(compile_kwargs = {'literal_binds': True})))
+
+                # Temporary table to reuse our possibly costly dictionary id query both for dictionaries and
+                # for pespectives.
+
+                dictionary_table_name = (
+
+                    'dictionary_' +
+                     str(uuid.uuid4()).replace('-', '_'))
+
+                dictionary_id_table = (
+
+                    sqlalchemy.Table(
+                        dictionary_table_name,
+                        models.Base.metadata,
+                        sqlalchemy.Column('client_id', SLBigInteger),
+                        sqlalchemy.Column('object_id', SLBigInteger),
+                        prefixes = ['temporary'],
+                        postgresql_on_commit = 'drop'))
+
+                dictionary_id_table.create(
+                    DBSession.connection())
+
+                DBSession.execute(
+
+                    dictionary_id_table
+
+                        .insert()
+
+                        .from_select(
+                            (dbDictionary.client_id, dbDictionary.object_id),
+                            dictionaries))
+
+                # Getting and returning dictionaries and perspectives.
+
+                dictionary_list = (
+
+                    DBSession
+
+                        .query(
+                            dbDictionary)
+
+                        .filter(
+                            dbDictionary.client_id == dictionary_id_table.c.client_id,
+                            dbDictionary.object_id == dictionary_id_table.c.object_id)
+
+                        .all())
+
+                gql_dictionary_list = [
+                    graphene_obj(dictionary, Dictionary)
+                    for dictionary in dictionary_list]
+
+                perspective_list = (
+
+                   DBSession
+
+                        .query(
+                            dbPerspective)
+
+                        .filter(
+                            dbPerspective.parent_client_id == dictionary_id_table.c.client_id,
+                            dbPerspective.parent_object_id == dictionary_id_table.c.object_id,
+                            dbPerspective.marked_for_deletion == False)
+
+                        .all())
+
+                gql_perspective_list = [
+                    graphene_obj(perspective, Perspective)
+                    for perspective in perspective_list]
+
+                return (
+
+                    cls(
+                        entities = [],
+                        lexical_entries = [],
+                        perspectives = gql_perspective_list,
+                        dictionaries = gql_dictionary_list))
 
             res_entities = list()
             res_lexical_entries = list()
             res_perspectives = list()
             res_dictionaries = list()
-            if not search_strings:
-                res_dictionaries = [
-                    graphene_obj(
-                        DBSession.query(dbDictionary).filter(tuple_(dbDictionary.client_id, dbDictionary.object_id) == x).first(),
-                        Dictionary) for x in dictionaries]
-                perspective_objects = DBSession.query(dbDictionaryPerspective).filter(
-                   dbDictionaryPerspective.marked_for_deletion==False,
-                   tuple_(dbDictionaryPerspective.parent_client_id,
-                   dbDictionaryPerspective.parent_object_id).in_([(x.dbObject.client_id, x.dbObject.object_id) for x in res_dictionaries])).all()
-                res_perspectives = [graphene_obj(x, DictionaryPerspective) for x in perspective_objects]
-
-                return cls(entities=[], lexical_entries=[], perspectives=res_perspectives, dictionaries=res_dictionaries)
-
-
-
-            text_data_type = translation_gist_search('Text')
-
-            text_field_query = DBSession.query(dbField.client_id, dbField.object_id).\
-                filter(dbField.data_type_translation_gist_client_id == text_data_type.client_id,
-                       dbField.data_type_translation_gist_object_id == text_data_type.object_id)
-
-            markup_data_type = translation_gist_search('Markup')
-            markup_field_query = DBSession.query(dbField.client_id, dbField.object_id). \
-                filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
-                       dbField.data_type_translation_gist_object_id == markup_data_type.object_id)
 
             # Setting up export to an XLSX file, if required.
 
@@ -1419,8 +1624,27 @@ class AdvancedSearch(LingvodocObjectType):
                     cognates_flag = cognates_flag,
                     __debug_flag__ = __debug_flag__))
 
-            # normal dictionaries
+            # Normal dictionaries.
+
             if category != 1:
+
+                text_field_cte = (
+
+                    DBSession
+
+                        .query(
+                            dbField.client_id,
+                            dbField.object_id)
+
+                        .filter(
+                            dbField.marked_for_deletion == False,
+                            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+                            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+                            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                            dbTranslationAtom.content == 'Text')
+
+                        .cte())
+
                 res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
                     dictionaries=dictionaries,
                     category=0,
@@ -1430,15 +1654,34 @@ class AdvancedSearch(LingvodocObjectType):
                     adopted=adopted,
                     etymology=etymology,
                     diacritics=diacritics,
-                    category_field_cte_query=DBSession.query(text_field_query.cte()),
+                    category_field_cte_query=DBSession.query(text_field_cte),
                     yield_batch_count=yield_batch_count,
                     xlsx_context=xlsx_context,
                     load_entities=load_entities,
                     __debug_flag__=__debug_flag__
                 )
 
-            # corpora
+            # Corpora.
+
             if category != 0:
+
+                markup_field_cte = (
+
+                    DBSession
+
+                        .query(
+                            dbField.client_id,
+                            dbField.object_id)
+
+                        .filter(
+                            dbField.marked_for_deletion == False,
+                            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+                            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+                            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                            dbTranslationAtom.content == 'Markup')
+
+                        .cte())
+
                 tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
                     dictionaries=dictionaries,
                     category=1,
@@ -1448,12 +1691,13 @@ class AdvancedSearch(LingvodocObjectType):
                     adopted=adopted,
                     etymology=etymology,
                     diacritics=diacritics,
-                    category_field_cte_query=DBSession.query(markup_field_query.cte()),
+                    category_field_cte_query=DBSession.query(markup_field_cte),
                     yield_batch_count=yield_batch_count,
                     xlsx_context=xlsx_context,
                     load_entities=load_entities,
                     __debug_flag__=__debug_flag__
                 )
+
                 res_entities += tmp_entities
                 res_lexical_entries += tmp_lexical_entries
                 res_perspectives += tmp_perspectives
@@ -1508,12 +1752,14 @@ class AdvancedSearch(LingvodocObjectType):
                     with open(xlsx_filename, 'wb') as xlsx_file:
                         shutil.copyfileobj(xlsx_context.stream, xlsx_file)
 
-            return cls(
-                entities=res_entities,
-                lexical_entries=res_lexical_entries,
-                perspectives=res_perspectives,
-                dictionaries=res_dictionaries,
-                xlsx_url=xlsx_url)
+            return (
+
+                cls(
+                    entities = res_entities,
+                    lexical_entries = res_lexical_entries,
+                    perspectives = res_perspectives,
+                    dictionaries = res_dictionaries,
+                    xlsx_url = xlsx_url))
 
         except Exception as exception:
 
@@ -1528,13 +1774,13 @@ class AdvancedSearch(LingvodocObjectType):
 
             return (
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 class AdvancedSearchSimple(LingvodocObjectType):
     entities = graphene.List(Entity)
     lexical_entries = graphene.List(LexicalEntry)
-    perspectives = graphene.List(DictionaryPerspective)
+    perspectives = graphene.List(Perspective)
     dictionaries = graphene.List(Dictionary)
     xlsx_url = graphene.String()
 
@@ -1805,9 +2051,9 @@ class EafSearch(LingvodocObjectType):
         else:
 
             eaf_query = eaf_query.filter(
-                dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
-                dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
-                dbDictionaryPerspective.marked_for_deletion == False)
+                dbLexicalEntry.parent_client_id == dbPerspective.client_id,
+                dbLexicalEntry.parent_object_id == dbPerspective.object_id,
+                dbPerspective.marked_for_deletion == False)
 
         eaf_count = eaf_query.count()
 

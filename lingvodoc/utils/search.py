@@ -14,7 +14,10 @@ from lingvodoc.models import (
     Entity as dbEntity,
     PublishingEntity as dbPublishingEntity,
     Field as dbField,
-    DBSession)
+    DBSession,
+    ENGLISH_LOCALE
+)
+
 from lingvodoc.utils.static_fields import fields_static
 
 #from lingvodoc.views.v2.translations import translationgist_contents
@@ -24,7 +27,7 @@ def translation_gist_search(searchstring):
         translationatom = DBSession.query(dbTranslationAtom) \
             .join(dbTranslationGist). \
             filter(dbTranslationAtom.content == searchstring,
-                   dbTranslationAtom.locale_id == 2,
+                   dbTranslationAtom.locale_id == ENGLISH_LOCALE,
                    dbTranslationGist.type == 'Service') \
             .first()
 
