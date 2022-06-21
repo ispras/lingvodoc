@@ -5175,17 +5175,23 @@ class Query(graphene.ObjectType):
         return user_groups
 
     def resolve_select_tags_metadata(self, info):
+
         def get_sorted_metadata_keys(metadata_name):
+
             all_values = DBSession.query(dbDictionary.additional_metadata[metadata_name]) \
                 .filter(dbDictionary.additional_metadata[metadata_name] != None,
                         dbDictionary.marked_for_deletion==False)
-            all_authors_lists = [
-                (re.split(r'\s*,', value) if isinstance(value, str) else value)
-                    for value, in all_values]
-            values_iterator = itertools.chain.from_iterable(all_authors_lists)
-            uniq_values = set(values_iterator)
-            soreted_values = sorted(list(uniq_values))
-            return soreted_values
+
+            value_set = set()
+
+            for value, in all_values:
+
+                value_set.update(
+                    (value_str.strip() for value_str in re.split(r'\s*,\s*', value))
+                        if isinstance(value, str) else
+                        value)
+
+            return sorted(value_set)
 
         menu_json_data = {}
         authors_list = get_sorted_metadata_keys("authors")
@@ -5447,10 +5453,7 @@ class Query(graphene.ObjectType):
             publish = None
             accept = None
         else:
-            raise ResponseError(message="mode: <all|published|not_accepted>")
-
-        # if not search_strings:
-        #     raise ResponseError(message="search_strings is empty")
+            return ResponseError('mode: <all|published|not_accepted>')
 
         if simple:
 
@@ -15069,7 +15072,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
             return (
 
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 class NewUnstructuredData(graphene.Mutation):
@@ -15216,7 +15219,7 @@ class NewUnstructuredData(graphene.Mutation):
             return (
 
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 class Docx2Eaf(graphene.Mutation):
@@ -15450,7 +15453,7 @@ class Docx2Eaf(graphene.Mutation):
             return (
 
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 @celery.task
@@ -15906,7 +15909,7 @@ class Valency(graphene.Mutation):
             return (
 
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 diacritic_re = (
@@ -17290,7 +17293,7 @@ class CreateValencyData(graphene.Mutation):
             return (
 
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 class SaveValencyData(graphene.Mutation):
@@ -17614,7 +17617,7 @@ class SaveValencyData(graphene.Mutation):
             return (
 
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 class SetValencyAnnotation(graphene.Mutation):
@@ -17716,7 +17719,7 @@ class SetValencyAnnotation(graphene.Mutation):
             return (
 
                 ResponseError(
-                    message = 'Exception:\n' + traceback_string))
+                    'Exception:\n' + traceback_string))
 
 
 class MyMutations(graphene.ObjectType):
