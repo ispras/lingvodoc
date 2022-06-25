@@ -24,7 +24,7 @@ def print_to_str(*args, **kwargs):
 
 
 span_id_counter = 0
-def generate_html_wrap(word, ana_tag_list):
+def generate_html_wrap(word, ana_tag_list, lang=""):
 
     json_list = list()
     for ana_tag in ana_tag_list:
@@ -45,10 +45,16 @@ def generate_html_wrap(word, ana_tag_list):
         span_id_counter += 1
         encoded_attrs = ((json.dumps(attr_json, ensure_ascii=False)).encode('utf8')).decode()
         wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs + "</span>"
+
+        if lang == 'udm' and 'nom' in encoded_attrs:
+            flag = True
+            span_id_counter += 1
+            wrap += "<span class=\"result\"" + " id=" + str(span_id_counter) + ">" + encoded_attrs.replace('nom', 'acc0') + "</span>"
+
     wrap += word + "</span>"
     return wrap
 
-def insert_parser_output_to_text(text, parser_output):
+def insert_parser_output_to_text(text, parser_output, lang=""):
 
     ESC_PAT = "$id$"
     soup = bs4.BeautifulSoup(parser_output, 'html.parser')
@@ -63,7 +69,7 @@ def insert_parser_output_to_text(text, parser_output):
                 continue
         result_list.append(text[search_start_index:match_index])
         if (len(w_tag.contents) > 1):
-            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1]))
+            result_list.append(generate_html_wrap(word, w_tag.contents[0:-1], lang=lang))
         search_start_index = match_index + len(word)
     result_list.append(text[search_start_index:])
     result = "".join(result_list)
@@ -115,7 +121,7 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
         parser_output = analyzer.analyze_words(wordlist, format="xml")
     parser_output_str = print_to_str(parser_output)
 
-    return insert_parser_output_to_text(dedoc_output, parser_output_str)
+    return insert_parser_output_to_text(dedoc_output, parser_output_str, lang=lang)
 
 def apertium_parser(dedoc_output, apertium_path, lang):
 
@@ -338,7 +344,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         parser_output = reformat(morph_filename=morph_filename)
     os.remove(morph_filename)
 
-    return insert_parser_output_to_text(dedoc_output, parser_output)
+    return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
 
 def timarkh_udm(dedoc_output):
