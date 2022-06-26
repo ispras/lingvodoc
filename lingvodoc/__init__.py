@@ -179,8 +179,12 @@ def get_git_version(repository_dir):
         if path == version_path:
             continue
 
-        mtime = (
-            os.path.getmtime(path))
+        try:
+            mtime = (
+                os.path.getmtime(path))
+
+        except FileNotFoundError:
+            continue
 
         if (last_mtime is None or
             mtime > last_mtime):

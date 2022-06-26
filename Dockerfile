@@ -26,8 +26,8 @@ RUN \
 RUN \
   pip3 install pip==20.0.2 && \
   pip3 install --upgrade setuptools==44.0 && \
-  pip3 install -r server-requirements.txt && \
-  pip3 install alembic gunicorn==19.7.1
+  pip3 install -r server-requirements-1.txt && \
+  pip3 install -r server-requirements-final.txt
 RUN \
   locale-gen en_US.UTF-8 && update-locale && \
   ( curl -sS https://apertium.projectjj.com/apt/install-nightly.sh | bash ) && \
