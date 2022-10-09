@@ -292,14 +292,14 @@ def login_post(request):  # tested
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
-        headers = remember(request, principal=client.id, max_age=315360000)
+        headers = remember(request, userid=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
         locale_id = user.default_locale_id
         if not locale_id:
             locale_id = 1
-        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='client_id', value=str(client.id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
         # headers = remember(request, principal=client.id, max_age=315360000)
         # # return HTTPFound(location=next, headers=response.headers)
         return HTTPOk(headers=response.headers, json_body={})
@@ -324,14 +324,14 @@ def signin(request):
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
-        headers = remember(request, principal=client.id, max_age=315360000)
+        headers = remember(request, userid=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
         locale_id = user.default_locale_id
         if not locale_id:
             locale_id = 1
-        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='client_id', value=str(client.id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
         result = dict()
         result['client_id'] = client.id
         request.response.status = HTTPOk.code
@@ -374,12 +374,12 @@ def desk_signin(request):
         cookies = status.cookies.get_dict()
 
         response = Response()
-        headers = remember(request, principal=client_id, max_age=315360000)
+        headers = remember(request, userid=client_id, max_age=315360000)
         response.headers = headers
         locale_id = cookies['locale_id']
-        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
+        response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
         sub_headers = response.headers
         sub_headers = dict(sub_headers)
         sub_headers['Cookie'] = sub_headers['Set-Cookie']
@@ -398,13 +398,13 @@ def desk_signin(request):
             print('headers', subreq.headers)
             resp = request.invoke_subrequest(subreq)
             if resp.status_code == 200:
-                headers = remember(request, principal=client_id, max_age=315360000)
+                headers = remember(request, userid=client_id, max_age=315360000)
                 response = Response()
                 response.headers = headers
                 locale_id = cookies['locale_id']
-                response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
-                response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
-                response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
+                response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+                response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+                response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
                 result = dict()
                 result['client_id'] = client_id
                 request.response.status = HTTPOk.code
@@ -428,14 +428,14 @@ def new_client_server(request):
             user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
-            headers = remember(request, principal=client.id, max_age=315360000)
+            headers = remember(request, userid=client.id, max_age=315360000)
             response = Response()
             response.headers = headers
             locale_id = user.default_locale_id
             if not locale_id:
                 locale_id = 1
-            response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
-            response.set_cookie(key='client_id', value=str(client.id), max_age=datetime.timedelta(days=3650))
+            response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+            response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
             result = dict()
             result['client_id'] = client.id
             request.response.status = HTTPOk.code
@@ -464,13 +464,13 @@ def new_client(request):
     # with open('shadow_cookie.json', 'w') as f:
     #     f.write(json.dumps(cookies))
     if status.status_code == 200:
-        headers = remember(request, principal=client_id)
+        headers = remember(request, userid=client_id)
         response = Response()
         response.headers = headers
         locale_id = cookies['locale_id']
-        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
+        response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
         result = dict()
         result['client_id'] = client_id
         result['server_cookies'] = cookies
@@ -503,15 +503,15 @@ def login_cheat(request):  # TODO: test
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
-        headers = remember(request, principal=client.id)
+        headers = remember(request, userid=client.id)
         response = Response()
         response.headers = headers
         locale_id = user.default_locale_id
         if not locale_id:
             locale_id = 1
-        response.set_cookie(key='locale_id', value=str(locale_id))
-        response.set_cookie(key='client_id', value=str(client.id))
-        headers = remember(request, principal=client.id)
+        response.set_cookie('locale_id', value=str(locale_id), samesite='lax')
+        response.set_cookie('client_id', value=str(client.id), samesite='lax')
+        headers = remember(request, userid=client.id)
         return response
 
     log.debug("Login unsuccessful for " + login)
@@ -522,8 +522,8 @@ def login_cheat(request):  # TODO: test
 def logout_any(request):  # tested
     response = Response()
     response.headers = forget(request)
-    response.set_cookie(key='client_id', value=None)
-    response.set_cookie(key='auth_tkt', value=None)
+    response.set_cookie('client_id', value=None)
+    response.set_cookie('auth_tkt', value=None)
     response.status_code = 200
     response.json_body = {}
     return response

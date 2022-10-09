@@ -847,13 +847,13 @@ def download_all(request):
         cookies = resp.json['server_cookies']
         # client_id = cookies['client_id']
         client_id = resp.json['client_id']
-        headers = remember(request, principal=client_id, max_age=315360000)
+        headers = remember(request, userid=client_id, max_age=315360000)
         response = Response()
         response.headers = headers
         locale_id = cookies['locale_id']
-        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
-        response.set_cookie(key='server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650))
+        response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('client_id', value=str(client_id), max_age=datetime.timedelta(days=3650), samesite='lax')
+        response.set_cookie('server_cookies', value=json.dumps(cookies), max_age=datetime.timedelta(days=3650), samesite='lax')
         result = dict()
         result['client_id'] = client_id
 
