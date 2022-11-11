@@ -106,6 +106,7 @@ from lingvodoc.schema.gql_lexicalentry import (
     CreateLexicalEntry,
     DeleteLexicalEntry,
     BulkDeleteLexicalEntry,
+    BulkUndeleteLexicalEntry,
     BulkCreateLexicalEntry,
     ConnectLexicalEntries,
     DeleteGroupingTags,
@@ -17771,6 +17772,7 @@ class MyMutations(graphene.ObjectType):
     create_lexicalentry = CreateLexicalEntry.Field()
     delete_lexicalentry = DeleteLexicalEntry.Field()
     bulk_delete_lexicalentry = BulkDeleteLexicalEntry.Field()
+    bulk_undelete_lexicalentry = BulkUndeleteLexicalEntry.Field()
     bulk_create_lexicalentry = BulkCreateLexicalEntry.Field()
     join_lexical_entry_group = ConnectLexicalEntries.Field()
     leave_lexical_entry_group = DeleteGroupingTags.Field()

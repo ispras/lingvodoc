@@ -4,6 +4,8 @@ import string
 import random
 import logging
 
+from sqlalchemy import tuple_
+
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CompositeIdHolder,
@@ -16,6 +18,7 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     client_id_check,
     del_object,
+    undel_object,
     acl_check_by_id,
     ResponseError,
     LingvodocID,
@@ -279,33 +282,96 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
     class Arguments:
         ids = graphene.List(LingvodocID, required=True)
 
-    lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, info, **args):
+
         ids = args.get('ids')
         task_id = str(uuid4())
+
         lexical_entries = CACHE.get(objects =
             {
                dbLexicalEntry : ids
             },
         DBSession=DBSession, keep_dims=True)
+
+        settings = info.context["request"].registry.settings
+        client_id = info.context.get('client_id')
+
         for dblexicalentry in lexical_entries:
             # client_id, object_id = lex_id
             # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
             if not dblexicalentry or dblexicalentry.marked_for_deletion:
                 raise ResponseError(message="Error: No such entry in the system")
-            info.context.acl_check('delete', 'lexical_entries_and_entities',
-                                   (dblexicalentry.parent_client_id, dblexicalentry.parent_object_id))
-            settings = info.context["request"].registry.settings
-            if 'desktop' in settings:
-                real_delete_lexical_entry(dblexicalentry, settings)
-            else:
-                del_object(dblexicalentry, "bulk_delete_lexicalentry",
-                           info.context.get('client_id'), task_id=task_id, counter=len(ids))
 
-        return DeleteLexicalEntry(triumph=True)
+            info.context.acl_check(
+                'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
+
+            if 'desktop' in settings:
+
+                real_delete_lexical_entry(
+                    dblexicalentry, settings)
+
+            else:
+
+                del_object(
+                    dblexicalentry,
+                    "bulk_delete_lexicalentry",
+                    client_id,
+                    task_id = task_id,
+                    counter = len(ids))
+
+        return BulkDeleteLexicalEntry(triumph=True)
+
+
+class BulkUndeleteLexicalEntry(graphene.Mutation):
+
+    class Arguments:
+        ids = graphene.List(LingvodocID, required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        ids = args.get('ids')
+        task_id = str(uuid4())
+
+        lexical_entries = (
+
+            DBSession
+
+                .query(dbLexicalEntry)
+
+                .filter(
+                    tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids))
+
+                .all())
+
+        settings = info.context["request"].registry.settings
+        client_id = info.context.get('client_id')
+
+        for dblexicalentry in lexical_entries:
+            # client_id, object_id = lex_id
+            # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+
+            if not dblexicalentry:
+                raise ResponseError(message = "Error: No such entry in the system")
+            if not dblexicalentry.marked_for_deletion:
+                raise ResponseError(message = f"Entry {dblexicalentry.id} is not deleted")
+
+            info.context.acl_check(
+                'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
+
+            undel_object(
+                dblexicalentry,
+                "bulk_undelete_lexicalentry",
+                client_id,
+                task_id = task_id,
+                counter = len(ids))
+
+        return BulkUndeleteLexicalEntry(triumph=True)
 
 
 def create_n_entries_in_persp(n, pid, client):
