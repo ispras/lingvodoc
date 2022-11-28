@@ -329,18 +329,32 @@ def process_paragraph_bs(
                     text_list.append(content.get_text())
                     continue
 
-                sub_class_list =  content.attrs['class']
+                sub_class_list = content.attrs['class']
 
-                if 'result' not in sub_class_list:
+                if ('result' not in sub_class_list and
+                    content.attrs.keys() != {'class', 'id'}):
                     
-                    print(f'sub_class_list: {sub_class_list}')
+                    log.debug(
+                        f'sub_class_list: {sub_class_list}'
+                        f'\ncontent.attrs.keys(): {content.attrs.keys()}')
+
                     raise NotImplementedError
 
-                sub_element_json = (
-                    json.loads(content.get_text()))
+                try:
 
-                ((approved_list if 'approved' in sub_class_list else other_list)
-                    .append(sub_element_json))
+                    sub_element_text = (
+                        content.get_text())
+
+                    sub_element_json = (
+                        json.loads(sub_element_text))
+
+                    ((approved_list if 'approved' in sub_class_list else other_list)
+                        .append(sub_element_json))
+
+                except:
+
+                    log.warning(
+                        f'\nsub_element_text:\n{repr(sub_element_text)}')
 
             # Saving gathered info.
 
