@@ -360,6 +360,7 @@ class UpdateParserResult(graphene.Mutation):
         element_id = graphene.String()
         content = graphene.String()
         reexecute = graphene.Boolean()
+        synchronous = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -370,6 +371,7 @@ class UpdateParserResult(graphene.Mutation):
         element_id = args.get('element_id')
         content_from_args = args.get('content')
         reexecute = args.get('reexecute')
+        synchronous = args.get('synchronous', False)
 
         request = info.context.request
 
@@ -408,18 +410,25 @@ class UpdateParserResult(graphene.Mutation):
                     raise ResponseError(message=msg)
 
             if reexecute:
+
                 cur_args = dict()
                 cur_args['parser_result_id'] = parser_result_id
                 cur_args['content'] = content
                 cur_args['parse_method'] = parser.method
-                client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
-                user_id = Client.get_user_by_client_id(client.id).id
-                task = TaskStatus(user_id, "Reparsing entity", "", 2)
-                cur_args["task_key"] = task.key
-                cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
-                cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
-                cur_args["apertium_path"] = apertium_path
-                async_reexecute_parser.delay(**cur_args)
+                cur_args['apertium_path'] = apertium_path
+
+                if synchronous:
+                    raise NotImplementedError
+
+                else:
+                    client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+                    user_id = Client.get_user_by_client_id(client.id).id
+                    task = TaskStatus(user_id, "Reparsing entity", "", 2)
+                    cur_args["task_key"] = task.key
+                    cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
+                    cur_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
+                    async_reexecute_parser.delay(**cur_args)
+
                 return UpdateParserResult(triumph=True)
 
             parser_result.content = parse_and_insert_element(content, element_id, parser.method, apertium_path)

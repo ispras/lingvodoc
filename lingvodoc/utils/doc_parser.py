@@ -337,6 +337,10 @@ def apertium_parser(dedoc_output, apertium_path, lang):
         s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-bak bak-morph >> " + morph_filename)
         s2 = s1
 
+    if lang == 'rus':
+        s1 = os.system("cat \"" + input_filename + "\" | apertium -d " + apertium_path + "/apertium-rus rus-morph >> " + morph_filename)
+        s2 = s1
+
     if s1 != 0 or s2 != 0:
         raise ValueError("An error occured during Apertium parser process running")
 
@@ -384,3 +388,7 @@ def apertium_bak_tat(dedoc_output, apertium_path):
 
 def apertium_bak(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'bak')
+
+def apertium_rus(dedoc_output, apertium_path):
+    return apertium_parser(dedoc_output, apertium_path, 'rus')
+

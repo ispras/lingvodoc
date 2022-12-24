@@ -27,6 +27,11 @@ PARSER_LIST=("apertium-kaz" "apertium-tat" "apertium-rus" "apertium-kaz-rus" "ap
 
 fi;
 
+# Bashkir should update from https://github.com/AigizK/apertium-bak.
+
+echo "unimplemented: bashkir from https://github.com/AigizK/apertium-bak" 
+exit 1
+
 for PARSER_NAME in "${PARSER_LIST[@]}"; do
 
   if ! [ -d "$1/$PARSER_NAME" ]; then
