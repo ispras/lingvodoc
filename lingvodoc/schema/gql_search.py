@@ -25,6 +25,7 @@ import shutil
 import time
 
 import graphene
+import pathvalidate
 import xlsxwriter
 
 from lingvodoc.schema.gql_holders import (
@@ -1733,15 +1734,22 @@ class AdvancedSearch(LingvodocObjectType):
             
             if xlsx_export:
 
-                query_str = '_'.join([
-                    search_string["search_string"]
-                    for search_block in search_strings
-                    for search_string in search_block])
+                query_str = (
 
-                xlsx_filename = ('Search_' + query_str)[:64] + '.xlsx'
+                    '_'.join([
+                        search_string["search_string"]
+                        for search_block in search_strings
+                        for search_string in search_block]))
 
-                xlsx_url = save_xlsx(
-                    info, xlsx_context, xlsx_filename)
+                xlsx_filename = (
+
+                    pathvalidate.sanitize_filename(
+                        'Search_' + query_str)[:64] + '.xlsx')
+
+                xlsx_url = (
+
+                    save_xlsx(
+                        info, xlsx_context, xlsx_filename))
 
                 # Saving resulting Excel workbook for debug purposes, if required.
 
