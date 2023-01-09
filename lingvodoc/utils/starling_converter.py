@@ -147,7 +147,11 @@ def csv_to_columns_starling(path, url):
 
     # hack #1
 
-    column_dict["NUMBER"] = [int(x) for x in column_dict["NUMBER"]] #list(range(1, len(column_dict["NUMBER"]) + 1))
+    column_dict['NUMBER'] = (
+
+        [int(x) for x in column_dict['NUMBER']] #list(range(1, len(column_dict["NUMBER"]) + 1))
+        if 'NUMBER' in column_dict else
+        list(range(1, len(lines))))
 
     return column_dict, True
 
