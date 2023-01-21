@@ -145,6 +145,8 @@ class ExecuteParser(graphene.Mutation):
         else:
             cur_args["apertium_path"] = ""
 
+        cur_args['storage'] = request.registry.settings['storage']
+
         async_execution = args.get("async_execution")
         if async_execution == None or async_execution == True:
             task = TaskStatus(user_id, "Parsing entity", "", 2)

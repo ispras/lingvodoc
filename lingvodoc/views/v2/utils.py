@@ -46,8 +46,7 @@ from pyramid.httpexceptions import (
 )
 from lingvodoc.exceptions import CommonException
 from sqlalchemy.exc import IntegrityError
-#from lingvodoc.views.v2.translations import translationgist_contents
-from lingvodoc.utils.creation import translationgist_contents
+
 
 def cache_clients():
     clients_to_users_dict = dict()
@@ -699,16 +698,4 @@ def as_storage_file(storage_config, url):
         return (
             urllib.request.urlopen(
                 urllib.parse.quote(url, safe = '/:')))
-
-
-def translation_service_search(searchstring):
-    translationatom = DBSession.query(TranslationAtom)\
-        .join(TranslationGist).\
-        filter(TranslationAtom.content == searchstring,
-               TranslationAtom.locale_id == 2,
-               TranslationGist.type == 'Service')\
-        .order_by(TranslationAtom.client_id)\
-        .first()
-    response = translationgist_contents(translationatom.parent)
-    return response
 
