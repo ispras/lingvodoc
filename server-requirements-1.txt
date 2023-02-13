@@ -52,7 +52,7 @@ passlib==1.6.5
 PasteDeploy==2.0.1
 pathvalidate==0.8.3
 promise==2.1
-psycopg2==2.8.6
+psycopg2==2.9.5
 pycparser==2.16
 pydub==0.16.5
 Pygments==2.1.3
@@ -89,11 +89,11 @@ sphinxcontrib-htmlhelp==1.0.2
 sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.2
 sphinxcontrib-serializinghtml==1.1.3
-SQLAlchemy==1.1.2
+SQLAlchemy==1.3.20
 tablib==0.13.0
 tgt==1.4.2
 tqdm==4.51.0
-transaction==1.6.1
+git+https://github.com/zopefoundation/transaction@fb9184c
 translationstring==1.3
 typepy==0.6.6
 typing==3.6.2
