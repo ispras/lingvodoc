@@ -5,7 +5,7 @@ import logging
 import re
 import time
 
-from graphql.language.ast import ObjectValue, ListValue, IntValue
+from graphql.language.ast import ObjectValueNode, ListValueNode, IntValueNode
 from graphql.language import ast
 
 from graphene.types import Scalar

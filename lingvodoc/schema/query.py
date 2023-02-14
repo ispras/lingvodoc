@@ -25,7 +25,7 @@ import zipfile
 
 import graphene
 import graphene.types
-from graphql.language.ast import BooleanValue, IntValue, ListValue
+from graphql.language.ast import BooleanValueNode, IntValueNode, ListValueNode
 
 import lingvodoc.utils as utils
 from lingvodoc.utils.deletion import real_delete_entity
@@ -320,7 +320,7 @@ from celery.utils.log import get_task_logger
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
-matplotlib.use('Agg', warn = False)
+matplotlib.use('Agg')
 
 from matplotlib.collections import LineCollection
 from matplotlib import pyplot

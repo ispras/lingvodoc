@@ -44,7 +44,7 @@ from celery.utils.log import get_task_logger
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
-matplotlib.use('Agg', warn = False)
+matplotlib.use('Agg')
 
 import matplotlib.pyplot as pyplot
 from mpl_toolkits.mplot3d import Axes3D

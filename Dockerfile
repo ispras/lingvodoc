@@ -11,7 +11,7 @@ RUN wget -O- https://packages.sil.org/keys/pso-keyring-2016.gpg > /etc/apt/trust
 	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
 	apt-key add -
 RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt-get update && apt install -y python3.11-dev python3.11-distutils python3-setuptools \
+RUN apt-get update && apt install -y python3.10-dev python3.10-distutils python3-setuptools \
     libssl-dev libffi-dev wget build-essential \
     xz-utils bzip2 tar unzip git \
     libpng16-16 libpng-dev libfreetype6 libfreetype-dev unzip \
@@ -20,9 +20,9 @@ RUN apt-get update && apt install -y python3.11-dev python3.11-distutils python3
     fonts-sil-gentiumplus-compact libfreetype6-dev libxft-dev \
     ffmpeg libxml2-dev libxslt-dev
 RUN \
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 && \
-    ln -sf $(which python3.11) $(which python3) && \
-    ln -sf $(which pip3.11) /usr/local/bin/pip3
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 && \
+    ln -sf $(which python3.10) $(which python3) && \
+    ln -sf $(which pip3.10) /usr/local/bin/pip3
 RUN \
   wget https://github.com/ispras/lingvodoc-ext-oslon/archive/master.zip -O /tmp/master.zip && \
   unzip /tmp/master.zip -d /tmp/ && \
