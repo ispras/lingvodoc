@@ -376,7 +376,6 @@ class BulkUndeleteLexicalEntry(graphene.Mutation):
 
 def create_n_entries_in_persp(n, pid, client):
     lexentries_list = list()
-    client = client
     for i in range(0, n):
         id = [client.id, None]
         perspective_id = pid
