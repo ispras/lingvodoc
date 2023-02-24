@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+import bisect
 import re
 import pympi
 
@@ -27,6 +29,9 @@ class Word:
         self.tier = tier
         self.time = time
 
+    def __repr__(self):
+        return f'<{repr(self.index)}, {repr(self.text)}, {repr(self.tier)}, {self.time}>'
+
     def strip(self, string):
         if type(string) is str:
             return hyphen_to_dash(string.strip())
@@ -37,12 +42,12 @@ class Word:
 
 class Elan:
     def __init__(self, eaf_path):
-        self.main_tier_name = None
 
         self.result = collections.OrderedDict()
         self.word_tier = {}
         self.tiers = []
-        self.tier_refs = collections.defaultdict(list)
+        self.top_tiers = []
+        self.tier_refs = collections.defaultdict(set)
         self.word = {}
         self.main_tier_elements = []
         self.noref_tiers = []
@@ -67,30 +72,117 @@ class Elan:
 
 
     def parse(self):
-        d = collections.defaultdict(dict)
+
+        # Choosing top-level text tier as first top-level tier referring to 'literary translation' and
+        # 'translation' tiers.
+
         for element in self.xml_obj:
             if element.tag == 'TIER':
                 tier_id = element.attrib['TIER_ID']
-                if self.main_tier_name is None:
-                    self.main_tier_name = tier_id
                 if 'PARENT_REF' in element.attrib:
                     tier_ref = element.attrib['PARENT_REF']
-                    self.tier_refs[tier_ref].append(tier_id)
+                    self.tier_refs[tier_ref].add(tier_id)
+                else:
+                    self.top_tiers.append(tier_id)
                 self.tiers.append(tier_id)
-                for elem1 in element:
-                    if elem1.tag == 'ANNOTATION':
-                        for elem2 in elem1:
-                            self.word_tier[elem2.attrib["ANNOTATION_ID"]] = tier_id
-                            if tier_id == "translation":
-                                self.main_tier_elements.append(elem2.attrib["ANNOTATION_ID"])
-                            self.word[elem2.attrib["ANNOTATION_ID"]] = [x for x in elem2][0].text
-                            if elem2.tag == 'REF_ANNOTATION':
-                                annot_ref = elem2.attrib['ANNOTATION_REF']
-                                if not annot_ref in self.result:
-                                    self.result[annot_ref] = []
-                                self.result[annot_ref].append(elem2.attrib["ANNOTATION_ID"])
 
-        return self.main_tier_name
+        self.top_level_tier = None
+
+        for tier_id in self.tier_refs:
+            if self.tier_refs[tier_id].issuperset(('literary translation', 'translation')):
+                self.top_level_tier = tier_id
+
+        if self.top_level_tier is None:
+            raise NotImplementedError
+
+        translation_list = None
+
+        def find_by_time_slot(time_from, time_to):
+
+            nonlocal translation_list
+
+            if translation_list is None:
+
+                translation_list = (
+
+                    sorted(
+
+                        [(self.eafob.timeslots[data[0]], 
+                            self.eafob.timeslots[data[1]],
+                            data[2],
+                            id)
+
+                            for id, data in self.eafob.tiers['translation'][0].items()],
+
+                        key = lambda item: item[0]))
+
+            index = (
+
+                bisect.bisect_left(
+                    translation_list,
+                    (time_from, time_to)))
+
+            while index < len(translation_list):
+
+                translation = translation_list[index]
+
+                if time_from >= translation[0] and time_to <= translation[1]:
+                    return translation[3]
+
+                elif time_from > translation[1]:
+                    break
+
+            return None
+
+        for element in self.xml_obj:
+
+            if element.tag != 'TIER':
+                continue
+
+            tier_id = element.attrib['TIER_ID']
+            tier_parent_ref = element.attrib.get('PARENT_REF')
+
+            for elem1 in element:
+
+                if elem1.tag != 'ANNOTATION':
+                    continue
+
+                for elem2 in elem1:
+
+                    annotation_id = elem2.attrib["ANNOTATION_ID"]
+
+                    self.word_tier[annotation_id] = tier_id
+                    if tier_id == "translation":
+                        self.main_tier_elements.append(annotation_id)
+                    self.word[annotation_id] = [x for x in elem2][0].text
+
+                    if elem2.tag == 'REF_ANNOTATION':
+                        annot_ref = elem2.attrib['ANNOTATION_REF']
+                        if not annot_ref in self.result:
+                            self.result[annot_ref] = []
+                        self.result[annot_ref].append(annotation_id)
+
+                    # If we have an improperly linked 'transcription' or 'word' sub-tier of 'translation'
+                    # tier, wuth 'Included In' type instead of 'Symbolic Association', we still try to get
+                    # its contents.
+
+                    elif (
+                        elem2.tag == 'ALIGNABLE_ANNOTATION' and
+                        (tier_id.lower() == 'transcription' or tier_id.lower() == 'word') and
+                        tier_parent_ref.lower() == 'translation'):
+
+                        time_from = self.eafob.timeslots[elem2.attrib['TIME_SLOT_REF1']]
+                        time_to = self.eafob.timeslots[elem2.attrib['TIME_SLOT_REF2']]
+
+                        annot_ref = (
+                            find_by_time_slot(time_from, time_to))
+
+                        if annot_ref:
+
+                            if not annot_ref in self.result:
+                                self.result[annot_ref] = []
+
+                            self.result[annot_ref].append(annotation_id)
 
     def get_word_text(self, word):
         return list(word)[0].text
@@ -113,7 +205,13 @@ class Elan:
             #else: 1st paradigm has 1 column
 
         perspectives = []
-        ans = sorted(self.eafob.get_annotation_data_for_tier("text"), key=lambda time_tup: time_tup[0]) # text
+
+        ans = (
+                
+            sorted(
+                self.eafob.get_annotation_data_for_tier(self.top_level_tier),
+                key = lambda time_tup: time_tup[0])) # text
+
         for text_an in ans:
             next = []
             #for cur_tier in ["text", "translation", "literary translation"]:
@@ -189,19 +287,23 @@ class Elan:
                     new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
                     if new_list:
                         perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
+
             if perspectives2:
                 next.append(perspectives2)
 
-            cur_tier = "text"
-            next.append([Word(i[2] , self.word[i[2]], cur_tier, (i[0], i[1]))
-                         for i in self.get_annotation_data_between_times("text", text_an[0], text_an[1])])
+            next.append([
+                Word(i[2], self.word[i[2]], 'text', (i[0], i[1]))
+                for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1])])
+
             cur_tier = "literary translation"
-            for i in self.get_annotation_data_between_times("text", text_an[0], text_an[1]):
+            for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1]):
                 if i[2] in self.result:
                     for j in self.result[i[2]]:
-                        next.append([Word(j , self.word[j], cur_tier, (i[0], i[1])) ]) #time from text
+                        if self.word_tier[j] == cur_tier:
+                            next.append([Word(j, self.word[j], cur_tier, (i[0], i[1]))]) #time from text
 
             perspectives.append(next)
+
         to_fix = []
         #  Elements order fix
         for i, annotations_list in enumerate(perspectives):
@@ -217,16 +319,14 @@ class Elan:
 
 
 class ElanCheck:
+
     def __init__(self, eaf_path):
-        self.tier_refs = collections.defaultdict(list)
+        self.top_tier_list = []
+        self.tier_refs = collections.defaultdict(set)
         self.reader = ElementTree.parse(eaf_path)
         self.xml_obj = self.reader.getroot()
-        self.edges = set()
-        self.num_words = {}
-        self.word_number = 1
+        self.edge_dict = collections.defaultdict(set)
         self.lingv_type = {}
-
-
 
     def parse(self):
         for element in self.xml_obj:
@@ -234,11 +334,12 @@ class ElanCheck:
                 tier_id = element.attrib['TIER_ID']
                 if 'PARENT_REF' in element.attrib:
                     tier_ref = element.attrib['PARENT_REF']
-                    self.edges.add((self.get_word_number(tier_ref),
-                                    self.get_word_number(tier_id),
-                                    element.attrib["LINGUISTIC_TYPE_REF"],
-                                    tier_id))
-                    self.tier_refs[tier_ref].append(tier_id)
+                    self.edge_dict[tier_ref].add((
+                        tier_id,
+                        element.attrib["LINGUISTIC_TYPE_REF"]))
+                    self.tier_refs[tier_ref].add(tier_id)
+                else:
+                    self.top_tier_list.append(tier_id)
             elif element.tag == "LINGUISTIC_TYPE":
                 at = element.attrib
                 if "CONSTRAINTS" in at:
@@ -247,30 +348,24 @@ class ElanCheck:
                     is_time_alignable = at["TIME_ALIGNABLE"]
                     self.lingv_type[id] = (ling_type, is_time_alignable)
 
-
-    def get_word_number(self, word):
-        if not word in self.num_words:
-            number = self.word_number
-            self.num_words[word] = number
-            self.word_number += 1
-        else:
-            number = self.num_words[word]
-        return number
-
     def check(self):
-        # graph_structure = {(1, 2, ('Symbolic_Association', 'false'), 'literary translation'),
-        #                     (1, 3, ('Included_In', 'true'), 'translation'),
-        #                     (3, 5, ('Symbolic_Association', 'false'), 'word'),
-        #                     (3, 4, ('Symbolic_Association', 'false'), 'transcription')
-        # }
-        # new_graph = set([(x[0], x[1], self.lingv_type[x[2]], x[3]) for x in self.edges])
+        """
+        Accepting EAF if we have a top-level tier with required sub-tiers.
+        """
 
-        graph_structure = {(('Symbolic_Association', 'false'), 'literary translation'),
-                            (('Included_In', 'true'), 'translation'),
-                            (('Symbolic_Association', 'false'), 'word'),
-                            (('Symbolic_Association', 'false'), 'transcription')
-        }
-        new_graph = set([( self.lingv_type[x[2]], x[3]) for x in self.edges])
-        if new_graph != graph_structure:
+        # We got to have a translation tier with two dependent transcription and word tiers.
+
+        if ('translation' not in self.tier_refs or
+            not self.tier_refs['translation'].issuperset(('transcription', 'word'))):
+
             return False
-        return True
+
+        # And then we have to have a top level tier referencing two translation tiers.
+
+        for tier_id in self.top_tier_list:
+
+            if self.tier_refs[tier_id].issuperset(('literary translation', 'translation')):
+                return True
+
+        return False
+

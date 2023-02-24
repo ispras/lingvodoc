@@ -240,6 +240,7 @@ class State(object):
         row_str,
         cell_list,
         row_index,
+        no_parsing_flag,
         __debug_flag__ = False):
         """
         Processing another data string, splitting into a state when it's a word string and another state
@@ -261,6 +262,9 @@ class State(object):
             copy.total_value = self.total_value + self.d1[-1]
 
             yield copy
+
+            if no_parsing_flag:
+                return
 
         # Second, assuming that this data string is a word string.
 
@@ -350,6 +354,7 @@ def beam_search_step(
     cell_list,
     row_index,
     beam_width,
+    no_parsing_flag,
     __debug_beam_flag__ = False):
     """
     Another step of alignment beam search.
@@ -366,8 +371,13 @@ def beam_search_step(
 
     for state in state_list:
 
-        for state_after in state.process_row(
-            cell_str, cell_list, row_index):
+        for state_after in (
+
+            state.process_row(
+                cell_str,
+                cell_list,
+                row_index,
+                no_parsing_flag)):
 
             index = state_after.row_index
 
@@ -413,6 +423,8 @@ def beam_search_step(
 def parse_table(
     row_list,
     limit = None,
+    no_header_flag = False,
+    no_parsing_flag = False,
     __debug_beam_flag__ = False):
     """
     Tries to parse snippet data represented as a table.
@@ -433,7 +445,11 @@ def parse_table(
 
     # Going through snippet data.
 
-    for row_index, cell_list in enumerate(row_list[1:], 1):
+    row_sequence = (
+        enumerate(row_list) if no_header_flag else
+        enumerate(row_list[1:], 1))
+
+    for row_index, cell_list in row_sequence:
 
         if limit and row_index > limit:
             break
@@ -448,12 +464,14 @@ def parse_table(
         # Updating alignment search on another row.
 
         state_list = (
+
             beam_search_step(
                 state_list,
                 cell_str,
                 cell_list,
                 row_index,
                 beam_width,
+                no_parsing_flag,
                 __debug_beam_flag__))
 
     # Returning final parsing search state.
@@ -567,115 +585,132 @@ def parse_by_paragraphs(
     return state_list
 
 
-def main_import(args):
+class Docx2EafError(Exception):
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+def docx2eaf(
+    docx_path,
+    eaf_file_path,
+    separate_by_paragraphs_flag = False,
+    modify_docx_flag = False,
+    all_tables_flag = False,
+    no_header_flag = False,
+    no_parsing_flag = False,
+    check_file_path = None,
+    check_docx_file_path = None,
+    limit = None,
+    __debug_flag__ = False,
+    __debug_beam_flag__ = False,
+    __debug_eaf_flag__ = False):
     """
-    Test import of 5-tier data from a Docx file.
+    Converts .docx file of the right structure to a 5-tier .eaf corpus file.
     """
-
-    opt_list, arg_list = (
-        getopt.gnu_getopt(args, '', [
-            'check-docx-file=',
-            'check-file=',
-            'debug',
-            'debug-beam',
-            'debug-eaf',
-            'eaf-file=',
-            'limit=',
-            'modify-docx-file',
-            'no-db',
-            'separate-by-paragraphs']))
-
-    opt_dict = dict(opt_list)
-
-    # Parsing command-line options.
-
-    docx_path = arg_list[0]
-
-    check_file_path = opt_dict.get('--check-file')
-    check_docx_file_path = opt_dict.get('--check-docx-file')
-    eaf_file_path = opt_dict.get('--eaf-file')
-
-    limit = (
-        ast.literal_eval(opt_dict['--limit'])
-            if '--limit' in opt_dict else None)
-
-    modify_docx_flag = '--modify-docx-file' in opt_dict
-    separate_by_paragraphs_flag = '--separate-by-paragraphs' in opt_dict
-
-    __debug_flag__ = '--debug' in opt_dict
-    __debug_beam_flag__ = '--debug-beam' in opt_dict
-    __debug_eaf_flag__ = '--debug-eaf' in opt_dict
-
-    # Processing specified Docx file.
 
     log.debug(
         '\ndocx_path: {0}'.format(docx_path))
 
-    document = docx.Document(docx_path)
+    try:
+        document = docx.Document(docx_path)
+
+    except docx.opc.exceptions.PackageNotFoundError:
+        raise Docx2EafError('input file is not a .docx format file')
 
     if len(document.tables) <= 0:
-        raise NotImplementedError
+        raise Docx2EafError('.docx file does not have any tables')
 
-    # Accessing info of the first table.
+    # Accessing info of the first table, or all tables, depending on the options.
     #
     # Counting only unique cells because apparently some .docx documents can have repeating cells in their
     # structure.
 
-    table = document.tables[0]
+    row_list = []
 
-    column_count = len(set(table.rows[0].cells))
-    row_count = len(set(table.columns[0].cells))
+    table_list = (
+            
+        document.tables if all_tables_flag else
+        document.tables[:1])
 
-    table_cell_list = list(table._cells)
+    for table_index, table in enumerate(table_list):
 
-    source_cell_list = []
-    source_cell_set = set()
-    
-    for cell in table_cell_list:
+        column_count = len(set(table.rows[0].cells))
+        row_count = len(set(table.columns[0].cells))
 
-        if cell not in source_cell_set:
+        table_cell_list = list(table._cells)
 
-            source_cell_list.append(cell)
-            source_cell_set.add(cell)
+        source_cell_list = []
+        source_cell_set = set()
+        
+        for cell in table_cell_list:
 
-    if len(source_cell_list) != column_count * row_count:
+            if cell not in source_cell_set:
 
-        log.error(
-            '\nTable rows and / or columns are uneven, '
-            '{0} rows, {1} columns, {2} != {0} * {1} cells.'.format(
-            row_count, column_count, len(source_cell_list)))
+                source_cell_list.append(cell)
+                source_cell_set.add(cell)
 
-        raise NotImplementedError
+        # Checking for non-uniform rows / columns.
 
-    row_list = [
+        if len(source_cell_list) != column_count * row_count:
 
-        [cell.text
-            for cell in source_cell_list[
-                i * column_count : (i + 1) * column_count]]
+            error_str = (
 
-            for i in range(row_count)]
+                '\nTable ({0}): rows and / or columns are uneven, '
+                '{1} rows, {2} columns, {3} != {1} * {2} cells.'.format(
+                    table_index,
+                    row_count,
+                    column_count,
+                    len(source_cell_list)))
+
+            log.error(error_str)
+
+            raise Docx2EafError(error_str)
+
+        row_list.extend(
+
+            [cell.text
+                for cell in source_cell_list[
+                    i * column_count : (i + 1) * column_count]]
+
+                for i in range(row_count))
+
+        log.debug(
+            '\ntable ({}): {} columns, {} rows, {} cells'.format(
+                table_index,
+                column_count,
+                row_count,
+                len(source_cell_list)))
 
     # Processing this info.
 
-    header_list = row_list[0]
+    if not no_header_flag:
 
-    log.debug(
-        '\nheader: {0}'.format(header_list))
+        header_list = row_list[0]
+
+        log.debug(
+            '\nheader: {0}'.format(header_list))
 
     if separate_by_paragraphs_flag:
 
-        state_list = parse_by_paragraphs(
-            row_list,
-            limit,
-            __debug_flag__,
-            __debug_beam_flag__)
+        state_list = (
+
+            parse_by_paragraphs(
+                row_list,
+                limit,
+                __debug_flag__,
+                __debug_beam_flag__))
 
     else:
 
-        state_list = parse_table(
-            row_list,
-            limit,
-            __debug_beam_flag__)
+        state_list = (
+
+            parse_table(
+                row_list,
+                limit,
+                no_header_flag,
+                no_parsing_flag,
+                __debug_beam_flag__))
 
     # Showing final alignment search state, if required.
 
@@ -694,9 +729,15 @@ def main_import(args):
 
     # Getting all parsed snippets, if we need them.
 
-    if (check_file_path is not None or
+    if (eaf_file_path is not None or
+        check_file_path is not None or
         check_docx_file_path is not None or
         modify_docx_flag):
+
+        if not state_list:
+
+            log.debug('\nno data')
+            return
 
         best_state = state_list[0]
 
@@ -752,10 +793,9 @@ def main_import(args):
 
     # Saving parsing alignment as Docx file, if required.
 
-    if check_docx_file_path is not None:
-
-        if separate_by_paragraphs_flag:
-            raise NotImplementedError
+    if (check_docx_file_path is not None and
+        not separate_by_paragraphs_flag and
+        not all_tables_flag):
 
         check_docx = docx.Document()
 
@@ -816,8 +856,8 @@ def main_import(args):
         eaf.add_tier('other text', 'symbolic_association', 'text')
         eaf.add_tier('literary translation', 'symbolic_association', 'text')
         eaf.add_tier('translation', 'word_translation_included_in', 'text')
+        eaf.add_tier('transcription', 'symbolic_association', 'translation')
         eaf.add_tier('word', 'symbolic_association', 'translation')
-        eaf.add_tier('other word', 'symbolic_association', 'translation')
 
         eaf.remove_tier('default')
 
@@ -836,7 +876,7 @@ def main_import(args):
 
         # Compiling annotation data.
 
-        step = 50
+        step = 75
         position = step
 
         for snippet_value_list, snippet_value_index in snippet_list:
@@ -876,7 +916,10 @@ def main_import(args):
                 word, word_other, translation = text_list
 
                 translation_duration = (
-                    len(word or translation or word_other) * translation_step)
+                        
+                    round(
+                        max(len(word or translation or word_other), 1) *
+                        translation_step))
 
                 eaf.add_annotation(
                     'translation',
@@ -885,10 +928,10 @@ def main_import(args):
                     translation)
 
                 eaf.add_ref_annotation(
-                    'word', 'translation', translation_position, word)
+                    'transcription', 'translation', translation_position, word_other)
 
                 eaf.add_ref_annotation(
-                    'other word', 'translation', translation_position, word_other)
+                    'word', 'translation', translation_position, word)
 
                 translation_position += (
                     translation_duration + translation_step)
@@ -906,6 +949,8 @@ def main_import(args):
                     repr(name),
                     eaf.get_annotation_data_for_tier(name)[:4])
                 for name in eaf.get_tier_names()))
+
+        eaf.header['TIME_UNITS'] = 'milliseconds'
 
         eaf.to_file(eaf_file_path)
 
@@ -1043,6 +1088,70 @@ def main_import(args):
             # Saving Docx file updates.
 
             document.save(docx_path)
+
+
+def main_import(args):
+    """
+    Test import of 5-tier data from a Docx file.
+    """
+
+    opt_list, arg_list = (
+        getopt.gnu_getopt(args, '', [
+            'all-tables',
+            'check-docx-file=',
+            'check-file=',
+            'debug',
+            'debug-beam',
+            'debug-eaf',
+            'eaf-file=',
+            'limit=',
+            'modify-docx-file',
+            'no-db',
+            'no-header',
+            'no-parsing',
+            'separate-by-paragraphs']))
+
+    opt_dict = dict(opt_list)
+
+    # Parsing command-line options.
+
+    docx_path = arg_list[0]
+
+    check_file_path = opt_dict.get('--check-file')
+    check_docx_file_path = opt_dict.get('--check-docx-file')
+    eaf_file_path = opt_dict.get('--eaf-file')
+
+    limit = (
+        ast.literal_eval(opt_dict['--limit'])
+            if '--limit' in opt_dict else None)
+
+    modify_docx_flag = '--modify-docx-file' in opt_dict
+    separate_by_paragraphs_flag = '--separate-by-paragraphs' in opt_dict
+
+    all_tables_flag = '--all-tables' in opt_dict
+    no_header_flag = '--no-header' in opt_dict
+    no_parsing_flag = '--no-parsing' in opt_dict
+
+    __debug_flag__ = '--debug' in opt_dict
+    __debug_beam_flag__ = '--debug-beam' in opt_dict
+    __debug_eaf_flag__ = '--debug-eaf' in opt_dict
+
+    # Processing specified Docx file.
+
+    docx2eaf(
+        docx_path,
+        eaf_file_path,
+        separate_by_paragraphs_flag,
+        modify_docx_flag,
+        all_tables_flag,
+        no_header_flag,
+        no_parsing_flag,
+        check_file_path,
+        check_docx_file_path,
+        limit,
+        __debug_flag__,
+        __debug_beam_flag__,
+        __debug_eaf_flag__)
 
 
 def main_eaf(args):
@@ -1188,8 +1297,11 @@ if __name__ == '__main__':
         log_handler = logging.StreamHandler(sys.stdout)
         log_handler.setLevel(logging.DEBUG)
 
-        log_formatter = logging.Formatter(
-            '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s')
+        log_formatter = (
+                
+            logging.Formatter(
+                '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] '
+                '%(pathname)s:%(lineno)d: %(message)s'))
 
         log_handler.setFormatter(log_formatter)
         log_root.addHandler(log_handler)

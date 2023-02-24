@@ -8,9 +8,11 @@ import string
 import time
 import logging
 import shutil
+import tempfile
 import transaction
 import traceback
 import re
+import urllib
 from collections import defaultdict
 from pathvalidate import sanitize_filename
 from sqlalchemy import create_engine
@@ -40,6 +42,7 @@ from lingvodoc.models import (
 )
 from lingvodoc.utils.search import get_id_to_field_dict
 
+from lingvodoc.cache.caching import CACHE
 
 def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
     return DBSession.query(LexicalEntry) \
@@ -93,9 +96,14 @@ def create_group_entity(request, client, user):  # tested
         if not field:
             return {'error': str("No such field in the system")}
 
-        for par in req['connections']:
-            parent = DBSession.query(LexicalEntry).\
-                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+        parents = CACHE.get(objects=
+            {
+                LexicalEntry : ((par['client_id'], par['object_id']) for par in req['connections'])
+            },
+        DBSession=DBSession)
+        for parent in parents:
+            # parent = DBSession.query(LexicalEntry).\
+            #     filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             if not parent:
                 return {'error': str("No such lexical entry in the system")}
             par_tags = find_all_tags(parent, field_client_id, field_object_id)
@@ -104,13 +112,14 @@ def create_group_entity(request, client, user):  # tested
                     tags.append(tag)
         if not tags:
             n = 10  # better read from settings
-            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                         for c in range(n))
+            tag = (
+                time.asctime(time.gmtime()) + ''.join(
+                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
             tags.append(tag)
         lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
-        for par in req['connections']:
-            parent = DBSession.query(LexicalEntry).\
-                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+        for parent in parents:
+            # parent = DBSession.query(LexicalEntry).\
+            #     filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 
@@ -226,8 +235,13 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids, po
 
 def update_perspective_fields(req, perspective_client_id, perspective_object_id, client):
     response = dict()
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
-                                                                   object_id=perspective_object_id).first()
+    # perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
+    #                                                                object_id=perspective_object_id).first()
+    perspective = CACHE.get(objects=
+        {
+            DictionaryPerspective : ((perspective_client_id, perspective_object_id), )
+        },
+    DBSession=DBSession)
     client = DBSession.query(Client).filter_by(id=client.id).first() #variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -302,7 +316,12 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content= None, filename=None,
                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):
-    parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
+    # parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
+    parent = CACHE.get(objects =
+        {
+            LexicalEntry : ((le_client_id, le_object_id), )
+        },
+    DBSession=DBSession)
     if not parent:
         return {'error': str("No such lexical entry in the system")}
     upper_level = None
@@ -315,8 +334,13 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         Field.client_id == field_client_id, Field.object_id == field_object_id).first()
     data_type = tr_atom.content.lower()
     if up_lvl:
-        upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
-                                                              object_id=up_lvl[1]).first()
+        # upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
+        #                                                       object_id=up_lvl[1]).first()
+        upper_level = CACHE.get(objects=
+            {
+                Entity : (up_lvl, )
+            },
+        DBSession=DBSession)
     if additional_metadata is not None:
         entity = Entity(client_id=client.id,
                         field_client_id=field_client_id,
@@ -381,8 +405,9 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     else:
         entity.content = content
     entity.publishingentity.accepted = True
-    DBSession.add(entity)
-    DBSession.flush()
+    CACHE.set(objects = [entity, ], DBSession=DBSession)
+    # DBSession.add(entity)
+    # DBSession.flush()
     return (entity.client_id, entity.object_id)
 
 def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes,
@@ -415,7 +440,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             sound_metadata.update({"blob_description": blob_description, "original_filename": common_name})
         if not audio or not markup:
             continue
-        sound_ids.add(word_id)
+        sound_ids.add((word_id, blob_id))
         audio_hash = hashlib.sha224(audio).hexdigest()
         markup_hash = hashlib.sha224(markup).hexdigest()
         if audio_hash not in audio_hashes:
@@ -456,7 +481,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
                 else:
                     filename = 'noname.TextGrid'
                 markup_hashes.add(markup_hash)
-    
+
                 if not markup_update_flag:
                     le_id = ids_map[int(word_id)]
                 else:
@@ -503,9 +528,9 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
         sound_metadata = {}
         if blob_description is not None:
             sound_metadata.update({"blob_description": blob_description, "original_filename": common_name})
-        if word_id in sound_ids:
+        if (word_id, blob_id) in sound_ids:
             continue
-        sound_ids.add(word_id)
+        sound_ids.add((word_id, blob_id))
         audio_hash = hashlib.sha224(audio).hexdigest()
         if audio_hash not in audio_hashes:
             if common_name:
@@ -564,7 +589,8 @@ def translation_service_search_all(searchstring):
 
 
 def check_perspective_perm(user_id, perspective_client_id, perspective_object_id):
-    #user_id = Client.get_user_by_client_id(client_id).id
+    if user_id == 1:
+        return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
     user_create = DBSession.query(user_to_group_association, Group).filter(and_(
@@ -577,7 +603,8 @@ def check_perspective_perm(user_id, perspective_client_id, perspective_object_id
 
 
 def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
-    #user_id = Client.get_user_by_client_id(client_id).id
+    if user_id == 1:
+        return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'perspective', action = 'create').first()
     user_create = DBSession.query(user_to_group_association, Group).filter(and_(
@@ -588,8 +615,21 @@ def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
         Group.subject_object_id == dictionary_object_id)).limit(1).count() > 0
     return user_create
 
-def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id, language_client_id, language_object_id, client_id, gist_client_id, gist_object_id, storage,
-                   locale_id, task_status):
+def convert_db_new(
+    dictionary_client_id,
+    dictionary_object_id,
+    blob_client_id,
+    blob_object_id,
+    language_client_id,
+    language_object_id,
+    client_id,
+    gist_client_id,
+    gist_object_id,
+    license,
+    storage,
+    locale_id,
+    task_status):
+
     log = logging.getLogger(__name__)
     #from lingvodoc.cache.caching import CACHE
     task_status.set(1, 1, "Preparing")
@@ -603,7 +643,29 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         log.debug("client_id: %s" % client_id)
         log.debug("Starting convert_one")
         log.debug("Creating session")
-        sqconn = sqlite3.connect(filename)
+        log.debug('\nfilename: {}'.format(filename))
+
+        # Trying to open Sqlite3 DB file.
+
+        try:
+            sqconn = sqlite3.connect(filename)
+
+        # Failed, maybe we can download it instead?
+
+        except sqlite3.OperationalError:
+
+            with tempfile.NamedTemporaryFile() as temporary_file:
+
+                sqlite3_url = (
+                    urllib.parse.quote(blob.content, safe = '/:'))
+
+                with urllib.request.urlopen(sqlite3_url) as sqlite3_stream:
+                    shutil.copyfileobj(sqlite3_stream, temporary_file)
+
+                temporary_file.flush()
+
+                sqconn = sqlite3.connect(temporary_file.name)
+
         log.debug("Connected to sqlite3 database")
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
@@ -675,6 +737,7 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                                     translation_gist_object_id=gist_object_id
                                           )
                                     #additional_metadata=additional_metadata)
+
             DBSession.add(dictionary)
             DBSession.flush()
 
@@ -708,8 +771,13 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         authors_list = sorted(authors_set)
         if authors_list:
             perspective_metadata = {"authors": authors_list}
-        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
-                                                       object_id=dictionary_object_id).first()
+        # parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id,
+        #                                                object_id=dictionary_object_id).first()
+        parent = CACHE.get(objects=
+            {
+                Dictionary : ((dictionary_client_id, dictionary_object_id), )
+            },
+        DBSession=DBSession)
 
         if not parent:
             return {'error': str("No such dictionary in the system")}
@@ -734,6 +802,12 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
                             parent.additional_metadata["authors"] = new_authors_list
         else:
             parent.additional_metadata = perspective_metadata
+
+        if license:
+
+            parent.update_additional_metadata(
+                {'license': license or 'proprietary'})
+
         flag_modified(parent, 'additional_metadata')
         if not update_flag:
             """
@@ -1440,9 +1514,24 @@ def convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, b
         task_status.set(10, 100, "Finished", "")
         return {}
 
-def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
-                language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
-                sqlalchemy_url, storage, locale_id, task_key, cache_kwargs, synchronous = False):
+def convert_all(
+    dictionary_client_id,
+    dictionary_object_id,
+    blob_client_id,
+    blob_object_id,
+    language_client_id,
+    language_object_id,
+    client_id,
+    gist_client_id,
+    gist_object_id,
+    license,
+    sqlalchemy_url,
+    storage,
+    locale_id,
+    task_key,
+    cache_kwargs,
+    synchronous = False):
+
     log = logging.getLogger(__name__)
     #time.sleep(3)
     #from lingvodoc.cache.caching import CACHE
@@ -1450,7 +1539,8 @@ def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob
     if not synchronous:
         from lingvodoc.cache.caching import initialize_cache
         initialize_cache(cache_kwargs)
-
+        global CACHE
+        from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
     status = None
 
@@ -1460,9 +1550,23 @@ def convert_all(dictionary_client_id, dictionary_object_id, blob_client_id, blob
             engine = create_engine(sqlalchemy_url)
             DBSession.configure(bind=engine)
 
-        status = convert_db_new(dictionary_client_id, dictionary_object_id, blob_client_id, blob_object_id,
-                                language_client_id, language_object_id, client_id, gist_client_id, gist_object_id,
-                                storage, locale_id, task_status)
+        status = (
+
+            convert_db_new(
+                dictionary_client_id,
+                dictionary_object_id,
+                blob_client_id,
+                blob_object_id,
+                language_client_id,
+                language_object_id,
+                client_id,
+                gist_client_id,
+                gist_object_id,
+                license,
+                storage,
+                locale_id,
+                task_status))
+
     except Exception as err:
         task_status.set(None, -1, "Conversion failed: %s" % str(err))
 

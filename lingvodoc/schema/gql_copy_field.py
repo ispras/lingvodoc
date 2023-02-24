@@ -1,13 +1,18 @@
+import base64
+import errno
+import hashlib
+import os
+import os.path
+from pathvalidate import sanitize_filename
+import shutil
 import urllib
 
 import graphene
-from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.cache.caching import TaskStatus, CACHE
 from sqlalchemy import and_, create_engine
 from sqlalchemy.orm import aliased
 
 from lingvodoc.queue.celery import celery
-from lingvodoc.schema.gql_dictionaryperspective import DictionaryPerspective
-from lingvodoc.schema.gql_field import Field
 from lingvodoc.utils.creation import create_entity, create_lexicalentry
 from lingvodoc.utils.verification import check_lingvodoc_id
 
@@ -21,8 +26,6 @@ from lingvodoc.models import (
 )
 from lingvodoc.schema.gql_holders import LingvodocID, ResponseError
 
-from lingvodoc.utils.corpus_converter import create_entity as corpus_create_entity
-
 def create_n_entries_in_persp(n, pid, client):
     lexentries_list = list()
     client = client
@@ -31,19 +34,142 @@ def create_n_entries_in_persp(n, pid, client):
         perspective_id = pid
         dblexentry = create_lexicalentry(id, perspective_id, True)
         lexentries_list.append(dblexentry)
-    DBSession.bulk_save_objects(lexentries_list)
-    DBSession.flush()
+    # DBSession.bulk_save_objects(lexentries_list)
+    CACHE.set(objects = lexentries_list, DBSession=DBSession)
+    # DBSession.flush()
     result = list()
     for lexentry in lexentries_list:
         result.append(lexentry)
     return result
 
-def copy_sound_or_markup_entity(entity, dest_fid, client, self_client_id=None, self_object_id=None, parent_client_id=None, parent_object_id=None):
+def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
+    filename = sanitize_filename(filename)
+    storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
+    if create_dir:
+        os.makedirs(storage_dir, exist_ok=True)
+    storage_path = os.path.join(storage_dir, filename)
+    return storage_path, filename
 
-    storage = dict()
-    storage['path'] = "/home/andriy/Desktop/objects/"
-    storage['prefix'] = "http://localhost:6543/"
-    storage['static_route'] = "objects/"
+def create_object(content, obj, data_type, filename, folder_name, storage):
+
+    storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
+    directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
+    try:
+        os.makedirs(directory)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    with open(storage_path, 'wb+') as f:
+        f.write(content)
+
+    real_location = storage_path
+
+    url = "".join((storage["prefix"],
+                  storage["static_route"],
+                  obj.__tablename__,
+                  '/',
+                  folder_name,
+                  '/',
+                  str(obj.client_id), '/',
+                  str(obj.object_id), '/',
+                  filename))
+    return real_location, url
+
+def corpus_create_entity(
+    le_client_id,
+    le_object_id,
+    field_client_id,
+    field_object_id,
+    data_type,
+    client_id,
+    content = None,
+    filename = None,
+    self_client_id = None,
+    self_object_id = None,
+    link_client_id = None,
+    link_object_id = None,
+    folder_name = None,
+    storage = None):
+
+    entity = dbEntity(client_id=client_id,
+                    field_client_id=field_client_id,
+                    field_object_id=field_object_id,
+                    parent_client_id=le_client_id,
+                    parent_object_id=le_object_id)
+
+    if self_client_id and self_object_id:
+        entity.self_client_id = self_client_id
+        entity.self_object_id = self_object_id
+
+    hash = None
+    real_location = None
+    url = None
+    if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+        ##entity.data_type = data_type
+        real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
+        entity.content = url
+        old_meta = entity.additional_metadata
+        need_hash = True
+        if old_meta:
+            new_meta = old_meta #json.loads(old_meta)
+            if new_meta.get('hash'):
+                need_hash = False
+        if need_hash:
+            hash = hashlib.sha224(content).hexdigest()
+
+            hash_dict = {'hash': hash}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(hash_dict)
+            else:
+                new_meta = hash_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+        old_meta = entity.additional_metadata
+        if data_type == "markup":
+            data_type_dict = {"data_type": "praat markup"}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(data_type_dict)
+            else:
+                new_meta = data_type_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+        if data_type == "sound":
+            data_type_dict = {"data_type": "sound"}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(data_type_dict)
+            else:
+                new_meta = data_type_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+    elif data_type == 'link':
+        try:
+            entity.link_client_id = link_client_id
+            entity.link_object_id = link_object_id
+        except (KeyError, TypeError):
+            return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
+    else:
+        entity.content = content
+    entity.publishingentity.accepted = True
+
+    # DBSession.add(entity)
+    CACHE.set(objects = [entity, ], DBSession=DBSession)
+
+    # means that the function was called from CopyField and so need to be sure that sound has been copied before copying markups
+    if byte_content:
+        DBSession.flush()
+    return (entity.client_id, entity.object_id)
+
+def copy_sound_or_markup_entity(
+    entity,
+    dest_fid,
+    ftype,
+    client,
+    self_client_id=None,
+    self_object_id=None,
+    parent_client_id=None,
+    parent_object_id=None):
+
+    storage = info.context.request.registry.settings["storage"]
 
     # filename = "copy_" + sound.content[sound.content.rfind('/')+1:]
     filename = entity.content[entity.content.rfind('/') + 1:]
@@ -55,15 +181,22 @@ def copy_sound_or_markup_entity(entity, dest_fid, client, self_client_id=None, s
 
     response = urllib.request.urlopen(url)
     content = response.read()
-    outfile = open("out.wav", "wb")
-    outfile.write(content)
 
-    created_entity_ids = corpus_create_entity(parent_client_id, parent_object_id, dest_fid[0], dest_fid[1],
-                                            entity.additional_metadata, client,
-                                            content=content, filename=filename,
-                                            folder_name="graphql_files", locale_id=entity.locale_id,
-                                            storage=storage, byte_content=True,
-                                            self_client_id=self_client_id, self_object_id=self_object_id)
+    created_entity_ids = (
+
+        corpus_create_entity(
+            parent_client_id,
+            parent_object_id,
+            dest_fid[0],
+            dest_fid[1],
+            ftype,
+            client.id,
+            content=content,
+            filename=filename,
+            folder_name="graphql_files",
+            storage=storage,
+            self_client_id=self_client_id,
+            self_object_id=self_object_id))
 
     return created_entity_ids
 
@@ -77,7 +210,11 @@ def async_copy_single_field(one_pid, ftype, client, info,
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
+    global CACHE
+    from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
+
+    ftype = ftype.lower()
 
     try:
 
@@ -116,8 +253,9 @@ def async_copy_single_field(one_pid, ftype, client, info,
                 i += 1
                 for entity in lex_entry_from:
                     # create one db entry and add to list of all entries to be added
-                    if ftype != "Text":
-                        copy_sound_or_markup_entity(entity, fid2, client, parent_client_id=lex_entries_to[i].client_id,
+                    if ftype != "text":
+                        copy_sound_or_markup_entity(entity, fid2, ftype, client,
+                                                    parent_client_id=lex_entries_to[i].client_id,
                                                     parent_object_id=lex_entries_to[i].object_id)
                         task_status.set(4, 15+round((1 / len(query_result)) * 85), "Copied an entity")
                     else:
@@ -132,8 +270,9 @@ def async_copy_single_field(one_pid, ftype, client, info,
         else:
 
             for entity in query_result:
-                if ftype != "Text":
-                    copy_sound_or_markup_entity(entity, fid2, client, parent_client_id=entity.parent_client_id,
+                if ftype != "text":
+                    copy_sound_or_markup_entity(entity, fid2, ftype, client,
+                                                parent_client_id=entity.parent_client_id,
                                                 parent_object_id=entity.parent_object_id)
                     task_status.set(4, 15 + round((1 / len(query_result)) * 85), "Copied an entity")
                 else:
@@ -147,13 +286,13 @@ def async_copy_single_field(one_pid, ftype, client, info,
                     task_status.set(4, 15+round((1 / len(query_result)) * 85), "Copied an entity")
 
         if len(dbentities_list) > 0:
-            DBSession.bulk_save_objects(dbentities_list)
-
+            # DBSession.bulk_save_objects(dbentities_list)
+            CACHE.set(objects = dbentities_list, DBSession = DBSession)
     except Exception as err:
         task_status.set(None, -1, "Copying failed: %s" % str(err))
         raise
 
-    DBSession.flush()
+    # DBSession.flush()
     task_status.set(5, 100, "Copying field finished")
 
 

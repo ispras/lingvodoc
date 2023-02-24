@@ -15,7 +15,7 @@ import traceback
 from pyramid.response import Response
 from pyramid.view import view_config
 
-from sqlalchemy import and_, BigInteger, cast, extract, func, tuple_
+from sqlalchemy import and_, BigInteger, cast, extract, Float, func, tuple_
 from sqlalchemy.orm import aliased
 from lingvodoc.schema.gql_holders import ResponseError
 
@@ -44,6 +44,8 @@ from lingvodoc.models import (
 from lingvodoc.views.v2.utils import message, unimplemented
 from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.schema.gql_holders import ResponseError
+
+from lingvodoc.cache.caching import CACHE
 
 log = logging.getLogger(__name__)
 
@@ -94,9 +96,14 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
         # Ok, now working, starting with perspective check.
 
-        perspective = DBSession.query(DictionaryPerspective).filter_by(
-            client_id = perspective_client_id,
-            object_id = perspective_object_id).first()
+        # perspective = DBSession.query(DictionaryPerspective).filter_by(
+        #     client_id = perspective_client_id,
+        #     object_id = perspective_object_id).first()
+        perspective = CACHE.get(objects=
+            {
+                DictionaryPerspective : (perspective_id, )
+            },
+        DBSession=DBSession)
 
         if not perspective:
             raise ResponseError(message='No such perspective {0}/{1}.'.format(
@@ -107,7 +114,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
         # select
         #   coalesce((additional_metadata #>> '{merge, original_client_id}') :: bigint,
         #     client_id) as entry_client_id,
-        #   coalesce((additional_metadata #>> '{merge, min_created_at}') :: bigint,
+        #   coalesce((additional_metadata #>> '{merge, min_created_at}') :: float,
         #     extract(epoch from created_at)) as entry_created_at
         #   from lexicalentry where
         #     parent_client_id = perspective_client_id and
@@ -121,7 +128,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                 LexicalEntry.client_id).label('entry_client_id'),
 
             func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, BigInteger),
+                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, Float),
                 extract('epoch', LexicalEntry.created_at)).label('entry_created_at'))
 
             .filter(and_(
@@ -185,7 +192,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     PublishingEntity.published, PublishingEntity.accepted)
@@ -231,7 +238,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     PublishingEntity.published, PublishingEntity.accepted)
@@ -367,7 +374,7 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
         # Returning gathered statistics.
 
-        log.debug('stat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
+        log.debug('\nstat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
             perspective_client_id, perspective_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
             datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,
@@ -424,9 +431,14 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
         # Ok, now working, starting with dictionary check.
 
-        dictionary = DBSession.query(Dictionary).filter_by(
-            client_id = dictionary_client_id,
-            object_id = dictionary_object_id).first()
+        # dictionary = DBSession.query(Dictionary).filter_by(
+        #     client_id = dictionary_client_id,
+        #     object_id = dictionary_object_id).first()
+        dictionary = CACHE.get(objects =
+            {
+                Dictionary : (dictionary_id, )
+            },
+        DBSession=DBSession)
 
         if not dictionary:
             raise ResponseError(message='No such dictionary {0}/{1}.'.format(
@@ -446,7 +458,7 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
                 LexicalEntry.client_id).label('entry_client_id'),
 
             func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, BigInteger),
+                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, Float),
                 extract('epoch', LexicalEntry.created_at)).label('entry_created_at'),
 
             DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
@@ -594,7 +606,7 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
@@ -654,7 +666,7 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
@@ -823,7 +835,7 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
         # Returning gathered statistics.
 
-        log.debug('stat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
+        log.debug('\nstat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
             dictionary_client_id, dictionary_object_id,
             datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
             datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,

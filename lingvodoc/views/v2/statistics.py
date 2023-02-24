@@ -15,7 +15,7 @@ import traceback
 from pyramid.response import Response
 from pyramid.view import view_config
 
-from sqlalchemy import and_, BigInteger, cast, extract, func, tuple_
+from sqlalchemy import and_, BigInteger, cast, extract, Float, func, tuple_
 from sqlalchemy.orm import aliased
 
 # Lingvodoc imports.
@@ -126,7 +126,7 @@ def stat_perspective(request):
         # select
         #   coalesce((additional_metadata #>> '{merge, original_client_id}') :: bigint,
         #     client_id) as entry_client_id,
-        #   coalesce((additional_metadata #>> '{merge, min_created_at}') :: bigint,
+        #   coalesce((additional_metadata #>> '{merge, min_created_at}') :: float,
         #     extract(epoch from created_at)) as entry_created_at
         #   from lexicalentry where
         #     parent_client_id = perspective_client_id and
@@ -140,7 +140,7 @@ def stat_perspective(request):
                 LexicalEntry.client_id).label('entry_client_id'),
 
             func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, BigInteger),
+                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, Float),
                 extract('epoch', LexicalEntry.created_at)).label('entry_created_at'))
 
             .filter(and_(
@@ -204,7 +204,7 @@ def stat_perspective(request):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     PublishingEntity.published)
@@ -248,7 +248,7 @@ def stat_perspective(request):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     PublishingEntity.published)
@@ -418,7 +418,7 @@ def stat_dictionary(request):
                 LexicalEntry.client_id).label('entry_client_id'),
 
             func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, BigInteger),
+                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, Float),
                 extract('epoch', LexicalEntry.created_at)).label('entry_created_at'),
 
             DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
@@ -566,7 +566,7 @@ def stat_dictionary(request):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
@@ -626,7 +626,7 @@ def stat_dictionary(request):
 
                     func.coalesce(
                         cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, BigInteger),
+                            ('merge', 'min_created_at')].astext, Float),
                         extract('epoch', Entity.created_at)).label('entity_created_at'),
 
                     DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),

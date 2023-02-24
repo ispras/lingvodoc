@@ -1,12 +1,12 @@
 version: '3.2'
 services:
   pg:
-    image: postgres:10.4
+    image: postgres:13.2
     container_name: postgres
     environment:
-#      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
       POSTGRES_DB: lingvodoc
-      POSTGRES_USER: lingvodoc
     volumes:
       - ./dbdump:/docker-entrypoint-initdb.d
     ports:
@@ -20,11 +20,12 @@ services:
       - ./frontend/dist:/dist
       - ./nginx:/etc/nginx/conf.d
       - ./sock:/sock
+      - /tmp:/tmp
     depends_on:
       - pg
       - api
   redis:
-    image: 'bitnami/redis:latest'
+    image: 'redis:latest'
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     labels:
@@ -43,12 +44,14 @@ services:
     container_name: ld
     volumes:
       - ./frontend/dist:/dist
+      - /opt/apertium:/opt/apertium
       - ./sock:/sock
       - /api/build/
       - ../:/api
+      - /tmp:/tmp
 
     env_file:
       - ./locale_env.sh
-    command: bash -c "pip3 install setuptools --upgrade && python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg gunicorn --paster /api/docker/docker.ini"
+    command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --preload --paster /api/docker/docker.ini"
     ports:
       - "16543:6543"

@@ -4,7 +4,9 @@ from lingvodoc.views.v2.utils import (
     view_field_from_object
 )
 from lingvodoc.utils.verification import check_client_id
+import sqlalchemy.exc
 from sqlalchemy.exc import IntegrityError
+import psycopg2.errors
 
 from pyramid.response import Response
 from pyramid.view import view_config
@@ -59,7 +61,7 @@ import urllib
 import json
 import requests
 from pyramid.request import Request
-from time import time
+import time
 from webob.multidict import MultiDict, NoVars
 from lingvodoc.schema.query import schema, Context
 
@@ -337,6 +339,9 @@ def testing(request):
                     print(meta)
 
             # Restore Mark`s deletions
+            #
+            # NOTE: after changing all created_at to proper UTC-based Unix timestamps (previously they were
+            # shifted by UTC - MSK difference) following time constants can be no longer right.
 
             entities_to_delete = set()
             i = 0
@@ -648,7 +653,7 @@ def garbage_collector(request):
     :return:
     """
     from lingvodoc.utils import garbage_collector
-    collection_time = datetime.datetime.utcnow()
+    collection_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
     null_entities = garbage_collector.get_null_entities()
     empty_entities = garbage_collector.get_empty_entities()
     entities_deleted = 0
@@ -1131,6 +1136,7 @@ def change_user_password(request):
     request.response.status = HTTPOk.code
     return {"success": True}
 
+
 # TODO: Remove it
 @view_config(route_name='graphql', renderer='json')
 def graphql(request):
@@ -1186,18 +1192,18 @@ def graphql(request):
             if not data:
                 return {'errors': [{"message": 'empty request'}]}
             elif not "operations" in data:
-                return {'errors': [{"message": 'operations key not nound'}]}
+                return {'errors': [{"message": 'operations key not found'}]}
             elif not "query" in data["operations"]:
-                return {'errors': [{"message": 'query key not nound in operations'}]}
-            elif not "0" in data:
-                return {'errors': [{"message": '0 key not nound'}]}
+                return {'errors': [{"message": 'query key not found in operations'}]}
+            elif not "1" in data:
+                return {'errors': [{"message": '1 key not found'}]}
 
             request_string = request.POST.pop("operations")
             request_string = request_string.rstrip()
             # body = request_string.decode('utf-8')
             json_req = json.loads(request_string)
             if "query" not in json_req:
-                return {'errors': [{"message": 'query key not nound'}]}
+                return {'errors': [{"message": 'query key not found'}]}
             request_string = json_req["query"]
             request_string = request_string.rstrip()
             if "variables" in json_req:
@@ -1224,14 +1230,14 @@ def graphql(request):
                 batch = True
             if not batch:
                 if "query" not in json_req:
-                    return {'errors': [{"message": 'query key not nound'}]}
+                    return {'errors': [{"message": 'query key not found'}]}
                 request_string = json_req["query"]
                 if "variables" in json_req:
                     variable_values = json_req["variables"]
             else:
                 for query in json_req:
                     if "query" not in query:
-                        return {'errors': [{"message": 'query key not nound'}]}
+                        return {'errors': [{"message": 'query key not found'}]}
                     request_string = query["query"]
                     if "variables" in query:
                         variable_values = query["variables"]
@@ -1255,23 +1261,70 @@ def graphql(request):
             request.response.status = HTTPBadRequest.code
             return {'errors': [{"message": 'wrong content type'}]}
         if not batch:
+            t_start_real, t_start_process = (time.time(), time.process_time())
             result = schema.execute(request_string,
                                     context_value=Context({
                                         'client_id': client_id,
                                         'locale_id': locale_id,
                                         'request': request}),
                                     variable_values=variable_values)
+            t_end_real, t_end_process = (time.time(), time.process_time())
+            t_elapsed_real = t_end_real - t_start_real
+            t_elapsed_process = t_end_process - t_start_process
+            log.debug(
+                '\nschema.execute() elapsed time real, process: '
+                f'{t_elapsed_real:.6f}s, {t_elapsed_process:.6f}s')
+            request.response.headerlist.append((
+                'Server-Timing',
+                f'real;dur={t_elapsed_real:.6f}, process;dur={t_elapsed_process:.6f}'))
+
             if result.errors:
                 for error in result.errors:
                     if hasattr(error, 'original_error'):
                         if type(error.original_error) == ProxyPass:
                             return json.loads(error.original_error.response_body.decode("utf-8"))
+
             if result.invalid:
-                return {'errors': [{"message": str(e)} for e in result.errors]}
+
+                return {
+                    'errors': [{'message': str(e)} for e in result.errors],
+                    'time_real': t_elapsed_real,
+                    'time_process': t_elapsed_process}
+
             if result.errors:
-                sp.rollback()
-                return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
-            return {"data": result.data}
+
+                # If we had an attempt to proceed with failed transaction because of another error, we don't
+                # need its superfluous error info.
+
+                if len(result.errors) > 1:
+
+                    errors = [
+
+                        error
+                        for error in result.errors
+
+                        if (not isinstance(
+                                error.original_error,
+                                sqlalchemy.exc.InternalError) or
+
+                            not isinstance(
+                                error.original_error.orig,
+                                psycopg2.errors.InFailedSqlTransaction))]
+
+                else:
+
+                    errors = result.errors
+
+                return {
+                    'data': None,
+                    'errors': [{'message': str(e)} for e in errors],
+                    'time_real': t_elapsed_real,
+                    'time_process': t_elapsed_process}
+
+            return {
+                'data': result.data,
+                'time_real': t_elapsed_real,
+                'time_process': t_elapsed_process}
 
     except ProxyPass as e:
         return e.response_body

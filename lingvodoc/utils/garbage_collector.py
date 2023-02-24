@@ -20,7 +20,7 @@ def gc_message(timestamp, reason, initiator):
     :return:
     """
     return {"garbage_collector":
-                {"deleted_at": int(timestamp.timestamp()),
+                {"deleted_at": timestamp,
                  "reason": reason,
                  "initiator":
                      {"client_id": initiator.client_id,

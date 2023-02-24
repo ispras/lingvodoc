@@ -1,9 +1,20 @@
-import logging
+
 from configparser import (
     ConfigParser,
     NoSectionError
 )
+import datetime
 import distutils.util
+import logging
+import os.path
+import re
+import subprocess
+
+try:
+    import git
+
+except ImportError:
+    git = None
 
 from sqlalchemy import engine_from_config
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -22,6 +33,235 @@ from .acl import (
     groupfinder
 )
 import multiprocess
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
+
+def get_git_version(repository_dir):
+    """
+    Determines version from the Git repository state.
+
+    If the Git version tag selected by `git describe` conforms to PEP 440, resulting version string conforms
+    to it too.
+    """
+
+    if not git:
+        return None
+
+    # Getting repository info.
+
+    try:
+
+        repository = (
+            git.Repo(os.path.join(
+                repository_dir, '.git')))
+
+        describe_result = (
+
+            repository.git.describe(
+                abbrev = 8,
+                always = True,
+                long = True,
+                tags = True,
+                match = 'v*'))
+
+        # Working tree status and head commit info.
+
+        status_result = (
+
+            repository.git.status(
+                porcelain = True,
+                untracked_files = 'no'))
+
+        head_commit = (
+            repository.head.commit)
+
+        head_datetime = (
+            head_commit.authored_datetime
+                .astimezone(tz = datetime.timezone.utc))
+
+    except git.exc.GitError:
+        return None
+
+    # Getting version info from 'git describe'.
+
+    match_result = (
+
+        re.fullmatch(
+            r'v(.*?)-(\d+)-g([0-9a-fA-F]+)?',
+            describe_result))
+
+    if match_result:
+
+        # We have a valid version tag.
+
+        assert (
+            head_commit.hexsha.startswith(
+                match_result.group(3)))
+
+        version_str = (
+            match_result.group(1))
+
+        commit_count = (
+            int(match_result.group(2)))
+
+        if commit_count > 0:
+
+            version_str += (
+                '+{}'.format(commit_count))
+
+        version_str += (
+
+            '-{}-{}'.format(
+                match_result.group(3),
+                head_datetime.strftime('%Y.%m.%d-%H:%M')))
+
+    else:
+
+        # No tagged version, using just the fallback commit hash.
+
+        assert (
+            head_commit.hexsha.startswith(
+                describe_result))
+
+        version_str = (
+                
+            '{}-{}'.format(
+                describe_result,
+                head_datetime.strftime('%Y.%m.%d-%H:%M')))
+
+    # Checking if we have any modifications from the last commit.
+
+    last_mtime = None
+
+    version_path = (
+        os.path.join(
+            repository_dir, 'lingvodoc', 'version.py'))
+
+    for line in status_result.splitlines():
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        # Another modified path.
+
+        if line[-1] == '"':
+
+            path_utf8_escaped = (
+                line[ line.rindex(' "', 0, -1) + 2 : -1 ])
+
+            path = (
+                path_utf8_escaped
+                    .encode('latin1')
+                    .decode('unicode-escape')
+                    .encode('latin1')
+                    .decode('utf-8'))
+
+        else:
+
+            path_utf8 = (
+                line[ line.rindex(' ') + 1 : ])
+
+            path = (
+                path_utf8
+                    .encode('latin1')
+                    .decode('utf-8'))
+
+        # Determining last modification time.
+
+        path = (
+            os.path.join(repository_dir, path))
+
+        if path == version_path:
+            continue
+
+        try:
+            mtime = (
+                os.path.getmtime(path))
+
+        except FileNotFoundError:
+            continue
+
+        if (last_mtime is None or
+            mtime > last_mtime):
+
+            last_mtime = mtime
+
+    # Last commit time.
+
+    if last_mtime is not None:
+
+        last_m_datetime = (
+
+            datetime.datetime.fromtimestamp(
+                last_mtime,
+                tz = datetime.timezone.utc))
+
+        version_str += (
+            last_m_datetime.strftime('+modified-%Y.%m.%d-%H:%M'))
+
+    return version_str
+
+
+def get_uniparser_version():
+    """
+    Gets versions of some uniparser-* packages.
+    """
+
+    try:
+
+        result = (
+
+            subprocess.check_output([
+                'pip3',
+                'show', 
+                'uniparser-erzya',
+                'uniparser-komi-zyrian',
+                'uniparser-meadow-mari',
+                'uniparser-moksha',
+                'uniparser-udmurt']))
+
+    except:
+
+        return None
+
+    version_str_list = (
+
+        re.findall(
+            r'Name: (.*)(\n\r?|\r\n?)Version: (.*)',
+            result.decode('utf-8')))
+
+    version_str_dict = {
+        name_str: version_str
+        for name_str, _, version_str in version_str_list}
+
+    log.debug(
+        f'\nversion_str_dict: {version_str_dict}')
+
+    return version_str_dict or None
+
+
+# Updating version with current Git repository info, if we have any, setting up package version.
+
+import lingvodoc.version
+
+version_str = (
+    get_git_version(os.path.join(
+        os.path.dirname(__file__), '..')))
+
+if version_str is not None:
+    lingvodoc.version.__version__ = version_str
+
+__version__ = lingvodoc.version.__version__
+
+# Getting version of some uniparser-* packages.
+
+lingvodoc.version.uniparser_version_dict = get_uniparser_version()
+
 
 # def add_route_custom(config, name, pattern, api_version=[]):
 
@@ -832,9 +1072,23 @@ def main(global_config, **settings):
 
     # TODO: DANGER
 
-    settings['storage'] = dict(parser.items(
-        'backend:storage' if parser.has_section('backend:storage') else
-            'storage'))
+    storage_dict = (
+            
+        dict(parser.items(
+            'backend:storage' if parser.has_section('backend:storage') else
+                'storage')))
+
+    if parser.has_section('backend:storage.temporary'):
+
+        storage_dict['temporary'] = (
+            dict(parser.items('backend:storage.temporary')))
+
+    elif parser.has_section('storage.temporary'):
+
+        storage_dict['temporary'] = (
+            dict(parser.items('storage.temporary')))
+
+    settings['storage'] = storage_dict
 
     if parser.has_section('app:desktop'):
         storage = dict()
@@ -847,16 +1101,16 @@ def main(global_config, **settings):
     # TODO: Find a more neat way
     try:
         cache_kwargs = dict()
-        for k, v in parser.items('cache:dogpile'):
+        for k, v in parser.items('cache:redis:args'):
             cache_kwargs[k] = v
-        cache_args = dict()
-        for k, v in parser.items('cache:dogpile:args'):
-            cache_args[k] = v
-        cache_kwargs['arguments'] = cache_args
-        if 'expiration_time' in cache_kwargs:
-            cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
-        if 'redis_expiration_time' in cache_kwargs:
-            cache_kwargs['redis_expiration_time'] = int(cache_kwargs['redis_expiration_time'])
+#       cache_args = dict()
+#       for k, v in parser.items('cache:redis:args'):
+#           cache_args[k] = v
+#       cache_kwargs['arguments'] = cache_args
+#       if 'expiration_time' in cache_kwargs:
+#           cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
+#       if 'redis_expiration_time' in cache_kwargs:
+#           cache_kwargs['redis_expiration_time'] = int(cache_kwargs['redis_expiration_time'])
     except NoSectionError:
         log.warn("No 'cache:dogpile' or/and 'cache:dogpile:args' sections in config; disabling caching")
         initialize_cache(None)

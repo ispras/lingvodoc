@@ -2,6 +2,7 @@
 __author__ = 'student'
 
 
+import json
 import os
 import re
 
@@ -11,8 +12,14 @@ except:
     pass
 
 
+from sqlalchemy import cast
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.expression import Executable, ClauseElement, _literal_as_text
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.sql import column
+from sqlalchemy.sql.expression import Executable, ClauseElement, _literal_as_text, FromClause
+
+
+from lingvodoc.models import DBSession, SLBigInteger
 
 
 class explain(Executable, ClauseElement):
@@ -58,7 +65,7 @@ def pg_explain(element, compiler, **kwargs):
 
     text += compiler.process(element.statement, **kwargs)
 
-    # Allow EXPLAIN for INSERT / UPDATE / DELETE, turn off  compiler flags that would otherwise start
+    # Allow EXPLAIN for INSERT / UPDATE / DELETE, turn off compiler flags that would otherwise start
     # treating this like INSERT / UPDATE / DELETE (gets confused with RETURNING or autocloses cursor
     # which we don't want).
 
@@ -84,6 +91,171 @@ def explain_analyze(statement):
     """
 
     return explain(statement, analyze = True)
+
+
+class values(FromClause):
+    """
+    PostgreSQL VALUES for selecting from and for using in CTE.
+
+    See StackOverflow answer https://stackoverflow.com/a/18900176/2016856,
+    mostly copied from https://github.com/sqlalchemy/sqlalchemy/wiki/PGValues.
+    """
+
+    named_with_column = True
+
+    def __init__(self, columns, value_list, alias = None):
+
+        self._column_args = columns
+        self.list = value_list
+
+        self.name = alias
+        self.alias_name = alias
+
+    def _populate_column_collection(self):
+
+        for c in self._column_args:
+            c._make_proxy(self)
+
+    @property
+    def _from_objects(self):
+        return [self]
+
+
+@compiles(values)
+def compile_values(element, compiler, asfrom = False, **kwargs):
+
+    columns = element.columns
+
+    if len(columns) > 1:
+
+        v = "VALUES %s" % ", ".join(
+            "(%s)"
+            % ", ".join(
+                compiler.render_literal_value(elem, column.type)
+                for elem, column in zip(tup, columns)
+            )
+            for tup in element.list
+        )
+
+    else:
+
+        column = list(columns)[0]
+
+        v = "VALUES %s" % ", ".join(
+            "(%s)"
+            % compiler.render_literal_value(value, column.type)
+            for value in element.list
+        )
+
+    if asfrom:
+
+        alias = (
+            element.alias_name or '_alias_')
+
+        v = "(%s) AS %s (%s)" % (
+            v,
+            alias,
+            (", ".join(c.name for c in element.columns)),
+        )
+
+    return v
+
+
+def values_query(
+    value_list,
+    column_info_list,
+    alias = None):
+
+    column_list = []
+
+    try:
+        iter(column_info_list)
+
+    except TypeError:
+        column_info_list = [column_info_list]
+
+    for index, column_info in enumerate(column_info_list):
+
+        try:
+
+            column_list.append(
+                column(*column_info))
+
+        except TypeError:
+
+            column_list.append(
+                column(f'_column_{index}_', column_info))
+
+    values_clause = (
+
+        values(
+            column_list,
+            value_list,
+            alias or '_values_'))
+
+    return (
+
+        DBSession.query(
+            *values_clause.columns))
+
+
+def ids_to_id_query(ids, explicit_cast = False):
+
+    id_values = (
+
+        values(
+            [column('client_id', SLBigInteger), column('object_id', SLBigInteger)],
+            ids,
+            'ids'))
+
+    c_client_id = id_values.c.client_id
+    c_object_id = id_values.c.object_id
+    
+    if explicit_cast:
+
+        c_client_id = cast(c_client_id, SLBigInteger).label('client_id')
+        c_object_id = cast(c_object_id, SLBigInteger).label('object_id')
+
+    return (
+
+        DBSession.query(
+            c_client_id, c_object_id))
+
+def ids_to_id_cte(ids, **kwargs):
+
+    return ids_to_id_query(ids).cte(**kwargs)
+
+def ids_to_id_cte_query(ids):
+
+    return DBSession.query(ids_to_id_cte(ids))
+
+
+def render_statement(statement):
+    """
+    Renders SQLAlchemy query as a string with any parameters substituted, including proper handling of any JSONB
+    dictionary parameter literals.
+
+    Based on, among other things, on https://stackoverflow.com/a/9898141/2016856.
+    """
+
+    dialect = (
+        statement.bind.dialect if statement.bind else
+        postgresql.dialect())
+
+    compiler = statement._compiler(dialect)
+
+    class Compiler(type(compiler)):
+
+        def render_literal_value(self, value, type, *args, **kwargs):
+
+            if (isinstance(value, dict) and
+                isinstance(type, postgresql.JSONB)):
+
+                return repr(json.dumps(value)) + ' :: jsonb'
+
+            return super().render_literal_value(value, type, *args, **kwargs)
+
+    return Compiler(dialect, statement).process(statement, literal_binds = True)
 
 
 def get_resident_memory():

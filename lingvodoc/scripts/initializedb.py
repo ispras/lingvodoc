@@ -37,7 +37,7 @@ from ..models import (
     TranslationGist,
     TranslationAtom,
     Field,
-    DictionaryPerspectiveToField
+    DictionaryPerspectiveToField,
     )
 
 import json

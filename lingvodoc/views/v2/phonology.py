@@ -2,7 +2,9 @@
 # Standard library imports.
 
 import base64
+import bisect
 import collections
+import configparser
 import csv
 import datetime
 from errno import EEXIST
@@ -20,9 +22,10 @@ import re
 from shutil import copyfileobj
 import sndhdr
 import string
+import subprocess
 import sys
 import tempfile
-from time import time
+import time
 import traceback
 import types
 import unicodedata
@@ -320,7 +323,11 @@ def compute_formants(sample_list, nyquist_frequency):
 
     # Returning computed formants, from lowest to highest.
 
+    while len(formant_list) < 5:
+        formant_list.append(nyquist_frequency)
+
     formant_list.sort()
+
     return formant_list
 
 
@@ -330,9 +337,15 @@ class AudioPraatLike(object):
     corresponding algorithms of the Praat [http://www.fon.hum.uva.nl/praat] software.
     """
 
-    def __init__(self, source_sound):
+    def __init__(
+        self,
+        source_sound,
+        args = None,
+        vowel_range_list = None):
 
         self.intensity_sound = source_sound
+        self.args = args
+        self.vowel_range_list = vowel_range_list
 
         #
         # Praat's intensity window size is computed as 3.2/minimum_pitch (see http://www.fon.hum.uva.nl/
@@ -360,24 +373,86 @@ class AudioPraatLike(object):
 
         self.intensity_list = [None for i in range(self.intensity_step_count)]
 
-        #
-        # Praat's formant window size is 0.05 seconds, and formant time step is 8 times less, i.e.
-        # 0.05 / 8 = 0.00625 seconds.
-        #
-        # Computation of formants is performed on the sound recording resampled to twice the maximum formant
-        # frequency (see http://www.fon.hum.uva.nl/praat/manual/Sound__To_Formant__burg____.html). Standard
-        # maximum formant frequency is 5500 Hz, so standard resampling frequency is 11000 Hz.
-        #
-        # We set resampling frequency to 11025 Hz, which is a divisor of common sound recording frequencies
-        # 44100 Hz and 22050 Hz; doing so allows us to minimize resampling errors when using pydub's simple
-        # linear interpolation resampling.
-        #
+        self.fast_track_flag = (
+            args and args.use_fast_track)
 
-        self.formant_frame_rate = 11025
+        self.fast_track_plot_flag = False
 
-        self.formant_step_size = int(math.floor(0.00625 * self.formant_frame_rate))
-        self.formant_half_window_size = 4 * self.formant_step_size
-        self.formant_window_size = 2 * self.formant_half_window_size + 1
+        # Standard formant computation algorithm.
+
+        if not self.fast_track_flag:
+
+            #
+            # Praat's formant window size is 0.05 seconds, and formant time step is 8 times less, i.e.
+            # 0.05 / 8 = 0.00625 seconds.
+            #
+            # Computation of formants is performed on the sound recording resampled to twice the maximum formant
+            # frequency (see http://www.fon.hum.uva.nl/praat/manual/Sound__To_Formant__burg____.html). Standard
+            # maximum formant frequency is 5500 Hz, so standard resampling frequency is 11000 Hz.
+            #
+            # We set resampling frequency to 11025 Hz, which is a divisor of common sound recording frequencies
+            # 44100 Hz and 22050 Hz; doing so allows us to minimize resampling errors when using pydub's simple
+            # linear interpolation resampling.
+            #
+
+            self.formant_frame_rate = 11025
+
+            self.formant_step_size = int(math.floor(0.00625 * self.formant_frame_rate))
+
+            self.formant_half_window_size = 4 * self.formant_step_size
+            self.formant_window_size = 2 * self.formant_half_window_size + 1
+
+            self.formant_step_shift = 4
+
+        # Fast Track formant computation algorithm.
+
+        else:
+
+            self.formant_frequency_min = 4700
+            self.formant_frequency_max = 7550
+
+            self.formant_frequency_step_n = 20
+
+            self.dct_coef_n = 5
+
+            step_n_m1 = (
+                self.formant_frequency_step_n - 1)
+
+            frequency_delta = (
+                self.formant_frequency_max - self.formant_frequency_min)
+
+            self.formant_frame_rate_list = []
+
+            self.formant_step_size_list = []
+            self.formant_half_window_size_list = []
+            self.formant_window_size_list = []
+
+            self.formant_step_shift_list = []
+            self.formant_step_count_list = []
+
+            # Derived parameters for each maximum formant frequency.
+
+            for i in range(self.formant_frequency_step_n):
+
+                formant_frame_rate = (
+                    2 * int(self.formant_frequency_min + frequency_delta * i / step_n_m1))
+
+                self.formant_frame_rate_list.append(formant_frame_rate)
+
+                formant_step_size = (
+                    int(math.floor(0.002 * formant_frame_rate)))
+
+                formant_half_window_size = (
+                    int(math.floor(0.025 * formant_frame_rate)))
+
+                self.formant_step_size_list.append(formant_step_size)
+                self.formant_half_window_size_list.append(formant_half_window_size)
+                self.formant_window_size_list.append(2 * formant_half_window_size + 1)
+
+                formant_step_shift = (
+                    (formant_half_window_size + formant_step_size - 1) // formant_step_size)
+
+                self.formant_step_shift_list.append(formant_step_shift)
 
         self.formant_list = None
 
@@ -494,22 +569,39 @@ class AudioPraatLike(object):
 
         sample_array = self.intensity_sound.get_array_of_samples()
         channel_count = self.intensity_sound.channels
+
         frame_count = int(self.intensity_sound.frame_count())
+        frame_rate = self.intensity_sound.frame_rate
 
         if padding_length is None:
+
             padding = min(1000, frame_count // 16)
 
         else:
-            padding = max(
-                min(1000, frame_count // 16),
-                int(math.floor(padding_length * self.intensity_sound.frame_rate)))
 
-        source_count = frame_count + 2 * padding
-        factor = float(self.formant_frame_rate) / self.intensity_sound.frame_rate
+            padding = (
 
-        resample_count = int(math.floor(factor * source_count))
+                max(
+                    min(1000, frame_count // 16),
+                    int(math.floor(padding_length * frame_rate))))
 
-        # Fourier transform is linear, so we first average over channels and then resample using FFT.
+        source_count = (
+            frame_count + 2 * padding)
+
+        self.padding = padding
+
+        self.padding_length = (
+            float(padding) / frame_rate)
+
+        if not self.fast_track_flag:
+
+            factor_rate = (
+                float(self.formant_frame_rate) / frame_rate)
+
+            resample_count = (
+                int(math.floor(factor_rate * source_count)))
+
+        # Fourier transform is linear, so we can average over channels before using FFT.
 
         source_list = numpy.empty(source_count)
 
@@ -517,56 +609,216 @@ class AudioPraatLike(object):
         source_list[-padding:] = 0.0
 
         if channel_count == 1:
+
             source_list[padding:-padding] = sample_array
 
         elif channel_count == 2:
 
             for i in range(frame_count):
-                source_list[padding + i] = (sample_array[i * 2] + sample_array[i * 2 + 1]) / 2.0
 
-        # General case.
+                source_list[padding + i] = (
+                    (sample_array[i * 2] + sample_array[i * 2 + 1]) / 2.0)
 
         else:
+
+            # General case.
+
             for i in range(frame_count):
 
-                source_list[padding + i] = sum(
-                    sample_array[i * channel_count + j]
-                      for j in range(channel_count)) / channel_count
+                source_list[padding + i] = (
 
-        # Getting resampled waveform.
+                    sum(
+                        sample_array[i * channel_count + j]
+                        for j in range(channel_count))
 
-        sample_list = numpy.fft.irfft(numpy.fft.rfft(source_list), resample_count)
+                        / channel_count)
 
-        self.padding = padding
-        self.padding_length = float(padding) / self.intensity_sound.frame_rate
+        # If we are using samples only from vowel intervals.
 
-        self.formant_padding = int(math.floor(padding * factor))
+        if self.args and self.args.interval_only:
 
-        # NOTE: we have to manually clear rfft's cache because otherwise it will grow indefinitely while
-        # processing many series of different lengths.
+            if self.fast_track_flag:
+                raise NotImplementedError
 
-        if len(numpy.fft.fftpack._real_fft_cache) >= 16:
-            numpy.fft.fftpack._real_fft_cache = {}
+            self.formant_frame_count = resample_count
 
-        # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
-        # than 50 Hz.
+            self.formant_step_count = (
 
-        factor = math.exp(-2.0 * math.pi * 50 / self.formant_frame_rate)
+                int(math.floor(
+                    (self.formant_frame_count - 1) // self.formant_step_size + 1)))
 
-        self.formant_frame_count = len(sample_list)
-        self.formant_sample_list = [sample_list[0]]
+            sample_interval_list = []
 
-        for i in range(1, int(self.formant_frame_count)):
+            factor_step = (
+                self.formant_frame_rate / self.formant_step_size)
 
-            self.formant_sample_list.append(
-                sample_list[i] - factor * sample_list[i - 1])
+            # Looking for boundaries of vowel-containing intervals.
 
-        # Number of formant values and formant value cache.
+            for begin, end in self.vowel_range_list:
 
-        self.formant_step_count = int(
-            math.floor((self.formant_frame_count - 1) // self.formant_step_size + 1))
+                begin_step = (
 
-        self.formant_list = [None for i in range(self.formant_step_count)]
+                    max(4,
+                        int(math.ceil((begin + self.padding_length) * factor_step))))
+
+                end_step = (
+
+                    min(
+                        self.formant_step_count - 5,
+                        int(math.floor((end + self.padding_length) * factor_step))))
+
+                # Boundaries in both resampled and source sound time series.
+
+                formant_sample_from = (
+                    (begin_step - 4) * self.formant_step_size)
+
+                formant_sample_to = (
+                    (end_step - 4) * self.formant_step_size + self.formant_window_size)
+
+                source_sample_from = (
+                    int(math.floor(formant_sample_from / factor_rate)))
+
+                source_sample_to = (
+                    int(math.floor(formant_sample_to / factor_rate)))
+
+                # Merging intervals, if required.
+
+                if (sample_interval_list and
+                    source_sample_from <= sample_interval_list[-1][7]):
+
+                    sample_interval_list[-1][1] = end
+                    sample_interval_list[-1][3] = end_step
+                    sample_interval_list[-1][5] = formant_sample_to
+                    sample_interval_list[-1][7] = source_sample_to
+
+                else:
+
+                    sample_interval_list.append([
+                        begin, end,
+                        begin_step, end_step,
+                        formant_sample_from, formant_sample_to,
+                        source_sample_from, source_sample_to])
+
+            log.debug(
+                '\nsample_interval_list:\n' +
+                pprint.pformat(
+                    sample_interval_list, width = 144))
+
+            # Preparing data for formant analysis in each interval.
+
+            self.formant_sample_list = [
+                None for i in range(resample_count)]
+
+            factor_filter = (
+                math.exp(-2.0 * math.pi * 50 / self.formant_frame_rate))
+
+            for _, _, _, _, formant_from, formant_to, source_from, source_to in sample_interval_list:
+
+                formant_count = (
+                    formant_to - formant_from)
+
+                sample_list = (
+
+                    numpy.fft.irfft(
+                        numpy.fft.rfft(source_list[source_from : source_to]),
+                        formant_count))
+
+                # Pre-emphasizing frequencies higher than 50 Hz, see Praat source code.
+
+                self.formant_sample_list[formant_from] = (
+                    sample_list[0] * (1 - factor_filter))
+
+                for i in range(1, formant_count):
+
+                    self.formant_sample_list[formant_from + i] = (
+                        sample_list[i] - factor_filter * sample_list[i - 1])
+
+        # Using full length of the sound, standard formant computation algorithm.
+
+        elif not self.fast_track_flag:
+
+            sample_list = numpy.fft.irfft(numpy.fft.rfft(source_list), resample_count)
+
+            # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
+            # than 50 Hz, see Praat source code.
+
+            factor_filter = (
+                math.exp(-2.0 * math.pi * 50 / self.formant_frame_rate))
+
+            formant_frame_count = len(sample_list)
+            formant_sample_list = [sample_list[0]]
+
+            for i in range(1, int(formant_frame_count)):
+
+                formant_sample_list.append(
+                    sample_list[i] - factor_filter * sample_list[i - 1])
+
+            self.formant_sample_list = formant_sample_list
+
+            # Number of formant values.
+
+            self.formant_step_count = int(
+                math.floor((formant_frame_count - 1) // self.formant_step_size + 1))
+
+        # Full length of the sound, Fast Track formant computation algorithm.
+
+        else:
+
+            source_fft_list = (
+                numpy.fft.rfft(source_list))
+
+            self.formant_sample_list_list = []
+            self.formant_list_list = []
+
+            for i in range(self.formant_frequency_step_n):
+
+                formant_frame_rate = self.formant_frame_rate_list[i]
+
+                factor_rate = (
+                    float(formant_frame_rate) / frame_rate)
+
+                resample_count = (
+                    int(math.floor(factor_rate * source_count)))
+
+                sample_list = numpy.fft.irfft(source_fft_list, resample_count)   
+
+                # Getting sound time series ready for formant analysis by pre-emphasising frequencies higher
+                # than 50 Hz, see Praat source code.
+
+                factor_filter = (
+                    math.exp(-2.0 * math.pi * 50 / formant_frame_rate))
+
+                formant_frame_count = len(sample_list)
+                formant_sample_list = [sample_list[0]]
+
+                for j in range(1, int(formant_frame_count)):
+
+                    formant_sample_list.append(
+                        sample_list[j] - factor_filter * sample_list[j - 1])
+
+                self.formant_sample_list_list.append(formant_sample_list)
+
+                # Number of formant values.
+
+                formant_step_count = (
+
+                    int(math.floor(
+                        (formant_frame_count - 1) // self.formant_step_size_list[i] + 1)))
+
+                self.formant_step_count_list.append(formant_step_count)
+
+                self.formant_list_list.append(
+                    [None for j in range(formant_step_count)])
+
+        # Formant value time series.
+
+        if not self.fast_track_flag:
+
+            self.formant_list = [None for i in range(self.formant_step_count)]
+
+        else:
+
+            self.formant_list = []
 
     def get_formants(self, step_index):
         """
@@ -575,14 +827,21 @@ class AudioPraatLike(object):
 
         # Initializing formant computation data, if required.
 
-        if self.formant_list == None:
+        if self.formant_list is None:
             self.init_formant_f()
 
         # Checking validity of supplied time step index.
 
-        if step_index < 4 or step_index >= self.formant_step_count - 4:
-            raise ValueError('step index {0} is out of bounds [4, {1})'.format(
-                step_index, self.formant_step_count - 4))
+        if (step_index < self.formant_step_shift or
+            step_index >= self.formant_step_count - self.formant_step_shift):
+
+            raise (
+
+                ValueError(
+                    'step index {} is out of bounds [{}, {})'.format(
+                        step_index,
+                        self.formant_step_shift,
+                        self.formant_step_count - self.formant_step_shift)))
 
         # Checking if we already computed required formant point value.
 
@@ -591,14 +850,79 @@ class AudioPraatLike(object):
 
         # No, we haven't, so we are going to compute it.
 
-        sample_from = (step_index - 4) * self.formant_step_size
+        sample_from = (
+            step_index * self.formant_step_size - self.formant_half_window_size)
 
         sample_list = [
             self.formant_sample_list[sample_from + i]
                 for i in range(self.formant_window_size)]
 
-        formant_list = compute_formants(sample_list, self.formant_frame_rate * 0.5)
+        formant_list = (
+
+            compute_formants(
+                sample_list, self.formant_frame_rate * 0.5))
+
         self.formant_list[step_index] = formant_list[:3]
+
+        return formant_list[:3]
+
+    def get_formants_fast_track(self, ft_index, step_index):
+        """
+        Computes point formant values at the point specified by formant time step index for Fast Track
+        formant computation.
+        """
+
+        # Initializing formant computation data, if required.
+
+        if self.formant_list is None:
+            self.init_formant_f()
+
+        # Checking validity of supplied time step index.
+
+        formant_step_shift = self.formant_step_shift_list[ft_index]
+        formant_step_count = self.formant_step_count_list[ft_index]
+
+        if (step_index < formant_step_shift or
+            step_index >= formant_step_count - formant_step_shift):
+
+            raise (
+
+                ValueError(
+                    'step index {} is out of bounds [{}, {})'.format(
+                        step_index,
+                        formant_step_shift,
+                        formant_step_count - formant_step_shift)))
+
+        # Checking if we already computed required formant point value.
+
+        formant_list_list = (
+            self.formant_list_list[ft_index])
+
+        if formant_list_list[step_index] != None:
+            return formant_list_list[step_index]
+
+        # No, we haven't, so we are going to compute it.
+
+        formant_step_size = self.formant_step_size_list[ft_index]
+
+        formant_half_window_size = self.formant_half_window_size_list[ft_index]
+        formant_window_size = self.formant_window_size_list[ft_index]
+
+        formant_sample_list = self.formant_sample_list_list[ft_index]
+
+        sample_from = (
+            step_index * formant_step_size - formant_half_window_size)
+
+        sample_list = [
+            formant_sample_list[sample_from + i]
+                for i in range(formant_window_size)]
+
+        formant_list = (
+
+            compute_formants(
+                sample_list, self.formant_frame_rate_list[ft_index] * 0.5))
+
+        formant_list_list[step_index] = formant_list[:3]
 
         return formant_list[:3]
 
@@ -609,39 +933,211 @@ class AudioPraatLike(object):
 
         # Initializing formant computation data, if required.
 
-        if self.formant_list == None:
+        if self.formant_list is None:
             self.init_formant_f()
-
-        # Due to windowed nature of formant value computation, we can't compute them for points close to
-        # the beginning and the end of the recording; such points are skipped.
-
-        factor = self.formant_frame_rate / self.formant_step_size
-
-        begin_step = max(4,
-            int(math.ceil((begin + self.padding_length) * factor)))
-
-        end_step = min(
-            self.formant_step_count - 5,
-            int(math.floor((end + self.padding_length) * factor)))
-
-        # Getting point formant values.
 
         f1_list, f2_list, f3_list = [], [], []
 
-        for step_index in range(begin_step, end_step + 1):
-            f1, f2, f3 = self.get_formants(step_index)
+        # Standard formant computation algorithm.
 
-            f1_list.append(f1)
-            f2_list.append(f2)
-            f3_list.append(f3)
+        if not self.fast_track_flag:
 
-        f1_list.sort()
-        f2_list.sort()
-        f3_list.sort()
+            # Due to windowed nature of formant value computation, we can't compute them for points close to
+            # the beginning and the end of the recording; such points are skipped.
+
+            factor = (
+                self.formant_frame_rate / self.formant_step_size)
+
+            begin_step = (
+
+                max(
+                    self.formant_step_shift,
+                    int(math.ceil((begin + self.padding_length) * factor))))
+
+            end_step = (
+
+                min(
+                    self.formant_step_count - 1 - self.formant_step_shift,
+                    int(math.floor((end + self.padding_length) * factor))))
+
+            # Getting point formant values.
+
+            for step_index in range(begin_step, end_step + 1):
+
+                f1, f2, f3 = self.get_formants(step_index)
+
+                f1_list.append(f1)
+                f2_list.append(f2)
+                f3_list.append(f3)
+
+            f1_list.sort()
+            f2_list.sort()
+            f3_list.sort()
+
+        # Fast Track formant computation algorithm.
+
+        else:
+
+            best_index = None
+
+            best_f_list_list = None
+            best_mae = None
+
+            for i in range(self.formant_frequency_step_n):
+
+                formant_frame_rate = self.formant_frame_rate_list[i]
+
+                formant_step_size = self.formant_step_size_list[i]
+                formant_step_shift = self.formant_step_shift_list[i]
+
+                formant_step_count = self.formant_step_count_list[i]
+
+                factor = (
+                    formant_frame_rate / formant_step_size)
+
+                begin_step = (
+
+                    max(
+                        formant_step_shift,
+                        int(math.ceil((begin + self.padding_length) * factor))))
+
+                end_step = (
+
+                    min(
+                        formant_step_count - 1 - formant_step_shift,
+                        int(math.floor((end + self.padding_length) * factor))))
+
+                # Getting point formant values.
+
+                ft_f1_list = []
+                ft_f2_list = []
+                ft_f3_list = []
+
+                for step_index in range(begin_step, end_step + 1):
+
+                    f1, f2, f3 = self.get_formants_fast_track(i, step_index)
+
+                    ft_f1_list.append(f1)
+                    ft_f2_list.append(f2)
+                    ft_f3_list.append(f3)
+
+                f_list_list = [ft_f1_list, ft_f2_list, ft_f3_list]
+
+                # Computing linear regression on cosine predictors.
+
+                N = len(ft_f1_list)
+
+                cosine_list_list = [
+                    [1.0 for j in range(N)]]
+
+                for j in range(1, self.dct_coef_n + 1):
+
+                    cosine_list_list.append([
+                        math.cos((k + 0.5) * j * math.pi / N)
+                        for k in range(N)])
+
+                cosine_array = (
+                    numpy.array(cosine_list_list).transpose())
+
+                fitted_list_list = []
+                mae_list = []
+
+                for ft_list in f_list_list:
+
+                    result = (
+                        numpy.linalg.lstsq(
+                            cosine_array, ft_list, rcond = None))
+
+                    coef_array = result[0]
+
+                    fitted_list = (
+
+                        numpy.sum(
+                            coef_array[j] * cosine_array[:,j]
+                            for j in range(self.dct_coef_n + 1)))
+
+                    fitted_list_list.append(fitted_list)
+
+                    mae = (
+
+                        sum(
+                            abs(ft_list[j] - fitted_list[j])
+                            for j in range(N))
+
+                            / N)
+
+                    mae_list.append(mae)
+
+                mae_total = sum(mae_list)
+
+                if best_mae is None or mae_total < best_mae:
+
+                    best_index = i
+
+                    best_f_list_list = f_list_list
+                    best_mae = mae_total
+
+                log.debug(
+                    '\n{} Hz: {:.2f} + {:.2f} + {:.2f} -> {:.2f} MAE'.format(
+                        int(formant_frame_rate / 2),
+                        mae_list[0], mae_list[1], mae_list[2],
+                        mae_total))
+
+                # Plotting formants, if required.
+
+                if (self.args and self.args.__debug_flag__ and
+                    self.fast_track_plot_flag):
+
+                    figure = pyplot.figure()
+                    figure.set_size_inches(16, 10)
+
+                    axes = figure.add_subplot(111)
+
+                    x_list = [0.5 + j for j in range(N)]
+
+                    axes.plot(x_list, ft_f1_list, 'b.')
+                    axes.plot(x_list, ft_f2_list, 'g.')
+                    axes.plot(x_list, ft_f3_list, 'r.')
+
+                    axes.plot(x_list, fitted_list_list[0], 'b-x')
+                    axes.plot(x_list, fitted_list_list[1], 'g-x')
+                    axes.plot(x_list, fitted_list_list[2], 'r-x')
+
+                    axes.set_title(
+                        '{} Hz: {:.2f} + {:.2f} + {:.2f} -> {:.2f} MAE'.format(
+                            int(formant_frame_rate / 2),
+                            mae_list[0], mae_list[1], mae_list[2],
+                            mae_total))
+
+                    axes.autoscale()
+
+                    axes.set_xlim(0, len(ft_f1_list))
+                    axes.set_ylim(ymin = 0)
+
+                    y_max = max(ft_f3_list) * 1.05
+
+                    if y_max > axes.get_ylim()[1]:
+                        axes.set_ylim(ymax = y_max)
+
+                    pyplot.tight_layout()
+                    pyplot.savefig('fast_track_plot_{:02d}.png'.format(i))
+
+            # Using set of formants with the least MAE.
+
+            log.debug(
+                '\nbest: {} Hz, {:.2f} MAE'.format(
+                    int(self.formant_frame_rate_list[best_index] / 2),
+                    best_mae))
+
+            f1_list, f2_list, f3_list = best_f_list_list
+
+            f1_list.sort()
+            f2_list.sort()
+            f3_list.sort()
 
         # Computing interval formant values as means (without highest and lowest values, if possible).
 
-        step_count = end_step - begin_step + 1
+        step_count = len(f1_list)
 
         f1_mean = (
             sum(f1_list) / step_count if step_count <= 2 else
@@ -884,13 +1380,18 @@ def process_textgrid(
     textgrid,
     unusual_f = None,
     no_vowel_f = None,
-    no_vowel_selected_f = None):
+    no_vowel_selected_f = None,
+    interval_only = False):
     """
     Processes TextGrid markup, checking for each tier if it should be analyzed.
     """
 
     tier_data_list = []
     vowel_flag = False
+    vowel_range_list = None
+
+    if interval_only:
+        vowel_range_list = []
 
     for tier_number, tier_name in textgrid.get_tier_name_num():
 
@@ -953,6 +1454,57 @@ def process_textgrid(
                     interval_idx_to_raw_idx[(sequence_index, interval_index)] = raw_index
                     interval_idx_to_raw_idx[sequence_index][interval_index] = partial_raw_index
 
+                    # If we are to limit processing to only selected intervals, we should update selected
+                    # ranges.
+
+                    if interval_only:
+
+                        interval_range = tuple(interval[:2])
+
+                        if len(vowel_range_list) <= 0:
+                            vowel_range_list.append(interval_range)
+
+                        else:
+
+                            index = (
+
+                                bisect.bisect_left(
+                                    vowel_range_list, interval_range))
+
+                            # Can we merge with preceeding?
+                                
+                            if (index >= 1 and
+                                vowel_range_list[index - 1][1] >= interval_range[0]):
+
+                                index -= 1
+
+                                vowel_range_list[index] = (
+                                    (vowel_range_list[index][0], interval_range[1]))
+
+                                # Maybe we should also merge with succeeding?
+
+                                if (index + 1 < len(vowel_range_list) and
+                                    vowel_range_list[index][1] >= vowel_range_list[index + 1][0]):
+
+                                    vowel_range_list[index] = (
+                                        (vowel_range_list[index][0], vowel_range_list[index + 1][1]))
+
+                                    vowel_range_list.pop(index + 1)
+
+                            # Can we merge with succeeding?
+
+                            elif (
+                                index < len(vowel_range_list) and
+                                vowel_range_list[index][0] <= interval_range[1]):
+
+                                vowel_range_list[index] = (
+                                    (interval_range[0], vowel_range_list[index][1]))
+
+                            # No merge, just insert.
+
+                            else:
+                                vowel_range_list.insert(index, interval_range)
+
                 # Noting if the interval contains unusual (i.e. non-transcription) markup.
 
                 elif not transcription_check:
@@ -974,7 +1526,7 @@ def process_textgrid(
         if unusual_markup_flag:
 
             if unusual_f is not None:
-              unusual_f(tier_number, tier_name, transcription, dict(unusual_markup_list))
+                unusual_f(tier_number, tier_name, transcription, dict(unusual_markup_list))
 
         # If the markup does not have any vowels, we note it and also report it.
 
@@ -983,7 +1535,7 @@ def process_textgrid(
             tier_data_list.append((tier_number, tier_name, 'no_vowel'))
 
             if no_vowel_f is not None:
-              no_vowel_f(tier_number, tier_name, transcription_list)
+                no_vowel_f(tier_number, tier_name, transcription_list)
 
         # It is also possible that while full transcription has vowels, intervals selected for
         # analysis do not. In that case we also note it and report it.
@@ -993,18 +1545,30 @@ def process_textgrid(
             tier_data_list.append((tier_number, tier_name, 'no_vowel_selected'))
 
             if no_vowel_selected_f is not None:
-              no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list)
+                no_vowel_selected_f(tier_number, tier_name, transcription_list, selected_list)
 
         # Otherwise we store tier data to be used during processing of the sound file.
 
         else:
-            tier_data_list.append((tier_number, tier_name,
-                (raw_interval_list, raw_interval_seq_list, interval_seq_list,
-                    interval_idx_to_raw_idx, transcription)))
+
+            interval_tuple = (   
+                raw_interval_list,
+                raw_interval_seq_list,
+                interval_seq_list,
+                interval_idx_to_raw_idx,
+                transcription)
+
+            tier_data_list.append((
+                tier_number,
+                tier_name,
+                interval_tuple))
 
             vowel_flag = True
 
-    return tier_data_list, vowel_flag
+    return (
+        tier_data_list,
+        vowel_flag,
+        vowel_range_list)
 
 
 class Tier_Result(object):
@@ -1307,11 +1871,25 @@ def process_sound_markup(
                 markup_bytes = markup_stream.read()
 
             try:
+
                 textgrid = pympi.Praat.TextGrid(xmax = 0)
 
+                if __debug_flag__:
+
+                    with open('__markup__.TextGrid', 'wb') as markup_file:
+                        markup_file.write(markup_bytes)
+
+                # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
+                # endianness specified by the BOM at the start of the file may be lost.
+
                 textgrid.from_file(
-                    io.BytesIO(markup_bytes),
-                    codec = chardet.detect(markup_bytes)['encoding'])
+
+                    io.BytesIO(
+                        markup_bytes
+                            .decode(chardet.detect(markup_bytes)['encoding'])
+                            .encode('utf-8')),
+
+                    codec = 'utf-8')
 
             except:
 
@@ -1327,12 +1905,17 @@ def process_sound_markup(
                 textgrid = pympi.Praat.TextGrid(xmax = 0)
 
                 textgrid.from_file(
-                    io.BytesIO(markup_bytes),
-                    codec = chardet.detect(markup_bytes)['encoding'])
+
+                    io.BytesIO(
+                        markup_bytes
+                            .decode(chardet.detect(markup_bytes)['encoding'])
+                            .encode('utf-8')),
+
+                    codec = 'utf-8')
 
             # Processing markup, getting info we need.
 
-            tier_data_list, vowel_flag = process_textgrid(textgrid)
+            tier_data_list, vowel_flag, vowel_range_list = process_textgrid(textgrid)
 
             log.debug(
                 '{0}:\ntier_data_list:\n{1}\nvowel_flag: {2}'.format(
@@ -1486,10 +2069,13 @@ def sigma_inverse(sigma):
     return sigma, inverse
 
 
-def chart_data(f_2d_list, f_3d_list):
+def chart_data(f_2d_tt_list, f_3d_tt_list):
     """
     Generates formant chart data given formant series.
     """
+
+    f_2d_list = [f_2d for f_2d, tt in f_2d_tt_list]
+    f_3d_list = [f_3d for f_3d, tt in f_3d_tt_list]
 
     # Computing means and standard deviation matrices.
 
@@ -1515,18 +2101,30 @@ def chart_data(f_2d_list, f_3d_list):
     distance_2d_list = []
     distance_3d_list = []
 
-    for f_2d in f_2d_list:
+    for f_2d, tt in f_2d_tt_list:
 
-        delta_2d = f_2d - mean_2d
-        distance_2d_list.append((numpy.einsum('n,nk,k->', delta_2d, inverse_2d, delta_2d), f_2d))
+        delta_2d = (
+            f_2d - mean_2d)
 
-    for f_3d in f_3d_list:
+        distance_2d = (
+            numpy.einsum('n,nk,k->', delta_2d, inverse_2d, delta_2d))
 
-        delta_3d = f_3d - mean_3d
-        distance_3d_list.append((numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d), f_3d))
+        distance_2d_list.append(
+            (distance_2d, f_2d, tt))
 
-    distance_2d_list.sort(key = lambda df: df[0])
-    distance_3d_list.sort(key = lambda df: df[0])
+    for f_3d, tt in f_3d_tt_list:
+
+        delta_3d = (
+            f_3d - mean_3d)
+
+        distance_3d = (
+            numpy.einsum('n,nk,k->', delta_3d, inverse_3d, delta_3d))
+
+        distance_3d_list.append(
+            (distance_3d, f_3d, tt))
+
+    distance_2d_list.sort(key = lambda dft: dft[0])
+    distance_3d_list.sort(key = lambda dft: dft[0])
 
     # Trying to produce one standard deviation ellipse for F1/F2 2-vectors.
 
@@ -1544,34 +2142,52 @@ def chart_data(f_2d_list, f_3d_list):
     filtered_2d_list = []
     outlier_2d_list = []
 
-    for distance_squared, f_2d in distance_2d_list:
+    for distance_squared, f_2d, tt in distance_2d_list:
+
         if distance_squared <= 2:
-            filtered_2d_list.append(f_2d)
+            filtered_2d_list.append((f_2d, tt))
+
         else:
-            outlier_2d_list.append(f_2d)
+            outlier_2d_list.append((f_2d, tt))
 
     if len(filtered_2d_list) < (len(distance_2d_list) + 1) // 2:
-        sorted_list = [f_2d for distance_squared, f_2d in distance_2d_list]
 
-        filtered_2d_list = sorted_list[:(len(distance_2d_list) + 1) // 2]
-        outlier_2d_list = sorted_list[(len(distance_2d_list) + 1) // 2:]
+        sorted_list = [
+
+            (f_2d, tt)
+            for distance_squared, f_2d, tt in distance_2d_list]
+
+        filtered_2d_list = (
+            sorted_list[:(len(distance_2d_list) + 1) // 2])
+
+        outlier_2d_list = (
+            sorted_list[(len(distance_2d_list) + 1) // 2:])
 
     # The same for F1/F2/F3 3-vectors.
 
     filtered_3d_list = []
     outlier_3d_list = []
 
-    for distance_squared, f_3d in distance_3d_list:
+    for distance_squared, f_3d, tt in distance_3d_list:
+
         if distance_squared <= 2:
-            filtered_3d_list.append(f_3d)
+            filtered_3d_list.append((f_3d, tt))
+
         else:
-            outlier_3d_list.append(f_3d)
+            outlier_3d_list.append((f_3d, tt))
 
     if len(filtered_3d_list) < (len(distance_3d_list) + 1) // 2:
-        sorted_list = [f_3d for distance_squared, f_3d in distance_3d_list]
 
-        filtered_3d_list = sorted_list[:(len(distance_3d_list) + 1) // 2]
-        outlier_3d_list = sorted_list[(len(distance_3d_list) + 1) // 2:]
+        sorted_list = [
+                
+            (f_3d, tt)
+            for distance_squared, f_3d, tt in distance_3d_list]
+
+        filtered_3d_list = (
+            sorted_list[:(len(distance_3d_list) + 1) // 2])
+
+        outlier_3d_list = (
+            sorted_list[(len(distance_3d_list) + 1) // 2:])
 
     # Returning computed chart data.
 
@@ -1611,14 +2227,20 @@ def chart_definition_list(
         for c, tc, v, f_2d_list, o_list, m, e_list in chart_data_2d_list)
 
     heading_list = []
+
     for c, tc, vowel, f_list, o_list, m, e_list in chart_data_2d_list:
-        heading_list.extend(['{0} F1'.format(vowel), '{0} F2'.format(vowel)])
+
+        heading_list.extend([
+            '{0} F1'.format(vowel),
+            '{0} F2'.format(vowel),
+            '',
+            ''])
 
     worksheet_table_2d.write_row(
         'A{0}'.format(row_index + 1), heading_list)
 
     worksheet_table_2d.write_row(
-        'A{0}'.format(row_index + 2), ['main part', ''] * len(chart_data_2d_list))
+        'A{0}'.format(row_index + 2), ['main part', '', '', ''] * len(chart_data_2d_list))
 
     # Removing outliers that outlie too much.
 
@@ -1626,11 +2248,16 @@ def chart_definition_list(
     f2_limit = max_2d_f2 + min_2d_f2 / 2
 
     for i in range(len(chart_data_2d_list)):
+
         chart_data_2d_list[i] = list(chart_data_2d_list[i])
 
-        chart_data_2d_list[i][4] = list(filter(
-            lambda f_2d: f_2d[0] <= f1_limit and f_2d[1] <= f2_limit,
-            chart_data_2d_list[i][4]))
+        chart_data_2d_list[i][4] = (
+                
+            list(filter(
+                lambda f_2d_tt:
+                    f_2d_tt[0][0] <= f1_limit and
+                    f_2d_tt[0][1] <= f2_limit,
+                chart_data_2d_list[i][4])))
 
     max_outlier_list_length = max(len(outlier_list)
         for c, tc, v, f_list, outlier_list, m, e_list in chart_data_2d_list)
@@ -1638,17 +2265,32 @@ def chart_definition_list(
     # Writing out chart data and compiling chart data series info.
 
     for index, (count, total_count, vowel,
-        f_2d_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_2d_list):
+        f_2d_tt_list, outlier_list, mean, ellipse_list) in enumerate(chart_data_2d_list):
+
+        f_2d_list = [f_2d for f_2d, tt in f_2d_tt_list]
+        tt_list = [tt for f_2d, tt in f_2d_tt_list]
 
         f1_list, f2_list = zip(*f_2d_list)
+        xc_list, xl_list = zip(*tt_list)
 
-        f1_outlier_list, f2_outlier_list = \
-            zip(*outlier_list) if outlier_list else ([], [])
+        f1_outlier_list, f2_outlier_list = [], []
+        xc_outlier_list, xl_outlier_list = [], []
+
+        if outlier_list:
+
+            f_2d_list = [f_2d for f_2d, tt in outlier_list]
+            tt_list = [tt for f_2d, tt in outlier_list]
+
+            f1_outlier_list, f2_outlier_list = zip(*f_2d_list)
+            xc_outlier_list, xl_outlier_list = zip(*tt_list)
 
         x1_ellipse_list, x2_ellipse_list = zip(*ellipse_list)
 
-        f1_column = column_list[index * 2]
-        f2_column = column_list[index * 2 + 1]
+        f1_column = column_list[index * 4]
+        f2_column = column_list[index * 4 + 1]
+
+        xc_column = column_list[index * 4 + 2]
+        xl_column = column_list[index * 4 + 3]
 
         # Writing out formant data.
 
@@ -1676,7 +2318,22 @@ def chart_definition_list(
                 [''] * (max_outlier_list_length - len(f2_outlier_list)) +
                 ['', mean[1], ''] + list(x2_ellipse_list))
 
-        worksheet_table_2d.set_column(index * 2, index * 2 + 1, 11)
+        worksheet_table_2d.write_column(
+            xc_column + str(row_index + 4),
+            list(xc_list) +
+                [''] * (max_f_2d_list_length - len(xc_list)) +
+                ['', ''] + list(xc_outlier_list) +
+                [''] * (max_outlier_list_length - len(xc_outlier_list)))
+
+        worksheet_table_2d.write_column(
+            xl_column + str(row_index + 4),
+            list(xl_list) +
+                [''] * (max_f_2d_list_length - len(xl_list)) +
+                ['', ''] + list(xl_outlier_list) +
+                [''] * (max_outlier_list_length - len(xl_outlier_list)))
+
+        worksheet_table_2d.set_column(index * 4, index * 4 + 1, 11)
+        worksheet_table_2d.set_column(index * 4 + 2, index * 4 + 3, 15)
 
         # Compiling and saving chart data series info.
 
@@ -1890,6 +2547,10 @@ def compile_workbook(
         already_set.add(entry_id)
         result_list, text_list, link_set = result_dict[entry_id]
 
+        text_list_str = (
+            ', '.join(text[2] for text in text_list)
+            if text_list else None)
+
         text = text_list[0] if text_list else None
         text_str = text[2] if text else ''
         text_index = 0
@@ -1985,14 +2646,20 @@ def compile_workbook(
 
                         for group in textgrid_group_list:
 
+                            f_list_a.extend([
+                                tier_result.transcription, text_list_str])
+
                             sound_counter_dict[group] += 1
-                            vowel_formant_dict[group][vowel_a].append(tuple(f_list_a))
+                            vowel_formant_dict[group][vowel_a].append(f_list_a)
 
                         if text_b_list[2] != text_a_list[2]:
                             for group in textgrid_group_list:
 
+                                f_list_b.extend([
+                                    tier_result.transcription, text_list_str])
+
                                 sound_counter_dict[group] += 1
-                                vowel_formant_dict[group][vowel_b].append(tuple(f_list_b))
+                                vowel_formant_dict[group][vowel_b].append(f_list_b)
 
                     # ...for all intervals.
 
@@ -2030,8 +2697,11 @@ def compile_workbook(
 
                                 row_counter_dict[group] += 1
 
+                                f_list.extend([
+                                    tier_result.transcription, text_list_str])
+
                                 sound_counter_dict[group] += 1
-                                vowel_formant_dict[group][vowel].append(tuple(f_list))
+                                vowel_formant_dict[group][vowel].append(f_list)
 
                             if csv_stream:
 
@@ -2077,14 +2747,25 @@ def compile_workbook(
 
         vowel_formant_list = []
 
-        for vowel, f_tuple_list in sorted(vowel_formant_dict[group].items()):
-            f_tuple_list = list(set(f_tuple_list))
+        for vowel, f_list_list_raw in sorted(vowel_formant_dict[group].items()):
 
-            if len(f_tuple_list) >= args.chart_threshold:
+            f_list_list = []
+            f_tuple_set = set()
+
+            for f_list in f_list_list_raw:
+
+                f_tuple = tuple(f_list[:3])
+
+                if f_tuple not in f_tuple_set:
+
+                    f_list_list.append(f_list)
+                    f_tuple_set.add(f_tuple)
+
+            if len(f_list_list) >= args.chart_threshold:
 
                 vowel_formant_list.append((vowel,
-                    list(map(lambda f_tuple: numpy.array(f_tuple[:2]), f_tuple_list)),
-                    list(map(numpy.array, f_tuple_list))))
+                    list(map(lambda f_list: (numpy.array(f_list[:2]), f_list[3:]), f_list_list)),
+                    list(map(lambda f_list: (numpy.array(f_list[:3]), f_list[3:]), f_list_list))))
 
         # Compiling data of formant value series by filtering F1/F2 2-vectors and F1/F2/F3 3-vectors by
         # Mahalonobis distance.
@@ -2118,7 +2799,8 @@ def compile_workbook(
 
             # Updating F1/F2 maximum/minimum info.
 
-            f1_list, f2_list = zip(*filtered_2d_list)
+            f1_list, f2_list = (
+                zip(*[f_2d for f_2d, tt in filtered_2d_list]))
 
             min_f1_list, max_f1_list = min(f1_list), max(f1_list)
             min_f2_list, max_f2_list = min(f2_list), max(f2_list)
@@ -2137,7 +2819,8 @@ def compile_workbook(
 
             # Updating F1/F2/F3 maximum/minimum info.
 
-            f1_list, f2_list, f3_list = zip(*filtered_3d_list)
+            f1_list, f2_list, f3_list = (
+                zip(*[f_3d for f_3d, tt in filtered_3d_list]))
 
             min_f1_list, max_f1_list = min(f1_list), max(f1_list)
             min_f2_list, max_f2_list = min(f2_list), max(f2_list)
@@ -2164,6 +2847,7 @@ def compile_workbook(
         # Compiling info of the formant scatter chart data series, unless we actually don't have any.
 
         if len(chart_data_2d_list) > 0:
+
             chart_dict_list = []
 
             # It seems that we have to plot data in order of its size, from vowels with least number of
@@ -2219,13 +2903,21 @@ def compile_workbook(
                 for c, tc, v, f_3d_list, o_list, m, s_3d, i_3d in chart_data_3d_list)
 
             heading_list = []
+
             for c, tc, vowel, f_list, o_list, m, s_3d, i_3d in chart_data_3d_list:
 
                 heading_list.extend([
-                    '{0} F1'.format(vowel), '{0} F2'.format(vowel), '{0} F3'.format(vowel)])
+                    '{0} F1'.format(vowel),
+                    '{0} F2'.format(vowel),
+                    '{0} F3'.format(vowel),
+                    '',
+                    ''])
 
-            worksheet_table_3d.write_row('A1', heading_list)
-            worksheet_table_3d.write_row('A2', ['main part', '', ''] * len(chart_data_3d_list))
+            worksheet_table_3d.write_row(
+                'A1', heading_list)
+
+            worksheet_table_3d.write_row(
+                'A2', ['main part', '', '', '', ''] * len(chart_data_3d_list))
 
             # Removing outliers that outlie too much.
 
@@ -2234,59 +2926,99 @@ def compile_workbook(
             f3_limit = max_3d_f3 + min_3d_f3 / 2
 
             for i in range(len(chart_data_3d_list)):
+
                 chart_data_3d_list[i] = list(chart_data_3d_list[i])
 
-                chart_data_3d_list[i][4] = list(filter(
-                    lambda f_3d: f_3d[0] <= f1_limit and f_3d[1] <= f2_limit and f_3d[2] <= f3_limit,
-                    chart_data_3d_list[i][4]))
+                chart_data_3d_list[i][4] = (
+                        
+                    list(filter(
+                        lambda f_3d_tt:
+                            f_3d_tt[0][0] <= f1_limit and
+                            f_3d_tt[0][1] <= f2_limit and
+                            f_3d_tt[0][2] <= f3_limit,
+                        chart_data_3d_list[i][4])))
 
             max_outlier_list_length = max(len(outlier_list)
                 for c, tc, v, f_list, outlier_list, m, s_3d, i_3d in chart_data_3d_list)
 
             # Writing out chart data.
 
-            for index, (count, total_count, vowel, f_3d_list,
-                outlier_list, mean, sigma_3d, inverse_3d) in enumerate(chart_data_3d_list):
+            for index, (count, total_count, vowel,
+                f_3d_tt_list, outlier_list, mean, sigma_3d, inverse_3d) in enumerate(chart_data_3d_list):
+
+                f_3d_list = [f_3d for f_3d, tt in f_3d_tt_list]
+                tt_list = [tt for f_3d, tt in f_3d_tt_list]
 
                 f1_list, f2_list, f3_list = zip(*f_3d_list)
+                xc_list, xl_list = zip(*tt_list)
 
-                f1_outlier_list, f2_outlier_list, f3_outlier_list = \
-                    zip(*outlier_list) if outlier_list else ([], [], [])
+                f1_outlier_list, f2_outlier_list, f3_outlier_list = [], [], []
+                xc_outlier_list, xl_outlier_list = [], []
 
-                f1_column = column_list[index * 3]
-                f2_column = column_list[index * 3 + 1]
-                f3_column = column_list[index * 3 + 2]
+                if outlier_list:
+
+                    f_3d_list = [f_3d for f_3d, tt in outlier_list]
+                    tt_list = [tt for f_3d, tt in outlier_list]
+
+                    f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*f_3d_list)
+                    xc_outlier_list, xl_outlier_list = zip(*tt_list)
+                
+                f1_column = column_list[index * 5]
+                f2_column = column_list[index * 5 + 1]
+                f3_column = column_list[index * 5 + 2]
+
+                xc_column = column_list[index * 5 + 3]
+                xl_column = column_list[index * 5 + 4]
 
                 # Writing out formant data.
 
-                worksheet_table_3d.write(f1_column + '3',
+                worksheet_table_3d.write(
+                    f1_column + '3',
                     '{0}/{1} ({2:.1f}%) points'.format(
                         count, total_count, 100.0 * count / total_count))
 
-                worksheet_table_3d.write_column(f1_column + '4',
+                worksheet_table_3d.write_column(
+                    f1_column + '4',
                     list(f1_list) +
-                    [''] * (max_f_3d_list_length - len(f1_list)) +
-                    [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
-                        len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
-                    list(f1_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f1_outlier_list)) +
-                    [vowel + ' mean', mean[0]])
+                        [''] * (max_f_3d_list_length - len(f1_list)) +
+                        [vowel + ' outliers', '{0}/{1} ({2:.1f}%) points'.format(
+                            len(outlier_list), total_count, 100.0 * len(outlier_list) / total_count)] +
+                        list(f1_outlier_list) +
+                        [''] * (max_outlier_list_length - len(f1_outlier_list)) +
+                        [vowel + ' mean', mean[0]])
 
-                worksheet_table_3d.write_column(f2_column + '4',
+                worksheet_table_3d.write_column(
+                    f2_column + '4',
                     list(f2_list) +
-                    [''] * (max_f_3d_list_length - len(f2_list)) +
-                    ['', ''] + list(f2_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f2_outlier_list)) +
-                    ['', mean[1]])
+                        [''] * (max_f_3d_list_length - len(f2_list)) +
+                        ['', ''] + list(f2_outlier_list) +
+                        [''] * (max_outlier_list_length - len(f2_outlier_list)) +
+                        ['', mean[1]])
 
-                worksheet_table_3d.write_column(f3_column + '4',
+                worksheet_table_3d.write_column(
+                    f3_column + '4',
                     list(f3_list) +
-                    [''] * (max_f_3d_list_length - len(f3_list)) +
-                    ['', ''] + list(f3_outlier_list) +
-                    [''] * (max_outlier_list_length - len(f3_outlier_list)) +
-                    ['', mean[2]])
+                        [''] * (max_f_3d_list_length - len(f3_list)) +
+                        ['', ''] + list(f3_outlier_list) +
+                        [''] * (max_outlier_list_length - len(f3_outlier_list)) +
+                        ['', mean[2]])
 
-                worksheet_table_3d.set_column(index * 3, index * 3 + 2, 11)
+                worksheet_table_3d.write_column(
+                    xc_column + '4',
+                    list(xc_list) +
+                        [''] * (max_f_3d_list_length - len(xc_list)) +
+                        ['', ''] + list(xc_outlier_list) +
+                        [''] * (max_outlier_list_length - len(xc_outlier_list)))
+
+                worksheet_table_3d.write_column(
+                    xl_column + '4',
+                    list(xl_list) +
+                        [''] * (max_f_3d_list_length - len(xl_list)) +
+                        ['', ''] + list(xl_outlier_list) +
+                        [''] * (max_outlier_list_length - len(xl_outlier_list)))
+
+                worksheet_table_3d.set_column(index * 5, index * 5 + 2, 11)
+                worksheet_table_3d.set_column(index * 5 + 3, index * 5 + 4, 15)
 
             # Creating 3d formant scatter charts, if we have any data.
 
@@ -2315,21 +3047,21 @@ def compile_workbook(
 
                 # Graphing every vowel's data.
 
-                for index, ((c, tc, vowel, f_3d_list, outlier_list, mean_3d, s_3d, inverse_3d),
+                for index, ((c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, s_3d, inverse_3d),
                     color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
 
                     axes.scatter(
-                        [f_3d[0] for f_3d in f_3d_list],
-                        [f_3d[1] for f_3d in f_3d_list],
-                        [f_3d[2] for f_3d in f_3d_list],
+                        [f_3d[0] for f_3d, tt in f_3d_tt_list],
+                        [f_3d[1] for f_3d, tt in f_3d_tt_list],
+                        [f_3d[2] for f_3d, tt in f_3d_tt_list],
                         color = color, s = 4, depthshade = False, alpha = 0.5, zorder = 1000 + index)
 
                     if outlier_list:
 
-                        f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*outlier_list)
-
                         axes.scatter(
-                            f1_outlier_list, f2_outlier_list, f3_outlier_list,
+                            [f_3d[0] for f_3d, tt in outlier_list],
+                            [f_3d[1] for f_3d, tt in outlier_list],
+                            [f_3d[2] for f_3d, tt in outlier_list],
                             color = color, s = 1.44, depthshade = False, alpha = 0.5, zorder = index)
 
                     # Using 'plot' and not 'scatter' so that z-ordering would work correctly and mean
@@ -2410,7 +3142,7 @@ def compile_workbook(
                 z_min_current, z_max_current = axes.get_zlim3d()
                 z_level = z_min_current - (z_max - z_min_current) / 4
 
-                for index, ((c, tc, vowel, f_3d_list, outlier_list, mean_3d, sigma_3d, i_3d),
+                for index, ((c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, sigma_3d, i_3d),
                     color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
 
                     axes.scatter(mean_3d[0], mean_3d[1], z_level,
@@ -2590,6 +3322,11 @@ class Phonology_Parameters(object):
             self.link_field_dict = dict(self.link_field_list)
             self.link_perspective_dict = dict(self.link_perspective_list)
 
+            self.use_fast_track = 'use_fast_track' in request.params
+
+            self.no_cache = 'no_cache' in request.params
+            self.interval_only = 'interval_only' in request.params
+
             self.synchronous = 'synchronous' in request.params
 
         # ...or from JSON data.
@@ -2629,6 +3366,11 @@ class Phonology_Parameters(object):
             self.link_perspective_dict = {
                 tuple(perspective_id): tuple(field_id)
                     for perspective_id, field_id in self.link_perspective_list}
+
+            self.use_fast_track = request_json.get('use_fast_track')
+
+            self.no_cache = request_json.get('no_cache')
+            self.interval_only = request_json.get('interval_only')
 
             self.synchronous = request_json.get('synchronous')
 
@@ -2725,12 +3467,17 @@ class Phonology_Parameters(object):
             tuple(perspective_id): tuple(field_id)
                 for perspective_id, field_id in self.link_perspective_list}
 
+        self.use_fast_track = args.get('use_fast_track')
+
         self.synchronous = args.get('synchronous')
 
         self.limit = args.get('limit')
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
         self.limit_result = args.get('limit_result')
+
+        self.no_cache = args.get('no_cache')
+        self.interval_only = args.get('interval_only')
 
 
 @view_config(route_name = 'phonology', renderer = 'json')
@@ -2758,7 +3505,11 @@ def phonology(request):
     task_status = None
 
     try:
-        args = Phonology_Parameters.from_request(request)
+
+        args = (
+            Phonology_Parameters.from_request(request))
+
+        args.__debug_flag__ = False
 
         log.debug(
             'phonology {0}/{1}: {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}'.format(
@@ -2900,9 +3651,12 @@ def analyze_sound_markup(
     markup_url = row.Markup.content
     sound_url = row.Sound.content
 
-    cache_key = 'phonology:{0}:{1}:{2}:{3}'.format(
-        row.Sound.client_id, row.Sound.object_id,
-        row.Markup.client_id, row.Markup.object_id)
+    cache_key = (
+
+        'phonology:{}:{}:{}:{}{}'.format(
+            row.Sound.client_id, row.Sound.object_id,
+            row.Markup.client_id, row.Markup.object_id,
+            '+ft' if args and args.use_fast_track else ''))
 
     # Processing grouping, if required.
 
@@ -2913,7 +3667,7 @@ def analyze_sound_markup(
 
         log.debug(message('\n  blob description: {0}/{1}'.format(
             row.Markup.additional_metadata['blob_description'],
-            row.Sound.additional_metadata['blob_description'])))
+            row.Sound.additional_metadata.get('blob_description'))))
 
     # Checking if we have cached result for this pair of sound/markup.
     #
@@ -2921,92 +3675,111 @@ def analyze_sound_markup(
     # and CACHE is re-initialized, we would get newly initialized CACHE, and not the value which was
     # imported ealier.
 
-    cache_result = caching.CACHE.get(cache_key)
+    if not args.no_cache:
+
+        cache_result = caching.CACHE.get(cache_key)
+
+        try:
+            if cache_result == 'no_vowel':
+
+                log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}\n{4}'.format(
+                    row_str, cache_key, markup_url, sound_url, text_list))
+
+                state.no_vowel_counter += 1
+
+                task_status.set(2, 1 + int(math.floor(
+                    complete_already + complete_range * (index + 1) / state.total_count)),
+                    'Analyzing sound and markup')
+
+                return (
+                    args.limit_no_vowel and state.no_vowel_counter >= args.limit_no_vowel or
+                    args.limit and index + 1 >= args.limit), None
+
+            # If we have cached exception, we do the same as with absence of vowels, show its info and
+            # continue.
+
+            elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
+                exception, traceback_string = cache_result[1:3]
+
+                log.debug(
+                    '{0} [CACHE {1}]: exception\n{2}\n{3}\n{4}'.format(
+                    row_str, cache_key, markup_url, sound_url, text_list))
+
+                log.debug(
+                    '\n' + traceback_string)
+
+                state.exception_counter += 1
+
+                task_status.set(2, 1 + int(math.floor(
+                    complete_already + complete_range * (index + 1) / state.total_count)),
+                    'Analyzing sound and markup')
+
+                return (
+                    args.limit_exception and state.exception_counter >= args.limit_exception or
+                    args.limit and index + 1 >= args.limit), None
+
+            # If we actually have the result, we use it and continue.
+
+            elif cache_result:
+
+                textgrid_result_list = cache_result
+
+                filtered_result_list = \
+                    result_filter(textgrid_result_list) \
+                        if result_filter else textgrid_result_list
+
+                log.debug(
+                    '{0} [CACHE {1}]:\n{2}\n{3}\n{4}\n{5}'.format(
+                    row_str, cache_key, markup_url, sound_url, text_list,
+                    format_textgrid_result(group_list, textgrid_result_list)))
+
+                if result_filter and args.maybe_tier_set:
+
+                    log.debug('filtered result:\n{0}'.format(
+                        format_textgrid_result(group_list, filtered_result_list)))
+
+                # Ok, another result, updating progress status, stopping earlier, if required.
+
+                task_status.set(2, 1 + int(math.floor(
+                    complete_already + complete_range * (index + 1) / state.total_count)),
+                    'Analyzing sound and markup')
+
+                return False, (group_list, filtered_result_list)
+
+        # If we have an exception while processing cache results, we stop and terminate with error.
+
+        except:
+            return False, 'cache_error'
 
     try:
-        if cache_result == 'no_vowel':
 
-            log.debug('{0} [CACHE {1}]: no vowels\n{2}\n{3}\n{4}'.format(
-                row_str, cache_key, markup_url, sound_url, text_list))
-
-            state.no_vowel_counter += 1
-
-            task_status.set(2, 1 + int(math.floor(
-                complete_already + complete_range * (index + 1) / state.total_count)),
-                'Analyzing sound and markup')
-
-            return (
-                args.limit_no_vowel and state.no_vowel_counter >= args.limit_no_vowel or
-                args.limit and index + 1 >= args.limit), None
-
-        # If we have cached exception, we do the same as with absence of vowels, show its info and
-        # continue.
-
-        elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
-            exception, traceback_string = cache_result[1:3]
-
-            log.debug(
-                '{0} [CACHE {1}]: exception\n{2}\n{3}\n{4}'.format(
-                row_str, cache_key, markup_url, sound_url, text_list))
-
-            log.debug(traceback_string)
-
-            state.exception_counter += 1
-
-            task_status.set(2, 1 + int(math.floor(
-                complete_already + complete_range * (index + 1) / state.total_count)),
-                'Analyzing sound and markup')
-
-            return (
-                args.limit_exception and state.exception_counter >= args.limit_exception or
-                args.limit and index + 1 >= args.limit), None
-
-        # If we actually have the result, we use it and continue.
-
-        elif cache_result:
-
-            textgrid_result_list = cache_result
-
-            filtered_result_list = \
-                result_filter(textgrid_result_list) \
-                    if result_filter else textgrid_result_list
-
-            log.debug(
-                '{0} [CACHE {1}]:\n{2}\n{3}\n{4}\n{5}'.format(
-                row_str, cache_key, markup_url, sound_url, text_list,
-                format_textgrid_result(group_list, textgrid_result_list)))
-
-            if result_filter and args.maybe_tier_set:
-
-                log.debug('filtered result:\n{0}'.format(
-                    format_textgrid_result(group_list, filtered_result_list)))
-
-            # Ok, another result, updating progress status, stopping earlier, if required.
-
-            task_status.set(2, 1 + int(math.floor(
-                complete_already + complete_range * (index + 1) / state.total_count)),
-                'Analyzing sound and markup')
-
-            return False, (group_list, filtered_result_list)
-
-    # If we have an exception while processing cache results, we stop and terminate with error.
-
-    except:
-        return False, 'cache_error'
-
-    try:
+        storage_f = (
+            as_storage_file if args.__debug_flag__ else storage_file)
 
         # Getting markup, checking for each tier if it needs to be processed.
 
-        with urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')) as markup_stream:
+        with storage_f(storage, markup_url) as markup_stream:
             markup_bytes = markup_stream.read()
 
         try:
             textgrid = pympi.Praat.TextGrid(xmax = 0)
 
+            if args.__debug_flag__:
+
+                with open('__markup__.TextGrid', 'wb') as markup_file:
+                    markup_file.write(markup_bytes)
+
+            # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
+            # endianness specified by the BOM at the start of the file may be lost.
+
             textgrid.from_file(
-                io.BytesIO(markup_bytes),
-                codec = chardet.detect(markup_bytes)['encoding'])
+
+                io.BytesIO(
+                    markup_bytes
+                        .decode(chardet.detect(markup_bytes)['encoding'])
+                        .encode('utf-8')),
+
+                codec = 'utf-8')
 
         except:
 
@@ -3015,14 +3788,19 @@ def analyze_sound_markup(
 
             markup_url, sound_url = sound_url, markup_url
 
-            with urllib.request.urlopen(urllib.parse.quote(markup_url, safe = '/:')) as markup_stream:
+            with storage_f(storage, markup_url) as markup_stream:
                 markup_bytes = markup_stream.read()
 
             textgrid = pympi.Praat.TextGrid(xmax = 0)
 
             textgrid.from_file(
-                io.BytesIO(markup_bytes),
-                codec = chardet.detect(markup_bytes)['encoding'])
+
+                io.BytesIO(
+                    markup_bytes
+                        .decode(chardet.detect(markup_bytes)['encoding'])
+                        .encode('utf-8')),
+
+                codec = 'utf-8')
 
         # Some helper functions.
 
@@ -3046,8 +3824,14 @@ def analyze_sound_markup(
                 'markup {3}, selected {4}'.format(
                 row_str, tier_number, tier_name, transcription_list, selected_list))
 
-        tier_data_list, vowel_flag = process_textgrid(
-            textgrid, unusual_f, no_vowel_f, no_vowel_selected_f)
+        tier_data_list, vowel_flag, vowel_range_list = (
+
+            process_textgrid(
+                textgrid,
+                unusual_f,
+                no_vowel_f,
+                no_vowel_selected_f,
+                args.interval_only))
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
 
@@ -3064,6 +3848,12 @@ def analyze_sound_markup(
                 args.limit_no_vowel and state.no_vowel_counter >= args.limit_no_vowel or
                 args.limit and index + 1 >= args.limit), None
 
+        if args.interval_only:
+
+            log.debug(
+                '\nvowel_range_list:\n' +
+                pprint.pformat(vowel_range_list, width = 108))
+
         # Otherwise we retrieve the sound file and analyze each vowel-containing markup.
         # Partially inspired by source code at scripts/convert_five_tiers.py:307.
 
@@ -3073,14 +3863,19 @@ def analyze_sound_markup(
         sound = None
         with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
 
-            with storage_file(storage, sound_url) as sound_stream:
+            with storage_f(storage, sound_url) as sound_stream:
                 temp_file.write(sound_stream.read())
                 temp_file.flush()
 
-            sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
+            sound = (
 
-        textgrid_result_list = process_sound(
-            tier_data_list, sound)
+                AudioPraatLike(
+                    pydub.AudioSegment.from_file(temp_file.name),
+                    args,
+                    vowel_range_list if args.interval_only else None))
+
+        textgrid_result_list = (
+            process_sound(tier_data_list, sound))
 
         caching.CACHE.set(cache_key, textgrid_result_list)
 
@@ -3157,19 +3952,20 @@ def perform_phonology(args, task_status, storage):
     Performs phonology compilation.
     """
 
-    log.debug('phonology {0}/{1}:'
-        '\n  dictionary_name: \'{2}\'\n  perspective_name: \'{3}\''
-        '\n  group_by_description: {4}'
-        '\n  maybe_translation_field: {5}\n  only_first_translation: {6}'
-        '\n  use_automatic_markup: {7}\n  vowel_selection: {8}'
-        '\n  maybe_tier_set: {9}'
-        '\n  keep_set: {10}\n  join_set: {11}'
-        '\n  chart_threshold: {12}'
-        '\n  generate_csv: {13}'
-        '\n  link_field_dict: {14}'
-        '\n  link_perspective_dict: {15}'
-        '\n  limit: {16}\n  limit_exception: {17}'
-        '\n  limit_no_vowel: {18}\n  limit_result: {19}'.format(
+    log.debug('phonology {}/{}:'
+        '\n  dictionary_name: \'{}\'\n  perspective_name: \'{}\''
+        '\n  group_by_description: {}'
+        '\n  maybe_translation_field: {}\n  only_first_translation: {}'
+        '\n  use_automatic_markup: {}\n  vowel_selection: {}'
+        '\n  maybe_tier_set: {}'
+        '\n  keep_set: {}\n  join_set: {}'
+        '\n  chart_threshold: {}'
+        '\n  generate_csv: {}'
+        '\n  link_field_dict: {}'
+        '\n  link_perspective_dict: {}'
+        '\n  use_fast_track: {}'
+        '\n  limit: {}\n  limit_exception: {}'
+        '\n  limit_no_vowel: {}\n  limit_result: {}'.format(
         args.perspective_cid, args.perspective_oid,
         args.dictionary_name, args.perspective_name,
         args.group_by_description,
@@ -3181,8 +3977,11 @@ def perform_phonology(args, task_status, storage):
         args.generate_csv,
         args.link_field_dict,
         args.link_perspective_dict,
+        args.use_fast_track,
         args.limit, args.limit_exception,
         args.limit_no_vowel, args.limit_result))
+
+    time_begin = time.time()
 
     task_status.set(1, 0, 'Preparing')
 
@@ -3401,10 +4200,15 @@ def perform_phonology(args, task_status, storage):
         if break_flag:
             break
 
-    log.debug('phonology {0}/{1}: {2} result{3}, {4} no vowels, {5} exceptions'.format(
-        args.perspective_cid, args.perspective_oid,
-        len(result_dict), '' if len(result_dict) == 1 else 's',
-        state.no_vowel_counter, state.exception_counter))
+    log.debug(
+        'phonology {}/{}: {} result{}, {} no vowels, {} exceptions, {:.3f}s elapsed time'.format(
+            args.perspective_cid,
+            args.perspective_oid,
+            len(result_dict),
+            '' if len(result_dict) == 1 else 's',
+            state.no_vowel_counter,
+            state.exception_counter,
+            time.time() - time_begin))
 
     # We also process data linked through specified link fields, if we have any.
 
@@ -3756,7 +4560,7 @@ def perform_phonology(args, task_status, storage):
     xlsx_filename = sanitize_filename(result_filename + '.xlsx')
     csv_filename = sanitize_filename(result_filename + '.csv')
 
-    cur_time = time()
+    cur_time = time.time()
     storage_dir = path.join(storage['path'], 'phonology', str(cur_time))
 
     xlsx_path = path.join(storage_dir, xlsx_filename)
@@ -3792,6 +4596,13 @@ def perform_phonology(args, task_status, storage):
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
 
+    if args.__debug_flag__:
+
+        workbook_stream.seek(0)
+
+        with open(xlsx_filename, 'wb+') as workbook_file:
+            copyfileobj(workbook_stream, workbook_file)
+
     # Writing out data in a CSV file, if required.
 
     if csv_stream:
@@ -3814,6 +4625,13 @@ def perform_phonology(args, task_status, storage):
             copyfileobj(chart_stream, chart_file)
 
         chart_filename_list.append(chart_filename)
+
+        if args.__debug_flag__:
+
+            chart_stream.seek(0)
+
+            with open(chart_filename, 'wb+') as chart_file:
+                copyfileobj(chart_stream, chart_file)
 
     # Successfully compiled phonology, finishing and returning links to files with results.
 
@@ -3920,13 +4738,23 @@ class Sound_Markup_Iterator(object):
                     markup_bytes = markup_stream.read()
 
                 try:
+
                     textgrid = pympi.Praat.TextGrid(xmax = 0)
 
+                    # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
+                    # endianness specified by the BOM at the start of the file may be lost.
+
                     textgrid.from_file(
-                        io.BytesIO(markup_bytes),
-                        codec = chardet.detect(markup_bytes)['encoding'])
+
+                        io.BytesIO(
+                            markup_bytes
+                                .decode(chardet.detect(markup_bytes)['encoding'])
+                                .encode('utf-8')),
+
+                        codec = 'utf-8')
 
                 except:
+
                     # If we failed to parse TextGrid markup, we assume that sound and markup files were
                     # accidentally swapped and try again.
 
@@ -3940,8 +4768,13 @@ class Sound_Markup_Iterator(object):
                     textgrid = pympi.Praat.TextGrid(xmax = 0)
 
                     textgrid.from_file(
-                        io.BytesIO(markup_bytes),
-                        codec = chardet.detect(markup_bytes)['encoding'])
+
+                        io.BytesIO(
+                            markup_bytes
+                                .decode(chardet.detect(markup_bytes)['encoding'])
+                                .encode('utf-8')),
+
+                        codec = 'utf-8')
 
                 result = self.process_sound_markup(row_str, textgrid)
                 caching.CACHE.set(cache_key, result)
@@ -4572,9 +5405,17 @@ def get_sound_markup_bytes(storage, sound_url, markup_url):
 
         textgrid = pympi.Praat.TextGrid(xmax = 0)
 
+        # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
+        # endianness specified by the BOM at the start of the file may be lost.
+
         textgrid.from_file(
-            io.BytesIO(markup_bytes),
-            codec = chardet.detect(markup_bytes)['encoding'])
+
+            io.BytesIO(
+                markup_bytes
+                    .decode(chardet.detect(markup_bytes)['encoding'])
+                    .encode('utf-8')),
+
+            codec = 'utf-8')
 
         return sound_bytes, markup_bytes
 
@@ -4586,8 +5427,13 @@ def get_sound_markup_bytes(storage, sound_url, markup_url):
         textgrid = pympi.Praat.TextGrid(xmax = 0)
 
         textgrid.from_file(
-            io.BytesIO(sound_bytes),
-            codec = chardet.detect(sound_bytes)['encoding'])
+
+            io.BytesIO(
+                markup_bytes
+                    .decode(chardet.detect(markup_bytes)['encoding'])
+                    .encode('utf-8')),
+
+            codec = 'utf-8')
 
         return markup_bytes, sound_bytes
 
@@ -5227,6 +6073,43 @@ def cpu_time(reference_cpu_time = 0.0):
     return sum(os.times()[:4]) - reference_cpu_time
 
 
+def main_cache_delete_exceptions(args):
+    """
+    Removes cached phonology exceptions from the redis cache.
+    """
+
+    parser = configparser.ConfigParser()
+    parser.read(args[0])
+
+    caching.initialize_cache({
+        k: v for k, v in parser.items('cache:redis:args')})
+
+    cache_key_list = (
+
+        subprocess
+            .check_output(['redis-cli', '--scan', '--pattern', 'phonology:*'])
+            .decode('utf-8')
+            .split())
+
+    count = 0
+
+    for cache_key in cache_key_list:
+
+        cache_result = caching.CACHE.get(cache_key)
+
+        if (isinstance(cache_result, tuple) and
+            cache_result[0] == 'exception'):
+
+            print(cache_result[1])
+
+            caching.CACHE.rem(cache_key)
+            count += 1
+
+            print(cache_key)
+
+    print('{} cached exceptions removed'.format(count))
+
+
 def main_test_alpha(args):
     """
     Tests that intensity and formant computation works.
@@ -5235,9 +6118,18 @@ def main_test_alpha(args):
     markup_bytes = open('корень_БИН_(1_раз).TextGrid', 'rb').read()
 
     textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+    # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
+    # endianness specified by the BOM at the start of the file may be lost.
+
     textgrid.from_file(
-        io.BytesIO(markup_bytes),
-        codec = chardet.detect(markup_bytes)['encoding'])
+
+        io.BytesIO(
+            markup_bytes
+                .decode(chardet.detect(markup_bytes)['encoding'])
+                .encode('utf-8')),
+
+        codec = 'utf-8')
 
     raw_interval_list = textgrid.get_tier(1).get_all_intervals()
     interval_list = []
@@ -5354,12 +6246,22 @@ def main_test_profile(args):
             # Getting markup.
 
             try:
+
                 markup_bytes = open(textgrid_path, 'rb').read()
 
                 textgrid = pympi.Praat.TextGrid(xmax = 0)
+
+                # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
+                # endianness specified by the BOM at the start of the file may be lost.
+
                 textgrid.from_file(
-                    io.BytesIO(markup_bytes),
-                    codec = chardet.detect(markup_bytes)['encoding'])
+
+                    io.BytesIO(
+                        markup_bytes
+                            .decode(chardet.detect(markup_bytes)['encoding'])
+                            .encode('utf-8')),
+
+                    codec = 'utf-8')
 
             except Exception as exception:
 
@@ -5553,6 +6455,7 @@ def main_praat_escape(args):
 # Some additional local computations.
 
 command_dict = {
+    'cache_delete_exceptions': main_cache_delete_exceptions,
     'praat_escape': main_praat_escape,
     'test_alpha': main_test_alpha,
     'test_profile': main_test_profile}

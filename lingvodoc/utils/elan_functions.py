@@ -149,8 +149,9 @@ def eaf_wordlist(entity):
         content = resp.content
         try:
             n = 10
-            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                              for c in range(n))
+            filename = (
+                time.asctime(time.gmtime()) + ''.join(
+                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
             # extension = os.path.splitext(blob.content)[1]
             f = open(filename, 'wb')
         except Exception as e:
@@ -196,8 +197,9 @@ def tgt_to_eaf(content, additional_metadata):
     try:
         try:
             n = 10
-            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                              for c in range(n))
+            filename = (
+                time.asctime(time.gmtime()) + ''.join(
+                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
             # extension = os.path.splitext(blob.content)[1]
             f = open(filename, 'wb')
         except Exception as e:

@@ -1,25 +1,35 @@
+import datetime
 import itertools
 import logging
+import pprint
 
 import graphene
 from collections import  defaultdict
 
 from lingvodoc.cache.caching import CACHE
 from lingvodoc.models import (
-    DictionaryPerspective as dbPerspective,
+    BaseGroup as dbBaseGroup,
+    Client as dbClient,
+    DBSession,
     Dictionary as dbDictionary,
-    TranslationAtom as dbTranslationAtom,
+    DictionaryPerspective as dbPerspective,
+    DictionaryPerspectiveToField as dbColumn,
+    Entity as dbEntity,
+    Group as dbGroup,
+    JSONB,
     Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
-    Client as dbClient,
-    User as dbUser,
-    BaseGroup as dbBaseGroup,
-    Group as dbGroup,
-    Entity as dbEntity,
-    DBSession,
-    DictionaryPerspectiveToField as dbColumn,
+    ObjectTOC,
+    ParserResult as dbParserResult,
     PublishingEntity as dbPublishingEntity,
-    )
+    TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
+    User as dbUser,
+    ValencyEafData as dbValencyEafData,
+    ValencyParserData as dbValencyParserData,
+    ValencySourceData as dbValencySourceData,
+    user_to_group_association,
+)
 
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
@@ -29,6 +39,7 @@ from lingvodoc.schema.gql_holders import (
     fetch_object,
     client_id_check,
     del_object,
+    undel_object,
     ResponseError,
     acl_check_by_id,
     ObjectVal
@@ -43,6 +54,7 @@ from lingvodoc.schema.gql_user import User
 from lingvodoc.utils.search import translation_gist_search
 from lingvodoc.utils import statistics
 from lingvodoc.utils.creation import (
+    create_dictionary_persp_to_field,
     create_perspective,
     create_gists_with_atoms,
     edit_role,
@@ -50,13 +62,22 @@ from lingvodoc.utils.creation import (
 )
 from lingvodoc.utils.deletion import real_delete_perspective
 
+import sqlalchemy
 from sqlalchemy import (
+    and_,
+    cast,
+    column,
+    extract,
+    func,
+    literal,
     or_,
-    tuple_
+    tuple_,
+    union,
 )
 
-from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
+from sqlalchemy.sql.expression import Grouping
 
+from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -79,19 +100,34 @@ def gql_lexicalentry(cur_lexical_entry, cur_entities):
     lex.dbObject = cur_lexical_entry
     return lex
 
-def entries_with_entities(lexes, accept, delete, mode, publish):
+def entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = True):
     if mode == 'debug':
         return [gql_lexicalentry(lex, None) for lex in lexes]
     lex_id_to_obj = dict()
     lexes_composite_list = list()
 
-    for lex_obj in (
-        lexes if isinstance(lexes, list) else
-        lexes.yield_per(100).all()):
+    if check_perspective:
 
-        lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
-                                    lex_obj.parent_client_id, lex_obj.parent_object_id))
-        lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
+        for lex_obj in (
+            lexes if isinstance(lexes, list) else
+            lexes.yield_per(100).all()):
+
+            lexes_composite_list.append((lex_obj.client_id, lex_obj.object_id,
+                                        lex_obj.parent_client_id, lex_obj.parent_object_id))
+            lex_id_to_obj[(lex_obj.client_id, lex_obj.object_id)] = lex_obj
+
+    else:
+
+        # If we don't need to check for perspective deletion, we don't need perspective ids.
+
+        for lex_obj in (
+            lexes if isinstance(lexes, list) else
+            lexes.yield_per(100).all()):
+
+            entry_id = (lex_obj.client_id, lex_obj.object_id)
+
+            lexes_composite_list.append(entry_id)
+            lex_id_to_obj[entry_id] = lex_obj
 
     if mode == 'not_accepted':
         accept = False
@@ -100,20 +136,29 @@ def entries_with_entities(lexes, accept, delete, mode, publish):
     entities = dbLexicalEntry.graphene_track_multiple(lexes_composite_list,
                                                       publish=publish,
                                                       accept=accept,
-                                                      delete=delete)
-    entities_list = list([x for x in entities])
-    ent_iter = itertools.chain(entities_list)
-    result_lexes = list()
-    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key=group_by_lex):
-        gql_entities_list = [gql_entity_with_published(cur_entity=x[0], cur_publishing=x[1])
-                             for x in entity_with_published]
-        lexical_entry = lex_id_to_obj[lex_ids]
-        del lex_id_to_obj[lex_ids]
+                                                      delete=delete,
+                                                      check_perspective=check_perspective)
+
+    ent_iter = itertools.chain(list(entities))
+    lexical_entries = list()
+
+    for lex_ids, entity_with_published in itertools.groupby(ent_iter, key = group_by_lex):
+
+        gql_entities_list = [
+            gql_entity_with_published(cur_entity = x[0], cur_publishing = x[1])
+            for x in entity_with_published]
+
+        lexical_entry = lex_id_to_obj.pop(lex_ids)
+
         if (lexical_entry.client_id, lexical_entry.object_id) == lex_ids:
-            result_lexes.append((lexical_entry, gql_entities_list))
-    for new_lex in lex_id_to_obj:
-        result_lexes.append((lex_id_to_obj[new_lex], None))
-    lexical_entries = [gql_lexicalentry(cur_lexical_entry=lex[0], cur_entities=lex[1]) for lex in result_lexes]
+
+            lexical_entries.append(
+                gql_lexicalentry(cur_lexical_entry = lexical_entry, cur_entities = gql_entities_list))
+
+    for new_lex in lex_id_to_obj.values():
+
+        lexical_entries.append(
+            gql_lexicalentry(cur_lexical_entry = new_lex, cur_entities = []))
 
     return lexical_entries
 
@@ -160,7 +205,6 @@ class DictionaryPerspective(LingvodocObjectType):
     """
     data_type = graphene.String()
 
-    status = graphene.String()
     import_source = graphene.String()
     import_hash = graphene.String()
 
@@ -170,14 +214,138 @@ class DictionaryPerspective(LingvodocObjectType):
     lexical_entries = graphene.List(LexicalEntry, ids = graphene.List(LingvodocID), mode=graphene.String())
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     roles = graphene.Field(UserAndOrganizationsRoles)
+    role_check = graphene.Boolean(subject = graphene.String(required = True), action = graphene.String(required = True))
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
     is_template = graphene.Boolean()
     counter = graphene.Int(mode=graphene.String())
+    last_modified_at = graphene.Float()
+
+    is_hidden_for_client = graphene.Boolean()
+    has_valency_data = graphene.Boolean()
+    new_valency_data_count = graphene.Int()
 
     dbType = dbPerspective
 
     class Meta:
         interfaces = (CommonFieldsComposite, StateHolder)
+
+    def check_is_hidden_for_client(self, info):
+        """
+        Checks if the perspective is hidden for the current client.
+
+        Perspective is hidden for the current client if either it or its dictionary status is 'Hidden' and
+        it is not in the 'Available dictionaries' list for the client, see 'def resolve_dictionaries()' in
+        query.py switching based on 'mode'.
+        """
+
+        try:
+            return self.is_hidden_for_client_flag
+
+        except AttributeError:
+            pass
+
+        # See get_hidden() in models.py.
+
+        hidden_id = (
+
+            DBSession
+
+                .query(
+                    dbTranslationGist.client_id,
+                    dbTranslationGist.object_id)
+
+                .join(dbTranslationAtom)
+
+                .filter(
+                    dbTranslationGist.type == 'Service',
+                    dbTranslationAtom.content == 'Hidden',
+                    dbTranslationAtom.locale_id == 2)
+
+                .first())
+
+        # Checking if either the perspective or its dictionary has 'Hidden' status.
+
+        is_hidden = (
+            self.dbObject.state_translation_gist_client_id == hidden_id[0] and
+            self.dbObject.state_translation_gist_object_id == hidden_id[1])
+
+        if not is_hidden:
+
+            is_hidden = (
+
+                DBSession
+
+                    .query(
+                        and_(
+                            dbDictionary.state_translation_gist_client_id == hidden_id[0],
+                            dbDictionary.state_translation_gist_object_id == hidden_id[1]))
+
+                    .filter(
+                        dbDictionary.client_id == self.dbObject.parent_client_id,
+                        dbDictionary.object_id == self.dbObject.parent_object_id)
+
+                    .scalar())
+
+        if not is_hidden:
+
+            self.is_hidden_for_client_flag = False
+            return False
+
+        # Perspective is hidden, checking if it's hidden for the client.
+
+        client_id = info.context.request.authenticated_userid
+
+        if not client_id:
+
+            self.is_hidden_for_client_flag = True
+            return True
+
+        user = dbClient.get_user_by_client_id(client_id)
+
+        if user.id == 1:
+
+            self.is_hidden_for_client_flag = False
+            return False
+
+        # Not an admin, we check if the perspective's dictionary is available for the client, see 'available
+        # dictionaries' branch in resolve_dictionaries() in query.py.
+
+        exists_query = (
+
+            DBSession
+
+                .query(
+                    literal(1))
+
+                .filter(
+                    user_to_group_association.c.user_id == user.id,
+                    dbGroup.id == user_to_group_association.c.group_id,
+                    dbBaseGroup.id == dbGroup.base_group_id,
+
+                    or_(
+                        and_(
+                            dbGroup.subject_override,
+                            or_(
+                                dbBaseGroup.dictionary_default,
+                                dbBaseGroup.perspective_default)),
+                        and_(
+                            dbGroup.subject_client_id == self.dbObject.client_id,
+                            dbGroup.subject_object_id == self.dbObject.object_id),
+                        and_(
+                            dbGroup.subject_client_id == self.dbObject.parent_client_id,
+                            dbGroup.subject_object_id == self.dbObject.parent_object_id,
+                            dbBaseGroup.dictionary_default)))
+
+                .exists())
+
+        is_available = (
+
+            DBSession
+                .query(exists_query)
+                .scalar())
+
+        self.is_hidden_for_client_flag = not is_available
+        return self.is_hidden_for_client_flag
 
     # @fetch_object()
     # def resolve_additional_metadata(self, args, context, info):
@@ -191,19 +359,7 @@ class DictionaryPerspective(LingvodocObjectType):
     def resolve_is_template(self, info):
         return self.dbObject.is_template
 
-    @fetch_object('status') # tested
-    def resolve_status(self, info):
-        atom = DBSession.query(dbTranslationAtom.content).filter_by(
-            parent_client_id=self.dbObject.state_translation_gist_client_id,
-            parent_object_id=self.dbObject.state_translation_gist_object_id,
-            locale_id=int(info.context.get('locale_id'))
-        ).first()
-        if atom:
-            return atom[0]
-        else:
-            return None
-
-    @fetch_object() # tested
+    @fetch_object('tree') # tested
     def resolve_tree(self, info):
         result = list()
         iteritem = self.dbObject
@@ -221,7 +377,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
         return result
 
-    @fetch_object() # tested
+    @fetch_object('columns') # tested
     def resolve_columns(self, info):
         columns = DBSession.query(dbColumn).filter_by(parent=self.dbObject, marked_for_deletion=False).order_by(dbColumn.position).all()
         result = list()
@@ -230,34 +386,6 @@ class DictionaryPerspective(LingvodocObjectType):
             gr_field_obj.dbObject = dbfield
             result.append(gr_field_obj)
         return result
-
-    #@acl_check_by_id('view', 'approve_entities')
-    # @fetch_object()
-    # def resolve_lexical_entries(self, info, ids=None):
-    #     lex_list = list()
-    #     query = DBSession.query(dbLexicalEntry, dbEntity)
-    #     if ids is None:
-    #         query = query.filter(dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
-    #     else:
-    #         query = query.filter(tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids), dbLexicalEntry.parent == self.dbObject, dbLexicalEntry.marked_for_deletion == False)
-    #     for lex in query.all():
-    #         lex_object = LexicalEntry(id=[lex.client_id, lex.object_id])
-    #         lex_object.dbObject = lex
-    #         lex_list.append(lex_object)
-    #     return lex_list
-
-
-    # @fetch_object()
-    # def resolve_counters(self, info):
-    #     lexes = DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent == self.dbObject)
-    #     lexes = lexes.join(dbLexicalEntry.entity).join(dbEntity.publishingentity)
-    #     all_count = lexes.filter(dbPublishingEntity.accepted == True, dbLexicalEntry.marked_for_deletion == False,
-    #                              dbEntity.marked_for_deletion == False).count()
-    #     published_count = lexes.filter(dbPublishingEntity.published == True, dbLexicalEntry.marked_for_deletion == False,
-    #                              dbEntity.marked_for_deletion == False).count()
-    #     not_accepted_count = lexes.filter(dbPublishingEntity.accepted == False, dbLexicalEntry.marked_for_deletion == False,
-    #                              dbEntity.marked_for_deletion == False).count()
-    #     return PerspectiveCounters(all=all_count, published=published_count, not_accepted=not_accepted_count)
 
     @fetch_object()
     def resolve_counter(self, info, mode):
@@ -279,9 +407,302 @@ class DictionaryPerspective(LingvodocObjectType):
         counter = counter_query.group_by(dbLexicalEntry).count()
         return counter
 
+    @fetch_object('last_modified_at')
+    def resolve_last_modified_at(self, info):
+        """
+        Perspective's last modification time, defined as latest time of creation or deletion of the
+        perspective and all its lexical entries and entities.
+        """
+
+        # select
+        #   max((value ->> 'deleted_at') :: float)
+        #
+        #   from
+        #     ObjectTOC,
+        #     jsonb_each(additional_metadata)
+        #
+        #   where
+        #     client_id = <client_id> and
+        #     object_id = <object_id>;
+
+        deleted_at_query = (
+
+            DBSession
+
+            .query(
+                func.max(cast(
+                    column('value').op('->>')('deleted_at'),
+                    sqlalchemy.Float)))
+
+            .select_from(
+                ObjectTOC,
+                func.jsonb_each(ObjectTOC.additional_metadata))
+
+            .filter(
+                ObjectTOC.client_id == self.dbObject.client_id,
+                ObjectTOC.object_id == self.dbObject.object_id,
+                ObjectTOC.additional_metadata != JSONB.NULL))
+
+        # Query for last modification time of the perspective's lexical entries and entities.
+
+        sql_str = ('''
+
+            select
+
+              max(
+                greatest(
+
+                  extract(epoch from L.created_at),
+
+                  (select
+                    max((value ->> 'deleted_at') :: float)
+
+                    from
+                      jsonb_each(OL.additional_metadata)),
+
+                  (select
+
+                    max(
+                      greatest(
+
+                        extract(epoch from E.created_at),
+
+                        (select
+                          max((value ->> 'deleted_at') :: float)
+
+                          from
+                            jsonb_each(OE.additional_metadata))))
+
+                    from
+                      public.entity E,
+                      ObjectTOC OE
+
+                    where
+                      E.parent_client_id = L.client_id and
+                      E.parent_object_id = L.object_id and
+                      OE.client_id = E.client_id and
+                      OE.object_id = E.object_id and
+                      OE.additional_metadata != 'null' :: jsonb)))
+
+            from
+              lexicalentry L,
+              ObjectTOC OL
+
+            where
+              L.parent_client_id = :client_id and
+              L.parent_object_id = :object_id and
+              OL.client_id = L.client_id and
+              OL.object_id = L.object_id and
+              OL.additional_metadata != 'null' :: jsonb
+
+            ''')
+
+        # Complete query for the perspective, excluding created_at which we already have.
+
+        DBSession.execute(
+            'set extra_float_digits to 3;');
+
+        result = (
+
+            DBSession
+
+            .query(
+                  func.greatest(
+                      deleted_at_query.label('deleted_at'),
+                      Grouping(sqlalchemy.text(sql_str))))
+
+            .params({
+                'client_id': self.dbObject.client_id,
+                'object_id': self.dbObject.object_id})
+
+            .scalar())
+
+        if result is not None:
+
+            return max(
+                self.dbObject.created_at,
+                result)
+
+        else:
+
+            return self.dbObject.created_at
+
+    @fetch_object()
+    def resolve_is_hidden_for_client(self, info):
+        """
+        If the perspective is hidden for the current client.
+        """
+
+        return self.check_is_hidden_for_client(info)
+
+    def resolve_has_valency_data(self, info):
+        """
+        If the perspective has valency annotation data.
+        """
+
+        exists_query = (
+
+            DBSession
+
+                .query(
+                    literal(1))
+
+                .filter(
+                    dbValencySourceData.perspective_client_id == self.id[0],
+                    dbValencySourceData.perspective_object_id == self.id[1])
+
+                .exists())
+
+        return (
+
+            DBSession
+                .query(exists_query)
+                .scalar())
+
+    def resolve_new_valency_data_count(self, info):
+        """
+        How many unprocessed valency sources perspective has.
+        """
+
+        debug_flag = False
+
+        total_hash_union = (
+
+            union(
+
+                DBSession
+
+                    .query(
+
+                        func.encode(
+                            func.digest(
+                                dbParserResult.content, 'sha256'),
+                            'hex')
+
+                            .label('hash'))
+
+                    .filter(
+                        dbLexicalEntry.parent_client_id == self.id[0],
+                        dbLexicalEntry.parent_object_id == self.id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True,
+                        dbParserResult.entity_client_id == dbEntity.client_id,
+                        dbParserResult.entity_object_id == dbEntity.object_id,
+                        dbParserResult.marked_for_deletion == False),
+
+                DBSession
+
+                    .query(
+
+                        cast(
+                            dbEntity.additional_metadata['hash'],
+                            sqlalchemy.UnicodeText)
+
+                            .label('hash'))
+
+                    .filter(
+                        dbLexicalEntry.parent_client_id == self.id[0],
+                        dbLexicalEntry.parent_object_id == self.id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.marked_for_deletion == False,
+                        dbEntity.content.ilike('%.eaf'),
+                        dbEntity.additional_metadata.contains({'data_type': 'elan markup'}),
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True))
+
+                .alias())
+
+        total_hash_subquery = (
+
+            DBSession
+                .query(total_hash_union)
+                .subquery())
+
+        if debug_flag:
+
+            total_hash_count = (
+
+                DBSession
+                    .query(total_hash_union)
+                    .count())
+
+            log.debug(
+                f'total_hash_count: {total_hash_count}')
+
+        has_hash_union = (
+
+            union(
+
+                DBSession
+
+                    .query(
+                        dbValencyParserData.hash)
+
+                    .filter(
+                        dbValencySourceData.perspective_client_id == self.id[0],
+                        dbValencySourceData.perspective_object_id == self.id[1],
+                        dbValencyParserData.id == dbValencySourceData.id),
+
+                DBSession
+
+                    .query(
+                        dbValencyEafData.hash)
+
+                    .filter(
+                        dbValencySourceData.perspective_client_id == self.id[0],
+                        dbValencySourceData.perspective_object_id == self.id[1],
+                        dbValencyEafData.id == dbValencySourceData.id))
+
+                .alias())
+
+        if debug_flag:
+
+            has_hash_count = (
+
+                DBSession
+                    .query(has_hash_union)
+                    .count())
+
+            log.debug(
+                f'has_hash_count: {has_hash_count}')
+
+        new_hash_count = (
+
+            DBSession
+
+                .query(
+                    total_hash_subquery.c.hash)
+
+                .filter(
+                    total_hash_subquery.c.hash.notin_(
+                        has_hash_union))
+
+                .count())
+
+        if debug_flag:
+
+            log.debug(
+                f'new_hash_count: {new_hash_count}')
+
+        return new_hash_count
+
     @fetch_object()
     def resolve_lexical_entries(self, info, ids=None, mode=None, authors=None, clients=None, start_date=None, end_date=None,
                              position=1):
+
+        if self.check_is_hidden_for_client(info):
+            return []
+
         result = list()
         request = info.context.get('request')
         if mode == 'all':
@@ -362,7 +783,14 @@ class DictionaryPerspective(LingvodocObjectType):
         #       'яяяяяя')],
         #     else_=dbEntity.content))) \
         #     .group_by(dbLexicalEntry)
-        lexical_entries = entries_with_entities(lexes, accept, delete, mode, publish)
+        lexical_entries = (
+            entries_with_entities(lexes, accept, delete, mode, publish, check_perspective = False))
+
+        # If we were asked for specific lexical entries, we try to return them in creation order.
+
+        if ids is not None:
+            lexical_entries.sort(key = lambda e: (e.dbObject.created_at, e.dbObject.object_id))
+
         return lexical_entries
 
 
@@ -412,6 +840,15 @@ class DictionaryPerspective(LingvodocObjectType):
         return UserAndOrganizationsRoles(roles_users=roles_users, roles_organizations=roles_organizations)
 
     @fetch_object()
+    def resolve_role_check(self, info, subject = '', action = ''):
+
+        # Checking for specified permission for the current user for the perspective.
+
+        return (
+            info.context.acl_check_if(
+                action, subject, (self.dbObject.client_id, self.dbObject.object_id)))
+
+    @fetch_object()
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
         if starting_time is None or ending_time is None:
             raise ResponseError(message="Bad time period")
@@ -421,9 +858,28 @@ class DictionaryPerspective(LingvodocObjectType):
                                                          ending_time,
                                                          locale_id=locale_id
                                                          )
-        new_format_statistics = [
-            {"user_id": key, "name": current_statistics[key]['name'], "entities": current_statistics[key]['entities']}
-            for key in current_statistics]
+        new_format_statistics = []
+
+        for key, stat_dict in current_statistics.items():
+
+            new_dict = {
+                'user_id': key,
+                'name': stat_dict['name']}
+
+            # NOTE: 'lexical_entries' with underscore '_' for the new format.
+
+            if 'lexical entries' in stat_dict:
+                new_dict['lexical_entries'] = stat_dict['lexical entries']
+
+            if 'entities' in stat_dict:
+                new_dict['entities'] = stat_dict['entities']
+
+            new_format_statistics.append(new_dict)
+
+        log.debug(
+            '\nnew format:\n{0}'.format(
+                pprint.pformat(new_format_statistics, width = 144)))
+
         return new_format_statistics
 
 
@@ -478,6 +934,7 @@ class CreateDictionaryPerspective(graphene.Mutation):
         import_source = graphene.String()
         import_hash = graphene.String()
         is_template = graphene.Boolean()
+        fields = graphene.List(ObjectVal)
 
     perspective = graphene.Field(DictionaryPerspective)
     triumph = graphene.Boolean()
@@ -503,6 +960,9 @@ class CreateDictionaryPerspective(graphene.Mutation):
         import_hash = args.get('import_hash')
         additional_metadata = args.get('additional_metadata')
         is_template = args.get("is_template")
+
+        field_info_list = args.get('fields')
+
         dbperspective = create_perspective(id=id,
                                 parent_id=parent_id,
                                 translation_gist_id=translation_gist_id,
@@ -511,8 +971,53 @@ class CreateDictionaryPerspective(graphene.Mutation):
                                 import_hash=import_hash,
                                 is_template=is_template
                                 )
-        perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+
+        perspective_id = (
+            (dbperspective.client_id, dbperspective.object_id))
+
+        perspective = DictionaryPerspective(id = perspective_id)
         perspective.dbObject = dbperspective
+
+        # Creating fields, if required.
+
+        if field_info_list:
+
+            log.debug(
+                '\nfield_info_list:\n' +
+                pprint.pformat(
+                    field_info_list, width = 192))
+
+            counter = 0
+            fake_id_dict = {}
+
+            for field_info in field_info_list:
+
+                counter += 1
+
+                self_id = field_info['self_id']
+
+                if self_id is not None:
+
+                    if self_id not in fake_id_dict:
+                        raise ResponseError(f'Unknown fake id \'{self_id}\'.')
+
+                    self_id = fake_id_dict[self_id]
+
+                persp_to_field = (
+
+                    create_dictionary_persp_to_field(
+                        id = (client_id, None),
+                        parent_id = perspective_id,
+                        field_id = field_info['field_id'],
+                        self_id = self_id,
+                        link_id = field_info['link_id'],
+                        position = counter))
+
+                if 'id' in field_info:
+
+                    fake_id_dict[field_info['id']] = (
+                        (persp_to_field.client_id, persp_to_field.object_id))
+
         return CreateDictionaryPerspective(perspective=perspective, triumph=True)
 
 
@@ -560,7 +1065,12 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         object_id = id[1]
         parent_id = args.get('parent_id')
         additional_metadata = args.get('additional_metadata')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="Error: No such perspective in the system")
 
@@ -573,9 +1083,14 @@ class UpdateDictionaryPerspective(graphene.Mutation):
         if translation_gist_object_id:
             dbperspective.translation_gist_object_id = translation_gist_object_id  # TODO: refactor like dictionaries
         if parent_id:
-            parent_client_id, parent_object_id = parent_id
-            dbparent_dictionary = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id,
-                                                                          object_id=parent_object_id).first()
+            # parent_client_id, parent_object_id = parent_id
+            # dbparent_dictionary = DBSession.query(dbDictionary).filter_by(client_id=parent_client_id,
+            #                                                               object_id=parent_object_id).first()
+            dbparent_dictionary = CACHE.get(objects=
+                {
+                    dbDictionary : (parent_id, )
+                },
+            DBSession=DBSession)
             if not dbparent_dictionary:
                 raise ResponseError(message="Error: No such dictionary in the system")
             dbperspective.parent_client_id = parent_client_id
@@ -583,6 +1098,7 @@ class UpdateDictionaryPerspective(graphene.Mutation):
 
         update_metadata(dbperspective, additional_metadata)
 
+        CACHE.set(objects = [dbperspective,], DBSession=DBSession)
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
         return UpdateDictionaryPerspective(perspective=perspective, triumph=True)
@@ -611,7 +1127,12 @@ class UpdatePerspectiveStatus(graphene.Mutation):
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if dbperspective and not dbperspective.marked_for_deletion:
             dbperspective.state_translation_gist_client_id = state_translation_gist_client_id
             dbperspective.state_translation_gist_object_id = state_translation_gist_object_id
@@ -621,6 +1142,7 @@ class UpdatePerspectiveStatus(graphene.Mutation):
             perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id],
                                                 status=atom.content)
             perspective.dbObject = dbperspective
+            CACHE.set(objects = [dbperspective,], DBSession=DBSession)
             return UpdatePerspectiveStatus(perspective=perspective, triumph=True)
 
 class AddPerspectiveRoles(graphene.Mutation):
@@ -648,7 +1170,12 @@ class AddPerspectiveRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : (args.get('id'), )
+            },
+        DBSession=DBSession)
         client_id = info.context.get('client_id')
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
@@ -660,6 +1187,7 @@ class AddPerspectiveRoles(graphene.Mutation):
                 edit_role(dbperspective, user_id, role_id, client_id, perspective_default=True, organization=True)
         perspective = Dictionary(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
+        CACHE.set(objects = [dbperspective,], DBSession=DBSession)
         return AddPerspectiveRoles(perspective=perspective, triumph=True)
 
 
@@ -680,8 +1208,13 @@ class DeletePerspectiveRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id,
-                                                                 object_id=perspective_object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_client_id,
+        #                                                          object_id=perspective_object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : (args.get('id'), )
+            },
+        DBSession=DBSession)
         client_id = info.context.get('client_id')
         if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
@@ -695,6 +1228,7 @@ class DeletePerspectiveRoles(graphene.Mutation):
                           action="delete")
         perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
         perspective.dbObject = dbperspective
+        CACHE.set(objects = [dbperspective,], DBSession=DBSession)
         return DeletePerspectiveRoles(perspective=perspective, triumph=True)
 
 
@@ -734,20 +1268,51 @@ class UpdatePerspectiveAtom(graphene.Mutation):
     def mutate(root, info, **args):
         content = args.get('content')
         client_id, object_id = args.get('id')
-        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        dbperspective = CACHE.get(objects =
+            {
+                dbPerspective : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if not dbperspective:
             raise ResponseError(message="No such perspective in the system")
         locale_id = args.get("locale_id")
 
-        dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbperspective.translation_gist_client_id,
-                                                            parent_object_id=dbperspective.translation_gist_object_id,
-                                                            locale_id=locale_id).first()
+        if 'atom_id' in args:
+
+            atom_id = args['atom_id']
+
+            dbtranslationatom = (
+
+                DBSession
+                    .query(dbTranslationAtom)
+                    .filter_by(
+                        client_id = atom_id[0],
+                        object_id = atom_id[1])
+                    .first())
+
+        else:
+
+            dbtranslationatom = (
+
+                DBSession
+                    .query(dbTranslationAtom)
+                    .filter_by(
+                        parent_client_id=dbperspective.translation_gist_client_id,
+                        parent_object_id=dbperspective.translation_gist_object_id,
+                        locale_id=locale_id)
+                    .first())
+
         if dbtranslationatom:
             if dbtranslationatom.locale_id == locale_id:
                 key = "translation:%s:%s:%s" % (
                     str(dbtranslationatom.parent_client_id),
                     str(dbtranslationatom.parent_object_id),
                     str(dbtranslationatom.locale_id))
+                CACHE.rem(key)
+                key = "translations:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id))
                 CACHE.rem(key)
                 if content:
                     dbtranslationatom.content = content
@@ -815,7 +1380,7 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         id = args.get("id")
         client_id, object_id = id
         dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        if not dbPerspective or dbperspective.marked_for_deletion:
+        if not dbperspective or dbperspective.marked_for_deletion:
             raise ResponseError(message="No such perspective in the system")
         settings = info.context["request"].registry.settings
         if 'desktop' in settings:
@@ -826,3 +1391,26 @@ class DeleteDictionaryPerspective(graphene.Mutation):
         perspective.dbObject = dbperspective
         return DeleteDictionaryPerspective(perspective=perspective, triumph=True)
 
+
+class UndeleteDictionaryPerspective(graphene.Mutation):
+
+    class Arguments:
+        id = LingvodocID(required=True)
+
+    perspective = graphene.Field(DictionaryPerspective)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id('delete', 'perspective')
+    def mutate(root, info, **args):
+        id = args.get("id")
+        client_id, object_id = id
+        dbperspective = DBSession.query(dbPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if not dbperspective:
+            raise ResponseError(message="No such perspective in the system")
+        if not dbperspective.marked_for_deletion:
+            raise ResponseError(message="Perspective is not deleted")
+        undel_object(dbperspective, "undelete_perspective", info.context.get('client_id'))
+        perspective = DictionaryPerspective(id=[dbperspective.client_id, dbperspective.object_id])
+        perspective.dbObject = dbperspective
+        return UndeleteDictionaryPerspective(perspective=perspective, triumph=True)

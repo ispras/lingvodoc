@@ -159,6 +159,10 @@ def edit_translationatom(request):
             str(translationatom.parent_object_id),
             str(translationatom.locale_id))
         CACHE.rem(key)
+        key = "translations:%s:%s" % (
+            str(translationatom.parent_client_id),
+            str(translationatom.parent_object_id))
+        CACHE.rem(key)
         translationatom.content = content
         request.response.status = HTTPOk.code
         return response

@@ -4,17 +4,21 @@ import string
 import random
 import logging
 
+from sqlalchemy import tuple_
+
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CompositeIdHolder,
     AdditionalMetadata,
     CreatedAt,
+    DeletedAt,
     MarkedForDeletion,
     Relationship,
     MovedTo,
     fetch_object,
     client_id_check,
     del_object,
+    undel_object,
     acl_check_by_id,
     ResponseError,
     LingvodocID,
@@ -42,7 +46,7 @@ from pyramid.security import authenticated_userid
 from lingvodoc.utils.search import find_all_tags, find_lexical_entries_by_tags
 from uuid import uuid4
 
-
+from lingvodoc.cache.caching import CACHE
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -64,7 +68,14 @@ class LexicalEntry(LingvodocObjectType):
     gql_Entities = None
 
     class Meta:
-        interfaces = (CompositeIdHolder, AdditionalMetadata, CreatedAt, MarkedForDeletion, Relationship, MovedTo)
+        interfaces = (
+            CompositeIdHolder,
+            AdditionalMetadata,
+            CreatedAt,
+            DeletedAt,
+            MarkedForDeletion,
+            Relationship,
+            MovedTo)
 
     @fetch_object('entities')
     # @acl_check_by_id('view', 'lexical_entries_and_entities')
@@ -247,7 +258,12 @@ class DeleteLexicalEntry(graphene.Mutation):
     def mutate(root, info, **args):
         lex_id = args.get('id')
         client_id, object_id = lex_id
-        dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+        # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+        dblexicalentry = CACHE.get(objects =
+            {
+                dbLexicalEntry : (lex_id, )
+            },
+        DBSession=DBSession)
         if not dblexicalentry or dblexicalentry.marked_for_deletion:
             raise ResponseError(message="Error: No such entry in the system")
         info.context.acl_check('delete', 'lexical_entries_and_entities',
@@ -266,28 +282,96 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
     class Arguments:
         ids = graphene.List(LingvodocID, required=True)
 
-    lexicalentry = graphene.Field(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
     def mutate(root, info, **args):
+
         ids = args.get('ids')
         task_id = str(uuid4())
-        for lex_id in ids:
-            client_id, object_id = lex_id
-            dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+
+        lexical_entries = CACHE.get(objects =
+            {
+               dbLexicalEntry : ids
+            },
+        DBSession=DBSession, keep_dims=True)
+
+        settings = info.context["request"].registry.settings
+        client_id = info.context.get('client_id')
+
+        for dblexicalentry in lexical_entries:
+            # client_id, object_id = lex_id
+            # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
             if not dblexicalentry or dblexicalentry.marked_for_deletion:
                 raise ResponseError(message="Error: No such entry in the system")
-            info.context.acl_check('delete', 'lexical_entries_and_entities',
-                                   (dblexicalentry.parent_client_id, dblexicalentry.parent_object_id))
-            settings = info.context["request"].registry.settings
-            if 'desktop' in settings:
-                real_delete_lexical_entry(dblexicalentry, settings)
-            else:
-                del_object(dblexicalentry, "bulk_delete_lexicalentry",
-                           info.context.get('client_id'), task_id=task_id, counter=len(ids))
 
-        return DeleteLexicalEntry(triumph=True)
+            info.context.acl_check(
+                'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
+
+            if 'desktop' in settings:
+
+                real_delete_lexical_entry(
+                    dblexicalentry, settings)
+
+            else:
+
+                del_object(
+                    dblexicalentry,
+                    "bulk_delete_lexicalentry",
+                    client_id,
+                    task_id = task_id,
+                    counter = len(ids))
+
+        return BulkDeleteLexicalEntry(triumph=True)
+
+
+class BulkUndeleteLexicalEntry(graphene.Mutation):
+
+    class Arguments:
+        ids = graphene.List(LingvodocID, required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        ids = args.get('ids')
+        task_id = str(uuid4())
+
+        lexical_entries = (
+
+            DBSession
+
+                .query(dbLexicalEntry)
+
+                .filter(
+                    tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(ids))
+
+                .all())
+
+        settings = info.context["request"].registry.settings
+        client_id = info.context.get('client_id')
+
+        for dblexicalentry in lexical_entries:
+            # client_id, object_id = lex_id
+            # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+
+            if not dblexicalentry:
+                raise ResponseError(message = "Error: No such entry in the system")
+            if not dblexicalentry.marked_for_deletion:
+                raise ResponseError(message = f"Entry {dblexicalentry.id} is not deleted")
+
+            info.context.acl_check(
+                'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
+
+            undel_object(
+                dblexicalentry,
+                "bulk_undelete_lexicalentry",
+                client_id,
+                task_id = task_id,
+                counter = len(ids))
+
+        return BulkUndeleteLexicalEntry(triumph=True)
 
 
 def create_n_entries_in_persp(n, pid, client):
@@ -298,8 +382,9 @@ def create_n_entries_in_persp(n, pid, client):
         perspective_id = pid
         dblexentry = create_lexicalentry(id, perspective_id, True)
         lexentries_list.append(dblexentry)
-    DBSession.bulk_save_objects(lexentries_list)
-    DBSession.flush()
+    # DBSession.bulk_save_objects(lexentries_list)
+    # DBSession.flush()
+    CACHE.set(objects = lexentries_list, DBSession=DBSession)
     result = list()
     for lexentry in lexentries_list:
         result.append(LexicalEntry(id=[lexentry.client_id, lexentry.object_id]))
@@ -329,8 +414,9 @@ class BulkCreateLexicalEntry(graphene.Mutation):
             dblexentry = create_lexicalentry(id, perspective_id, False)
             lexentries_list.append(dblexentry)
 
-        DBSession.bulk_save_objects(lexentries_list)
-        DBSession.flush()
+        # DBSession.bulk_save_objects(lexentries_list)
+        # DBSession.flush()
+        CACHE.set(objects = lexentries_list, DBSession=DBSession)
         return BulkCreateLexicalEntry(triumph=True)
 
 
@@ -364,8 +450,13 @@ class ConnectLexicalEntries(graphene.Mutation):
             raise ResponseError("wrong field data type")
         connections = args['connections']
         for par in connections:
-            parent = DBSession.query(dbLexicalEntry).\
-                filter_by(client_id=par[0], object_id=par[1]).first()
+            # parent = DBSession.query(dbLexicalEntry).\
+            #     filter_by(client_id=par[0], object_id=par[1]).first()
+            parent = CACHE.get(objects =
+                {
+                    dbLexicalEntry : (par, )
+                },
+            DBSession=DBSession)
             if not parent:
                 raise ResponseError("No such lexical entry in the system")
             par_tags = find_all_tags(parent, field_id[0], field_id[1], False, False)
@@ -374,13 +465,21 @@ class ConnectLexicalEntries(graphene.Mutation):
                     tags.append(tag)
         if not tags:
             n = 10  # better read from settings
-            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                         for c in range(n))
+            rnd = random.SystemRandom()
+            choice_str = string.digits + string.ascii_letters
+            tag = (
+                time.asctime(time.gmtime()) +
+                ''.join(rnd.choice(choice_str) for c in range(n)))
             tags.append(tag)
         lexical_entries = find_lexical_entries_by_tags(tags, field_id[0], field_id[1], False, False)
         for par in connections:
-            parent = DBSession.query(dbLexicalEntry).\
-                filter_by(client_id=par[0], object_id=par[1]).first()
+            # parent = DBSession.query(dbLexicalEntry).\
+            #     filter_by(client_id=par[0], object_id=par[1]).first()
+            parent = CACHE.get(objects =
+                {
+                    dbLexicalEntry : (par, )
+                },
+            DBSession=DBSession)
             if parent not in lexical_entries:
                 lexical_entries.append(parent)
 
@@ -468,7 +567,6 @@ class DeleteGroupingTags(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('delete', 'lexical_entries_and_entities', id_key= "parent_id")
     def mutate(root, info, **args):
         """
         mutation DeleteTag{
@@ -484,9 +582,6 @@ class DeleteGroupingTags(graphene.Mutation):
         variables = {'auth': authenticated_userid(request)}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        tags = list()
-
-
 
         client_id, object_id = args.get("id")
         field_client_id, field_object_id = args.get("field_id")
@@ -496,6 +591,31 @@ class DeleteGroupingTags(graphene.Mutation):
             return {'error': str("No such field in the system")}
         elif field.data_type != 'Grouping Tag':
             return {'error': str("Wrong type of field")}
+
+        perspective_id = (
+
+            DBSession
+
+                .query(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
+
+                .filter(
+                    dbLexicalEntry.client_id == client_id,
+                    dbLexicalEntry.object_id == object_id,
+                    dbLexicalEntry.marked_for_deletion == False)
+
+                .first())
+
+        if not perspective_id:
+            return ResponseError('No such lexical entry in the system.')
+
+        # Checking permissions.
+
+        info.context.acl_check(
+            'delete',
+            'lexical_entries_and_entities',
+            perspective_id)
 
         entities = DBSession.query(dbEntity).filter_by(field_client_id=field_client_id,
                                                      field_object_id=field_object_id,

@@ -124,7 +124,7 @@ def merge_bulk(request, publish_any, group_list):
     """
 
     def error_f(error_message):
-        raise ResponseError(message = error_message)
+        raise ResponseError(message = '\n' + error_message)
 
     try_ok, merge_context = merge_bulk_try(
         request, publish_any, group_list, error_f)

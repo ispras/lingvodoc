@@ -1,8 +1,11 @@
-from dogpile.cache.api import NO_VALUE
-from dogpile.cache import make_region
+import time
+# from dogpile.cache.api import NO_VALUE
+# from dogpile.cache import make_region
+from redis import Redis
 
 from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
+from lingvodoc.cache.through.cache import ThroughCache
 
 import uuid
 import dill
@@ -53,9 +56,9 @@ def initialize_cache(args):
         MEMOIZE = lambda func: func
         CACHE = MockCache()
         return
-    region = make_region().configure(**args)
-    MEMOIZE = cache_responses(region)
-    CACHE = CommonCache(region)
+    # region = make_region().configure(**args)
+    # MEMOIZE = cache_responses(region)
+    CACHE = ThroughCache(Redis(**args))
 
 
 class TaskStatus():
@@ -70,6 +73,8 @@ class TaskStatus():
         self.task_details = task_details
         self.status = "Starting the task"
         self.result_link_list = []
+
+        self.created_at = time.time()
 
         self.put_to_cache()
 
@@ -107,6 +112,9 @@ class TaskStatus():
                 if task:
                     task = dill.loads(task)
                     task_list.append(task)
+        task_list.sort(
+            key=lambda task: (getattr(task, 'created_at', 0), task.id),
+            reverse=True)
         if clear_out:
             return [task.__dict__ for task in task_list]
         else:
@@ -135,5 +143,3 @@ class TaskStatus():
                     CACHE.set("current_tasks:" + self.user_id, dill.dumps(current_tasks))
                     CACHE.rem(self.key)
         return None
-
-

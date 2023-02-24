@@ -16,6 +16,7 @@ from lingvodoc.schema.gql_holders import (
 )
 
 from lingvodoc.models import (
+    TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     Client,
     User as dbUser,
@@ -39,7 +40,9 @@ class TranslationGist(LingvodocObjectType):
 
     """
     dbType = dbTranslationGist
-    translationatoms = graphene.List(TranslationAtom)
+
+    translationatoms = (
+        graphene.List(TranslationAtom, deleted = graphene.Boolean()))
 
     class Meta:
         interfaces = (CompositeIdHolder,
@@ -49,15 +52,36 @@ class TranslationGist(LingvodocObjectType):
                         TranslationHolder
                       )
 
-    @fetch_object("translationatoms") # TODO: fix that
-    def resolve_translationatoms(self, info):
-        result = list()
-        for dbatom in self.dbObject.translationatom:
-            atom =  TranslationAtom(id=[dbatom.client_id, dbatom.object_id])
-            atom.dbObject = dbatom
-            result.append(atom)
-        return result
+    @fetch_object("translationatoms")
+    def resolve_translationatoms(self, info, deleted = None):
 
+        query = (
+
+            DBSession
+
+                .query(dbTranslationAtom)
+
+                .filter_by(
+                    parent_client_id = self.dbObject.client_id,
+                    parent_object_id = self.dbObject.object_id))
+
+        if deleted is not None:
+
+            query = (
+
+                query.filter(
+                    dbTranslationAtom.marked_for_deletion == deleted))
+
+        result = list()
+
+        for dbatom in query.all():
+
+            atom = TranslationAtom(id=[dbatom.client_id, dbatom.object_id])
+            atom.dbObject = dbatom
+
+            result.append(atom)
+
+        return result
 
 
 class CreateTranslationGist(graphene.Mutation):

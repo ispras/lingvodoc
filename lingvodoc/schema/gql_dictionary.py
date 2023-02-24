@@ -1,44 +1,61 @@
 from collections import defaultdict
+import datetime
 import logging
+import pprint
+
 import graphene
 
 from lingvodoc.cache.caching import CACHE
+
 from lingvodoc.models import (
-    Dictionary as dbDictionary,
-    TranslationAtom as dbTranslationAtom,
-    DBSession,
-    Client as dbClient,
-    Language as dbLanguage,
-    DictionaryPerspective as dbDictionaryPerspective,
     BaseGroup as dbBaseGroup,
-    Group as dbGroup,
-    Grant as dbGrant,
+    Client as dbClient,
+    DBSession,
+    Dictionary as dbDictionary,
+    DictionaryPerspective as dbPerspective,
     Entity as dbEntity,
+    Grant as dbGrant,
+    Group as dbGroup,
+    JSONB,
+    Language as dbLanguage,
     LexicalEntry as dbLexicalEntry,
+    ObjectTOC,
     PublishingEntity as dbPublishingEntity,
-    )
+    TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
+)
+
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
+
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CommonFieldsComposite,
     StateHolder,
     fetch_object,
     del_object,
+    undel_object,
     client_id_check,
     ResponseError,
     ObjectVal,
     acl_check_by_id,
     LingvodocID,
-    UserAndOrganizationsRoles
+    UserAndOrganizationsRoles,
+    get_published_translation_gist_id_cte_query
 )
+
+import sqlalchemy
+from sqlalchemy import and_, cast, column, extract, func, or_, tuple_, literal
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
-from lingvodoc.utils import statistics
+from sqlalchemy.sql.expression import Grouping
+
+from lingvodoc.utils import statistics, explain_analyze
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field,
                                       edit_role)
 from lingvodoc.utils.deletion import real_delete_dictionary
+from lingvodoc.utils.search import translation_gist_search
 
 
 # Setting up logging.
@@ -104,7 +121,16 @@ class Dictionary(LingvodocObjectType):  # tested
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
     statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
-    status = graphene.String()
+    last_modified_at = graphene.Float()
+
+    # If the dictionary in 'Published' or 'Limited access' state and has at least one 'Published' or
+    # 'Limited access' perspective with some additional checks based on whether the dictionary is deleted or
+    # not.
+    #
+    # The same as parameter 'published' of the field 'dictionaries' of Language type, see
+    # gql_language.py.
+    #
+    published = graphene.Boolean()
 
     tree = graphene.List(CommonFieldsComposite)
 
@@ -121,19 +147,370 @@ class Dictionary(LingvodocObjectType):  # tested
     def persp_class(self):
         return self._meta.fields['persp'].type
 
-    @fetch_object('status')
-    def resolve_status(self, info):
-        context = info.context
-        atom = DBSession.query(dbTranslationAtom.content).filter_by(
-            parent_client_id=self.dbObject.state_translation_gist_client_id,
-            parent_object_id=self.dbObject.state_translation_gist_object_id,
-            marked_for_deletion=False,
+    @fetch_object('last_modified_at')
+    def resolve_last_modified_at(self, info):
+        """
+        Dictionary's last modification time, defined as latest time of creation or deletion of the
+        dictionary and all its perspectives, lexical entries and entities.
+        """
 
-            locale_id=int(context.get('locale_id'))).first()
-        if atom:
-            return atom[0]
+        # select
+        #   max((value ->> 'deleted_at') :: float)
+        #
+        #   from
+        #     ObjectTOC,
+        #     jsonb_each(additional_metadata)
+        #
+        #   where
+        #     client_id = <client_id> and
+        #     object_id = <object_id>;
+
+        deleted_at_query = (
+
+            DBSession
+
+            .query(
+                func.max(cast(
+                    column('value').op('->>')('deleted_at'),
+                    sqlalchemy.Float)))
+
+            .select_from(
+                ObjectTOC,
+                func.jsonb_each(ObjectTOC.additional_metadata))
+
+            .filter(
+                ObjectTOC.client_id == self.id[0],
+                ObjectTOC.object_id == self.id[1],
+                ObjectTOC.additional_metadata != JSONB.NULL))
+
+        # Query for last modification time of the dictionary's perspectives, lexical entries and entities.
+
+        sql_str = ('''
+
+            select
+
+              max(
+                greatest(
+
+                  extract(epoch from P.created_at),
+
+                  (select
+                    max((value ->> 'deleted_at') :: float)
+
+                    from
+                      jsonb_each(OP.additional_metadata)),
+
+                  (select
+
+                    max(
+                      greatest(
+
+                        extract(epoch from L.created_at),
+
+                        (select
+                          max((value ->> 'deleted_at') :: float)
+
+                          from
+                            jsonb_each(OL.additional_metadata)),
+
+                        (select
+
+                          max(
+                            greatest(
+
+                              extract(epoch from E.created_at),
+
+                              (select
+                                max((value ->> 'deleted_at') :: float)
+
+                                from
+                                  jsonb_each(OE.additional_metadata))))
+
+                          from
+                            public.entity E,
+                            ObjectTOC OE
+
+                          where
+                            E.parent_client_id = L.client_id and
+                            E.parent_object_id = L.object_id and
+                            OE.client_id = E.client_id and
+                            OE.object_id = E.object_id and
+                            OE.additional_metadata != 'null' :: jsonb)))
+
+                    from
+                      lexicalentry L,
+                      ObjectTOC OL
+
+                    where
+                      L.parent_client_id = P.client_id and
+                      L.parent_object_id = P.object_id and
+                      OL.client_id = L.client_id and
+                      OL.object_id = L.object_id and
+                      OL.additional_metadata != 'null' :: jsonb)))
+
+            from
+              dictionaryperspective P,
+              ObjectTOC OP
+
+            where
+              P.parent_client_id = :client_id and
+              P.parent_object_id = :object_id and
+              OP.client_id = P.client_id and
+              OP.object_id = P.object_id and
+              OP.additional_metadata != 'null' :: jsonb
+
+            ''')
+
+        # Complete query for the dictionary, excluding created_at which we already have.
+
+        DBSession.execute(
+            'set extra_float_digits to 3;');
+
+        result = (
+
+            DBSession
+
+            .query(
+                func.greatest(
+                    deleted_at_query.label('deleted_at'),
+                    Grouping(sqlalchemy.text(sql_str))))
+
+            .params({
+                'client_id': self.id[0],
+                'object_id': self.id[1]})
+
+            .scalar())
+
+        if result is not None:
+
+            return max(
+                self.dbObject.created_at,
+                result)
+
         else:
-            return None
+
+            return self.dbObject.created_at
+
+    def published_search(
+        self,
+        __debug_flag__ = False):
+
+        db_published_gist = translation_gist_search('Published')
+
+        published_client_id = db_published_gist.client_id
+        published_object_id = db_published_gist.object_id
+
+        db_limited_gist = translation_gist_search('Limited access')
+
+        limited_client_id = db_limited_gist.client_id
+        limited_object_id = db_limited_gist.object_id
+
+        if (
+            (self.dbObject.state_translation_gist_client_id != published_client_id or
+                self.dbObject.state_translation_gist_object_id != published_object_id) and
+            (self.dbObject.state_translation_gist_client_id != limited_client_id or
+                self.dbObject.state_translation_gist_object_id != limited_object_id)):
+
+            return False
+
+        perspective_query = (
+
+            DBSession
+
+                .query(literal(1))
+
+                .filter(
+                    dbPerspective.parent_client_id == self.id[0],
+                    dbPerspective.parent_object_id == self.id[1])
+
+                .filter(
+                    or_(
+                        and_(dbPerspective.state_translation_gist_client_id == published_client_id,
+                            dbPerspective.state_translation_gist_object_id == published_object_id),
+                        and_(dbPerspective.state_translation_gist_client_id == limited_client_id,
+                            dbPerspective.state_translation_gist_object_id == limited_object_id))))
+
+        if not self.dbObject.marked_for_deletion:
+
+            perspective_query = (
+
+                perspective_query.filter(
+                    dbPerspective.marked_for_deletion == False))
+
+        return (
+
+            DBSession
+                .query(perspective_query.exists())
+                .scalar())
+
+    def published_cte_str(
+        self,
+        __debug_flag__ = False):
+
+        sql_str = ('''
+
+            with translation_gist_id_set as
+            (
+              select
+              T.client_id, T.object_id
+
+              from
+              translationgist T,
+              translationatom A
+
+              where
+              T.marked_for_deletion = false and
+              T.type = 'Service' and
+              A.parent_client_id = T.client_id and
+              A.parent_object_id = T.object_id and
+              A.locale_id = 2 and
+              A.marked_for_deletion = false and
+              (A.content = 'Published' or
+                A.content = 'Limited access')
+            )
+
+            select
+
+            (:state_translation_gist_client_id,
+              :state_translation_gist_object_id) in
+              (select * from translation_gist_id_set)
+
+              and
+
+              exists (
+                select 1
+                from dictionaryperspective P
+                where
+                P.parent_client_id = :client_id and
+                P.parent_object_id = :object_id and
+                {0}
+                (P.state_translation_gist_client_id,
+                  P.state_translation_gist_object_id) in
+                  (select * from translation_gist_id_set));
+
+            '''.format(
+                '' if self.dbObject.marked_for_deletion else
+                    'P.marked_for_deletion = false and'))
+
+        param_dict = {
+            'client_id': self.id[0],
+            'object_id': self.id[1],
+            'state_translation_gist_client_id': self.dbObject.state_translation_gist_client_id,
+            'state_translation_gist_object_id': self.dbObject.state_translation_gist_object_id}
+
+        if __debug_flag__:
+
+            row_list = (
+
+                DBSession.execute(
+                    'explain analyze\n' + sql_str,
+                    param_dict).fetchall())
+
+            log.debug(''.join(
+                '\n' + row[0] for row in row_list))
+
+        return (DBSession
+            .execute(sql_str, param_dict)
+            .scalar())
+
+    def published_cte_orm(
+        self,
+        __debug_flag__ = False):
+
+        # NOTE: we have to use pubished CTE query and not just published CTE because otherwise the CTE won't
+        # be used as proper via WITH and will be just inserted literally two times.
+
+        published_cte_query = (
+            get_published_translation_gist_id_cte_query())
+
+        perspective_query = (DBSession
+
+            .query(dbPerspective)
+
+            .filter(
+                dbPerspective.parent_client_id == self.id[0],
+                dbPerspective.parent_object_id == self.id[1],
+
+                tuple_(
+                    dbPerspective.state_translation_gist_client_id,
+                    dbPerspective.state_translation_gist_object_id)
+
+                    .in_(published_cte_query)))
+
+        if not self.dbObject.marked_for_deletion:
+
+            perspective_query = perspective_query.filter(
+                dbPerspective.marked_for_deletion == False)
+
+        published_query = (DBSession
+
+            .query(
+
+                and_(
+
+                    tuple_(
+                        self.dbObject.state_translation_gist_client_id,
+                        self.dbObject.state_translation_gist_object_id)
+
+                        .in_(published_cte_query),
+
+                    perspective_query.exists())))
+
+        if __debug_flag__:
+
+            log.debug(str(
+                published_query.statement.compile(compile_kwargs = {'literal_binds': True})))
+
+            row_list = (
+                DBSession.execute(
+                    explain_analyze(published_query)).fetchall())
+
+            log.debug(''.join(
+                '\n' + row[0] for row in row_list))
+
+        return published_query.scalar()
+
+    @fetch_object()
+    def resolve_published(self, info, __debug_flag__ = False):
+
+        if __debug_flag__:
+
+            import time
+
+            t0 = time.time()
+
+            for i in range(256):
+                self.published_search()
+
+            t1 = time.time()
+
+            for i in range(256):
+                self.published_cte_str()
+
+            t2 = time.time()
+
+            for i in range(256):
+                self.published_cte_orm()
+
+            t3 = time.time()
+
+            log.warn(
+                f'\nt1 - t0: {t1 - t0:.6f}s'
+                f'\nt2 - t1: {t2 - t1:.6f}s'
+                f'\nt3 - t2: {t3 - t2:.6f}s')
+
+            result_search = self.published_search(True)
+
+            result_str = self.published_cte_str(True)
+            result_orm = self.published_cte_orm(True)
+
+            log.warn((result_search, result_str, result_orm))
+
+            return result_orm
+
+        # Testing shows that direct query is the most optimal.
+
+        return self.published_cte_str()
 
     @fetch_object()
     def resolve_tree(self, info):
@@ -158,23 +535,42 @@ class Dictionary(LingvodocObjectType):  # tested
         if starting_time is None or ending_time is None:
             raise ResponseError(message="Time period is not chosen")
         locale_id = info.context.get('locale_id')
-        current_statistics = statistics.stat_dictionary((self.dbObject.client_id, self.dbObject.object_id),
+        current_statistics = statistics.stat_dictionary(self.id,
                                    starting_time,
                                    ending_time,
                                    locale_id=locale_id
                                                         )
-        new_format_statistics = [
-            {"user_id": key, "name": current_statistics[key]['name'], "entities": current_statistics[key]['entities']}
-            for key in current_statistics]
+        new_format_statistics = []
+
+        for key, stat_dict in current_statistics.items():
+
+            new_dict = {
+                'user_id': key,
+                'name': stat_dict['name']}
+
+            # NOTE: 'lexical_entries' with underscore '_' for the new format.
+
+            if 'lexical entries' in stat_dict:
+                new_dict['lexical_entries'] = stat_dict['lexical entries']
+
+            if 'entities' in stat_dict:
+                new_dict['entities'] = stat_dict['entities']
+
+            new_format_statistics.append(new_dict)
+
+        log.debug(
+            '\nnew format:\n{0}'.format(
+                pprint.pformat(new_format_statistics, width = 144)))
+
         return new_format_statistics
 
-    @fetch_object()
+    @fetch_object('perspectives')
     def resolve_perspectives(self, info, only_with_phonology_data = None):
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
-        dictionary_client_id, dictionary_object_id = self.id  # self.dbObject.client_id, self.dbObject.object_id
+        dictionary_client_id, dictionary_object_id = self.id
 
-        child_persps_query = DBSession.query(dbDictionaryPerspective) \
+        child_persps_query = DBSession.query(dbPerspective) \
             .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id,
                        marked_for_deletion=False)
 
@@ -188,28 +584,47 @@ class Dictionary(LingvodocObjectType):  # tested
             dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
             dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
 
-            phonology_query = DBSession.query(
-                dbDictionaryPerspective, dbLexicalEntry, dbMarkup, dbSound).filter(
-                    dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
-                    dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
-                    dbLexicalEntry.marked_for_deletion == False,
-                    dbMarkup.parent_client_id == dbLexicalEntry.client_id,
-                    dbMarkup.parent_object_id == dbLexicalEntry.object_id,
-                    dbMarkup.marked_for_deletion == False,
-                    dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
-                    dbPublishingMarkup.client_id == dbMarkup.client_id,
-                    dbPublishingMarkup.object_id == dbMarkup.object_id,
-                    dbPublishingMarkup.published == True,
-                    dbPublishingMarkup.accepted == True,
-                    dbSound.client_id == dbMarkup.self_client_id,
-                    dbSound.object_id == dbMarkup.self_object_id,
-                    dbSound.marked_for_deletion == False,
-                    dbPublishingSound.client_id == dbSound.client_id,
-                    dbPublishingSound.object_id == dbSound.object_id,
-                    dbPublishingSound.published == True,
-                    dbPublishingSound.accepted == True)
+            phonology_query = (
 
-            child_persps_query = child_persps_query.filter(phonology_query.exists())
+                DBSession
+
+                    .query(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id)
+
+                    .filter(
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbMarkup.parent_client_id == dbLexicalEntry.client_id,
+                        dbMarkup.parent_object_id == dbLexicalEntry.object_id,
+                        dbMarkup.marked_for_deletion == False,
+                        dbMarkup.additional_metadata.contains({'data_type': 'praat markup'}),
+                        dbPublishingMarkup.client_id == dbMarkup.client_id,
+                        dbPublishingMarkup.object_id == dbMarkup.object_id,
+                        dbPublishingMarkup.published == True,
+                        dbPublishingMarkup.accepted == True,
+                        dbSound.client_id == dbMarkup.self_client_id,
+                        dbSound.object_id == dbMarkup.self_object_id,
+                        dbSound.marked_for_deletion == False,
+                        dbPublishingSound.client_id == dbSound.client_id,
+                        dbPublishingSound.object_id == dbSound.object_id,
+                        dbPublishingSound.published == True,
+                        dbPublishingSound.accepted == True)
+
+                    .group_by(
+                        dbLexicalEntry.parent_client_id,
+                        dbLexicalEntry.parent_object_id))
+
+            child_persps_query = (
+
+                child_persps_query.filter(
+
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id)
+
+                        .in_(
+                            DBSession.query(
+                                phonology_query.cte()))))
 
         perspectives = list()
         for persp in child_persps_query.all():
@@ -220,8 +635,13 @@ class Dictionary(LingvodocObjectType):  # tested
 
     @fetch_object(ACLSubject='dictionary_role', ACLKey='id')
     def resolve_roles(self, info):
-        client_id, object_id = self.dbObject.client_id, self.dbObject.object_id
-        dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        client_id, object_id = self.id
+        # dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dictionary = CACHE.get(objects =
+            {
+                dbDictionary : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if not dictionary or dictionary.marked_for_deletion:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
 
@@ -469,7 +889,7 @@ class CreateDictionary(graphene.Mutation):
                 persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
                                                                     persp_translation_gist_id,
                                                                     [client_id,object_id],
-                                                                    gist_type="Dictionary")
+                                                                    gist_type="Perspective")
                 parent_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
                 new_persp = create_perspective(id=(client_id, None),
                                         parent_id=parent_id,  # TODO: use all object attrs
@@ -580,8 +1000,13 @@ class UpdateDictionary(graphene.Mutation):
                           ):
         if not ids:
             raise ResponseError(message="dict id not found")
-        client_id, object_id = ids
-        db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # client_id, object_id = ids
+        # db_dictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        db_dictionary = CACHE.get(objects =
+            {
+                dbDictionary : (ids, )
+            },
+        DBSession=DBSession)
         if not db_dictionary or db_dictionary.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
 
@@ -598,7 +1023,7 @@ class UpdateDictionary(graphene.Mutation):
         if additional_metadata:
 
             if "location" in additional_metadata:
-                child_persps = DBSession.query(dbDictionaryPerspective)\
+                child_persps = DBSession.query(dbPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
@@ -614,7 +1039,7 @@ class UpdateDictionary(graphene.Mutation):
                     flag_modified(persp, 'additional_metadata')
 
             if "authors" in additional_metadata:
-                child_persps = DBSession.query(dbDictionaryPerspective)\
+                child_persps = DBSession.query(dbPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
@@ -626,7 +1051,7 @@ class UpdateDictionary(graphene.Mutation):
                     flag_modified(persp, 'additional_metadata')
             if "blobs" in additional_metadata:
                 additional_metadata['blobs'] = [{"client_id": i[0], "object_id": i[1]} for i in additional_metadata['blobs']]
-                child_persps = DBSession.query(dbDictionaryPerspective)\
+                child_persps = DBSession.query(dbPerspective)\
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
@@ -645,7 +1070,7 @@ class UpdateDictionary(graphene.Mutation):
 
             if "sociolinguistics" in additional_metadata:
 
-                child_persps = DBSession.query(dbDictionaryPerspective) \
+                child_persps = DBSession.query(dbPerspective) \
                     .filter_by(parent=db_dictionary).all()
                 for persp in child_persps:
                     if not persp.additional_metadata:
@@ -657,6 +1082,7 @@ class UpdateDictionary(graphene.Mutation):
                     flag_modified(persp, 'additional_metadata')
 
         update_metadata(db_dictionary, additional_metadata)
+        CACHE.set(objects = [db_dictionary,], DBSession=DBSession)
         return db_dictionary
 
     @staticmethod
@@ -708,7 +1134,12 @@ class UpdateDictionaryStatus(graphene.Mutation):
     def mutate(root, info, **args):
         client_id, object_id = args.get('id')
         state_translation_gist_client_id, state_translation_gist_object_id = args.get('state_translation_gist_id')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if dbdictionary and not dbdictionary.marked_for_deletion:
             dbdictionary.state_translation_gist_client_id = state_translation_gist_client_id
             dbdictionary.state_translation_gist_object_id = state_translation_gist_object_id
@@ -717,6 +1148,7 @@ class UpdateDictionaryStatus(graphene.Mutation):
                                                               locale_id=info.context.get('locale_id')).first()
             dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id], status=atom.content)
             dictionary.dbObject = dbdictionary
+            CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
             return UpdateDictionaryStatus(dictionary=dictionary, triumph=True)
         raise ResponseError(message="No such dictionary in the system")
 
@@ -759,21 +1191,51 @@ mutation up{
         client_id, object_id = args.get('id')
 
 
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : ((client_id, object_id), )
+            },
+        DBSession=DBSession)
         if not dbdictionary:
             raise ResponseError(message="No such dictionary in the system")
         locale_id = args.get("locale_id")
 
+        if 'atom_id' in args:
 
-        dbtranslationatom = DBSession.query(dbTranslationAtom).filter_by(parent_client_id=dbdictionary.translation_gist_client_id,
-                                                            parent_object_id=dbdictionary.translation_gist_object_id,
-                                                            locale_id=locale_id).first()
+            atom_id = args['atom_id']
+
+            dbtranslationatom = (
+
+                DBSession
+                    .query(dbTranslationAtom)
+                    .filter_by(
+                        client_id = atom_id[0],
+                        object_id = atom_id[1])
+                    .first())
+
+        else:
+
+            dbtranslationatom = (
+
+                DBSession
+                    .query(dbTranslationAtom)
+                    .filter_by(
+                        parent_client_id=dbdictionary.translation_gist_client_id,
+                        parent_object_id=dbdictionary.translation_gist_object_id,
+                        locale_id=locale_id)
+                    .first())
+
         if dbtranslationatom:
             if dbtranslationatom.locale_id == locale_id:
                 key = "translation:%s:%s:%s" % (
                     str(dbtranslationatom.parent_client_id),
                     str(dbtranslationatom.parent_object_id),
                     str(dbtranslationatom.locale_id))
+                CACHE.rem(key)
+                key = "translations:%s:%s" % (
+                    str(dbtranslationatom.parent_client_id),
+                    str(dbtranslationatom.parent_object_id))
                 CACHE.rem(key)
                 if content:
                     dbtranslationatom.content = content
@@ -840,7 +1302,12 @@ class AddDictionaryRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
         client_id = info.context.get('client_id')
         if not dbdictionary or dbdictionary.marked_for_deletion:
             raise ResponseError(message="No such dictionary in the system")
@@ -852,6 +1319,7 @@ class AddDictionaryRoles(graphene.Mutation):
                 edit_role(dbdictionary, user_id, role_id, client_id, dictionary_default=True, organization=True)
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
+        CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
         return AddDictionaryRoles(dictionary=dictionary, triumph=True)
 
 class DeleteDictionaryRoles(graphene.Mutation):
@@ -879,7 +1347,13 @@ class DeleteDictionaryRoles(graphene.Mutation):
         user_id = args.get("user_id")
         roles_users = args.get('roles_users')
         roles_organizations = args.get('roles_organizations')
-        dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        # dbdictionary = DBSession.query(dbDictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        dbdictionary = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
+
         client_id = info.context.get('client_id')
 
         if not dbdictionary or dbdictionary.marked_for_deletion:
@@ -896,6 +1370,7 @@ class DeleteDictionaryRoles(graphene.Mutation):
 
         dictionary = Dictionary(id=[dbdictionary.client_id, dbdictionary.object_id])
         dictionary.dbObject = dbdictionary
+        CACHE.set(objects = [dbdictionary,], DBSession=DBSession)
         return DeleteDictionaryRoles(dictionary=dictionary, triumph=True)
 
 
@@ -927,24 +1402,121 @@ class DeleteDictionary(graphene.Mutation):
     @staticmethod
     @acl_check_by_id('delete', 'dictionary')
     def mutate(root, info, **args):
+
         ids = args.get('id')
         client_id, object_id = ids
-        dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        # dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary_obj = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
+
         if not dbdictionary_obj or dbdictionary_obj.marked_for_deletion:
             raise ResponseError(message="Error: No such dictionary in the system")
+
+        grant_id_list = []
+
         for grant in DBSession.query(dbGrant).all():
             dict_id = {'client_id': client_id, 'object_id': object_id}
+
             if grant.additional_metadata and grant.additional_metadata.get('participant') and dict_id in grant.additional_metadata['participant']:
                 grant.additional_metadata['participant'].remove(dict_id)
                 flag_modified(grant, 'additional_metadata')
+                grant_id_list.append(grant.id)
 
         settings = info.context["request"].registry.settings
+
         if 'desktop' in settings:
             real_delete_dictionary(dbdictionary_obj, settings)
+
         else:
-            del_object(dbdictionary_obj, "delete_dictionary", info.context.get('client_id'))
+            del_object(
+                dbdictionary_obj, "delete_dictionary", info.context.get('client_id'),
+                grant_id_list = sorted(grant_id_list))
+
         dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
         dictionary.dbObject = dbdictionary_obj
+
         return DeleteDictionary(dictionary=dictionary, triumph=True)
 
 
+class UndeleteDictionary(graphene.Mutation):
+
+    class Arguments:
+        id = LingvodocID(required=True)
+
+    dictionary = graphene.Field(Dictionary)
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    @acl_check_by_id('delete', 'dictionary')
+    def mutate(root, info, **args):
+        ids = args.get('id')
+        client_id, object_id = ids
+        # dbdictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dbdictionary_obj = CACHE.get(objects =
+            {
+                dbDictionary : (args.get('id'), )
+            },
+        DBSession=DBSession)
+        
+
+        if not dbdictionary_obj:
+            raise ResponseError(message="Error: No such dictionary in the system")
+        if not dbdictionary_obj.marked_for_deletion:
+            raise ResponseError(message="Error: Dictionary is not deleted")
+
+        objecttoc_obj = DBSession.query(ObjectTOC).filter_by(client_id=client_id, object_id=object_id).first()
+
+        # Restoring grant membership, if required.
+
+        additional_metadata = (
+            objecttoc_obj.additional_metadata)
+
+        additional_info = (
+            additional_metadata and additional_metadata.get('__additional_info__'))
+
+        if additional_info:
+
+            grant_id_list = additional_info.get('grant_id_list')
+
+            if grant_id_list:
+
+                grant_list = DBSession.query(dbGrant).filter(dbGrant.id.in_(grant_id_list)).all()
+
+                dict_id = {
+                    'client_id': client_id,
+                    'object_id': object_id}
+
+                for grant in grant_list:
+
+                    if grant.additional_metadata is None:
+                        grant.additional_metadata = {}
+
+                    participant_list = grant.additional_metadata.get('participant')
+
+                    if participant_list is None:
+
+                        participant_list = []
+                        grant.additional_metadata['participant'] = participant_list
+
+                    if dict_id not in participant_list:
+
+                        participant_list.append(dict_id)
+                        flag_modified(grant, 'additional_metadata')
+
+                        log.debug(participant_list)
+
+        # Undeleting dictionary object with its translations.
+
+        settings = info.context["request"].registry.settings
+
+        if 'desktop' in settings:
+            raise NotImplementedError
+        else:
+            undel_object(dbdictionary_obj, "undelete_dictionary", info.context.get('client_id'))
+
+        dictionary = Dictionary(id=[dbdictionary_obj.client_id, dbdictionary_obj.object_id])
+        dictionary.dbObject = dbdictionary_obj
+        return UndeleteDictionary(dictionary=dictionary, triumph=True)

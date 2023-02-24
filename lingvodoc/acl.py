@@ -188,7 +188,14 @@ def check_direct(client_id, request, action, subject, subject_id):
 
     client_id = get_effective_client_id(client_id, request)
 
-    if not client_id:
+    try:
+        user = Client.get_user_by_client_id(client_id)
+
+    except:
+        return False
+
+    if (not client_id or
+        not user):
 
         # Special case for perspective, we allow anonymous view access based on perspective state.
 
@@ -203,12 +210,6 @@ def check_direct(client_id, request, action, subject, subject_id):
         return (perspective and
             (perspective.state == 'Published' or perspective.state == 'Limited access') and
             (action == 'view' or action == 'preview'))
-
-    try:
-        user = Client.get_user_by_client_id(client_id)
-
-    except:
-        return False
 
     # Subject is specified by a client_id/object_id pair.
 

@@ -3,19 +3,27 @@ import datetime
 import graphene
 import logging
 import re
+import time
+
 from graphql.language.ast import ObjectValue, ListValue, IntValue
 from graphql.language import ast
+
 from graphene.types import Scalar
 from graphene.types.json import JSONString as JSONtype
 from graphene.types.generic import GenericScalar
+
+from sqlalchemy import or_, tuple_
+
 from lingvodoc.models import (
     ObjectTOC,
     DBSession,
-    Client,
+    Client as dbClient,
     LexicalEntry,
     DictionaryPerspectiveToField,
     TranslationGist as dbTranslationGist,
-    TranslationAtom as dbTranslationAtom
+    TranslationAtom as dbTranslationAtom,
+    UnstructuredData as dbUnstructuredData,
+    User as dbUser
 )
 from lingvodoc.utils.verification import check_client_id
 from lingvodoc.cache.caching import CACHE
@@ -114,10 +122,9 @@ def client_id_check():
             authenticated = info.context.client_id
             if client_id:
                 if not check_client_id(authenticated, client_id):
-                    raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                                   authenticated)
+                    raise KeyError("Clients of mismatched users.", authenticated, client_id)
             else:
-                client = DBSession.query(Client).filter_by(id=authenticated).first()
+                client = DBSession.query(dbClient).filter_by(id=authenticated).first()
                 if not client:
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                                    authenticated)
@@ -127,9 +134,12 @@ def client_id_check():
 
     return decorator
 
+
 class LingvodocObjectType(graphene.ObjectType):
+
     dbObject = None
     ErrorHappened = None
+
 
 class LingvodocID(Scalar):
     """
@@ -267,8 +277,16 @@ class DateTime(Scalar):  # TODO: change format
 # Functions
 
 
-def delete_message(function_name, deleted_by, task_id=None, counter=1,
-                   reason="Manually deleted", deleted_at=None, subject=None):
+def delete_message(
+    function_name,
+    deleted_by,
+    task_id=None,
+    counter=1,
+    reason="Manually deleted",
+    deleted_at=None,
+    subject=None,
+    undelete=False,
+    __additional_info__=None):
     """
     This function generates a message for additional metadata to track reason of garbage collection.
     :param function_name: name of function that delete object
@@ -281,28 +299,53 @@ def delete_message(function_name, deleted_by, task_id=None, counter=1,
     :param subject: like parent of deleted object. For ex. for atom it`s gist; for gist it`s perspective
     :return:
     """
+
     if not deleted_at:
-        deleted_at = int(datetime.datetime.utcnow().timestamp())
+        deleted_at = datetime.datetime.now(datetime.timezone.utc).timestamp()
+
+    if reason == "Manually deleted" and undelete:
+        reason = "Manually undeleted"
+
     message = {function_name:
-                {"deleted_at": deleted_at,
+                {"undeleted_at" if undelete else "deleted_at": deleted_at,
                  "reason": reason,
-                 "deleted_by": deleted_by,
+                 "undeleted_by" if undelete else "deleted_by": deleted_by,
                  "task_id": task_id,
                  "counter": counter,
                  "subject": subject},
                 }
+
+    if __additional_info__ is not None:
+        message['__additional_info__'] = __additional_info__
+
     return message
 
 
-def delete_gist_with_atoms(deleted_by, gist, task_id):
+def undelete_message(*args, **kwargs):
+    return delete_message(*args, undelete = True, **kwargs)
+
+
+def delete_gist_with_atoms(
+    deleted_by, gist, task_id, subject = None, reason = "Manually deleted", **kwargs):
+
+    key = "translations:%s:%s" % (
+        str(gist.client_id),
+        str(gist.object_id))
+    CACHE.rem(key)
+
     atoms = DBSession.query(dbTranslationAtom).filter_by(parent=gist,
                                                          marked_for_deletion=False).all()
+
+    atom_id_list = []
+
     for dbtranslationatom in atoms:
         key = "translation:%s:%s:%s" % (
             str(dbtranslationatom.parent_client_id),
             str(dbtranslationatom.parent_object_id),
             str(dbtranslationatom.locale_id))
         CACHE.rem(key)
+        atom_id_list.append(
+            [dbtranslationatom.client_id, dbtranslationatom.object_id])
         dbtranslationatom.mark_deleted(
             delete_message("del_object",
                            deleted_by,
@@ -310,33 +353,170 @@ def delete_gist_with_atoms(deleted_by, gist, task_id):
                            counter=len(atoms),
                            subject=(gist.client_id, gist.object_id),
                            reason="Automatically deleted after gist removal"))
+
+    additional_info = kwargs.copy()
+    additional_info['atom_id_list'] = sorted(atom_id_list)
+
     gist.mark_deleted(delete_message("del_object",
                                      deleted_by,
                                      task_id,
-                                     subject=(gist.parent_client_id, gist.parent_object_id)))
+                                     reason=reason,
+                                     subject=subject,
+                                     __additional_info__=additional_info))
 
-def del_object(tmp_object, function_name, deleted_by, task_id=None, counter=1):
-    # This function can delete perspective\dictionary\any object
-    # with child gist and translationatoms
+
+def undelete_gist_with_atoms(
+    deleted_by, gist, task_id, subject = None, reason = "Manually undeleted", **kwargs):
+
+    objecttoc_obj = (
+
+        DBSession.query(ObjectTOC).filter_by(
+            client_id = gist.client_id,
+            object_id = gist.object_id).first())
+
+    # Restoring translation atoms, if required.
+
+    additional_info = objecttoc_obj.additional_metadata.get('__additional_info__')
+
+    if additional_info:
+
+        atom_id_list = additional_info.get('atom_id_list')
+
+        if atom_id_list:
+
+            atom_list = (
+
+                DBSession.query(dbTranslationAtom)
+
+                    .filter(
+                        tuple_(dbTranslationAtom.client_id, dbTranslationAtom.object_id)
+                            .in_(atom_id_list))
+
+                    .all())
+
+            for atom in atom_list:
+
+                atom.mark_undeleted(
+                    undelete_message(
+                        "undel_object",
+                        deleted_by,
+                        task_id,
+                        counter=len(atom_list),
+                        subject=(gist.client_id, gist.object_id),
+                        reason="Automatically undeleted after gist restore"))
+
+    gist.mark_undeleted(
+        undelete_message(
+            "undel_object",
+            deleted_by,
+            task_id,
+            reason = reason,
+            subject = subject,
+            __additional_info__ = kwargs or None))
+
+
+def del_object(
+    tmp_object,
+    function_name,
+    deleted_by,
+    task_id=None,
+    counter=1,
+    update_cache = True,
+    **kwargs):
+    """
+    This function can delete perspective/dictionary/any object with child gist and translationatoms.
+    """
+
     if tmp_object.marked_for_deletion:
         return
+
     # if object is translationgist, delete translationgist with atoms
     if function_name == "delete_translationgist":
         gist = tmp_object
-        delete_gist_with_atoms(deleted_by, gist, task_id)
+        delete_gist_with_atoms(deleted_by, gist, task_id, **kwargs)
         return
+
     # if object is Dictionary/Language/Field/etc. delete its translationgist
     elif hasattr(tmp_object, "translation_gist_object_id"):
         gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
                                                             object_id=tmp_object.translation_gist_object_id,
                                                             marked_for_deletion=False).first()
         if gist and gist.type != "Perspective":
-            delete_gist_with_atoms(deleted_by, gist, task_id)
+
+            delete_gist_with_atoms(
+                deleted_by,
+                gist,
+                task_id,
+                reason = 'Automatically deleted after object removal',
+                subject = (tmp_object.client_id, tmp_object.object_id))
+
     # delete object
-    message = delete_message(function_name, deleted_by, task_id, counter)
+    message = (
+
+        delete_message(
+            function_name,
+            deleted_by,
+            task_id,
+            counter,
+            __additional_info__ = kwargs or None))
+
     tmp_object.mark_deleted(message)
+    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }, DBSession=DBSession):
+        CACHE.set(objects = [tmp_object, ], DBSession=DBSession)
+
+def undel_object(
+    tmp_object,
+    function_name,
+    deleted_by,
+    task_id=None,
+    counter=1,
+    update_cache = True,
+    **kwargs):
+    """
+    Reverse for del_object(), should be modified accordingly whenever del_object() is modified.
+    """
+
+    if not tmp_object.marked_for_deletion:
+        return
+    # if object is translationgist, undelete translationgist with atoms
+    if function_name == "undelete_translationgist":
+        gist = tmp_object
+        undelete_gist_with_atoms(deleted_by, gist, task_id, **kwargs)
+        return
+    # if object is Dictionary/Language/Field/etc. undelete its translationgist
+    elif hasattr(tmp_object, "translation_gist_object_id"):
+        gist = DBSession.query(dbTranslationGist).filter_by(client_id=tmp_object.translation_gist_client_id,
+                                                            object_id=tmp_object.translation_gist_object_id,
+                                                            marked_for_deletion=True).first()
+        if gist and gist.type != "Perspective":
+
+            undelete_gist_with_atoms(
+                deleted_by,
+                gist,
+                task_id,
+                reason = 'Automatically undeleted after object restore',
+                subject = (tmp_object.client_id, tmp_object.object_id))
+
+    # delete object
+    message = (
+
+        undelete_message(
+            function_name,
+            deleted_by,
+            task_id,
+            counter,
+            __additional_info__ = kwargs or None))
+
+    tmp_object.mark_undeleted(message)
+    if update_cache and CACHE.get(objects = { tmp_object.__class__ : ((tmp_object.client_id, tmp_object.object_id), ) }, DBSession=DBSession):
+        CACHE.set(objects = [tmp_object, ], DBSession=DBSession)
 
 
+#
+# Special unique placeholder value signifying that the field has None value. We need that because None
+# itself is used to mark field as having no value.
+#
+gql_none_value = object()
 
 
 def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
@@ -360,18 +540,32 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                 context.acl_check('view', ACLSubject, cls.id)
             if cls.ErrorHappened:
                 return None
+
+            if (attrib_name is not None and
+                ACLSubject is None):
+
+                try:
+
+                    value = getattr(cls, attrib_name)
+
+                    if value is not None:
+                        return (None if value is gql_none_value else value)
+
+                except AttributeError:
+                    pass
+
             if not cls.dbObject:
-                if type(cls.id) is int:
-                    # example: (id: 1)
-                    id = cls.id
-                    cls.dbObject = DBSession.query(cls.dbType).filter_by(id=id).first()
+                if isinstance(cls.id, (int, str)):
+                    # example: (id: 1),  (id: 'ihGLq')
+                    cls.dbObject = DBSession.query(cls.dbType).filter_by(id=cls.id).first()
                     if cls.dbObject is None:
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
-                elif type(cls.id) is list:
+                elif isinstance(cls.id, (list, tuple)):
                     # example: (id: [2,3])
                     cls.dbObject = DBSession.query(cls.dbType).filter_by(client_id=cls.id[0],
                                                                          object_id=cls.id[1]).first()
+                    # cls.dbObject = CACHE.get(objects = {cls.dbType : (cls.id, )})
                     if cls.dbObject is None:
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
@@ -397,7 +591,10 @@ class IdHolder(graphene.Interface):
 
 
 class CompositeIdHolder(graphene.Interface):
+
     id = LingvodocID()
+    created_by = graphene.Field('lingvodoc.schema.gql_user.User')
+
     # client_id = graphene.Int()
     # object_id = graphene.Int()
 
@@ -413,15 +610,50 @@ class CompositeIdHolder(graphene.Interface):
     # def resolve_object_id(self, info):
     #     return self.dbObject.object_id
 
+    @fetch_object('created_by')
+    def resolve_created_by(self, info):
+        """
+        Returns user whose client created the object.
+        """
+
+        from .gql_user import User
+
+        dbuser = (
+
+            DBSession
+                .query(dbUser)
+                .filter(
+                    dbClient.id == self.dbObject.client_id,
+                    dbUser.id == dbClient.user_id)
+                .first())
+
+        user = User(id = dbuser.id)
+        user.dbObject = dbuser
+
+        return user
 
 class CreatedAt(graphene.Interface):
-    created_at = graphene.Int() #DateTime()
+    created_at = graphene.Float() #DateTime()
+
+    @staticmethod
+    def from_timestamp(value):
+
+        if isinstance(value, (int, float)):
+            return value
+
+        return value.replace(tzinfo = datetime.timezone.utc).timestamp()
 
     @fetch_object("created_at")
     def resolve_created_at(self, info):
-        if type(self.dbObject.created_at) is int:
-            return self.dbObject.created_at
-        return self.dbObject.created_at.timestamp()
+        return CreatedAt.from_timestamp(self.dbObject.created_at)
+
+
+class DeletedAt(graphene.Interface):
+    deleted_at = graphene.Float()
+
+    @fetch_object("deleted_at")
+    def resolve_deleted_at(self, info):
+        return self.dbObject.deleted_at
 
 
 class Relationship(graphene.Interface):
@@ -492,12 +724,39 @@ class UserId(graphene.Interface):
 
 
 class StateHolder(graphene.Interface):
+
     state_translation_gist_id = LingvodocID()
 
-    @fetch_object("state_translation_gist_id")
+    status = graphene.Field(graphene.String, locale_id = graphene.Int())
+    status_translations = ObjectVal()
+
+    @fetch_object('state_translation_gist_id')
     def resolve_state_translation_gist_id(self, info):
         return (self.dbObject.state_translation_gist_client_id,
                 self.dbObject.state_translation_gist_object_id)
+
+    @fetch_object('status')
+    def resolve_status(self, info, locale_id = None):
+
+        if locale_id is None:
+            locale_id = int(info.context.get('locale_id'))
+
+        atom = DBSession.query(dbTranslationAtom.content).filter_by(
+            parent_client_id=self.dbObject.state_translation_gist_client_id,
+            parent_object_id=self.dbObject.state_translation_gist_object_id,
+            marked_for_deletion=False,
+            locale_id=locale_id).first()
+        if atom:
+            return atom[0]
+        else:
+            return None
+
+    @fetch_object('status_translations')
+    def resolve_status_translations(self, info):
+
+        if self.dbObject:
+            return self.dbObject.get_state_translations()
+
 
 class TableName(graphene.Interface):
     table_name = graphene.String()
@@ -546,13 +805,22 @@ class TypeHolder(graphene.Interface):
 
 
 class TranslationHolder(graphene.Interface):
+
     translation = graphene.String(locale_id=graphene.Int())
+    translations = ObjectVal()
 
     @fetch_object("translation")
     def resolve_translation(self, info, locale_id = None):
-        if self.dbObject:
-            return str(self.dbObject.get_translation( # TODO: fix it
+
+        return (
+            self.dbObject.get_translation( # TODO: fix it
                 locale_id if locale_id is not None else info.context.get('locale_id')))
+
+    @fetch_object("translations")
+    def resolve_translations(self, info):
+
+        return (
+            self.dbObject.get_translations())
 
 
 # rare interfaces
@@ -563,6 +831,7 @@ class TranslationHolder(graphene.Interface):
 class About(graphene.Interface):
 
     about = graphene.String()
+    about_translations = ObjectVal()
 
     @fetch_object("about")
     def resolve_about(self, info, locale_id = None):
@@ -570,6 +839,13 @@ class About(graphene.Interface):
         if self.dbObject:
             return str(self.dbObject.get_about_translation( # TODO: fix it
                 locale_id if locale_id is not None else info.context.get('locale_id')))
+
+    @fetch_object("about_translations")
+    def resolve_about_translations(self, info):
+
+        if self.dbObject:
+            return self.dbObject.get_about_translations()
+
 
 # PublishedEntity interface
 
@@ -640,7 +916,7 @@ class IsTranslatable(graphene.Interface):
 
 
 class MergeMetadata(graphene.ObjectType):
-    min_created_at = graphene.Int()
+    min_created_at = graphene.Float()
     original_client_id = graphene.Int()
     merge_tree = graphene.List(LingvodocID)
 
@@ -677,40 +953,65 @@ class Metadata(graphene.ObjectType):
     humanSettlement = graphene.List(graphene.String)
     transcription_rules = graphene.String()
     admins = graphene.List(graphene.Int)
-    authors_process = graphene.List(graphene.String)
-    informant = graphene.List(graphene.String)
-    discourse_type = graphene.List(graphene.String)
-    speech_type = graphene.List(graphene.String)
-    speech_genre = graphene.List(graphene.String)
-    text_topic = graphene.List(graphene.String)
+    #authors_process = graphene.List(graphene.String)
+    informant = graphene.String()
+    #discourse_type = graphene.List(graphene.String)
+    #speech_type = graphene.List(graphene.String)
+    #speech_genre = graphene.List(graphene.String)
+    #text_topic = graphene.List(graphene.String)
+    interrogator = graphene.List(graphene.String)
+    processing = graphene.List(graphene.String)
+    typeOfDiscourse = graphene.String()
+    typeOfSpeech = graphene.String()
+    speechGenre = graphene.String()
+    theThemeOfTheText = graphene.String()
+
+    license = graphene.String()
+
+    titleOfTheWork = graphene.String()
+    genre = graphene.String()
+    timeOfWriting = graphene.String()
+    quantitativeCharacteristic = graphene.String()
+    bibliographicDataOfTheSource = graphene.String()
+    translator = graphene.String()
+    bibliographicDataOfTheTranslation = graphene.String()
+
+    toc_mark = graphene.Boolean()
 
 
-# class LevelAndId(graphene.ObjectType):
-#     """
-#     graphene object that have all metadata attributes
-#     if new attributes of metadata are added, then this class has to be updated
-#     """
-#     parent_id = LingvodocID()
-#     language_id = LingvodocID()
+metadata_key_set = {
 
+    key
+    for key in Metadata.__dict__
+    if not key.startswith('_')}
 
-# def get_value_by_key(db_object, additional_metadata_string, metadata_key):
-#     """
-#
-#     :param db_object: self.dbObject with metadata or None
-#     :param additional_metadata_string: self.additional_metadata_string dictionary or None
-#     :param metadata_key: metadata first-level key
-#     :return: value by metadata_key or None if params are not set
-#     """
-#     if additional_metadata_string:
-#         if metadata_key in additional_metadata_string:
-#             return additional_metadata_string[metadata_key]
-#     if db_object:
-#         meta = db_object.additional_metadata
-#         if meta:
-#             if metadata_key in meta:
-#                 return meta[metadata_key]
+metadata_list_key_dict = {
+    'blobs': [],
+    'previous_objects': [],
+    'younger_siblings': [],
+    'starling_fields': [],
+    'participant': [],
+    'tag_list': [],
+    'authors': [],
+    'years': [],
+    'humanSettlement': [],
+    'admins': [],
+    'interrogator': [],
+    'processing': []}
 
+metadata_list_key_list = [
+    'blobs',
+    'previous_objects',
+    'younger_siblings',
+    'starling_fields',
+    'participant',
+    'tag_list',
+    'authors',
+    'years',
+    'humanSettlement',
+    'admins',
+    'interrogator',
+    'processing']
 
 
 class AdditionalMetadata(graphene.Interface):
@@ -725,32 +1026,32 @@ class AdditionalMetadata(graphene.Interface):
 
     additional_metadata = graphene.Field(Metadata)
 
-    @fetch_object()
-    def resolve_additional_metadata(self, info):
-        db_object = self.dbObject
+    @staticmethod
+    def from_object(metadata_dict):
 
-        # initializes dict with None, for keys nonexistent in dbObject.additional_metadata
-        # list of keys is taken from Metadata attributes
+        if not metadata_dict:
+            return Metadata(**metadata_list_key_dict)
 
-        def default_value(i):
-            if type(getattr(Metadata, i)) == graphene.List:
-                return []
-            return None
+        metadata_dict = {
+            key: value
+            for key, value in metadata_dict.items()
+            if key in metadata_key_set}
 
-        metadata_dict = {i: default_value(i) for i in Metadata().__class__.__dict__ if not i.startswith("_")}
+        participant = (
+            metadata_dict.get('participant'))
 
-        if db_object.additional_metadata:
-            new_meta = {key: db_object.additional_metadata[key] for key in db_object.additional_metadata if key in metadata_dict}
-            metadata_dict.update(new_meta)
+        if participant:
 
-        if "participant" in metadata_dict:
-            if metadata_dict["participant"]:
-                old_id_meta = metadata_dict["participant"]
-                metadata_dict["participant"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
-        if "blobs" in metadata_dict:
-            if metadata_dict["blobs"]:
-                old_id_meta = metadata_dict["blobs"]
-                metadata_dict["blobs"] = [[x["client_id"], x["object_id"]] for x in old_id_meta]
+            metadata_dict['participant'] = [
+                [x['client_id'], x['object_id']] for x in participant]
+
+        blobs = (
+            metadata_dict.get('blobs'))
+
+        if blobs:
+
+            metadata_dict['blobs'] = [
+                [x['client_id'], x['object_id']] for x in blobs]
 
         # New 'authors' metadata is a list of author strings, while some old dictionaries (in particular,
         # ones converted from Dialeqt files via old convertion code) has 'authors' metadata which is a
@@ -758,19 +1059,37 @@ class AdditionalMetadata(graphene.Interface):
         #
         # So if 'authors' is a string, we assume that it's comma-separated and split it.
 
-        if ('authors' in metadata_dict and
-            isinstance(metadata_dict['authors'], str)):
+        authors = metadata_dict.get('authors')
 
-            metadata_dict['authors'] = re.split(r'\s*,', metadata_dict['authors'])
+        if isinstance(authors, str):
 
-        metadata_object = Metadata(**metadata_dict)
-        return metadata_object
+            metadata_dict['authors'] = (
+                re.split(r'\s*,', authors))
 
-#  end of metadata section
+        for key in metadata_list_key_list:
+
+            if key not in metadata_dict:
+                metadata_dict[key] = []
+
+        return Metadata(**metadata_dict)
+
+    @fetch_object("additional_metadata")
+    def resolve_additional_metadata(self, info):
+
+        return (
+            AdditionalMetadata.from_object(
+                self.dbObject.additional_metadata))
 
 
-class CommonFieldsComposite(MarkedForDeletion, AdditionalMetadata, CreatedAt, CompositeIdHolder, Relationship,
-                            TranslationGistHolder, TranslationHolder):
+class CommonFieldsComposite(
+    MarkedForDeletion,
+    AdditionalMetadata,
+    CreatedAt,
+    DeletedAt,
+    CompositeIdHolder,
+    Relationship,
+    TranslationGistHolder,
+    TranslationHolder):
     """
     used in Dictionary, DictionaryPerspective and Language classes as Interfaces because function
     tree = graphene.List(CommonFieldsComposite, ) does not support listing
@@ -787,3 +1106,81 @@ class UserAndOrganizationsRoles(graphene.ObjectType):
 
     def resolve_roles_organizations(self, info):
         return self.roles_organizations
+
+
+class UnstructuredData(LingvodocObjectType):
+
+    dbType = dbUnstructuredData
+
+    id = graphene.String()
+    client_id = graphene.Int()
+    data = ObjectVal()
+    additional_metadata = ObjectVal()
+
+    class Meta:
+        interfaces = (CreatedAt,)
+
+    @fetch_object('id')
+    def resolve_id(self, info):
+        return self.dbObject.id
+
+    @fetch_object('client_id')
+    def resolve_client_id(self, info):
+        return self.dbObject.client_id
+
+    @fetch_object('data')
+    def resolve_data(self, info):
+        return self.dbObject.data
+
+    @fetch_object('additional_metadata')
+    def resolve_additional_metadata(self, info):
+        return self.dbObject.additional_metadata
+
+
+def get_published_translation_gist_id_query(session = DBSession):
+
+    return (
+
+        session
+
+            .query(
+                dbTranslationGist.client_id,
+                dbTranslationGist.object_id)
+
+            .filter(
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationGist.type == 'Service',
+                dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
+                dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
+                dbTranslationAtom.locale_id == 2,
+                dbTranslationAtom.marked_for_deletion == False,
+
+                or_(
+                    dbTranslationAtom.content == 'Published',
+                    dbTranslationAtom.content == 'Limited access')))
+
+
+def get_published_translation_gist_id_subquery_query(session = DBSession):
+
+    return (
+
+        session.query(
+            get_published_translation_gist_id_query(session)
+                .subquery()))
+
+
+def get_published_translation_gist_id_cte(query = None, session = DBSession):
+
+    if query is None:
+        query = get_published_translation_gist_id_query(session)
+
+    return query.cte()
+
+
+def get_published_translation_gist_id_cte_query(cte = None, session = DBSession):
+
+    if cte is None:
+        cte = get_published_translation_gist_id_cte(session = session)
+
+    return session.query(cte)
+

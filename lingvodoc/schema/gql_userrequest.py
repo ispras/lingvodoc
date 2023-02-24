@@ -46,6 +46,7 @@ from sqlalchemy import (
     case
 )
 
+from lingvodoc.cache.caching import CACHE
 
 class Subject(graphene.ObjectType):
     """
@@ -151,12 +152,14 @@ class AcceptUserRequest(graphene.Mutation):
     @staticmethod
     def mutate(root, info, **args):
         userrequest_id = args.get('id')
+
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
+        if not client:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         recipient_id = user.id
 
         userrequest = DBSession.query(dbUserRequest).filter_by(id=userrequest_id, recipient_id=recipient_id).first()
@@ -189,82 +192,61 @@ class AcceptUserRequest(graphene.Mutation):
 
                     dict_ids = {'client_id': userrequest.subject['client_id'],
                                 'object_id': userrequest.subject['object_id']}
-
+                    # Seems like must be cached, but current caching model doesn't support it
                     cur_dict = DBSession.query(dbDictionary).filter_by(client_id=dict_ids['client_id'],
                                                                      object_id=dict_ids['object_id'],
                                                                        marked_for_deletion=False).first()
                     if not cur_dict:
                         raise ResponseError('such dictionary doesn\'t exist')
 
-                    no_grants = True
-                    for tmp_grant in DBSession.query(dbGrant).all():
-                        if tmp_grant.additional_metadata and tmp_grant.additional_metadata.get(
-                                'participant') and dict_ids in \
-                                tmp_grant.additional_metadata['participant']:
-                            no_grants = False
-                            break
-
                     if dict_ids not in grant.additional_metadata['participant']:
                         grant.additional_metadata['participant'].append(dict_ids)
 
-                    state_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                        dbGroup.subject_client_id == dict_ids['client_id'],
-                        dbGroup.subject_object_id == dict_ids['object_id'],
-                        dbBaseGroup.subject == 'dictionary_status',
-                        dbBaseGroup.action == 'edit'
-                    ).first()
-                    approve_groups = list()
-                    cur_dict = DBSession.query(dbDictionary).filter_by(client_id=dict_ids['client_id'],
-                                                                     object_id=dict_ids['object_id']).first()
-                    persp_ids = list()
-                    for persp in cur_dict.dictionaryperspective:
-                        persp_ids.append((persp.client_id, persp.object_id))
-                        approve_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                            dbGroup.subject_client_id == persp.client_id,
-                            dbGroup.subject_object_id == persp.object_id,
-                            dbBaseGroup.subject == 'perspective_status',
-                            dbBaseGroup.action == 'edit'
-                        ).first()
+                    subject_id_list = [
+                        (cur_dict.client_id, cur_dict.object_id)]
 
-                        if approve_group:
-                            approve_groups.append(approve_group)
-                        approve_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                            dbGroup.subject_client_id == persp.client_id,
-                            dbGroup.subject_object_id == persp.object_id,
-                            dbBaseGroup.subject == 'approve_entities',
-                            dbBaseGroup.action == 'create'
-                        ).first()
-                        if approve_group:
-                            approve_groups.append(approve_group)
-                        approve_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                            dbGroup.subject_client_id == persp.client_id,
-                            dbGroup.subject_object_id == persp.object_id,
-                            dbBaseGroup.subject == 'approve_entities',
-                            dbBaseGroup.action == 'delete'
-                        ).first()
-                        if approve_group:
-                            approve_groups.append(approve_group)
+                    for persp in cur_dict.dictionaryperspective:
+
+                        subject_id_list.append(
+                            (persp.client_id, persp.object_id))
 
                     grant_admins = DBSession.query(dbUser).filter(dbUser.id.in_(grant.owners))
                     if grant.additional_metadata is None:
                         grant.additional_metadata = dict()
                     if grant.additional_metadata.get('roles', None) is None:
                         grant.additional_metadata['roles'] = list()
-                    for admin in grant_admins:
-                        perm_groups = DBSession.query(dbGroup).filter_by(subject_client_id=cur_dict.client_id,
-                                                                       subject_object_id=cur_dict.object_id).all()
-                        for group in perm_groups:
-                            if group.id not in grant.additional_metadata['roles']:
-                                grant.additional_metadata['roles'].append(group.id)
+
+                    # All permissions for the dictionary and its perspectives.
+
+                    perm_groups = (
+
+                        DBSession.query(dbGroup)
+
+                            .filter(
+                                tuple_(dbGroup.subject_client_id, dbGroup.subject_object_id)
+                                    .in_(subject_id_list))
+
+                            .all())
+
+                    # Adding all permissions to the grant and granting all permissions to the grant's
+                    # admins.
+                    #
+                    # Roles list can be quite lengthy, more then 1000 items in one case, and we can have up
+                    # to 32 and more permission groups for a standard dictionary with 2 perspectives, so we
+                    # check role incidence efficiently using a set.
+
+                    role_set = (
+                        set(grant.additional_metadata['roles']))
+
+                    for group in perm_groups:
+
+                        if group.id not in role_set:
+                            grant.additional_metadata['roles'].append(group.id)
+
+                        for admin in grant_admins:
                             if group not in admin.groups:
                                 admin.groups.append(group)
-                        perm_groups = DBSession.query(dbGroup).filter(
-                            tuple_(dbGroup.subject_client_id, dbGroup.subject_object_id).in_(persp_ids)).all()
-                        for group in perm_groups:
-                            if group.id not in grant.additional_metadata['roles']:
-                                grant.additional_metadata['roles'].append(group.id)
-                            if group not in admin.groups:
-                                admin.groups.append(group)
+
                     flag_modified(grant, 'additional_metadata')
 
                 elif userrequest.type == 'participate_org':
@@ -288,8 +270,62 @@ class AcceptUserRequest(graphene.Mutation):
                         organization.additional_metadata['admins'] = list()
                     organization.additional_metadata['admins'].append(user_id)
                     flag_modified(organization, 'additional_metadata')
+
+                # Adding dictionary to organization.
+
+                elif userrequest.type == 'add_dict_to_org':
+
+                    dict_id = (
+                        userrequest.subject['client_id'],
+                        userrequest.subject['object_id'])
+
+                    org_id = userrequest.subject['org_id']
+
+                    # dictionary = (
+                    #     DBSession.query(dbDictionary).filter_by(
+                    #         client_id = dict_id[0],
+                    #         object_id = dict_id[1]).first())
+                    dictionary = CACHE.get(objects =
+                        {
+                            dbDictionary : (dict_id, )
+                        },
+                    DBSession=DBSession)
+
+                    if not dictionary:
+                        raise ResponseError('No such dictionary.')
+
+                    elif dictionary.marked_for_deletion:
+                        raise ResponseError('Dictionary is deleted.')
+
+                    organization = (
+                        DBSession.query(dbOrganization).filter_by(
+                            id = org_id).first())
+
+                    if not organization:
+                        raise ResponseError('No such organization.')
+
+                    dict_item = {
+                        'client_id': dict_id[0],
+                        'object_id': dict_id[1]}
+
+                    if organization.additional_metadata is None:
+
+                        organization.additional_metadata = {
+                            'participant': [dict_item]}
+
+                    elif 'participant' not in organization.additional_metadata:
+                        organization.additional_metadata['participant'] = [dict_item]
+
+                    else:
+                        organization.additional_metadata['participant'].append(dict_item)
+
+                    flag_modified(organization, 'additional_metadata')
+
                 else:
-                    pass
+
+                    raise ResponseError(
+                        'Unknown request type \'{}\'.'.format(
+                            userrequest.type))
 
                 broadcast_uuid = userrequest.broadcast_uuid
                 family = DBSession.query(dbUserRequest).filter_by(id=userrequest_id, broadcast_uuid=broadcast_uuid).all()
@@ -303,33 +339,15 @@ class AcceptUserRequest(graphene.Mutation):
         raise ResponseError(message="No such userrequest in the system")
 
 
+def create_one_userrequest(request):
 
-def create_one_userrequest(req, client_id):
-    sender_id = req['sender_id']
-    recipient_id = req['recipient_id']
-    broadcast_uuid = req['broadcast_uuid']  # generate it
-    type = req['type']
-    subject = req['subject']
-    message = req['message']
-    client = DBSession.query(Client).filter_by(id=client_id).first()
+    userrequest = dbUserRequest(**request)
 
-    if not client:
-        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                       client_id)
-    user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-    if not user:
-        raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
-
-    userrequest = dbUserRequest(sender_id=sender_id,
-                              recipient_id=recipient_id,
-                              broadcast_uuid=broadcast_uuid,
-                              type=type,
-                              subject=subject,
-                              message=message
-                              )
     DBSession.add(userrequest)
     DBSession.flush()
-    return userrequest.id
+
+    return userrequest
+
 
 class CreateGrantPermission(graphene.Mutation):
     """
@@ -350,9 +368,10 @@ class CreateGrantPermission(graphene.Mutation):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
+        if not client:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
         user_id = user.id
         grant_id = int(args.get('grant_id'))
@@ -381,7 +400,7 @@ class CreateGrantPermission(graphene.Mutation):
 
         for grantadmin in grantadmins:
             req['recipient_id'] = grantadmin.id
-            create_one_userrequest(req, client_id)
+            create_one_userrequest(req)
 
         return CreateGrantPermission(triumph=True)
 
@@ -414,9 +433,10 @@ class AddDictionaryToGrant(graphene.Mutation):
         context_client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=context_client_id).first()
 
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
+        if not client:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         client_id, object_id = dictionary_id
         user_id = user.id
         # request_json = {"dictionary_id": [client_id, object_id], "grant_id": grant_id}
@@ -446,7 +466,7 @@ class AddDictionaryToGrant(graphene.Mutation):
 
         for grantadmin in grantadmins:
             req['recipient_id'] = grantadmin
-            req_id = create_one_userrequest(req, client_id)
+            create_one_userrequest(req)
 
         return AddDictionaryToGrant(triumph=True)
 
@@ -468,9 +488,10 @@ class AdministrateOrg(graphene.Mutation):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
+        if not client:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
         user_id = user.id
         org_id = args.get('org_id')
@@ -496,7 +517,7 @@ class AdministrateOrg(graphene.Mutation):
             raise ResponseError(message="No administrators")
         for orgadmin in orgadmins:
             req['recipient_id'] = orgadmin.id
-            req_id = create_one_userrequest(req, client_id)
+            create_one_userrequest(req)
 
         return AdministrateOrg(triumph=True)
 
@@ -518,9 +539,10 @@ class ParticipateOrg(graphene.Mutation):
         client_id = info.context.get('client_id')
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
+        if not client:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
         user_id = user.id
         org_id = args.get('org_id')
@@ -538,7 +560,7 @@ class ParticipateOrg(graphene.Mutation):
         org = DBSession.query(dbOrganization).filter_by(id=org_id).first()
 
         if org.additional_metadata:
-            orgadmins = org.additional_metadata.get('admins')
+            orgadmins = org.additional_metadata.get('admins', [])
 
         # If the org does not have any administrators, we'll send the request to the main administrator
         # user.
@@ -548,9 +570,101 @@ class ParticipateOrg(graphene.Mutation):
 
         for orgadmin in orgadmins:
             req['recipient_id'] = orgadmin
-            req_id = create_one_userrequest(req, client_id)
+            create_one_userrequest(req)
 
         return ParticipateOrg(triumph=True)
+
+class AddDictionaryToOrganization(graphene.Mutation):
+    """
+    mutation  {
+        add_dictionary_to_organization(dictionary_id: [657, 3], organization_id: 1) {
+            triumph
+        }
+    }
+    """
+
+    class Arguments:
+        dictionary_id = LingvodocID(required=True)
+        organization_id = graphene.Int(required=True)
+
+    triumph = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        client_id = info.context.get('client_id')
+
+        dictionary_id = args.get('dictionary_id')
+        organization_id = args.get('organization_id')
+
+        client = (
+            DBSession
+                .query(Client)
+                .filter_by(id = client_id)
+                .first())
+
+        if not client:
+            raise ResponseError('This client id is orphaned. Try to logout and then login once more.')
+
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+
+        request = {
+            'broadcast_uuid': str(uuid4()),
+            'message': '',
+            'sender_id': user.id,
+            'subject': {
+                'client_id': dictionary_id[0],
+                'object_id': dictionary_id[1],
+                'org_id': organization_id},
+            'type': 'add_dict_to_org'}
+
+        info.context.acl_check('edit', 'dictionary', dictionary_id)
+
+        # dictionary = (
+        #     DBSession.query(dbDictionary).filter_by(
+        #         client_id = dictionary_id[0],
+        #         object_id = dictionary_id[1]).first())
+        dictionary = CACHE.get(objects =
+            {
+                dbDictionary : (args["dictionary_id"], )
+            },
+        DBSession=DBSession)
+        if not dictionary:
+            raise ResponseError('No such dictionary.')
+
+        elif dictionary.marked_for_deletion:
+            raise ResponseError('Dictionary is deleted.')
+
+        if DBSession.query(dbUserRequest).filter_by(
+            type = request['type'],
+            subject = request['subject'],
+            message = request['message']).first():
+
+            raise ResponseError('Request already exists.')
+
+        organization = (
+            DBSession.query(dbOrganization).filter_by(
+                id = organization_id).first())
+
+        if not organization:
+            raise ResponseError('No such organization.')
+
+        admin_list = []
+
+        if organization.additional_metadata:
+            admin_list = organization.additional_metadata.get('admins', [])
+
+        # If the organization does not have any administrators, we'll send the request to the main
+        # administrator user.
+
+        if not admin_list:
+            admin_list.append(1)
+
+        for user_id in admin_list:
+            request['recipient_id'] = user_id
+            create_one_userrequest(request)
+
+        return AddDictionaryToOrganization(triumph = True)
 
 # class DeleteUserRequest(graphene.Mutation):
 #     """

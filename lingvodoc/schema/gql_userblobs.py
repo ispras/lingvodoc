@@ -1,4 +1,7 @@
+import io
+import logging
 from os import unlink
+
 import graphene
 
 from lingvodoc.schema.gql_holders import (
@@ -29,6 +32,11 @@ from lingvodoc.models import (
 import base64
 
 from lingvodoc.views.v2.sociolinguistics import check_socio  # TODO: replace it
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 #from lingvodoc.schema.gql_entity import create_object
 import csv
@@ -100,41 +108,71 @@ class CreateUserBlob(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, info, **args):
+
+        client_id = info.context.get('client_id')
+        client = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+        if not client:
+            return ResponseError('Only signed in users can upload files.')
+
+        user = DBSession.query(dbUser).filter_by(id = client.user_id).first()
+
+        if not user:
+            return ResponseError(f'Invalid user id {client.user_id}.')
+
+        if not user.is_active and user.id != 1:
+            return ResponseError('Inactive non-administrator users can\'t upload files.')
+
+        user_for_blob = user
+
         id = args.get('id')
-        client_id = id[0] if id else info.context["client_id"]
+
+        if id and id[0] != client_id:
+
+            client_id = id[0]
+            client_args = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+            if not client_args:
+                return ResponseError(f'Invalid client id {client_id}.')
+
+            if client_args.user_id != client.user_id:
+
+                if user.id != 1:
+                    return ResponseError('Non-administrator users can\'t upload files for other users.')
+
+                user_args = DBSession.query(dbUser).filter_by(id = client_args.user_id).first()
+
+                if not user_args:
+                    return ResponseError(f'Invalid user id {client_args.user_id}.')
+
+                user_for_blob = user_args
+
         object_id = id[1] if id else None
         
-        if not "0" in info.context.request.POST:
+        if not "1" in info.context.request.POST:
             raise ResponseError(message="file not found")
-        multiparted = info.context.request.POST.pop("0")
-        # multiparted = info.context.request.POST.pop("opearations")
+
+        multiparted = info.context.request.POST.pop("1")
         filename = multiparted.filename
-        input_file = multiparted.file#multiparted.file
+        input_file = multiparted.file
 
         class Object(object):
             pass
 
         blob = Object()
         blob.client_id = client_id
-        client = DBSession.query(dbClient).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         #if args.get("data_type"):
         blob.data_type = args.get("data_type")
 
         blob.filename = filename
 
-
-
-        current_user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-
         blob_object = dbUserBlobs(object_id=object_id,
                                 client_id=blob.client_id,
                                 name=filename,
                                 data_type=blob.data_type,
-                                user_id=current_user.id,
+                                user_id=user_for_blob.id,
                                 content=None,
                                 real_storage_path=None)
-
 
         blob_object.real_storage_path, blob_object.content = create_object(info.context.request, input_file, blob_object, blob.data_type,
                                                                            blob.filename, json_input=False)
@@ -146,21 +184,45 @@ class CreateUserBlob(graphene.Mutation):
                 raise ResponseError(message=str(e))
 
         if blob.data_type == "starling/csv":
+
             try:
                 input_file.seek(0)
 
-                with input_file  as csvfile:
-                    starling_fields = csvfile.readline().decode('utf-8').rstrip().split('#####')
-                    # starling_fields = csv.reader(csvfile, delimiter = '|')
+                with io.TextIOWrapper(
+                    input_file,
+                    encoding = 'utf-8-sig',
+                    errors = 'ignore',
+                    newline = '') as csvfile:
+
+                    csv_first_line = csvfile.readline().rstrip()
+
+                    # Maybe it's just a general CSV file?
+
+                    if csv_first_line.find('#####') == -1:
+
+                        csvfile.seek(0)
+
+                        starling_fields = [
+                            field_str.strip()
+                            for field_str in next(csv.reader(csvfile, 'excel'))]
+
+                        while starling_fields and not starling_fields[-1]:
+                            starling_fields.pop()
+
+                    # Ok, assuming it's a special Starling-format CSV file.
+
+                    else:
+                        starling_fields = csv_first_line.split('#####')
 
                     if not blob_object.additional_metadata:
                         blob_object.additional_metadata = {}
                     blob_object.additional_metadata['starling_fields'] = starling_fields
+
             except Exception as e:
                 raise ResponseError(message=str(e))
-        current_user.userblobs.append(blob_object)
+
+        user_for_blob.userblobs.append(blob_object)
         DBSession.add(blob_object)
-        #DBSession.add(current_user)
         DBSession.flush()
         userblob = UserBlobs(id = [blob_object.client_id, blob_object.object_id]) # TODO: more args
         return CreateUserBlob(userblob=userblob, triumph=True)
@@ -188,8 +250,36 @@ class DeleteUserBlob(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, **args):
+
+        client_id = info.context.get('client_id')
+        client = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+        if not client:
+            return ResponseError('Only signed in users can delete files.')
+
+        user = DBSession.query(dbUser).filter_by(id = client.user_id).first()
+
+        if not user:
+            return ResponseError(f'Invalid user id {client.user_id}.')
+
+        if not user.is_active and user.id != 1:
+            return ResponseError('Inactive non-administrator users can\'t delete files.')
+
         id = args.get('id')
-        client_id = id[0] if id else info.context["client_id"]
+
+        if id and id[0] != client_id:
+
+            client_id = id[0]
+            client_args = DBSession.query(dbClient).filter_by(id = client_id).first()
+
+            if not client_args:
+                return ResponseError(f'Invalid client id {client_id}.')
+
+            if client_args.user_id != client.user_id:
+
+                if user.id != 1:
+                    return ResponseError('Non-administrator users can\'t delete another users\' files.')
+
         object_id = id[1] if id else None
 
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=client_id, object_id=object_id).first()

@@ -13,5 +13,5 @@ until psql -h "$host" -U "postgres" -c '\q'; do
   sleep 5
 done
 
->&2 echo "Postgres is up - executing command"
-exec $cmd
+>&2 echo "Postgres is up - finished waiting"
+
