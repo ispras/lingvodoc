@@ -108,7 +108,7 @@ def sentence_instance_gen(
 
             grammar = t['gr'].split(',')
 
-            if 'V' in grammar:
+            if 'V' in grammar or 'VBLEX' in grammar or 'VBSER' in grammar:
                 v_ind.append(t_index)
 
     for n, ind in enumerate(v_ind):
