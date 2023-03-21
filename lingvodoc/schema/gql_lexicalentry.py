@@ -486,7 +486,7 @@ class ConnectLexicalEntries(graphene.Mutation):
         # Override create permission check, depends only on the user.
         # Admin is assumed to have all permissions.
 
-        create_override_flag = (user.id == 1)
+        create_override_flag = (user.id == "1")
 
         if not create_override_flag:
 
@@ -553,7 +553,7 @@ class ConnectLexicalEntries(graphene.Mutation):
 
                 # If we are the admin, we automatically publish link entities.
 
-                if user.id == 1:
+                if user.id == "1":
                     tag_entity.publishingentity.published = True
 
         return ConnectLexicalEntries(triumph=True)

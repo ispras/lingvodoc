@@ -4,6 +4,8 @@ import time
 from json import loads
 import logging
 
+from sqlalchemy import VARCHAR
+
 import lingvodoc.models as models
 
 from lingvodoc.models import (
@@ -157,7 +159,7 @@ class Grant(LingvodocObjectType):
 
                     dbUser.id.in_(
                         utils.values_query(
-                            self.dbObject.owners, models.SLBigInteger))))
+                            self.dbObject.owners, VARCHAR(length=36)))))
 
         gql_user_list = []
 

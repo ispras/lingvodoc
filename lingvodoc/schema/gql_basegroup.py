@@ -112,7 +112,7 @@ class CreateBasegroup(graphene.Mutation):
         action = args.get('action')
         client_id = info.context.get('client_id')
         user = dbClient.get_user_by_client_id(client_id)
-        if user.id != 1:
+        if user.id != "1":
             raise ResponseError(message="Permission Denied")
         name_exists = DBSession.query(dbBaseGroup).filter(dbBaseGroup.name==name).first()
         if name_exists:
@@ -163,7 +163,7 @@ class AddUserToBasegroup(graphene.Mutation):
         basegroup_name = args.get('basegroup_name')
         client_id = info.context.get('client_id')
         req_user = dbClient.get_user_by_client_id(client_id)
-        if req_user.id != 1:
+        if req_user.id != "1":
             raise ResponseError(message="Permission Denied")
 
         db_user = DBSession.query(dbUser).filter(dbUser.id==user_id).first()

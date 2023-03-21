@@ -121,7 +121,7 @@ def create_entity(request):  # tested
 
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == 1:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == "1":
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest

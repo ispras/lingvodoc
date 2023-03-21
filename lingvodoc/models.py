@@ -1425,7 +1425,7 @@ class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
 
 
 user_to_group_association = Table('user_to_group_association', Base.metadata,
-                                  Column('user_id', SLBigInteger(), ForeignKey('user.id')),
+                                  Column('user_id', VARCHAR(length=36), ForeignKey('user.id')),
                                   Column('group_id', UUIDType, ForeignKey('group.id'))
                                   )
 
@@ -1435,7 +1435,7 @@ organization_to_group_association = Table('organization_to_group_association', B
                                           )
 
 user_to_organization_association = Table('user_to_organization_association', Base.metadata,
-                                         Column('user_id', SLBigInteger(), ForeignKey('user.id')),
+                                         Column('user_id', VARCHAR(length=36), ForeignKey('user.id')),
                                          Column('organization_id', SLBigInteger(), ForeignKey('organization.id'))
                                          )
 
@@ -1470,7 +1470,6 @@ class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 class Group(Base, TableNameMixin, CreatedAtMixin):
     __parentname__ = 'BaseGroup'
-    # old_id = Column(SLBigInteger(), autoincrement=True)
     id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
     base_group_id = Column(ForeignKey("basegroup.id"), nullable=False)
     subject_client_id = Column(SLBigInteger())
@@ -1534,7 +1533,7 @@ class Organization(
 
 
 class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), nullable=False)
     hash = Column(UnicodeText, nullable=False)
 
     def __init__(self, password):
@@ -1542,13 +1541,13 @@ class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 
 class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), nullable=False)
     email = Column(UnicodeText, unique=True)
     user = relationship("User", backref=backref('email', uselist=False))
 
 
 class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), nullable=False)
     # creation_time = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     is_browser_client = Column(Boolean, default=True, nullable=False)
     user = relationship("User", backref='clients')
@@ -1579,7 +1578,7 @@ class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedFo
     real_storage_path = Column(UnicodeText, nullable=False)
     data_type = Column(UnicodeText, nullable=False)
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'))
     user = relationship("User", backref='userblobs')
 
 

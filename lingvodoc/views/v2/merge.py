@@ -431,7 +431,7 @@ def check_user_merge_permissions_direct(
     if not user:
         return False
 
-    if user.id == 1:
+    if user.id == "1":
         return True
 
     if not user.is_active:
@@ -501,7 +501,7 @@ def check_user_merge_permissions(
     if not user:
         return False
 
-    if user.id == 1:
+    if user.id == "1":
         return True
 
     if not user.is_active:

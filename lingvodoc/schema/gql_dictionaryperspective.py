@@ -302,7 +302,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
         user = dbClient.get_user_by_client_id(client_id)
 
-        if user.id == 1:
+        if user.id == "1":
 
             self.is_hidden_for_client_flag = False
             return False

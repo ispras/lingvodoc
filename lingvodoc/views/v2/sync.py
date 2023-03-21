@@ -406,7 +406,7 @@ def make_request(path, cookies, req_type='get', json_data=None, data=None, files
     return status
 
 def check_client(current_client, client_id):
-    if current_client.user_id == 1:
+    if current_client.user_id == "1":
         return True
     client = DBSession.query(Client).filter_by(id=client_id).first()
     if not client or client.user_id != current_client.user_id:
@@ -490,7 +490,7 @@ def diff_desk(request):
 
     for entry in upload_groups:
         group = DBSession.query(Group).filter_by(id=entry).first()
-        if group and group.subject_client_id and (get_user_by_client_id(group.subject_client_id).id == user.id or user.id == 1):
+        if group and group.subject_client_id and (get_user_by_client_id(group.subject_client_id).id == user.id or user.id == "1"):
             path = central_server + 'group'
             gr_req = row2dict(group)
             gr_req['users']=[cur_user.id for cur_user in group.users]

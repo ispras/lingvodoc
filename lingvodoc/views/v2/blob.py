@@ -129,7 +129,7 @@ def upload_user_blob(request):  # TODO: remove blob Object
         raise CommonException("This client id is orphaned. Try to logout and then login once more.")
     if request.POST.get('client_id', None):
 
-        if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']) or user.id == 1:
+        if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']) or user.id == "1":
             client_id = request.POST['client_id']
         else:
             request.response.status_code = HTTPBadRequest

@@ -102,7 +102,7 @@ def create_dictionary(request):  # tested & in docs
 
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == 1:
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == "1":
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest
@@ -287,7 +287,7 @@ def dictionary_copy(request):
 
         user = Client.get_user_by_client_id(request.authenticated_userid)
 
-        if user is None or user.id != 1:
+        if user is None or user.id != "1":
 
             log.debug('dictionary_copy {0}/{1} {2}: not an administrator'.format(
                 dictionary_cid, dictionary_oid, user_id))

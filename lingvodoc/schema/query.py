@@ -236,7 +236,7 @@ from sqlalchemy import (
     literal,
     union,
     cast,
-    Boolean,
+    Boolean, VARCHAR,
 )
 
 import sqlalchemy.dialects.postgresql as postgresql
@@ -4934,6 +4934,7 @@ class Query(graphene.ObjectType):
         user_list = []
 
         if user_id_set:
+            user_id_set = {str(item) for item in user_id_set}
 
             user_list = (
 
@@ -4943,10 +4944,10 @@ class Query(graphene.ObjectType):
                         dbUser.id, dbUser.name)
 
                     .filter(
-                        dbUser.id.in_(
+                        dbUser.id.inuser_id_set_(
 
                             utils.values_query(
-                                user_id_set, models.SLBigInteger)))
+                                user_id_set, VARCHAR(length=36))))
 
                     .all())
 
@@ -8098,6 +8099,8 @@ class Query(graphene.ObjectType):
                 *(gql_grant.owners
                     for gql_grant in gql_grant_list))
 
+            owner_id_set = {str(item) for item in owner_id_set}
+
             user_query = (
 
                 DBSession
@@ -8107,7 +8110,7 @@ class Query(graphene.ObjectType):
 
                         dbUser.id.in_(
                             utils.values_query(
-                                owner_id_set, models.SLBigInteger))))
+                                owner_id_set, VARCHAR(length=36)))))
 
             if email_flag:
 
@@ -8131,7 +8134,7 @@ class Query(graphene.ObjectType):
 
                 gql_grant.owners = [
 
-                    gql_user_dict[owner_id]
+                    gql_user_dict[str(owner_id)]
                     for owner_id in gql_grant.owners]
 
         return gql_grant_list
@@ -17417,6 +17420,7 @@ class SaveValencyData(graphene.Mutation):
             user_list = []
 
             if user_id_set:
+                user_id_set = {str(item) for item in user_id_set}
 
                 user_list = (
 
@@ -17429,7 +17433,7 @@ class SaveValencyData(graphene.Mutation):
                             dbUser.id.in_(
 
                                 utils.values_query(
-                                    user_id_set, models.SLBigInteger)))
+                                    user_id_set, VARCHAR(length=36))))
 
                         .all())
 

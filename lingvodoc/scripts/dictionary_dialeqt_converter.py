@@ -589,7 +589,7 @@ def translation_service_search_all(searchstring):
 
 
 def check_perspective_perm(user_id, perspective_client_id, perspective_object_id):
-    if user_id == 1:
+    if user_id == "1":
         return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
@@ -603,7 +603,7 @@ def check_perspective_perm(user_id, perspective_client_id, perspective_object_id
 
 
 def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
-    if user_id == 1:
+    if user_id == "1":
         return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'perspective', action = 'create').first()

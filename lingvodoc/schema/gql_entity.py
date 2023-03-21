@@ -280,7 +280,7 @@ class CreateEntity(graphene.Mutation):
         # Acception permission check.
         # Admin is assumed to have all permissions.
 
-        create_flag = (user.id == 1)
+        create_flag = (user.id == "1")
 
         if not create_flag:
 
@@ -311,7 +311,7 @@ class CreateEntity(graphene.Mutation):
 
         # If the entity is being created by the admin, we automatically publish it.
 
-        if user.id == 1:
+        if user.id == "1":
             dbentity.publishingentity.published = True
 
         filename = args.get('filename')
