@@ -33,6 +33,7 @@ from lingvodoc.utils.creation import (
     create_gists_with_atoms
 )
 from lingvodoc.schema.gql_user import User
+from lingvodoc.utils.verification import check_is_admin
 
 
 class Organization(LingvodocObjectType):
@@ -292,7 +293,7 @@ class DeleteOrganization(graphene.Mutation):
         user = (
             Client.get_user_by_client_id(client_id))
 
-        if not user or user.id != 1:
+        if not user or not check_is_admin(user.id):
             return ResponseError(message = 'Only administrator can delete organizations.')
 
         organization_id = args.get('organization_id')

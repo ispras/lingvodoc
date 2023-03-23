@@ -78,6 +78,7 @@ from sqlalchemy import (
 from sqlalchemy.sql.expression import Grouping
 
 from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
+from lingvodoc.utils.verification import check_is_admin
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -302,7 +303,7 @@ class DictionaryPerspective(LingvodocObjectType):
 
         user = dbClient.get_user_by_client_id(client_id)
 
-        if user.id == "1":
+        if check_is_admin(user.id):
 
             self.is_hidden_for_client_flag = False
             return False

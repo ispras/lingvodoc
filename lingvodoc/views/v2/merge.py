@@ -62,6 +62,7 @@ from lingvodoc.models import (
 from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_holders import del_object
 from lingvodoc.utils.static_fields import fields_static
+from lingvodoc.utils.verification import check_is_admin
 
 from lingvodoc.views.v2.utils import (
     as_storage_file,
@@ -431,7 +432,7 @@ def check_user_merge_permissions_direct(
     if not user:
         return False
 
-    if user.id == "1":
+    if check_is_admin(user.id):
         return True
 
     if not user.is_active:
@@ -501,7 +502,7 @@ def check_user_merge_permissions(
     if not user:
         return False
 
-    if user.id == "1":
+    if check_is_admin(user.id):
         return True
 
     if not user.is_active:

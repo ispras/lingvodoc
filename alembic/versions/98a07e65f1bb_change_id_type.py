@@ -36,13 +36,13 @@ def upgrade():
         ALTER TABLE ONLY public."userblobs" ALTER COLUMN user_id TYPE VARCHAR(36);
         ALTER TABLE ONLY public."valency_annotation_data" ALTER COLUMN user_id TYPE VARCHAR(36);
         
-        ALTER TABLE ONLY public.email ADD CONSTRAINT email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.client ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.passhash ADD CONSTRAINT passhash_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.user_to_group_association ADD CONSTRAINT user_to_group_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.user_to_organization_association ADD CONSTRAINT user_to_organization_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.userblobs ADD CONSTRAINT userblobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.valency_annotation_data ADD CONSTRAINT valency_annotation_data_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."email" ADD CONSTRAINT email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."client" ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."passhash" ADD CONSTRAINT passhash_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."user_to_group_association" ADD CONSTRAINT user_to_group_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."user_to_organization_association" ADD CONSTRAINT user_to_organization_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."userblobs" ADD CONSTRAINT userblobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."valency_annotation_data" ADD CONSTRAINT valency_annotation_data_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
        ''')
     # ### end Alembic commands ###
 
@@ -67,12 +67,12 @@ def downgrade():
         ALTER TABLE ONLY public."userblobs" ALTER COLUMN user_id TYPE BIGINT;
         ALTER TABLE ONLY public."valency_annotation_data" ALTER COLUMN user_id TYPE BIGINT;
 
-        ALTER TABLE ONLY public.email ADD CONSTRAINT email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.client ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.passhash ADD CONSTRAINT passhash_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.user_to_group_association ADD CONSTRAINT user_to_group_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.user_to_organization_association ADD CONSTRAINT user_to_organization_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.userblobs ADD CONSTRAINT userblobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
-        ALTER TABLE ONLY public.valency_annotation_data ADD CONSTRAINT valency_annotation_data_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."email" ADD CONSTRAINT email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."client" ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."passhash" ADD CONSTRAINT passhash_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."user_to_group_association" ADD CONSTRAINT user_to_group_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."user_to_organization_association" ADD CONSTRAINT user_to_organization_association_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."userblobs" ADD CONSTRAINT userblobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+        ALTER TABLE ONLY public."valency_annotation_data" ADD CONSTRAINT valency_annotation_data_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
            ''')
     # ### end Alembic commands ###

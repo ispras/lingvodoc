@@ -10,7 +10,7 @@ from lingvodoc.models import (
     ObjectTOC
 )
 from lingvodoc.utils.creation import create_object
-from lingvodoc.utils.verification import check_client_id
+from lingvodoc.utils.verification import check_client_id, check_is_admin
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
 
@@ -129,7 +129,7 @@ def upload_user_blob(request):  # TODO: remove blob Object
         raise CommonException("This client id is orphaned. Try to logout and then login once more.")
     if request.POST.get('client_id', None):
 
-        if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']) or user.id == "1":
+        if check_client_id(authenticated=variables['auth'], client_id=request.POST['client_id']) or check_is_admin(user.id):
             client_id = request.POST['client_id']
         else:
             request.response.status_code = HTTPBadRequest

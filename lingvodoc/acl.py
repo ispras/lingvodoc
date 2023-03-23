@@ -12,7 +12,7 @@ from .models import (
     user_to_organization_association,
     organization_to_group_association,
     DictionaryPerspective
-    )
+)
 
 from pyramid.security import forget
 
@@ -21,6 +21,9 @@ from sqlalchemy.orm import joinedload
 
 import logging
 from time import time
+
+from .utils.verification import check_is_admin
+
 log = logging.getLogger(__name__)
 
 
@@ -35,8 +38,8 @@ def get_effective_client_id(client_id, request):
     else:
         return client_id
 
-def groupfinder(client_id, request, factory = None, subject = None):
 
+def groupfinder(client_id, request, factory=None, subject=None):
     client_id = get_effective_client_id(client_id, request)
 
     if not client_id:
@@ -56,27 +59,27 @@ def groupfinder(client_id, request, factory = None, subject = None):
     if not subject or subject == 'no op subject':
         try:
             user = DBSession.query(User) \
-                        .join(Client) \
-                        .filter(Client.id == client_id).first()
+                .join(Client) \
+                .filter(Client.id == client_id).first()
 
         except AttributeError as e:
-                log.error('forget in acl.py')
-                forget(request)
-                return None
+            log.error('forget in acl.py')
+            forget(request)
+            return None
 
         groupset = set()
-        if user is not None and user.id == "1":
+        if user is not None and check_is_admin(user.id):
             groupset.add('Admin')
         return groupset
 
     try:
         user = DBSession.query(User) \
-                        .join(Client) \
-                        .filter(Client.id == client_id).first()
+            .join(Client) \
+            .filter(Client.id == client_id).first()
 
-        groups = DBSession.query(Group)\
-            .join(BaseGroup)\
-            .join(Group.users)\
+        groups = DBSession.query(Group) \
+            .join(BaseGroup) \
+            .join(Group.users) \
             .options(joinedload('BaseGroup')) \
             .filter(User.id == user.id)
         if subject:
@@ -84,16 +87,16 @@ def groupfinder(client_id, request, factory = None, subject = None):
         groups = groups.all()
 
     except AttributeError as e:
-            log.error('forget in acl.py')
-            forget(request)
-            return None
+        log.error('forget in acl.py')
+        forget(request)
+        return None
 
     if not user:
         return None
 
     groupset = set()
 
-    if user.id == "1":
+    if check_is_admin(user.id):
         groupset.add('Admin')
 
     for group in groups:
@@ -112,7 +115,7 @@ def groupfinder(client_id, request, factory = None, subject = None):
                 group_name = base_group.action + ":" + base_group.subject \
                              + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
             else:
-                 group_name = base_group.action + ":" + base_group.subject \
+                group_name = base_group.action + ":" + base_group.subject \
                              + ":" + str(group.subject_object_id)
 
         groupset.add(group_name)
@@ -135,7 +138,7 @@ def groupfinder(client_id, request, factory = None, subject = None):
             groupset.add(group_name)
 
     log.debug("GROUPSET: %d, %s", len(groupset), list(sorted(groupset)))
-    return groupset # todo: caching
+    return groupset  # todo: caching
 
 
 def check(client_id, request, action, subject, subject_id):
@@ -144,7 +147,7 @@ def check(client_id, request, action, subject, subject_id):
     """
 
     principal_set = groupfinder(
-        client_id, request, subject = subject)
+        client_id, request, subject=subject)
 
     # Subject is specified by a single object_id.
 
@@ -169,7 +172,7 @@ def check(client_id, request, action, subject, subject_id):
 
             # Checking carefully, because acl_permission can be, for example, special ALL_PERMISSIONS
             # object.
-            
+
             if not hasattr(acl_permission, '__iter__'):
                 if acl_permission == action:
                     return True
@@ -195,7 +198,7 @@ def check_direct(client_id, request, action, subject, subject_id):
         return False
 
     if (not client_id or
-        not user):
+            not user):
 
         # Special case for perspective, we allow anonymous view access based on perspective state.
 
@@ -205,11 +208,11 @@ def check_direct(client_id, request, action, subject, subject_id):
         subject_client_id, subject_object_id = subject_id[:2]
 
         perspective = DBSession.query(DictionaryPerspective).filter_by(
-            client_id = subject_client_id, object_id = subject_object_id).first()
+            client_id=subject_client_id, object_id=subject_object_id).first()
 
         return (perspective and
-            (perspective.state == 'Published' or perspective.state == 'Limited access') and
-            (action == 'view' or action == 'preview'))
+                (perspective.state == 'Published' or perspective.state == 'Limited access') and
+                (action == 'view' or action == 'preview'))
 
     # Subject is specified by a client_id/object_id pair.
 
@@ -225,9 +228,8 @@ def check_direct(client_id, request, action, subject, subject_id):
                 client_id=subject_client_id, object_id=subject_object_id).first()
 
             if (perspective and
-                (perspective.state == 'Published' or perspective.state == 'Limited access') and
-                (action == 'view' or action == 'preview')):
-
+                    (perspective.state == 'Published' or perspective.state == 'Limited access') and
+                    (action == 'view' or action == 'preview')):
                 return True
 
         # If the user is deactivated, we won't allow any actions except for viewing.
@@ -253,17 +255,18 @@ def check_direct(client_id, request, action, subject, subject_id):
         # ...and then through by-organization permissions.
 
         organization_count = DBSession.query(BaseGroup, Group,
-            user_to_organization_association, organization_to_group_association).filter(and_(
-                BaseGroup.subject == subject,
-                BaseGroup.action == action,
-                Group.base_group_id == BaseGroup.id,
-                or_(Group.subject_override, and_(
-                    Group.subject_client_id == subject_client_id,
-                    Group.subject_object_id == subject_object_id)),
-                user_to_organization_association.c.user_id == user.id,
-                organization_to_group_association.c.organization_id ==
-                    user_to_organization_association.c.organization_id,
-                organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+                                             user_to_organization_association,
+                                             organization_to_group_association).filter(and_(
+            BaseGroup.subject == subject,
+            BaseGroup.action == action,
+            Group.base_group_id == BaseGroup.id,
+            or_(Group.subject_override, and_(
+                Group.subject_client_id == subject_client_id,
+                Group.subject_object_id == subject_object_id)),
+            user_to_organization_association.c.user_id == user.id,
+            organization_to_group_association.c.organization_id ==
+            user_to_organization_association.c.organization_id,
+            organization_to_group_association.c.group_id == Group.id)).limit(1).count()
 
         if organization_count > 0:
             return True
@@ -297,16 +300,17 @@ def check_direct(client_id, request, action, subject, subject_id):
         # ...and then through by-organization permissions.
 
         organization_count = DBSession.query(BaseGroup, Group,
-            user_to_organization_association, organization_to_group_association).filter(and_(
-                BaseGroup.subject == subject,
-                BaseGroup.action == action,
-                Group.base_group_id == BaseGroup.id,
-                or_(Group.subject_override,
-                    Group.subject_object_id == subject_object_id),
-                user_to_organization_association.c.user_id == user.id,
-                organization_to_group_association.c.organization_id ==
-                    user_to_organization_association.c.organization_id,
-                organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+                                             user_to_organization_association,
+                                             organization_to_group_association).filter(and_(
+            BaseGroup.subject == subject,
+            BaseGroup.action == action,
+            Group.base_group_id == BaseGroup.id,
+            or_(Group.subject_override,
+                Group.subject_object_id == subject_object_id),
+            user_to_organization_association.c.user_id == user.id,
+            organization_to_group_association.c.organization_id ==
+            user_to_organization_association.c.organization_id,
+            organization_to_group_association.c.group_id == Group.id)).limit(1).count()
 
         if organization_count > 0:
             return True
@@ -343,4 +347,3 @@ def check_direct(client_id, request, action, subject, subject_id):
     # we at least should know that something is not right.
 
     raise NotImplementedError
-

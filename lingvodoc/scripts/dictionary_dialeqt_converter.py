@@ -43,6 +43,8 @@ from lingvodoc.models import (
 from lingvodoc.utils.search import get_id_to_field_dict
 
 from lingvodoc.cache.caching import CACHE
+from lingvodoc.utils.verification import check_is_admin
+
 
 def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
     return DBSession.query(LexicalEntry) \
@@ -589,7 +591,7 @@ def translation_service_search_all(searchstring):
 
 
 def check_perspective_perm(user_id, perspective_client_id, perspective_object_id):
-    if user_id == "1":
+    if check_is_admin(user_id):
         return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'lexical_entries_and_entities', action = 'create').first()
@@ -603,7 +605,7 @@ def check_perspective_perm(user_id, perspective_client_id, perspective_object_id
 
 
 def check_dictionary_perm(user_id, dictionary_client_id, dictionary_object_id):
-    if user_id == "1":
+    if check_is_admin(user_id):
         return True
     create_base_group = DBSession.query(BaseGroup).filter_by(
         subject = 'perspective', action = 'create').first()

@@ -246,6 +246,8 @@ from sqlalchemy.sql.elements import ColumnElement
 import sqlalchemy.types
 
 from zope.sqlalchemy import mark_changed
+
+from lingvodoc.utils.verification import check_is_admin
 from lingvodoc.views.v2.utils import (
     view_field_from_object,
     storage_file,
@@ -8496,7 +8498,7 @@ class StarlingEtymology(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
             raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
-        if user.id != 1:
+        if not check_is_admin(user.id):
             raise ResponseError(message="not admin")
 
         etymology_field_id = args['etymology_field_id']

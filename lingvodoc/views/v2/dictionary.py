@@ -35,7 +35,7 @@ from lingvodoc.views.v2.utils import (
     group_by_organizations,
     user_counter
 )
-from lingvodoc.utils.verification import check_client_id
+from lingvodoc.utils.verification import check_client_id, check_is_admin
 
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -102,7 +102,7 @@ def create_dictionary(request):  # tested & in docs
 
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == "1":
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or check_is_admin(user.id):
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest

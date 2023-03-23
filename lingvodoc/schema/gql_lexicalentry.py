@@ -37,6 +37,7 @@ from lingvodoc.models import (
     BaseGroup as dbBaseGroup
 )
 from lingvodoc.schema.gql_entity import Entity
+from lingvodoc.utils.verification import check_is_admin
 
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
@@ -486,7 +487,7 @@ class ConnectLexicalEntries(graphene.Mutation):
         # Override create permission check, depends only on the user.
         # Admin is assumed to have all permissions.
 
-        create_override_flag = (user.id == "1")
+        create_override_flag = check_is_admin(user.id)
 
         if not create_override_flag:
 
@@ -553,7 +554,7 @@ class ConnectLexicalEntries(graphene.Mutation):
 
                 # If we are the admin, we automatically publish link entities.
 
-                if user.id == "1":
+                if check_is_admin(user.id):
                     tag_entity.publishingentity.published = True
 
         return ConnectLexicalEntries(triumph=True)

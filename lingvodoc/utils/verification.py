@@ -17,3 +17,11 @@ def check_client_id(authenticated, client_id):
     result = DBSession.query(Client.user_id).filter(Client.id.in_([authenticated,client_id]))\
         .group_by(Client.user_id)
     return result.count() == 1
+
+def check_is_admin(user_id):
+    if user_id == "1":
+        return True
+    elif user_id == 1:
+        return True
+    else:
+        return False

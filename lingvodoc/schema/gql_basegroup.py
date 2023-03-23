@@ -17,6 +17,7 @@ from lingvodoc.schema.gql_holders import (
 
 from lingvodoc.schema.gql_user import User
 from lingvodoc.utils.creation import add_user_to_group
+from lingvodoc.utils.verification import check_is_admin
 
 
 class BaseGroup(LingvodocObjectType):  # tested
@@ -112,7 +113,7 @@ class CreateBasegroup(graphene.Mutation):
         action = args.get('action')
         client_id = info.context.get('client_id')
         user = dbClient.get_user_by_client_id(client_id)
-        if user.id != "1":
+        if not check_is_admin(user.id):
             raise ResponseError(message="Permission Denied")
         name_exists = DBSession.query(dbBaseGroup).filter(dbBaseGroup.name==name).first()
         if name_exists:
@@ -163,7 +164,7 @@ class AddUserToBasegroup(graphene.Mutation):
         basegroup_name = args.get('basegroup_name')
         client_id = info.context.get('client_id')
         req_user = dbClient.get_user_by_client_id(client_id)
-        if req_user.id != "1":
+        if not check_is_admin(req_user.id) :
             raise ResponseError(message="Permission Denied")
 
         db_user = DBSession.query(dbUser).filter(dbUser.id==user_id).first()

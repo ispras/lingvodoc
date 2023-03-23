@@ -34,7 +34,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator#, add_user_to_group, check_client_id
 from lingvodoc.utils.creation import add_user_to_group, translationgist_contents, translationatom_contents
-from lingvodoc.utils.verification import check_client_id
+from lingvodoc.utils.verification import check_client_id, check_is_admin
 # search (filter by input, type and (?) locale)
 from lingvodoc.cache.caching import CACHE
 
@@ -103,7 +103,7 @@ def create_translationgist(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == "1":
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or check_is_admin(user.id):
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest
@@ -192,7 +192,7 @@ def create_translationatom(request):
 
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == "1":
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or check_is_admin(user.id):
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest

@@ -2,7 +2,7 @@ __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
 from lingvodoc.utils.creation import create_object
-from lingvodoc.utils.verification import check_client_id
+from lingvodoc.utils.verification import check_client_id, check_is_admin
 from lingvodoc.views.v2.delete import real_delete_entity
 from lingvodoc.models import (
     Client,
@@ -121,7 +121,7 @@ def create_entity(request):  # tested
 
         client_id = variables['auth']
         if 'client_id' in req:
-            if check_client_id(authenticated = client.id, client_id=req['client_id']) or user.id == "1":
+            if check_client_id(authenticated = client.id, client_id=req['client_id']) or check_is_admin(user.id) :
                 client_id = req['client_id']
             else:
                 request.response.status_code = HTTPBadRequest

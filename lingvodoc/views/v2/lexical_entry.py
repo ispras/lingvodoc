@@ -36,7 +36,7 @@ from pyramid.view import view_config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
-from lingvodoc.utils.verification import check_client_id
+from lingvodoc.utils.verification import check_client_id, check_is_admin
 
 import logging
 import random
@@ -380,7 +380,7 @@ def create_lexical_entry(request):  # tested
 
             object_id = request.json_body.get('object_id', None)
             if 'client_id' in request.json_body:
-                if check_client_id(authenticated = client.id, client_id=request.json_body['client_id']) or user.id == "1":
+                if check_client_id(authenticated = client.id, client_id=request.json_body['client_id']) or check_is_admin(user.id):
                     client_id = request.json_body['client_id']
                 else:
                     request.response.status_code = HTTPBadRequest
