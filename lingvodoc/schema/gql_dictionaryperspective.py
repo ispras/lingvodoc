@@ -1157,7 +1157,7 @@ class AddPerspectiveRoles(graphene.Mutation):
     """
     class Arguments:
         id = LingvodocID(required=True)
-        user_id = graphene.Int(required=True)
+        user_id = graphene.String(required=True)
         roles_users = graphene.List(graphene.Int)
         roles_organizations = graphene.List(graphene.Int)
 
@@ -1195,7 +1195,7 @@ class AddPerspectiveRoles(graphene.Mutation):
 class DeletePerspectiveRoles(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
-        user_id = graphene.Int(required=True)
+        user_id = graphene.String(required=True)
         roles_users = graphene.List(graphene.Int)
         roles_organizations = graphene.List(graphene.Int)
 

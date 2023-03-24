@@ -94,10 +94,9 @@ class SLBigInteger(BigInteger):
 def bi_c(element, compiler, **kw):
     return "INTEGER"
 
-
-@compiles(SLBigInteger)
+@compiles(VARCHAR, 'sqlite')
 def bi_c(element, compiler, **kw):
-    return compiler.visit_BIGINT(element, **kw)
+    return compiler.visit_VARCHAR(element, **kw)
 
 
 categories = {0: 'lingvodoc.ispras.ru/dictionary',
@@ -1440,7 +1439,8 @@ user_to_organization_association = Table('user_to_organization_association', Bas
                                          )
 
 
-class User(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
+class User(Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
+    id = Column(VARCHAR(length=36), primary_key=True)
     login = Column(UnicodeText, unique=True, nullable=False)
     name = Column(UnicodeText)
     # this stands for name in English

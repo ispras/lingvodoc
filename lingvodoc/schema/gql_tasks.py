@@ -38,7 +38,7 @@ class Task(LingvodocObjectType):
     task_family = graphene.String()
     total_stages = graphene.Int()
     current_stage = graphene.Int()
-    user_id = graphene.Int()
+    user_id = graphene.String()
 
     def resolve_user_id(self, info):
         return int(self.user_id)

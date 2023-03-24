@@ -126,7 +126,7 @@ def view_organization(request):  # TODO: test
             response['additional_metadata'] = additional_metadata
             admins = list()
             if additional_metadata.get('admins'):
-                admins = additional_metadata['admins']
+                admins = map(str,additional_metadata['admins'])
             response['admin'] = admins
             request.response.status = HTTPOk.code
             return response

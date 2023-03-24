@@ -133,7 +133,7 @@ class CreateBasegroup(graphene.Mutation):
 
 class AddUserToBasegroup(graphene.Mutation):
     class Arguments:
-        user_id = graphene.Int(required=True)
+        user_id = graphene.String(required=True)
         basegroup_name = graphene.String(required=True)
 
     # Result object

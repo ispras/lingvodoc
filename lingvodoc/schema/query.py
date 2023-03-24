@@ -13891,7 +13891,7 @@ class AddRolesBulk(graphene.Mutation):
     """
 
     class Arguments:
-        user_id = graphene.Int(required=True)
+        user_id = graphene.String(required=True)
         language_id = LingvodocID(required=True)
 
     language_count = graphene.Int()

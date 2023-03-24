@@ -46,7 +46,7 @@ class UserBlobs(LingvodocObjectType):
     #object_id           | bigint                      | NOT NULL
     #client_id           | bigint                      | NOT NULL
     #marked_for_deletion | boolean                     | NOT NULL
-    #user_id             | bigint                      |
+    #user_id             | string                      |
     #name                | text                        | NOT NULL
     #content             | text                        | NOT NULL
     #real_storage_path   | text                        | NOT NULL

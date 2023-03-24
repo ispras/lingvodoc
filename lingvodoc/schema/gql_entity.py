@@ -531,7 +531,7 @@ class ApproveAllForUser(graphene.Mutation):
     }
     """
     class Arguments:
-        user_id = graphene.Int()
+        user_id = graphene.String()
         published = graphene.Boolean()
         accepted = graphene.Boolean()
         field_ids = graphene.List(LingvodocID)

@@ -54,7 +54,7 @@ class Subject(graphene.ObjectType):
     if new attributes of metadata are added, then this class has to be updated
     """
     grant_id = graphene.Int()
-    user_id = graphene.Int()
+    user_id = graphene.String()
     org_id = graphene.Int()
     dictionary_id = LingvodocID()
 
@@ -268,7 +268,7 @@ class AcceptUserRequest(graphene.Mutation):
                         organization.additional_metadata = dict()
                     if organization.additional_metadata.get('admins') is None:
                         organization.additional_metadata['admins'] = list()
-                    organization.additional_metadata['admins'].append(user_id)
+                    organization.additional_metadata['admins'].append(str(user_id))
                     flag_modified(organization, 'additional_metadata')
 
                 # Adding dictionary to organization.
@@ -560,7 +560,7 @@ class ParticipateOrg(graphene.Mutation):
         org = DBSession.query(dbOrganization).filter_by(id=org_id).first()
 
         if org.additional_metadata:
-            orgadmins = org.additional_metadata.get('admins', [])
+            orgadmins = map(str,org.additional_metadata.get('admins', []))
 
         # If the org does not have any administrators, we'll send the request to the main administrator
         # user.
@@ -652,7 +652,7 @@ class AddDictionaryToOrganization(graphene.Mutation):
         admin_list = []
 
         if organization.additional_metadata:
-            admin_list = organization.additional_metadata.get('admins', [])
+            admin_list = map(str,organization.additional_metadata.get('admins', []))
 
         # If the organization does not have any administrators, we'll send the request to the main
         # administrator user.

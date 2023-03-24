@@ -14,6 +14,7 @@ from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     IdHolder,
+    StrIdHolder,
     CreatedAt,
     AdditionalMetadata,
     Name,
@@ -44,11 +45,12 @@ class User(LingvodocObjectType):
     birthday = graphene.String()
     is_active = graphene.Boolean()
     email = graphene.String()
+    id = graphene.String()
 
     dbType = dbUser
 
     class Meta:
-        interfaces = (IdHolder, CreatedAt, AdditionalMetadata, Name)
+        interfaces = (StrIdHolder, CreatedAt, AdditionalMetadata, Name)
     @fetch_object("email")
     def resolve_email(self, info):
         return self.dbObject.email.email
@@ -185,7 +187,7 @@ class UpdateUser(graphene.Mutation):
     class Arguments:
         #id = graphene.List(graphene.Int)
         client_id = graphene.Int()
-        user_id = graphene.Int()
+        user_id = graphene.String()
         new_password = graphene.String()
         old_password = graphene.String()
         name = graphene.String()
@@ -280,7 +282,7 @@ class ActivateDeactivateUser(graphene.Mutation):
     """
 
     class Arguments:
-        user_id = graphene.Int()
+        user_id = graphene.String()
         is_active = graphene.Boolean()
 
     triumph = graphene.Boolean()

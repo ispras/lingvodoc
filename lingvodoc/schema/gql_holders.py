@@ -588,6 +588,13 @@ class IdHolder(graphene.Interface):
     @fetch_object("id")
     def resolve_id(self, info):
         return self.dbObject.id
+class StrIdHolder(graphene.Interface):
+    id = graphene.String()
+
+    @fetch_object("id")
+    def resolve_id(self, info):
+        return self.dbObject.id
+
 
 
 class CompositeIdHolder(graphene.Interface):
@@ -716,7 +723,7 @@ class TranslationGistHolder(graphene.Interface):
 
 
 class UserId(graphene.Interface):
-    user_id = graphene.Int()
+    user_id = graphene.String()
 
     @fetch_object("user_id")
     def resolve_user_id(self, info):
@@ -952,7 +959,7 @@ class Metadata(graphene.ObjectType):
     speakersAmount = graphene.String()
     humanSettlement = graphene.List(graphene.String)
     transcription_rules = graphene.String()
-    admins = graphene.List(graphene.Int)
+    admins = graphene.List(graphene.String)
     #authors_process = graphene.List(graphene.String)
     informant = graphene.String()
     #discourse_type = graphene.List(graphene.String)

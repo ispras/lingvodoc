@@ -254,7 +254,7 @@ def accept_userrequest(request):
                     organization.additional_metadata = dict()
                 if organization.additional_metadata.get('admins') is None:
                     organization.additional_metadata['admins'] = list()
-                organization.additional_metadata['admins'].append(user_id)
+                organization.additional_metadata['admins'].append(str(user_id))
             else:
                 pass
             broadcast_uuid = userrequest.broadcast_uuid
@@ -580,7 +580,7 @@ def participate_org(request):
             request.response.status = HTTPBadRequest.code
             return {'error': 'no administrators'}
 
-        orgadmins = org.additional_metadata.get('admins')
+        orgadmins = map(str,org.additional_metadata.get('admins'))
 
         if not orgadmins:
             request.response.status = HTTPBadRequest.code
