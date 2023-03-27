@@ -296,6 +296,7 @@ import tempfile
 
 import lingvodoc.scripts.export_parser_result as export_parser_result
 import lingvodoc.scripts.valency as valency
+import lingvodoc.scripts.valency_verb_cases as valency_verb_cases
 
 from lingvodoc.scripts.save_dictionary import (
     find_group_by_tags,
@@ -9531,6 +9532,8 @@ class CognateAnalysis(graphene.Mutation):
         Gets lexical entry grouping data using stored PL/pgSQL functions, computes elapsed time.
         """
 
+        __debug_flag__ = False
+
         start_time = time.time()
 
         # Getting lexical entries with tag data of the specified tag field from all perspectives.
@@ -9546,10 +9549,15 @@ class CognateAnalysis(graphene.Mutation):
                 dbLexicalEntry.object_id)
 
             .filter(
+
                 tuple_(
                     dbLexicalEntry.parent_client_id,
                     dbLexicalEntry.parent_object_id)
-                    .in_(perspective_id_list),
+
+                    .in_(
+                        ids_to_id_query(
+                            perspective_id_list)),
+
                 dbLexicalEntry.marked_for_deletion == False,
                 dbEntity.parent_client_id == dbLexicalEntry.client_id,
                 dbEntity.parent_object_id == dbLexicalEntry.object_id,
@@ -9565,6 +9573,18 @@ class CognateAnalysis(graphene.Mutation):
                 dbLexicalEntry.client_id,
                 dbLexicalEntry.object_id))
 
+        entry_id_list = (
+            entry_id_query.all())
+
+        if __debug_flag__:
+
+            log.debug(
+                '\nentry_id_query:\n' +
+                str(entry_id_query.statement.compile(compile_kwargs = {'literal_binds': True})))
+
+            log.debug(
+                f'len(entry_id_list): {len(entry_id_list)}')
+
         # Grouping lexical entries using stored PL/pgSQL function.
 
         entry_already_set = set()
@@ -9577,7 +9597,7 @@ class CognateAnalysis(graphene.Mutation):
                 :client_id,
                 :object_id)'''
 
-        for entry_id in entry_id_query:
+        for entry_id in entry_id_list:
 
             if entry_id in entry_already_set:
                 continue
@@ -17308,6 +17328,138 @@ class SaveValencyData(graphene.Mutation):
     data_url = graphene.String()
 
     @staticmethod
+    def get_annotation_data(perspective_id):
+
+        # Getting valency annotation data.
+
+        annotation_list = (
+
+            DBSession
+
+                .query(
+                    dbValencyAnnotationData)
+
+                .filter(
+                    dbValencyAnnotationData.accepted != None,
+                    dbValencyAnnotationData.instance_id == dbValencyInstanceData.id,
+                    dbValencyInstanceData.sentence_id == dbValencySentenceData.id,
+                    dbValencySentenceData.source_id == dbValencySourceData.id,
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1])
+
+                .all())
+
+        instance_id_set = set()
+        user_id_set = set()
+
+        for annotation in annotation_list:
+
+            instance_id_set.add(annotation.instance_id)
+            user_id_set.add(annotation.user_id)
+
+        instance_list = []
+
+        if instance_id_set:
+
+            instance_list = (
+
+                DBSession
+
+                    .query(
+                        dbValencyInstanceData)
+
+                    .filter(
+                        dbValencyInstanceData.id.in_(
+
+                            utils.values_query(
+                                instance_id_set, models.SLBigInteger)))
+
+                    .all())
+
+        user_list = []
+
+        if user_id_set:
+
+            user_list = (
+
+                DBSession
+
+                    .query(
+                        dbUser.id, dbUser.name)
+
+                    .filter(
+                        dbUser.id.in_(
+
+                            utils.values_query(
+                                user_id_set, models.SLBigInteger)))
+
+                    .all())
+
+        sentence_id_set = (
+            set(instance.sentence_id for instance in instance_list))
+
+        sentence_list = []
+
+        if sentence_id_set:
+
+            sentence_list = (
+
+                DBSession
+
+                    .query(
+                        dbValencySentenceData)
+
+                    .filter(
+                        dbValencySentenceData.id.in_(
+
+                            utils.values_query(
+                                sentence_id_set, models.SLBigInteger)))
+
+                    .all())
+
+        # Preparing valency annotation data.
+
+        sentence_data_list = []
+
+        for sentence in sentence_list:
+
+            sentence_data = sentence.data
+            sentence_data['id'] = sentence.id
+
+            sentence_data_list.append(sentence_data)
+
+        instance_data_list = [
+
+            {'id': instance.id,
+                'sentence_id': instance.sentence_id,
+                'index': instance.index,
+                'verb_lex': instance.verb_lex,
+                'case_str': instance.case_str}
+
+                for instance in instance_list]
+
+        annotation_data_list = [
+
+            {'instance_id': annotation.instance_id,
+                'user_id': annotation.user_id,
+                'accepted': annotation.accepted}
+
+                for annotation in annotation_list]
+
+        user_data_list = [
+
+            {'id': user.id,
+                'name': user.name}
+
+                for user in user_list]
+
+        return {
+            'sentence_list': sentence_data_list,
+            'instance_list': instance_data_list,
+            'annotation_list': annotation_data_list,
+            'user_list': user_data_list}
+
+    @staticmethod
     def mutate(root, info, **args):
 
         try:
@@ -17370,132 +17522,11 @@ class SaveValencyData(graphene.Mutation):
 
             # Getting valency annotation data.
 
-            annotation_list = (
+            data_dict = (
+                SaveValencyData.get_annotation_data(perspective_id))
 
-                DBSession
-
-                    .query(
-                        dbValencyAnnotationData)
-
-                    .filter(
-                        dbValencyAnnotationData.accepted != None,
-                        dbValencyAnnotationData.instance_id == dbValencyInstanceData.id,
-                        dbValencyInstanceData.sentence_id == dbValencySentenceData.id,
-                        dbValencySentenceData.source_id == dbValencySourceData.id,
-                        dbValencySourceData.perspective_client_id == perspective_id[0],
-                        dbValencySourceData.perspective_object_id == perspective_id[1])
-
-                    .all())
-
-            instance_id_set = set()
-            user_id_set = set()
-
-            for annotation in annotation_list:
-
-                instance_id_set.add(annotation.instance_id)
-                user_id_set.add(annotation.user_id)
-
-            instance_list = []
-
-            if instance_id_set:
-
-                instance_list = (
-
-                    DBSession
-
-                        .query(
-                            dbValencyInstanceData)
-
-                        .filter(
-                            dbValencyInstanceData.id.in_(
-
-                                utils.values_query(
-                                    instance_id_set, models.SLBigInteger)))
-
-                        .all())
-
-            user_list = []
-
-            if user_id_set:
-
-                user_list = (
-
-                    DBSession
-
-                        .query(
-                            dbUser.id, dbUser.name)
-
-                        .filter(
-                            dbUser.id.in_(
-
-                                utils.values_query(
-                                    user_id_set, models.SLBigInteger)))
-
-                        .all())
-
-            sentence_id_set = (
-                set(instance.sentence_id for instance in instance_list))
-
-            sentence_list = []
-
-            if sentence_id_set:
-
-                sentence_list = (
-
-                    DBSession
-
-                        .query(
-                            dbValencySentenceData)
-
-                        .filter(
-                            dbValencySentenceData.id.in_(
-
-                                utils.values_query(
-                                    sentence_id_set, models.SLBigInteger)))
-
-                        .all())
-
-            # Preparing valency annotation data.
-
-            sentence_data_list = []
-
-            for sentence in sentence_list:
-
-                sentence_data = sentence.data
-                sentence_data['id'] = sentence.id
-
-                sentence_data_list.append(sentence_data)
-
-            instance_data_list = [
-
-                {'id': instance.id,
-                    'sentence_id': instance.sentence_id,
-                    'index': instance.index,
-                    'verb_lex': instance.verb_lex,
-                    'case_str': instance.case_str}
-
-                    for instance in instance_list]
-
-            annotation_data_list = [
-
-                {'instance_id': annotation.instance_id,
-                    'user_id': annotation.user_id,
-                    'accepted': annotation.accepted}
-
-                    for annotation in annotation_list]
-
-            user_data_list = [
-
-                {'id': user.id,
-                    'name': user.name}
-
-                    for user in user_list]
-
-            data_dict = {
-                'sentence_list': sentence_data_list,
-                'instance_list': instance_data_list,
-                'annotation_list': annotation_data_list,
-                'user_list': user_data_list}
+            import pdb
+            pdb.set_trace()
 
             # Saving valency annotation data as zipped JSON.
 
@@ -17723,6 +17754,313 @@ class SetValencyAnnotation(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
+class ValencyVerbCases(graphene.Mutation):
+    """
+    Compiles valency verb and cases info.
+    """
+
+    class Arguments:
+
+        perspective_id = LingvodocID(required = True)
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+    verb_case_list = graphene.List(ObjectVal)
+    xlsx_url = graphene.String()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only registered users can get valency verb cases info.'))
+
+            perspective_id = args['perspective_id']
+            debug_flag = args.get('debug_flag', False)
+
+            perspective = (
+                DBSession.query(dbPerspective).filter_by(
+                    client_id = perspective_id[0], object_id = perspective_id[1]).first())
+
+            if not perspective:
+
+                return (
+
+                    ResponseError(
+                        message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
+
+            dictionary = perspective.parent
+
+            locale_id = info.context.get('locale_id') or 2
+
+            dictionary_name = dictionary.get_translation(locale_id)
+            perspective_name = perspective.get_translation(locale_id)
+
+            full_name = dictionary_name + ' \u203a ' + perspective_name
+
+            if dictionary.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Dictionary \'{}\' {}/{} of perspective \'{}\' is deleted.'.format(
+                            dictionary_name,
+                            dictionary.client_id,
+                            dictionary.object_id,
+                            perspective_name,
+                            perspective.client_id,
+                            perspective.object_id)))
+
+            if perspective.marked_for_deletion:
+
+                return (
+
+                    ResponseError(message =
+                        'Perspective \'{}\' {}/{} is deleted.'.format(
+                            full_name,
+                            perspective_id[0],
+                            perspective_id[1])))
+
+            # Getting valency annotation data.
+
+            data_dict = (
+                SaveValencyData.get_annotation_data(perspective_id))
+
+            verb_dict = (
+                valency_verb_cases.verbs_case_str(
+                    data_dict, '__lang__', {}))
+
+            verb_dict_dict = (
+
+                collections.defaultdict(
+                    lambda: collections.defaultdict(
+                        lambda: collections.defaultdict(list))))
+
+            for verb_xlat, case_dict in verb_dict.items():
+
+                case_verb_dict = verb_dict_dict[verb_xlat]
+
+                for (verb_str, case_str), sentence_dict in case_dict['__lang__'].items():
+
+                    case_verb_dict[case_str][verb_str].extend(
+                        (sentence for index, sentence in sorted(sentence_dict.items())))
+
+            # Sorting by verb translations and by cases.
+
+            verb_case_list = []
+
+            case_index_dict = {
+                case: index
+                for index, case in enumerate(CreateValencyData.case_list)}
+
+            for verb_xlat, case_verb_dict in sorted(verb_dict_dict.items()):
+
+                case_verb_sentence_list = []
+
+                for case, verb_sentence_dict in (
+
+                    sorted(
+                        case_verb_dict.items(),
+                        key = lambda item: case_index_dict[item[0]])):
+
+                    verb_sentence_list = (
+                        sorted(verb_sentence_dict.items()))
+
+                    verb_list = [
+                        verb
+                        for verb, sentence_list in verb_sentence_list]
+
+                    case_verb_sentence_list.append(
+                        (case, verb_list, verb_sentence_list))
+
+                verb_list = (
+
+                    sorted(
+                        set.union(
+                            *(set(verb_list) for _, verb_list, _ in case_verb_sentence_list))))
+
+                verb_case_list.append(
+                    (verb_xlat, case_verb_sentence_list, verb_list))
+
+            log.debug(
+                '\nverb_case_list:\n' + 
+                pprint.pformat(
+                    verb_case_list, width = 192))
+
+            # Saving as XLSX file.
+
+            workbook_stream = (
+                io.BytesIO())
+
+            workbook = (
+                xlsxwriter.Workbook(
+                    workbook_stream, {'in_memory': True}))
+
+            worksheet = (
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name('Verb cases')))
+
+            worksheet.set_column(
+                0, 0, 32)
+
+            worksheet.set_column(
+                2, 2, 16)
+
+            row_count = 0
+
+            for verb_xlat, case_verb_sentence_list, _ in verb_case_list:
+
+                case, verb_list, _ = case_verb_sentence_list[0]
+
+                worksheet.write_row(
+                    row_count, 0, [verb_xlat, case, ', '.join(verb_list)])
+
+                row_count += 1
+
+                for case, verb_list, _ in case_verb_sentence_list[1:]:
+
+                    worksheet.write_row(
+                        row_count, 1, [case, ', '.join(verb_list)])
+
+                    row_count += 1
+
+            # With sentences.
+
+            worksheet = (
+                workbook.add_worksheet(
+                    utils.sanitize_worksheet_name('Verb cases and sentences')))
+
+            worksheet.set_column(
+                0, 0, 32)
+
+            worksheet.set_column(
+                2, 2, 16)
+
+            worksheet.set_column(
+                3, 3, 64)
+
+            row_count = 0
+
+            for verb_xlat, case_verb_sentence_list, _ in verb_case_list:
+
+                for case, _, verb_sentence_list in case_verb_sentence_list:
+
+                    for verb, sentence_list in verb_sentence_list:
+
+                        for sentence in sentence_list:
+
+                            worksheet.write_row(
+                                row_count, 0, [verb_xlat, case, verb, sentence])
+
+                            log.debug([verb_xlat, case, verb, sentence])
+
+                            row_count += 1
+
+                            verb_xlat = ''
+                            case = ''
+                            verb = ''
+
+            workbook.close()
+
+            if debug_flag:
+
+                workbook_stream.seek(0)
+
+                with open('valency_verb_cases.xlsx', 'wb') as xlsx_file:
+                    shutil.copyfileobj(workbook_stream, xlsx_file)
+
+            # Saving XLSX file.
+
+            storage = (
+                info.context.request.registry.settings['storage'])
+
+            storage_temporary = storage['temporary']
+
+            host = storage_temporary['host']
+            bucket = storage_temporary['bucket']
+
+            minio_client = (
+
+                minio.Minio(
+                    host,
+                    access_key = storage_temporary['access_key'],
+                    secret_key = storage_temporary['secret_key'],
+                    secure = True))
+
+            current_time = time.time()
+
+            object_name = (
+
+                storage_temporary['prefix'] +
+
+                '/'.join((
+                    'valency_verb_cases',
+                    '{:.6f}'.format(current_time),
+                    'valency_verb_cases.xlsx')))
+
+            object_length = (
+                workbook_stream.tell())
+
+            workbook_stream.seek(0)
+
+            (etag, version_id) = (
+
+                minio_client.put_object(
+                    bucket,
+                    object_name,
+                    workbook_stream,
+                    object_length))
+
+            url = (
+
+                '/'.join((
+                    'https:/',
+                    host,
+                    bucket,
+                    object_name)))
+
+            log.debug(
+                '\nobject_name:\n{}'
+                '\netag:\n{}'
+                '\nversion_id:\n{}'
+                '\nurl:\n{}'.format(
+                    object_name,
+                    etag,
+                    version_id,
+                    url))
+
+            return (
+
+                ValencyVerbCases(
+                    triumph = True,
+                    verb_case_list = verb_case_list,
+                    xlsx_url = url))
+
+        except Exception as exception:
+
+            traceback_string = (
+
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('valency_verb_cases: exception')
+            log.warning(traceback_string)
+
+            return (
+
+                ResponseError(
+                    'Exception:\n' + traceback_string))
+
+
 class MyMutations(graphene.ObjectType):
     """
     Mutation classes.
@@ -17826,6 +18164,7 @@ class MyMutations(graphene.ObjectType):
     create_valency_data = CreateValencyData.Field()
     save_valency_data = SaveValencyData.Field()
     set_valency_annotation = SetValencyAnnotation.Field()
+    valency_verb_cases = ValencyVerbCases.Field()
 
 schema = graphene.Schema(query=Query, auto_camelcase=False, mutation=MyMutations)
 
