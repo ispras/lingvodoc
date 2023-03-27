@@ -28,6 +28,8 @@ from lingvodoc.cache.caching import CACHE
 from bs4 import BeautifulSoup
 import re
 
+from lingvodoc.utils.verification import check_is_admin
+
 class ParserResult(LingvodocObjectType):
     dbType = dbParserResult
     arguments = ObjectVal()
@@ -169,7 +171,7 @@ def check_permissions(info, parser_result):
     else:
         user_id = Client.get_user_by_client_id(client.id).id
 
-        if user_id != 1:
+        if not check_is_admin(user_id):
             perspective_id = (
             DBSession
                 .query(

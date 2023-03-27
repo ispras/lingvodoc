@@ -2595,7 +2595,7 @@ def merge_update_2(request):
     try:
         user = Client.get_user_by_client_id(request.authenticated_userid)
 
-        if user is None or user.id != 1:
+        if user is None or not check_is_admin(user.id):
             return {'error': 'Not an administrator.'}
 
         entry_list = DBSession.query(LexicalEntry).filter(
@@ -2656,7 +2656,7 @@ def merge_update_3(request):
     try:
         user = Client.get_user_by_client_id(request.authenticated_userid)
 
-        if user is None or user.id != 1:
+        if user is None or not check_is_admin(user.id):
             return {'error': 'Not an administrator.'}
 
         entry_list = DBSession.query(LexicalEntry).filter(
@@ -2977,7 +2977,7 @@ def hash_fix(request):
     try:
         user = Client.get_user_by_client_id(request.authenticated_userid)
 
-        if user is None or user.id != 1:
+        if user is None or not check_is_admin(user.id):
             return {'error': 'Not an administrator.'}
 
         # Getting info of entities with wrong hashes.

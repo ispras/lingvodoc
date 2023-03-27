@@ -42,6 +42,7 @@ from lingvodoc.models import (
 )
 from lingvodoc.schema.gql_holders import ResponseError
 from lingvodoc.utils.search import translation_gist_search
+from lingvodoc.utils.verification import check_is_admin
 from lingvodoc.views.v2.utils import storage_file
 
 from lingvodoc.cache.caching import CACHE
@@ -726,7 +727,7 @@ def edit_role(dict_or_persp, user_id, role_id, client_id, organization=False, di
 
         # Administrator can do everything.
 
-        permitted = userlogged and userlogged.id == 1
+        permitted = userlogged and check_is_admin(userlogged.id)
 
         if userlogged in group.users:
             permitted = True

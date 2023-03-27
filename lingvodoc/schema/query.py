@@ -12407,7 +12407,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 .scalar())
 
-        if (user.id != 1 and
+        if (not check_is_admin(user.id) and
             not author_id_check and
             not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
 
@@ -13768,7 +13768,7 @@ class SaveAllDictionaries(graphene.Mutation):
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
-        if user_id != 1:
+        if not check_is_admin(user_id):
             raise ResponseError(message="not admin")
         # counter = 0
         dictionaries = DBSession.query(dbDictionary).filter_by(marked_for_deletion=False).all()
@@ -13818,9 +13818,6 @@ class MoveColumn(graphene.Mutation):
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
         client_ids = DBSession.query(Client.id).filter(Client.user_id==user_id).all()
-        # if user_id != 1:
-        #     raise ResponseError(message="not admin")
-        # counter = 0
         perspective = DBSession.query(dbPerspective).filter_by(client_id=perspective_id[0],
                                                                          object_id=perspective_id[1],
                                                                          marked_for_deletion=False).first()
@@ -13907,7 +13904,7 @@ class AddRolesBulk(graphene.Mutation):
         request_client_id = info.context.get('client_id')
         request_user = Client.get_user_by_client_id(request_client_id)
 
-        if request_user.id != 1:
+        if not check_is_admin(request_user.id):
             raise ResponseError('Only administrator can perform bulk roles additions.')
 
         user = DBSession.query(dbUser).filter_by(id = user_id).first()
@@ -14587,7 +14584,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
             client_id = info.context.get('client_id')
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
-            if not client or client.user_id != 1:
+            if not client or not check_is_admin(client.user_id):
                 return ResponseError('Only administrator can bulk disconnect.')
 
             request = info.context.request

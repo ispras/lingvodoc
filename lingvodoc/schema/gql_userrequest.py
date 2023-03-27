@@ -122,7 +122,8 @@ class UserRequest(LingvodocObjectType): # show only
             subject_dict.update(new_meta)
         if 'client_id' in db_object.subject and 'object_id' in db_object.subject:
             subject_dict['dictionary_id'] = [db_object.subject['client_id'], db_object.subject['object_id']]
-
+        if 'user_id' in db_object.subject and db_object.subject['user_id'] is not None:
+            subject_dict['user_id'] = str(db_object.subject['user_id'])
         subject_object = Subject(**subject_dict)
         return subject_object
 

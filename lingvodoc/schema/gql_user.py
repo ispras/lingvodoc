@@ -27,6 +27,8 @@ from lingvodoc.schema.gql_holders import (
 import datetime
 from passlib.hash import bcrypt
 
+from lingvodoc.utils.verification import check_is_admin
+
 class User(LingvodocObjectType):
     """
     created_at          | timestamp without time zone | NOT NULL
@@ -299,7 +301,7 @@ class ActivateDeactivateUser(graphene.Mutation):
 
         client = DBSession.query(Client).filter_by(id = client_id).first()
 
-        if not client or client.user_id != 1:
+        if not client or not check_is_admin(client.user_id):
             return ResponseError(message = 'Error: only administrator can activate/deactivate users')
 
         user_id = args.get('user_id')

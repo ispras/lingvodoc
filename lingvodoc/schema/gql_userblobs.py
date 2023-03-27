@@ -31,6 +31,7 @@ from lingvodoc.models import (
 )
 import base64
 
+from lingvodoc.utils.verification import check_is_admin
 from lingvodoc.views.v2.sociolinguistics import check_socio  # TODO: replace it
 
 
@@ -120,7 +121,7 @@ class CreateUserBlob(graphene.Mutation):
         if not user:
             return ResponseError(f'Invalid user id {client.user_id}.')
 
-        if not user.is_active and user.id != 1:
+        if not user.is_active and not check_is_admin(user.id):
             return ResponseError('Inactive non-administrator users can\'t upload files.')
 
         user_for_blob = user
@@ -137,7 +138,7 @@ class CreateUserBlob(graphene.Mutation):
 
             if client_args.user_id != client.user_id:
 
-                if user.id != 1:
+                if not check_is_admin(user.id):
                     return ResponseError('Non-administrator users can\'t upload files for other users.')
 
                 user_args = DBSession.query(dbUser).filter_by(id = client_args.user_id).first()
@@ -262,7 +263,7 @@ class DeleteUserBlob(graphene.Mutation):
         if not user:
             return ResponseError(f'Invalid user id {client.user_id}.')
 
-        if not user.is_active and user.id != 1:
+        if not user.is_active and not check_is_admin(user.id):
             return ResponseError('Inactive non-administrator users can\'t delete files.')
 
         id = args.get('id')
@@ -277,7 +278,7 @@ class DeleteUserBlob(graphene.Mutation):
 
             if client_args.user_id != client.user_id:
 
-                if user.id != 1:
+                if not check_is_admin(user.id):
                     return ResponseError('Non-administrator users can\'t delete another users\' files.')
 
         object_id = id[1] if id else None

@@ -607,13 +607,13 @@ class ApproveAllForUser(graphene.Mutation):
                 'Please specify either a perspective, a language or the flag for all languages.')
 
         if ((language_id or language_all) and
-            request_user.id != 1):
+            not check_is_admin(request_user.id)):
 
             raise ResponseError(
                 'Only administrator can perform bulk approve for languages.')
 
         if (user_id is None and
-            request_user.id != 1):
+            not check_is_admin(request_user.id)):
 
             raise ResponseError(
                 'Only administrator can perform bulk approve for all users.')
@@ -705,12 +705,12 @@ class ApproveAllForUser(graphene.Mutation):
             #
             # We also do not check permissions if the request is from the administrator.
 
-            if published is not None and request_user.id != 1:
+            if published is not None and not check_is_admin(request_user.id):
 
                 info.context.acl_check('create', 'approve_entities',
                                        (perspective_id[0], perspective_id[1]))
 
-            if accepted is not None and request_user.id != 1:
+            if accepted is not None and not check_is_admin(request_user.id):
 
                 info.context.acl_check('create', 'lexical_entries_and_entities',
                                        (perspective_id[0], perspective_id[1]))
