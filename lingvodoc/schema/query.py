@@ -4610,6 +4610,88 @@ class Query(graphene.ObjectType):
         verb_flag = verb_prefix is not None
         accept_flag = accept_value is not None
 
+        # We'll need source deletion info and acceptance info to filter out not accepted instances from
+        # deleted sources.
+
+        source_id_cte = (
+
+            DBSession
+
+                .query(
+                    dbValencySourceData.id)
+
+                .filter(
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1])
+
+                .cte())
+
+        source_parser_query = (
+
+            DBSession
+
+                .query(
+
+                    source_id_cte.c.id
+                        .label('id'),
+
+                    (dbParserResult.marked_for_deletion |
+                        dbEntity.marked_for_deletion |
+                        dbLexicalEntry.marked_for_deletion)
+
+                        .label('marked_for_deletion'))
+
+                .filter(
+                    source_id_cte.c.id == dbValencyParserData.id,
+                    dbParserResult.client_id == dbValencyParserData.parser_result_client_id,
+                    dbParserResult.object_id == dbValencyParserData.parser_result_object_id,
+                    dbEntity.client_id == dbParserResult.entity_client_id,
+                    dbEntity.object_id == dbParserResult.entity_object_id,
+                    dbLexicalEntry.client_id == dbEntity.parent_client_id,
+                    dbLexicalEntry.object_id == dbEntity.parent_object_id))
+
+        source_eaf_query = (
+
+            DBSession
+
+                .query(
+
+                    source_id_cte.c.id
+                        .label('id'),
+
+                    (dbEntity.marked_for_deletion |
+                        dbLexicalEntry.marked_for_deletion)
+
+                        .label('marked_for_deletion'))
+
+                .filter(
+                    source_id_cte.c.id == dbValencyEafData.id,
+                    dbEntity.client_id == dbValencyEafData.entity_client_id,
+                    dbEntity.object_id == dbValencyEafData.entity_object_id,
+                    dbLexicalEntry.client_id == dbEntity.parent_client_id,
+                    dbLexicalEntry.object_id == dbEntity.parent_object_id))
+
+        source_subquery = (
+
+            source_parser_query
+                .union(source_eaf_query)
+                .subquery())
+
+        accept_subquery = (
+
+            DBSession
+
+                .query(
+                    dbValencyAnnotationData.instance_id,
+
+                    func.bool_or(dbValencyAnnotationData.accepted)
+                        .label('accept_value'))
+
+                .group_by(
+                    dbValencyAnnotationData.instance_id)
+
+                .subquery())
+
         instance_query = (
 
             DBSession
@@ -4618,10 +4700,18 @@ class Query(graphene.ObjectType):
                     dbValencyInstanceData)
 
                 .filter(
-                    dbValencySourceData.perspective_client_id == perspective_id[0],
-                    dbValencySourceData.perspective_object_id == perspective_id[1],
-                    dbValencySentenceData.source_id == dbValencySourceData.id,
-                    dbValencyInstanceData.sentence_id == dbValencySentenceData.id))
+                    dbValencySentenceData.source_id == source_subquery.c.id,
+                    dbValencyInstanceData.sentence_id == dbValencySentenceData.id)
+
+                .outerjoin(
+                    accept_subquery,
+                    dbValencyInstanceData.id == accept_subquery.c.instance_id)
+
+                .filter(
+                    or_(
+                        ~source_subquery.c.marked_for_deletion,
+                        func.coalesce(
+                            accept_subquery.c.accept_value, False))))
 
         # We'll need that for getting verb merge groupings.
 
@@ -4820,27 +4910,6 @@ class Query(graphene.ObjectType):
             elif sort_type == 'accept':
 
                 if accept_flag:
-
-                    accept_subquery = (
-
-                        DBSession
-
-                            .query(
-                                dbValencyAnnotationData.instance_id,
-
-                                func.bool_or(dbValencyAnnotationData.accepted)
-                                    .label('accept_value'))
-
-                            .group_by(
-                                dbValencyAnnotationData.instance_id)
-
-                            .subquery())
-
-                    instance_query = (
-
-                        instance_query.outerjoin(
-                            accept_subquery,
-                            dbValencyInstanceData.id == accept_subquery.c.instance_id))
 
                     order_by_list.append(
                         func.coalesce(accept_subquery.c.accept_value, False) != accept_value)
@@ -17524,9 +17593,6 @@ class SaveValencyData(graphene.Mutation):
 
             data_dict = (
                 SaveValencyData.get_annotation_data(perspective_id))
-
-            import pdb
-            pdb.set_trace()
 
             # Saving valency annotation data as zipped JSON.
 
