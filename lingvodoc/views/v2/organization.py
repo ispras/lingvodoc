@@ -126,6 +126,12 @@ def view_organization(request):  # TODO: test
             response['additional_metadata'] = additional_metadata
             admins = list()
             if additional_metadata.get('admins'):
+                old_meta = organization.additional_metadata
+                old_admins_list = old_meta["admins"]
+                if isinstance(old_admins_list, int):
+                    old_authors_list = [str(i) for i in old_admins_list]
+                    organization.update_additional_metadata(
+                        {'admins': old_authors_list})
                 admins = map(str,additional_metadata['admins'])
             response['admin'] = admins
             request.response.status = HTTPOk.code

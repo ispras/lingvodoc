@@ -249,11 +249,15 @@ def accept_userrequest(request):
                 org_id = userrequest.subject['org_id']
                 user_id = userrequest.subject['user_id']
                 organization = DBSession.query(Organization).filter_by(id=org_id).first()
-                user = DBSession.query(User).filter_by(id=user_id).first()
                 if organization.additional_metadata is None:
                     organization.additional_metadata = dict()
                 if organization.additional_metadata.get('admins') is None:
                     organization.additional_metadata['admins'] = list()
+                old_meta = organization.additional_metadata
+                old_admins_list = old_meta['admins']
+                old_authors_list = [str(i) for i in old_admins_list]
+                organization.update_additional_metadata(
+                    {'admins': old_authors_list})
                 organization.additional_metadata['admins'].append(str(user_id))
             else:
                 pass
