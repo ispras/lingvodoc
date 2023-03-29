@@ -23,7 +23,7 @@ RUN \
   unzip /tmp/master.zip -d /tmp/ && \
   g++ -O2 -fPIC -shared -Wl,-soname,liboslon.so -Wno-write-strings -o /usr/lib/liboslon.so /tmp/lingvodoc-ext-oslon-master/analysis.cpp && \
   ldconfig
-RUN \
+RUN --mount=type=cache,target=/root/.cache/pip3 \
   pip3 install pip==20.0.2 && \
   pip3 install --upgrade setuptools==44.0 && \
   pip3 install -r server-requirements-1.txt && \

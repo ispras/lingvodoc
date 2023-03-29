@@ -35,6 +35,7 @@ So the needed files for this mode to work are the following:
 To run this mode you should have recent docker and docker-compose installed.
 
 After any update of lingvodoc or lingvodoc-react you should do the following:
+- `export DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1`
 
 - `docker-compose build`
 
