@@ -83,7 +83,7 @@ class UserRequest(LingvodocObjectType): # show only
     """
     dbType = dbUserRequest
     sender_id = graphene.Int()
-    recipient_id = graphene.Int()
+    recipient_id = graphene.String()
     broadcast_uuid = graphene.String()
     message = graphene.String()
     # subject = JSONString()
@@ -385,7 +385,7 @@ class CreateGrantPermission(graphene.Mutation):
         req['sender_id'] = user_id
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'grant_permission'
-        req['subject'] = {'grant_id': grant_id, 'user_id': user_id}
+        req['subject'] = {'grant_id': grant_id, 'user_id': str(user_id)}
         req['message'] = ''
         if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
@@ -447,7 +447,7 @@ class AddDictionaryToGrant(graphene.Mutation):
         # request_json = {"dictionary_id": [client_id, object_id], "grant_id": grant_id}
         request_json = {"client_id": client_id, "object_id": object_id, "grant_id": grant_id}
         req = dict()
-        req['sender_id'] = user_id
+        req['sender_id'] = str(user_id)
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'add_dict_to_grant'
         req['subject'] = request_json
@@ -501,10 +501,10 @@ class AdministrateOrg(graphene.Mutation):
         user_id = user.id
         org_id = args.get('org_id')
         req = dict()
-        req['sender_id'] = user_id
+        req['sender_id'] = str(user_id)
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'administrate_org'
-        req['subject'] = {'org_id': org_id, 'user_id': user_id}
+        req['subject'] = {'org_id': org_id, 'user_id': str(user_id)}
         req['message'] = ''
         if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
@@ -552,10 +552,10 @@ class ParticipateOrg(graphene.Mutation):
         user_id = user.id
         org_id = args.get('org_id')
         req = dict()
-        req['sender_id'] = user_id
+        req['sender_id'] = str(user_id)
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'participate_org'
-        req['subject'] = {'org_id': org_id, 'user_id': user_id}
+        req['subject'] = {'org_id': org_id, 'user_id': str(user_id)}
         req['message'] = ''
         if DBSession.query(dbUserRequest).filter_by(type=req['type'], subject=req['subject'],
                                                   message=req['message']).first():
@@ -565,13 +565,10 @@ class ParticipateOrg(graphene.Mutation):
         org = DBSession.query(dbOrganization).filter_by(id=org_id).first()
 
         if org.additional_metadata:
-            orgadmins = map(str,org.additional_metadata.get('admins', []))
+            orgadmins = list(map(str,org.additional_metadata.get('admins', ['1'])))
 
         # If the org does not have any administrators, we'll send the request to the main administrator
         # user.
-
-        if not orgadmins:
-            orgadmins.append(1)
 
         for orgadmin in orgadmins:
             req['recipient_id'] = orgadmin
@@ -657,13 +654,10 @@ class AddDictionaryToOrganization(graphene.Mutation):
         admin_list = []
 
         if organization.additional_metadata:
-            admin_list = map(str,organization.additional_metadata.get('admins', []))
+            admin_list = list(map(str,organization.additional_metadata.get('admins', ['1'])))
 
         # If the organization does not have any administrators, we'll send the request to the main
         # administrator user.
-
-        if not admin_list:
-            admin_list.append(1)
 
         for user_id in admin_list:
             request['recipient_id'] = user_id
