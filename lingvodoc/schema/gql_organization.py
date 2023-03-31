@@ -83,7 +83,7 @@ class Organization(LingvodocObjectType):
 
         return (
            [User(id = user_id)
-                for user_id in map(str, additional_metadata.get('admins', []))])
+                for user_id in list(map(str, additional_metadata.get('admins', [])))])
 
 
 class CreateOrganization(graphene.Mutation):

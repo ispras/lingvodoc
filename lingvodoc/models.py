@@ -1621,7 +1621,7 @@ class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, Add
 
 class UserRequest(IdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
     sender_id = Column(SLBigInteger(), nullable=False)
-    recipient_id = Column(SLBigInteger(), nullable=False)
+    recipient_id = Column(VARCHAR(length=36), nullable=False)
     broadcast_uuid = Column(String(36), nullable=False)
     type = Column(String(1000), nullable=False)
     subject = Column(JSONB)
@@ -1966,7 +1966,7 @@ class ValencyAnnotationData(
     __tablename__ = 'valency_annotation_data'
 
     instance_id = Column(SLBigInteger(), ForeignKey('valency_instance_data.id'), primary_key = True)
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'), primary_key = True)
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), primary_key = True)
     accepted = Column(Boolean, default = None)
 
 

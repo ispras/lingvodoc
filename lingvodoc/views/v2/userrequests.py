@@ -577,14 +577,13 @@ def participate_org(request):
             return {'error': 'request already exists'}
 
         orgadmins = list()
-        # groups = DBSession.query(Group).filter_by(parent=parentbase, subject_override = True).all()
 
         org = DBSession.query(Organization).filter_by(id=org_id).first()
         if not org.additional_metadata:
             request.response.status = HTTPBadRequest.code
             return {'error': 'no administrators'}
 
-        orgadmins = map(str,org.additional_metadata.get('admins'))
+        orgadmins = list(map(str,org.additional_metadata.get('admins')))
 
         if not orgadmins:
             request.response.status = HTTPBadRequest.code

@@ -35,6 +35,7 @@ def upgrade():
         ALTER TABLE ONLY public."user_to_organization_association" ALTER COLUMN user_id TYPE VARCHAR(36);
         ALTER TABLE ONLY public."userblobs" ALTER COLUMN user_id TYPE VARCHAR(36);
         ALTER TABLE ONLY public."valency_annotation_data" ALTER COLUMN user_id TYPE VARCHAR(36);
+        ALTER TABLE ONLY public."userrequest" ALTER COLUMN recipient_id TYPE VARCHAR(36);
         
         ALTER TABLE ONLY public."email" ADD CONSTRAINT email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
         ALTER TABLE ONLY public."client" ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
@@ -66,6 +67,7 @@ def downgrade():
         ALTER TABLE ONLY public."user_to_organization_association" ALTER COLUMN user_id TYPE BIGINT;
         ALTER TABLE ONLY public."userblobs" ALTER COLUMN user_id TYPE BIGINT;
         ALTER TABLE ONLY public."valency_annotation_data" ALTER COLUMN user_id TYPE BIGINT;
+        ALTER TABLE ONLY public."userrequest" ALTER COLUMN recipient_id TYPE BIGINT;
 
         ALTER TABLE ONLY public."email" ADD CONSTRAINT email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
         ALTER TABLE ONLY public."client" ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);

@@ -63,13 +63,13 @@ log = logging.getLogger(__name__)
 
 
 class UserToRoles(graphene.ObjectType):
-    id_user = graphene.Int()
+    user_id = graphene.String()
     roles = graphene.List(graphene.Int)
 
     def resolve_roles(self, info):
         return self.user_id
 
-    def resolve_id_user(self, info):
+    def resolve_user_id(self, info):
         return self.roles
 
 
