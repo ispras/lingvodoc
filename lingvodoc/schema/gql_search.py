@@ -297,9 +297,6 @@ def save_xlsx_data(
     standard_language_id_set = (
         set(tuple(id) for id in standard_language_id_query.all()))
 
-    standard_language_id_set.update(
-        utils.standard_language_id_set)
-
     def f(
         language_id,
         standard_id = None):
