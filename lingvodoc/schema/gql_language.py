@@ -346,29 +346,12 @@ class Language(LingvodocObjectType):
     @fetch_object('in_toc')
     def resolve_in_toc(self, info):
 
-        if tuple(self.id) in utils.standard_language_id_set:
-            return True
+        metadata = (
+            self.dbObject.additional_metadata)
 
         return (
-
-            DBSession
-
-                .query(
-
-                    DBSession
-
-                        .query(
-                            literal(1))
-
-                        .filter(
-                            dbLanguage.client_id == self.id[0],
-                            dbLanguage.object_id == self.id[1],
-                            dbLanguage.marked_for_deletion == False,
-                            cast(dbLanguage.additional_metadata['toc_mark'], Boolean))
-
-                        .exists())
-
-                .scalar())
+            metadata is not None and
+            metadata.get('toc_mark', False))
 
 
 class CreateLanguage(graphene.Mutation):

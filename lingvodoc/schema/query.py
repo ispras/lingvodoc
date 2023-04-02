@@ -578,12 +578,6 @@ def language_toc_sql(self):
           {toc_table_name}
           on commit drop as
 
-          with
-
-          standard_language_ids as (
-            select * from (values (1574, 116655), (33, 88), (252, 40), (1076, 4), (1574, 269058), (1068, 5), (500, 121), (1076, 22), (33, 90), (216, 8), (1574, 272286), (295, 8), (1100, 4), (1105, 28), (508, 49), (508, 39), (633, 23), (1552, 1252), (508, 46), (1733, 13468), (1501, 42640), (1501, 42646), (1311, 23), (1076, 10), (1552, 652), (508, 37), (500, 124), (500, 123), (1574, 269111), (508, 44), (508, 42), (1076, 119), (1574, 99299), (1574, 274491), (508, 45), (508, 41), (508, 40), (1076, 7), (633, 17), (1209, 24), (1209, 20), (508, 48), (508, 50), (1088, 612), (1311, 41), (1574, 203685), (1479, 599), (996, 1069), (1401, 11742), (1574, 272495), (998, 5), (1574, 116715), (508, 38), (508, 47), (1372, 10768), (508, 51), (1557, 6), (1574, 268977), (500, 122), (65, 2), (1251, 6), (1574, 116679), (633, 16), (1002, 12), (1068, 9), (1574, 269088), (1574, 203688), (1550, 3373), (508, 43), (643, 4), (33, 89), (633, 22), (508, 36), (840, 6), (1632, 6), (1372, 11240), (2108, 13), (1574, 274494), (678, 9)) V
-          )
-
           select
             client_id,
             object_id,
@@ -594,9 +588,8 @@ def language_toc_sql(self):
             language
 
           where
-            marked_for_deletion = false and (
-              (additional_metadata -> 'toc_mark') :: boolean or
-              (client_id, object_id) in (select * from standard_language_ids));
+            marked_for_deletion = false and
+            (additional_metadata -> 'toc_mark') :: boolean;
 
         create temporary table
           {count_table_name}
@@ -780,12 +773,6 @@ def language_toc_python(self):
           {toc_table_name}
           on commit drop as
 
-          with
-
-          standard_language_ids as (
-            select * from (values (1574, 116655), (33, 88), (252, 40), (1076, 4), (1574, 269058), (1068, 5), (500, 121), (1076, 22), (33, 90), (216, 8), (1574, 272286), (295, 8), (1100, 4), (1105, 28), (508, 49), (508, 39), (633, 23), (1552, 1252), (508, 46), (1733, 13468), (1501, 42640), (1501, 42646), (1311, 23), (1076, 10), (1552, 652), (508, 37), (500, 124), (500, 123), (1574, 269111), (508, 44), (508, 42), (1076, 119), (1574, 99299), (1574, 274491), (508, 45), (508, 41), (508, 40), (1076, 7), (633, 17), (1209, 24), (1209, 20), (508, 48), (508, 50), (1088, 612), (1311, 41), (1574, 203685), (1479, 599), (996, 1069), (1401, 11742), (1574, 272495), (998, 5), (1574, 116715), (508, 38), (508, 47), (1372, 10768), (508, 51), (1557, 6), (1574, 268977), (500, 122), (65, 2), (1251, 6), (1574, 116679), (633, 16), (1002, 12), (1068, 9), (1574, 269088), (1574, 203688), (1550, 3373), (508, 43), (643, 4), (33, 89), (633, 22), (508, 36), (840, 6), (1632, 6), (1372, 11240), (2108, 13), (1574, 274494), (678, 9)) V
-          )
-
           select
             client_id,
             object_id,
@@ -796,9 +783,8 @@ def language_toc_python(self):
             language
 
           where
-            marked_for_deletion = false and (
-              (additional_metadata -> 'toc_mark') :: boolean or
-              (client_id, object_id) in (select * from standard_language_ids));
+            marked_for_deletion = false and
+            (additional_metadata -> 'toc_mark') :: boolean;
 
         with recursive
 
@@ -2479,19 +2465,9 @@ class Language_Resolver(object):
 
                 ls.query.filter(
 
-                    or_(
-
-                        cast(
-                            ls.c.additional_metadata['toc_mark'],
-                            Boolean),
-
-                        tuple_(
-                            ls.c.client_id,
-                            ls.c.object_id)
-
-                            .in_(
-                                ids_to_id_query(
-                                    utils.standard_language_id_set)))))
+                    cast(
+                        ls.c.additional_metadata['toc_mark'],
+                        Boolean)))
 
         # If we are going to get dictionaries, we save language info in a temporary table, unless we've got
         # dictionary ids directly from grant or organization.
@@ -3057,9 +3033,8 @@ class Language_Resolver(object):
 
                     gql_language.in_toc = (
 
-                        language_id in utils.standard_language_id_set or
-                            metadata is not None and
-                            metadata.get('toc_mark', False))
+                        metadata is not None and
+                        metadata.get('toc_mark', False))
 
                     gql_language.additional_metadata = (
                         AdditionalMetadata.from_object(metadata))
@@ -3140,9 +3115,8 @@ class Language_Resolver(object):
 
                     gql_language.in_toc = (
 
-                        language_id in utils.standard_language_id_set or
-                            metadata is not None and
-                            metadata.get('toc_mark', False))
+                        metadata is not None and
+                        metadata.get('toc_mark', False))
 
                     gql_language.additional_metadata = (
                         AdditionalMetadata.from_object(metadata))
