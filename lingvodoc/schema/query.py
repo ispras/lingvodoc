@@ -171,7 +171,6 @@ from lingvodoc.schema.gql_userrequest import (
     ParticipateOrg,
     AddDictionaryToOrganization,
     AcceptUserRequest,
-    # DeleteUserRequest
 )
 
 from lingvodoc.schema.gql_parser import Parser
@@ -4946,7 +4945,7 @@ class Query(graphene.ObjectType):
                         dbUser.id, dbUser.name)
 
                     .filter(
-                        dbUser.id.inuser_id_set_(
+                        dbUser.id.in_(
 
                             utils.values_query(
                                 user_id_set, VARCHAR(length=36))))

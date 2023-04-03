@@ -62,8 +62,8 @@ class Subject(graphene.ObjectType):
 class UserRequest(LingvodocObjectType): # show only
     """
      #id                  | bigint                      | NOT NULL DEFAULT nextval('userrequest_id_seq'::regclass)
-     #sender_id           | bigint                      | NOT NULL
-     #recipient_id        | bigint                      | NOT NULL
+     #sender_id           | character varying(36)                      | NOT NULL
+     #recipient_id        | character varying(36)                      | NOT NULL
      #created_at          | timestamp without time zone | NOT NULL
      #broadcast_uuid      | character varying(36)       | NOT NULL
      #type                | character varying(1000)     | NOT NULL
@@ -82,7 +82,7 @@ class UserRequest(LingvodocObjectType): # show only
         }
     """
     dbType = dbUserRequest
-    sender_id = graphene.Int()
+    sender_id = graphene.String()
     recipient_id = graphene.String()
     broadcast_uuid = graphene.String()
     message = graphene.String()
@@ -126,15 +126,6 @@ class UserRequest(LingvodocObjectType): # show only
             subject_dict['user_id'] = str(db_object.subject['user_id'])
         subject_object = Subject(**subject_dict)
         return subject_object
-
-    # @fetch_object("subject")
-    # def resolve_subject(self, info):
-    #     return self.dbObject.subject
-    # def data_type(self):
-    #     return DBSession.query(TranslationAtom.content).filter_by(
-    #     parent_client_id=self.data_type_translation_gist_client_id,
-    #     parent_object_id=self.data_type_translation_gist_object_id,
-    #     locale_id=2).scalar()
 
 class AcceptUserRequest(graphene.Mutation):
     """
@@ -447,7 +438,7 @@ class AddDictionaryToGrant(graphene.Mutation):
         # request_json = {"dictionary_id": [client_id, object_id], "grant_id": grant_id}
         request_json = {"client_id": client_id, "object_id": object_id, "grant_id": grant_id}
         req = dict()
-        req['sender_id'] = str(user_id)
+        req['sender_id'] = user_id
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'add_dict_to_grant'
         req['subject'] = request_json
@@ -501,7 +492,7 @@ class AdministrateOrg(graphene.Mutation):
         user_id = user.id
         org_id = args.get('org_id')
         req = dict()
-        req['sender_id'] = str(user_id)
+        req['sender_id'] = user_id
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'administrate_org'
         req['subject'] = {'org_id': org_id, 'user_id': str(user_id)}
@@ -552,7 +543,7 @@ class ParticipateOrg(graphene.Mutation):
         user_id = user.id
         org_id = args.get('org_id')
         req = dict()
-        req['sender_id'] = str(user_id)
+        req['sender_id'] = user_id
         req['broadcast_uuid'] = str(uuid4())
         req['type'] = 'participate_org'
         req['subject'] = {'org_id': org_id, 'user_id': str(user_id)}
@@ -561,7 +552,7 @@ class ParticipateOrg(graphene.Mutation):
                                                   message=req['message']).first():
             raise ResponseError(message="Request already exists")
 
-        orgadmins = list()
+        orgadmins = ['1']
         org = DBSession.query(dbOrganization).filter_by(id=org_id).first()
 
         if org.additional_metadata:
@@ -651,7 +642,7 @@ class AddDictionaryToOrganization(graphene.Mutation):
         if not organization:
             raise ResponseError('No such organization.')
 
-        admin_list = []
+        admin_list = ['1']
 
         if organization.additional_metadata:
             admin_list = list(map(str,organization.additional_metadata.get('admins', ['1'])))

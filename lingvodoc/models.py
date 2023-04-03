@@ -1450,8 +1450,6 @@ class User(Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean, default=True, nullable=False)
     password = relationship("Passhash", uselist=False)
-    # dictionaries = relationship("Dictionary",
-    #                             secondary=user_to_dictionary_association, backref=backref("participated"))
 
     def check_password(self, passwd):
         return bcrypt.verify(passwd, self.password.hash)

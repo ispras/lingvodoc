@@ -9,12 +9,9 @@ from lingvodoc.schema.gql_holders import (
     IdHolder,
     MarkedForDeletion,
     AdditionalMetadata,
-    Name,
     About,
-    del_object,
     acl_check_by_id,
     ResponseError,
-    LingvodocID,
     TranslationHolder,
     TranslationGistHolder,
     fetch_object,
@@ -57,7 +54,7 @@ class Organization(LingvodocObjectType):
                       TranslationHolder,
                       TranslationGistHolder,
                       About,
-                    )
+                      )
 
     @fetch_object('members')
     def resolve_members(self, info):
@@ -65,8 +62,7 @@ class Organization(LingvodocObjectType):
         member_list = list()
 
         for dbuser in self.dbObject.users:
-
-            user = User(id = dbuser.id)
+            user = User(id=dbuser.id)
             user.dbObject = dbuser
             member_list.append(user)
 
@@ -82,8 +78,8 @@ class Organization(LingvodocObjectType):
             return []
 
         return (
-           [User(id = user_id)
-                for user_id in list(map(str, additional_metadata.get('admins', [])))])
+            [User(id=user_id)
+             for user_id in list(map(str, additional_metadata.get('admins', [])))])
 
 
 class CreateOrganization(graphene.Mutation):
@@ -113,8 +109,8 @@ class CreateOrganization(graphene.Mutation):
     """
 
     class Arguments:
-        translation_atoms = graphene.List(ObjectVal, required = True)
-        about_translation_atoms = graphene.List(ObjectVal, required = True)
+        translation_atoms = graphene.List(ObjectVal, required=True)
+        about_translation_atoms = graphene.List(ObjectVal, required=True)
 
     organization = graphene.Field(Organization)
     triumph = graphene.Boolean()
@@ -125,50 +121,48 @@ class CreateOrganization(graphene.Mutation):
 
         client_id = info.context['client_id']
 
-        client = DBSession.query(Client).filter_by(id = client_id).first()
+        client = DBSession.query(Client).filter_by(id=client_id).first()
 
         if not client:
+            raise ResponseError(message=
+                                'Invalid client id (not registered on server). Try to logout and then login.')
 
-            raise ResponseError(message =
-                'Invalid client id (not registered on server). Try to logout and then login.')
-
-        user = DBSession.query(dbUser).filter_by(id = client.user_id).first()
+        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
 
         if not user:
-
-            raise ResponseError(message =
-                'This client id is orphaned. Try to logout and then login.')
+            raise ResponseError(message=
+                                'This client id is orphaned. Try to logout and then login.')
 
         translation_gist_id = create_gists_with_atoms(
-            args['translation_atoms'], None, [client_id, None], gist_type = 'Organization')
+            args['translation_atoms'], None, [client_id, None], gist_type='Organization')
 
         about_translation_gist_id = create_gists_with_atoms(
-            args['about_translation_atoms'], None, [client_id, None], gist_type = 'Organization')
+            args['about_translation_atoms'], None, [client_id, None], gist_type='Organization')
 
         dborganization = dbOrganization(
-            translation_gist_client_id = translation_gist_id[0],
-            translation_gist_object_id = translation_gist_id[1],
-            about_translation_gist_client_id = about_translation_gist_id[0],
-            about_translation_gist_object_id = about_translation_gist_id[1])
+            translation_gist_client_id=translation_gist_id[0],
+            translation_gist_object_id=translation_gist_id[1],
+            about_translation_gist_client_id=about_translation_gist_id[0],
+            about_translation_gist_object_id=about_translation_gist_id[1])
 
         DBSession.add(dborganization)
         DBSession.flush()
 
         # Organization creator can edit it.
 
-        base = DBSession.query(dbBaseGroup).filter_by(name = 'Can edit organization').first()
-        group = dbGroup(parent = base, subject_object_id = dborganization.id)
+        base = DBSession.query(dbBaseGroup).filter_by(name='Can edit organization').first()
+        group = dbGroup(parent=base, subject_object_id=dborganization.id)
         add_user_to_group(user, group)
 
         DBSession.add(group)
         DBSession.flush()
 
-        organization = Organization(id = dborganization.id)
+        organization = Organization(id=dborganization.id)
         organization.dbObject = dborganization
 
         return CreateOrganization(
-            organization = organization,
-            triumph = True)
+            organization=organization,
+            triumph=True)
 
 
 class UpdateOrganization(graphene.Mutation):
@@ -202,8 +196,8 @@ class UpdateOrganization(graphene.Mutation):
 
     class Arguments:
         organization_id = graphene.Int(required=True)
-        add_users = graphene.List(graphene.Int)
-        delete_users = graphene.List(graphene.Int)  # TODO: LingvodocID()? (no)
+        add_users = graphene.List(graphene.String)
+        delete_users = graphene.List(graphene.String)
         name = graphene.String()
         about = graphene.String()
 
@@ -236,7 +230,7 @@ class UpdateOrganization(graphene.Mutation):
                     bases = DBSession.query(dbBaseGroup).filter_by(subject='organization')
                     for base in bases:
                         group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                                 subject_object_id=dborganization.id).first()
+                                                                   subject_object_id=dborganization.id).first()
                         add_user_to_group(user, group)
         delete_users = args.get('delete_users')
         if delete_users:
@@ -249,7 +243,7 @@ class UpdateOrganization(graphene.Mutation):
                     bases = DBSession.query(dbBaseGroup).filter_by(subject='organization')
                     for base in bases:
                         group = DBSession.query(dbGroup).filter_by(base_group_id=base.id,
-                                                                 subject_object_id=dborganization.id).first()
+                                                                   subject_object_id=dborganization.id).first()
                         group.users.remove(user)
         name = args.get('name')
         if name:
@@ -294,19 +288,19 @@ class DeleteOrganization(graphene.Mutation):
             Client.get_user_by_client_id(client_id))
 
         if not user or not check_is_admin(user.id):
-            return ResponseError(message = 'Only administrator can delete organizations.')
+            return ResponseError(message='Only administrator can delete organizations.')
 
         organization_id = args.get('organization_id')
         dborganization = DBSession.query(dbOrganization).filter_by(id=organization_id).first()
 
         if not dborganization:
-            return ResponseError(message = 'No such organization in the system.')
+            return ResponseError(message='No such organization in the system.')
 
-        organization = Organization(id = dborganization.id)
+        organization = Organization(id=dborganization.id)
         organization.dbObject = dborganization
 
         if dborganization.marked_for_deletion:
-            return DeleteOrganization(organization = organization, triumph = False)
+            return DeleteOrganization(organization=organization, triumph=False)
 
         # Actually deleting organization.
 
@@ -326,5 +320,4 @@ class DeleteOrganization(graphene.Mutation):
 
         flag_modified(dborganization, 'additional_metadata')
 
-        return DeleteOrganization(organization = organization, triumph = True)
-
+        return DeleteOrganization(organization=organization, triumph=True)
