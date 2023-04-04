@@ -391,6 +391,45 @@ def save_xlsx_data(
                     xlsx_context.save_lexical_entry(
                         lexical_entry, published = True, accepted = True)
 
+
+#: Texts fields, used in search mechanisms to restrict search without field specification.
+text_field_cte = (
+
+    DBSession
+
+        .query(
+            dbField.client_id,
+            dbField.object_id)
+
+        .filter(
+            dbField.marked_for_deletion == False,
+            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+            dbTranslationAtom.content == 'Text')
+
+        .cte())
+
+
+#: Markup fields, used in search mechanisms to restrict search without field specification.
+markup_field_cte = (
+
+    DBSession
+
+        .query(
+            dbField.client_id,
+            dbField.object_id)
+
+        .filter(
+            dbField.marked_for_deletion == False,
+            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+            dbTranslationAtom.content == 'Markup')
+
+        .cte())
+
+
 def search_mechanism(
     dictionaries,
     category,
@@ -1022,7 +1061,7 @@ def search_mechanism_simple(
     adopted,
     etymology,
     yield_batch_count,
-    category_fields,
+    category_field_cte_query,
     xlsx_context = None):
 
     state_translation_gist_client_id, state_translation_gist_object_id = state_gist_id
@@ -1079,7 +1118,7 @@ def search_mechanism_simple(
             else:
                 inner_and_block.append(
                     tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id)
-                        .in_(category_fields_cte_query))
+                        .in_(category_field_cte_query))
 
             matching_type = search_string.get('matching_type')
             if matching_type == "full_string":
@@ -1626,23 +1665,6 @@ class AdvancedSearch(LingvodocObjectType):
 
             if category != 1:
 
-                text_field_cte = (
-
-                    DBSession
-
-                        .query(
-                            dbField.client_id,
-                            dbField.object_id)
-
-                        .filter(
-                            dbField.marked_for_deletion == False,
-                            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-                            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
-                            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                            dbTranslationAtom.content == 'Text')
-
-                        .cte())
-
                 res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
                     dictionaries=dictionaries,
                     category=0,
@@ -1662,23 +1684,6 @@ class AdvancedSearch(LingvodocObjectType):
             # Corpora.
 
             if category != 0:
-
-                markup_field_cte = (
-
-                    DBSession
-
-                        .query(
-                            dbField.client_id,
-                            dbField.object_id)
-
-                        .filter(
-                            dbField.marked_for_deletion == False,
-                            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-                            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
-                            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                            dbTranslationAtom.content == 'Markup')
-
-                        .cte())
 
                 tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
                     dictionaries=dictionaries,
@@ -1806,20 +1811,90 @@ class AdvancedSearchSimple(LingvodocObjectType):
         cognates_flag = True,
         __debug_flag__ = False):
 
+        # Checking for too permissive search conditions.
+
+        for block in search_strings:
+            for condition in block:
+
+                matching_type = condition.get('matching_type')
+
+                if matching_type == 'substring':
+
+                    if condition['search_string'] == '':
+                        return ResponseError('Empty search substrings are not allowed.')
+
+                elif matching_type == 'regexp':
+
+                    if condition['search_string'] in regexp_check_set:
+                        return ResponseError('Too broad search regular expressions are not allowed.')
+
+        # Preparing the search.
+
         yield_batch_count = 200
-        dictionaries = DBSession.query(dbDictionary.client_id, dbDictionary.object_id).filter_by(
-            marked_for_deletion=False)
+
+        dictionaries = (
+
+            DBSession
+
+                .query(
+                    dbDictionary.client_id,
+                    dbDictionary.object_id)
+
+                .filter_by(
+                    marked_for_deletion = False))
+
         d_filter = []
+
         if dicts_to_filter:
-            d_filter.append(tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dicts_to_filter))
+
+            dictionary_ids = dicts_to_filter
+
+            if len(dictionary_ids) > 2:
+                dictionary_ids = ids_to_id_query(dictionary_ids)
+
+            d_filter.append(
+
+                tuple_(
+                    dbDictionary.client_id,
+                    dbDictionary.object_id)
+
+                    .in_(
+                        dictionary_ids))
+
         if languages:
+
             if dicts_to_filter:
+
+                dictionaries = (
+                    dictionaries.join(dbLanguage))
+
+                language_ids = languages
+
+                if len(language_ids) > 2:
+                    language_ids = ids_to_id_query(language_ids)
+
                 d_filter.append(
-                    tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(languages)
-                )
-        dictionaries = dictionaries.filter(or_(*d_filter)).distinct()
+
+                    and_(
+
+                        tuple_(
+                            dbLanguage.client_id,
+                            dbLanguage.object_id)
+
+                            .in_(
+                                language_ids),
+
+                        dbLanguage.marked_for_deletion == False))
+
+        dictionaries = (
+            dictionaries.filter(or_(*d_filter)))
+
         if tag_list:
-            dictionaries = dictionaries.filter(dbDictionary.additional_metadata["tag_list"].contains(tag_list))
+
+            dictionaries = (
+
+                dictionaries.filter(
+                    dbDictionary.additional_metadata["tag_list"].contains(tag_list)))
 
         res_entities = list()
         res_lexical_entries = list()
@@ -1831,16 +1906,6 @@ class AdvancedSearchSimple(LingvodocObjectType):
         state_translation_gist_object_id = db_published_gist.object_id
         db_la_gist = translation_gist_search('Limited access')
         limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
-
-        text_data_type = translation_gist_search('Text')
-        text_fields = DBSession.query(dbField.client_id, dbField.object_id).\
-            filter(dbField.data_type_translation_gist_client_id == text_data_type.client_id,
-                   dbField.data_type_translation_gist_object_id == text_data_type.object_id).all()
-
-        markup_data_type = translation_gist_search('Markup')
-        markup_fields = DBSession.query(dbField.client_id, dbField.object_id). \
-            filter(dbField.data_type_translation_gist_client_id == markup_data_type.client_id,
-                   dbField.data_type_translation_gist_object_id == markup_data_type.object_id).all()
 
         # Setting up export to an XLSX file, if required.
 
@@ -1867,7 +1932,7 @@ class AdvancedSearchSimple(LingvodocObjectType):
                 accept=accept,
                 adopted=adopted,
                 etymology=etymology,
-                category_fields=text_fields,
+                category_field_cte_query=DBSession.query(text_field_cte),
                 yield_batch_count=yield_batch_count,
                 xlsx_context=xlsx_context
             )
@@ -1887,7 +1952,7 @@ class AdvancedSearchSimple(LingvodocObjectType):
                 accept=accept,
                 adopted=adopted,
                 etymology=etymology,
-                category_fields=markup_fields,
+                category_field_cte_query=DBSession.query(markup_field_cte),
                 yield_batch_count=yield_batch_count,
                 xlsx_context=xlsx_context
             )
