@@ -1308,6 +1308,10 @@ class AdvancedSearch(LingvodocObjectType):
             # Checking for too permissive search conditions.
 
             for block in search_strings:
+
+                if not block:
+                    return ResponseError('Empty AND blocks in OR mode are not allowed.')
+
                 for condition in block:
 
                     matching_type = condition.get('matching_type')
@@ -1814,6 +1818,7 @@ class AdvancedSearchSimple(LingvodocObjectType):
         # Checking for too permissive search conditions.
 
         for block in search_strings:
+
             for condition in block:
 
                 matching_type = condition.get('matching_type')
