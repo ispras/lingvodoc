@@ -392,42 +392,50 @@ def save_xlsx_data(
                         lexical_entry, published = True, accepted = True)
 
 
-#: Texts fields, used in search mechanisms to restrict search without field specification.
-text_field_cte = (
+def get_text_field_cte(session):
+    """
+    Texts fields, used in search mechanisms to restrict search without field specification.
+    """
 
-    DBSession
+    return (
 
-        .query(
-            dbField.client_id,
-            dbField.object_id)
+        session
 
-        .filter(
-            dbField.marked_for_deletion == False,
-            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
-            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-            dbTranslationAtom.content == 'Text')
+            .query(
+                dbField.client_id,
+                dbField.object_id)
 
-        .cte())
+            .filter(
+                dbField.marked_for_deletion == False,
+                dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+                dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+                dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationAtom.content == 'Text')
+
+            .cte())
 
 
-#: Markup fields, used in search mechanisms to restrict search without field specification.
-markup_field_cte = (
+def get_markup_field_cte(session):
+    """
+    Markup fields, used in search mechanisms to restrict search without field specification.
+    """
 
-    DBSession
+    return (
 
-        .query(
-            dbField.client_id,
-            dbField.object_id)
+        session
 
-        .filter(
-            dbField.marked_for_deletion == False,
-            dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-            dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
-            dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-            dbTranslationAtom.content == 'Markup')
+            .query(
+                dbField.client_id,
+                dbField.object_id)
 
-        .cte())
+            .filter(
+                dbField.marked_for_deletion == False,
+                dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
+                dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id,
+                dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationAtom.content == 'Markup')
+
+            .cte())
 
 
 def search_mechanism(
@@ -1678,7 +1686,7 @@ class AdvancedSearch(LingvodocObjectType):
                     adopted=adopted,
                     etymology=etymology,
                     diacritics=diacritics,
-                    category_field_cte_query=DBSession.query(text_field_cte),
+                    category_field_cte_query=DBSession.query(get_text_field_cte(DBSession)),
                     yield_batch_count=yield_batch_count,
                     xlsx_context=xlsx_context,
                     load_entities=load_entities,
@@ -1698,7 +1706,7 @@ class AdvancedSearch(LingvodocObjectType):
                     adopted=adopted,
                     etymology=etymology,
                     diacritics=diacritics,
-                    category_field_cte_query=DBSession.query(markup_field_cte),
+                    category_field_cte_query=DBSession.query(get_markup_field_cte(DBSession)),
                     yield_batch_count=yield_batch_count,
                     xlsx_context=xlsx_context,
                     load_entities=load_entities,
@@ -1937,7 +1945,7 @@ class AdvancedSearchSimple(LingvodocObjectType):
                 accept=accept,
                 adopted=adopted,
                 etymology=etymology,
-                category_field_cte_query=DBSession.query(text_field_cte),
+                category_field_cte_query=DBSession.query(get_text_field_cte(DBSession)),
                 yield_batch_count=yield_batch_count,
                 xlsx_context=xlsx_context
             )
@@ -1957,7 +1965,7 @@ class AdvancedSearchSimple(LingvodocObjectType):
                 accept=accept,
                 adopted=adopted,
                 etymology=etymology,
-                category_field_cte_query=DBSession.query(markup_field_cte),
+                category_field_cte_query=DBSession.query(get_markup_field_cte(DBSession)),
                 yield_batch_count=yield_batch_count,
                 xlsx_context=xlsx_context
             )
