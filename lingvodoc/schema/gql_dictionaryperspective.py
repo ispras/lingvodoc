@@ -361,21 +361,11 @@ class DictionaryPerspective(LingvodocObjectType):
 
     @fetch_object('tree') # tested
     def resolve_tree(self, info):
-        result = list()
-        iteritem = self.dbObject
-        while iteritem:
-            id = [iteritem.client_id, iteritem.object_id]
-            if type(iteritem) == dbPerspective:
-                gql_persp = DictionaryPerspective(id=id)
-                gql_persp.dbObject = iteritem
-                result.append(gql_persp)
-            if type(iteritem) == dbDictionary:
-                result.append(Dictionary(id=id))
-            if type(iteritem) == dbLanguage:
-                result.append(Language(id=id))
-            iteritem = iteritem.parent
 
-        return result
+        dictionary_db = self.dbObject.parent
+        dictionary = Dictionary(id = dictionary_db.id)
+
+        return [self] + dictionary.resolve_tree(info)
 
     @fetch_object('columns') # tested
     def resolve_columns(self, info):

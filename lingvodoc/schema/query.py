@@ -1242,13 +1242,26 @@ class Language_Resolver(object):
 
                 already_set.add('perspectives')
 
-                ds.perspectives = (
-                    types.SimpleNamespace())
+                p = (
+
+                    types.SimpleNamespace(
+                        with_verb_data = None))
+
+                ds.perspectives = p
 
                 for argument in field.arguments:
 
-                    ds.perspectives = None
-                    break
+                    name_str = argument.name.value
+
+                    if name_str == 'with_verb_data':
+
+                        p.with_verb_data = (
+                            self.argument_value(argument))
+
+                    else:
+
+                        ds.perspectives = None
+                        break
 
                 if ds.perspectives:
 
@@ -2007,7 +2020,7 @@ class Language_Resolver(object):
 
                 self.published_condition_count += 1
 
-            # For aggregate count representation
+            # For aggregate count representation.
 
             empty_count_dict = {}
             self.aggregate_count_dict = {}
@@ -2471,9 +2484,17 @@ class Language_Resolver(object):
 
         # If we are going to get dictionaries, we save language info in a temporary table, unless we've got
         # dictionary ids directly from grant or organization.
+        #
+        # We also might need language info to trace language tree paths up to the root to enable proper
+        # ordering of languages in tree order or to get language / dictionary / perspective tree path info.
 
         if (ls.dictionaries and
-            not self.grant_or_organization_id):
+            not self.grant_or_organization_id
+
+            or
+
+            self.args.in_tree_order and
+            (self.args.id_list or self.args.only_in_toc)):
 
             self.language_table_name = (
 
@@ -2916,16 +2937,23 @@ class Language_Resolver(object):
         if self.debug_flag:
 
             log.debug(
-                '\n language_query:\n ' +
+                f'\n language_query ({len(result_list)} languages):\n ' +
                 render_statement(ls.query.statement))
 
         # Generating language tree data and dictionary counts, if required.
+
+        self.arbitrary_root_set = (
+
+            self.args.in_tree_order and
+            (self.args.id_list or self.args.only_in_toc))
 
         if (self.args.in_tree_order or
             ls.recursive_count_flag or
             self.grant_or_organization):
 
-            self.from_to_dict = collections.defaultdict(list)
+            if not self.arbitrary_root_set:
+
+                self.from_to_dict = collections.defaultdict(list)
 
             for result in result_list:
 
@@ -2945,7 +2973,13 @@ class Language_Resolver(object):
                     parent_id = (
                         result.parent_client_id, result.parent_object_id)
 
-                self.from_to_dict[parent_id].append(id)
+                # Processing language tree data, unless we don't have full paths to the language hierarchy
+                # root in our language set and we'll have to get fully traceable language set later and
+                # build language tree data from it.
+
+                if not self.arbitrary_root_set:
+
+                    self.from_to_dict[parent_id].append(id)
 
                 for name, count_dict in dictionary_count_dict.values():
 
@@ -3202,6 +3236,79 @@ class Language_Resolver(object):
 
                     f(to_id)
 
+            # Filtering languages explicitly or based on ToC status, an arbitrary number of tree roots, and
+            # we'll have to find them and traverse them in the right order, so we'll have to compile full
+            # language ordering info.
+
+            if (self.args.id_list or
+                self.args.only_in_toc):
+
+                base_cte = (
+
+                    DBSession
+
+                        .query(
+                            dbLanguage.client_id,
+                            dbLanguage.object_id,
+                            dbLanguage.parent_client_id,
+                            dbLanguage.parent_object_id,
+                            dbLanguage.additional_metadata)
+
+                        .filter(
+                            dbLanguage.client_id == language_table.c.client_id,
+                            dbLanguage.object_id == language_table.c.object_id)
+
+                        .cte(recursive = True))
+
+                recursive_query = (
+
+                    DBSession
+
+                        .query(
+                            dbLanguage.client_id,
+                            dbLanguage.object_id,
+                            dbLanguage.parent_client_id,
+                            dbLanguage.parent_object_id,
+                            dbLanguage.additional_metadata)
+
+                        .filter(
+                            dbLanguage.client_id == base_cte.c.parent_client_id,
+                            dbLanguage.object_id == base_cte.c.parent_object_id))
+
+                language_cte = (
+                    base_cte.union(recursive_query))
+
+                language_id_id_list = (
+
+                    DBSession
+
+                        .query(
+                            language_cte.c.client_id,
+                            language_cte.c.object_id,
+                            language_cte.c.parent_client_id,
+                            language_cte.c.parent_object_id)
+
+                        .order_by(
+                            language_cte.c.additional_metadata['younger_siblings'],
+                            language_cte.c.client_id.desc(),
+                            language_cte.c.object_id.desc())
+
+                        .all())
+
+                self.from_to_dict = collections.defaultdict(list)
+
+                for language_id_id in language_id_id_list:
+
+                    id = (
+                        language_id_id[0], language_id_id[1])
+
+                    parent_id = (
+                        language_id_id[2], language_id_id[3])
+
+                    self.from_to_dict[parent_id].append(id)
+
+            # Traversing language tree we have in the standard order, compiling final list of languages.
+
             root_id = (
 
                 tuple(self.args.language_id) if self.args.language_id else
@@ -3252,6 +3359,11 @@ class Language_Resolver(object):
                         f'\nreference_list:\n{pprint.pformat(reference_list, width = 192)}')
 
                     raise NotImplementedError
+
+        if self.debug_flag:
+
+            log.debug(
+                f'\nlen(gql_language_list): {len(gql_language_list)}')
 
         # Getting dictionaries, if required.
 
@@ -3601,6 +3713,52 @@ class Language_Resolver(object):
                     dbPerspective.parent_client_id,
                     dbPerspective.parent_object_id))
 
+            condition_list = [
+
+                parent_id_tuple.in_(
+
+                    DBSession.query(
+                        dictionary_table.c.client_id,
+                        dictionary_table.c.object_id)),
+
+                dbPerspective.marked_for_deletion == False]
+
+            if p.with_verb_data is not None:
+
+                with_accepted_cte = (
+
+                    DBSession
+
+                        .query(
+                            dbValencySourceData.perspective_client_id,
+                            dbValencySourceData.perspective_object_id)
+
+                        .filter(
+                            dbValencySourceData.id == dbValencySentenceData.source_id,
+                            dbValencySentenceData.id == dbValencyInstanceData.sentence_id,
+                            dbValencyInstanceData.id == dbValencyAnnotationData.instance_id,
+                            dbValencyAnnotationData.accepted == True)
+
+                        .group_by(
+                            dbValencySourceData.perspective_client_id,
+                            dbValencySourceData.perspective_object_id)
+
+                        .cte())
+
+                id_tuple = (
+
+                    tuple_(
+                        dbPerspective.client_id,
+                        dbPerspective.object_id))
+
+                condition_list.append(
+
+                    (id_tuple.in_ if p.with_verb_data else
+                        id_tuple.notin_)(
+
+                        DBSession.query(
+                            with_accepted_cte)))
+
             if ps.object_flag:
 
                 ps.column_list = [dbPerspective]
@@ -3613,14 +3771,7 @@ class Language_Resolver(object):
                         *ps.column_list)
 
                     .filter(
-
-                        parent_id_tuple.in_(
-
-                            DBSession.query(
-                                dictionary_table.c.client_id,
-                                dictionary_table.c.object_id)),
-
-                        dbPerspective.marked_for_deletion == False))
+                        *condition_list))
 
             ps.c = dbPerspective
 
@@ -4091,8 +4242,8 @@ class Query(graphene.ObjectType):
     dictionary = graphene.Field(Dictionary, id=LingvodocID())
     perspectives = graphene.List(Perspective,
         published=graphene.Boolean(),
-        only_with_phonology_data=graphene.Boolean(),
-        only_with_valency_data=graphene.Boolean())
+        with_phonology_data=graphene.Boolean(),
+        with_valency_data=graphene.Boolean())
     perspective = graphene.Field(Perspective, id=LingvodocID())
     entity = graphene.Field(Entity, id=LingvodocID())
     language = graphene.Field(Language, id=LingvodocID())
@@ -5785,8 +5936,8 @@ class Query(graphene.ObjectType):
         self,
         info,
         published = None,
-        only_with_phonology_data = None,
-        only_with_valency_data = None):
+        with_phonology_data = None,
+        with_valency_data = None):
         """
         example:
 
@@ -5843,7 +5994,7 @@ class Query(graphene.ObjectType):
         # Experiments have shown that filtering is faster through id in select group by than through exists
         # subquery. For previous exists-based filterting see the file's history.
 
-        if only_with_phonology_data:
+        if with_phonology_data is not None:
 
             dbMarkup = aliased(dbEntity, name = 'Markup')
             dbSound = aliased(dbEntity, name = 'Sound')
@@ -5881,24 +6032,28 @@ class Query(graphene.ObjectType):
                         dbLexicalEntry.parent_client_id,
                         dbLexicalEntry.parent_object_id))
 
+            id_tuple = (
+
+                tuple_(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id))
+
             perspective_query = (
 
                 perspective_query.filter(
 
-                    tuple_(
-                        dbPerspective.client_id,
-                        dbPerspective.object_id)
+                    (id_tuple.in_ if with_phonology_data else
+                        id_tuple.notin_)(
 
-                        .in_(
-                            DBSession.query(
-                                phonology_query.cte()))))
+                        DBSession.query(
+                            phonology_query.cte()))))
 
         # If required, filtering out perspectives without valency data.
         #
         # NOTE: We explicitly need a union, if we try to use an or condition, due to something or other in
         # PostgreSQL's planner query execution time jumps from 2 to 180 seconds, like what?
 
-        if only_with_valency_data:
+        if with_valency_data is not None:
 
             parser_result_query = (
 
@@ -5955,16 +6110,20 @@ class Query(graphene.ObjectType):
                 DBSession.query(eaf_corpus_query.cte()),
             ]
 
+            id_tuple = (
+
+                tuple_(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id))
+
             perspective_query = (
 
                 perspective_query.filter(
 
-                    tuple_(
-                        dbPerspective.client_id,
-                        dbPerspective.object_id)
+                    (id_tuple.in_ if with_valency_data else
+                        id_tuple.notin_)(
 
-                        .in_(
-                            union(*union_list))))
+                        union(*union_list))))
 
         log.debug(
             '\nperspective_query:\n' +
@@ -16276,6 +16435,10 @@ class CreateValencyData(graphene.Mutation):
         'nom', 'acc', 'gen', 'ad', 'abl', 'dat', 'ab', 'ins', 'car', 'term', 'cns', 'com', 'comp',
         'trans', 'sim', 'par', 'loc', 'prol', 'in', 'ill', 'el', 'egr',  'lat', 'allat']
 
+    case_index_dict = {
+        case: index
+        for index, case in enumerate(case_list)}
+
     class Arguments:
 
         perspective_id = LingvodocID(required = True)
@@ -17801,17 +17964,188 @@ class ValencyVerbCases(graphene.Mutation):
 
     class Arguments:
 
-        perspective_id = LingvodocID(required = True)
+        perspective_id = LingvodocID()
+        language_arg_list = ObjectVal()
+
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
-    verb_case_list = graphene.List(ObjectVal)
+    verb_data_list = graphene.List(ObjectVal)
     xlsx_url = graphene.String()
 
     @staticmethod
-    def mutate(root, info, **args):
+    def get_check_perspective(
+        perspective_id,
+        locale_id):
+        """
+        Checks that perspective actually exists and is not deleted.
+        """
+
+        perspective = (
+
+            DBSession
+
+                .query(dbPerspective)
+
+                .filter_by(
+                    client_id = perspective_id[0],
+                    object_id = perspective_id[1])
+
+                .first())
+
+        if not perspective:
+
+            raise (
+
+                ResponseError(
+                    message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
+
+        dictionary = perspective.parent
+
+        dictionary_name = dictionary.get_translation(locale_id)
+        perspective_name = perspective.get_translation(locale_id)
+
+        full_name = dictionary_name + ' \u203a ' + perspective_name
+
+        if dictionary.marked_for_deletion:
+
+            raise (
+
+                ResponseError(message =
+                    'Dictionary \'{}\' {}/{} of perspective \'{}\' is deleted.'.format(
+                        dictionary_name,
+                        dictionary.client_id,
+                        dictionary.object_id,
+                        perspective_name,
+                        perspective.client_id,
+                        perspective.object_id)))
+
+        if perspective.marked_for_deletion:
+
+            raise (
+
+                ResponseError(message =
+                    'Perspective \'{}\' {}/{} is deleted.'.format(
+                        full_name,
+                        perspective_id[0],
+                        perspective_id[1])))
+
+        return perspective
+
+    @staticmethod
+    def get_case_verb_sentence_list(
+        case_verb_dict):
+        """
+        Sorts case verb sentence data by cases and verbs.
+        """
+
+        case_verb_sentence_list = []
+
+        for case, verb_sentence_dict in (
+
+            sorted(
+                case_verb_dict.items(),
+                key = lambda item: CreateValencyData.case_index_dict[item[0]])):
+
+            verb_sentence_list = (
+                sorted(verb_sentence_dict.items()))
+
+            verb_list = [
+                verb
+                for verb, sentence_list in verb_sentence_list]
+
+            case_verb_sentence_list.append(
+                (case, verb_list, verb_sentence_list))
+
+        return case_verb_sentence_list
+
+    @staticmethod
+    def save_xlsx_file(
+        info,
+        workbook_stream,
+        debug_flag):
+        """
+        Saves XLSX file.
+        """
+
+        if debug_flag:
+
+            workbook_stream.seek(0)
+
+            with open('valency_verb_cases.xlsx', 'wb') as xlsx_file:
+                shutil.copyfileobj(workbook_stream, xlsx_file)
+
+        storage = (
+            info.context.request.registry.settings['storage'])
+
+        storage_temporary = storage['temporary']
+
+        host = storage_temporary['host']
+        bucket = storage_temporary['bucket']
+
+        minio_client = (
+
+            minio.Minio(
+                host,
+                access_key = storage_temporary['access_key'],
+                secret_key = storage_temporary['secret_key'],
+                secure = True))
+
+        current_time = time.time()
+
+        object_name = (
+
+            storage_temporary['prefix'] +
+
+            '/'.join((
+                'valency_verb_cases',
+                '{:.6f}'.format(current_time),
+                'valency_verb_cases.xlsx')))
+
+        object_length = (
+            workbook_stream.tell())
+
+        workbook_stream.seek(0)
+
+        (etag, version_id) = (
+
+            minio_client.put_object(
+                bucket,
+                object_name,
+                workbook_stream,
+                object_length))
+
+        url = (
+
+            '/'.join((
+                'https:/',
+                host,
+                bucket,
+                object_name)))
+
+        log.debug(
+            '\nobject_name:\n{}'
+            '\netag:\n{}'
+            '\nversion_id:\n{}'
+            '\nurl:\n{}'.format(
+                object_name,
+                etag,
+                version_id,
+                url))
+
+        return url
+
+    @staticmethod
+    def mutate(
+        root,
+        info,
+        perspective_id = None,
+        language_arg_list = None,
+        debug_flag = False):
 
         try:
+
+            # Checking user and arguments.
 
             client_id = info.context.get('client_id')
             client = DBSession.query(Client).filter_by(id = client_id).first()
@@ -17823,266 +18157,393 @@ class ValencyVerbCases(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can get valency verb cases info.'))
 
-            perspective_id = args['perspective_id']
-            debug_flag = args.get('debug_flag', False)
-
-            perspective = (
-                DBSession.query(dbPerspective).filter_by(
-                    client_id = perspective_id[0], object_id = perspective_id[1]).first())
-
-            if not perspective:
+            if perspective_id is None and language_arg_list is None:
 
                 return (
 
                     ResponseError(
-                        message = 'No perspective {}/{} in the system.'.format(*perspective_id)))
-
-            dictionary = perspective.parent
+                        message = 'Please specify either perspective or a set of languages.'))
 
             locale_id = info.context.get('locale_id') or 2
 
-            dictionary_name = dictionary.get_translation(locale_id)
-            perspective_name = perspective.get_translation(locale_id)
+            # For a single corpus.
 
-            full_name = dictionary_name + ' \u203a ' + perspective_name
+            if perspective_id is not None:
 
-            if dictionary.marked_for_deletion:
+                try:
 
-                return (
+                    perspective = (
 
-                    ResponseError(message =
-                        'Dictionary \'{}\' {}/{} of perspective \'{}\' is deleted.'.format(
-                            dictionary_name,
-                            dictionary.client_id,
-                            dictionary.object_id,
-                            perspective_name,
-                            perspective.client_id,
-                            perspective.object_id)))
+                        ValencyVerbCases.get_check_perspective(
+                            perspective_id, locale_id))
 
-            if perspective.marked_for_deletion:
+                except ResponseError as error:
 
-                return (
+                    return error
 
-                    ResponseError(message =
-                        'Perspective \'{}\' {}/{} is deleted.'.format(
-                            full_name,
-                            perspective_id[0],
-                            perspective_id[1])))
+                # Getting valency annotation data.
 
-            # Getting valency annotation data.
+                data_dict = (
+                    SaveValencyData.get_annotation_data(perspective_id))
 
-            data_dict = (
-                SaveValencyData.get_annotation_data(perspective_id))
+                verb_dict = (
+                    valency_verb_cases.verbs_case_str(
+                        data_dict, '__lang__', {}))
 
-            verb_dict = (
-                valency_verb_cases.verbs_case_str(
-                    data_dict, '__lang__', {}))
+                verb_dict_dict = (
 
-            verb_dict_dict = (
+                    collections.defaultdict(
+                        lambda: collections.defaultdict(
+                            lambda: collections.defaultdict(list))))
 
-                collections.defaultdict(
-                    lambda: collections.defaultdict(
-                        lambda: collections.defaultdict(list))))
+                for verb_xlat, case_dict in verb_dict.items():
 
-            for verb_xlat, case_dict in verb_dict.items():
+                    case_verb_dict = verb_dict_dict[verb_xlat]
 
-                case_verb_dict = verb_dict_dict[verb_xlat]
+                    for (verb_str, case_str), sentence_dict in case_dict['__lang__'].items():
 
-                for (verb_str, case_str), sentence_dict in case_dict['__lang__'].items():
+                        case_verb_dict[case_str][verb_str].extend(
+                            (sentence for index, sentence in sorted(sentence_dict.items())))
 
-                    case_verb_dict[case_str][verb_str].extend(
-                        (sentence for index, sentence in sorted(sentence_dict.items())))
+                # Sorting by verb translations and by cases.
 
-            # Sorting by verb translations and by cases.
+                verb_data_list = []
 
-            verb_case_list = []
+                for verb_xlat, case_verb_dict in sorted(verb_dict_dict.items()):
 
-            case_index_dict = {
-                case: index
-                for index, case in enumerate(CreateValencyData.case_list)}
+                    case_verb_sentence_list = (
+                        ValencyVerbCases.get_case_verb_sentence_list(case_verb_dict))
 
-            for verb_xlat, case_verb_dict in sorted(verb_dict_dict.items()):
+                    verb_list = (
 
-                case_verb_sentence_list = []
+                        sorted(
+                            set.union(
+                                *(set(verb_list)
+                                    for _, verb_list, _ in case_verb_sentence_list))))
 
-                for case, verb_sentence_dict in (
+                    verb_data_list.append(
+                        (verb_xlat, case_verb_sentence_list, verb_list))
 
-                    sorted(
-                        case_verb_dict.items(),
-                        key = lambda item: case_index_dict[item[0]])):
+                log.debug(
+                    '\nverb_case_list:\n' + 
+                    pprint.pformat(
+                        verb_data_list, width = 192))
 
-                    verb_sentence_list = (
-                        sorted(verb_sentence_dict.items()))
+                # Saving as XLSX file.
 
-                    verb_list = [
-                        verb
-                        for verb, sentence_list in verb_sentence_list]
+                workbook_stream = (
+                    io.BytesIO())
 
-                    case_verb_sentence_list.append(
-                        (case, verb_list, verb_sentence_list))
+                workbook = (
+                    xlsxwriter.Workbook(
+                        workbook_stream, {'in_memory': True}))
 
-                verb_list = (
+                worksheet = (
+                    workbook.add_worksheet(
+                        utils.sanitize_worksheet_name('Verb cases')))
 
-                    sorted(
-                        set.union(
-                            *(set(verb_list) for _, verb_list, _ in case_verb_sentence_list))))
+                worksheet.set_column(
+                    0, 0, 32)
 
-                verb_case_list.append(
-                    (verb_xlat, case_verb_sentence_list, verb_list))
+                worksheet.set_column(
+                    2, 2, 16)
 
-            log.debug(
-                '\nverb_case_list:\n' + 
-                pprint.pformat(
-                    verb_case_list, width = 192))
+                row_count = 0
 
-            # Saving as XLSX file.
+                for verb_xlat, case_verb_sentence_list, _ in verb_data_list:
 
-            workbook_stream = (
-                io.BytesIO())
-
-            workbook = (
-                xlsxwriter.Workbook(
-                    workbook_stream, {'in_memory': True}))
-
-            worksheet = (
-                workbook.add_worksheet(
-                    utils.sanitize_worksheet_name('Verb cases')))
-
-            worksheet.set_column(
-                0, 0, 32)
-
-            worksheet.set_column(
-                2, 2, 16)
-
-            row_count = 0
-
-            for verb_xlat, case_verb_sentence_list, _ in verb_case_list:
-
-                case, verb_list, _ = case_verb_sentence_list[0]
-
-                worksheet.write_row(
-                    row_count, 0, [verb_xlat, case, ', '.join(verb_list)])
-
-                row_count += 1
-
-                for case, verb_list, _ in case_verb_sentence_list[1:]:
+                    case, verb_list, _ = case_verb_sentence_list[0]
 
                     worksheet.write_row(
-                        row_count, 1, [case, ', '.join(verb_list)])
+                        row_count, 0, [verb_xlat, case, ', '.join(verb_list)])
 
                     row_count += 1
 
-            # With sentences.
+                    for case, verb_list, _ in case_verb_sentence_list[1:]:
 
-            worksheet = (
-                workbook.add_worksheet(
-                    utils.sanitize_worksheet_name('Verb cases and sentences')))
+                        worksheet.write_row(
+                            row_count, 1, [case, ', '.join(verb_list)])
 
-            worksheet.set_column(
-                0, 0, 32)
+                        row_count += 1
 
-            worksheet.set_column(
-                2, 2, 16)
+                # With sentences.
 
-            worksheet.set_column(
-                3, 3, 64)
+                worksheet = (
 
-            row_count = 0
+                    workbook.add_worksheet(
+                        utils.sanitize_worksheet_name('Verb cases and sentences')))
 
-            for verb_xlat, case_verb_sentence_list, _ in verb_case_list:
+                worksheet.set_column(
+                    0, 0, 32)
 
-                for case, _, verb_sentence_list in case_verb_sentence_list:
+                worksheet.set_column(
+                    2, 2, 16)
 
-                    for verb, sentence_list in verb_sentence_list:
+                worksheet.set_column(
+                    3, 3, 64)
 
-                        for sentence in sentence_list:
+                row_count = 0
+
+                for verb_xlat, case_verb_sentence_list, _ in verb_data_list:
+
+                    for case, _, verb_sentence_list in case_verb_sentence_list:
+
+                        for verb, sentence_list in verb_sentence_list:
+
+                            for sentence in sentence_list:
+
+                                worksheet.write_row(
+                                    row_count, 0, [verb_xlat, case, verb, sentence])
+
+                                if debug_flag:
+
+                                    log.debug([verb_xlat, case, verb, sentence])
+
+                                row_count += 1
+
+                                verb_xlat = ''
+                                case = ''
+                                verb = ''
+
+                workbook.close()
+
+                # Saving XLSX file, returning data.
+
+                xlsx_url = (
+
+                    ValencyVerbCases.save_xlsx_file(
+                        info,
+                        workbook_stream,
+                        debug_flag))
+
+                return (
+
+                    ValencyVerbCases(
+                        triumph = True,
+                        verb_data_list = verb_data_list,
+                        xlsx_url = xlsx_url))
+
+            # For corpora in a set of languages.
+
+            if language_arg_list is not None:
+
+                log.debug(
+                    '\nlanguage_arg_list:\n' +
+                    pprint.pformat(
+                        language_arg_list, width = 192))
+
+                # Processing all languages with their perspective sets.
+
+                verb_dict = {}
+
+                for language_id, perspective_id_list in language_arg_list:
+
+                    language = (
+
+                        DBSession
+
+                            .query(dbLanguage)
+
+                            .filter_by(
+                                client_id = language_id[0],
+                                object_id = language_id[1])
+
+                            .first())
+
+                    if not language:
+
+                        return (
+
+                            ResponseError(
+                                message = 'No language {}/{} in the system.'.format(*language_id)))
+
+                    language_name = (
+
+                        language.get_translation(
+                            locale_id))
+                    
+                    for perspective_id in perspective_id_list:
+
+                        try:
+
+                            perspective = (
+
+                                ValencyVerbCases.get_check_perspective(
+                                    perspective_id, locale_id))
+
+                        except ResponseError as error:
+
+                            return error
+
+                        data_dict = (
+
+                            SaveValencyData.get_annotation_data(
+                                perspective_id))
+
+                        verb_dict = (
+
+                            valency_verb_cases.verbs_case_str(
+                                data_dict,
+                                language_name,
+                                verb_dict))
+
+                # Processing gathered verb case data.
+
+                verb_dict_dict_dict = (
+
+                    collections.defaultdict(
+                        lambda: collections.defaultdict(
+                            lambda: collections.defaultdict(
+                                lambda: collections.defaultdict(list)))))
+
+                for verb_xlat, language_dict in verb_dict.items():
+
+                    language_case_verb_dict = (
+                        verb_dict_dict_dict[verb_xlat])
+
+                    for language_str, case_dict in language_dict.items():
+
+                        case_verb_dict = (
+                            language_case_verb_dict[language_str])
+
+                        for (verb_str, case_str), sentence_dict in case_dict.items():
+
+                            case_verb_dict[case_str][verb_str].extend(
+                                (sentence for index, sentence in sorted(sentence_dict.items())))
+
+                # Sorting by verb translations, languages and by cases.
+
+                verb_data_list = []
+
+                for verb_xlat, language_dict in sorted(verb_dict_dict_dict.items()):
+
+                    language_list = []
+
+                    for language_str, case_verb_dict in sorted(language_dict.items()):
+
+                        case_verb_sentence_list = (
+                            ValencyVerbCases.get_case_verb_sentence_list(case_verb_dict))
+
+                        language_list.append(
+                            (language_str, case_verb_sentence_list))
+
+                    verb_list = (
+
+                        sorted(
+                            set.union(
+                                *(set(verb_list)
+                                    for _, case_verb_sentence_list in language_list
+                                    for _, verb_list, _ in case_verb_sentence_list))))
+
+                    verb_data_list.append(
+                        (verb_xlat, language_list, verb_list))
+
+                log.debug(
+                    '\nverb_data_list:\n' + 
+                    pprint.pformat(
+                        verb_data_list, width = 192))
+
+                # Saving as XLSX file.
+
+                workbook_stream = (
+                    io.BytesIO())
+
+                workbook = (
+                    xlsxwriter.Workbook(
+                        workbook_stream, {'in_memory': True}))
+
+                worksheet = (
+                    workbook.add_worksheet(
+                        utils.sanitize_worksheet_name('Verb cases')))
+
+                worksheet.set_column(
+                    0, 0, 32)
+
+                worksheet.set_column(
+                    1, 1, 12)
+
+                worksheet.set_column(
+                    3, 3, 16)
+
+                row_count = 0
+
+                for verb_xlat, language_list, _ in verb_data_list:
+
+                    for language_str, case_verb_sentence_list in language_list:
+
+                        for case, verb_list, _ in case_verb_sentence_list:
 
                             worksheet.write_row(
-                                row_count, 0, [verb_xlat, case, verb, sentence])
-
-                            log.debug([verb_xlat, case, verb, sentence])
+                                row_count, 0, [verb_xlat, language_str, case, ', '.join(verb_list)])
 
                             row_count += 1
 
                             verb_xlat = ''
+                            language_str = ''
                             case = ''
-                            verb = ''
 
-            workbook.close()
+                # With sentences.
 
-            if debug_flag:
+                worksheet = (
 
-                workbook_stream.seek(0)
+                    workbook.add_worksheet(
+                        utils.sanitize_worksheet_name('Verb cases and sentences')))
 
-                with open('valency_verb_cases.xlsx', 'wb') as xlsx_file:
-                    shutil.copyfileobj(workbook_stream, xlsx_file)
+                worksheet.set_column(
+                    0, 0, 32)
 
-            # Saving XLSX file.
+                worksheet.set_column(
+                    1, 1, 12)
 
-            storage = (
-                info.context.request.registry.settings['storage'])
+                worksheet.set_column(
+                    3, 3, 16)
 
-            storage_temporary = storage['temporary']
+                worksheet.set_column(
+                    4, 4, 64)
 
-            host = storage_temporary['host']
-            bucket = storage_temporary['bucket']
+                row_count = 0
 
-            minio_client = (
+                for verb_xlat, language_list, _ in verb_data_list:
 
-                minio.Minio(
-                    host,
-                    access_key = storage_temporary['access_key'],
-                    secret_key = storage_temporary['secret_key'],
-                    secure = True))
+                    for language_str, case_verb_sentence_list in language_list:
 
-            current_time = time.time()
+                        for case, _, verb_sentence_list in case_verb_sentence_list:
 
-            object_name = (
+                            for verb, sentence_list in verb_sentence_list:
 
-                storage_temporary['prefix'] +
+                                for sentence in sentence_list:
 
-                '/'.join((
-                    'valency_verb_cases',
-                    '{:.6f}'.format(current_time),
-                    'valency_verb_cases.xlsx')))
+                                    worksheet.write_row(
+                                        row_count, 0, [verb_xlat, language_str, case, verb, sentence])
 
-            object_length = (
-                workbook_stream.tell())
+                                    if debug_flag:
 
-            workbook_stream.seek(0)
+                                        log.debug([verb_xlat, language_str, case, verb, sentence])
 
-            (etag, version_id) = (
+                                    row_count += 1
 
-                minio_client.put_object(
-                    bucket,
-                    object_name,
-                    workbook_stream,
-                    object_length))
+                                    verb_xlat = ''
+                                    language_str = ''
+                                    case = ''
+                                    verb = ''
 
-            url = (
+                workbook.close()
 
-                '/'.join((
-                    'https:/',
-                    host,
-                    bucket,
-                    object_name)))
+                # Saving XLSX file, returning data.
 
-            log.debug(
-                '\nobject_name:\n{}'
-                '\netag:\n{}'
-                '\nversion_id:\n{}'
-                '\nurl:\n{}'.format(
-                    object_name,
-                    etag,
-                    version_id,
-                    url))
+                xlsx_url = (
 
-            return (
+                    ValencyVerbCases.save_xlsx_file(
+                        info,
+                        workbook_stream,
+                        debug_flag))
 
-                ValencyVerbCases(
-                    triumph = True,
-                    verb_case_list = verb_case_list,
-                    xlsx_url = url))
+                return (
+
+                    ValencyVerbCases(
+                        triumph = True,
+                        verb_data_list = verb_data_list,
+                        xlsx_url = xlsx_url))
 
         except Exception as exception:
 

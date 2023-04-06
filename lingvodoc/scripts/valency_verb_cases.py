@@ -1,6 +1,6 @@
 
 __authors__ = [
-    'Mikhail',
+    'Mikhail Sokov',
     'Ivan Beloborodov']
 
 import ast
