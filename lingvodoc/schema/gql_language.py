@@ -117,8 +117,8 @@ class Language(LingvodocObjectType):
                 .query(dbDictionary)
                 
                 .filter_by(
-                    parent_client_id == self.id[0],
-                    parent_object_id == self.id[1])
+                    parent_client_id = self.id[0],
+                    parent_object_id = self.id[1])
                     
                 .order_by(
                     dbDictionary.created_at.desc(),
