@@ -116,12 +116,14 @@ class Language(LingvodocObjectType):
                 
                 .query(dbDictionary)
                 
-                .filter(
-                    dbDictionary.parent_client_id == self.id[0],
-                    dbDictionary.parent_object_id == self.id[1])
+                .filter_by(
+                    parent_client_id == self.id[0],
+                    parent_object_id == self.id[1])
                     
                 .order_by(
-                    dbDictionary.created_at.desc()))
+                    dbDictionary.created_at.desc(),
+                    dbDictionary.client_id.desc(),
+                    dbDictionary.object_id.desc()))
 
         if deleted is not None:
 

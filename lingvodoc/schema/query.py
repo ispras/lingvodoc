@@ -1166,7 +1166,11 @@ class Language_Resolver(object):
                     self.parse_dictionaries(
                         field.selection_set.selections)
 
+                    # Would need creation time to order dictionaries in a standard way, from newest to
+                    # oldest.
+
                     ds('id')
+                    ds('created_at')
 
                     ls('id')
                     ds('parent_id')
@@ -1317,7 +1321,10 @@ class Language_Resolver(object):
                     self.parse_perspectives(
                         field.selection_set.selections)
 
+                    # Would need creation time to order perspectives from older to newer.
+
                     ps('id')
+                    ps('created_at')
 
                     ds('id')
                     ps('parent_id')
@@ -3529,6 +3536,17 @@ class Language_Resolver(object):
                     'state_translation_gist_object_id',
                     'status_translations')
 
+            # Dictionaries go in standard order, from newest to oldest.
+
+            ds.query = (
+
+                ds.query
+
+                    .order_by(
+                        ds.c.created_at.desc(),
+                        ds.c.client_id.desc(),
+                        ds.c.object_id.desc()))
+
             # Getting and processing dictionary data.
 
             result_list = ds.query.all()
@@ -3890,6 +3908,17 @@ class Language_Resolver(object):
                     'state_translation_gist_client_id',
                     'state_translation_gist_object_id',
                     'status_translations')
+
+            # Perspectives go from older to newer.
+
+            ps.query = (
+
+                ps.query
+
+                    .order_by(
+                        ps.c.created_at,
+                        ps.c.client_id,
+                        ps.c.object_id))
 
             # Getting and processing perspective data.
 
