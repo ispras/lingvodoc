@@ -572,6 +572,8 @@ class Dictionary(LingvodocObjectType):  # tested
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
 
+        # Perspectives of the dictionary, from older to newer.
+
         child_persps_query = (
 
             DBSession
@@ -581,7 +583,12 @@ class Dictionary(LingvodocObjectType):  # tested
                 .filter_by(
                     parent_client_id = self.id[0],
                     parent_object_id = self.id[1],
-                    marked_for_deletion = False))
+                    marked_for_deletion = False)
+                    
+                .order_by(
+                    dbPerspective.created_at,
+                    dbPerspective.client_id,
+                    dbPerspective.object_id))
 
         # If required, filtering out pespectives without phonology data.
         #
