@@ -42,7 +42,9 @@ from lingvodoc.utils.deletion import real_delete_language
 from lingvodoc.utils.search import translation_gist_search
 
 # from lingvodoc.schema.gql_dictionary import Dictionary
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.util import identity_key
 from sqlalchemy import (
     func,
     or_,
@@ -260,11 +262,119 @@ class Language(LingvodocObjectType):
 
     @fetch_object('tree')
     def resolve_tree(self, info):
-        result = list()
-        iteritem = self.dbObject
+
+        #
+        # So this is an attempt to optimize tree retrieval, but apparently it does not always work faster.
+        #
+        # For a single language query, like 
+        # language(id: [33, 90]) { id translations tree { id translations } },
+        # it is faster.
+        #
+        # For many-language query like
+        # languages(only_in_toc: true) { id translations tree { id translations } }
+        # it is apparently slower.
+        #
+        # Looks like with many-language queries retrieving parents one by one takes full advantage of the
+        # SQLAlchemy identity map instance cache, while recursive retrieval, even with optimization of first
+        # trying to get from the cache, results in heavier DB usage and so is slower.
+        #
+        # So, if we would like to make getting trees faster for multi-language queries, we'll have to
+        # optimize retrieval of tree data when we efficiently get the queried languages.
+        #
+
+        if False:
+
+            result = [self]
+            parent_client_id, parent_object_id = self.dbObject.parent_id
+
+            # First trying to get instances from the SQLAlchemy identity map instance cache.
+
+            while parent_client_id is not None:
+
+                language_db = (
+                    DBSession.identity_map.get(
+                        identity_key(dbLanguage, (parent_object_id, parent_client_id))))
+
+                if not language_db:
+                    break
+
+                language = Language(id = (parent_client_id, parent_object_id))
+                language.dbObject = language_db
+
+                result.append(language)
+                parent_client_id, parent_object_id = language_db.parent_id
+
+            # Then, if we need, we retrieve any parent languages left all at once via recursive CTE query.
+
+            if parent_client_id is not None:
+
+                base_cte = (
+
+                    DBSession
+
+                        .query(
+                            dbLanguage)
+
+                        .filter(
+                            dbLanguage.client_id == parent_client_id,
+                            dbLanguage.object_id == parent_object_id)
+
+                        .cte(recursive = True))
+
+                recursive_query = (
+
+                    DBSession
+
+                        .query(
+                            dbLanguage)
+
+                        .filter(
+                            dbLanguage.client_id == base_cte.c.parent_client_id,
+                            dbLanguage.object_id == base_cte.c.parent_object_id))
+
+                language_list = (
+
+                    DBSession
+
+                        .query(
+                            aliased(
+                                dbLanguage,
+                                base_cte.union(recursive_query),
+                                adapt_on_names = True))
+
+                        .all())
+
+                language_dict = {
+                    language.id: language
+                    for language in language_list}
+
+                parent_id = (
+                    parent_client_id, parent_object_id)
+
+                while parent_id != (None, None):
+
+                    language_db = language_dict[parent_id]
+
+                    language = Language(id = parent_id)
+                    language.dbObject = language_db
+
+                    result.append(language)
+                    parent_id = language_db.parent_id
+
+            return result
+
+        # Simple per-object retrieval.
+
+        result = [self]
+        iteritem = self.dbObject.parent
+
         while iteritem:
-            id = [iteritem.client_id, iteritem.object_id]
-            result.append(Language(id=id))
+
+            language = Language(id = iteritem.id)
+            language.dbObject = iteritem
+
+            result.append(language)
+
             iteritem = iteritem.parent
 
         return result

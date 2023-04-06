@@ -23,6 +23,10 @@ from lingvodoc.models import (
     PublishingEntity as dbPublishingEntity,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
+    ValencySourceData as dbValencySourceData,
+    ValencySentenceData as dbValencySentenceData,
+    ValencyInstanceData as dbValencyInstanceData,
+    ValencyAnnotationData as dbValencyAnnotationData,
 )
 
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
@@ -136,7 +140,8 @@ class Dictionary(LingvodocObjectType):  # tested
 
     perspectives = graphene.List(
         'lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective',
-        only_with_phonology_data = graphene.Boolean())
+        with_phonology_data = graphene.Boolean(),
+        with_verb_data = graphene.Boolean())
 
     persp = graphene.Field('lingvodoc.schema.gql_dictionaryperspective.DictionaryPerspective')
     class Meta:
@@ -517,17 +522,10 @@ class Dictionary(LingvodocObjectType):  # tested
 
         from .gql_language import Language
 
-        result = list()
-        iteritem = self.dbObject
-        while iteritem:
-            id = [iteritem.client_id, iteritem.object_id]
-            if type(iteritem) == dbDictionary:
-                result.append(Dictionary(id=id))
-            if type(iteritem) == dbLanguage:
-                result.append(Language(id=id))
-            iteritem = iteritem.parent
+        language_db = self.dbObject.parent
+        language = Language(id = language_db.id)
 
-        return result
+        return [self] + language.resolve_tree(info)
 
     @fetch_object()
     def resolve_statistic(self, info, starting_time=None, ending_time=None):
@@ -565,18 +563,33 @@ class Dictionary(LingvodocObjectType):  # tested
         return new_format_statistics
 
     @fetch_object('perspectives')
-    def resolve_perspectives(self, info, only_with_phonology_data = None):
+    def resolve_perspectives(
+        self,
+        info,
+        with_phonology_data = None,
+        with_verb_data = None):
+
         if not self.id:
             raise ResponseError(message="Dictionary with such ID doesn`t exists in the system")
-        dictionary_client_id, dictionary_object_id = self.id
 
-        child_persps_query = DBSession.query(dbPerspective) \
-            .filter_by(parent_client_id=dictionary_client_id, parent_object_id=dictionary_object_id,
-                       marked_for_deletion=False)
+        child_persps_query = (
+
+            DBSession
+
+                .query(dbPerspective)
+
+                .filter_by(
+                    parent_client_id = self.id[0],
+                    parent_object_id = self.id[1],
+                    marked_for_deletion = False))
 
         # If required, filtering out pespectives without phonology data.
+        #
+        # Apparently, as comment in def resolve_perspectives() in query.py claims, filtering through id in
+        # select group by is faster than through exists subquery. But what about join group by? Maybe an
+        # experiment for later.
 
-        if only_with_phonology_data:
+        if with_phonology_data is not None:
 
             dbMarkup = aliased(dbEntity, name = 'Markup')
             dbSound = aliased(dbEntity, name = 'Sound')
@@ -614,17 +627,59 @@ class Dictionary(LingvodocObjectType):  # tested
                         dbLexicalEntry.parent_client_id,
                         dbLexicalEntry.parent_object_id))
 
+            id_tuple = (
+
+                tuple_(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id))
+
             child_persps_query = (
 
                 child_persps_query.filter(
 
-                    tuple_(
-                        dbPerspective.client_id,
-                        dbPerspective.object_id)
+                    (id_tuple.in_ if with_phonology_data else
+                        id_tuple.notin_)(
 
-                        .in_(
-                            DBSession.query(
-                                phonology_query.cte()))))
+                        DBSession.query(
+                            phonology_query.cte()))))
+
+        # If required, filtering out perspectives without accepted verb valency data.
+
+        if with_verb_data is not None:
+
+            accepted_query = (
+
+                DBSession
+
+                    .query(
+                        dbValencySourceData.perspective_client_id,
+                        dbValencySourceData.perspective_object_id)
+
+                    .filter(
+                        dbValencySourceData.id == dbValencySentenceData.source_id,
+                        dbValencySentenceData.id == dbValencyInstanceData.sentence_id,
+                        dbValencyInstanceData.id == dbValencyAnnotationData.instance_id,
+                        dbValencyAnnotationData.accepted == True)
+
+                    .group_by(
+                        dbValencySourceData.perspective_client_id,
+                        dbValencySourceData.perspective_object_id))
+
+            id_tuple = (
+
+                tuple_(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id))
+
+            child_persps_query = (
+
+                child_persps_query.filter(
+
+                    (id_tuple.in_ if with_verb_data else
+                        id_tuple.notin_)(
+
+                        DBSession.query(
+                            accepted_query.cte()))))
 
         perspectives = list()
         for persp in child_persps_query.all():
