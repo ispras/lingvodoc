@@ -397,11 +397,20 @@ class GqlStarling(graphene.Mutation):
             raise ResponseError(message="The starling_dictionaries variable is not set")
         cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
         sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
+
         task_names = []
-        for st_dict in starling_dictionaries:
-            # TODO: fix
-            task_names.append(st_dict.get("translation_atoms")[0].get("content"))
-        name = ",".join(task_names)
+
+        for index, st_dict in enumerate(starling_dictionaries):
+
+            translation_atoms = st_dict.get("translation_atoms")
+            default_name = f'dictionary {index + 1}'
+
+            task_names.append(
+                translation_atoms[0].get('content', default_name) if translation_atoms else
+                default_name)
+
+        name = ', '.join(task_names)
+
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
 
