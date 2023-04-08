@@ -18003,11 +18003,14 @@ class ValencyVerbCases(graphene.Mutation):
     xlsx_url = graphene.String()
 
     @staticmethod
-    def get_check_perspective(
+    def process_perspective(
         perspective_id,
-        locale_id):
+        locale_id,
+        verb_data_dict,
+        language_str,
+        debug_flag):
         """
-        Checks that perspective actually exists and is not deleted.
+        Gathers and accumulates valency verb case data of a perspective.
         """
 
         perspective = (
@@ -18059,7 +18062,111 @@ class ValencyVerbCases(graphene.Mutation):
                         perspective_id[0],
                         perspective_id[1])))
 
-        return perspective
+        if debug_flag:
+
+            log.debug(
+                '\nperspective '
+                f'{dictionary.id} {repr(dictionary_name)} '
+                f'{perspective.id} {repr(perspective_name)}')
+
+        # Getting data of accepted instances and their sentences.
+        #
+        # Instance is accepted if it has at least one acceptance annotation.
+
+        instance_list = (
+
+            DBSession
+
+                .query(
+                    dbValencyInstanceData)
+
+                .filter(
+                    dbValencyAnnotationData.accepted == True,
+                    dbValencyAnnotationData.instance_id == dbValencyInstanceData.id,
+                    dbValencyInstanceData.sentence_id == dbValencySentenceData.id,
+                    dbValencySentenceData.source_id == dbValencySourceData.id,
+                    dbValencySourceData.perspective_client_id == perspective_id[0],
+                    dbValencySourceData.perspective_object_id == perspective_id[1])
+
+                .group_by(
+                    dbValencyInstanceData.id)
+
+                .all())
+
+        sentence_id_set = (
+
+            set(
+                instance.sentence_id
+                for instance in instance_list))
+
+        sentence_list = []
+
+        if sentence_id_set:
+
+            sentence_list = (
+
+                DBSession
+
+                    .query(
+                        dbValencySentenceData)
+
+                    .filter(
+                        dbValencySentenceData.id.in_(
+
+                            utils.values_query(
+                                sentence_id_set, models.SLBigInteger)))
+
+                    .all())
+
+        sentence_dict = {
+            sentence.id: sentence
+            for sentence in sentence_list}
+
+        sentence_str_dict = {}
+
+        # Processing each instance.
+
+        for instance in instance_list:
+
+            sentence_id = (
+                instance.sentence_id)
+
+            sentence = (
+                sentence_dict[sentence_id])
+
+            token_list = (
+                sentence.data['tokens'])
+
+            verb_xlat = (
+
+                token_list[
+                    sentence.data['instances'][instance.index]['location'][0]][
+                    'trans_ru']
+
+                    or instance.verb_lex)
+
+            sentence_str = (
+                sentence_str_dict.get(sentence_id))
+
+            if sentence_str is None:
+
+                sentence_str = (
+
+                    valency_verb_cases.get_sentence_str(
+                        token_list))
+
+                sentence_str_dict[sentence_id] = (
+                    sentence_str)
+
+            # Relying on Python dictionary insertion order preservation (assumption valid starting with
+            # Python 3.7).
+
+            verb_data_dict[
+                verb_xlat][
+                language_str][
+                instance.case_str][
+                instance.verb_lex][
+                sentence_str] = None
 
     @staticmethod
     def get_case_verb_sentence_list(
@@ -18077,7 +18184,10 @@ class ValencyVerbCases(graphene.Mutation):
                 key = lambda item: CreateValencyData.case_index_dict[item[0]])):
 
             verb_sentence_list = (
-                sorted(verb_sentence_dict.items()))
+
+                sorted(
+                    (verb, list(sentence_dict.keys()))
+                    for verb, sentence_dict in verb_sentence_dict.items()))
 
             verb_list = [
                 verb
@@ -18199,49 +18309,41 @@ class ValencyVerbCases(graphene.Mutation):
 
             if perspective_id is not None:
 
+                verb_data_dict = (
+
+                    collections.defaultdict(
+                        lambda: collections.defaultdict(
+                            lambda: collections.defaultdict(
+                                lambda: collections.defaultdict(dict)))))
+
                 try:
 
-                    perspective = (
-
-                        ValencyVerbCases.get_check_perspective(
-                            perspective_id, locale_id))
+                    ValencyVerbCases.process_perspective(
+                        perspective_id,
+                        locale_id,
+                        verb_data_dict,
+                        None,
+                        debug_flag)
 
                 except ResponseError as error:
 
                     return error
 
-                # Getting valency annotation data.
+                if debug_flag:
 
-                data_dict = (
-                    SaveValencyData.get_annotation_data(perspective_id))
-
-                verb_dict = (
-                    valency_verb_cases.verbs_case_str(
-                        data_dict, '__lang__', {}))
-
-                verb_dict_dict = (
-
-                    collections.defaultdict(
-                        lambda: collections.defaultdict(
-                            lambda: collections.defaultdict(list))))
-
-                for verb_xlat, case_dict in verb_dict.items():
-
-                    case_verb_dict = verb_dict_dict[verb_xlat]
-
-                    for (verb_str, case_str), sentence_dict in case_dict['__lang__'].items():
-
-                        case_verb_dict[case_str][verb_str].extend(
-                            (sentence for index, sentence in sorted(sentence_dict.items())))
-
-                # Sorting by verb translations and by cases.
+                    log.debug(
+                        '\nverb_data_dict:\n' +
+                        pprint.pformat(
+                            verb_data_dict, width = 192))
 
                 verb_data_list = []
 
-                for verb_xlat, case_verb_dict in sorted(verb_dict_dict.items()):
+                for verb_xlat, language_dict in sorted(verb_data_dict.items()):
+
+                    case_verb_sentence_dict = language_dict[None]
 
                     case_verb_sentence_list = (
-                        ValencyVerbCases.get_case_verb_sentence_list(case_verb_dict))
+                        ValencyVerbCases.get_case_verb_sentence_list(case_verb_sentence_dict))
 
                     verb_list = (
 
@@ -18253,10 +18355,12 @@ class ValencyVerbCases(graphene.Mutation):
                     verb_data_list.append(
                         (verb_xlat, case_verb_sentence_list, verb_list))
 
-                log.debug(
-                    '\nverb_case_list:\n' + 
-                    pprint.pformat(
-                        verb_data_list, width = 192))
+                if debug_flag:
+
+                    log.debug(
+                        '\nverb_data_list:\n' + 
+                        pprint.pformat(
+                            verb_data_list, width = 192))
 
                 # Saving as XLSX file.
 
@@ -18363,7 +18467,12 @@ class ValencyVerbCases(graphene.Mutation):
 
                 # Processing all languages with their perspective sets.
 
-                verb_dict = {}
+                verb_data_dict = (
+
+                    collections.defaultdict(
+                        lambda: collections.defaultdict(
+                            lambda: collections.defaultdict(
+                                lambda: collections.defaultdict(dict)))))
 
                 for language_id, perspective_id_list in language_arg_list:
 
@@ -18390,68 +18499,40 @@ class ValencyVerbCases(graphene.Mutation):
 
                         language.get_translation(
                             locale_id))
+
+                    if debug_flag:
+
+                        log.debug(
+                            f'\nlanguage {language.id} {repr(language_name)}')
                     
                     for perspective_id in perspective_id_list:
 
                         try:
 
-                            perspective = (
-
-                                ValencyVerbCases.get_check_perspective(
-                                    perspective_id, locale_id))
+                            ValencyVerbCases.process_perspective(
+                                perspective_id,
+                                locale_id,
+                                verb_data_dict,
+                                language_name,
+                                debug_flag)
 
                         except ResponseError as error:
 
                             return error
 
-                        data_dict = (
-
-                            SaveValencyData.get_annotation_data(
-                                perspective_id))
-
-                        verb_dict = (
-
-                            valency_verb_cases.verbs_case_str(
-                                data_dict,
-                                language_name,
-                                verb_dict))
-
-                # Processing gathered verb case data.
-
-                verb_dict_dict_dict = (
-
-                    collections.defaultdict(
-                        lambda: collections.defaultdict(
-                            lambda: collections.defaultdict(
-                                lambda: collections.defaultdict(list)))))
-
-                for verb_xlat, language_dict in verb_dict.items():
-
-                    language_case_verb_dict = (
-                        verb_dict_dict_dict[verb_xlat])
-
-                    for language_str, case_dict in language_dict.items():
-
-                        case_verb_dict = (
-                            language_case_verb_dict[language_str])
-
-                        for (verb_str, case_str), sentence_dict in case_dict.items():
-
-                            case_verb_dict[case_str][verb_str].extend(
-                                (sentence for index, sentence in sorted(sentence_dict.items())))
-
-                # Sorting by verb translations, languages and by cases.
+                # Processing gathered verb case data, sorting by verb translations, languaged, cases and
+                # verb lexemes.
 
                 verb_data_list = []
 
-                for verb_xlat, language_dict in sorted(verb_dict_dict_dict.items()):
+                for verb_xlat, language_dict in sorted(verb_data_dict.items()):
 
                     language_list = []
 
-                    for language_str, case_verb_dict in sorted(language_dict.items()):
+                    for language_str, case_verb_sentence_dict in language_dict.items():
 
                         case_verb_sentence_list = (
-                            ValencyVerbCases.get_case_verb_sentence_list(case_verb_dict))
+                            ValencyVerbCases.get_case_verb_sentence_list(case_verb_sentence_dict))
 
                         language_list.append(
                             (language_str, case_verb_sentence_list))
@@ -18467,10 +18548,12 @@ class ValencyVerbCases(graphene.Mutation):
                     verb_data_list.append(
                         (verb_xlat, language_list, verb_list))
 
-                log.debug(
-                    '\nverb_data_list:\n' + 
-                    pprint.pformat(
-                        verb_data_list, width = 192))
+                if debug_flag:
+
+                    log.debug(
+                        '\nverb_data_list:\n' + 
+                        pprint.pformat(
+                            verb_data_list, width = 192))
 
                 # Saving as XLSX file.
 
