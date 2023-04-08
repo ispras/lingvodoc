@@ -5,8 +5,9 @@ __authors__ = [
 
 import ast
 import json
-import sys
+import re
 from textwrap import indent
+import sys
 
 #list_of_input_jsons = {'1':'UdmurtskyTexts.json','2':'KomiTexts.json'}
 #list_of_input_jsons = {'1':'KomiTexts.json'}
@@ -14,7 +15,8 @@ list_of_input_jsons = {'1':'Komi_data.json','2':'Udmurtsky_data.json', '3':'Erzy
 
 def get_sentence_str(token_dict_list):
     """
-    Reconstructs sentence text from a its token data as in verbs_case_str().
+    Reconstructs sentence text from a its token data as in verbs_case_str(), with additional adjustment for
+    non-parsed tokens.
     """
 
     token_str_list = []
@@ -26,9 +28,13 @@ def get_sentence_str(token_dict_list):
 
         token = token_dict['token']
 
-        token_str_list.append(
-            token if len(token_dict) == 1 or index == token_count - 1 else
-            token + ' ')
+        if (index > 0 and
+            (len(token_dict) > 1 or re.search(r'\w', token))and
+            index < token_count - 1):
+
+            token_str_list.append(' ')
+
+        token_str_list.append(token)
 
     return ''.join(token_str_list)
 
