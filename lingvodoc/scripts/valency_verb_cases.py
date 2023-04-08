@@ -12,6 +12,26 @@ from textwrap import indent
 #list_of_input_jsons = {'1':'KomiTexts.json'}
 list_of_input_jsons = {'1':'Komi_data.json','2':'Udmurtsky_data.json', '3':'Erzyansky_data.json', '4':'Mokshansky_data.json'}
 
+def get_sentence_str(token_dict_list):
+    """
+    Reconstructs sentence text from a its token data as in verbs_case_str().
+    """
+
+    token_str_list = []
+
+    token_count = (
+        len(token_dict_list))
+
+    for index, token_dict in enumerate(token_dict_list):
+
+        token = token_dict['token']
+
+        token_str_list.append(
+            token if len(token_dict) == 1 or index == token_count - 1 else
+            token + ' ')
+
+    return ''.join(token_str_list)
+
 def verbs_case_str(arx_data, lang, verb_list):
 
     s_ends = {'.', '!',  '?', '...', '?!', '...»'}
