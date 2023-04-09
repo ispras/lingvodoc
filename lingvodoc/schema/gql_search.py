@@ -438,6 +438,86 @@ def get_markup_field_cte(session):
             .cte())
 
 
+def get_perspectives_dictionaries(res_lexical_entries):
+    """
+    Gets perspectives and dictionaries of the search result from its lexical entries.
+    """
+
+    perspective_ids = (
+
+        set(
+            lexical_entry.dbObject.parent_id
+            for lexical_entry in res_lexical_entries))
+
+    if len(perspective_ids) > 2:
+        perspective_ids = ids_to_id_query(perspective_ids)
+
+    perspective_query = (
+
+        DBSession
+
+            .query(
+                dbPerspective)
+
+            .filter(
+
+                tuple_(
+                    dbPerspective.client_id,
+                    dbPerspective.object_id)
+
+                    .in_(
+                        perspective_ids)))
+
+    log.debug(
+        '\n perspective_query:\n ' +
+        str(perspective_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+    perspective_list = (
+        perspective_query.all())
+
+    res_perspectives = [
+        graphene_obj(perspective, Perspective)
+        for perspective in perspective_list]
+
+    dictionary_ids = (
+
+        set(
+            perspective.dbObject.parent_id
+            for perspective in res_perspectives))
+
+    if len(dictionary_ids) > 2:
+        dictionary_ids = ids_to_id_query(dictionary_ids)
+
+    dictionary_query = (
+
+        DBSession
+
+            .query(
+                dbDictionary)
+
+            .filter(
+
+                tuple_(
+                    dbDictionary.client_id,
+                    dbDictionary.object_id)
+
+                    .in_(
+                        dictionary_ids)))
+
+    log.debug(
+        '\n dictionary_query:\n ' +
+        str(dictionary_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+    dictionary_list = (
+        dictionary_query.all())
+
+    res_dictionaries = [
+        graphene_obj(dictionary, Dictionary)
+        for dictionary in dictionary_list]
+
+    return res_perspectives, res_dictionaries
+
+
 def search_mechanism(
     dictionaries,
     category,
@@ -447,9 +527,7 @@ def search_mechanism(
     adopted,
     etymology,
     diacritics,
-    yield_batch_count,
     category_field_cte_query,
-    xlsx_context = None,
     load_entities = True,
     __debug_flag__ = False):
 
@@ -553,7 +631,7 @@ def search_mechanism(
             res_dictionaries = [
                 graphene_obj(dbdict, Dictionary) for dbdict in dictionary_list]
 
-            return [], result_lexical_entries, res_perspectives, res_dictionaries
+            return result_lexical_entries, res_perspectives, res_dictionaries
 
     lexes = (
 
@@ -572,7 +650,9 @@ def search_mechanism(
                 tuple_(
                     dbPerspective.parent_client_id,
                     dbPerspective.parent_object_id)
-                    .in_(DBSession.query(dictionaries.cte()))))
+
+                    .in_(
+                        DBSession.query(dictionaries.cte()))))
 
     if adopted is not None or etymology is not None:
         lexes.join(dbLexicalEntry.entity)
@@ -704,8 +784,6 @@ def search_mechanism(
                         xform_func(dbEntity.additional_metadata['bag_of_words'].astext)
                             .op('~*')(xform_func(search_string["search_string"])))
 
-    # all_entity_content_filter = and_(or_(*all_entity_content_filter))
-
     if fields_flag and category == 0:
 
         all_block_field_cte = ids_to_id_cte(all_block_field_set)
@@ -742,6 +820,7 @@ def search_mechanism(
                     .in_(category_field_cte_query)))
 
     # filter unused entitities
+
     field_filter = True
     select_query = []
     if field_filter:
@@ -767,12 +846,8 @@ def search_mechanism(
                 *published_filter,
                 all_entity_content_filter).cte()  # only published entities
 
-    # persp filter
-    #DBSession.query(dbLexicalEntry).filter(dbLexicalEntry.parent_client_id, dbLexicalEntry.parent_object_id)
-
-
-
     # old mechanism + cte
+
     full_or_block = list()
 
     for search_block in search_strings:
@@ -959,11 +1034,11 @@ def search_mechanism(
 
                 pickle.dump(([], [], []), search_data_file)
 
-        return [], [], [], []
+        return [], [], []
 
     if load_entities:
 
-        result_lexical_entries = (
+        res_lexical_entries = (
 
             # Don't need to check for perspective deletion, we explicitly look only in undeleted dictionaries
             # and undeleted perspectives.
@@ -978,59 +1053,12 @@ def search_mechanism(
 
     else:
 
-        result_lexical_entries = [graphene_obj(entry, LexicalEntry) for entry in resolved_search]
+        res_lexical_entries = [
+            graphene_obj(lexical_entry, LexicalEntry)
+            for lexical_entry in resolved_search]
 
-    perspective_ids = (
-        set(le.dbObject.parent_id for le in result_lexical_entries))
-
-    if len(perspective_ids) > 2:
-        perspective_ids = ids_to_id_query(perspective_ids)
-
-    tmp_perspectives_query = (
-
-        DBSession
-
-            .query(
-                dbPerspective)
-
-            .filter(
-                tuple_(
-                    dbPerspective.client_id,
-                    dbPerspective.object_id)
-                    .in_(perspective_ids)))
-
-    log.debug(
-        '\n tmp_perspectives_query:\n ' +
-        str(tmp_perspectives_query.statement.compile(compile_kwargs = {"literal_binds": True})))
-
-    tmp_perspectives = tmp_perspectives_query.all()
-    res_perspectives = [graphene_obj(dbpersp, Perspective) for dbpersp in tmp_perspectives]
-
-    dictionary_ids = (
-        set(le.dbObject.parent_id for le in res_perspectives))
-
-    if len(dictionary_ids) > 2:
-        dictionary_ids = ids_to_id_query(dictionary_ids)
-
-    tmp_dictionaries_query = (
-
-        DBSession
-
-            .query(
-                dbDictionary)
-
-            .filter(
-                tuple_(
-                    dbDictionary.client_id,
-                    dbDictionary.object_id)
-                    .in_(dictionary_ids)))
-
-    log.debug(
-        '\n tmp_dictionaries_query:\n ' +
-        str(tmp_dictionaries_query.statement.compile(compile_kwargs = {"literal_binds": True})))
-
-    tmp_dictionaries = tmp_dictionaries_query.all()
-    res_dictionaries = [graphene_obj(dbdict, Dictionary) for dbdict in tmp_dictionaries]
+    res_perspectives, res_dictionaries = (
+        get_perspectives_dictionaries(res_lexical_entries))
 
     # Saving search results data, if required.
 
@@ -1042,56 +1070,63 @@ def search_mechanism(
             search_data = (
 
                 sorted(
-                    (entry.client_id, entry.object_id)
-                    for entry in resolved_search),
+                    lexical_entry.dbObject.id
+                    for lexical_entry in res_lexical_entries),
 
                 sorted(
-                    (perspective.client_id, perspective.object_id)
-                    for perspective in tmp_perspectives),
+                    perspective.dbObject.id
+                    for perspective in res_perspectives),
 
                 sorted(
-                    (dictionary.client_id, dictionary.object_id)
-                    for dictionary in tmp_dictionaries))
+                    dictionary.dbObject.id
+                    for dictionary in res_dictionaries))
 
             pickle.dump(
                 search_data, search_data_file)
 
-    return [], result_lexical_entries, res_perspectives, res_dictionaries
+    return res_lexical_entries, res_perspectives, res_dictionaries
+
 
 def search_mechanism_simple(
     dictionaries,
     category,
-    state_gist_id,
-    limited_gist_id,
     search_strings,
     publish,
     accept,
     adopted,
     etymology,
-    yield_batch_count,
-    category_field_cte_query,
-    xlsx_context = None):
+    category_field_cte_query):
 
-    state_translation_gist_client_id, state_translation_gist_object_id = state_gist_id
-    limited_client_id, limited_object_id = limited_gist_id
-    dictionaries = dictionaries.filter(dbDictionary.category == category)
-    if publish:
-        dictionaries = dictionaries.filter(dbDictionary.marked_for_deletion == False).filter(
-            or_(and_(dbDictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                     dbDictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                and_(dbDictionary.state_translation_gist_object_id == limited_object_id,
-                     dbDictionary.state_translation_gist_client_id == limited_client_id))). \
-            join(dbPerspective) \
-            .filter(or_(
-            and_(dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                 dbPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-            and_(dbPerspective.state_translation_gist_object_id == limited_object_id,
-                 dbPerspective.state_translation_gist_client_id == limited_client_id))). \
-            filter(dbPerspective.marked_for_deletion == False)
-    lexes = DBSession.query(dbLexicalEntry.client_id, dbLexicalEntry.object_id).join(dbLexicalEntry.parent) \
-        .join(dbPerspective.parent) \
-        .filter(dbLexicalEntry.marked_for_deletion==False,
-                tuple_(dbDictionary.client_id, dbDictionary.object_id).in_(dictionaries))
+    # Empty list of AND conditions means no results.
+
+    if not search_strings:
+
+        return [], [], []
+
+    dictionaries = (
+
+        dictionaries.filter(
+            dbDictionary.category == category))
+
+    lexes = (
+
+        DBSession
+
+            .query(
+                dbLexicalEntry)
+
+            .filter(
+                dbLexicalEntry.marked_for_deletion == False,
+                dbLexicalEntry.parent_client_id == dbPerspective.client_id,
+                dbLexicalEntry.parent_object_id == dbPerspective.object_id,
+                dbPerspective.marked_for_deletion == False,
+
+                tuple_(
+                    dbPerspective.parent_client_id,
+                    dbPerspective.parent_object_id)
+
+                    .in_(
+                        DBSession.query(dictionaries.cte()))))
 
     if adopted is not None or etymology is not None:
         lexes.join(dbLexicalEntry.entity)
@@ -1109,15 +1144,23 @@ def search_mechanism_simple(
             else:
                 lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
 
-    aliases = list()
+    publish_or_accept = (
+        publish is not None and
+        accept is not None)
+
     and_block = list()
+
     for search_block in search_strings:
+
         cur_dbEntity = aliased(dbEntity)
-        cur_dbPublishingEntity = aliased(dbPublishingEntity)
-        aliases.append(cur_dbEntity)
-        aliases.append(cur_dbPublishingEntity)
-        # add entity alias in aliases
+
+        and_block.extend((
+            cur_dbEntity.marked_for_deletion == False,
+            cur_dbEntity.parent_client_id == dbLexicalEntry.client_id,
+            cur_dbEntity.parent_object_id == dbLexicalEntry.object_id))
+
         or_block = list()
+
         for search_string in search_block:
             inner_and_block = list()
             if search_string.get('field_id'):
@@ -1149,52 +1192,48 @@ def search_mechanism_simple(
                 raise ResponseError(message='wrong matching_type')
 
             or_block.append(and_(*inner_and_block))
-        if publish is not None:
-            and_block.append(cur_dbPublishingEntity.published == publish)
-        if accept is not None:
-            and_block.append(cur_dbPublishingEntity.accepted == accept)
-        and_block.append(cur_dbEntity.marked_for_deletion == False)
-        and_block.append(cur_dbEntity.client_id == cur_dbPublishingEntity.client_id)
-        and_block.append(cur_dbEntity.object_id == cur_dbPublishingEntity.object_id)
-        and_block.append(cur_dbEntity.parent_client_id == dbLexicalEntry.client_id)
-        and_block.append(cur_dbEntity.parent_object_id == dbLexicalEntry.object_id)
+
         and_block.append(or_(*or_block))
-    and_block.append(dbLexicalEntry.parent_client_id == dbPerspective.client_id)
-    and_block.append(dbLexicalEntry.parent_object_id == dbPerspective.object_id)
-    and_block.append(dbPerspective.parent_client_id == dbDictionary.client_id)
-    and_block.append(dbPerspective.parent_object_id == dbDictionary.object_id)
-    and_block = and_(*and_block)
-    aliases_len = len(aliases)
-    aliases.append(dbLexicalEntry)
-    aliases.append(dbPerspective)
-    aliases.append(dbDictionary)
 
-    search = DBSession.query(*aliases).filter(and_block, tuple_(dbLexicalEntry.client_id, dbLexicalEntry.object_id).in_(
-        lexes)).yield_per(yield_batch_count)
-    resolved_search = [entity for entity in search]
+        if publish_or_accept:
 
-    def graphene_entity(entity, publishing):
-        ent = Entity(id=(entity.client_id, entity.object_id))
-        ent.dbObject = entity
-        ent.publishingentity = publishing
-        return ent
+            cur_dbPublishingEntity = aliased(dbPublishingEntity)
 
+            and_block.extend((
+                cur_dbPublishingEntity.client_id == cur_dbEntity.client_id,
+                cur_dbPublishingEntity.object_id == cur_dbEntity.object_id))
 
-    full_entities_and_publishing = set()
-    for i in range(int(aliases_len / 2)):
-        counter = i * 2
-        entities_and_publishing = {(entity[counter], entity[counter+1]) for entity in resolved_search}
-        full_entities_and_publishing |= entities_and_publishing
+            if publish is not None:
+                and_block.append(cur_dbPublishingEntity.published == publish)
 
-    # res_entities = [graphene_entity(entity[0], entity[1]) for entity in full_entities_and_publishing]
-    tmp_lexical_entries = {entity[aliases_len ] for entity in resolved_search}
-    res_lexical_entries = [graphene_obj(ent, LexicalEntry) for ent in tmp_lexical_entries]
-    tmp_perspectives = {entity[aliases_len + 1] for entity in resolved_search}
-    res_perspectives = [graphene_obj(ent, Perspective) for ent in tmp_perspectives]
-    tmp_dictionaries = {entity[aliases_len + 2] for entity in resolved_search}
-    res_dictionaries = [graphene_obj(ent, Dictionary) for ent in tmp_dictionaries]
+            if accept is not None:
+                and_block.append(cur_dbPublishingEntity.accepted == accept)
 
-    return [], res_lexical_entries, res_perspectives, res_dictionaries
+    entry_query = (
+
+        lexes.filter(
+            and_(*and_block)))
+
+    # Showing overall entry query.
+
+    log.info(
+        '\n entry_query:\n ' +
+        str(entry_query.statement.compile(compile_kwargs = {"literal_binds": True})))
+
+    resolved_search = entry_query.all()
+
+    if not resolved_search:
+
+        return [], [], []
+
+    res_lexical_entries = [
+        graphene_obj(lexical_entry, LexicalEntry)
+        for lexical_entry in resolved_search]
+
+    res_perspectives, res_dictionaries = (
+        get_perspectives_dictionaries(res_lexical_entries))
+
+    return res_lexical_entries, res_perspectives, res_dictionaries
 
 
 def dictionaries_with_audio_id_cte():
@@ -1318,6 +1357,7 @@ class AdvancedSearch(LingvodocObjectType):
             for block in search_strings:
 
                 if not block:
+
                     return ResponseError('Empty AND blocks in OR mode are not allowed.')
 
                 for condition in block:
@@ -1335,8 +1375,6 @@ class AdvancedSearch(LingvodocObjectType):
                             return ResponseError('Too broad search regular expressions are not allowed.')
 
             # Preparing the search.
-
-            yield_batch_count = 200
 
             dictionaries = (
 
@@ -1656,7 +1694,6 @@ class AdvancedSearch(LingvodocObjectType):
                         perspectives = gql_perspective_list,
                         dictionaries = gql_dictionary_list))
 
-            res_entities = list()
             res_lexical_entries = list()
             res_perspectives = list()
             res_dictionaries = list()
@@ -1677,7 +1714,7 @@ class AdvancedSearch(LingvodocObjectType):
 
             if category != 1:
 
-                res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
+                res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
                     dictionaries=dictionaries,
                     category=0,
                     search_strings=search_strings,
@@ -1687,8 +1724,6 @@ class AdvancedSearch(LingvodocObjectType):
                     etymology=etymology,
                     diacritics=diacritics,
                     category_field_cte_query=DBSession.query(get_text_field_cte(DBSession)),
-                    yield_batch_count=yield_batch_count,
-                    xlsx_context=xlsx_context,
                     load_entities=load_entities,
                     __debug_flag__=__debug_flag__
                 )
@@ -1697,7 +1732,7 @@ class AdvancedSearch(LingvodocObjectType):
 
             if category != 0:
 
-                tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
+                tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
                     dictionaries=dictionaries,
                     category=1,
                     search_strings=search_strings,
@@ -1707,13 +1742,10 @@ class AdvancedSearch(LingvodocObjectType):
                     etymology=etymology,
                     diacritics=diacritics,
                     category_field_cte_query=DBSession.query(get_markup_field_cte(DBSession)),
-                    yield_batch_count=yield_batch_count,
-                    xlsx_context=xlsx_context,
                     load_entities=load_entities,
                     __debug_flag__=__debug_flag__
                 )
 
-                res_entities += tmp_entities
                 res_lexical_entries += tmp_lexical_entries
                 res_perspectives += tmp_perspectives
                 res_dictionaries += tmp_dictionaries
@@ -1777,7 +1809,7 @@ class AdvancedSearch(LingvodocObjectType):
             return (
 
                 cls(
-                    entities = res_entities,
+                    entities = [],
                     lexical_entries = res_lexical_entries,
                     perspectives = res_perspectives,
                     dictionaries = res_dictionaries,
@@ -1823,198 +1855,230 @@ class AdvancedSearchSimple(LingvodocObjectType):
         cognates_flag = True,
         __debug_flag__ = False):
 
-        # Checking for too permissive search conditions.
+        try:
 
-        for block in search_strings:
+            # Checking for too permissive search conditions.
 
-            for condition in block:
+            for block in search_strings:
 
-                matching_type = condition.get('matching_type')
+                if not block:
 
-                if matching_type == 'substring':
+                    return ResponseError('Empty OR blocks in AND mode are not allowed.')
 
-                    if condition['search_string'] == '':
-                        return ResponseError('Empty search substrings are not allowed.')
+                for condition in block:
 
-                elif matching_type == 'regexp':
+                    matching_type = condition.get('matching_type')
 
-                    if condition['search_string'] in regexp_check_set:
-                        return ResponseError('Too broad search regular expressions are not allowed.')
+                    if matching_type == 'substring':
 
-        # Preparing the search.
+                        if condition['search_string'] == '':
+                            return ResponseError('Empty search substrings are not allowed.')
 
-        yield_batch_count = 200
+                    elif matching_type == 'regexp':
 
-        dictionaries = (
+                        if condition['search_string'] in regexp_check_set:
+                            return ResponseError('Too broad search regular expressions are not allowed.')
 
-            DBSession
-
-                .query(
-                    dbDictionary.client_id,
-                    dbDictionary.object_id)
-
-                .filter_by(
-                    marked_for_deletion = False))
-
-        d_filter = []
-
-        if dicts_to_filter:
-
-            dictionary_ids = dicts_to_filter
-
-            if len(dictionary_ids) > 2:
-                dictionary_ids = ids_to_id_query(dictionary_ids)
-
-            d_filter.append(
-
-                tuple_(
-                    dbDictionary.client_id,
-                    dbDictionary.object_id)
-
-                    .in_(
-                        dictionary_ids))
-
-        if languages:
-
-            if dicts_to_filter:
-
-                dictionaries = (
-                    dictionaries.join(dbLanguage))
-
-                language_ids = languages
-
-                if len(language_ids) > 2:
-                    language_ids = ids_to_id_query(language_ids)
-
-                d_filter.append(
-
-                    and_(
-
-                        tuple_(
-                            dbLanguage.client_id,
-                            dbLanguage.object_id)
-
-                            .in_(
-                                language_ids),
-
-                        dbLanguage.marked_for_deletion == False))
-
-        dictionaries = (
-            dictionaries.filter(or_(*d_filter)))
-
-        if tag_list:
+            # Preparing the search.
 
             dictionaries = (
 
-                dictionaries.filter(
-                    dbDictionary.additional_metadata["tag_list"].contains(tag_list)))
+                DBSession
 
-        res_entities = list()
-        res_lexical_entries = list()
-        res_perspectives = list()
-        res_dictionaries = list()
+                    .query(
+                        dbDictionary.client_id,
+                        dbDictionary.object_id)
 
-        db_published_gist = translation_gist_search('Published')
-        state_translation_gist_client_id = db_published_gist.client_id
-        state_translation_gist_object_id = db_published_gist.object_id
-        db_la_gist = translation_gist_search('Limited access')
-        limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
+                    .filter_by(
+                        marked_for_deletion = False))
 
-        # Setting up export to an XLSX file, if required.
+            d_filter = []
 
-        xlsx_context = (
+            if dicts_to_filter:
 
-            None if not xlsx_export else
+                dictionary_ids = dicts_to_filter
 
-            Save_Context(
-                info.context.get('locale_id'),
-                DBSession,
-                cognates_flag = cognates_flag,
-                __debug_flag__ = __debug_flag__))
+                if len(dictionary_ids) > 2:
+                    dictionary_ids = ids_to_id_query(dictionary_ids)
 
-        # normal dictionaries
-        if category != 1:
-            res_entities, res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism_simple(
-                dictionaries=dictionaries,
-                category=0,
-                state_gist_id = (state_translation_gist_client_id,
-                                state_translation_gist_object_id),
-                limited_gist_id = (limited_client_id, limited_object_id),
-                search_strings=search_strings,
-                publish=publish,
-                accept=accept,
-                adopted=adopted,
-                etymology=etymology,
-                category_field_cte_query=DBSession.query(get_text_field_cte(DBSession)),
-                yield_batch_count=yield_batch_count,
-                xlsx_context=xlsx_context
-            )
+                d_filter.append(
+
+                    tuple_(
+                        dbDictionary.client_id,
+                        dbDictionary.object_id)
+
+                        .in_(
+                            dictionary_ids))
+
+            if languages:
+
+                if dicts_to_filter:
+
+                    dictionaries = (
+                        dictionaries.join(dbLanguage))
+
+                    language_ids = languages
+
+                    if len(language_ids) > 2:
+                        language_ids = ids_to_id_query(language_ids)
+
+                    d_filter.append(
+
+                        and_(
+
+                            tuple_(
+                                dbLanguage.client_id,
+                                dbLanguage.object_id)
+
+                                .in_(
+                                    language_ids),
+
+                            dbLanguage.marked_for_deletion == False))
+
+            dictionaries = (
+                dictionaries.filter(or_(*d_filter)))
+
+            if publish:
+
+                published_query = (
+                    get_published_translation_gist_id_cte_query())
+
+                dbPerspectiveP = aliased(dbPerspective)
+
+                dictionaries = (
+
+                    dictionaries
+
+                        .filter(
+
+                            tuple_(
+                                dbDictionary.state_translation_gist_client_id,
+                                dbDictionary.state_translation_gist_object_id)
+
+                                .in_(published_query))
+
+                        .join(dbPerspectiveP)
+
+                        .filter(
+                            dbPerspectiveP.marked_for_deletion == False,
+
+                            tuple_(
+                                dbPerspectiveP.state_translation_gist_client_id,
+                                dbPerspectiveP.state_translation_gist_object_id)
+
+                                .in_(published_query)))
+
+            if tag_list:
+
+                dictionaries = (
+
+                    dictionaries.filter(
+                        dbDictionary.additional_metadata["tag_list"].contains(tag_list)))
+
+            res_lexical_entries = list()
+            res_perspectives = list()
+            res_dictionaries = list()
+
+            # Setting up export to an XLSX file, if required.
+
+            xlsx_context = (
+
+                None if not xlsx_export else
+
+                Save_Context(
+                    info.context.get('locale_id'),
+                    DBSession,
+                    cognates_flag = cognates_flag,
+                    __debug_flag__ = __debug_flag__))
+
+            # normal dictionaries
+            if category != 1:
+                res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism_simple(
+                    dictionaries=dictionaries,
+                    category=0,
+                    search_strings=search_strings,
+                    publish=publish,
+                    accept=accept,
+                    adopted=adopted,
+                    etymology=etymology,
+                    category_field_cte_query=DBSession.query(get_text_field_cte(DBSession)),
+                )
 
 
-        # corpora
-        if category != 0:
-            tmp_entities, tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism_simple(
-                dictionaries=dictionaries,
-                category=1,
-                state_gist_id=(state_translation_gist_client_id,
-                               state_translation_gist_object_id),
-                limited_gist_id=(limited_client_id,
-                                 limited_object_id),
-                search_strings=search_strings,
-                publish=publish,
-                accept=accept,
-                adopted=adopted,
-                etymology=etymology,
-                category_field_cte_query=DBSession.query(get_markup_field_cte(DBSession)),
-                yield_batch_count=yield_batch_count,
-                xlsx_context=xlsx_context
-            )
-            res_entities += tmp_entities
-            res_lexical_entries += tmp_lexical_entries
-            res_perspectives += tmp_perspectives
-            res_dictionaries += tmp_dictionaries
+            # corpora
+            if category != 0:
+                tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism_simple(
+                    dictionaries=dictionaries,
+                    category=1,
+                    search_strings=search_strings,
+                    publish=publish,
+                    accept=accept,
+                    adopted=adopted,
+                    etymology=etymology,
+                    category_field_cte_query=DBSession.query(get_markup_field_cte(DBSession)),
+                )
+                res_lexical_entries += tmp_lexical_entries
+                res_perspectives += tmp_perspectives
+                res_dictionaries += tmp_dictionaries
 
-        # Exporting search results as an XLSX data, if required.
+            # Exporting search results as an XLSX data, if required.
 
-        if xlsx_context is not None:
+            if xlsx_context is not None:
 
-            save_xlsx_data(
-                xlsx_context,
-                [dictionary.dbObject for dictionary in res_dictionaries],
-                [perspective.dbObject for perspective in res_perspectives],
-                [lexical_entry.dbObject for lexical_entry in res_lexical_entries])
+                save_xlsx_data(
+                    xlsx_context,
+                    [dictionary.dbObject for dictionary in res_dictionaries],
+                    [perspective.dbObject for perspective in res_perspectives],
+                    [lexical_entry.dbObject for lexical_entry in res_lexical_entries])
 
-        # Saving XLSX-exported search results, if required.
+            # Saving XLSX-exported search results, if required.
 
-        xlsx_url = None
-        
-        if xlsx_export:
+            xlsx_url = None
+            
+            if xlsx_export:
 
-            query_str = '_'.join([
-                search_string["search_string"]
-                for search_block in search_strings
-                for search_string in search_block])
+                query_str = '_'.join([
+                    search_string["search_string"]
+                    for search_block in search_strings
+                    for search_string in search_block])
 
-            xlsx_filename = ('Search_' + query_str)[:64] + '.xlsx'
+                xlsx_filename = ('Search_' + query_str)[:64] + '.xlsx'
 
-            xlsx_url = save_xlsx(
-                info, xlsx_context, xlsx_filename)
+                xlsx_url = save_xlsx(
+                    info, xlsx_context, xlsx_filename)
 
-            # Saving resulting Excel workbook for debug purposes, if required.
+                # Saving resulting Excel workbook for debug purposes, if required.
 
-            if __debug_flag__:
+                if __debug_flag__:
 
-                xlsx_context.stream.seek(0)
+                    xlsx_context.stream.seek(0)
 
-                with open(xlsx_filename, 'wb') as xlsx_file:
-                    shutil.copyfileobj(xlsx_context.stream, xlsx_file)
+                    with open(xlsx_filename, 'wb') as xlsx_file:
+                        shutil.copyfileobj(xlsx_context.stream, xlsx_file)
 
-        return cls(
-            entities=res_entities,
-            lexical_entries=res_lexical_entries,
-            perspectives=res_perspectives,
-            dictionaries=res_dictionaries,
-            xlsx_url=xlsx_url)
+            return (
+
+                cls(
+                    entities = [],
+                    lexical_entries = res_lexical_entries,
+                    perspectives = res_perspectives,
+                    dictionaries = res_dictionaries,
+                    xlsx_url = xlsx_url))
+
+        except Exception as exception:
+
+            traceback_string = (
+                    
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('advanced_search_simple: exception')
+            log.warning(traceback_string)
+
+            return (
+                ResponseError(
+                    'Exception:\n' + traceback_string))
 
 
 class EafSearch(LingvodocObjectType):
