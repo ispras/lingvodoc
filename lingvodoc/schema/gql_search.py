@@ -693,48 +693,55 @@ def search_mechanism(
         for search_block in search_strings:
 
             all_block_field_set.update(
-                tuple(sb.get("field_id")) for sb in search_block if sb.get("field_id"))
+                tuple(sb.get('field_id')) for sb in search_block if sb.get('field_id'))
 
             for search_string in search_block:
 
-                if not search_string.get("field_id"):
+                search_value = (
+                    search_string['search_string'])
+
+                if not search_string.get('field_id'):
+
                     fields_flag = False
 
-                if search_string.get('matching_type') == "substring":
+                if search_string.get('matching_type') == 'substring':
 
                     curr_bs_search_blocks = (
-                        boolean_search(search_string["search_string"]))
+                        boolean_search(search_value))
 
                     for ss in chain.from_iterable(curr_bs_search_blocks):
 
-                        xform_ss = xform_func(ss["search_string"])
+                        xform_ss = xform_func(ss['search_string'])
 
-                        if ss.get('matching_type') == "substring":
-
-                            all_entity_content_filter.append(
-                                xform_func(dbEntity.content).like(xform_ss))
-
-                        elif ss.get('matching_type') == "full_string":
+                        if ss.get('matching_type') == 'substring':
 
                             all_entity_content_filter.append(
-                                xform_func(dbEntity.content) == xform_ss)
+                                xform_func(dbEntity.content)
+                                    .like(xform_ss))
 
-                        elif ss.get('matching_type') == "regexp":
+                        elif ss.get('matching_type') == 'full_string':
 
                             all_entity_content_filter.append(
-                                xfrom_func(dbEntity.content).op('~*')(xform_ss))
+                                xform_func(dbEntity.content) ==
+                                    xform_ss)
 
-                elif search_string.get('matching_type') == "full_string":
+                        elif ss.get('matching_type') == 'regexp':
+
+                            all_entity_content_filter.append(
+                                xform_func(dbEntity.content)
+                                    .op('~*')(xform_ss))
+
+                elif search_string.get('matching_type') == 'full_string':
 
                     all_entity_content_filter.append(
                         xform_func(dbEntity.content) ==
-                            xform_func(search_string["search_string"]))
+                            xform_func(search_value))
 
-                elif search_string.get('matching_type') == "regexp":
+                elif search_string.get('matching_type') == 'regexp':
 
                     all_entity_content_filter.append(
-                        xform_func(dbEntity.content).op('~*')(
-                            xform_func(search_string["search_string"])))
+                        xform_func(dbEntity.content)
+                            .op('~*')(xform_func(search_value)))
 
     elif category == 1:
 
@@ -742,47 +749,51 @@ def search_mechanism(
 
             for search_string in search_block:
 
-                if not search_string.get("field_id"):
+                search_value = (
+                    search_string['search_string'])
+
+                if not search_string.get('field_id'):
+
                     fields_flag = False
 
-                if search_string.get('matching_type') == "substring":
+                if search_string.get('matching_type') == 'substring':
 
                     curr_bs_search_blocks = (
-                        boolean_search(search_string["search_string"]))
+                        boolean_search(search_value))
 
                     for ss in chain.from_iterable(curr_bs_search_blocks):
 
-                        xform_ss = xform_func(ss["search_string"])
+                        xform_ss = xform_func(ss['search_string'])
 
-                        if ss.get('matching_type') == "substring":
+                        if ss.get('matching_type') == 'substring':
 
                             all_entity_content_filter.append(
                                 xform_func(dbEntity.additional_metadata['bag_of_words'].astext)
                                     .like(xform_ss))
 
-                        elif ss.get('matching_type') == "full_string":
+                        elif ss.get('matching_type') == 'full_string':
 
                             all_entity_content_filter.append(
                                 xform_bag_func(dbEntity.additional_metadata['bag_of_words'])
                                     .op('@>')(func.to_jsonb(xform_ss)))
 
-                        elif ss.get('matching_type') == "regexp":
+                        elif ss.get('matching_type') == 'regexp':
 
                             all_entity_content_filter.append(
                                 xform_func(dbEntity.additional_metadata['bag_of_words'].astext)
                                     .op('~*')(xform_ss))
 
-                elif search_string.get('matching_type') == "full_string":
+                elif search_string.get('matching_type') == 'full_string':
 
                     all_entity_content_filter.append(
                         xform_bag_func(dbEntity.additional_metadata['bag_of_words'])
-                            .op('@>')(func.to_jsonb(xform_func(search_string["search_string"]))))
+                            .op('@>')(func.to_jsonb(xform_func(search_value))))
 
-                elif search_string.get('matching_type') == "regexp":
+                elif search_string.get('matching_type') == 'regexp':
 
                     all_entity_content_filter.append(
                         xform_func(dbEntity.additional_metadata['bag_of_words'].astext)
-                            .op('~*')(xform_func(search_string["search_string"])))
+                            .op('~*')(xform_func(search_value)))
 
     if fields_flag and category == 0:
 
@@ -851,52 +862,71 @@ def search_mechanism(
     full_or_block = list()
 
     for search_block in search_strings:
-        and_lexes_sum = list()
-        for search_string in search_block:
-            inner_and = list()
-            cur_dbEntity = all_entities_cte.c
-            if search_string.get('field_id'):
-                inner_and.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
-                inner_and.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
-            else:
-                inner_and.append(
-                    tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id)
-                        .in_(category_field_cte_query))
 
-            matching_type = search_string.get('matching_type')
-            if not matching_type in ("full_string", "substring", "regexp", "exclude"):
-                raise ResponseError(message='wrong matching_type')
+        and_lexes_sum = list()
+
+        for search_string in search_block:
+
+            inner_and = list()
+
+            cur_dbEntity = all_entities_cte.c
+
+            if search_string.get('field_id'):
+
+                inner_and.extend((
+                    cur_dbEntity.field_client_id == search_string['field_id'][0],
+                    cur_dbEntity.field_object_id == search_string['field_id'][1]))
+
+            else:
+
+                inner_and.append(
+
+                    tuple_(
+                        cur_dbEntity.field_client_id,
+                        cur_dbEntity.field_object_id)
+
+                        .in_(
+                            category_field_cte_query))
+
+            matching_type = (
+                search_string.get('matching_type'))
+
+            if not matching_type in ('full_string', 'substring', 'regexp', 'exclude'):
+                raise ResponseError(message = 'wrong matching_type')
+
+            search_value = (
+                search_string['search_string'])
 
             if category == 1:
 
-                if matching_type == "full_string":
+                if matching_type == 'full_string':
 
                     inner_and.append(
                         xform_bag_func(cur_dbEntity.additional_metadata['bag_of_words'])
-                            .op('@>')(func.to_jsonb(xform_func(search_string["search_string"]))))
+                            .op('@>')(func.to_jsonb(xform_func(search_value))))
 
                 elif matching_type == 'substring':
 
                     curr_bs_search_blocks = (
-                        boolean_search(search_string["search_string"]))
+                        boolean_search(search_value))
 
                     for ss in chain.from_iterable(curr_bs_search_blocks):
 
-                        xform_ss = xform_func(ss["search_string"])
+                        xform_ss = xform_func(ss['search_string'])
 
-                        if ss.get('matching_type') == "substring":
+                        if ss.get('matching_type') == 'substring':
 
                             inner_and.append(
                                 xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
                                     .like(xform_ss))
 
-                        elif ss.get('matching_type') == "full_string":
+                        elif ss.get('matching_type') == 'full_string':
 
                             inner_and.append(
                                 xform_bag_func(cur_dbEntity.additional_metadata['bag_of_words'])
                                     .op('@>')(func.to_jsonb(xform_ss)))
 
-                        elif ss.get('matching_type') == "regexp":
+                        elif ss.get('matching_type') == 'regexp':
 
                             inner_and.append(
                                 xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
@@ -906,20 +936,20 @@ def search_mechanism(
 
                     inner_and.append(
                         xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
-                            .op('~*')(xform_func(search_string["search_string"])))
+                            .op('~*')(xform_func(search_value)))
 
             else:
 
-                if matching_type == "full_string":
+                if matching_type == 'full_string':
 
                     inner_and.append(
                         xform_func(cur_dbEntity.content) ==
-                            xform_func(search_string["search_string"]))
+                            xform_func(search_value))
 
                 elif matching_type == 'substring':
 
                     curr_bs_search_blocks = (
-                        boolean_search(search_string["search_string"]))
+                        boolean_search(search_value))
 
                     bs_or_block_list = list()
 
@@ -929,27 +959,31 @@ def search_mechanism(
 
                         for ss in bs_or_block:
 
-                            xform_ss = xform_func(ss["search_string"])
+                            xform_ss = xform_func(ss['search_string'])
 
-                            if ss.get('matching_type') == "substring":
-
-                                bs_and.append(
-                                    xform_func(cur_dbEntity.content).like(xform_ss))
-
-                            elif ss.get('matching_type') == "full_string":
+                            if ss.get('matching_type') == 'substring':
 
                                 bs_and.append(
-                                    xform_func(cur_dbEntity.content) == xform_ss)
+                                    xform_func(cur_dbEntity.content)
+                                        .like(xform_ss))
 
-                            elif ss.get('matching_type') == "regexp":
-
-                                bs_and.append(
-                                    xform_func(cur_dbEntity.content).op('~*')(xform_ss))
-
-                            elif ss.get('matching_type') == "exclude":
+                            elif ss.get('matching_type') == 'full_string':
 
                                 bs_and.append(
-                                    xform_func(cur_dbEntity.content) != xform_ss)
+                                    xform_func(cur_dbEntity.content) ==
+                                        xform_ss)
+
+                            elif ss.get('matching_type') == 'regexp':
+
+                                bs_and.append(
+                                    xform_func(cur_dbEntity.content)
+                                        .op('~*')(xform_ss))
+
+                            elif ss.get('matching_type') == 'exclude':
+
+                                bs_and.append(
+                                    xform_func(cur_dbEntity.content) !=
+                                        xform_ss)
 
                         bs_or_block_list.append(and_(*bs_and))
 
@@ -958,8 +992,8 @@ def search_mechanism(
                 elif matching_type == 'regexp':
 
                     inner_and.append(
-                        xform_func(cur_dbEntity.content).op('~*')(
-                            xform_func(search_string["search_string"])))
+                        xform_func(cur_dbEntity.content)
+                            .op('~*')(xform_func(search_value)))
 
             and_lexes_query = (
 
@@ -1095,6 +1129,7 @@ def search_mechanism_simple(
     accept,
     adopted,
     etymology,
+    diacritics,
     category_field_cte_query):
 
     # Empty list of AND conditions means no results.
@@ -1144,6 +1179,16 @@ def search_mechanism_simple(
             else:
                 lexes = lexes.filter(tuple_(dbEntity.field_client_id, dbEntity.field_object_id).in_(fields))
 
+    if diacritics == 'ignore':
+
+        xform_func = func.diacritic_xform
+        xform_bag_func = func.diacritic_xform_bag
+
+    else:
+
+        xform_func = func.lower
+        xform_bag_func = func.lower_bag
+
     publish_or_accept = (
         publish is not None and
         accept is not None)
@@ -1159,42 +1204,6 @@ def search_mechanism_simple(
             cur_dbEntity.parent_client_id == dbLexicalEntry.client_id,
             cur_dbEntity.parent_object_id == dbLexicalEntry.object_id))
 
-        or_block = list()
-
-        for search_string in search_block:
-            inner_and_block = list()
-            if search_string.get('field_id'):
-                inner_and_block.append(cur_dbEntity.field_client_id == search_string["field_id"][0])
-                inner_and_block.append(cur_dbEntity.field_object_id == search_string["field_id"][1])
-            else:
-                inner_and_block.append(
-                    tuple_(cur_dbEntity.field_client_id, cur_dbEntity.field_object_id)
-                        .in_(category_field_cte_query))
-
-            matching_type = search_string.get('matching_type')
-            if matching_type == "full_string":
-                if category == 1:
-                    inner_and_block.append(cur_dbEntity.additional_metadata['bag_of_words'].contains([search_string["search_string"].lower()]))
-                else:
-                    inner_and_block.append(func.lower(cur_dbEntity.content) == func.lower(search_string["search_string"]))
-            elif matching_type == 'substring':
-                if category == 1:
-                    inner_and_block.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).like("".join(['%', search_string["search_string"].lower(), '%'])))
-                else:
-
-                    inner_and_block.append(func.lower(cur_dbEntity.content).like("".join(['%', search_string["search_string"].lower(), '%'])))
-            elif matching_type == 'regexp':
-                if category == 1:
-                    inner_and_block.append(func.lower(cur_dbEntity.additional_metadata['bag_of_words'].astext).op('~*')(search_string["search_string"]))
-                else:
-                    inner_and_block.append(func.lower(cur_dbEntity.content).op('~*')(search_string["search_string"]))
-            else:
-                raise ResponseError(message='wrong matching_type')
-
-            or_block.append(and_(*inner_and_block))
-
-        and_block.append(or_(*or_block))
-
         if publish_or_accept:
 
             cur_dbPublishingEntity = aliased(dbPublishingEntity)
@@ -1208,6 +1217,82 @@ def search_mechanism_simple(
 
             if accept is not None:
                 and_block.append(cur_dbPublishingEntity.accepted == accept)
+
+        or_block = list()
+
+        for search_string in search_block:
+
+            inner_and = list()
+
+            if search_string.get('field_id'):
+
+                inner_and.extend((
+                    cur_dbEntity.field_client_id == search_string['field_id'][0],
+                    cur_dbEntity.field_object_id == search_string['field_id'][1]))
+
+            else:
+
+                inner_and.append(
+
+                    tuple_(
+                        cur_dbEntity.field_client_id,
+                        cur_dbEntity.field_object_id)
+
+                        .in_(
+                            category_field_cte_query))
+
+            matching_type = (
+                search_string.get('matching_type'))
+
+            if not matching_type in ('full_string', 'substring', 'regexp'):
+                raise ResponseError(message = 'wrong matching_type')
+
+            search_value = (
+                search_string['search_string'])
+
+            if category == 1:
+
+                if matching_type == 'full_string':
+
+                    inner_and.append(
+                        xform_bag_func(cur_dbEntity.additional_metadata['bag_of_words'])
+                            .op('@>')(func.to_jsonb(xform_func(search_value))))
+
+                elif matching_type == 'substring':
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
+                            .like(xform_func('%' + search_value + '%')))
+
+                elif matching_type == 'regexp':
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.additional_metadata['bag_of_words'].astext)
+                            .op('~*')(search_value))
+
+            else:
+
+                if matching_type == 'full_string':
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.content) ==
+                            xform_func(search_value))
+
+                elif matching_type == 'substring':
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.content)
+                            .like(xform_func('%' + search_value + '%')))
+
+                elif matching_type == 'regexp':
+
+                    inner_and.append(
+                        xform_func(cur_dbEntity.content)
+                            .op('~*')(xform_func(search_value)))
+
+            or_block.append(and_(*inner_and))
+
+        and_block.append(or_(*or_block))
 
     entry_query = (
 
@@ -1714,37 +1799,39 @@ class AdvancedSearch(LingvodocObjectType):
 
             if category != 1:
 
-                res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism(
-                    dictionaries=dictionaries,
-                    category=0,
-                    search_strings=search_strings,
-                    publish=publish,
-                    accept=accept,
-                    adopted=adopted,
-                    etymology=etymology,
-                    diacritics=diacritics,
-                    category_field_cte_query=DBSession.query(get_text_field_cte(DBSession)),
-                    load_entities=load_entities,
-                    __debug_flag__=__debug_flag__
-                )
+                res_lexical_entries, res_perspectives, res_dictionaries = (
+
+                    search_mechanism(
+                        dictionaries = dictionaries,
+                        category = 0,
+                        search_strings = search_strings,
+                        publish = publish,
+                        accept = accept,
+                        adopted = adopted,
+                        etymology = etymology,
+                        diacritics = diacritics,
+                        category_field_cte_query = DBSession.query(get_text_field_cte(DBSession)),
+                        load_entities = load_entities,
+                        __debug_flag__ = __debug_flag__))
 
             # Corpora.
 
             if category != 0:
 
-                tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism(
-                    dictionaries=dictionaries,
-                    category=1,
-                    search_strings=search_strings,
-                    publish=publish,
-                    accept=accept,
-                    adopted=adopted,
-                    etymology=etymology,
-                    diacritics=diacritics,
-                    category_field_cte_query=DBSession.query(get_markup_field_cte(DBSession)),
-                    load_entities=load_entities,
-                    __debug_flag__=__debug_flag__
-                )
+                tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = (
+
+                    search_mechanism(
+                        dictionaries = dictionaries,
+                        category = 1,
+                        search_strings = search_strings,
+                        publish = publish,
+                        accept = accept,
+                        adopted = adopted,
+                        etymology = etymology,
+                        diacritics = diacritics,
+                        category_field_cte_query = DBSession.query(get_markup_field_cte(DBSession)),
+                        load_entities = load_entities,
+                        __debug_flag__ = __debug_flag__))
 
                 res_lexical_entries += tmp_lexical_entries
                 res_perspectives += tmp_perspectives
@@ -1848,6 +1935,7 @@ class AdvancedSearchSimple(LingvodocObjectType):
         category,
         adopted,
         etymology,
+        diacritics,
         search_strings,
         publish,
         accept,
@@ -1856,6 +1944,22 @@ class AdvancedSearchSimple(LingvodocObjectType):
         __debug_flag__ = False):
 
         try:
+
+            log.info(
+                f'\n advanced_search_simple'
+                f'\n languages: {languages}'
+                f'\n dicts_to_filter: {dicts_to_filter}'
+                f'\n tag_list: {tag_list}'
+                f'\n category: {category}'
+                f'\n adopted: {adopted}'
+                f'\n etymology: {etymology}'
+                f'\n diacritics: {diacritics}'
+                f'\n search_strings: {search_strings}'
+                f'\n publish: {publish}'
+                f'\n accept: {accept}'
+                f'\n xlsx_export: {xlsx_export}'
+                f'\n cognates_flag: {cognates_flag}'
+                f'\n __debug_flag__: {__debug_flag__}')
 
             # Checking for too permissive search conditions.
 
@@ -1991,32 +2095,40 @@ class AdvancedSearchSimple(LingvodocObjectType):
                     cognates_flag = cognates_flag,
                     __debug_flag__ = __debug_flag__))
 
-            # normal dictionaries
+            # Normal dictionaries.
+
             if category != 1:
-                res_lexical_entries, res_perspectives, res_dictionaries = search_mechanism_simple(
-                    dictionaries=dictionaries,
-                    category=0,
-                    search_strings=search_strings,
-                    publish=publish,
-                    accept=accept,
-                    adopted=adopted,
-                    etymology=etymology,
-                    category_field_cte_query=DBSession.query(get_text_field_cte(DBSession)),
-                )
 
+                res_lexical_entries, res_perspectives, res_dictionaries = (
 
-            # corpora
+                    search_mechanism_simple(
+                        dictionaries = dictionaries,
+                        category = 0,
+                        search_strings = search_strings,
+                        publish = publish,
+                        accept = accept,
+                        adopted = adopted,
+                        etymology = etymology,
+                        diacritics = diacritics,
+                        category_field_cte_query = DBSession.query(get_text_field_cte(DBSession))))
+
+            # Corpora.
+
             if category != 0:
-                tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = search_mechanism_simple(
-                    dictionaries=dictionaries,
-                    category=1,
-                    search_strings=search_strings,
-                    publish=publish,
-                    accept=accept,
-                    adopted=adopted,
-                    etymology=etymology,
-                    category_field_cte_query=DBSession.query(get_markup_field_cte(DBSession)),
-                )
+
+                tmp_lexical_entries, tmp_perspectives, tmp_dictionaries = (
+
+                    search_mechanism_simple(
+                        dictionaries = dictionaries,
+                        category = 1,
+                        search_strings = search_strings,
+                        publish = publish,
+                        accept = accept,
+                        adopted = adopted,
+                        etymology = etymology,
+                        diacritics = diacritics,
+                        category_field_cte_query = DBSession.query(get_markup_field_cte(DBSession))))
+
                 res_lexical_entries += tmp_lexical_entries
                 res_perspectives += tmp_perspectives
                 res_dictionaries += tmp_dictionaries
