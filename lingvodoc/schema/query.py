@@ -4365,32 +4365,41 @@ class Query(graphene.ObjectType):
 
     connected_words = graphene.Field(LexicalEntriesAndEntities, id=LingvodocID(required=True),
                                      field_id=LingvodocID(required=True), mode=graphene.String())
-    advanced_search = graphene.Field(AdvancedSearch,
-                                     languages=graphene.List(LingvodocID),
-                                     dicts_to_filter=graphene.List(LingvodocID),
-                                     tag_list=graphene.List(graphene.String),
-                                     category=graphene.Int(),
-                                     adopted=graphene.Boolean(),
-                                     etymology=graphene.Boolean(),
-                                     diacritics=graphene.String(),
-                                     search_strings=graphene.List(graphene.List(ObjectVal), required=True),
-                                     mode=graphene.String(),
-                                     search_metadata=ObjectVal(),
-                                     simple=graphene.Boolean(),
-                                     xlsx_export=graphene.Boolean(),
-                                     cognates_flag=graphene.Boolean(),
-                                     load_entities=graphene.Boolean(),
-                                     debug_flag=graphene.Boolean())
-    advanced_search_simple = graphene.Field(AdvancedSearchSimple,
-                                     languages=graphene.List(LingvodocID),
-                                     dicts_to_filter=graphene.List(LingvodocID),
-                                     tag_list=graphene.List(graphene.String),
-                                     category=graphene.Int(),
-                                     adopted=graphene.Boolean(),
-                                     etymology=graphene.Boolean(),
-                                     search_strings=graphene.List(graphene.List(ObjectVal)),
-                                     mode=graphene.String())
-    search_strings = graphene.List(graphene.List(ObjectVal))
+
+    advanced_search = (
+
+        graphene.Field(
+            AdvancedSearch,
+            languages = graphene.List(LingvodocID),
+            dicts_to_filter = graphene.List(LingvodocID),
+            tag_list = graphene.List(graphene.String),
+            category = graphene.Int(),
+            adopted = graphene.Boolean(),
+            etymology = graphene.Boolean(),
+            diacritics = graphene.String(),
+            search_strings = graphene.List(graphene.List(ObjectVal), required = True),
+            mode = graphene.String(),
+            search_metadata = ObjectVal(),
+            simple = graphene.Boolean(),
+            xlsx_export = graphene.Boolean(),
+            cognates_flag = graphene.Boolean(),
+            load_entities = graphene.Boolean(),
+            debug_flag = graphene.Boolean()))
+
+    advanced_search_simple = (
+
+        graphene.Field(
+            AdvancedSearchSimple,
+            languages = graphene.List(LingvodocID),
+            dicts_to_filter = graphene.List(LingvodocID),
+            tag_list = graphene.List(graphene.String),
+            category = graphene.Int(),
+            adopted = graphene.Boolean(),
+            etymology = graphene.Boolean(),
+            diacritics = graphene.String(),
+            search_strings = graphene.List(graphene.List(ObjectVal), required = True),
+            mode = graphene.String()))
+
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
 
@@ -5646,21 +5655,21 @@ class Query(graphene.ObjectType):
     def resolve_advanced_search(
         self,
         info,
-        search_strings=None,
-        languages=None,
-        dicts_to_filter=None,
-        tag_list=None,
-        category=None,
-        adopted=None,
-        etymology=None,
-        diacritics=None,
-        search_metadata=None,
-        mode='published',
-        simple=True,
-        xlsx_export=False,
-        cognates_flag=True,
-        load_entities=True,
-        debug_flag=False):
+        search_strings,
+        languages = None,
+        dicts_to_filter = None,
+        tag_list = None,
+        category = None,
+        adopted = None,
+        etymology = None,
+        diacritics = None,
+        search_metadata = None,
+        mode = 'published',
+        simple = True,
+        xlsx_export = False,
+        cognates_flag = True,
+        load_entities = True,
+        debug_flag = False):
 
         if mode == 'all':
             publish = None
@@ -5682,7 +5691,27 @@ class Query(graphene.ObjectType):
 
         if simple:
 
-            return AdvancedSearchSimple().constructor(
+            return (
+
+                AdvancedSearchSimple().constructor(
+                    info,
+                    languages,
+                    dicts_to_filter,
+                    tag_list,
+                    category,
+                    adopted,
+                    etymology,
+                    diacritics,
+                    search_strings,
+                    publish,
+                    accept,
+                    xlsx_export,
+                    cognates_flag,
+                    debug_flag))
+
+        return (
+
+            AdvancedSearch().constructor(
                 info,
                 languages,
                 dicts_to_filter,
@@ -5690,32 +5719,28 @@ class Query(graphene.ObjectType):
                 category,
                 adopted,
                 etymology,
+                diacritics,
                 search_strings,
                 publish,
                 accept,
+                search_metadata,
                 xlsx_export,
                 cognates_flag,
-                debug_flag)
+                load_entities,
+                debug_flag))
 
-        return AdvancedSearch().constructor(
-            info,
-            languages,
-            dicts_to_filter,
-            tag_list,
-            category,
-            adopted,
-            etymology,
-            diacritics,
-            search_strings,
-            publish,
-            accept,
-            search_metadata,
-            xlsx_export,
-            cognates_flag,
-            load_entities,
-            debug_flag)
-
-    def resolve_advanced_search_simple(self, info, search_strings, languages=None, dicts_to_filter=None, tag_list=None, category=None, adopted=None, etymology=None, search_metadata=None, mode='published'):
+    def resolve_advanced_search_simple(
+        self,
+        info,
+        search_strings,
+        languages = None,
+        dicts_to_filter = None,
+        tag_list = None,
+        category = None,
+        adopted = None,
+        etymology = None,
+        diacritics = None,
+        mode = 'published'):
 
         if mode == 'all':
             publish = None
@@ -5733,13 +5758,22 @@ class Query(graphene.ObjectType):
             publish = None
             accept = None
         else:
-            raise ResponseError(message="mode: <all|published|not_accepted>")
-        if not search_strings:
-            raise ResponseError(message="search_strings is empty")
+            return ResponseError(message="mode: <all|published|not_accepted>")
 
-        return AdvancedSearchSimple().constructor(
-            info, languages, dicts_to_filter, tag_list, category, adopted, etymology,
-            search_strings, publish, accept)
+        return (
+
+            AdvancedSearchSimple().constructor(
+                info,
+                languages,
+                dicts_to_filter,
+                tag_list,
+                category,
+                adopted,
+                etymology,
+                diacritics,
+                search_strings,
+                publish,
+                accept))
 
     def resolve_template_modes(self, info):
         return ['corpora']
