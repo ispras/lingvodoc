@@ -18042,6 +18042,7 @@ class ValencyVerbCases(graphene.Mutation):
         locale_id,
         verb_data_dict,
         language_str,
+        by_perspective_flag,
         debug_flag):
         """
         Gathers and accumulates valency verb case data of a perspective.
@@ -18071,7 +18072,8 @@ class ValencyVerbCases(graphene.Mutation):
         dictionary_name = dictionary.get_translation(locale_id)
         perspective_name = perspective.get_translation(locale_id)
 
-        full_name = dictionary_name + ' \u203a ' + perspective_name
+        full_name = (
+            dictionary_name + ' \u203a ' + perspective_name)
 
         if dictionary.marked_for_deletion:
 
@@ -18102,6 +18104,13 @@ class ValencyVerbCases(graphene.Mutation):
                 '\nperspective '
                 f'{dictionary.id} {repr(dictionary_name)} '
                 f'{perspective.id} {repr(perspective_name)}')
+
+        # We might need data separate by perspective.
+
+        if by_perspective_flag:
+
+            language_str = (
+                language_str + ' \u203a\u203a ' + full_name)
 
         # Getting data of accepted instances and their sentences.
         #
@@ -18171,13 +18180,16 @@ class ValencyVerbCases(graphene.Mutation):
             token_list = (
                 sentence.data['tokens'])
 
-            verb_xlat = (
+            token_info_dict = (
 
                 token_list[
-                    sentence.data['instances'][instance.index]['location'][0]][
-                    'trans_ru']
+                    sentence.data['instances'][instance.index]['location'][0]])
 
-                    or instance.verb_lex)
+            verb_xlat = (
+
+                token_info_dict.get('trans_ru') or
+                token_info_dict.get('translation') or
+                instance.verb_lex)
 
             sentence_str = (
                 sentence_str_dict.get(sentence_id))
@@ -18357,6 +18369,7 @@ class ValencyVerbCases(graphene.Mutation):
                         locale_id,
                         verb_data_dict,
                         None,
+                        False,
                         debug_flag)
 
                 except ResponseError as error:
@@ -18508,7 +18521,7 @@ class ValencyVerbCases(graphene.Mutation):
                             lambda: collections.defaultdict(
                                 lambda: collections.defaultdict(dict)))))
 
-                for language_id, perspective_id_list in language_arg_list:
+                for language_id, perspective_id_list, by_perspective_flag in language_arg_list:
 
                     language = (
 
@@ -18548,6 +18561,7 @@ class ValencyVerbCases(graphene.Mutation):
                                 locale_id,
                                 verb_data_dict,
                                 language_name,
+                                by_perspective_flag,
                                 debug_flag)
 
                         except ResponseError as error:
