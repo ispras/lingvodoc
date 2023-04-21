@@ -507,7 +507,8 @@ class AudioPraatLike(object):
 
     def get_interval_intensity(self, begin, end):
         """
-        Computes mean-energy intensity of an interval specified by beginning and end in seconds.
+        Computes mean-energy intensity, intensity maximum and intensity minimum of an interval specified by
+        beginning and end in seconds.
         """
 
         # Due to windowed nature of intensity computation, we can't compute it for points close to the
@@ -518,14 +519,64 @@ class AudioPraatLike(object):
         begin_step = max(4, int(math.ceil(begin * factor)))
         end_step = min(self.intensity_step_count - 5, int(math.floor(end * factor)))
 
+        # Checking if we actually have any points.
+
         if end_step < begin_step:
-            return 0.0
+            return 0.0, 0.0, 0.0
 
-        energy_sum = sum(
-            math.pow(10, 0.1 * self.get_intensity(step_index))
-                for step_index in range(begin_step, end_step + 1))
+        # Computing intensity point values, getting minimum and maximum like in Praat, with additional
+        # parabolic interpolation.
 
-        return 10 * math.log10(energy_sum / (end_step - begin_step + 1))
+        intensity_list = [
+            self.get_intensity(step_index)
+            for step_index in range(begin_step, end_step + 1)]
+
+        intensity_min = (
+            min(intensity_list[0], intensity_list[-1]))
+
+        intensity_max = (
+            max(intensity_list[0], intensity_list[-1]))
+
+        for i in range(len(intensity_list) - 2):
+
+            v1, v2, v3 = intensity_list[i : i + 3]
+
+            # Extremum of parabolic interpolation, see e.g.
+            # http://www.ebyte.it/library/codesnippets/P3Interpolation.html.
+
+            d2 = v1 + v3 - 2 * v2
+
+            if math.fabs(d2) > 0:
+
+                d1 = 0.5 * (v3 - v1)
+                vX = v2 - 0.5 * d1 * d1 / d2
+
+                intensity_min = (
+                    min(intensity_min, v2, vX))
+
+                intensity_max = (
+                    max(intensity_max, v2, vX))
+
+            else:
+
+                intensity_min = (
+                    min(intensity_min, v2))
+
+                intensity_max = (
+                    max(intensity_max, v2))
+
+        # Interval intensity as mean-energy intensity like in Praat.
+
+        energy_sum = (
+
+            sum(
+                math.pow(10, 0.1 * intensity)
+                for intensity in intensity_list))
+
+        return (
+            10 * math.log10(energy_sum / (end_step - begin_step + 1)),
+            intensity_min,
+            intensity_max)
 
     def init_formant_pydub(self):
         """
@@ -1207,18 +1258,27 @@ def find_max_interval_praat(sound, interval_list):
 
     for index, (begin_sec, end_sec, _) in enumerate(interval_list):
 
-        intensity = sound.get_interval_intensity(begin_sec, end_sec)
-        length = end_sec - begin_sec
+        intensity = (
+            sound.get_interval_intensity(begin_sec, end_sec)[0])
+
+        length = (
+            end_sec - begin_sec)
 
         if max_intensity == None or intensity > max_intensity:
+
             max_intensity = intensity
             max_intensity_index = index
 
         if max_length == None or length > max_length:
+
             max_length = length
             max_length_index = index
 
-    return (max_intensity_index, max_intensity, max_length_index, max_length)
+    return (
+        max_intensity_index,
+        max_intensity,
+        max_length_index,
+        max_length)
 
 
 #: Set of vowels used by computation of phonology of dictionary perspectives.
@@ -1582,10 +1642,12 @@ class Tier_Result(object):
         mean_interval_length,
         max_length_str,
         max_length_r_length,
+        max_length_i_list,
         max_length_f_list,
         max_length_source_index,
         max_intensity_str,
         max_intensity_r_length,
+        max_intensity_i_list,
         max_intensity_f_list,
         max_intensity_source_index,
         coincidence_str,
@@ -1599,11 +1661,13 @@ class Tier_Result(object):
 
         self.max_length_str = max_length_str
         self.max_length_r_length = max_length_r_length
+        self.max_length_i_list = max_length_i_list
         self.max_length_f_list = max_length_f_list
         self.max_length_source_index = max_length_source_index
 
         self.max_intensity_str = max_intensity_str
         self.max_intensity_r_length = max_intensity_r_length
+        self.max_intensity_i_list = max_intensity_i_list
         self.max_intensity_f_list = max_intensity_f_list
         self.max_intensity_source_index = max_intensity_source_index
 
@@ -1622,9 +1686,10 @@ class Tier_Result(object):
             ([interval_str,
                 '{0:.2f}%'.format(r_length * 100),
                 is_max_length, is_max_intensity, source_index],
+                i_list,
                 f_list)
 
-                for interval_str, r_length, f_list, is_max_length, is_max_intensity, source_index in
+                for interval_str, r_length, i_list, f_list, is_max_length, is_max_intensity, source_index in
                     self.interval_data_list]
 
         return pprint.pformat(
@@ -1639,7 +1704,9 @@ class Tier_Result(object):
                 self.max_intensity_r_length,
                 self.coincidence_str],
 
+                self.max_length_i_list,
                 self.max_length_f_list,
+                self.max_intensity_i_list,
                 self.max_intensity_f_list] + interval_result_list,
 
             width = 192)
@@ -1707,8 +1774,17 @@ def process_sound(tier_data_list, sound):
             max_intensity_interval = interval_list[max_intensity_index]
             max_length_interval = interval_list[max_length_index]
 
-            max_intensity_f_list = sound.get_interval_formants(*max_intensity_interval[:2])
-            max_length_f_list = sound.get_interval_formants(*max_length_interval[:2])
+            max_intensity_i_list = (
+                sound.get_interval_intensity(*max_intensity_interval[:2]))
+
+            max_length_i_list = (
+                sound.get_interval_intensity(*max_length_interval[:2]))
+
+            max_intensity_f_list = (
+                sound.get_interval_formants(*max_intensity_interval[:2]))
+
+            max_length_f_list = (
+                sound.get_interval_formants(*max_length_interval[:2]))
 
             intensity_list = [
                 sound.get_interval_intensity(begin_sec, end_sec)
@@ -1720,10 +1796,14 @@ def process_sound(tier_data_list, sound):
 
             # Computing average sound interval length.
 
-            total_interval_length = sum(end - begin
-                for raw_index, (begin, end, text) in raw_interval_list)
+            total_interval_length = (
 
-            mean_interval_length = total_interval_length / len(raw_interval_list)
+                sum(
+                    end - begin
+                    for raw_index, (begin, end, text) in raw_interval_list))
+
+            mean_interval_length = (
+                total_interval_length / len(raw_interval_list))
 
             # Preparing data of maximum length and maximum intensity intervals.
 
@@ -1753,7 +1833,7 @@ def process_sound(tier_data_list, sound):
                     len(''.join(text for raw_index, (begin, end, text) in
                         raw_interval_list[:interval_idx_to_raw_idx[seq_index][index]])))
 
-                    for index, (intensity, (begin_sec, end_sec, text)) in
+                    for index, ((intensity, _, _), (begin_sec, end_sec, text)) in
                         enumerate(zip(intensity_list, interval_list))]
 
             source_index_list = [
@@ -1766,29 +1846,39 @@ def process_sound(tier_data_list, sound):
 
                 (interval_str,
                     (end - begin) / mean_interval_length,
+                    [f'{i_min:.3f}', f'{i_max:.3f}', f'{i_max - i_min:.3f}'],
                     list(map('{0:.3f}'.format, f_list)),
                     '+' if index == max_length_index else '-',
                     '+' if index == max_intensity_index else '-',
                     source_index)
 
-                    for index, (interval_str, f_list, (begin, end, text), source_index) in
-                        enumerate(zip(str_list, formant_list, interval_list, source_index_list))]
+                    for (
+                        index,
+                            (interval_str, (_, i_min, i_max), f_list, (begin, end, text), source_index)) in
 
-            textgrid_result_list[-1][2].append(Tier_Result(
-                ''.join(text for index, (begin, end, text) in raw_interval_list),
-                total_interval_length,
-                mean_interval_length,
-                max_length_str,
-                max_length / mean_interval_length,
-                list(map('{0:.3f}'.format, max_length_f_list)),
-                max_length_source_index,
-                max_intensity_str,
-                (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
-                list(map('{0:.3f}'.format, max_intensity_f_list)),
-                max_intensity_source_index,
-                '+' if max_intensity_index == max_length_index else '-',
-                interval_data_list,
-                source_interval_list))
+                        enumerate(
+                            zip(
+                                str_list, intensity_list, formant_list, interval_list, source_index_list))]
+
+            textgrid_result_list[-1][2].append(
+
+                Tier_Result(
+                    ''.join(text for index, (begin, end, text) in raw_interval_list),
+                    total_interval_length,
+                    mean_interval_length,
+                    max_length_str,
+                    max_length / mean_interval_length,
+                    list(map('{0:.3f}'.format, max_length_i_list)),
+                    list(map('{0:.3f}'.format, max_length_f_list)),
+                    max_length_source_index,
+                    max_intensity_str,
+                    (max_intensity_interval[1] - max_intensity_interval[0]) / mean_interval_length,
+                    list(map('{0:.3f}'.format, max_intensity_i_list)),
+                    list(map('{0:.3f}'.format, max_intensity_f_list)),
+                    max_intensity_source_index,
+                    '+' if max_intensity_index == max_length_index else '-',
+                    interval_data_list,
+                    source_interval_list))
 
     # Returning analysis results.
 
@@ -2447,8 +2537,11 @@ def compile_workbook(
     Compiles analysis results into an Excel workbook, and, if required, a CSV file.
     """
 
-    workbook = xlsxwriter.Workbook(workbook_stream, {'in_memory': True})
-    format_percent = workbook.add_format({'num_format': '0.00%'})
+    workbook = (
+        xlsxwriter.Workbook(workbook_stream, {'in_memory': True}))
+
+    format_percent = (
+        workbook.add_format({'num_format': '0.00%'}))
 
     if csv_stream:
         csv_writer = csv.writer(csv_stream)
@@ -2467,18 +2560,32 @@ def compile_workbook(
     if args.vowel_selection:
 
         header_list = [
-            'Longest (seconds) interval', 'Relative length',
-            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
-            'Highest intensity (dB) interval', 'Relative length',
-            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
+
+            'Longest (seconds) interval',
+            'Relative length',
+            'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
+            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+            'Table reference',
+
+            'Highest intensity (dB) interval',
+            'Relative length',
+            'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
+            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+            'Table reference',
+
             'Coincidence']
 
     else:
 
         header_list = [
-            'Interval', 'Relative length',
-            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)', 'Table reference',
-            'Longest', 'Highest intensity']
+
+            'Interval',
+            'Relative length',
+            'Intensity minimum (dB)', 'Intensity maximum (dB)', 'Intensity range (dB)',
+            'F1 mean (Hz)', 'F2 mean (Hz)', 'F3 mean (Hz)',
+            'Table reference',
+            'Longest',
+            'Highest intensity']
 
     # Creating sets of worksheets for each result group, including the universal one.
 
@@ -2496,19 +2603,28 @@ def compile_workbook(
 
         if args.vowel_selection:
 
-            worksheet_results.set_column(0, 2, 26)
-            worksheet_results.set_column(3, 3, 13, format_percent)
-            worksheet_results.set_column(4, 7, 13)
-            worksheet_results.set_column(8, 8, 26)
-            worksheet_results.set_column(9, 9, 13, format_percent)
-            worksheet_results.set_column(10, 14, 13)
+            worksheet_results.set_column(0, 2, 20)
+            worksheet_results.set_column(3, 3, 8, format_percent)
+            worksheet_results.set_column(4, 6, 8)
+            worksheet_results.set_column(7, 9, 10)
+            worksheet_results.set_column(10, 10, 4)
+            worksheet_results.set_column(11, 11, 20)
+            worksheet_results.set_column(12, 12, 8, format_percent)
+            worksheet_results.set_column(13, 15, 8)
+            worksheet_results.set_column(16, 18, 10)
+            worksheet_results.set_column(19, 20, 4)
 
         else:
-            worksheet_results.set_column(0, 2, 26)
-            worksheet_results.set_column(3, 3, 13, format_percent)
-            worksheet_results.set_column(4, 9, 13)
 
-        worksheet_dict[group] = (worksheet_results,
+            worksheet_results.set_column(0, 2, 20)
+            worksheet_results.set_column(3, 3, 8, format_percent)
+            worksheet_results.set_column(4, 6, 8)
+            worksheet_results.set_column(7, 9, 10)
+            worksheet_results.set_column(10, 12, 4)
+
+        worksheet_dict[group] = (
+
+            worksheet_results,
 
             workbook.add_worksheet(
                 sanitize_worksheet_name('F-table' + group_name_string)),
@@ -2592,36 +2708,58 @@ def compile_workbook(
 
                     if args.vowel_selection:
 
-                        f_list_a = list(map(float, tier_result.max_length_f_list[:3]))
-                        f_list_b = list(map(float, tier_result.max_intensity_f_list[:3]))
+                        i_list_a = (
+                            list(map(float, tier_result.max_length_i_list)))
+
+                        i_list_b = (
+                            list(map(float, tier_result.max_intensity_i_list)))
+
+                        f_list_a = (
+                            list(map(float, tier_result.max_length_f_list[:3])))
+
+                        f_list_b = (
+                            list(map(float, tier_result.max_intensity_f_list[:3])))
 
                         text_a_list = tier_result.max_length_str.split()
                         text_b_list = tier_result.max_intensity_str.split()
 
-                        vowel_a = get_vowel_class(
-                            tier_result.max_length_source_index,
-                            tier_result.source_interval_list,
-                            args.keep_set,
-                            args.join_set)
+                        vowel_a = (
 
-                        vowel_b = get_vowel_class(
-                            tier_result.max_intensity_source_index,
-                            tier_result.source_interval_list,
-                            args.keep_set,
-                            args.join_set)
+                            get_vowel_class(
+                                tier_result.max_length_source_index,
+                                tier_result.source_interval_list,
+                                args.keep_set,
+                                args.join_set))
+
+                        vowel_b = (
+
+                            get_vowel_class(
+                                tier_result.max_intensity_source_index,
+                                tier_result.source_interval_list,
+                                args.keep_set,
+                                args.join_set))
 
                         # Writing out interval data and any additional texts.
 
-                        row_list = ([
-                            tier_result.transcription,
-                            text_str,
-                            ' '.join([vowel_a] + text_a_list[1:]),
-                            round(tier_result.max_length_r_length, 4)] + f_list_a + [
-                            ', '.join(formant_reference(*f_list_a[:2])),
-                            ' '.join([vowel_b] + text_b_list[1:]),
-                            round(tier_result.max_intensity_r_length, 4)] + f_list_b + [
-                            ', '.join(formant_reference(*f_list_b[:2])),
-                            tier_result.coincidence_str])
+                        row_list = (
+
+                            [tier_result.transcription,
+                                text_str,
+                                ' '.join([vowel_a] + text_a_list[1:]),
+                                round(tier_result.max_length_r_length, 4)] +
+
+                            i_list_a +
+                            f_list_a +
+
+                            [', '.join(formant_reference(*f_list_a[:2])),
+                                ' '.join([vowel_b] + text_b_list[1:]),
+                                round(tier_result.max_intensity_r_length, 4)] +
+
+                            i_list_b +
+                            f_list_b +
+
+                            [', '.join(formant_reference(*f_list_b[:2])),
+                                tier_result.coincidence_str])
 
                         for group in textgrid_group_list:
 
@@ -2666,26 +2804,34 @@ def compile_workbook(
                     else:
 
                         for index, (interval_str, interval_r_length,
-                            f_list, sign_longest, sign_highest, source_index) in \
-                            enumerate(tier_result.interval_data_list):
+                            i_list, f_list, sign_longest, sign_highest, source_index) in (
 
-                            vowel = get_vowel_class(
-                                source_index,
-                                tier_result.source_interval_list,
-                                args.keep_set,
-                                args.join_set)
+                            enumerate(tier_result.interval_data_list)):
 
+                            vowel = (
+
+                                get_vowel_class(
+                                    source_index,
+                                    tier_result.source_interval_list,
+                                    args.keep_set,
+                                    args.join_set))
+
+                            i_list = list(map(float, i_list))
                             f_list = list(map(float, f_list[:3]))
 
-                            row_list = ([
-                                tier_result.transcription,
-                                text_str,
-                                ' '.join([vowel] + interval_str.split()[1:]),
-                                round(interval_r_length, 4)] +
-                                f_list + [
-                                ', '.join(formant_reference(*f_list[:2])),
-                                sign_longest,
-                                sign_highest])
+                            row_list = (
+
+                                [tier_result.transcription,
+                                    text_str,
+                                    ' '.join([vowel] + interval_str.split()[1:]),
+                                    round(interval_r_length, 4)] +
+
+                                i_list +
+                                f_list +
+
+                                [', '.join(formant_reference(*f_list[:2])),
+                                    sign_longest,
+                                    sign_highest])
 
                             # Writing out interval analysis data and any additional translations, collecting
                             # vowel formant data.
@@ -4150,12 +4296,14 @@ def perform_phonology(args, task_status, storage):
             '' if 'amr' not in row.Markup.additional_metadata else
                 ' [auto/{0}]'.format(row.Markup.additional_metadata['amr']))
 
-        break_flag, result = analyze_sound_markup(
-            args, task_status, storage,
-            result_filter,
-            state, 0.0, 99.0 / (1 + len(args.link_field_dict)),
-            index, row, row_str,
-            text_list)
+        break_flag, result = (
+
+            analyze_sound_markup(
+                args, task_status, storage,
+                result_filter,
+                state, 0.0, 99.0 / (1 + len(args.link_field_dict)),
+                index, row, row_str,
+                text_list))
 
         # If we had cache processing error, we terminate.
 
@@ -4512,15 +4660,16 @@ def perform_phonology(args, task_status, storage):
     csv_wrapper = io.TextIOWrapper(csv_stream, encoding = 'utf-8') if args.generate_csv else None
 
     try:
-        entry_count_dict, sound_count_dict, chart_stream_list = \
-                                                                \
+
+        entry_count_dict, sound_count_dict, chart_stream_list = (
+
             compile_workbook(
                 args,
                 source_entry_id_set,
                 result_dict,
                 result_group_set,
                 workbook_stream,
-                csv_wrapper)
+                csv_wrapper))
 
         # Getting ready to write out Excel and, if required, CSV file data.
 
