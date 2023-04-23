@@ -537,33 +537,55 @@ class AudioPraatLike(object):
         intensity_max = (
             max(intensity_list[0], intensity_list[-1]))
 
+        if self.args.__debug_flag__:
+
+            intensity_list_str = (
+
+                ', '.join(
+                    f'{value:.3f}'
+                    for value in intensity_list))
+
+            log.debug(
+                f'\nintensity_list ({len(intensity_list)}):\n[{intensity_list_str}]'
+                f'\nintensity_min: {intensity_min:.3f}'
+                f'\nintensity_max: {intensity_max:.3f}')
+
         for i in range(len(intensity_list) - 2):
 
-            v1, v2, v3 = intensity_list[i : i + 3]
+            v1, v2, v3 = (
+                intensity_list[i : i + 3])
+
+            intensity_min = (
+                min(intensity_min, v2))
+
+            intensity_max = (
+                max(intensity_max, v2))
 
             # Extremum of parabolic interpolation, see e.g.
             # http://www.ebyte.it/library/codesnippets/P3Interpolation.html.
+            #
+            # Using parabola's extremum only if it's non-degenerate and the extremum lies in the [i, i+2]
+            # interval of v1, v2, v3 values.
 
+            d1 = 0.5 * (v3 - v1)
             d2 = v1 + v3 - 2 * v2
 
-            if math.fabs(d2) > 0:
+            if (math.fabs(d2) > 0 and
+                math.fabs(d1d2 := d1 / d2) < 1):
 
-                d1 = 0.5 * (v3 - v1)
-                vX = v2 - 0.5 * d1 * d1 / d2
-
-                intensity_min = (
-                    min(intensity_min, v2, vX))
-
-                intensity_max = (
-                    max(intensity_max, v2, vX))
-
-            else:
+                vX = v2 - 0.5 * d1 * d1d2
 
                 intensity_min = (
-                    min(intensity_min, v2))
+                    min(intensity_min, vX))
 
                 intensity_max = (
-                    max(intensity_max, v2))
+                    max(intensity_max, vX))
+
+        if self.args.__debug_flag__:
+
+            log.debug(
+                f'\nintensity_min: {intensity_min:.3f}'
+                f'\nintensity_max: {intensity_max:.3f}')
 
         # Interval intensity as mean-energy intensity like in Praat.
 
