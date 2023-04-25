@@ -537,7 +537,7 @@ class AudioPraatLike(object):
         intensity_max = (
             max(intensity_list[0], intensity_list[-1]))
 
-        if self.args.__debug_flag__:
+        if self.args and self.args.__debug_flag__:
 
             intensity_list_str = (
 
@@ -581,7 +581,7 @@ class AudioPraatLike(object):
                 intensity_max = (
                     max(intensity_max, vX))
 
-        if self.args.__debug_flag__:
+        if self.args and self.args.__debug_flag__:
 
             log.debug(
                 f'\nintensity_min: {intensity_min:.3f}'
