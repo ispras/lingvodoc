@@ -364,6 +364,7 @@ import lingvodoc.scripts.docx_import as docx_import
 
 # Setting up logging.
 log = logging.getLogger(__name__)
+logging.disable(level=logging.INFO)
 
 
 # Trying to set up celery logging.
@@ -9232,6 +9233,7 @@ def async_cognate_analysis(
     with transaction.manager:
 
         try:
+            breakpoint()
             CognateAnalysis.perform_cognate_analysis(
                 language_str,
                 source_perspective_id,
@@ -9883,6 +9885,7 @@ class CognateAnalysis(graphene.Mutation):
             entry_already_set.update(entry_id_set)
             group_list.append(entry_id_set)
 
+        breakpoint()
         return entry_already_set, group_list, time.time() - start_time
 
     @staticmethod
@@ -10970,6 +10973,7 @@ class CognateAnalysis(graphene.Mutation):
 
                 CognateAnalysis.tag_data_plpgsql(
                     perspective_info_list, group_field_id))
+            breakpoint()
 
         else:
 
@@ -11034,7 +11038,7 @@ class CognateAnalysis(graphene.Mutation):
         sg_both_count = 0
 
         source_perspective_index = None
-
+        breakpoint()
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
             enumerate(perspective_info_list):
 
@@ -12631,6 +12635,140 @@ class CognateAnalysis(graphene.Mutation):
         return CognateAnalysis(**result_dict)
 
     @staticmethod
+    def swadesh_statistics(
+            language_str,
+            source_perspective_id,
+            base_language_id,
+            base_language_name,
+            group_field_id,
+            perspective_info_list,
+            multi_list,
+            multi_name_list,
+            mode,
+            distance_flag,
+            reference_perspective_id,
+            figure_flag,
+            distance_vowel_flag,
+            distance_consonant_flag,
+            match_translations_value,
+            only_orphans_flag,
+            locale_id,
+            storage,
+            task_status=None,
+            __debug_flag__=False,
+            __intermediate_flag__=False):
+
+        # Gathering entry grouping data.
+        perspective_dict = collections.defaultdict(dict)
+
+        # entry_already_set = set()
+        # group_list = []
+        # tag_dict = collections.defaultdict(set)
+
+        text_dict = {}
+        entry_id_dict = {}
+
+        entry_already_set, group_list, group_time = (
+            CognateAnalysis.tag_data_plpgsql(
+                perspective_info_list, group_field_id))
+
+        # Getting text data for each perspective.
+
+        # dbTranslation = aliased(dbEntity, name='Translation')
+        # dbPublishingTranslation = aliased(dbPublishingEntity, name='PublishingTranslation')
+        # source_perspective_index = None
+
+        for index, (perspective_id, transcription_field_id, translation_field_id) in \
+                enumerate(perspective_info_list):
+
+            # if perspective_id == source_perspective_id:
+            #    source_perspective_index = index
+
+            # Getting and saving perspective info.
+            perspective = DBSession.query(dbPerspective).filter_by(
+                client_id=perspective_id[0], object_id=perspective_id[1]).first()
+
+            perspective_name = perspective.get_translation(locale_id)
+            dictionary_name = perspective.parent.get_translation(locale_id)
+
+            transcription_rules = (
+                '' if not perspective.additional_metadata else
+                perspective.additional_metadata.get('transcription_rules', ''))
+
+            perspective_data = perspective_dict[perspective_id]
+
+            perspective_data['perspective_name'] = perspective_name
+            perspective_data['dictionary_name'] = dictionary_name
+            perspective_data['transcription_rules'] = transcription_rules
+
+            log.debug(
+                '\ncognate_analysis {0}:'
+                '\n  dictionary {1}/{2}: {3}'
+                '\n  perspective {4}/{5}: {6}'
+                '\n  transcription_rules: {7}'.format(
+                    language_str,
+                    perspective.parent_client_id, perspective.parent_object_id,
+                    repr(dictionary_name.strip()),
+                    perspective_id[0], perspective_id[1],
+                    repr(perspective_name.strip()),
+                    repr(transcription_rules)))
+
+            # Getting text data.
+            translation_query = (
+                DBSession.query(
+                    dbLexicalEntry.client_id,
+                    dbLexicalEntry.object_id).filter(
+                    dbLexicalEntry.parent_client_id == perspective_id[0],
+                    dbLexicalEntry.parent_object_id == perspective_id[1],
+                    dbLexicalEntry.marked_for_deletion == False,
+                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                    dbEntity.field_client_id == translation_field_id[0],
+                    dbEntity.field_object_id == translation_field_id[1],
+                    dbEntity.marked_for_deletion == False,
+                    dbPublishingEntity.client_id == dbEntity.client_id,
+                    dbPublishingEntity.object_id == dbEntity.object_id,
+                    dbPublishingEntity.published == True,
+                    dbPublishingEntity.accepted == True)
+
+                    .add_columns(
+                    func.array_agg(dbEntity.content).label('translation'))
+
+                    .group_by(dbLexicalEntry))
+
+            # If we are in asynchronous mode, we need to look up how many data rows we need
+            # to process for this perspective.
+            if task_status is not None:
+                row_count = translation_query.count()
+
+                log.debug(
+                    'cognate_analysis {0}: perspective {1}/{2}: {3} data rows'.format(
+                        language_str,
+                        perspective_id[0], perspective_id[1],
+                        row_count))
+
+            # Grouping translations by lexical entries.
+            for row_index, row in enumerate(translation_query.all()):
+                entry_id = tuple(row[:2])
+                transcription_list, translation_list = row[2:4]
+
+                translation_list = (
+                    [] if not translation_list else [
+                        translation.strip()
+                        for translation in translation_list
+                        if translation.strip()])
+
+                # Saving translation data.
+                entry_data_list = (index, translation_list)
+                text_dict[entry_id] = entry_data_list
+
+                entry_id_key = (
+                    index,
+                    (' ʽ' + '|'.join(translation_list) + 'ʼ' if translation_list else ''))
+
+                entry_id_dict[entry_id_key] = entry_id
+
+    @staticmethod
     def mutate(self, info, **args):
         """
         mutation CognateAnalysis {
@@ -12823,7 +12961,7 @@ class CognateAnalysis(graphene.Mutation):
                 cognate_suggestions_f if mode == 'suggestions' else
                 cognate_analysis_f)
 
-            if analysis_f is None:
+            if analysis_f is None and False:
 
                 return ResponseError(message =
                     'Analysis library fuction \'{0}()\' is absent, '
@@ -12875,7 +13013,7 @@ class CognateAnalysis(graphene.Mutation):
                 request.response.status = HTTPOk.code
 
                 if synchronous:
-
+                    breakpoint()
                     CognateAnalysis.perform_cognate_analysis(
                         language_str,
                         source_perspective_id,
@@ -12933,7 +13071,7 @@ class CognateAnalysis(graphene.Mutation):
             # We do not use acoustic data, so we perform cognate analysis synchronously.
 
             else:
-
+                #breakpoint()
                 return CognateAnalysis.perform_cognate_analysis(
                     language_str,
                     source_perspective_id,
