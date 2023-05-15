@@ -9233,7 +9233,6 @@ def async_cognate_analysis(
     with transaction.manager:
 
         try:
-            breakpoint()
             CognateAnalysis.perform_cognate_analysis(
                 language_str,
                 source_perspective_id,
@@ -9885,7 +9884,6 @@ class CognateAnalysis(graphene.Mutation):
             entry_already_set.update(entry_id_set)
             group_list.append(entry_id_set)
 
-        breakpoint()
         return entry_already_set, group_list, time.time() - start_time
 
     @staticmethod
@@ -12750,13 +12748,15 @@ class CognateAnalysis(graphene.Mutation):
             # Grouping translations by lexical entries.
             for row_index, row in enumerate(translation_query.all()):
                 entry_id = tuple(row[:2])
-                transcription_list, translation_list = row[2:4]
+                translation_list = row[2]
 
                 translation_list = (
                     [] if not translation_list else [
                         translation.strip()
                         for translation in translation_list
                         if translation.strip()])
+
+                print(translation_list)
 
                 # Saving translation data.
                 entry_data_list = (index, translation_list)
@@ -13068,10 +13068,34 @@ class CognateAnalysis(graphene.Mutation):
 
                 return CognateAnalysis(triumph = True)
 
-            # We do not use acoustic data, so we perform cognate analysis synchronously.
+            elif mode == 'swadesh':
 
+                return CognateAnalysis.swadesh_statistics(
+                    language_str,
+                    source_perspective_id,
+                    base_language_id,
+                    base_language_name,
+                    group_field_id,
+                    perspective_info_list,
+                    multi_list,
+                    multi_name_list,
+                    mode,
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
+                    match_translations_value,
+                    only_orphans_flag,
+                    locale_id,
+                    storage,
+                    None,
+                    __debug_flag__,
+                    __intermediate_flag__)
+
+            # We do not use acoustic data, so we perform cognate analysis synchronously.
             else:
-                #breakpoint()
+
                 return CognateAnalysis.perform_cognate_analysis(
                     language_str,
                     source_perspective_id,
