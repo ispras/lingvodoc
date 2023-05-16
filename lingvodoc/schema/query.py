@@ -12719,7 +12719,7 @@ class CognateAnalysis(graphene.Mutation):
                     .all())
 
             # Grouping translations by lexical entries.
-            for row_index, row in enumerate(translation_query.all()):
+            for row_index, row in enumerate(translation_query):
                 entry_id = tuple(row[:2])
                 translation_list = row[2]
 
