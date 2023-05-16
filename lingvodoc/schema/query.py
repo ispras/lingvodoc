@@ -12672,21 +12672,19 @@ class CognateAnalysis(graphene.Mutation):
                 # various forms of lexem and extra explanation if is
                 return set(form.strip().lower()
                            for form in lex.replace('(', ',').split(',')
-                           if form and ')' not in form)
+                           if form and (')' not in form))
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
-
-        # Gathering entry grouping data.
-        text_dict = {}
-        entry_id_dict = {}
 
         _, group_list, _ = (
             CognateAnalysis.tag_data_plpgsql(
                 perspective_info_list, group_field_id))
 
         # Getting text data for each perspective.
+        entries_map = {}
         for index, (perspective_id, _, translation_field_id) in \
                 enumerate(perspective_info_list):
 
+            '''
             # Getting and saving perspective info.
             perspective = (
                 DBSession
@@ -12707,6 +12705,7 @@ class CognateAnalysis(graphene.Mutation):
                     repr(dictionary_name.strip()),
                     perspective_id[0], perspective_id[1],
                     repr(perspective_name.strip())))
+            '''
 
             # Getting text data.
             translation_query = (
@@ -12733,6 +12732,7 @@ class CognateAnalysis(graphene.Mutation):
                     .all())
 
             # Grouping translations by lexical entries.
+            entries_map[perspective_id] = set()
             for row_index, row in enumerate(translation_query):
                 entry_id = tuple(row[:2])
                 translation_list = row[2]
@@ -12746,17 +12746,30 @@ class CognateAnalysis(graphene.Mutation):
                 for swadesh_lex in swadesh_list:
                     for translation_lex in translation_list:
                         if compare_translations(swadesh_lex, translation_lex):
-                            print(entry_id, translation_lex)
+                            entries_map[perspective_id].add(entry_id)
+                            #print(entry_id, translation_lex)
 
-                # Saving translation data.
-                entry_data_list = (index, translation_list)
-                text_dict[entry_id] = entry_data_list
+        # Create dictionary of sets:
+        # keys: pepspective_id
+        # values: numbers of groups where an entry from dictionary is met
+        links = {}
+        for perspective, entries in entries_map.items():
+            links[perspective] = set()
+            for index_group, group in enumerate(group_list):
+                if (entries & group):
+                    links[perspective].add(index_group)
 
-                entry_id_key = (
-                    index,
-                    (' ʽ' + '|'.join(translation_list) + 'ʼ' if translation_list else ''))
-
-                entry_id_dict[entry_id_key] = entry_id
+        # Calculate intersection between lists of group numbers for all the perspectives
+        # So length of this intersection is the similarity of corresponding perspectives
+        similarity = {}
+        for perspective1, groups1 in links.items():
+            similarity[perspective1] = {}
+            print(perspective1, end=' :: ')
+            for perspective2, groups2 in links.items():
+                commons = len(groups1 & groups2)
+                similarity[perspective1][perspective2] = commons
+                print(f"{perspective2}:{commons}", end=' | ')
+            print()
 
     @staticmethod
     def mutate(self, info, **args):
