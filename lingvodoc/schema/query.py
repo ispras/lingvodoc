@@ -12668,24 +12668,23 @@ class CognateAnalysis(graphene.Mutation):
 
         def compare_translations(swadesh_lex, dictionary_lex):
             def split_lex(lex):
-                return set(form.lower()
-                           for form in lex.replace(' ', ',').split(',')
-                           if form and '(' not in form)
+                # Split by comma and open bracket to separate
+                # various forms of lexem and extra explanation if is
+                return set(form.strip().lower()
+                           for form in lex.replace('(', ',').split(',')
+                           if form and ')' not in form)
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
 
         # Gathering entry grouping data.
-        #perspective_dict = collections.defaultdict(dict)
         text_dict = {}
         entry_id_dict = {}
 
-        _, group_list, group_time = (
+        _, group_list, _ = (
             CognateAnalysis.tag_data_plpgsql(
                 perspective_info_list, group_field_id))
 
-        #print(f"*** Group list: {group_list}")
-
         # Getting text data for each perspective.
-        for index, (perspective_id, transcription_field_id, translation_field_id) in \
+        for index, (perspective_id, _, translation_field_id) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -12698,9 +12697,6 @@ class CognateAnalysis(graphene.Mutation):
 
             perspective_name = perspective.get_translation(locale_id)
             dictionary_name = perspective.parent.get_translation(locale_id)
-            #perspective_data = perspective_dict[perspective_id]
-            #perspective_data['perspective_name'] = perspective_name
-            #perspective_data['dictionary_name'] = dictionary_name
 
             log.debug(
                 '\ncognate_analysis {0}:'
@@ -12747,7 +12743,10 @@ class CognateAnalysis(graphene.Mutation):
                         for translation in translation_list
                         if translation.strip()])
 
-                print(entry_id, translation_list)
+                for swadesh_lex in swadesh_list:
+                    for translation_lex in translation_list:
+                        if compare_translations(swadesh_lex, translation_lex):
+                            print(entry_id, translation_lex)
 
                 # Saving translation data.
                 entry_data_list = (index, translation_list)
