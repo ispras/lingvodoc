@@ -12668,11 +12668,12 @@ class CognateAnalysis(graphene.Mutation):
 
         def compare_translations(swadesh_lex, dictionary_lex):
             def split_lex(lex):
-                # Split by comma and open bracket to separate
-                # various forms of lexem and extra explanation if is
+                # Split by commas and open brackets to separate
+                # various forms of lexem and extra note if is
                 return set(form.strip().lower()
                            for form in lex.replace('(', ',').split(',')
-                           if form and (')' not in form))
+                           if form.strip() and (')' not in form)) #exclude notes
+            # return true if the intersection is not empty
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
 
         _, group_list, _ = (
@@ -12680,6 +12681,7 @@ class CognateAnalysis(graphene.Mutation):
                 perspective_info_list, group_field_id))
 
         # Getting text data for each perspective.
+        # entries_map gathers words from Swadesh' list met in perspectives
         entries_map = {}
         for index, (perspective_id, _, translation_field_id) in \
                 enumerate(perspective_info_list):
@@ -12751,7 +12753,7 @@ class CognateAnalysis(graphene.Mutation):
 
         # Create dictionary of sets:
         # keys: pepspective_id
-        # values: numbers of groups where an entry from dictionary is met
+        # values: numbers of etymological groups where an entry from dictionary is met
         links = {}
         for perspective, entries in entries_map.items():
             links[perspective] = set()
