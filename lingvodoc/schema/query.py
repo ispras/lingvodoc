@@ -10971,7 +10971,6 @@ class CognateAnalysis(graphene.Mutation):
 
                 CognateAnalysis.tag_data_plpgsql(
                     perspective_info_list, group_field_id))
-            breakpoint()
 
         else:
 
@@ -12657,93 +12656,67 @@ class CognateAnalysis(graphene.Mutation):
             __intermediate_flag__=False):
 
         # Gathering entry grouping data.
-        perspective_dict = collections.defaultdict(dict)
-
-        # entry_already_set = set()
-        # group_list = []
-        # tag_dict = collections.defaultdict(set)
-
+        #perspective_dict = collections.defaultdict(dict)
         text_dict = {}
         entry_id_dict = {}
 
-        entry_already_set, group_list, group_time = (
+        _, group_list, group_time = (
             CognateAnalysis.tag_data_plpgsql(
                 perspective_info_list, group_field_id))
 
+        #print(f"*** Group list: {group_list}")
+
         # Getting text data for each perspective.
-
-        # dbTranslation = aliased(dbEntity, name='Translation')
-        # dbPublishingTranslation = aliased(dbPublishingEntity, name='PublishingTranslation')
-        # source_perspective_index = None
-
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
                 enumerate(perspective_info_list):
 
-            # if perspective_id == source_perspective_id:
-            #    source_perspective_index = index
-
             # Getting and saving perspective info.
-            perspective = DBSession.query(dbPerspective).filter_by(
-                client_id=perspective_id[0], object_id=perspective_id[1]).first()
+            perspective = (
+                DBSession
+                    .query(dbPerspective)
+                    .filter_by(client_id=perspective_id[0], object_id=perspective_id[1])
+                    .first()
+            )
 
             perspective_name = perspective.get_translation(locale_id)
             dictionary_name = perspective.parent.get_translation(locale_id)
-
-            transcription_rules = (
-                '' if not perspective.additional_metadata else
-                perspective.additional_metadata.get('transcription_rules', ''))
-
-            perspective_data = perspective_dict[perspective_id]
-
-            perspective_data['perspective_name'] = perspective_name
-            perspective_data['dictionary_name'] = dictionary_name
-            perspective_data['transcription_rules'] = transcription_rules
+            #perspective_data = perspective_dict[perspective_id]
+            #perspective_data['perspective_name'] = perspective_name
+            #perspective_data['dictionary_name'] = dictionary_name
 
             log.debug(
                 '\ncognate_analysis {0}:'
                 '\n  dictionary {1}/{2}: {3}'
-                '\n  perspective {4}/{5}: {6}'
-                '\n  transcription_rules: {7}'.format(
+                '\n  perspective {4}/{5}: {6}'.format(
                     language_str,
                     perspective.parent_client_id, perspective.parent_object_id,
                     repr(dictionary_name.strip()),
                     perspective_id[0], perspective_id[1],
-                    repr(perspective_name.strip()),
-                    repr(transcription_rules)))
+                    repr(perspective_name.strip())))
 
             # Getting text data.
             translation_query = (
-                DBSession.query(
-                    dbLexicalEntry.client_id,
-                    dbLexicalEntry.object_id).filter(
-                    dbLexicalEntry.parent_client_id == perspective_id[0],
-                    dbLexicalEntry.parent_object_id == perspective_id[1],
-                    dbLexicalEntry.marked_for_deletion == False,
-                    dbEntity.parent_client_id == dbLexicalEntry.client_id,
-                    dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                    dbEntity.field_client_id == translation_field_id[0],
-                    dbEntity.field_object_id == translation_field_id[1],
-                    dbEntity.marked_for_deletion == False,
-                    dbPublishingEntity.client_id == dbEntity.client_id,
-                    dbPublishingEntity.object_id == dbEntity.object_id,
-                    dbPublishingEntity.published == True,
-                    dbPublishingEntity.accepted == True)
-
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == translation_field_id[0],
+                        dbEntity.field_object_id == translation_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
                     .add_columns(
-                    func.array_agg(dbEntity.content).label('translation'))
-
-                    .group_by(dbLexicalEntry))
-
-            # If we are in asynchronous mode, we need to look up how many data rows we need
-            # to process for this perspective.
-            if task_status is not None:
-                row_count = translation_query.count()
-
-                log.debug(
-                    'cognate_analysis {0}: perspective {1}/{2}: {3} data rows'.format(
-                        language_str,
-                        perspective_id[0], perspective_id[1],
-                        row_count))
+                        func.array_agg(dbEntity.content).label('translation'))
+                    .group_by(dbLexicalEntry)
+                    .all())
 
             # Grouping translations by lexical entries.
             for row_index, row in enumerate(translation_query.all()):
