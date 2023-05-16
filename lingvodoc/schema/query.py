@@ -12655,6 +12655,24 @@ class CognateAnalysis(graphene.Mutation):
             __debug_flag__=False,
             __intermediate_flag__=False):
 
+        swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
+                        'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
+                        'семя','лист','корень','кора','кожа','мясо','кровь','кость','жир','яйцо','рог','хвост','перо',
+                        'волосы','голова','ухо','глаз','нос','рот','зуб','язык (орган)','ноготь','нога (стопа)','колено',
+                        'рука (кисть)','живот','горло','грудь','сердце','печень','пить','есть (кушать)','кусать','видеть',
+                        'слышать','знать','спать','умирать','убивать','плавать','летать','гулять','приходить','лежать',
+                        'сидеть','стоять','дать','сказать','солнце','луна','звезда','вода','дождь','камень','песок',
+                        'земля','облако','дым','огонь','пепел','гореть','дорога,тропа','гора','красный','зелёный',
+                        'жёлтый','белый','чёрный','ночь','тёплый','холодный','полный','новый','хороший','круглый',
+                        'сухой','имя']
+
+        def compare_translations(swadesh_lex, dictionary_lex):
+            def split_lex(lex):
+                return set(form.lower()
+                           for form in lex.replace(' ', ',').split(',')
+                           if form and '(' not in form)
+            return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
+
         # Gathering entry grouping data.
         #perspective_dict = collections.defaultdict(dict)
         text_dict = {}
@@ -12729,7 +12747,7 @@ class CognateAnalysis(graphene.Mutation):
                         for translation in translation_list
                         if translation.strip()])
 
-                print(translation_list)
+                print(entry_id, translation_list)
 
                 # Saving translation data.
                 entry_data_list = (index, translation_list)
