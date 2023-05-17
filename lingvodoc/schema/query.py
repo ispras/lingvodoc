@@ -12632,6 +12632,424 @@ class CognateAnalysis(graphene.Mutation):
         return CognateAnalysis(**result_dict)
 
     @staticmethod
+    def mutate(self, info, **args):
+        """
+        mutation CognateAnalysis {
+          cognate_analysis(
+            base_language_id: [508, 41],
+            group_field_id: [66, 25],
+            perspective_info_list: [
+              [[425, 4], [66, 8], [66, 10]],
+              [[1552, 1759], [66, 8], [66, 10]],
+              [[418, 4], [66, 8], [66, 10]]])
+          {
+            triumph
+            entity_count
+            dictionary_count
+            group_count
+            not_enough_count
+            text_count
+            result
+          }
+        }
+        """
+
+        # Administrator / perspective author / editing permission check.
+
+        error_str = (
+            'Only administrator, perspective author and users with perspective editing permissions '
+            'can perform cognate analysis.')
+
+        client_id = info.context.request.authenticated_userid
+
+        if not client_id:
+            raise ResponseError(error_str)
+
+        user = Client.get_user_by_client_id(client_id)
+
+        author_client_id_set = (
+
+            set(
+                client_id
+                for (client_id, _), _, _ in args['perspective_info_list']))
+
+        author_id_check = (
+
+            DBSession
+
+                .query(
+
+                    DBSession
+                        .query(literal(1))
+                        .filter(
+                            Client.id.in_(author_client_id_set),
+                            Client.user_id == user.id)
+                        .exists())
+
+                .scalar())
+
+        if (user.id != 1 and
+            not author_id_check and
+            not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
+
+            raise ResponseError(error_str)
+
+        # Getting arguments.
+
+        source_perspective_id = args['source_perspective_id']
+        base_language_id = args['base_language_id']
+
+        group_field_id = args['group_field_id']
+        perspective_info_list = args['perspective_info_list']
+        multi_list = args.get('multi_list')
+
+        mode = args.get('mode')
+
+        distance_flag = args.get('distance_flag')
+        reference_perspective_id = args.get('reference_perspective_id')
+
+        figure_flag = args.get('figure_flag')
+        distance_vowel_flag = args.get('distance_vowel_flag')
+        distance_consonant_flag = args.get('distance_consonant_flag')
+
+        match_translations_value = args.get('match_translations_value', 1)
+        only_orphans_flag = args.get('only_orphans_flag', True)
+
+        __debug_flag__ = args.get('debug_flag', False)
+        __intermediate_flag__ = args.get('intermediate_flag', False)
+
+        synchronous = args.get('synchronous', False)
+
+        language_str = (
+            '{0}/{1}, language {2}/{3}'.format(
+                source_perspective_id[0], source_perspective_id[1],
+                base_language_id[0], base_language_id[1]))
+
+        try:
+
+            # Getting base language info.
+
+            locale_id = info.context.get('locale_id') or 2
+
+            base_language = DBSession.query(dbLanguage).filter_by(
+                client_id = base_language_id[0], object_id = base_language_id[1]).first()
+
+            base_language_name = base_language.get_translation(locale_id)
+
+            request = info.context.request
+            storage = request.registry.settings['storage']
+
+            # Getting multi-language info, if required.
+
+            if multi_list is None:
+                multi_list = []
+
+            multi_name_list = []
+
+            for language_id, perspective_count in multi_list:
+
+                language = DBSession.query(dbLanguage).filter_by(
+                    client_id = language_id[0], object_id = language_id[1]).first()
+
+                multi_name_list.append(
+                    language.get_translation(locale_id))
+
+            # Language tag.
+
+            if mode == 'multi':
+
+                multi_str = ', '.join(
+                    '{0}/{1}'.format(*id)
+                    for id, count in multi_list)
+
+                language_str = (
+                    '{0}/{1}, languages {2}'.format(
+                        source_perspective_id[0], source_perspective_id[1],
+                        multi_str))
+
+            # Showing cognate analysis info, checking cognate analysis library presence.
+
+            log.debug(
+                 '\ncognate_analysis {}:'
+                 '\n  base language: {}'
+                 '\n  group field: {}/{}'
+                 '\n  perspectives and transcription/translation fields: {}'
+                 '\n  multi_list: {}'
+                 '\n  multi_name_list: {}'
+                 '\n  mode: {}'
+                 '\n  distance_flag: {}'
+                 '\n  reference_perspective_id: {}'
+                 '\n  figure_flag: {}'
+                 '\n  distance_vowel_flag: {}'
+                 '\n  distance_consonant_flag: {}'
+                 '\n  match_translations_value: {}'
+                 '\n  only_orphans_flag: {} ({})'
+                 '\n  __debug_flag__: {}'
+                 '\n  __intermediate_flag__: {}'
+                 '\n  cognate_analysis_f: {}'
+                 '\n  cognate_acoustic_analysis_f: {}'
+                 '\n  cognate_distance_analysis_f: {}'
+                 '\n  cognate_reconstruction_f: {}'
+                 '\n  cognate_reconstruction_multi_f: {}'
+                 '\n  cognate_suggestions_f: {}'.format(
+                    language_str,
+                    repr(base_language_name.strip()),
+                    group_field_id[0], group_field_id[1],
+                    perspective_info_list,
+                    multi_list,
+                    multi_name_list,
+                    repr(mode),
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
+                    match_translations_value,
+                    only_orphans_flag, int(only_orphans_flag),
+                    __debug_flag__,
+                    __intermediate_flag__,
+                    repr(cognate_analysis_f),
+                    repr(cognate_acoustic_analysis_f),
+                    repr(cognate_distance_analysis_f),
+                    repr(cognate_reconstruction_f),
+                    repr(cognate_reconstruction_multi_f),
+                    repr(cognate_suggestions_f)))
+
+            # Checking if we have analysis function ready.
+
+            analysis_f = (
+                cognate_acoustic_analysis_f if mode == 'acoustic' else
+                cognate_reconstruction_f if mode == 'reconstruction' else
+                cognate_reconstruction_multi_f if mode == 'multi' else
+                cognate_suggestions_f if mode == 'suggestions' else
+                cognate_analysis_f)
+
+            if analysis_f is None and False:
+
+                return ResponseError(message =
+                    'Analysis library fuction \'{0}()\' is absent, '
+                    'please contact system administrator.'.format(
+                        'CognateAcousticAnalysis_GetAllOutput' if mode == 'acoustic' else
+                        'CognateReconstruct_GetAllOutput' if mode == 'reconstruction' else
+                        'CognateMultiReconstruct_GetAllOutput' if mode == 'multi' else
+                        'GuessCognates_GetAllOutput' if mode == 'suggestions' else
+                        'CognateAnalysis_GetAllOutput'))
+
+            # Transforming client/object pair ids from lists to 2-tuples.
+
+            source_perspective_id = tuple(source_perspective_id)
+            base_language_id = tuple(base_language_id)
+            group_field_id = tuple(group_field_id)
+
+            perspective_info_list = [
+
+                (tuple(perspective_id),
+                    tuple(transcription_field_id),
+                    tuple(translation_field_id))
+
+                for perspective_id,
+                    transcription_field_id,
+                    translation_field_id in perspective_info_list]
+
+            multi_list = [
+                [tuple(language_id), perspective_count]
+                for language_id, perspective_count in multi_list]
+
+            if reference_perspective_id is not None:
+                reference_perspective_id = tuple(reference_perspective_id)
+
+            # If we are to use acoustic data, we will launch cognate analysis in asynchronous mode.
+
+            if mode == 'acoustic':
+
+                client_id = request.authenticated_userid
+
+                user_id = (
+                    Client.get_user_by_client_id(client_id).id
+                        if client_id else anonymous_userid(request))
+
+                task_status = TaskStatus(
+                    user_id, 'Cognate acoustic analysis', base_language_name, 5)
+
+                # Launching cognate acoustic analysis asynchronously.
+
+                request.response.status = HTTPOk.code
+
+                if synchronous:
+                    breakpoint()
+                    CognateAnalysis.perform_cognate_analysis(
+                        language_str,
+                        source_perspective_id,
+                        base_language_id,
+                        base_language_name,
+                        group_field_id,
+                        perspective_info_list,
+                        multi_list,
+                        multi_name_list,
+                        mode,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        match_translations_value,
+                        only_orphans_flag,
+                        locale_id,
+                        storage,
+                        task_status,
+                        __debug_flag__,
+                        __intermediate_flag__)
+
+                else:
+
+                    async_cognate_analysis.delay(
+                        language_str,
+                        source_perspective_id,
+                        base_language_id,
+                        base_language_name,
+                        group_field_id,
+                        perspective_info_list,
+                        multi_list,
+                        multi_name_list,
+                        mode,
+                        distance_flag,
+                        reference_perspective_id,
+                        figure_flag,
+                        distance_vowel_flag,
+                        distance_consonant_flag,
+                        match_translations_value,
+                        only_orphans_flag,
+                        locale_id,
+                        storage,
+                        task_status.key,
+                        request.registry.settings['cache_kwargs'],
+                        request.registry.settings['sqlalchemy.url'],
+                        __debug_flag__,
+                        __intermediate_flag__)
+
+                # Signifying that we've successfully launched asynchronous cognate acoustic analysis.
+
+                return CognateAnalysis(triumph = True)
+
+            elif mode == 'swadesh':
+
+                return CognateAnalysis.swadesh_statistics(
+                    language_str,
+                    source_perspective_id,
+                    base_language_id,
+                    base_language_name,
+                    group_field_id,
+                    perspective_info_list,
+                    multi_list,
+                    multi_name_list,
+                    mode,
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
+                    match_translations_value,
+                    only_orphans_flag,
+                    locale_id,
+                    storage,
+                    None,
+                    __debug_flag__,
+                    __intermediate_flag__)
+
+            # We do not use acoustic data, so we perform cognate analysis synchronously.
+            else:
+
+                return CognateAnalysis.perform_cognate_analysis(
+                    language_str,
+                    source_perspective_id,
+                    base_language_id,
+                    base_language_name,
+                    group_field_id,
+                    perspective_info_list,
+                    multi_list,
+                    multi_name_list,
+                    mode,
+                    distance_flag,
+                    reference_perspective_id,
+                    figure_flag,
+                    distance_vowel_flag,
+                    distance_consonant_flag,
+                    match_translations_value,
+                    only_orphans_flag,
+                    locale_id,
+                    storage,
+                    None,
+                    __debug_flag__,
+                    __intermediate_flag__)
+
+        # Exception occured while we tried to perform cognate analysis.
+
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.warning(
+                'cognate_analysis {0}: exception'.format(
+                language_str))
+
+            log.warning(traceback_string)
+
+            return ResponseError(message =
+                'Exception:\n' + traceback_string)
+
+
+class SwadeshAnalysis(graphene.Mutation):
+    class Arguments:
+
+        source_perspective_id = LingvodocID(required = True)
+        base_language_id = LingvodocID(required = True)
+
+        group_field_id = LingvodocID(required = True)
+        perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
+        multi_list = graphene.List(ObjectVal)
+
+        mode = graphene.String()
+
+        distance_flag = graphene.Boolean()
+        reference_perspective_id = LingvodocID()
+
+        figure_flag = graphene.Boolean()
+        distance_vowel_flag = graphene.Boolean()
+        distance_consonant_flag = graphene.Boolean()
+
+        match_translations_value = graphene.Int()
+        only_orphans_flag = graphene.Boolean()
+
+        debug_flag = graphene.Boolean()
+        intermediate_flag = graphene.Boolean()
+
+        synchronous = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    dictionary_count = graphene.Int()
+    group_count = graphene.Int()
+    not_enough_count = graphene.Int()
+    transcription_count = graphene.Int()
+    translation_count = graphene.Int()
+
+    result = graphene.String()
+    xlsx_url = graphene.String()
+    distance_list = graphene.Field(ObjectVal)
+    figure_url = graphene.String()
+
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+    perspective_name_list = graphene.List(graphene.String)
+
+    suggestion_list = graphene.List(ObjectVal)
+    suggestion_field_id = LingvodocID()
+
+    intermediate_url_list = graphene.List(graphene.String)
+
+    @staticmethod
     def swadesh_statistics(
             language_str,
             source_perspective_id,
