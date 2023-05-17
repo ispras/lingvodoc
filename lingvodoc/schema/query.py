@@ -364,7 +364,7 @@ import lingvodoc.scripts.docx_import as docx_import
 
 # Setting up logging.
 log = logging.getLogger(__name__)
-logging.disable(level=logging.INFO)
+#logging.disable(level=logging.INFO)
 
 
 # Trying to set up celery logging.
@@ -11035,7 +11035,6 @@ class CognateAnalysis(graphene.Mutation):
         sg_both_count = 0
 
         source_perspective_index = None
-        breakpoint()
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
             enumerate(perspective_info_list):
 
@@ -12876,7 +12875,6 @@ class CognateAnalysis(graphene.Mutation):
                 request.response.status = HTTPOk.code
 
                 if synchronous:
-                    breakpoint()
                     CognateAnalysis.perform_cognate_analysis(
                         language_str,
                         source_perspective_id,
