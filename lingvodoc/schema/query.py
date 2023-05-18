@@ -10888,6 +10888,399 @@ class CognateAnalysis(graphene.Mutation):
         return result_x, f(result.x)
 
     @staticmethod
+    def distance_graph(
+            language_str,
+            distance_data_array,
+            distance_header_array,
+            __debug_flag__):
+
+        d_ij = (distance_data_array + distance_data_array.T) / 2
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\ndistance_header_array:\n{1}'
+            '\ndistance_data_array:\n{2}'
+            '\nd_ij:\n{3}'.format(
+            language_str,
+            distance_header_array,
+            distance_data_array,
+            d_ij))
+
+        # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
+        # orient it left-right.
+
+        if len(distance_data_array) > 1:
+
+            embedding_2d, strain_2d = (
+                CognateAnalysis.graph_2d_embedding(d_ij, verbose = __debug_flag__))
+
+            embedding_2d_pca = (
+                sklearn.decomposition.PCA(n_components = 2)
+                    .fit_transform(embedding_2d))
+
+            distance_2d = sklearn.metrics.euclidean_distances(embedding_2d)
+
+        else:
+
+            embedding_2d = numpy.zeros((1, 2))
+            embedding_2d_pca = numpy.zeros((1, 2))
+
+            strain_2d = 0.0
+
+            distance_2d = numpy.zeros((1, 1))
+
+        # Showing what we computed.
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\nembedding 2d:\n{1}'
+            '\nembedding 2d (PCA-oriented):\n{2}'
+            '\nstrain 2d:\n{3}'
+            '\ndistances 2d:\n{4}'.format(
+            language_str,
+            embedding_2d,
+            embedding_2d_pca,
+            strain_2d,
+            distance_2d))
+
+        # And now the same with 3d embedding.
+
+        if len(distance_data_array) > 1:
+
+            embedding_3d, strain_3d = (
+                CognateAnalysis.graph_3d_embedding(d_ij, verbose = __debug_flag__))
+
+            # At least three points, standard PCA-based orientation.
+
+            if len(distance_data_array) >= 3:
+
+                embedding_3d_pca = (
+                    sklearn.decomposition.PCA(n_components = 3)
+                        .fit_transform(embedding_3d))
+
+            # Only two points, so we take 2d embedding and extend it with zeros.
+
+            else:
+
+                embedding_3d_pca = (
+
+                    numpy.hstack((
+                        embedding_2d_pca,
+                        numpy.zeros((embedding_2d_pca.shape[0], 1)))))
+
+            # Making 3d embedding actually 3d, if required.
+
+            if embedding_3d_pca.shape[1] <= 2:
+
+                embedding_3d_pca = (
+
+                    numpy.hstack((
+                        embedding_3d_pca,
+                        numpy.zeros((embedding_3d_pca.shape[0], 1)))))
+
+            distance_3d = (
+                sklearn.metrics.euclidean_distances(embedding_3d_pca))
+
+        else:
+
+            embedding_3d = numpy.zeros((1, 3))
+            embedding_3d_pca = numpy.zeros((1, 3))
+
+            strain_3d = 0.0
+
+            distance_3d = numpy.zeros((1, 1))
+
+        # Showing what we've get.
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\nembedding 3d:\n{1}'
+            '\nembedding 3d (PCA-oriented):\n{2}'
+            '\nstrain 3d:\n{3}'
+            '\ndistances 3d:\n{4}'.format(
+            language_str,
+            embedding_3d,
+            embedding_3d_pca,
+            strain_3d,
+            distance_3d))
+
+        # Computing minimum spanning tree via standard Jarnik-Prim-Dijkstra algorithm using 2d and 3d
+        # embedding distances to break ties.
+
+        if len(distance_data_array) <= 1:
+            mst_list = []
+
+        else:
+
+            d_min, d_extra_min, min_i, min_j = min(
+                (d_ij[i,j], distance_2d[i,j] + distance_3d[i,j], i, j)
+                for i in range(d_ij.shape[0] - 1)
+                for j in range(i + 1, d_ij.shape[0]))
+
+            mst_list = [(min_i, min_j)]
+            mst_dict = {}
+
+            # MST construction initialization.
+
+            for i in range(d_ij.shape[0]):
+
+                if i == min_i or i == min_j:
+                    continue
+
+                d_min_i = (d_ij[i, min_i], distance_2d[i, min_i] + distance_3d[i, min_i])
+                d_min_j = (d_ij[i, min_j], distance_2d[i, min_j] + distance_3d[i, min_j])
+
+                mst_dict[i] = (
+                    (d_min_i, min_i) if d_min_i <= d_min_j else
+                    (d_min_j, min_i))
+
+            # Iterative MST construction.
+
+            while len(mst_dict) > 0:
+
+                (d_min, d_extra_min, i_min, i_from_min) = min(
+                    (d, d_extra, i, i_from) for i, ((d, d_extra), i_from) in mst_dict.items())
+
+                log.debug('\n' + pprint.pformat(mst_dict))
+                log.debug('\n' + repr((i_from_min, i_min, d_min, d_extra_min)))
+
+                mst_list.append((i_from_min, i_min))
+                del mst_dict[i_min]
+
+                # Updating shortest connection info.
+
+                for i_to in mst_dict.keys():
+
+                    d_to = (d_ij[i_min, i_to], distance_2d[i_min, i_to] + distance_3d[i_min, i_to])
+
+                    if d_to < mst_dict[i_to][0]:
+                        mst_dict[i_to] = (d_to, i_min)
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\nminimum spanning tree:\n{1}'.format(
+            language_str,
+            pprint.pformat(mst_list)))
+
+        # Plotting with matplotlib.
+
+        figure = pyplot.figure(figsize = (10, 10))
+        axes = figure.add_subplot(212)
+
+        axes.set_title(
+            'Etymological distance tree (relative distance embedding)',
+            fontsize = 14, family = 'Gentium')
+
+        axes.axis('equal')
+        axes.axis('off')
+        axes.autoscale()
+
+        def f(axes, embedding_pca):
+            """
+            Plots specified graph embedding on a given axis.
+            """
+
+            flag_3d = numpy.size(embedding_pca, 1) > 2
+
+            for index, (position, name) in enumerate(
+                zip(embedding_pca, distance_header_array)):
+
+                # Checking if any of the previous perspectives are already in this perspective's
+                # position.
+
+                same_position_index = None
+
+                for i, p in enumerate(embedding_pca[:index]):
+                    if numpy.linalg.norm(position - p) <= 1e-3:
+
+                        same_position_index = i
+                        break
+
+                color = matplotlib.colors.hsv_to_rgb(
+                    [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
+
+                label_same_str = (
+                    '' if same_position_index is None else
+                    ' (same as {0})'.format(same_position_index + 1))
+
+                kwargs = {
+                    's': 35,
+                    'color': color,
+                    'label': '{0}) {1}{2}'.format(index + 1, name, label_same_str)}
+
+                axes.scatter(*position, **kwargs)
+
+                # Annotating position with its number, but only if we hadn't already annotated nearby.
+
+                if same_position_index is None:
+
+                    if flag_3d:
+
+                        axes.text(
+                            position[0] + 0.01, position[1], position[2] + 0.01,
+                            str(index + 1), None, fontsize = 14)
+
+                    else:
+
+                        axes.annotate(
+                            str(index + 1),
+                            (position[0] + 0.01, position[1] - 0.005),
+                            fontsize = 14)
+
+            # Plotting minimum spanning trees.
+
+            line_list = [
+                (embedding_pca[i], embedding_pca[j])
+                for i, j in mst_list]
+
+            line_collection = (
+                Line3DCollection if flag_3d else LineCollection)(
+                    line_list, zorder = 0, color = 'gray')
+
+            axes.add_collection(line_collection)
+
+            pyplot.setp(axes.texts, family = 'Gentium')
+
+        # Plotting our embedding, creating the legend.
+
+        f(axes, embedding_2d_pca)
+
+        pyplot.tight_layout()
+
+        legend = axes.legend(
+            scatterpoints = 1,
+            loc = 'upper center',
+            bbox_to_anchor = (0.5, -0.05),
+            frameon = False,
+            handlelength = 0.5,
+            handletextpad = 0.75,
+            fontsize = 14)
+
+        pyplot.setp(legend.texts, family = 'Gentium')
+        axes.autoscale_view()
+
+        # Saving generated figure for debug purposes, if required.
+
+        if __debug_flag__:
+
+            figure_file_name = (
+                'figure cognate distance{0}.png'.format(
+                mode_name_str))
+
+            with open(figure_file_name, 'wb') as figure_file:
+
+                pyplot.savefig(
+                    figure_file,
+                    bbox_extra_artists = (legend,),
+                    bbox_inches = 'tight',
+                    pad_inches = 0.25,
+                    format = 'png')
+
+            # Also generating 3d embedding figure.
+
+            figure_3d = pyplot.figure()
+            figure_3d.set_size_inches(16, 10)
+
+            axes_3d = figure_3d.add_subplot(111, projection = '3d')
+
+            axes_3d.axis('equal')
+            axes_3d.view_init(elev = 30, azim = -75)
+
+            f(axes_3d, embedding_3d_pca)
+
+            # Setting up legend.
+
+            axes_3d.set_xlabel('X')
+            axes_3d.set_ylabel('Y')
+            axes_3d.set_zlabel('Z')
+
+            legend_3d = axes_3d.legend(
+                scatterpoints = 1,
+                loc = 'upper center',
+                bbox_to_anchor = (0.5, -0.05),
+                frameon = False,
+                handlelength = 0.5,
+                handletextpad = 0.75,
+                fontsize = 14)
+
+            pyplot.setp(legend_3d.texts, family = 'Gentium')
+
+            # Fake cubic bounding box to force axis aspect ratios, see
+            # https://stackoverflow.com/a/13701747/2016856.
+
+            X = embedding_3d_pca[:,0]
+            Y = embedding_3d_pca[:,1]
+            Z = embedding_3d_pca[:,2]
+
+            max_range = numpy.array([
+                X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
+
+            Xb = (
+                0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() +
+                0.5 * (X.max() + X.min()))
+
+            Yb = (
+                0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() +
+                0.5 * (Y.max() + Y.min()))
+
+            Zb = (
+                0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() +
+                0.5 * (Z.max() + Z.min()))
+
+            for xb, yb, zb in zip(Xb, Yb, Zb):
+               axes_3d.plot([xb], [yb], [zb], 'w')
+
+            axes_3d.autoscale_view()
+
+            # And saving it.
+
+            figure_3d_file_name = (
+                'figure 3d cognate distance{0}.png'.format(
+                mode_name_str))
+
+            with open(figure_3d_file_name, 'wb') as figure_3d_file:
+
+                figure_3d.savefig(
+                    figure_3d_file,
+                    bbox_extra_artists = (legend_3d,),
+                    bbox_inches = 'tight',
+                    pad_inches = 0.25,
+                    format = 'png')
+
+        # Storing generated figure as a PNG image.
+
+        figure_filename = pathvalidate.sanitize_filename(
+            '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
+                base_language_name[:64],
+                ' ' + mode if mode else '',
+                current_datetime.year,
+                current_datetime.month,
+                current_datetime.day))
+
+        figure_path = os.path.join(storage_dir, figure_filename)
+        os.makedirs(os.path.dirname(figure_path), exist_ok = True)
+
+        with open(figure_path, 'wb') as figure_file:
+
+            figure.savefig(
+                figure_file,
+                bbox_extra_artists = (legend,),
+                bbox_inches = 'tight',
+                pad_inches = 0.25,
+                format = 'png')
+
+        figure_url = ''.join([
+            storage['prefix'], storage['static_route'],
+            'cognate', '/', str(cur_time), '/', figure_filename])
+
+        return (
+            figure_url,
+            mst_list,
+            embedding_2d_pca,
+            embedding_3d_pca
+        )
+
+    @staticmethod
     def perform_cognate_analysis(
         language_str,
         source_perspective_id,
@@ -12196,396 +12589,21 @@ class CognateAnalysis(graphene.Mutation):
                     distance_list))
 
         # Generating distance graph, if required.
-
         figure_url = None
-
         mst_list = None
         embedding_2d_pca = None
         embedding_3d_pca = None
 
         if figure_flag:
-
-            d_ij = (distance_data_array + distance_data_array.T) / 2
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\ndistance_header_array:\n{1}'
-                '\ndistance_data_array:\n{2}'
-                '\nd_ij:\n{3}'.format(
-                language_str,
-                distance_header_array,
-                distance_data_array,
-                d_ij))
-
-            # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
-            # orient it left-right.
-
-            if len(distance_data_array) > 1:
-
-                embedding_2d, strain_2d = (
-                    CognateAnalysis.graph_2d_embedding(d_ij, verbose = __debug_flag__))
-
-                embedding_2d_pca = (
-                    sklearn.decomposition.PCA(n_components = 2)
-                        .fit_transform(embedding_2d))
-
-                distance_2d = sklearn.metrics.euclidean_distances(embedding_2d)
-
-            else:
-
-                embedding_2d = numpy.zeros((1, 2))
-                embedding_2d_pca = numpy.zeros((1, 2))
-
-                strain_2d = 0.0
-
-                distance_2d = numpy.zeros((1, 1))
-
-            # Showing what we computed.
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\nembedding 2d:\n{1}'
-                '\nembedding 2d (PCA-oriented):\n{2}'
-                '\nstrain 2d:\n{3}'
-                '\ndistances 2d:\n{4}'.format(
-                language_str,
-                embedding_2d,
-                embedding_2d_pca,
-                strain_2d,
-                distance_2d))
-
-            # And now the same with 3d embedding.
-
-            if len(distance_data_array) > 1:
-
-                embedding_3d, strain_3d = (
-                    CognateAnalysis.graph_3d_embedding(d_ij, verbose = __debug_flag__))
-
-                # At least three points, standard PCA-based orientation.
-
-                if len(distance_data_array) >= 3:
-
-                    embedding_3d_pca = (
-                        sklearn.decomposition.PCA(n_components = 3)
-                            .fit_transform(embedding_3d))
-
-                # Only two points, so we take 2d embedding and extend it with zeros.
-
-                else:
-
-                    embedding_3d_pca = (
-
-                        numpy.hstack((
-                            embedding_2d_pca,
-                            numpy.zeros((embedding_2d_pca.shape[0], 1)))))
-
-                # Making 3d embedding actually 3d, if required.
-
-                if embedding_3d_pca.shape[1] <= 2:
-
-                    embedding_3d_pca = (
-
-                        numpy.hstack((
-                            embedding_3d_pca,
-                            numpy.zeros((embedding_3d_pca.shape[0], 1)))))
-
-                distance_3d = (
-                    sklearn.metrics.euclidean_distances(embedding_3d_pca))
-
-            else:
-
-                embedding_3d = numpy.zeros((1, 3))
-                embedding_3d_pca = numpy.zeros((1, 3))
-
-                strain_3d = 0.0
-
-                distance_3d = numpy.zeros((1, 1))
-
-            # Showing what we've get.
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\nembedding 3d:\n{1}'
-                '\nembedding 3d (PCA-oriented):\n{2}'
-                '\nstrain 3d:\n{3}'
-                '\ndistances 3d:\n{4}'.format(
-                language_str,
-                embedding_3d,
-                embedding_3d_pca,
-                strain_3d,
-                distance_3d))
-
-            # Computing minimum spanning tree via standard Jarnik-Prim-Dijkstra algorithm using 2d and 3d
-            # embedding distances to break ties.
-
-            if len(distance_data_array) <= 1:
-                mst_list = []
-
-            else:
-
-                d_min, d_extra_min, min_i, min_j = min(
-                    (d_ij[i,j], distance_2d[i,j] + distance_3d[i,j], i, j)
-                    for i in range(d_ij.shape[0] - 1)
-                    for j in range(i + 1, d_ij.shape[0]))
-
-                mst_list = [(min_i, min_j)]
-                mst_dict = {}
-
-                # MST construction initialization.
-
-                for i in range(d_ij.shape[0]):
-
-                    if i == min_i or i == min_j:
-                        continue
-
-                    d_min_i = (d_ij[i, min_i], distance_2d[i, min_i] + distance_3d[i, min_i])
-                    d_min_j = (d_ij[i, min_j], distance_2d[i, min_j] + distance_3d[i, min_j])
-
-                    mst_dict[i] = (
-                        (d_min_i, min_i) if d_min_i <= d_min_j else
-                        (d_min_j, min_i))
-
-                # Iterative MST construction.
-
-                while len(mst_dict) > 0:
-
-                    (d_min, d_extra_min, i_min, i_from_min) = min(
-                        (d, d_extra, i, i_from) for i, ((d, d_extra), i_from) in mst_dict.items())
-
-                    log.debug('\n' + pprint.pformat(mst_dict))
-                    log.debug('\n' + repr((i_from_min, i_min, d_min, d_extra_min)))
-
-                    mst_list.append((i_from_min, i_min))
-                    del mst_dict[i_min]
-
-                    # Updating shortest connection info.
-
-                    for i_to in mst_dict.keys():
-
-                        d_to = (d_ij[i_min, i_to], distance_2d[i_min, i_to] + distance_3d[i_min, i_to])
-
-                        if d_to < mst_dict[i_to][0]:
-                            mst_dict[i_to] = (d_to, i_min)
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\nminimum spanning tree:\n{1}'.format(
-                language_str,
-                pprint.pformat(mst_list)))
-
-            # Plotting with matplotlib.
-
-            figure = pyplot.figure(figsize = (10, 10))
-            axes = figure.add_subplot(212)
-
-            axes.set_title(
-                'Etymological distance tree (relative distance embedding)',
-                fontsize = 14, family = 'Gentium')
-
-            axes.axis('equal')
-            axes.axis('off')
-            axes.autoscale()
-
-            def f(axes, embedding_pca):
-                """
-                Plots specified graph embedding on a given axis.
-                """
-
-                flag_3d = numpy.size(embedding_pca, 1) > 2
-
-                for index, (position, name) in enumerate(
-                    zip(embedding_pca, distance_header_array)):
-
-                    # Checking if any of the previous perspectives are already in this perspective's
-                    # position.
-
-                    same_position_index = None
-
-                    for i, p in enumerate(embedding_pca[:index]):
-                        if numpy.linalg.norm(position - p) <= 1e-3:
-
-                            same_position_index = i
-                            break
-
-                    color = matplotlib.colors.hsv_to_rgb(
-                        [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
-
-                    label_same_str = (
-                        '' if same_position_index is None else
-                        ' (same as {0})'.format(same_position_index + 1))
-
-                    kwargs = {
-                        's': 35,
-                        'color': color,
-                        'label': '{0}) {1}{2}'.format(index + 1, name, label_same_str)}
-
-                    axes.scatter(*position, **kwargs)
-
-                    # Annotating position with its number, but only if we hadn't already annotated nearby.
-
-                    if same_position_index is None:
-
-                        if flag_3d:
-
-                            axes.text(
-                                position[0] + 0.01, position[1], position[2] + 0.01,
-                                str(index + 1), None, fontsize = 14)
-
-                        else:
-
-                            axes.annotate(
-                                str(index + 1),
-                                (position[0] + 0.01, position[1] - 0.005),
-                                fontsize = 14)
-
-                # Plotting minimum spanning trees.
-
-                line_list = [
-                    (embedding_pca[i], embedding_pca[j])
-                    for i, j in mst_list]
-
-                line_collection = (
-                    Line3DCollection if flag_3d else LineCollection)(
-                        line_list, zorder = 0, color = 'gray')
-
-                axes.add_collection(line_collection)
-
-                pyplot.setp(axes.texts, family = 'Gentium')
-
-            # Plotting our embedding, creating the legend.
-
-            f(axes, embedding_2d_pca)
-
-            pyplot.tight_layout()
-
-            legend = axes.legend(
-                scatterpoints = 1,
-                loc = 'upper center',
-                bbox_to_anchor = (0.5, -0.05),
-                frameon = False,
-                handlelength = 0.5,
-                handletextpad = 0.75,
-                fontsize = 14)
-
-            pyplot.setp(legend.texts, family = 'Gentium')
-            axes.autoscale_view()
-
-            # Saving generated figure for debug purposes, if required.
-
-            if __debug_flag__:
-
-                figure_file_name = (
-                    'figure cognate distance{0}.png'.format(
-                    mode_name_str))
-
-                with open(figure_file_name, 'wb') as figure_file:
-
-                    pyplot.savefig(
-                        figure_file,
-                        bbox_extra_artists = (legend,),
-                        bbox_inches = 'tight',
-                        pad_inches = 0.25,
-                        format = 'png')
-
-                # Also generating 3d embedding figure.
-
-                figure_3d = pyplot.figure()
-                figure_3d.set_size_inches(16, 10)
-
-                axes_3d = figure_3d.add_subplot(111, projection = '3d')
-
-                axes_3d.axis('equal')
-                axes_3d.view_init(elev = 30, azim = -75)
-
-                f(axes_3d, embedding_3d_pca)
-
-                # Setting up legend.
-
-                axes_3d.set_xlabel('X')
-                axes_3d.set_ylabel('Y')
-                axes_3d.set_zlabel('Z')
-
-                legend_3d = axes_3d.legend(
-                    scatterpoints = 1,
-                    loc = 'upper center',
-                    bbox_to_anchor = (0.5, -0.05),
-                    frameon = False,
-                    handlelength = 0.5,
-                    handletextpad = 0.75,
-                    fontsize = 14)
-
-                pyplot.setp(legend_3d.texts, family = 'Gentium')
-
-                # Fake cubic bounding box to force axis aspect ratios, see
-                # https://stackoverflow.com/a/13701747/2016856.
-
-                X = embedding_3d_pca[:,0]
-                Y = embedding_3d_pca[:,1]
-                Z = embedding_3d_pca[:,2]
-
-                max_range = numpy.array([
-                    X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
-
-                Xb = (
-                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() +
-                    0.5 * (X.max() + X.min()))
-
-                Yb = (
-                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() +
-                    0.5 * (Y.max() + Y.min()))
-
-                Zb = (
-                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() +
-                    0.5 * (Z.max() + Z.min()))
-
-                for xb, yb, zb in zip(Xb, Yb, Zb):
-                   axes_3d.plot([xb], [yb], [zb], 'w')
-
-                axes_3d.autoscale_view()
-
-                # And saving it.
-
-                figure_3d_file_name = (
-                    'figure 3d cognate distance{0}.png'.format(
-                    mode_name_str))
-
-                with open(figure_3d_file_name, 'wb') as figure_3d_file:
-
-                    figure_3d.savefig(
-                        figure_3d_file,
-                        bbox_extra_artists = (legend_3d,),
-                        bbox_inches = 'tight',
-                        pad_inches = 0.25,
-                        format = 'png')
-
-            # Storing generated figure as a PNG image.
-
-            figure_filename = pathvalidate.sanitize_filename(
-                '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
-                    base_language_name[:64],
-                    ' ' + mode if mode else '',
-                    current_datetime.year,
-                    current_datetime.month,
-                    current_datetime.day))
-
-            figure_path = os.path.join(storage_dir, figure_filename)
-            os.makedirs(os.path.dirname(figure_path), exist_ok = True)
-
-            with open(figure_path, 'wb') as figure_file:
-
-                figure.savefig(
-                    figure_file,
-                    bbox_extra_artists = (legend,),
-                    bbox_inches = 'tight',
-                    pad_inches = 0.25,
-                    format = 'png')
-
-            figure_url = ''.join([
-                storage['prefix'], storage['static_route'],
-                'cognate', '/', str(cur_time), '/', figure_filename])
+            figure_url, mst_list, embedding_2d_pca, embedding_3d_pca = \
+                distance_graph(
+                    language_str,
+                    distance_data_array,
+                    distance_header_array,
+                    __debug_flag__
+                )
 
         # Finalizing task status, if required, returning result.
-
         if task_status is not None:
 
             result_link_list = (
