@@ -13137,7 +13137,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 if n2 <= n1: continue  #exclude duplicates and self-to-self
                 commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
                 commons_linked = len(groups1 & groups2)
-                divergence_time = -10 * math.log(commons_linked / commons_total)
+                divergence_time = (-10 * math.log(commons_linked / commons_total) if commons_total > 0 else -1)
                 similarity[perspective1][perspective2] = commons_total, commons_linked
                 print(f"{perspective2}:{commons_linked}/{commons_total}:{divergence_time}", end=' | ')
             print()
