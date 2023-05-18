@@ -364,7 +364,7 @@ import lingvodoc.scripts.docx_import as docx_import
 
 # Setting up logging.
 log = logging.getLogger(__name__)
-#logging.disable(level=logging.INFO)
+logging.disable(level=logging.INFO)
 
 
 # Trying to set up celery logging.
@@ -13041,8 +13041,10 @@ class SwadeshAnalysis(graphene.Mutation):
                 perspective_info_list, group_field_id))
 
         # Getting text data for each perspective.
-        # entries_map gathers words from Swadesh' list met in perspectives
-        entries_map = {}
+        # entries_set gathers entry_id(s) of words met in Swadesh' list
+        # swadesh_set gathers numbers of words within Swadesh' list
+        entries_set = {}
+        swadesh_set = {}
         for index, (perspective_id, _, translation_field_id) in \
                 enumerate(perspective_info_list):
 
@@ -13094,7 +13096,8 @@ class SwadeshAnalysis(graphene.Mutation):
                     .all())
 
             # Grouping translations by lexical entries.
-            entries_map[perspective_id] = set()
+            entries_set[perspective_id] = set()
+            swadesh_set[perspective_id] = set()
             for row_index, row in enumerate(translation_query):
                 entry_id = tuple(row[:2])
                 translation_list = row[2]
@@ -13105,32 +13108,36 @@ class SwadeshAnalysis(graphene.Mutation):
                         for translation in translation_list
                         if translation.strip()])
 
-                for swadesh_lex in swadesh_list:
+                for swadesh_num, swadesh_lex in enumerate(swadesh_list):
                     for translation_lex in translation_list:
                         if compare_translations(swadesh_lex, translation_lex):
-                            entries_map[perspective_id].add(entry_id)
-                            #print(entry_id, translation_lex)
+                            # Store entry_id and number of the lex within Swadesh' list
+                            entries_set[perspective_id].add(entry_id)
+                            swadesh_set[perspective_id].add(swadesh_num)
+                            #print(entry_id, swadesh_num, translation_lex)
 
         # Create dictionary of sets:
         # keys: pepspective_id
         # values: numbers of etymological groups where an entry from dictionary is met
         links = {}
-        for perspective, entries in entries_map.items():
+        for perspective, entries in entries_set.items():
             links[perspective] = set()
-            for index_group, group in enumerate(group_list):
+            for group_index, group in enumerate(group_list):
                 if (entries & group):
-                    links[perspective].add(index_group)
+                    links[perspective].add(group_index)
 
         # Calculate intersection between lists of group numbers for all the perspectives
         # So length of this intersection is the similarity of corresponding perspectives
         similarity = {}
-        for perspective1, groups1 in links.items():
+        for n1, (perspective1, groups1) in enumerate(links.items()):
             similarity[perspective1] = {}
             print(perspective1, end=' :: ')
-            for perspective2, groups2 in links.items():
-                commons = len(groups1 & groups2)
-                similarity[perspective1][perspective2] = commons
-                print(f"{perspective2}:{commons}", end=' | ')
+            for n2, (perspective2, groups2) in enumerate(links.items()):
+                if n2 <= n1: continue  #exclude duplicates and self-to-self
+                commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
+                commons_linked = len(groups1 & groups2)
+                similarity[perspective1][perspective2] = commons_total, commons_linked
+                print(f"{perspective2}:{commons_linked}/{commons_total}", end=' | ')
             print()
 
     @staticmethod
