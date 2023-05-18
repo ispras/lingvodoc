@@ -13033,8 +13033,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 return set(form.strip().lower()
                            for form in lex.replace('(', ',').split(',')
                            if form.strip()
-                           and (')' not in form)
-                           and (' заим.' not in form)) #exclude notes and borrowings
+                           and ')' not in form
+                           and ' заим.' not in form) #exclude notes and borrowings
             # return true if the intersection is not empty
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
 
@@ -13139,8 +13139,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 if n2 <= n1: continue  #exclude duplicates and self-to-self
                 commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
                 commons_linked = len(groups1 & groups2)
-                # If commons_linked > 0 then commons_total > 0 all the more. If not then this is a bug.
-                divergence_time = (-10 * math.log(commons_linked / commons_total) if commons_linked > 0 else -1)
+                # commons_linked > 0 means that commons_total > 0 even more so
+                divergence_time = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else -1
                 similarity[perspective1][perspective2] = commons_total, commons_linked
                 print(f"{perspective2}:{commons_linked}/{commons_total}:{divergence_time:.2f}", end=' | ')
             print()
