@@ -13126,8 +13126,9 @@ class SwadeshAnalysis(graphene.Mutation):
                 if (entries & group):
                     links[perspective].add(group_index)
 
-        # Calculate intersection between lists of group numbers for all the perspectives
+        # Calculate intersection between lists of group numbers
         # So length of this intersection is the similarity of corresponding perspectives
+        # commons_total means amount of Swadesh's lexems met in the both perspectives
         similarity = {}
         for n1, (perspective1, groups1) in enumerate(links.items()):
             similarity[perspective1] = {}
@@ -13136,8 +13137,9 @@ class SwadeshAnalysis(graphene.Mutation):
                 if n2 <= n1: continue  #exclude duplicates and self-to-self
                 commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
                 commons_linked = len(groups1 & groups2)
+                divergence_time = -10 * math.log(commons_linked / commons_total)
                 similarity[perspective1][perspective2] = commons_total, commons_linked
-                print(f"{perspective2}:{commons_linked}/{commons_total}", end=' | ')
+                print(f"{perspective2}:{commons_linked}/{commons_total}:{divergence_time}", end=' | ')
             print()
 
     @staticmethod
