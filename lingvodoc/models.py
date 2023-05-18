@@ -75,6 +75,7 @@ import lingvodoc.cache.caching as caching
 
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
+LOCALES_DICT = {"ru": 1, "en": 2}
 
 log = logging.getLogger(__name__)
 
@@ -1440,16 +1441,19 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 
 
 class User(Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
-    id = Column(VARCHAR(length=36), primary_key=True)
-    login = Column(UnicodeText, unique=True, nullable=False)
+    id = Column(VARCHAR(length=36), primary_key=True, nullable=False)
+    login = Column(UnicodeText, unique=True, nullable=True)
     name = Column(UnicodeText)
     # this stands for name in English
-    intl_name = Column(UnicodeText, nullable=False)
-    default_locale_id = Column(ForeignKey("locale.id"), default=2, nullable=False)
+    intl_name = Column(UnicodeText, nullable=True)
+    default_locale_id = Column(ForeignKey("locale.id"), default=2, nullable=True)
     birthday = Column(EpochTypeForDate)
     # it's responsible for "deleted user state". True for active, False for deactivated.
-    is_active = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=True)
     password = relationship("Passhash", uselist=False)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
     def check_password(self, passwd):
         return bcrypt.verify(passwd, self.password.hash)
@@ -1539,7 +1543,7 @@ class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 
 class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), nullable=False)
+    user_id = Column(VARCHAR(length=255), ForeignKey('user.id'), nullable=False)
     email = Column(UnicodeText, unique=True)
     user = relationship("User", backref=backref('email', uselist=False))
 

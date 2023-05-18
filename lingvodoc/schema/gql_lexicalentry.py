@@ -37,7 +37,7 @@ from lingvodoc.models import (
     BaseGroup as dbBaseGroup
 )
 from lingvodoc.schema.gql_entity import Entity
-from lingvodoc.utils.verification import check_is_admin
+from lingvodoc.utils.verification import check_is_admin, check_is_active
 
 from lingvodoc.views.v2.delete import real_delete_lexical_entry
 
@@ -497,7 +497,7 @@ class ConnectLexicalEntries(graphene.Mutation):
                 dbBaseGroup.action == 'create').one()
 
             create_override_flag = (
-                user.is_active and user in group.users)
+                check_is_active(user.id) and user in group.users)
 
         create_flag_dict = {}
 
@@ -524,7 +524,7 @@ class ConnectLexicalEntries(graphene.Mutation):
                         dbBaseGroup.action == 'create').one()
 
                     create_flag = (
-                        user.is_active and user in group.users)
+                        check_is_active(user.id) and user in group.users)
 
                     create_flag_dict[perspective_id] = create_flag
 

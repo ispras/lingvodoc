@@ -63,7 +63,7 @@ from lingvodoc.models import DictionaryPerspective as dbPerspective
 from lingvodoc.utils.creation import create_entity
 from lingvodoc.utils.deletion import real_delete_entity
 
-from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id, check_is_admin
+from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id, check_is_admin, check_is_active
 
 from lingvodoc.utils.elan_functions import eaf_wordlist
 
@@ -291,7 +291,7 @@ class CreateEntity(graphene.Mutation):
                 dbBaseGroup.action == 'create').one()
 
             create_flag = (
-                user.is_active and user in group.users)
+                check_is_active(user.id) and user in group.users)
 
         if not create_flag:
 
@@ -301,7 +301,7 @@ class CreateEntity(graphene.Mutation):
                 dbBaseGroup.action == 'create').one()
 
             create_flag = (
-                user.is_active and user in override_group.users)
+                check_is_active(user.id) and user in override_group.users)
 
         if create_flag:
             dbentity.publishingentity.accepted = True

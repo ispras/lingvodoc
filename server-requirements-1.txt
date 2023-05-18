@@ -37,6 +37,7 @@ jdcal==1.4.1
 Jinja2==2.10.3
 joblib==0.14.1
 kombu==3.0.37
+python-keycloak==2.16.3
 Logbook==1.1.0
 lxml==4.4.1
 Mako==1.0.4
@@ -74,7 +75,7 @@ redis==2.10.5
 regex==2019.6.8
 repoze.lru==0.6
 repoze.sendmail==4.4.1
-requests==2.11.1
+requests==2.25.1
 Rx==1.6.0
 scipy==1.6.1
 scikit-learn==0.24.1
@@ -102,7 +103,7 @@ uniparser-komi-zyrian<1.2
 uniparser-meadow-mari<1.2
 uniparser-moksha<1.2
 uniparser-udmurt<2.2
-urllib3==1.25.10
+urllib3==1.26.5
 venusian==1.0
 waitress==0.9.0
 WebOb==1.8.7

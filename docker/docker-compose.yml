@@ -1,4 +1,4 @@
-version: '3.2'
+version: '3.9'
 services:
   pg:
     image: postgres:13.2
@@ -55,3 +55,60 @@ services:
     command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --preload --paster /api/docker/docker.ini"
     ports:
       - "16543:6543"
+
+  pg_new_keycloak:
+    image: postgres:13.2
+    container_name: pg_new_keycloak
+    restart: on-failure
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: keycloak
+    healthcheck:
+      test: pg_isready -d postgres
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    ports:
+      - "15433:5432"
+  #      - ${KC_POSTGRES_PORT_MAPPING:-5435}:5432
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:20.0.1
+    container_name: keycloak_new
+    restart: always
+    volumes:
+      - type: bind
+        source: ./keycloak/realm-export.json
+        target: /opt/keycloak/data/import/realm-export.json
+        read_only: true
+      - type: bind
+        source: ./keycloak/custom-scripts.jar
+        target: /opt/keycloak/providers/custom-scripts.jar
+        read_only: true
+    command:
+      - start-dev --db postgres --import-realm
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+#      - PROXY_ADDRESS_FORWARDING=true
+#      - LETSENCRYPT_HOST=dev-keycloak.mydomain.com
+      - KC_DB=postgres #build option
+      - KC_FEATURES=admin2 #build option
+      - KC_DB_URL_HOST=pg_new_keycloak
+      - KC_DB_URL_DATABASE=keycloak
+      - KC_DB_USERNAME=postgres
+      - KC_DB_PASSWORD=password
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://0.0.0.0:8080/realms/master" ]
+      start_period: 10s
+      interval: 30s
+      retries: 3
+      timeout: 5s
+    depends_on:
+      pg_new_keycloak:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+

@@ -1,3 +1,5 @@
+from lingvodoc.keycloakld import KeycloakSession
+
 from lingvodoc import DBSession
 from lingvodoc.models import Client
 
@@ -19,9 +21,13 @@ def check_client_id(authenticated, client_id):
     return result.count() == 1
 
 def check_is_admin(user_id):
+    if next(filter(lambda user: user['id'] == user_id, KeycloakSession.keycloak_admin.get_realm_role_members("admin"))):
+        return True
     if user_id == "1":
         return True
     elif user_id == 1:
         return True
     else:
         return False
+def check_is_active(user_id):
+    return KeycloakSession.keycloak_admin.get_user(user_id)['enabled'] == True

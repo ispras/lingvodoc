@@ -26,6 +26,7 @@ import zipfile
 import graphene
 import graphene.types
 from graphql.language.ast import BooleanValue, IntValue, ListValue
+from lingvodoc.keycloakld import KeycloakSession
 
 import lingvodoc.utils as utils
 from lingvodoc.utils.deletion import real_delete_entity
@@ -5678,7 +5679,7 @@ class Query(graphene.ObjectType):
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
         dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
         if mode is not None and client:
-            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
+            user = KeycloakSession.keycloak_admin.get_user(client.user_id)
 
             if not mode:
                 # my dictionaries
@@ -8115,16 +8116,13 @@ class Query(graphene.ObjectType):
 
             if email_flag:
 
-                user_query = (
-
-                    user_query.options(
-                        joinedload(dbUser.email)))
+                user_query = [d for d in user_query if d['email'] is not None]
 
             gql_user_dict = {}
 
             for user in user_query:
 
-                user_id = user.id
+                user_id = user["id"]
 
                 gql_user = User(id = user_id)
                 gql_user.dbObject = user

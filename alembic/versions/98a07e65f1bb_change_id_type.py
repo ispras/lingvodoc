@@ -27,9 +27,17 @@ def upgrade():
         ALTER TABLE IF EXISTS ONLY public."userblobs" DROP CONSTRAINT IF EXISTS userblobs_user_id_fkey;
         ALTER TABLE IF EXISTS ONLY public."valency_annotation_data" DROP CONSTRAINT IF EXISTS valency_annotation_data_user_id_fkey;
         
+        ALTER TABLE public."user" ADD COLUMN "v1_id" BIGINT;
+        UPDATE public."user" SET "v1_id" = "id";
+        ALTER TABLE public."user" ALTER COLUMN "id" SET NOT NULL;
+        ALTER TABLE public."user" ALTER COLUMN login DROP NOT NULL;
+        ALTER TABLE public."user" ALTER COLUMN intl_name DROP NOT NULL;
+        ALTER TABLE public."user" ALTER COLUMN default_locale_id DROP NOT NULL;
+        ALTER TABLE public."user" ALTER COLUMN is_active DROP NOT NULL;
         ALTER TABLE ONLY public."user" ALTER COLUMN id TYPE VARCHAR(36);
         ALTER TABLE ONLY public."client" ALTER COLUMN user_id TYPE VARCHAR(36);
         ALTER TABLE ONLY public."email" ALTER COLUMN user_id TYPE VARCHAR(36);
+        ALTER TABLE ONLY public."email" ALTER COLUMN email TYPE VARCHAR(255);
         ALTER TABLE ONLY public."passhash" ALTER COLUMN user_id TYPE VARCHAR(36);
         ALTER TABLE ONLY public."user_to_group_association" ALTER COLUMN user_id TYPE VARCHAR(36);
         ALTER TABLE ONLY public."user_to_organization_association" ALTER COLUMN user_id TYPE VARCHAR(36);
@@ -59,15 +67,15 @@ def downgrade():
         ALTER TABLE IF EXISTS ONLY public."userblobs" DROP CONSTRAINT IF EXISTS userblobs_user_id_fkey;
         ALTER TABLE IF EXISTS ONLY public."valency_annotation_data" DROP CONSTRAINT IF EXISTS valency_annotation_data_user_id_fkey;
 
-        ALTER TABLE ONLY public."user" ALTER COLUMN id TYPE BIGINT;
-        ALTER TABLE ONLY public."client" ALTER COLUMN user_id TYPE BIGINT;
-        ALTER TABLE ONLY public."email" ALTER COLUMN user_id TYPE BIGINT;
-        ALTER TABLE ONLY public."passhash" ALTER COLUMN user_id TYPE BIGINT;
-        ALTER TABLE ONLY public."user_to_group_association" ALTER COLUMN user_id TYPE BIGINT;
-        ALTER TABLE ONLY public."user_to_organization_association" ALTER COLUMN user_id TYPE BIGINT;
-        ALTER TABLE ONLY public."userblobs" ALTER COLUMN user_id TYPE BIGINT;
-        ALTER TABLE ONLY public."valency_annotation_data" ALTER COLUMN user_id TYPE BIGINT;
-        ALTER TABLE ONLY public."userrequest" ALTER COLUMN recipient_id TYPE BIGINT;
+        ALTER TABLE ONLY public."user" ALTER COLUMN id TYPE BIGINT USING ("id"::BIGINT);
+        ALTER TABLE ONLY public."client" ALTER COLUMN user_id TYPE BIGINT USING ("user_id"::BIGINT);
+        ALTER TABLE ONLY public."email" ALTER COLUMN user_id TYPE BIGINT USING ("user_id"::BIGINT);
+        ALTER TABLE ONLY public."passhash" ALTER COLUMN user_id TYPE BIGINT USING ("user_id"::BIGINT);
+        ALTER TABLE ONLY public."user_to_group_association" ALTER COLUMN user_id TYPE BIGINT USING ("user_id"::BIGINT);
+        ALTER TABLE ONLY public."user_to_organization_association" ALTER COLUMN user_id TYPE BIGINT USING ("user_id"::BIGINT);
+        ALTER TABLE ONLY public."userblobs" ALTER COLUMN user_id TYPE BIGINT USING ("user_id"::BIGINT);
+        ALTER TABLE ONLY public."valency_annotation_data" ALTER COLUMN user_id TYPE BIGINT USING ("user_id"::BIGINT);
+        ALTER TABLE ONLY public."userrequest" ALTER COLUMN recipient_id TYPE BIGINT USING ("recipient_id"::BIGINT);
 
         ALTER TABLE ONLY public."email" ADD CONSTRAINT email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
         ALTER TABLE ONLY public."client" ADD CONSTRAINT client_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);

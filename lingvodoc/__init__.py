@@ -1,4 +1,3 @@
-
 from configparser import (
     ConfigParser,
     NoSectionError
@@ -10,6 +9,11 @@ import os.path
 import re
 import subprocess
 
+import transaction
+from keycloak import KeycloakUMA, KeycloakOpenIDConnection
+from keycloak.keycloak_admin import KeycloakAdmin
+from keycloak.keycloak_openid import KeycloakOpenID
+
 try:
     import git
 
@@ -17,7 +21,6 @@ except ImportError:
     git = None
 
 from sqlalchemy import engine_from_config
-from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
 from pyramid_mailer.mailer import Mailer
@@ -32,8 +35,10 @@ from lingvodoc.cache.caching import (
 from .acl import (
     groupfinder
 )
+from .keycloakld import (
+    KeycloakBasedAuthenticationPolicy, KeycloakSession, KeycloakLD
+)
 import multiprocess
-
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -61,26 +66,26 @@ def get_git_version(repository_dir):
         describe_result = (
 
             repository.git.describe(
-                abbrev = 8,
-                always = True,
-                long = True,
-                tags = True,
-                match = 'v*'))
+                abbrev=8,
+                always=True,
+                long=True,
+                tags=True,
+                match='v*'))
 
         # Working tree status and head commit info.
 
         status_result = (
 
             repository.git.status(
-                porcelain = True,
-                untracked_files = 'no'))
+                porcelain=True,
+                untracked_files='no'))
 
         head_commit = (
             repository.head.commit)
 
         head_datetime = (
             head_commit.authored_datetime
-                .astimezone(tz = datetime.timezone.utc))
+            .astimezone(tz=datetime.timezone.utc))
 
     except git.exc.GitError:
         return None
@@ -108,7 +113,6 @@ def get_git_version(repository_dir):
             int(match_result.group(2)))
 
         if commit_count > 0:
-
             version_str += (
                 '+{}'.format(commit_count))
 
@@ -127,7 +131,7 @@ def get_git_version(repository_dir):
                 describe_result))
 
         version_str = (
-                
+
             '{}-{}'.format(
                 describe_result,
                 head_datetime.strftime('%Y.%m.%d-%H:%M')))
@@ -152,24 +156,24 @@ def get_git_version(repository_dir):
         if line[-1] == '"':
 
             path_utf8_escaped = (
-                line[ line.rindex(' "', 0, -1) + 2 : -1 ])
+                line[line.rindex(' "', 0, -1) + 2: -1])
 
             path = (
                 path_utf8_escaped
-                    .encode('latin1')
-                    .decode('unicode-escape')
-                    .encode('latin1')
-                    .decode('utf-8'))
+                .encode('latin1')
+                .decode('unicode-escape')
+                .encode('latin1')
+                .decode('utf-8'))
 
         else:
 
             path_utf8 = (
-                line[ line.rindex(' ') + 1 : ])
+                line[line.rindex(' ') + 1:])
 
             path = (
                 path_utf8
-                    .encode('latin1')
-                    .decode('utf-8'))
+                .encode('latin1')
+                .decode('utf-8'))
 
         # Determining last modification time.
 
@@ -187,19 +191,17 @@ def get_git_version(repository_dir):
             continue
 
         if (last_mtime is None or
-            mtime > last_mtime):
-
+                mtime > last_mtime):
             last_mtime = mtime
 
     # Last commit time.
 
     if last_mtime is not None:
-
         last_m_datetime = (
 
             datetime.datetime.fromtimestamp(
                 last_mtime,
-                tz = datetime.timezone.utc))
+                tz=datetime.timezone.utc))
 
         version_str += (
             last_m_datetime.strftime('+modified-%Y.%m.%d-%H:%M'))
@@ -218,7 +220,7 @@ def get_uniparser_version():
 
             subprocess.check_output([
                 'pip3',
-                'show', 
+                'show',
                 'uniparser-erzya',
                 'uniparser-komi-zyrian',
                 'uniparser-meadow-mari',
@@ -303,20 +305,18 @@ def configure_routes(config):
     prefix = 'v3'
     config.add_route(name='%stesting_graphene' % version, pattern='/%stesting_graphene' % version)
 
-
-
     # web-view #GET
     config.add_route(name='main', pattern='/')
 
     # Temporary view for the new React-based interface.
-    config.add_route(name = 'new_interface', pattern = '/new_interface')
+    config.add_route(name='new_interface', pattern='/new_interface')
 
     # web-view #GET && POST
     # registration page
     config.add_route(name='signup', pattern='/signup')
 
     # Used to approve moderated user signups.
-    config.add_route(name='signup_approve', pattern = '/signup_approve')
+    config.add_route(name='signup_approve', pattern='/signup_approve')
 
     # web-view #GET
     # login page
@@ -333,7 +333,6 @@ def configure_routes(config):
     config.add_route(name='all_grants', pattern='/all_grants')
     config.add_route(name='home_page_text', pattern='/home_page_text')
 
-
     config.add_route(name='userrequest', pattern='/userrequest/{id}')
     config.add_route(name='get_current_userrequests', pattern='/get_current_userrequests')
     config.add_route(name='accept_userrequest', pattern='/accept_userrequest/{id}')
@@ -345,7 +344,6 @@ def configure_routes(config):
                      factory='lingvodoc.models.AdminAcl')
 
     # config.add_route(name='create_grant', pattern='/grant')
-
 
     config.add_route(name='desk_signin', pattern='/signin/desktop')
     config.add_route(name='sync_signin', pattern='/signin/sync')
@@ -422,8 +420,7 @@ def configure_routes(config):
     config.add_route(name='permissions_on_perspectives', pattern='/permissions/perspectives')
     config.add_route(name='permissions_on_perspectives_desktop', pattern='/permissions/perspectives/desktop')
 
-
-# API #GET
+    # API #GET
     # Perspective list
     # 1. Filter by:
     #    a) template (param is_template=true/false)
@@ -464,7 +461,6 @@ def configure_routes(config):
 
     # API #GET
     config.add_route(name='organization_list', pattern='/organization_list')  # TODO: ?test
-
 
     # API #POST
     # Creating organization
@@ -745,9 +741,9 @@ def configure_routes(config):
                                                          '/perspective/{perspective_client_id}/{perspective_object_id}/all',
                      factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
     config.add_route(name='all_perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                         '/perspective/{perspective_client_id}/{perspective_object_id}/authors')
+                                                             '/perspective/{perspective_client_id}/{perspective_object_id}/authors')
     config.add_route(name='all_perspective_clients', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                         '/perspective/{perspective_client_id}/{perspective_object_id}/clients')
+                                                             '/perspective/{perspective_client_id}/{perspective_object_id}/clients')
 
     config.add_route(name='lexical_entries_all_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
@@ -796,7 +792,7 @@ def configure_routes(config):
                      factory='lingvodoc.models.PerspectivePublishAcl')
 
     config.add_route(name='accept_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                    '/perspective/{perspective_client_id}/{perspective_object_id}/accept',
+                                                   '/perspective/{perspective_client_id}/{perspective_object_id}/accept',
                      factory='lingvodoc.models.PerspectivePublishAcl')
     # todo: DANGEROUS! Anyone can approve, if the have their own dictionary and know ids of entity, they want to approve
     # todo: fix this
@@ -804,12 +800,11 @@ def configure_routes(config):
                                                  '/perspective/{perspective_client_id}/{perspective_object_id}/approve_all',
                      factory='lingvodoc.models.PerspectivePublishAcl')
     config.add_route(name='accept_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                 '/perspective/{perspective_client_id}/{perspective_object_id}/accept_all',
+                                                '/perspective/{perspective_client_id}/{perspective_object_id}/accept_all',
                      factory='lingvodoc.models.PerspectivePublishAcl')
     config.add_route(name='approve_all_outer', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                        '/perspective/{perspective_client_id}/{perspective_object_id}/approve_all_outer',
                      factory='lingvodoc.models.PerspectivePublishAcl')  # TODO: test
-
 
     # Merge can be two kinds:
     #   1. Dictionaries merge
@@ -876,9 +871,9 @@ def configure_routes(config):
     #
     # Checks if the user has create/delete permissions required to merge lexical entries and entities.
     #
-    config.add_route(name = 'merge_permissions',
-        pattern = '/merge/permissions/{perspective_client_id}/{perspective_object_id}',
-        factory = 'lingvodoc.models.LexicalEntriesEntitiesAcl')
+    config.add_route(name='merge_permissions',
+                     pattern='/merge/permissions/{perspective_client_id}/{perspective_object_id}',
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
 
     # API #POST
     # {
@@ -889,9 +884,9 @@ def configure_routes(config):
     # 'threshold': <threshold>,
     # 'levenshtein': <levenshtein>,
     # }
-    config.add_route(name = 'merge_suggestions',
-        pattern = '/merge/suggestions/{perspective_client_id}/{perspective_object_id}',
-        factory = 'lingvodoc.models.LexicalEntriesEntitiesAcl')
+    config.add_route(name='merge_suggestions',
+                     pattern='/merge/suggestions/{perspective_client_id}/{perspective_object_id}',
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
 
     # API #POST
     # {'group_list': <group_list>, 'publish_any': bool}
@@ -899,20 +894,20 @@ def configure_routes(config):
     # Merges multiple groups of lexical entries, provided that each group is a subset of a single
     # perspective, returns client/object ids of new lexical entries, a new entry for each merged group.
     #
-    config.add_route(name = 'merge_bulk', pattern = '/merge/bulk')
+    config.add_route(name='merge_bulk', pattern='/merge/bulk')
 
     # API #POST
     #
     # Launches background merge task, parameters are the same as of 'merge_bulk' route.
     #
-    config.add_route(name = 'merge_bulk_async', pattern = '/merge/bulk_async')
+    config.add_route(name='merge_bulk_async', pattern='/merge/bulk_async')
 
     # API #GET
     #
     # Changes format of metadata of lexical entries created from merges of other lexical entries from the
     # first version (with 'merge_tag' key) to the second version (with 'merge' key).
     #
-    config.add_route(name = 'merge_update_2', pattern = '/merge/update2')
+    config.add_route(name='merge_update_2', pattern='/merge/update2')
 
     # API #GET
     #
@@ -920,7 +915,7 @@ def configure_routes(config):
     # removing 'original_author' merge metadata key and adding 'original_client_id' merge metadata key, and
     # adding merge metadata to merged entities.
     #
-    config.add_route(name = 'merge_update_3', pattern = '/merge/update3')
+    config.add_route(name='merge_update_3', pattern='/merge/update3')
 
     config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'  # should be removed?
                                                            '{dictionary_client_id_1}/{dictionary_object_id_1}/'
@@ -977,7 +972,8 @@ def configure_routes(config):
     config.add_route(name='convert_dictionary_dialeqt', pattern='/convert_dictionary_dialeqt')  # TODO: dododo
     config.add_route(name='convert_five_tiers', pattern='/convert_five_tiers')  # TODO: dododo
     config.add_route(name='convert_five_tiers_validate', pattern='/convert_five_tiers_validate')  # TODO: dododo
-    config.add_route(name='convert_dictionary_dialeqt_get_info', pattern='/convert_dictionary_dialeqt_get_info/{blob_client_id}/{blob_object_id}')  # TODO: dododo
+    config.add_route(name='convert_dictionary_dialeqt_get_info',
+                     pattern='/convert_dictionary_dialeqt_get_info/{blob_client_id}/{blob_object_id}')  # TODO: dododo
 
     # Check the documentation in celery_test.view.py
     # config.add_route(name='test_queue_set', pattern='/test_queue_set')
@@ -1038,24 +1034,24 @@ def configure_routes(config):
     #   'time_begin': <YYYY-MM-DDtHH:MM:SS or unix_timestamp_number>,
     #   'time_end': <YYYY-MM-DDtHH:MM:SS or unix_timestamp_number>}
     #
-    config.add_route(name = 'stat_perspective',
-      pattern = '/statistics/perspective/{perspective_client_id}/{perspective_object_id}')
+    config.add_route(name='stat_perspective',
+                     pattern='/statistics/perspective/{perspective_client_id}/{perspective_object_id}')
 
     # Cumulative user participation statistics for all perspectives of a specified dictionary in a given
     # time interval. Time interval is specified in the same way as for 'stat_perspective'.
-    config.add_route(name = 'stat_dictionary',
-      pattern = '/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
+    config.add_route(name='stat_dictionary',
+                     pattern='/statistics/dictionary/{dictionary_client_id}/{dictionary_object_id}')
 
     # Compiles archive of sound recordings and corresponding markups for a specified perspective.
-    config.add_route(name = "sound_and_markup", pattern = "/sound_and_markup")
+    config.add_route(name="sound_and_markup", pattern="/sound_and_markup")
 
-    config.add_route(name = "graphql", pattern = "/graphql")
+    config.add_route(name="graphql", pattern="/graphql")
 
     # Creates copy of a specified dictionary for a specified user.
-    config.add_route(name = 'dictionary_copy', pattern = '/dictionary_copy')
+    config.add_route(name='dictionary_copy', pattern='/dictionary_copy')
 
     # Fixes, as much as possible, consequences of wrongly computed hashes of a subset of entities.
-    config.add_route(name = 'hash_fix', pattern = '/hash_fix')
+    config.add_route(name='hash_fix', pattern='/hash_fix')
 
 
 def main(global_config, **settings):
@@ -1070,13 +1066,46 @@ def main(global_config, **settings):
     parser = ConfigParser()
     parser.read(config_file)
 
+    if parser.has_section('keycloak'):
+        keycloak_dict = dict(parser.items('keycloak'))
+        KeycloakSession.client_name = keycloak_dict["client_id"]
+        ldadmin = KeycloakAdmin(server_url=keycloak_dict["server_url"],
+                                username='admin',
+                                password='admin',
+                                realm_name=keycloak_dict["realm_name_admin"],
+                                auto_refresh_token=["get", "post", "put", "delete"])
+        KeycloakSession.keycloak_admin = ldadmin
+        KeycloakSession.keycloak_admin.create_realm(payload={"realm": keycloak_dict["realm_name"]}, skip_exists=True)
+        KeycloakSession.keycloak_admin.realm_name = keycloak_dict["realm_name"]
+        KeycloakSession.keycloak_admin.create_client(
+            payload={"name": keycloak_dict["client_name"], "clientId": keycloak_dict["client_id"]}, skip_exists=True
+        )
+        openid = KeycloakOpenID(server_url=keycloak_dict["server_url"],
+                                client_id=keycloak_dict["client_id"],
+                                realm_name=keycloak_dict["realm_name"],
+                                client_secret_key=keycloak_dict["client_secret_key"])
+        KeycloakSession.openid_client = openid
+        keycloak_connection = KeycloakOpenIDConnection(
+            custom_headers={"Content-Type": "application/x-www-form-urlencoded"},
+            server_url=keycloak_dict["server_url"],
+            realm_name=keycloak_dict["realm_name"],
+            client_id=keycloak_dict["client_id"],
+            client_secret_key=keycloak_dict["client_secret_key"])
+        uma = KeycloakUMA(connection=keycloak_connection)
+        KeycloakSession.keycloak_uma = uma
+        KeycloakSession.keycloak_url = keycloak_dict["client_secret_key"]
+
+        if bool(distutils.util.strtobool(keycloak_dict["migrate"])) == True:
+            KeycloakSession.migrate_users()
+            transaction.manager.commit()
+
     # TODO: DANGER
 
     storage_dict = (
-            
+
         dict(parser.items(
             'backend:storage' if parser.has_section('backend:storage') else
-                'storage')))
+            'storage')))
 
     if parser.has_section('backend:storage.temporary'):
 
@@ -1141,9 +1170,7 @@ def main(global_config, **settings):
     config = Configurator(settings=settings)
 
     # config.configure_celery('development_test.ini')
-
-    authentication_policy = AuthTktAuthenticationPolicy(settings['secret'],
-                                                        hashalg='sha512', callback=groupfinder)
+    authentication_policy = KeycloakBasedAuthenticationPolicy(openid_client=KeycloakSession.openid_client)
     authorization_policy = ACLAuthorizationPolicy()
     config.set_authentication_policy(authentication_policy)
     config.set_authorization_policy(authorization_policy)
@@ -1151,7 +1178,7 @@ def main(global_config, **settings):
 
     # Creating email sender.
 
-    config.registry.mailer = Mailer.from_settings(settings['smtp'], prefix = '')
+    config.registry.mailer = Mailer.from_settings(settings['smtp'], prefix='')
 
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
     config.add_static_view('assets', path='lingvodoc:assets', cache_max_age=3600)
