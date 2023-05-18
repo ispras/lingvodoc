@@ -12841,7 +12841,7 @@ class CognateAnalysis(graphene.Mutation):
                 cognate_suggestions_f if mode == 'suggestions' else
                 cognate_analysis_f)
 
-            if analysis_f is None and False:
+            if analysis_f is None:
 
                 return ResponseError(message =
                     'Analysis library fuction \'{0}()\' is absent, '
