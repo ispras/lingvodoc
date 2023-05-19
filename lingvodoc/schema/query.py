@@ -10890,6 +10890,7 @@ class CognateAnalysis(graphene.Mutation):
     @staticmethod
     def distance_graph(
             language_str,
+            base_language_name,
             distance_data_array,
             distance_header_array,
             __debug_flag__):
@@ -12598,6 +12599,7 @@ class CognateAnalysis(graphene.Mutation):
             figure_url, mst_list, embedding_2d_pca, embedding_3d_pca = \
                 CognateAnalysis.distance_graph(
                     language_str,
+                    base_language_name,
                     distance_data_array,
                     distance_header_array,
                     __debug_flag__
@@ -13046,13 +13048,14 @@ class SwadeshAnalysis(graphene.Mutation):
 
         def compare_translations(swadesh_lex, dictionary_lex):
             def split_lex(lex):
+                if ' заим.' in lex:
+                    return set()
                 # Split by commas and open brackets to separate
-                # various forms of lexem and extra note if is
+                # various forms of lexeme and extra note if is
                 return set(form.strip().lower()
                            for form in lex.replace('(', ',').split(',')
                            if form.strip()
-                           and ')' not in form
-                           and ' заим.' not in form) #exclude notes and borrowings
+                           and ')' not in form)  # exclude notes
             # return true if the intersection is not empty
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
 
