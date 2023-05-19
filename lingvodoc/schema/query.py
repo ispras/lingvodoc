@@ -10893,7 +10893,7 @@ class CognateAnalysis(graphene.Mutation):
             base_language_name,
             distance_data_array,
             distance_header_array,
-            __debug_flag__):
+            __debug_flag__ = False):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
 
@@ -13031,6 +13031,7 @@ class SwadeshAnalysis(graphene.Mutation):
     @staticmethod
     def swadesh_statistics(
             language_str,
+            base_language_name,
             group_field_id,
             perspective_info_list,
             locale_id):
@@ -13068,10 +13069,12 @@ class SwadeshAnalysis(graphene.Mutation):
         # swadesh_set gathers numbers of words within Swadesh' list
         entries_set = {}
         swadesh_set = {}
+        distance_array_size = len(perspective_info_list)
+        distance_data_array = numpy.full((distance_array_size, distance_array_size), 100)
+        distance_header_array = numpy.empty(distance_array_size)
         for index, (perspective_id, _, translation_field_id) in \
                 enumerate(perspective_info_list):
 
-            '''
             # Getting and saving perspective info.
             perspective = (
                 DBSession
@@ -13081,18 +13084,7 @@ class SwadeshAnalysis(graphene.Mutation):
             )
 
             perspective_name = perspective.get_translation(locale_id)
-            dictionary_name = perspective.parent.get_translation(locale_id)
-
-            log.debug(
-                '\nswadesh_analysis {0}:'
-                '\n  dictionary {1}/{2}: {3}'
-                '\n  perspective {4}/{5}: {6}'.format(
-                    language_str,
-                    perspective.parent_client_id, perspective.parent_object_id,
-                    repr(dictionary_name.strip()),
-                    perspective_id[0], perspective_id[1],
-                    repr(perspective_name.strip())))
-            '''
+            distance_header_array[index] = perspective_name
 
             # Getting text data.
             translation_query = (
@@ -13157,14 +13149,22 @@ class SwadeshAnalysis(graphene.Mutation):
             similarity[perspective1] = {}
             print(perspective1, end=' :: ')
             for n2, (perspective2, groups2) in enumerate(links.items()):
-                if n2 <= n1: continue  #exclude duplicates and self-to-self
-                commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
+                #if n2 <= n1: continue  #exclude duplicates and self-to-self
                 commons_linked = len(groups1 & groups2)
+                commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
                 # commons_linked > 0 means that commons_total > 0 even more so
-                distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else -1
-                similarity[perspective1][perspective2] = commons_linked, commons_total
+                distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
+                distance_data_array[n1][n2] = distance
+                #similarity[perspective1][perspective2] = commons_linked, commons_total
                 print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
             print()
+
+        CognateAnalysis.distance_graph(
+            language_str,
+            base_language_name,
+            distance_data_array,
+            distance_header_array
+        )
 
     @staticmethod
     def mutate(self, info, **args):
@@ -13266,6 +13266,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             return SwadeshAnalysis.swadesh_statistics(
                 language_str,
+                base_language_name,
                 group_field_id,
                 perspective_info_list,
                 locale_id)
