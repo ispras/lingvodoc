@@ -12596,7 +12596,7 @@ class CognateAnalysis(graphene.Mutation):
 
         if figure_flag:
             figure_url, mst_list, embedding_2d_pca, embedding_3d_pca = \
-                distance_graph(
+                CognateAnalysis.distance_graph(
                     language_str,
                     distance_data_array,
                     distance_header_array,
