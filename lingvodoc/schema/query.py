@@ -10893,6 +10893,7 @@ class CognateAnalysis(graphene.Mutation):
             base_language_name,
             distance_data_array,
             distance_header_array,
+            mode,
             __debug_flag__ = False):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
@@ -12602,6 +12603,7 @@ class CognateAnalysis(graphene.Mutation):
                     base_language_name,
                     distance_data_array,
                     distance_header_array,
+                    mode,
                     __debug_flag__
                 )
 
@@ -13028,6 +13030,10 @@ class SwadeshAnalysis(graphene.Mutation):
 
     triumph = graphene.Boolean()
 
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+
     @staticmethod
     def swadesh_statistics(
             language_str,
@@ -13163,8 +13169,27 @@ class SwadeshAnalysis(graphene.Mutation):
             language_str,
             base_language_name,
             distance_data_array,
-            distance_header_array
+            distance_header_array,
+            "swadesh"
         )
+
+        result_dict = (
+
+            dict(
+                triumph = True,
+
+                minimum_spanning_tree = mst_list,
+                embedding_2d = embedding_2d_pca,
+                embedding_3d = embedding_3d_pca))
+
+        if __debug_flag__ and __result_flag__:
+
+            with gzip.open(
+                result_file_name, 'wb') as result_file:
+
+                pickle.dump(result_dict, result_file)
+
+        return SwadeshAnalysis(**result_dict)
 
     @staticmethod
     def mutate(self, info, **args):
