@@ -10896,7 +10896,6 @@ class CognateAnalysis(graphene.Mutation):
             mode,
             storage,
             storage_dir,
-            figure_filename,
             __debug_flag__ = False):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
@@ -12609,7 +12608,6 @@ class CognateAnalysis(graphene.Mutation):
                     mode,
                     storage,
                     storage_dir,
-                    figure_filename,
                     __debug_flag__
                 )
 
@@ -13021,7 +13019,8 @@ class SwadeshAnalysis(graphene.Mutation):
             base_language_name,
             group_field_id,
             perspective_info_list,
-            locale_id):
+            locale_id,
+            storage):
 
         swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
                         'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
@@ -13146,6 +13145,9 @@ class SwadeshAnalysis(graphene.Mutation):
                 print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
             print()
 
+        cur_time = time.time()
+        storage_dir = os.path.join(storage['path'], 'swadesh', str(cur_time))
+
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
                 language_str,
@@ -13154,8 +13156,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 distance_header_array,
                 "swadesh",
                 storage,
-                storage_dir,
-                figure_filename
+                storage_dir
             )
 
         result_dict = (
@@ -13279,7 +13280,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 base_language_name,
                 group_field_id,
                 perspective_info_list,
-                locale_id)
+                locale_id,
+                storage)
 
         # Exception occured while we tried to perform swadesh analysis.
         except Exception as exception:
