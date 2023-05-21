@@ -11252,7 +11252,7 @@ class CognateAnalysis(graphene.Mutation):
                     format = 'png')
 
         # Storing generated figure as a PNG image.
-
+        current_datetime = datetime.datetime.now(datetime.timezone.utc)
         figure_filename = pathvalidate.sanitize_filename(
             '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
                 base_language_name[:64],
@@ -13055,9 +13055,9 @@ class SwadeshAnalysis(graphene.Mutation):
         # swadesh_set gathers numbers of words within Swadesh' list
         entries_set = {}
         swadesh_set = {}
-        distance_array_size = len(perspective_info_list)
-        distance_data_array = numpy.full((distance_array_size, distance_array_size), 100)
-        distance_header_array = numpy.empty(distance_array_size)
+        dictionary_count = len(perspective_info_list)
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 100)
+        distance_header_array = numpy.empty(dictionary_count)
         for index, (perspective_id, _, translation_field_id) in \
                 enumerate(perspective_info_list):
 
