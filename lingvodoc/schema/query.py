@@ -11273,6 +11273,7 @@ class CognateAnalysis(graphene.Mutation):
                 pad_inches = 0.25,
                 format = 'png')
 
+        cur_time = time.time()
         figure_url = ''.join([
             storage['prefix'], storage['static_route'],
             'cognate', '/', str(cur_time), '/', figure_filename])
