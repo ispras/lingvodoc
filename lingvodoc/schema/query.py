@@ -12957,31 +12957,6 @@ class CognateAnalysis(graphene.Mutation):
 
                 return CognateAnalysis(triumph = True)
 
-            elif mode == 'swadesh':
-
-                return CognateAnalysis.swadesh_statistics(
-                    language_str,
-                    source_perspective_id,
-                    base_language_id,
-                    base_language_name,
-                    group_field_id,
-                    perspective_info_list,
-                    multi_list,
-                    multi_name_list,
-                    mode,
-                    distance_flag,
-                    reference_perspective_id,
-                    figure_flag,
-                    distance_vowel_flag,
-                    distance_consonant_flag,
-                    match_translations_value,
-                    only_orphans_flag,
-                    locale_id,
-                    storage,
-                    None,
-                    __debug_flag__,
-                    __intermediate_flag__)
-
             # We do not use acoustic data, so we perform cognate analysis synchronously.
             else:
 
