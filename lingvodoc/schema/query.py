@@ -10894,6 +10894,9 @@ class CognateAnalysis(graphene.Mutation):
             distance_data_array,
             distance_header_array,
             mode,
+            storage,
+            storage_dir,
+            figure_filename,
             __debug_flag__ = False):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
@@ -12604,6 +12607,9 @@ class CognateAnalysis(graphene.Mutation):
                     distance_data_array,
                     distance_header_array,
                     mode,
+                    storage,
+                    storage_dir,
+                    figure_filename,
                     __debug_flag__
                 )
 
@@ -13165,13 +13171,17 @@ class SwadeshAnalysis(graphene.Mutation):
                 print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
             print()
 
-        CognateAnalysis.distance_graph(
-            language_str,
-            base_language_name,
-            distance_data_array,
-            distance_header_array,
-            "swadesh"
-        )
+        _, mst_list, embedding_2d_pca, embedding_3d_pca = \
+            CognateAnalysis.distance_graph(
+                language_str,
+                base_language_name,
+                distance_data_array,
+                distance_header_array,
+                "swadesh",
+                storage,
+                storage_dir,
+                figure_filename
+            )
 
         result_dict = (
 
