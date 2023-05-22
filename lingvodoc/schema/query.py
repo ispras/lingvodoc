@@ -13058,7 +13058,7 @@ class SwadeshAnalysis(graphene.Mutation):
         swadesh_set = {}
         dictionary_count = len(perspective_info_list)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 100)
-        distance_header_array = numpy.empty(dictionary_count)
+        distance_header_array = numpy.empty(dictionary_count, dtype='object')
         for index, (perspective_id, _, translation_field_id) in \
                 enumerate(perspective_info_list):
 
@@ -13159,7 +13159,6 @@ class SwadeshAnalysis(graphene.Mutation):
                 storage,
                 storage_dir
             )
-
         result_dict = (
 
             dict(
@@ -13168,13 +13167,6 @@ class SwadeshAnalysis(graphene.Mutation):
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
                 embedding_3d = embedding_3d_pca))
-
-        if __debug_flag__ and __result_flag__:
-
-            with gzip.open(
-                result_file_name, 'wb') as result_file:
-
-                pickle.dump(result_dict, result_file)
 
         return SwadeshAnalysis(**result_dict)
 
