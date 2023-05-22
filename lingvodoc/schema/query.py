@@ -13013,6 +13013,7 @@ class SwadeshAnalysis(graphene.Mutation):
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
+    perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
     def swadesh_statistics(
@@ -13166,7 +13167,8 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
-                embedding_3d = embedding_3d_pca))
+                embedding_3d = embedding_3d_pca,
+                perspective_name_list = distance_header_array))
 
         return SwadeshAnalysis(**result_dict)
 
