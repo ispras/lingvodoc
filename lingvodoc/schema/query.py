@@ -13071,8 +13071,8 @@ class SwadeshAnalysis(graphene.Mutation):
                     .first()
             )
 
-            perspective_name = perspective.get_translation(locale_id)
-            distance_header_array[index] = perspective_name
+            dictionary_name = perspective.parent.get_translation(locale_id)
+            distance_header_array[index] = dictionary_name
 
             # Getting text data.
             translation_query = (
