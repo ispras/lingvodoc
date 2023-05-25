@@ -10896,6 +10896,7 @@ class CognateAnalysis(graphene.Mutation):
             mode,
             storage,
             storage_dir,
+            __plot_flag__ = True,
             __debug_flag__ = False):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
@@ -11067,138 +11068,93 @@ class CognateAnalysis(graphene.Mutation):
             pprint.pformat(mst_list)))
 
         # Plotting with matplotlib.
+        figure_url = None
+        if __plot_flag__:
 
-        figure = pyplot.figure(figsize = (10, 10))
-        axes = figure.add_subplot(212)
+            figure = pyplot.figure(figsize = (10, 10))
+            axes = figure.add_subplot(212)
 
-        axes.set_title(
-            'Etymological distance tree (relative distance embedding)',
-            fontsize = 14, family = 'Gentium')
+            axes.set_title(
+                'Etymological distance tree (relative distance embedding)',
+                fontsize = 14, family = 'Gentium')
 
-        axes.axis('equal')
-        axes.axis('off')
-        axes.autoscale()
+            axes.axis('equal')
+            axes.axis('off')
+            axes.autoscale()
 
-        def f(axes, embedding_pca):
-            """
-            Plots specified graph embedding on a given axis.
-            """
+            def f(axes, embedding_pca):
+                """
+                Plots specified graph embedding on a given axis.
+                """
 
-            flag_3d = numpy.size(embedding_pca, 1) > 2
+                flag_3d = numpy.size(embedding_pca, 1) > 2
 
-            for index, (position, name) in enumerate(
-                zip(embedding_pca, distance_header_array)):
+                for index, (position, name) in enumerate(
+                    zip(embedding_pca, distance_header_array)):
 
-                # Checking if any of the previous perspectives are already in this perspective's
-                # position.
+                    # Checking if any of the previous perspectives are already in this perspective's
+                    # position.
 
-                same_position_index = None
+                    same_position_index = None
 
-                for i, p in enumerate(embedding_pca[:index]):
-                    if numpy.linalg.norm(position - p) <= 1e-3:
+                    for i, p in enumerate(embedding_pca[:index]):
+                        if numpy.linalg.norm(position - p) <= 1e-3:
 
-                        same_position_index = i
-                        break
+                            same_position_index = i
+                            break
 
-                color = matplotlib.colors.hsv_to_rgb(
-                    [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
+                    color = matplotlib.colors.hsv_to_rgb(
+                        [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
 
-                label_same_str = (
-                    '' if same_position_index is None else
-                    ' (same as {0})'.format(same_position_index + 1))
+                    label_same_str = (
+                        '' if same_position_index is None else
+                        ' (same as {0})'.format(same_position_index + 1))
 
-                kwargs = {
-                    's': 35,
-                    'color': color,
-                    'label': '{0}) {1}{2}'.format(index + 1, name, label_same_str)}
+                    kwargs = {
+                        's': 35,
+                        'color': color,
+                        'label': '{0}) {1}{2}'.format(index + 1, name, label_same_str)}
 
-                axes.scatter(*position, **kwargs)
+                    axes.scatter(*position, **kwargs)
 
-                # Annotating position with its number, but only if we hadn't already annotated nearby.
+                    # Annotating position with its number, but only if we hadn't already annotated nearby.
 
-                if same_position_index is None:
+                    if same_position_index is None:
 
-                    if flag_3d:
+                        if flag_3d:
 
-                        axes.text(
-                            position[0] + 0.01, position[1], position[2] + 0.01,
-                            str(index + 1), None, fontsize = 14)
+                            axes.text(
+                                position[0] + 0.01, position[1], position[2] + 0.01,
+                                str(index + 1), None, fontsize = 14)
 
-                    else:
+                        else:
 
-                        axes.annotate(
-                            str(index + 1),
-                            (position[0] + 0.01, position[1] - 0.005),
-                            fontsize = 14)
+                            axes.annotate(
+                                str(index + 1),
+                                (position[0] + 0.01, position[1] - 0.005),
+                                fontsize = 14)
 
-            # Plotting minimum spanning trees.
+                # Plotting minimum spanning trees.
 
-            line_list = [
-                (embedding_pca[i], embedding_pca[j])
-                for i, j in mst_list]
+                line_list = [
+                    (embedding_pca[i], embedding_pca[j])
+                    for i, j in mst_list]
 
-            line_collection = (
-                Line3DCollection if flag_3d else LineCollection)(
-                    line_list, zorder = 0, color = 'gray')
+                line_collection = (
+                    Line3DCollection if flag_3d else LineCollection)(
+                        line_list, zorder = 0, color = 'gray')
 
-            axes.add_collection(line_collection)
+                axes.add_collection(line_collection)
 
-            pyplot.setp(axes.texts, family = 'Gentium')
+                pyplot.setp(axes.texts, family = 'Gentium')
 
-        # Plotting our embedding, creating the legend.
+            # Plotting our embedding, creating the legend.
 
-        f(axes, embedding_2d_pca)
+            f(axes, embedding_2d_pca)
 
-        pyplot.tight_layout()
+            pyplot.tight_layout()
 
-        legend = axes.legend(
-            scatterpoints = 1,
-            loc = 'upper center',
-            bbox_to_anchor = (0.5, -0.05),
-            frameon = False,
-            handlelength = 0.5,
-            handletextpad = 0.75,
-            fontsize = 14)
-
-        pyplot.setp(legend.texts, family = 'Gentium')
-        axes.autoscale_view()
-
-        # Saving generated figure for debug purposes, if required.
-
-        if __debug_flag__:
-
-            figure_file_name = (
-                'figure cognate distance{0}.png'.format(
-                mode_name_str))
-
-            with open(figure_file_name, 'wb') as figure_file:
-
-                pyplot.savefig(
-                    figure_file,
-                    bbox_extra_artists = (legend,),
-                    bbox_inches = 'tight',
-                    pad_inches = 0.25,
-                    format = 'png')
-
-            # Also generating 3d embedding figure.
-
-            figure_3d = pyplot.figure()
-            figure_3d.set_size_inches(16, 10)
-
-            axes_3d = figure_3d.add_subplot(111, projection = '3d')
-
-            axes_3d.axis('equal')
-            axes_3d.view_init(elev = 30, azim = -75)
-
-            f(axes_3d, embedding_3d_pca)
-
-            # Setting up legend.
-
-            axes_3d.set_xlabel('X')
-            axes_3d.set_ylabel('Y')
-            axes_3d.set_zlabel('Z')
-
-            legend_3d = axes_3d.legend(
+            legend = axes.legend(
                 scatterpoints = 1,
                 loc = 'upper center',
                 bbox_to_anchor = (0.5, -0.05),
@@ -11207,76 +11163,124 @@ class CognateAnalysis(graphene.Mutation):
                 handletextpad = 0.75,
                 fontsize = 14)
 
-            pyplot.setp(legend_3d.texts, family = 'Gentium')
+            pyplot.setp(legend.texts, family = 'Gentium')
+            axes.autoscale_view()
 
-            # Fake cubic bounding box to force axis aspect ratios, see
-            # https://stackoverflow.com/a/13701747/2016856.
+            # Saving generated figure for debug purposes, if required.
 
-            X = embedding_3d_pca[:,0]
-            Y = embedding_3d_pca[:,1]
-            Z = embedding_3d_pca[:,2]
+            if __debug_flag__:
 
-            max_range = numpy.array([
-                X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
+                figure_file_name = (
+                    'figure cognate distance{0}.png'.format(
+                    mode_name_str))
 
-            Xb = (
-                0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() +
-                0.5 * (X.max() + X.min()))
+                with open(figure_file_name, 'wb') as figure_file:
 
-            Yb = (
-                0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() +
-                0.5 * (Y.max() + Y.min()))
+                    pyplot.savefig(
+                        figure_file,
+                        bbox_extra_artists = (legend,),
+                        bbox_inches = 'tight',
+                        pad_inches = 0.25,
+                        format = 'png')
 
-            Zb = (
-                0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() +
-                0.5 * (Z.max() + Z.min()))
+                # Also generating 3d embedding figure.
 
-            for xb, yb, zb in zip(Xb, Yb, Zb):
-               axes_3d.plot([xb], [yb], [zb], 'w')
+                figure_3d = pyplot.figure()
+                figure_3d.set_size_inches(16, 10)
 
-            axes_3d.autoscale_view()
+                axes_3d = figure_3d.add_subplot(111, projection = '3d')
 
-            # And saving it.
+                axes_3d.axis('equal')
+                axes_3d.view_init(elev = 30, azim = -75)
 
-            figure_3d_file_name = (
-                'figure 3d cognate distance{0}.png'.format(
-                mode_name_str))
+                f(axes_3d, embedding_3d_pca)
 
-            with open(figure_3d_file_name, 'wb') as figure_3d_file:
+                # Setting up legend.
 
-                figure_3d.savefig(
-                    figure_3d_file,
-                    bbox_extra_artists = (legend_3d,),
+                axes_3d.set_xlabel('X')
+                axes_3d.set_ylabel('Y')
+                axes_3d.set_zlabel('Z')
+
+                legend_3d = axes_3d.legend(
+                    scatterpoints = 1,
+                    loc = 'upper center',
+                    bbox_to_anchor = (0.5, -0.05),
+                    frameon = False,
+                    handlelength = 0.5,
+                    handletextpad = 0.75,
+                    fontsize = 14)
+
+                pyplot.setp(legend_3d.texts, family = 'Gentium')
+
+                # Fake cubic bounding box to force axis aspect ratios, see
+                # https://stackoverflow.com/a/13701747/2016856.
+
+                X = embedding_3d_pca[:,0]
+                Y = embedding_3d_pca[:,1]
+                Z = embedding_3d_pca[:,2]
+
+                max_range = numpy.array([
+                    X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
+
+                Xb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() +
+                    0.5 * (X.max() + X.min()))
+
+                Yb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() +
+                    0.5 * (Y.max() + Y.min()))
+
+                Zb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() +
+                    0.5 * (Z.max() + Z.min()))
+
+                for xb, yb, zb in zip(Xb, Yb, Zb):
+                   axes_3d.plot([xb], [yb], [zb], 'w')
+
+                axes_3d.autoscale_view()
+
+                # And saving it.
+
+                figure_3d_file_name = (
+                    'figure 3d cognate distance{0}.png'.format(
+                    mode_name_str))
+
+                with open(figure_3d_file_name, 'wb') as figure_3d_file:
+
+                    figure_3d.savefig(
+                        figure_3d_file,
+                        bbox_extra_artists = (legend_3d,),
+                        bbox_inches = 'tight',
+                        pad_inches = 0.25,
+                        format = 'png')
+
+            # Storing generated figure as a PNG image.
+            current_datetime = datetime.datetime.now(datetime.timezone.utc)
+            figure_filename = pathvalidate.sanitize_filename(
+                '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
+                    base_language_name[:64],
+                    ' ' + mode if mode else '',
+                    current_datetime.year,
+                    current_datetime.month,
+                    current_datetime.day))
+
+            figure_path = os.path.join(storage_dir, figure_filename)
+            os.makedirs(os.path.dirname(figure_path), exist_ok = True)
+
+            with open(figure_path, 'wb') as figure_file:
+
+                figure.savefig(
+                    figure_file,
+                    bbox_extra_artists = (legend,),
                     bbox_inches = 'tight',
                     pad_inches = 0.25,
                     format = 'png')
 
-        # Storing generated figure as a PNG image.
-        current_datetime = datetime.datetime.now(datetime.timezone.utc)
-        figure_filename = pathvalidate.sanitize_filename(
-            '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
-                base_language_name[:64],
-                ' ' + mode if mode else '',
-                current_datetime.year,
-                current_datetime.month,
-                current_datetime.day))
-
-        figure_path = os.path.join(storage_dir, figure_filename)
-        os.makedirs(os.path.dirname(figure_path), exist_ok = True)
-
-        with open(figure_path, 'wb') as figure_file:
-
-            figure.savefig(
-                figure_file,
-                bbox_extra_artists = (legend,),
-                bbox_inches = 'tight',
-                pad_inches = 0.25,
-                format = 'png')
-
-        cur_time = time.time()
-        figure_url = ''.join([
-            storage['prefix'], storage['static_route'],
-            'cognate', '/', str(cur_time), '/', figure_filename])
+            cur_time = time.time()
+            figure_url = ''.join([
+                storage['prefix'], storage['static_route'],
+                'cognate', '/', str(cur_time), '/', figure_filename])
+        ### Plotting with matplotlib ends
 
         return (
             figure_url,
@@ -13158,7 +13162,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 distance_header_array,
                 "swadesh",
                 storage,
-                storage_dir
+                storage_dir,
+                __plot_flag__ = False
             )
         result_dict = (
 
@@ -13191,7 +13196,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # Administrator / perspective author / editing permission check.
         error_str = (
             'Only administrator, perspective author and users with perspective editing permissions '
-            'can perform swadesh analysis.')
+            'can perform Swadesh analysis.')
 
         client_id = info.context.request.authenticated_userid
 
