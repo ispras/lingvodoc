@@ -13061,10 +13061,8 @@ class SwadeshAnalysis(graphene.Mutation):
         # swadesh_set gathers numbers of words within Swadesh' list
         entries_set = {}
         swadesh_set = {}
-        dictionary_count = len(perspective_info_list)
-        distance_data_array = numpy.full((dictionary_count, dictionary_count), 100)
-        distance_header_array = numpy.empty(dictionary_count, dtype='object')
-        for index, (perspective_id, _, translation_field_id) in \
+        result_pool = {}
+        for index, (perspective_id, word_field_id, translation_field_id) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -13074,11 +13072,32 @@ class SwadeshAnalysis(graphene.Mutation):
                     .filter_by(client_id=perspective_id[0], object_id=perspective_id[1])
                     .first()
             )
-
             dictionary_name = perspective.parent.get_translation(locale_id)
-            distance_header_array[index] = dictionary_name
 
             # Getting text data.
+            word_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == word_field_id[0],
+                        dbEntity.field_object_id == word_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('word'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
             translation_query = (
                 DBSession
                     .query(
@@ -13100,14 +13119,30 @@ class SwadeshAnalysis(graphene.Mutation):
                     .add_columns(
                         func.array_agg(dbEntity.content).label('translation'))
                     .group_by(dbLexicalEntry)
+                    .subquery())
+
+            # Main query for word/translation data.
+            data_query = (
+                DBSession
+                    .query(word_query)
+                    .outerjoin(translation_query, and_(
+                        word_query.c.client_id == translation_query.c.client_id,
+                        word_query.c.object_id == translation_query.c.object_id))
+                    .add_columns(
+                        translation_query.c.translation)
                     .all())
 
             # Grouping translations by lexical entries.
             entries_set[perspective_id] = set()
             swadesh_set[perspective_id] = set()
-            for row_index, row in enumerate(translation_query):
+            result_pool[perspective_id] = {'name': dictionary_name}
+            for row_index, row in enumerate(data_query):
                 entry_id = tuple(row[:2])
-                translation_list = row[2]
+                word_list, translation_list = row[2:4]
+
+                # If we have no words for this lexical entry, we skip it altogether.
+                if not word_list:
+                    continue
 
                 translation_list = (
                     [] if not translation_list else [
@@ -13121,24 +13156,35 @@ class SwadeshAnalysis(graphene.Mutation):
                             # Store entry_id and number of the lex within Swadesh' list
                             entries_set[perspective_id].add(entry_id)
                             swadesh_set[perspective_id].add(swadesh_num)
-                            #print(entry_id, swadesh_num, translation_lex)
+                            # Store the entry content in human readable format
+                            result_pool[perspective_id][entry_id] = {
+                                'group': None,
+                                'swadesh': swadesh_lex,
+                                'word': word_list[0],
+                                'translation': translation_lex
+                            }
 
         # Create dictionary of sets:
         # keys: pepspective_id
         # values: numbers of etymological groups where an entry from dictionary is met
-        links = {}
+        links = collections.OrderedDict()
         for perspective, entries in entries_set.items():
             links[perspective] = set()
             for group_index, group in enumerate(group_list):
-                if (entries & group):
+                linked = entries & group
+                if linked:
                     links[perspective].add(group_index)
+                    result_pool[perspective][linked.pop()]['group'] = group_index
+
+        dictionary_count = len(links)
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 100)
+        distance_header_array = numpy.empty(dictionary_count, dtype='object')
 
         # Calculate intersection between lists of group numbers
         # So length of this intersection is the similarity of corresponding perspectives
         # commons_total means amount of Swadesh's lexems met in the both perspectives
-        similarity = {}
         for n1, (perspective1, groups1) in enumerate(links.items()):
-            similarity[perspective1] = {}
+            distance_header_array[n1] = result_pool[perspective1]['name']
             print(perspective1, end=' :: ')
             for n2, (perspective2, groups2) in enumerate(links.items()):
                 #if n2 <= n1: continue  #exclude duplicates and self-to-self
@@ -13147,7 +13193,6 @@ class SwadeshAnalysis(graphene.Mutation):
                 # commons_linked > 0 means that commons_total > 0 even more so
                 distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
                 distance_data_array[n1][n2] = distance
-                #similarity[perspective1][perspective2] = commons_linked, commons_total
                 print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
             print()
 
