@@ -13041,6 +13041,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
         def compare_translations(swadesh_lex, dictionary_lex):
             def split_lex(lex):
+                #TODO: move this condition
                 if ' заим.' in lex:
                     return set()
                 # Split by commas and open brackets to separate
@@ -13156,7 +13157,7 @@ class SwadeshAnalysis(graphene.Mutation):
                             # Store entry_id and number of the lex within Swadesh' list
                             entries_set[perspective_id].add(entry_id)
                             swadesh_set[perspective_id].add(swadesh_num)
-                            # Store the entry content in human readable format
+                            # Store the entry's content in human readable format
                             result_pool[perspective_id][entry_id] = {
                                 'group': None,
                                 'swadesh': swadesh_lex,
@@ -13178,7 +13179,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
         dictionary_count = len(links)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 100)
-        distance_header_array = numpy.empty(dictionary_count, dtype='object')
+        distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
         # Calculate intersection between lists of group numbers
         # So length of this intersection is the similarity of corresponding perspectives
@@ -13196,18 +13197,15 @@ class SwadeshAnalysis(graphene.Mutation):
                 print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
             print()
 
-        cur_time = time.time()
-        storage_dir = os.path.join(storage['path'], 'swadesh', str(cur_time))
-
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
                 language_str,
                 base_language_name,
                 distance_data_array,
                 distance_header_array,
-                "swadesh",
-                storage,
-                storage_dir,
+                None,
+                None,
+                None,
                 __plot_flag__ = False
             )
         result_dict = (
