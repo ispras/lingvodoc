@@ -13057,7 +13057,7 @@ class SwadeshAnalysis(graphene.Mutation):
             single[dict_index].append(dict_name)
 
             for entry in perspective.values():
-                print(entry)
+                if not isinstance(entry, dict): continue
                 group_num = entry['group']
                 entry_text = combine(entry['swadesh'], entry['word'], entry['translate'])
                 if group_num:
