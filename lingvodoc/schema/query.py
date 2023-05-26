@@ -13020,6 +13020,64 @@ class SwadeshAnalysis(graphene.Mutation):
     perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
+    def create_table(result_pool, group_count):
+        '''
+        Keys:
+        result_pool[perspective_id][entry_id]
+        Fields:
+        'group': group_index,
+        'swadesh': swadesh_lex,
+        'word': word_list[0],
+        'translation': translation_lex
+        '''
+
+        space = ' '
+        col_len = 62
+        def combine(*args):
+            result = space * 2
+            fld_len = ((col_len - 2) // len(args)) - 2
+
+            for s in args:
+                result += f"{str(s).ljust(fld_len)[:fld_len]}{space * 2}"
+            return result
+
+        dict_count = len(result_pool)
+        #print(f"{dict_count}:{result_pool})
+
+        # 'groups' is horizontals in table before 'single'
+        groups = [[None] * dict_count] * group_count
+
+        # 'single' is verticals in table after 'groups'
+        # first element in every vertical is the dictionary name
+        single = [[]] * dict_count
+
+        # re-group by group number and add joined values
+        for dict_index, perspective in enumerate(result_pool.values()):
+            dict_name = combine(f"{dict_index + 1}. {perspective['name']}")
+            single[dict_index].append(dict_name)
+
+            for entry in perspective.values():
+                print(entry)
+                group_num = entry['group']
+                entry_text = combine(entry['swadesh'], entry['word'], entry['translate'])
+                if group_num:
+                    groups[group_num][dict_index] = entry_text
+                else:
+                    single[dict_index].append(entry_text)
+
+        # iterate through 'groups' and 'single' and concatenate result
+        result = ""
+        # headers
+        result += ''.join(single[:][0]) + '\n\n'
+        # groups by lines
+        result += '\n'.join(''.join(line) for line in groups)
+        # not-cognates by columns
+        for indent, entries in enumerate(single):
+            result += '\n'.join(space * col_len * indent + entry for entry in entries)
+
+        return result
+
+    @staticmethod
     def swadesh_statistics(
             language_str,
             base_language_name,
@@ -13208,11 +13266,16 @@ class SwadeshAnalysis(graphene.Mutation):
                 None,
                 __plot_flag__ = False
             )
+
+        result = SwadeshAnalysis.create_table(result_pool, len(group_list))
+        print(result)
+
         result_dict = (
 
             dict(
                 triumph = True,
 
+                #result = result,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
                 embedding_3d = embedding_3d_pca,
