@@ -10896,8 +10896,8 @@ class CognateAnalysis(graphene.Mutation):
             mode,
             storage,
             storage_dir,
-            __plot_flag__ = True,
-            __debug_flag__ = False):
+            __debug_flag__ = False,
+            __plot_flag__ = True):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
 
