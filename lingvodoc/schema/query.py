@@ -13042,10 +13042,9 @@ class SwadeshAnalysis(graphene.Mutation):
             return result
 
         dict_count = len(result_pool)
-        #print(f"{dict_count}:{result_pool})
 
         # 'groups' is horizontals in table before 'single'
-        groups = [[None] * dict_count] * group_count
+        groups = [[""] * dict_count] * group_count
 
         # 'single' is verticals in table after 'groups'
         # first element in every vertical is the dictionary name
@@ -13059,7 +13058,8 @@ class SwadeshAnalysis(graphene.Mutation):
             for entry in perspective.values():
                 if not isinstance(entry, dict): continue
                 group_num = entry['group']
-                entry_text = combine(entry['swadesh'], entry['word'], entry['translate'])
+                entry_text = combine(entry['swadesh'], entry['word'], entry['translation'])
+                print(entry_text)
                 if group_num:
                     groups[group_num][dict_index] = entry_text
                 else:
