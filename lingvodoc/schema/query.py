@@ -13014,6 +13014,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
     triumph = graphene.Boolean()
 
+    result = graphene.String()
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
@@ -13033,6 +13034,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
         space = ' '
         col_len = 62
+        # get length-fixed lines
         def combine(*args):
             result = space * 2
             fld_len = ((col_len - 2) // len(args)) - 2
@@ -13044,36 +13046,33 @@ class SwadeshAnalysis(graphene.Mutation):
         dict_count = len(result_pool)
 
         # 'groups' is horizontals in table before 'single'
-        groups = [[""] * dict_count] * group_count
+        groups = numpy.full((group_count, dict_count), space*col_len, dtype='object')
 
         # 'single' is verticals in table after 'groups'
         # first element in every vertical is the dictionary name
-        single = [[]] * dict_count
+        single = [None] * dict_count
 
         # re-group by group number and add joined values
         for dict_index, perspective in enumerate(result_pool.values()):
             dict_name = combine(f"{dict_index + 1}. {perspective['name']}")
-            single[dict_index].append(dict_name)
-
+            single[dict_index] = [dict_name]
             for entry in perspective.values():
                 if not isinstance(entry, dict): continue
                 group_num = entry['group']
                 entry_text = combine(entry['swadesh'], entry['word'], entry['translation'])
-                print(entry_text)
                 if group_num:
                     groups[group_num][dict_index] = entry_text
                 else:
                     single[dict_index].append(entry_text)
-
         # iterate through 'groups' and 'single' and concatenate result
         result = ""
         # headers
-        result += ''.join(single[:][0]) + '\n\n'
+        result += ''.join(single[n][0] for n in range(dict_count)) + '\n\n'
         # groups by lines
-        result += '\n'.join(''.join(line) for line in groups)
+        result += '\n'.join(''.join(line) for line in groups) + '\n'
         # not-cognates by columns
         for indent, entries in enumerate(single):
-            result += '\n'.join(space * col_len * indent + entry for entry in entries)
+            result += '\n'.join(space * col_len * indent + entry for entry in entries[1:])
 
         return result
 
@@ -13244,7 +13243,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # commons_total means amount of Swadesh's lexems met in the both perspectives
         for n1, (perspective1, groups1) in enumerate(links.items()):
             distance_header_array[n1] = result_pool[perspective1]['name']
-            print(perspective1, end=' :: ')
+            #print(perspective1, end=' :: ')
             for n2, (perspective2, groups2) in enumerate(links.items()):
                 #if n2 <= n1: continue  #exclude duplicates and self-to-self
                 commons_linked = len(groups1 & groups2)
@@ -13252,8 +13251,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 # commons_linked > 0 means that commons_total > 0 even more so
                 distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
                 distance_data_array[n1][n2] = distance
-                print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
-            print()
+                #print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
+            #print()
 
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
@@ -13268,14 +13267,13 @@ class SwadeshAnalysis(graphene.Mutation):
             )
 
         result = SwadeshAnalysis.create_table(result_pool, len(group_list))
-        print(result)
 
         result_dict = (
 
             dict(
                 triumph = True,
 
-                #result = result,
+                result = result,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
                 embedding_3d = embedding_3d_pca,
