@@ -13033,7 +13033,9 @@ class SwadeshAnalysis(graphene.Mutation):
         '''
 
         import pandas as pd
+        from pretty_html_table import build_table
 
+        '''
         space = ' '
         col_len = 50
 
@@ -13046,15 +13048,16 @@ class SwadeshAnalysis(graphene.Mutation):
                 result += f"{str(s).ljust(fld_len)[:fld_len]}{space * 2}"
 
             return result
+        '''
 
         groups = pd.DataFrame()
         # re-group by group number and add joined values
         for dict_index, perspective in enumerate(result_pool.values()):
-            dict_name = combine(f"{dict_index + 1}. {perspective['name']}")
+            dict_name = f"{dict_index + 1}. {perspective['name']}"
             for entry in perspective.values():
                 if not isinstance(entry, dict): continue
                 group_num = entry['group']
-                entry_text = combine(entry['swadesh'], entry['word'], entry['translation'])
+                entry_text = f"{entry['swadesh']} | {entry['word']} | {entry['translation']}"
                 if group_num:
                     groups.loc[group_num, dict_name] = entry_text
                 else:
@@ -13073,7 +13076,7 @@ class SwadeshAnalysis(graphene.Mutation):
                                 for entry in entries[1:]) + '\n'
         '''
 
-        return groups.to_html(index=False)
+        return build_table(groups, 'blue_light',  width="300px")
 
     @staticmethod
     def swadesh_statistics(
