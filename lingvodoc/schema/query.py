@@ -13033,7 +13033,7 @@ class SwadeshAnalysis(graphene.Mutation):
         '''
 
         space = ' '
-        col_len = 62
+        col_len = 50
         # get length-fixed lines
         def combine(*args):
             result = space * 2
@@ -13046,7 +13046,7 @@ class SwadeshAnalysis(graphene.Mutation):
         dict_count = len(result_pool)
 
         # 'groups' is horizontals in table before 'single'
-        groups = numpy.full((group_count, dict_count), space*col_len, dtype='object')
+        groups = numpy.full((group_count, dict_count), '.'*col_len, dtype='object')
 
         # 'single' is verticals in table after 'groups'
         # first element in every vertical is the dictionary name
@@ -13072,7 +13072,8 @@ class SwadeshAnalysis(graphene.Mutation):
         result += '\n'.join(''.join(line) for line in groups) + '\n'
         # not-cognates by columns
         for indent, entries in enumerate(single):
-            result += '\n'.join(space * col_len * indent + entry for entry in entries[1:])
+            result += '\n'.join(space * col_len * indent + entry
+                                for entry in entries[1:]) + '\n'
 
         return result
 
