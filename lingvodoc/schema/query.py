@@ -13032,8 +13032,11 @@ class SwadeshAnalysis(graphene.Mutation):
         'translation': translation_lex
         '''
 
+        import pandas as pd
+
         space = ' '
         col_len = 50
+
         # get length-fixed lines
         def combine(*args):
             result = space * 2
@@ -13041,29 +13044,23 @@ class SwadeshAnalysis(graphene.Mutation):
 
             for s in args:
                 result += f"{str(s).ljust(fld_len)[:fld_len]}{space * 2}"
+
             return result
 
-        dict_count = len(result_pool)
-
-        # 'groups' is horizontals in table before 'single'
-        groups = numpy.full((group_count, dict_count), '.'*col_len, dtype='object')
-
-        # 'single' is verticals in table after 'groups'
-        # first element in every vertical is the dictionary name
-        single = [None] * dict_count
-
+        groups = pd.DataFrame()
         # re-group by group number and add joined values
         for dict_index, perspective in enumerate(result_pool.values()):
             dict_name = combine(f"{dict_index + 1}. {perspective['name']}")
-            single[dict_index] = [dict_name]
             for entry in perspective.values():
                 if not isinstance(entry, dict): continue
                 group_num = entry['group']
                 entry_text = combine(entry['swadesh'], entry['word'], entry['translation'])
                 if group_num:
-                    groups[group_num][dict_index] = entry_text
+                    groups.loc[group_num, dict_name] = entry_text
                 else:
-                    single[dict_index].append(entry_text)
+                    groups.loc[group_count, dict_name] = entry_text
+                    group_count += 1
+        '''
         # iterate through 'groups' and 'single' and concatenate result
         result = ""
         # headers
@@ -13074,8 +13071,9 @@ class SwadeshAnalysis(graphene.Mutation):
         for indent, entries in enumerate(single):
             result += '\n'.join(space * col_len * indent + entry
                                 for entry in entries[1:]) + '\n'
+        '''
 
-        return result
+        return groups.to_html(index=False)
 
     @staticmethod
     def swadesh_statistics(
@@ -13120,7 +13118,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # swadesh_set gathers numbers of words within Swadesh' list
         entries_set = {}
         swadesh_set = {}
-        result_pool = {}
+        result_pool = collections.OrderedDict()
         for index, (perspective_id, word_field_id, translation_field_id) in \
                 enumerate(perspective_info_list):
 
