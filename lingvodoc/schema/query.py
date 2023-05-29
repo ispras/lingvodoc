@@ -13055,7 +13055,8 @@ class SwadeshAnalysis(graphene.Mutation):
         for dict_index, perspective in enumerate(result_pool.values()):
             dict_name = f"{dict_index + 1}. {perspective['name']}"
             for entry in perspective.values():
-                if not isinstance(entry, dict): continue
+                if not isinstance(entry, dict):
+                    continue
                 group_num = entry['group']
                 entry_text = f"{entry['swadesh']} | {entry['word']} | {entry['translation']}"
                 if group_num:
@@ -13076,7 +13077,7 @@ class SwadeshAnalysis(graphene.Mutation):
                                 for entry in entries[1:]) + '\n'
         '''
 
-        return build_table(groups, 'blue_light',  width="300px")
+        return build_table(groups, 'blue_light', width="300px")
 
     @staticmethod
     def swadesh_statistics(
@@ -13100,12 +13101,9 @@ class SwadeshAnalysis(graphene.Mutation):
 
         def compare_translations(swadesh_lex, dictionary_lex):
             def split_lex(lex):
-                #TODO: move this condition
-                if ' заим.' in lex:
-                    return set()
                 # Split by commas and open brackets to separate
                 # various forms of lexeme and extra note if is
-                return set(form.strip().lower()
+                return set(f" {form}".lower().replace(" заим.", "").strip()
                            for form in lex.replace('(', ',').split(',')
                            if form.strip()
                            and ')' not in form)  # exclude notes
@@ -13213,28 +13211,32 @@ class SwadeshAnalysis(graphene.Mutation):
                 for swadesh_num, swadesh_lex in enumerate(swadesh_list):
                     for translation_lex in translation_list:
                         if compare_translations(swadesh_lex, translation_lex):
-                            # Store entry_id and number of the lex within Swadesh' list
-                            entries_set[perspective_id].add(entry_id)
-                            swadesh_set[perspective_id].add(swadesh_num)
                             # Store the entry's content in human readable format
                             result_pool[perspective_id][entry_id] = {
                                 'group': None,
+                                'borrowed': (" заим." in f" {word_list[0]} {translation_lex}"),
                                 'swadesh': swadesh_lex,
                                 'word': word_list[0],
                                 'translation': translation_lex
                             }
+                            # Store entry_id and number of the lex within Swadesh' list
+                            entries_set[perspective_id].add(entry_id)
+                            if not result_pool[perspective_id][entry_id]['borrowed']:
+                                swadesh_set[perspective_id].add(swadesh_num)
 
         # Create dictionary of sets:
         # keys: pepspective_id
         # values: numbers of etymological groups where an entry from dictionary is met
         links = collections.OrderedDict()
-        for perspective, entries in entries_set.items():
-            links[perspective] = set()
+        for perspective_id, entries in entries_set.items():
+            links[perspective_id] = set()
             for group_index, group in enumerate(group_list):
                 linked = entries & group
                 if linked:
-                    links[perspective].add(group_index)
-                    result_pool[perspective][linked.pop()]['group'] = group_index
+                    entry_id = linked.pop()
+                    result_pool[perspective_id][entry_id]['group'] = group_index
+                    if not result_pool[perspective_id][entry_id]['borrowed']:
+                        links[perspective_id].add(group_index)
 
         dictionary_count = len(links)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 100)
