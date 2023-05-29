@@ -13015,40 +13015,26 @@ class SwadeshAnalysis(graphene.Mutation):
     triumph = graphene.Boolean()
 
     result = graphene.String()
+    xlsx_url = graphene.String()
     minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
     perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
-    def create_table(result_pool, group_count):
+    def export_dataframe(result_pool, group_count):
         '''
         Keys:
         result_pool[perspective_id][entry_id]
         Fields:
         'group': group_index,
+        'borrowed': bool,
         'swadesh': swadesh_lex,
         'word': word_list[0],
         'translation': translation_lex
         '''
 
         import pandas as pd
-        from pretty_html_table import build_table
-
-        '''
-        space = ' '
-        col_len = 50
-
-        # get length-fixed lines
-        def combine(*args):
-            result = space * 2
-            fld_len = ((col_len - 2) // len(args)) - 2
-
-            for s in args:
-                result += f"{str(s).ljust(fld_len)[:fld_len]}{space * 2}"
-
-            return result
-        '''
 
         groups = pd.DataFrame()
         # re-group by group number and add joined values
@@ -13064,20 +13050,46 @@ class SwadeshAnalysis(graphene.Mutation):
                 else:
                     groups.loc[group_count, dict_name] = entry_text
                     group_count += 1
+
+        return groups
+
+    @staticmethod
+    def export_xlsx(
+            result_dataframe,
+            base_language_name,
+            storage
+    ):
+        # Exporting analysis results as an Excel file.
+
+        current_datetime = datetime.datetime.now(datetime.timezone.utc)
+        xlsx_filename = pathvalidate.sanitize_filename(
+            '{0} {1} {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+                base_language_name[:64],
+                'glottochronology',
+                current_datetime.year,
+                current_datetime.month,
+                current_datetime.day))
+
+        cur_time = time.time()
+        storage_dir = os.path.join(storage['path'], 'glottochronology', str(cur_time))
+
+        # Storing Excel file with the results.
+
+        xlsx_path = os.path.join(storage_dir, xlsx_filename)
+        os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
+
         '''
-        # iterate through 'groups' and 'single' and concatenate result
-        result = ""
-        # headers
-        result += ''.join(single[n][0] for n in range(dict_count)) + '\n\n'
-        # groups by lines
-        result += '\n'.join(''.join(line) for line in groups) + '\n'
-        # not-cognates by columns
-        for indent, entries in enumerate(single):
-            result += '\n'.join(space * col_len * indent + entry
-                                for entry in entries[1:]) + '\n'
+        workbook_stream.seek(0)
+
+        with open(xlsx_path, 'wb') as xlsx_file:
+            shutil.copyfileobj(workbook_stream, xlsx_file)
         '''
 
-        return build_table(groups, 'blue_light', width="300px")
+        xlsx_url = ''.join([
+            storage['prefix'], storage['static_route'],
+            'glottochronology', '/', str(cur_time), '/', xlsx_filename])
+
+        return xlsx_url
 
     @staticmethod
     def swadesh_statistics(
@@ -13087,6 +13099,8 @@ class SwadeshAnalysis(graphene.Mutation):
             perspective_info_list,
             locale_id,
             storage):
+
+        from pretty_html_table import build_table
 
         swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
                         'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
@@ -13270,14 +13284,17 @@ class SwadeshAnalysis(graphene.Mutation):
                 __plot_flag__ = False
             )
 
-        result = SwadeshAnalysis.create_table(result_pool, len(group_list))
+        result_dataframe = SwadeshAnalysis.export_dataframe(result_pool, len(group_list))
+        xlsx_url =  SwadeshAnalysis.export_xlsx(result_dataframe, base_language_name, storage)
+        result_table = build_table(result_dataframe, 'blue_light', width="300px")
 
         result_dict = (
 
             dict(
                 triumph = True,
 
-                result = result,
+                result = result_table,
+                xlsx_url = xlsx_url,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
                 embedding_3d = embedding_3d_pca,
