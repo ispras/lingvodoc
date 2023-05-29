@@ -13078,12 +13078,7 @@ class SwadeshAnalysis(graphene.Mutation):
         xlsx_path = os.path.join(storage_dir, xlsx_filename)
         os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
 
-        '''
-        workbook_stream.seek(0)
-
-        with open(xlsx_path, 'wb') as xlsx_file:
-            shutil.copyfileobj(workbook_stream, xlsx_file)
-        '''
+        result_dataframe.to_excel(xlsx_path, index=False, sheet_name='Glottochronology')
 
         xlsx_url = ''.join([
             storage['prefix'], storage['static_route'],
