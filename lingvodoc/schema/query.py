@@ -13087,9 +13087,19 @@ class SwadeshAnalysis(graphene.Mutation):
         os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
 
         with pd.ExcelWriter(xlsx_path, engine='xlsxwriter') as writer:
+            header_format = writer.book.add_format({'bold': True,
+                                                    'text_wrap': True,
+                                                    'valign': 'top',
+                                                    'fg_color': '#D7E4BC',
+                                                    'border': 1})
             for sheet_name, df in result.items():
-                df.to_excel(writer, index=False, sheet_name=sheet_name)
-                writer.sheets[sheet_name].set_column(0, df.shape[1] - 1, 30)
+                df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=1, header=False)
+                worksheet = writer.sheets[sheet_name]
+                worksheet.set_column(0, df.shape[1] - 1, 30)
+                # Write the column headers with the defined format.
+                for col_num, value in enumerate(df.columns.values):
+                    worksheet.write(0, col_num, value, header_format)
+                worksheet.set_row(0, 70)
 
         xlsx_url = ''.join([
             storage['prefix'], storage['static_route'],
