@@ -1,3 +1,4 @@
 matplotlib==1.5.3
 pandas==1.4.3
 pretty_html_table
+xlsxwriter

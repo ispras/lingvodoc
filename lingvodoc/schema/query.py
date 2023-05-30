@@ -13085,9 +13085,10 @@ class SwadeshAnalysis(graphene.Mutation):
         xlsx_path = os.path.join(storage_dir, xlsx_filename)
         os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
 
-        with pd.ExcelWriter(xlsx_path) as writer:
+        with pd.ExcelWriter(xlsx_path, engine='xlsxwriter') as writer:
             for sheet_name, df in result.items():
                 df.to_excel(writer, index=False, sheet_name=sheet_name)
+                writer.sheets[sheet_name].set_column(0, df.shape[1] - 1, 30)
 
         xlsx_url = ''.join([
             storage['prefix'], storage['static_route'],
