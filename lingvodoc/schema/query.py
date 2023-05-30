@@ -13041,6 +13041,8 @@ class SwadeshAnalysis(graphene.Mutation):
         for dict_index, perspective in enumerate(result_pool.values()):
             dict_name = f"{dict_index + 1}. {perspective['name']}"
             for entry in perspective.values():
+                # 'entry' iterator may present 'name' or 'suite' field
+                # but not an inner dictionary for entry
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
@@ -13202,7 +13204,10 @@ class SwadeshAnalysis(graphene.Mutation):
             # Grouping translations by lexical entries.
             entries_set[perspective_id] = set()
             swadesh_set[perspective_id] = set()
-            result_pool[perspective_id] = {'name': dictionary_name}
+            result_pool[perspective_id] = {
+                'name': dictionary_name,
+                'suit': (len(data_query) > 50)
+            }
             for row_index, row in enumerate(data_query):
                 entry_id = tuple(row[:2])
                 transcription_list, translation_list = row[2:4]
@@ -13230,7 +13235,8 @@ class SwadeshAnalysis(graphene.Mutation):
                             }
                             # Store entry_id and number of the lex within Swadesh' list
                             entries_set[perspective_id].add(entry_id)
-                            if not result_pool[perspective_id][entry_id]['borrowed']:
+                            if (result_pool[perspective_id]['suit'] and
+                                not result_pool[perspective_id][entry_id]['borrowed']):
                                 swadesh_set[perspective_id].add(swadesh_num)
 
         # Create dictionary of sets:
@@ -13244,7 +13250,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 if linked:
                     entry_id = linked.pop()
                     result_pool[perspective_id][entry_id]['group'] = group_index
-                    if not result_pool[perspective_id][entry_id]['borrowed']:
+                    if (result_pool[perspective_id]['suit'] and
+                        not result_pool[perspective_id][entry_id]['borrowed']):
                         links[perspective_id].add(group_index)
 
         dictionary_count = len(links)
