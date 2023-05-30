@@ -13055,12 +13055,14 @@ class SwadeshAnalysis(graphene.Mutation):
                     single.loc[group_count, dict_name] = entry_text
                     group_count += 1
 
-        return groups.sort_values(groups.columns[0]), single.sort_index()
+        return {
+            'Cognates': groups.sort_values(groups.columns[0]),
+            'Singles': single.sort_index()
+        }
 
     @staticmethod
     def export_xlsx(
-            result_dataframes,
-            sheet_names,
+            result,
             base_language_name,
             storage
     ):
@@ -13084,8 +13086,8 @@ class SwadeshAnalysis(graphene.Mutation):
         os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
 
         with pd.ExcelWriter(xlsx_path) as writer:
-            for n, df in enumerate(result_dataframes):
-                df.to_excel(writer, index=False, sheet_name=sheet_names[n])
+            for sheet_name, df in result.items():
+                df.to_excel(writer, index=False, sheet_name=sheet_name)
 
         xlsx_url = ''.join([
             storage['prefix'], storage['static_route'],
@@ -13289,13 +13291,10 @@ class SwadeshAnalysis(graphene.Mutation):
                 __plot_flag__ = False
             )
 
-        result_dataframes = SwadeshAnalysis.export_dataframe(result_pool, len(group_list))
-        xlsx_url =  SwadeshAnalysis.export_xlsx(result_dataframes,
-                                                ['Cognates', 'Singles'],
-                                                base_language_name,
-                                                storage)
-        result_tables = (build_table(result_dataframes[0], 'blue_light', width="300px"),
-                         build_table(result_dataframes[1], 'green_light', width="300px"))
+        result = SwadeshAnalysis.export_dataframe(result_pool, len(group_list))
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        result_tables = (build_table(result['Cognates'], 'blue_light', width="300px"),
+                         build_table(result['Singles'], 'green_light', width="300px"))
 
         result_dict = (
             dict(
