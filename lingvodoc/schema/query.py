@@ -362,6 +362,9 @@ from lingvodoc.cache.caching import CACHE
 
 import lingvodoc.scripts.docx_import as docx_import
 
+import pandas as pd
+from pretty_html_table import build_table
+
 # Setting up logging.
 log = logging.getLogger(__name__)
 logging.disable(level=logging.INFO)
@@ -13034,15 +13037,14 @@ class SwadeshAnalysis(graphene.Mutation):
         'translation': translation_lex
         '''
 
-        import pandas as pd
-
         groups = pd.DataFrame()
+        single = pd.DataFrame()
         # re-group by group number and add joined values
         for dict_index, perspective in enumerate(result_pool.values()):
             dict_name = f"{dict_index + 1}. {perspective['name']}"
             for entry in perspective.values():
-                # 'entry' iterator may present 'name' or 'suite' field
-                # but not an inner dictionary for entry
+                # 'entry' iterator may present string value of 'name' or 'suite' field
+                # but not a dictionary for one of entries. Continue in this case.
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
@@ -13050,14 +13052,15 @@ class SwadeshAnalysis(graphene.Mutation):
                 if group_num:
                     groups.loc[group_num, dict_name] = entry_text
                 else:
-                    groups.loc[group_count, dict_name] = entry_text
+                    single.loc[group_count, dict_name] = entry_text
                     group_count += 1
 
-        return groups
+        return groups.sort_values(groups.columns[0]), single.sort_index()
 
     @staticmethod
     def export_xlsx(
-            result_dataframe,
+            result_dataframes,
+            sheet_names,
             base_language_name,
             storage
     ):
@@ -13080,7 +13083,9 @@ class SwadeshAnalysis(graphene.Mutation):
         xlsx_path = os.path.join(storage_dir, xlsx_filename)
         os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
 
-        result_dataframe.to_excel(xlsx_path, index=False, sheet_name='Glottochronology')
+        with pd.ExcelWriter(xlsx_path) as writer:
+            for n, df in enumerate(result_dataframes):
+                df.to_excel(writer, index=False, sheet_name=sheet_names[n])
 
         xlsx_url = ''.join([
             storage['prefix'], storage['static_route'],
@@ -13096,8 +13101,6 @@ class SwadeshAnalysis(graphene.Mutation):
             perspective_info_list,
             locale_id,
             storage):
-
-        from pretty_html_table import build_table
 
         swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
                         'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
@@ -13286,16 +13289,19 @@ class SwadeshAnalysis(graphene.Mutation):
                 __plot_flag__ = False
             )
 
-        result_dataframe = SwadeshAnalysis.export_dataframe(result_pool, len(group_list))
-        xlsx_url =  SwadeshAnalysis.export_xlsx(result_dataframe, base_language_name, storage)
-        result_table = build_table(result_dataframe, 'blue_light', width="300px")
+        result_dataframes = SwadeshAnalysis.export_dataframe(result_pool, len(group_list))
+        xlsx_url =  SwadeshAnalysis.export_xlsx(result_dataframes,
+                                                ['Cognates', 'Singles'],
+                                                base_language_name,
+                                                storage)
+        result_tables = (build_table(result_dataframes[0], 'blue_light', width="300px"),
+                         build_table(result_dataframes[1], 'green_light', width="300px"))
 
         result_dict = (
-
             dict(
                 triumph = True,
 
-                result = result_table,
+                result = f"{result_tables[0]}\n\n{result_tables[1]}",
                 xlsx_url = xlsx_url,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
