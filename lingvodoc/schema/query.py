@@ -13025,7 +13025,7 @@ class SwadeshAnalysis(graphene.Mutation):
     perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
-    def export_dataframe(result_pool, group_count):
+    def export_dataframe(result_pool, bundles):
         '''
         Keys:
         result_pool[perspective_id][entry_id]
@@ -13039,6 +13039,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
         groups = pd.DataFrame()
         single = pd.DataFrame()
+        row_index = 0
         # re-group by group number and add joined values
         for dict_index, perspective in enumerate(result_pool.values()):
             dict_name = f"{dict_index + 1}. {perspective['name']}"
@@ -13049,11 +13050,11 @@ class SwadeshAnalysis(graphene.Mutation):
                     continue
                 group_num = entry['group']
                 entry_text = f"{entry['swadesh']} | {entry['transcription']} | {entry['translation']}"
-                if group_num:
+                if group_num and group_num in bundles:
                     groups.loc[group_num, dict_name] = entry_text
                 else:
-                    single.loc[group_count, dict_name] = entry_text
-                    group_count += 1
+                    single.loc[row_index, dict_name] = entry_text
+                    row_index += 1
 
         return {
             'Cognates': groups.sort_values(groups.columns[0]),
@@ -13267,18 +13268,16 @@ class SwadeshAnalysis(graphene.Mutation):
         # Calculate intersection between lists of group numbers
         # So length of this intersection is the similarity of corresponding perspectives
         # commons_total means amount of Swadesh's lexems met in the both perspectives
+        bundles = set()
         for n1, (perspective1, groups1) in enumerate(links.items()):
             distance_header_array[n1] = result_pool[perspective1]['name']
-            #print(perspective1, end=' :: ')
             for n2, (perspective2, groups2) in enumerate(links.items()):
-                #if n2 <= n1: continue  #exclude duplicates and self-to-self
+                bundles.update(groups1 & groups2)
                 commons_linked = len(groups1 & groups2)
                 commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
                 # commons_linked > 0 means that commons_total > 0 even more so
                 distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
                 distance_data_array[n1][n2] = distance
-                #print(f"{perspective2}:{commons_linked}/{commons_total}:{distance:.2f}", end=' | ')
-            #print()
 
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
@@ -13292,7 +13291,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 __plot_flag__ = False
             )
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, len(group_list))
+        result = SwadeshAnalysis.export_dataframe(result_pool, bundles)
         xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
         result_tables = (build_table(result['Cognates'], 'blue_light', width="300px"),
                          build_table(result['Singles'], 'green_light', width="300px"))
@@ -13301,7 +13300,7 @@ class SwadeshAnalysis(graphene.Mutation):
             dict(
                 triumph = True,
 
-                result = f"{result_tables[0]}\n\n{result_tables[1]}",
+                result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}",
                 xlsx_url = xlsx_url,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
