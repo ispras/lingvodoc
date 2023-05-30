@@ -13273,12 +13273,15 @@ class SwadeshAnalysis(graphene.Mutation):
         for n1, (perspective1, groups1) in enumerate(links.items()):
             distance_header_array[n1] = result_pool[perspective1]['name']
             for n2, (perspective2, groups2) in enumerate(links.items()):
-                bundles.update(groups1 & groups2)
-                commons_linked = len(groups1 & groups2)
-                commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
-                # commons_linked > 0 means that commons_total > 0 even more so
-                distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
-                distance_data_array[n1][n2] = distance
+                if n1 == n2:
+                    distance_data_array[n1][n2] = 0
+                else:
+                    bundles.update(groups1 & groups2)
+                    commons_linked = len(groups1 & groups2)
+                    commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
+                    # commons_linked > 0 means that commons_total > 0 even more so
+                    distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
+                    distance_data_array[n1][n2] = distance
 
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
