@@ -13229,15 +13229,16 @@ class SwadeshAnalysis(graphene.Mutation):
                         for translation in translation_list
                         if translation.strip()])
 
+                transcription_lex = ', '.join(transcription_list)
                 for swadesh_num, swadesh_lex in enumerate(swadesh_list):
                     for translation_lex in translation_list:
                         if compare_translations(swadesh_lex, translation_lex):
                             # Store the entry's content in human readable format
                             result_pool[perspective_id][entry_id] = {
                                 'group': None,
-                                'borrowed': (" заим." in f" {transcription_list[0]} {translation_lex}"),
+                                'borrowed': (" заим." in f" {transcription_lex} {translation_lex}"),
                                 'swadesh': swadesh_lex,
-                                'transcription': transcription_list[0],
+                                'transcription': transcription_lex,
                                 'translation': translation_lex
                             }
                             # Store entry_id and number of the lex within Swadesh' list
