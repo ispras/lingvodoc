@@ -13030,7 +13030,7 @@ class SwadeshAnalysis(graphene.Mutation):
         'group': group_index,
         'borrowed': bool,
         'swadesh': swadesh_lex,
-        'word': word_list[0],
+        'transcription': transcription_list[0],
         'translation': translation_lex
         '''
 
@@ -13044,7 +13044,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
-                entry_text = f"{entry['swadesh']} | {entry['word']} | {entry['translation']}"
+                entry_text = f"{entry['swadesh']} | {entry['transcription']} | {entry['translation']}"
                 if group_num:
                     groups.loc[group_num, dict_name] = entry_text
                 else:
@@ -13129,7 +13129,7 @@ class SwadeshAnalysis(graphene.Mutation):
         entries_set = {}
         swadesh_set = {}
         result_pool = collections.OrderedDict()
-        for index, (perspective_id, word_field_id, translation_field_id) in \
+        for index, (perspective_id, transcription_field_id, translation_field_id) in \
                 enumerate(perspective_info_list):
 
             # Getting and saving perspective info.
@@ -13142,7 +13142,7 @@ class SwadeshAnalysis(graphene.Mutation):
             dictionary_name = perspective.parent.get_translation(locale_id)
 
             # Getting text data.
-            word_query = (
+            transcription_query = (
                 DBSession
                     .query(
                         dbLexicalEntry.client_id,
@@ -13153,15 +13153,15 @@ class SwadeshAnalysis(graphene.Mutation):
                         dbLexicalEntry.marked_for_deletion == False,
                         dbEntity.parent_client_id == dbLexicalEntry.client_id,
                         dbEntity.parent_object_id == dbLexicalEntry.object_id,
-                        dbEntity.field_client_id == word_field_id[0],
-                        dbEntity.field_object_id == word_field_id[1],
+                        dbEntity.field_client_id == transcription_field_id[0],
+                        dbEntity.field_object_id == transcription_field_id[1],
                         dbEntity.marked_for_deletion == False,
                         dbPublishingEntity.client_id == dbEntity.client_id,
                         dbPublishingEntity.object_id == dbEntity.object_id,
                         dbPublishingEntity.published == True,
                         dbPublishingEntity.accepted == True)
                     .add_columns(
-                        func.array_agg(dbEntity.content).label('word'))
+                        func.array_agg(dbEntity.content).label('transcription'))
                     .group_by(dbLexicalEntry)
                     .subquery())
 
@@ -13188,13 +13188,13 @@ class SwadeshAnalysis(graphene.Mutation):
                     .group_by(dbLexicalEntry)
                     .subquery())
 
-            # Main query for word/translation data.
+            # Main query for transcription/translation data.
             data_query = (
                 DBSession
-                    .query(word_query)
+                    .query(transcription_query)
                     .outerjoin(translation_query, and_(
-                        word_query.c.client_id == translation_query.c.client_id,
-                        word_query.c.object_id == translation_query.c.object_id))
+                        transcription_query.c.client_id == translation_query.c.client_id,
+                        transcription_query.c.object_id == translation_query.c.object_id))
                     .add_columns(
                         translation_query.c.translation)
                     .all())
@@ -13205,10 +13205,10 @@ class SwadeshAnalysis(graphene.Mutation):
             result_pool[perspective_id] = {'name': dictionary_name}
             for row_index, row in enumerate(data_query):
                 entry_id = tuple(row[:2])
-                word_list, translation_list = row[2:4]
+                transcription_list, translation_list = row[2:4]
 
-                # If we have no words for this lexical entry, we skip it altogether.
-                if not word_list:
+                # If we have no transcriptions for this lexical entry, we skip it altogether.
+                if not transcription_list:
                     continue
 
                 translation_list = (
@@ -13223,9 +13223,9 @@ class SwadeshAnalysis(graphene.Mutation):
                             # Store the entry's content in human readable format
                             result_pool[perspective_id][entry_id] = {
                                 'group': None,
-                                'borrowed': (" заим." in f" {word_list[0]} {translation_lex}"),
+                                'borrowed': (" заим." in f" {transcription_list[0]} {translation_lex}"),
                                 'swadesh': swadesh_lex,
-                                'word': word_list[0],
+                                'transcription': transcription_list[0],
                                 'translation': translation_lex
                             }
                             # Store entry_id and number of the lex within Swadesh' list
