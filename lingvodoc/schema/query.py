@@ -13025,7 +13025,7 @@ class SwadeshAnalysis(graphene.Mutation):
     perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
-    def export_dataframe(result_pool, bundles):
+    def export_dataframe(result_pool, distance_data_array, bundles):
         '''
         Keys:
         result_pool[perspective_id][entry_id]
@@ -13038,7 +13038,9 @@ class SwadeshAnalysis(graphene.Mutation):
         '''
 
         groups = pd.DataFrame()
-        single = pd.DataFrame()
+        singles = pd.DataFrame()
+        distances = pd.DataFrame(distance_data_array,
+                                 columns=[perspective['name'] for perspective in result_pool.values()])
         row_index = 0
         # re-group by group number and add joined values
         for dict_index, perspective in enumerate(result_pool.values()):
@@ -13049,16 +13051,17 @@ class SwadeshAnalysis(graphene.Mutation):
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
-                entry_text = f"{entry['swadesh']} | {entry['transcription']} | {entry['translation']}"
+                entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
                 if group_num and group_num in bundles:
                     groups.loc[group_num, dict_name] = entry_text
                 else:
-                    single.loc[row_index, dict_name] = entry_text
+                    singles.loc[row_index, dict_name] = entry_text
                     row_index += 1
 
         return {
             'Cognates': groups if groups.empty else groups.sort_values(groups.columns[0]),
-            'Singles': single.sort_index()
+            'Singles': singles.sort_index(),
+            'Distances': distances.sort_index()
         }
 
     @staticmethod
@@ -13093,7 +13096,14 @@ class SwadeshAnalysis(graphene.Mutation):
                                                     'fg_color': '#D7E4BC',
                                                     'border': 1})
             for sheet_name, df in result.items():
-                df.to_excel(writer, sheet_name=sheet_name, index=False, startrow=1, header=False)
+                index = (sheet_name == 'Distances')
+                startcol = int(index)
+                df.to_excel(writer,
+                            sheet_name=sheet_name,
+                            index=index,
+                            startrow=1,
+                            startcol=startcol,
+                            header=False)
                 worksheet = writer.sheets[sheet_name]
                 worksheet.set_column(0, df.shape[1] - 1, 30)
                 # Write the column headers with the defined format.
@@ -13303,7 +13313,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
                     distance_data_array[n1][n2] = distance
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, bundles)
+        result = SwadeshAnalysis.export_dataframe(result_pool, distance_data_array, bundles)
 
         # GC
         del result_pool
