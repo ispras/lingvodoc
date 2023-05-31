@@ -13110,7 +13110,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 worksheet = writer.sheets[sheet_name]
                 worksheet.set_row(0, 70)
-                worksheet.set_column(0, df.shape[1] - 1 + startcol, 30)
+                worksheet.set_column(startcol, df.shape[1] - 1 + startcol, 30)
                 # Write the column headers with the defined format.
                 for col_num, value in enumerate(df.columns.values):
                     worksheet.write(0, col_num + startcol, value, header_format)
