@@ -13160,6 +13160,9 @@ class SwadeshAnalysis(graphene.Mutation):
             )
             dictionary_name = perspective.parent.get_translation(locale_id)
 
+            # GC
+            del perspective
+
             # Getting text data.
             transcription_query = (
                 DBSession
@@ -13218,6 +13221,10 @@ class SwadeshAnalysis(graphene.Mutation):
                         translation_query.c.translation)
                     .all())
 
+            # GC
+            del transcription_query
+            del translation_query
+
             # Grouping translations by lexical entries.
             entries_set[perspective_id] = set()
             swadesh_set[perspective_id] = set()
@@ -13257,6 +13264,9 @@ class SwadeshAnalysis(graphene.Mutation):
                                 not result_pool[perspective_id][entry_id]['borrowed']):
                                 swadesh_set[perspective_id].add(swadesh_num)
 
+            # GC
+            del data_query
+
         # Create dictionary of sets:
         # keys: pepspective_id
         # values: numbers of etymological groups where an entry from dictionary is met
@@ -13293,6 +13303,15 @@ class SwadeshAnalysis(graphene.Mutation):
                     distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
                     distance_data_array[n1][n2] = distance
 
+        result = SwadeshAnalysis.export_dataframe(result_pool, bundles)
+        # GC
+        del result_pool
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        result_tables = (build_table(result['Cognates'], 'blue_light', width="300px"),
+                         build_table(result['Singles'], 'green_light', width="300px"))
+        # GC
+        del result
+
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
                 language_str,
@@ -13304,11 +13323,6 @@ class SwadeshAnalysis(graphene.Mutation):
                 None,
                 __plot_flag__ = False
             )
-
-        result = SwadeshAnalysis.export_dataframe(result_pool, bundles)
-        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
-        result_tables = (build_table(result['Cognates'], 'blue_light', width="300px"),
-                         build_table(result['Singles'], 'green_light', width="300px"))
 
         result_dict = (
             dict(
