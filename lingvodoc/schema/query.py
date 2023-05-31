@@ -13041,10 +13041,13 @@ class SwadeshAnalysis(graphene.Mutation):
         singles = pd.DataFrame()
         distances = pd.DataFrame(distance_data_array,
                                  columns=[perspective['name'] for perspective in result_pool.values()])
+        # Start index for distances from 1 to match with dictionaries numbers
+        distances.index += 1
+
         row_index = 0
         # re-group by group number and add joined values
         for dict_index, perspective in enumerate(result_pool.values()):
-            dict_name = f"{dict_index + 1}. {perspective['name']}"
+            dict_name = perspective['name']
             for entry in perspective.values():
                 # 'entry' iterator may present string value of 'name' or 'suite' field
                 # but not a dictionary for one of entries. Continue in this case.
@@ -13102,13 +13105,12 @@ class SwadeshAnalysis(graphene.Mutation):
                             sheet_name=sheet_name,
                             index=index,
                             startrow=1,
-                            startcol=startcol,
                             header=False)
                 worksheet = writer.sheets[sheet_name]
-                worksheet.set_column(0, df.shape[1] - 1, 30)
+                worksheet.set_column(0, df.shape[1] - 1 + startcol, 30)
                 # Write the column headers with the defined format.
                 for col_num, value in enumerate(df.columns.values):
-                    worksheet.write(0, col_num, value, header_format)
+                    worksheet.write(0, col_num + startcol, value, header_format)
                 worksheet.set_row(0, 70)
 
         xlsx_url = ''.join([
@@ -13239,7 +13241,7 @@ class SwadeshAnalysis(graphene.Mutation):
             entries_set[perspective_id] = set()
             swadesh_set[perspective_id] = set()
             result_pool[perspective_id] = {
-                'name': dictionary_name,
+                'name': f"{index + 1}. {dictionary_name}",
                 'suit': (len(data_query) > 50)
             }
             for row_index, row in enumerate(data_query):
@@ -13293,7 +13295,7 @@ class SwadeshAnalysis(graphene.Mutation):
                         links[perspective_id].add(group_index)
 
         dictionary_count = len(links)
-        distance_data_array = numpy.full((dictionary_count, dictionary_count), 100)
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 100, dtype='float')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
         # Calculate intersection between lists of group numbers
