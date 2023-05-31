@@ -13057,7 +13057,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     row_index += 1
 
         return {
-            'Cognates': groups.sort_values(groups.columns[0]),
+            'Cognates': groups if groups.empty else groups.sort_values(groups.columns[0]),
             'Singles': single.sort_index()
         }
 
@@ -13304,13 +13304,24 @@ class SwadeshAnalysis(graphene.Mutation):
                     distance_data_array[n1][n2] = distance
 
         result = SwadeshAnalysis.export_dataframe(result_pool, bundles)
+
         # GC
         del result_pool
+
         xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
         result_tables = (build_table(result['Cognates'], 'blue_light', width="300px"),
                          build_table(result['Singles'], 'green_light', width="300px"))
+
+        # Control output size
+        huge_size = 1048576
+        result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}"
+        if len(result) > huge_size:
+            result = f"{result_tables[0]}<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
+        if len(result) > huge_size:
+            result = "<pre>\n\nNote: The result tables are not shown due to huge summary size</pre>"
+
         # GC
-        del result
+        del result_tables
 
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
@@ -13328,7 +13339,7 @@ class SwadeshAnalysis(graphene.Mutation):
             dict(
                 triumph = True,
 
-                result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}",
+                result = result,
                 xlsx_url = xlsx_url,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
