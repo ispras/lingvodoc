@@ -13099,7 +13099,6 @@ class SwadeshAnalysis(graphene.Mutation):
                                                     'fg_color': '#D7E4BC',
                                                     'border': 1})
             for sheet_name, df in result.items():
-                worksheet = writer.sheets[sheet_name]
                 index = (sheet_name == 'Distances')
                 startcol = int(index)
 
@@ -13109,6 +13108,7 @@ class SwadeshAnalysis(graphene.Mutation):
                             startrow=1,
                             header=False)
 
+                worksheet = writer.sheets[sheet_name]
                 worksheet.set_row(0, 70)
                 worksheet.set_column(0, df.shape[1] - 1 + startcol, 30)
                 # Write the column headers with the defined format.
