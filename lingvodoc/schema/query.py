@@ -13046,7 +13046,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
         row_index = 0
         # re-group by group number and add joined values
-        for dict_index, perspective in enumerate(result_pool.values()):
+        for perspective in result_pool.values():
             dict_name = perspective['name']
             for entry in perspective.values():
                 # 'entry' iterator may present string value of 'name' or 'suite' field
@@ -13158,10 +13158,10 @@ class SwadeshAnalysis(graphene.Mutation):
 
         # Getting text data for each perspective.
         # entries_set gathers entry_id(s) of words met in Swadesh' list
-        # swadesh_set gathers numbers of words within Swadesh' list
+        # swadesh_total gathers numbers of words within Swadesh' list
         entries_set = {}
-        swadesh_set = {}
-        result_pool = collections.OrderedDict()
+        swadesh_total = {}
+        result_pool = {}
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
                 enumerate(perspective_info_list):
 
@@ -13241,7 +13241,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             # Grouping translations by lexical entries.
             entries_set[perspective_id] = set()
-            swadesh_set[perspective_id] = set()
+            swadesh_total[perspective_id] = set()
             result_pool[perspective_id] = {
                 'name': f"{index + 1}. {dictionary_name}",
                 'suit': (len(data_query) > 50)
@@ -13260,6 +13260,7 @@ class SwadeshAnalysis(graphene.Mutation):
                         for translation in translation_list
                         if translation.strip()])
 
+                # Parsing translations and matching with Swadesh's words
                 transcription_lex = ', '.join(transcription_list)
                 for swadesh_num, swadesh_lex in enumerate(swadesh_list):
                     for translation_lex in translation_list:
@@ -13272,49 +13273,69 @@ class SwadeshAnalysis(graphene.Mutation):
                                 'transcription': transcription_lex,
                                 'translation': translation_lex
                             }
-                            # Store entry_id and number of the lex within Swadesh' list
+                            # Store entry_id and number of the lex within Swadesh's list
                             entries_set[perspective_id].add(entry_id)
                             if (result_pool[perspective_id]['suit'] and
                                 not result_pool[perspective_id][entry_id]['borrowed']):
-                                swadesh_set[perspective_id].add(swadesh_num)
+                                # Total list of Swadesh's words in the perspective,
+                                # they can have no any etimological links
+                                swadesh_total[perspective_id].add(swadesh_num)
 
             # GC
             del data_query
 
-        # Create dictionary of sets:
-        # keys: pepspective_id
-        # values: numbers of etymological groups where an entry from dictionary is met
-        links = collections.OrderedDict()
+        # Checking if found entries have links
+        means = collections.OrderedDict()
         for perspective_id, entries in entries_set.items():
-            links[perspective_id] = set()
+            means[perspective_id] = collections.defaultdict(set)
             for group_index, group in enumerate(group_list):
+                # Select etimologically linked entries
                 linked = entries & group
                 if linked:
                     entry_id = linked.pop()
                     result_pool[perspective_id][entry_id]['group'] = group_index
+                    swadesh = result_pool[perspective_id][entry_id]['swadesh']
+                    # Store the correspondence: perspective { means(1/2/3) { etimological_groups(1.1/1.2/2.1/3.1)
                     if (result_pool[perspective_id]['suit'] and
                         not result_pool[perspective_id][entry_id]['borrowed']):
-                        links[perspective_id].add(group_index)
+                        means[perspective_id][swadesh].add(group_index)
 
-        dictionary_count = len(links)
-        distance_data_array = numpy.full((dictionary_count, dictionary_count), 100, dtype='float')
+        dictionary_count = len(means)
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
-        # Calculate intersection between lists of group numbers
+        # Calculate intersection between lists of linked means (Swadesh matching)
         # So length of this intersection is the similarity of corresponding perspectives
-        # commons_total means amount of Swadesh's lexems met in the both perspectives
+        # means_total is amount of Swadesh's lexems met in the both perspectives
         bundles = set()
-        for n1, (perspective1, groups1) in enumerate(links.items()):
+        # Calculate each-to-each distances, exclude self-to-self
+        for n1, (perspective1, means1) in enumerate(means.items()):
             distance_header_array[n1] = result_pool[perspective1]['name']
-            for n2, (perspective2, groups2) in enumerate(links.items()):
+            for n2, (perspective2, means2) in enumerate(means.items()):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                 else:
-                    bundles.update(groups1 & groups2)
-                    commons_linked = len(groups1 & groups2)
-                    commons_total = len(swadesh_set[perspective1] & swadesh_set[perspective2])
-                    # commons_linked > 0 means that commons_total > 0 even more so
-                    distance = math.log(commons_linked / commons_total) / -0.14 if commons_linked > 0 else 100
+                    # Common means of entries which have etimological linkes
+                    # but this linkes may be not mutual
+                    means_common = means1.keys() & means2.keys()
+                    means_linked = 0
+                    # Checking if the found means have common links
+                    for swadesh in means_common:
+                        links_common = means1[swadesh] & means2[swadesh]
+                        if links_common:
+                            # Bundles are linkes with two or more entries in the result table
+                            bundles.update(links_common)
+                            means_linked += 1
+
+                    means_total = len(swadesh_total[perspective1] & swadesh_total[perspective2])
+
+                    if n2 > n1 and len(means_common) > means_linked:
+                        log.debug(f"{n1+1},{n2+1} : "
+                                  f"{len(means_common)} but {means_linked} of {means_total} : "
+                                  f"{', '.join(sorted(means_common))}")
+
+                    # means_linked > 0 means that means_total > 0 even more so
+                    distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
                     distance_data_array[n1][n2] = distance
 
         result = SwadeshAnalysis.export_dataframe(result_pool, distance_data_array, bundles)
