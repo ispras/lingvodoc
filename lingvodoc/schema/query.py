@@ -13329,7 +13329,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
                     means_total = len(swadesh_total[perspective1] & swadesh_total[perspective2])
 
-                    if n2 > n1 and len(means_common) > means_linked:
+                    if n2 > n1 and len(means_common) > 0:
                         log.debug(f"{n1+1},{n2+1} : "
                                   f"{len(means_common)} but {means_linked} of {means_total} : "
                                   f"{', '.join(sorted(means_common))}")
@@ -13348,6 +13348,7 @@ class SwadeshAnalysis(graphene.Mutation):
                          build_table(result['Cognates'], 'blue_light', width="300px"),
                          build_table(result['Singles'], 'green_light', width="300px"))
 
+        '''
         # Control output size
         huge_size = 262144 #1048576
         result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}<pre>\n\n</pre>{result_tables[2]}"
@@ -13355,8 +13356,10 @@ class SwadeshAnalysis(graphene.Mutation):
             result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}" \
                      f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
         if len(result) > huge_size:
-            result = f"{result_tables[0]}" \
-                     f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
+        '''
+
+        result = f"{result_tables[0]}" \
+                 f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
 
         # GC
         del result_tables
