@@ -13356,10 +13356,11 @@ class SwadeshAnalysis(graphene.Mutation):
             result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}" \
                      f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
         if len(result) > huge_size:
+            result = f"{result_tables[0]}" \
+                     f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
         '''
 
-        result = f"{result_tables[0]}" \
-                 f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
+        result = "Note: The result tables are hidden"
 
         # GC
         del result_tables
