@@ -13336,7 +13336,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
                     # means_linked > 0 means that means_total > 0 even more so
                     distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
-                    distance_data_array[n1][n2] = distance
+                    distance_data_array[n1][n2] = round(distance, 2)
 
         result = SwadeshAnalysis.export_dataframe(result_pool, distance_data_array, bundles)
 
@@ -13344,16 +13344,19 @@ class SwadeshAnalysis(graphene.Mutation):
         del result_pool
 
         xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
-        result_tables = (build_table(result['Cognates'], 'blue_light', width="300px"),
+        result_tables = (build_table(result['Distances'], 'orange_light', width="300px", index=True),
+                         build_table(result['Cognates'], 'blue_light', width="300px"),
                          build_table(result['Singles'], 'green_light', width="300px"))
 
         # Control output size
-        huge_size = 1048576
-        result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}"
+        huge_size = 262144 #1048576
+        result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}<pre>\n\n</pre>{result_tables[2]}"
         if len(result) > huge_size:
-            result = f"{result_tables[0]}<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
+            result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}" \
+                     f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
         if len(result) > huge_size:
-            result = "<pre>\n\nNote: The result tables are not shown due to huge summary size</pre>"
+            result = f"{result_tables[0]}" \
+                     f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
 
         # GC
         del result_tables
