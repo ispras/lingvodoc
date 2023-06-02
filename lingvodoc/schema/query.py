@@ -13162,6 +13162,7 @@ class SwadeshAnalysis(graphene.Mutation):
         entries_set = {}
         swadesh_total = {}
         result_pool = {}
+        tiny_dicts = set()
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
                 enumerate(perspective_info_list):
 
@@ -13242,10 +13243,7 @@ class SwadeshAnalysis(graphene.Mutation):
             # Grouping translations by lexical entries.
             entries_set[perspective_id] = set()
             swadesh_total[perspective_id] = set()
-            result_pool[perspective_id] = {
-                'name': f"{index + 1}. {dictionary_name}",
-                'suit': (len(data_query) > 50)
-            }
+            result_pool[perspective_id] = {'name': dictionary_name}
             for row_index, row in enumerate(data_query):
                 entry_id = tuple(row[:2])
                 transcription_list, translation_list = row[2:4]
@@ -13275,11 +13273,17 @@ class SwadeshAnalysis(graphene.Mutation):
                             }
                             # Store entry_id and number of the lex within Swadesh's list
                             entries_set[perspective_id].add(entry_id)
-                            if (result_pool[perspective_id]['suit'] and
-                                not result_pool[perspective_id][entry_id]['borrowed']):
+                            if not result_pool[perspective_id][entry_id]['borrowed']:
                                 # Total list of Swadesh's words in the perspective,
                                 # they can have no any etimological links
                                 swadesh_total[perspective_id].add(swadesh_num)
+
+            # Forget the dictionary if it contains less than 50 Swadesh words
+            if len(swadesh_total[perspective_id]) < 50:
+                del entries_set[perspective_id]
+                del swadesh_total[perspective_id]
+                del result_pool[perspective_id]
+                tiny_dicts.add(dictionary_name)
 
             # GC
             del data_query
@@ -13296,8 +13300,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     result_pool[perspective_id][entry_id]['group'] = group_index
                     swadesh = result_pool[perspective_id][entry_id]['swadesh']
                     # Store the correspondence: perspective { means(1/2/3) { etimological_groups(1.1/1.2/2.1/3.1)
-                    if (result_pool[perspective_id]['suit'] and
-                        not result_pool[perspective_id][entry_id]['borrowed']):
+                    if not result_pool[perspective_id][entry_id]['borrowed']:
                         means[perspective_id][swadesh].add(group_index)
 
         dictionary_count = len(means)
@@ -13310,6 +13313,8 @@ class SwadeshAnalysis(graphene.Mutation):
         bundles = set()
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (perspective1, means1) in enumerate(means.items()):
+            # Numerate dictionaries
+            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
             distance_header_array[n1] = result_pool[perspective1]['name']
             for n2, (perspective2, means2) in enumerate(means.items()):
                 if n1 == n2:
@@ -13348,9 +13353,8 @@ class SwadeshAnalysis(graphene.Mutation):
                          build_table(result['Cognates'], 'blue_light', width="300px"),
                          build_table(result['Singles'], 'green_light', width="300px"))
 
-        '''
         # Control output size
-        huge_size = 262144 #1048576
+        huge_size = 1048576
         result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}<pre>\n\n</pre>{result_tables[2]}"
         if len(result) > huge_size:
             result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}" \
@@ -13358,9 +13362,8 @@ class SwadeshAnalysis(graphene.Mutation):
         if len(result) > huge_size:
             result = f"{result_tables[0]}" \
                      f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
-        '''
-
-        result = "Note: The result tables are hidden"
+        result += ("<pre>Note: The following dictionaries contain too less words and were not processed: \n\n" +
+                   '\n'.join(tiny_dicts) + "</pre>") if tiny_dicts else ""
 
         # GC
         del result_tables
