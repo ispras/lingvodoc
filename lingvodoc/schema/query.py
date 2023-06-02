@@ -362,8 +362,12 @@ from lingvodoc.cache.caching import CACHE
 
 import lingvodoc.scripts.docx_import as docx_import
 
+import pandas as pd
+from pretty_html_table import build_table
+
 # Setting up logging.
 log = logging.getLogger(__name__)
+logging.disable(level=logging.INFO)
 
 
 # Trying to set up celery logging.
@@ -10887,6 +10891,408 @@ class CognateAnalysis(graphene.Mutation):
         return result_x, f(result.x)
 
     @staticmethod
+    def distance_graph(
+            language_str,
+            base_language_name,
+            distance_data_array,
+            distance_header_array,
+            mode,
+            storage,
+            storage_dir,
+            __debug_flag__ = False,
+            __plot_flag__ = True):
+
+        d_ij = (distance_data_array + distance_data_array.T) / 2
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\ndistance_header_array:\n{1}'
+            '\ndistance_data_array:\n{2}'
+            '\nd_ij:\n{3}'.format(
+            language_str,
+            distance_header_array,
+            distance_data_array,
+            d_ij))
+
+        # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
+        # orient it left-right.
+
+        if len(distance_data_array) > 1:
+
+            embedding_2d, strain_2d = (
+                CognateAnalysis.graph_2d_embedding(d_ij, verbose = __debug_flag__))
+
+            embedding_2d_pca = (
+                sklearn.decomposition.PCA(n_components = 2)
+                    .fit_transform(embedding_2d))
+
+            distance_2d = sklearn.metrics.euclidean_distances(embedding_2d)
+
+        else:
+
+            embedding_2d = numpy.zeros((1, 2))
+            embedding_2d_pca = numpy.zeros((1, 2))
+
+            strain_2d = 0.0
+
+            distance_2d = numpy.zeros((1, 1))
+
+        # Showing what we computed.
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\nembedding 2d:\n{1}'
+            '\nembedding 2d (PCA-oriented):\n{2}'
+            '\nstrain 2d:\n{3}'
+            '\ndistances 2d:\n{4}'.format(
+            language_str,
+            embedding_2d,
+            embedding_2d_pca,
+            strain_2d,
+            distance_2d))
+
+        # And now the same with 3d embedding.
+
+        if len(distance_data_array) > 1:
+
+            embedding_3d, strain_3d = (
+                CognateAnalysis.graph_3d_embedding(d_ij, verbose = __debug_flag__))
+
+            # At least three points, standard PCA-based orientation.
+
+            if len(distance_data_array) >= 3:
+
+                embedding_3d_pca = (
+                    sklearn.decomposition.PCA(n_components = 3)
+                        .fit_transform(embedding_3d))
+
+            # Only two points, so we take 2d embedding and extend it with zeros.
+
+            else:
+
+                embedding_3d_pca = (
+
+                    numpy.hstack((
+                        embedding_2d_pca,
+                        numpy.zeros((embedding_2d_pca.shape[0], 1)))))
+
+            # Making 3d embedding actually 3d, if required.
+
+            if embedding_3d_pca.shape[1] <= 2:
+
+                embedding_3d_pca = (
+
+                    numpy.hstack((
+                        embedding_3d_pca,
+                        numpy.zeros((embedding_3d_pca.shape[0], 1)))))
+
+            distance_3d = (
+                sklearn.metrics.euclidean_distances(embedding_3d_pca))
+
+        else:
+
+            embedding_3d = numpy.zeros((1, 3))
+            embedding_3d_pca = numpy.zeros((1, 3))
+
+            strain_3d = 0.0
+
+            distance_3d = numpy.zeros((1, 1))
+
+        # Showing what we've get.
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\nembedding 3d:\n{1}'
+            '\nembedding 3d (PCA-oriented):\n{2}'
+            '\nstrain 3d:\n{3}'
+            '\ndistances 3d:\n{4}'.format(
+            language_str,
+            embedding_3d,
+            embedding_3d_pca,
+            strain_3d,
+            distance_3d))
+
+        # Computing minimum spanning tree via standard Jarnik-Prim-Dijkstra algorithm using 2d and 3d
+        # embedding distances to break ties.
+
+        if len(distance_data_array) <= 1:
+            mst_list = []
+
+        else:
+
+            d_min, d_extra_min, min_i, min_j = min(
+                (d_ij[i,j], distance_2d[i,j] + distance_3d[i,j], i, j)
+                for i in range(d_ij.shape[0] - 1)
+                for j in range(i + 1, d_ij.shape[0]))
+
+            mst_list = [(min_i, min_j)]
+            mst_dict = {}
+
+            # MST construction initialization.
+
+            for i in range(d_ij.shape[0]):
+
+                if i == min_i or i == min_j:
+                    continue
+
+                d_min_i = (d_ij[i, min_i], distance_2d[i, min_i] + distance_3d[i, min_i])
+                d_min_j = (d_ij[i, min_j], distance_2d[i, min_j] + distance_3d[i, min_j])
+
+                mst_dict[i] = (
+                    (d_min_i, min_i) if d_min_i <= d_min_j else
+                    (d_min_j, min_i))
+
+            # Iterative MST construction.
+
+            while len(mst_dict) > 0:
+
+                (d_min, d_extra_min, i_min, i_from_min) = min(
+                    (d, d_extra, i, i_from) for i, ((d, d_extra), i_from) in mst_dict.items())
+
+                log.debug('\n' + pprint.pformat(mst_dict))
+                log.debug('\n' + repr((i_from_min, i_min, d_min, d_extra_min)))
+
+                mst_list.append((i_from_min, i_min))
+                del mst_dict[i_min]
+
+                # Updating shortest connection info.
+
+                for i_to in mst_dict.keys():
+
+                    d_to = (d_ij[i_min, i_to], distance_2d[i_min, i_to] + distance_3d[i_min, i_to])
+
+                    if d_to < mst_dict[i_to][0]:
+                        mst_dict[i_to] = (d_to, i_min)
+
+        log.debug(
+            '\ncognate_analysis {0}:'
+            '\nminimum spanning tree:\n{1}'.format(
+            language_str,
+            pprint.pformat(mst_list)))
+
+        # Plotting with matplotlib.
+        figure_url = None
+        if __plot_flag__:
+
+            figure = pyplot.figure(figsize = (10, 10))
+            axes = figure.add_subplot(212)
+
+            axes.set_title(
+                'Etymological distance tree (relative distance embedding)',
+                fontsize = 14, family = 'Gentium')
+
+            axes.axis('equal')
+            axes.axis('off')
+            axes.autoscale()
+
+            def f(axes, embedding_pca):
+                """
+                Plots specified graph embedding on a given axis.
+                """
+
+                flag_3d = numpy.size(embedding_pca, 1) > 2
+
+                for index, (position, name) in enumerate(
+                    zip(embedding_pca, distance_header_array)):
+
+                    # Checking if any of the previous perspectives are already in this perspective's
+                    # position.
+
+                    same_position_index = None
+
+                    for i, p in enumerate(embedding_pca[:index]):
+                        if numpy.linalg.norm(position - p) <= 1e-3:
+
+                            same_position_index = i
+                            break
+
+                    color = matplotlib.colors.hsv_to_rgb(
+                        [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
+
+                    label_same_str = (
+                        '' if same_position_index is None else
+                        ' (same as {0})'.format(same_position_index + 1))
+
+                    kwargs = {
+                        's': 35,
+                        'color': color,
+                        'label': '{0}) {1}{2}'.format(index + 1, name, label_same_str)}
+
+                    axes.scatter(*position, **kwargs)
+
+                    # Annotating position with its number, but only if we hadn't already annotated nearby.
+
+                    if same_position_index is None:
+
+                        if flag_3d:
+
+                            axes.text(
+                                position[0] + 0.01, position[1], position[2] + 0.01,
+                                str(index + 1), None, fontsize = 14)
+
+                        else:
+
+                            axes.annotate(
+                                str(index + 1),
+                                (position[0] + 0.01, position[1] - 0.005),
+                                fontsize = 14)
+
+                # Plotting minimum spanning trees.
+
+                line_list = [
+                    (embedding_pca[i], embedding_pca[j])
+                    for i, j in mst_list]
+
+                line_collection = (
+                    Line3DCollection if flag_3d else LineCollection)(
+                        line_list, zorder = 0, color = 'gray')
+
+                axes.add_collection(line_collection)
+
+                pyplot.setp(axes.texts, family = 'Gentium')
+
+            # Plotting our embedding, creating the legend.
+
+            f(axes, embedding_2d_pca)
+
+            pyplot.tight_layout()
+
+            legend = axes.legend(
+                scatterpoints = 1,
+                loc = 'upper center',
+                bbox_to_anchor = (0.5, -0.05),
+                frameon = False,
+                handlelength = 0.5,
+                handletextpad = 0.75,
+                fontsize = 14)
+
+            pyplot.setp(legend.texts, family = 'Gentium')
+            axes.autoscale_view()
+
+            # Saving generated figure for debug purposes, if required.
+
+            if __debug_flag__:
+
+                figure_file_name = (
+                    'figure cognate distance{0}.png'.format(
+                    mode_name_str))
+
+                with open(figure_file_name, 'wb') as figure_file:
+
+                    pyplot.savefig(
+                        figure_file,
+                        bbox_extra_artists = (legend,),
+                        bbox_inches = 'tight',
+                        pad_inches = 0.25,
+                        format = 'png')
+
+                # Also generating 3d embedding figure.
+
+                figure_3d = pyplot.figure()
+                figure_3d.set_size_inches(16, 10)
+
+                axes_3d = figure_3d.add_subplot(111, projection = '3d')
+
+                axes_3d.axis('equal')
+                axes_3d.view_init(elev = 30, azim = -75)
+
+                f(axes_3d, embedding_3d_pca)
+
+                # Setting up legend.
+
+                axes_3d.set_xlabel('X')
+                axes_3d.set_ylabel('Y')
+                axes_3d.set_zlabel('Z')
+
+                legend_3d = axes_3d.legend(
+                    scatterpoints = 1,
+                    loc = 'upper center',
+                    bbox_to_anchor = (0.5, -0.05),
+                    frameon = False,
+                    handlelength = 0.5,
+                    handletextpad = 0.75,
+                    fontsize = 14)
+
+                pyplot.setp(legend_3d.texts, family = 'Gentium')
+
+                # Fake cubic bounding box to force axis aspect ratios, see
+                # https://stackoverflow.com/a/13701747/2016856.
+
+                X = embedding_3d_pca[:,0]
+                Y = embedding_3d_pca[:,1]
+                Z = embedding_3d_pca[:,2]
+
+                max_range = numpy.array([
+                    X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
+
+                Xb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() +
+                    0.5 * (X.max() + X.min()))
+
+                Yb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() +
+                    0.5 * (Y.max() + Y.min()))
+
+                Zb = (
+                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() +
+                    0.5 * (Z.max() + Z.min()))
+
+                for xb, yb, zb in zip(Xb, Yb, Zb):
+                   axes_3d.plot([xb], [yb], [zb], 'w')
+
+                axes_3d.autoscale_view()
+
+                # And saving it.
+
+                figure_3d_file_name = (
+                    'figure 3d cognate distance{0}.png'.format(
+                    mode_name_str))
+
+                with open(figure_3d_file_name, 'wb') as figure_3d_file:
+
+                    figure_3d.savefig(
+                        figure_3d_file,
+                        bbox_extra_artists = (legend_3d,),
+                        bbox_inches = 'tight',
+                        pad_inches = 0.25,
+                        format = 'png')
+
+            # Storing generated figure as a PNG image.
+            current_datetime = datetime.datetime.now(datetime.timezone.utc)
+            figure_filename = pathvalidate.sanitize_filename(
+                '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
+                    base_language_name[:64],
+                    ' ' + mode if mode else '',
+                    current_datetime.year,
+                    current_datetime.month,
+                    current_datetime.day))
+
+            figure_path = os.path.join(storage_dir, figure_filename)
+            os.makedirs(os.path.dirname(figure_path), exist_ok = True)
+
+            with open(figure_path, 'wb') as figure_file:
+
+                figure.savefig(
+                    figure_file,
+                    bbox_extra_artists = (legend,),
+                    bbox_inches = 'tight',
+                    pad_inches = 0.25,
+                    format = 'png')
+
+            cur_time = time.time()
+            figure_url = ''.join([
+                storage['prefix'], storage['static_route'],
+                'cognate', '/', str(cur_time), '/', figure_filename])
+        ### Plotting with matplotlib ends
+
+        return (
+            figure_url,
+            mst_list,
+            embedding_2d_pca,
+            embedding_3d_pca
+        )
+
+    @staticmethod
     def perform_cognate_analysis(
         language_str,
         source_perspective_id,
@@ -11034,7 +11440,6 @@ class CognateAnalysis(graphene.Mutation):
         sg_both_count = 0
 
         source_perspective_index = None
-
         for index, (perspective_id, transcription_field_id, translation_field_id) in \
             enumerate(perspective_info_list):
 
@@ -12196,396 +12601,25 @@ class CognateAnalysis(graphene.Mutation):
                     distance_list))
 
         # Generating distance graph, if required.
-
         figure_url = None
-
         mst_list = None
         embedding_2d_pca = None
         embedding_3d_pca = None
 
         if figure_flag:
-
-            d_ij = (distance_data_array + distance_data_array.T) / 2
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\ndistance_header_array:\n{1}'
-                '\ndistance_data_array:\n{2}'
-                '\nd_ij:\n{3}'.format(
-                language_str,
-                distance_header_array,
-                distance_data_array,
-                d_ij))
-
-            # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
-            # orient it left-right.
-
-            if len(distance_data_array) > 1:
-
-                embedding_2d, strain_2d = (
-                    CognateAnalysis.graph_2d_embedding(d_ij, verbose = __debug_flag__))
-
-                embedding_2d_pca = (
-                    sklearn.decomposition.PCA(n_components = 2)
-                        .fit_transform(embedding_2d))
-
-                distance_2d = sklearn.metrics.euclidean_distances(embedding_2d)
-
-            else:
-
-                embedding_2d = numpy.zeros((1, 2))
-                embedding_2d_pca = numpy.zeros((1, 2))
-
-                strain_2d = 0.0
-
-                distance_2d = numpy.zeros((1, 1))
-
-            # Showing what we computed.
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\nembedding 2d:\n{1}'
-                '\nembedding 2d (PCA-oriented):\n{2}'
-                '\nstrain 2d:\n{3}'
-                '\ndistances 2d:\n{4}'.format(
-                language_str,
-                embedding_2d,
-                embedding_2d_pca,
-                strain_2d,
-                distance_2d))
-
-            # And now the same with 3d embedding.
-
-            if len(distance_data_array) > 1:
-
-                embedding_3d, strain_3d = (
-                    CognateAnalysis.graph_3d_embedding(d_ij, verbose = __debug_flag__))
-
-                # At least three points, standard PCA-based orientation.
-
-                if len(distance_data_array) >= 3:
-
-                    embedding_3d_pca = (
-                        sklearn.decomposition.PCA(n_components = 3)
-                            .fit_transform(embedding_3d))
-
-                # Only two points, so we take 2d embedding and extend it with zeros.
-
-                else:
-
-                    embedding_3d_pca = (
-
-                        numpy.hstack((
-                            embedding_2d_pca,
-                            numpy.zeros((embedding_2d_pca.shape[0], 1)))))
-
-                # Making 3d embedding actually 3d, if required.
-
-                if embedding_3d_pca.shape[1] <= 2:
-
-                    embedding_3d_pca = (
-
-                        numpy.hstack((
-                            embedding_3d_pca,
-                            numpy.zeros((embedding_3d_pca.shape[0], 1)))))
-
-                distance_3d = (
-                    sklearn.metrics.euclidean_distances(embedding_3d_pca))
-
-            else:
-
-                embedding_3d = numpy.zeros((1, 3))
-                embedding_3d_pca = numpy.zeros((1, 3))
-
-                strain_3d = 0.0
-
-                distance_3d = numpy.zeros((1, 1))
-
-            # Showing what we've get.
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\nembedding 3d:\n{1}'
-                '\nembedding 3d (PCA-oriented):\n{2}'
-                '\nstrain 3d:\n{3}'
-                '\ndistances 3d:\n{4}'.format(
-                language_str,
-                embedding_3d,
-                embedding_3d_pca,
-                strain_3d,
-                distance_3d))
-
-            # Computing minimum spanning tree via standard Jarnik-Prim-Dijkstra algorithm using 2d and 3d
-            # embedding distances to break ties.
-
-            if len(distance_data_array) <= 1:
-                mst_list = []
-
-            else:
-
-                d_min, d_extra_min, min_i, min_j = min(
-                    (d_ij[i,j], distance_2d[i,j] + distance_3d[i,j], i, j)
-                    for i in range(d_ij.shape[0] - 1)
-                    for j in range(i + 1, d_ij.shape[0]))
-
-                mst_list = [(min_i, min_j)]
-                mst_dict = {}
-
-                # MST construction initialization.
-
-                for i in range(d_ij.shape[0]):
-
-                    if i == min_i or i == min_j:
-                        continue
-
-                    d_min_i = (d_ij[i, min_i], distance_2d[i, min_i] + distance_3d[i, min_i])
-                    d_min_j = (d_ij[i, min_j], distance_2d[i, min_j] + distance_3d[i, min_j])
-
-                    mst_dict[i] = (
-                        (d_min_i, min_i) if d_min_i <= d_min_j else
-                        (d_min_j, min_i))
-
-                # Iterative MST construction.
-
-                while len(mst_dict) > 0:
-
-                    (d_min, d_extra_min, i_min, i_from_min) = min(
-                        (d, d_extra, i, i_from) for i, ((d, d_extra), i_from) in mst_dict.items())
-
-                    log.debug('\n' + pprint.pformat(mst_dict))
-                    log.debug('\n' + repr((i_from_min, i_min, d_min, d_extra_min)))
-
-                    mst_list.append((i_from_min, i_min))
-                    del mst_dict[i_min]
-
-                    # Updating shortest connection info.
-
-                    for i_to in mst_dict.keys():
-
-                        d_to = (d_ij[i_min, i_to], distance_2d[i_min, i_to] + distance_3d[i_min, i_to])
-
-                        if d_to < mst_dict[i_to][0]:
-                            mst_dict[i_to] = (d_to, i_min)
-
-            log.debug(
-                '\ncognate_analysis {0}:'
-                '\nminimum spanning tree:\n{1}'.format(
-                language_str,
-                pprint.pformat(mst_list)))
-
-            # Plotting with matplotlib.
-
-            figure = pyplot.figure(figsize = (10, 10))
-            axes = figure.add_subplot(212)
-
-            axes.set_title(
-                'Etymological distance tree (relative distance embedding)',
-                fontsize = 14, family = 'Gentium')
-
-            axes.axis('equal')
-            axes.axis('off')
-            axes.autoscale()
-
-            def f(axes, embedding_pca):
-                """
-                Plots specified graph embedding on a given axis.
-                """
-
-                flag_3d = numpy.size(embedding_pca, 1) > 2
-
-                for index, (position, name) in enumerate(
-                    zip(embedding_pca, distance_header_array)):
-
-                    # Checking if any of the previous perspectives are already in this perspective's
-                    # position.
-
-                    same_position_index = None
-
-                    for i, p in enumerate(embedding_pca[:index]):
-                        if numpy.linalg.norm(position - p) <= 1e-3:
-
-                            same_position_index = i
-                            break
-
-                    color = matplotlib.colors.hsv_to_rgb(
-                        [(same_position_index or index) * 1.0 / len(distance_header_array), 0.5, 0.75])
-
-                    label_same_str = (
-                        '' if same_position_index is None else
-                        ' (same as {0})'.format(same_position_index + 1))
-
-                    kwargs = {
-                        's': 35,
-                        'color': color,
-                        'label': '{0}) {1}{2}'.format(index + 1, name, label_same_str)}
-
-                    axes.scatter(*position, **kwargs)
-
-                    # Annotating position with its number, but only if we hadn't already annotated nearby.
-
-                    if same_position_index is None:
-
-                        if flag_3d:
-
-                            axes.text(
-                                position[0] + 0.01, position[1], position[2] + 0.01,
-                                str(index + 1), None, fontsize = 14)
-
-                        else:
-
-                            axes.annotate(
-                                str(index + 1),
-                                (position[0] + 0.01, position[1] - 0.005),
-                                fontsize = 14)
-
-                # Plotting minimum spanning trees.
-
-                line_list = [
-                    (embedding_pca[i], embedding_pca[j])
-                    for i, j in mst_list]
-
-                line_collection = (
-                    Line3DCollection if flag_3d else LineCollection)(
-                        line_list, zorder = 0, color = 'gray')
-
-                axes.add_collection(line_collection)
-
-                pyplot.setp(axes.texts, family = 'Gentium')
-
-            # Plotting our embedding, creating the legend.
-
-            f(axes, embedding_2d_pca)
-
-            pyplot.tight_layout()
-
-            legend = axes.legend(
-                scatterpoints = 1,
-                loc = 'upper center',
-                bbox_to_anchor = (0.5, -0.05),
-                frameon = False,
-                handlelength = 0.5,
-                handletextpad = 0.75,
-                fontsize = 14)
-
-            pyplot.setp(legend.texts, family = 'Gentium')
-            axes.autoscale_view()
-
-            # Saving generated figure for debug purposes, if required.
-
-            if __debug_flag__:
-
-                figure_file_name = (
-                    'figure cognate distance{0}.png'.format(
-                    mode_name_str))
-
-                with open(figure_file_name, 'wb') as figure_file:
-
-                    pyplot.savefig(
-                        figure_file,
-                        bbox_extra_artists = (legend,),
-                        bbox_inches = 'tight',
-                        pad_inches = 0.25,
-                        format = 'png')
-
-                # Also generating 3d embedding figure.
-
-                figure_3d = pyplot.figure()
-                figure_3d.set_size_inches(16, 10)
-
-                axes_3d = figure_3d.add_subplot(111, projection = '3d')
-
-                axes_3d.axis('equal')
-                axes_3d.view_init(elev = 30, azim = -75)
-
-                f(axes_3d, embedding_3d_pca)
-
-                # Setting up legend.
-
-                axes_3d.set_xlabel('X')
-                axes_3d.set_ylabel('Y')
-                axes_3d.set_zlabel('Z')
-
-                legend_3d = axes_3d.legend(
-                    scatterpoints = 1,
-                    loc = 'upper center',
-                    bbox_to_anchor = (0.5, -0.05),
-                    frameon = False,
-                    handlelength = 0.5,
-                    handletextpad = 0.75,
-                    fontsize = 14)
-
-                pyplot.setp(legend_3d.texts, family = 'Gentium')
-
-                # Fake cubic bounding box to force axis aspect ratios, see
-                # https://stackoverflow.com/a/13701747/2016856.
-
-                X = embedding_3d_pca[:,0]
-                Y = embedding_3d_pca[:,1]
-                Z = embedding_3d_pca[:,2]
-
-                max_range = numpy.array([
-                    X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max()
-
-                Xb = (
-                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() +
-                    0.5 * (X.max() + X.min()))
-
-                Yb = (
-                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() +
-                    0.5 * (Y.max() + Y.min()))
-
-                Zb = (
-                    0.5 * max_range * numpy.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() +
-                    0.5 * (Z.max() + Z.min()))
-
-                for xb, yb, zb in zip(Xb, Yb, Zb):
-                   axes_3d.plot([xb], [yb], [zb], 'w')
-
-                axes_3d.autoscale_view()
-
-                # And saving it.
-
-                figure_3d_file_name = (
-                    'figure 3d cognate distance{0}.png'.format(
-                    mode_name_str))
-
-                with open(figure_3d_file_name, 'wb') as figure_3d_file:
-
-                    figure_3d.savefig(
-                        figure_3d_file,
-                        bbox_extra_artists = (legend_3d,),
-                        bbox_inches = 'tight',
-                        pad_inches = 0.25,
-                        format = 'png')
-
-            # Storing generated figure as a PNG image.
-
-            figure_filename = pathvalidate.sanitize_filename(
-                '{0} cognate{1} analysis {2:04d}.{3:02d}.{4:02d}.png'.format(
-                    base_language_name[:64],
-                    ' ' + mode if mode else '',
-                    current_datetime.year,
-                    current_datetime.month,
-                    current_datetime.day))
-
-            figure_path = os.path.join(storage_dir, figure_filename)
-            os.makedirs(os.path.dirname(figure_path), exist_ok = True)
-
-            with open(figure_path, 'wb') as figure_file:
-
-                figure.savefig(
-                    figure_file,
-                    bbox_extra_artists = (legend,),
-                    bbox_inches = 'tight',
-                    pad_inches = 0.25,
-                    format = 'png')
-
-            figure_url = ''.join([
-                storage['prefix'], storage['static_route'],
-                'cognate', '/', str(cur_time), '/', figure_filename])
+            figure_url, mst_list, embedding_2d_pca, embedding_3d_pca = \
+                CognateAnalysis.distance_graph(
+                    language_str,
+                    base_language_name,
+                    distance_data_array,
+                    distance_header_array,
+                    mode,
+                    storage,
+                    storage_dir,
+                    __debug_flag__
+                )
 
         # Finalizing task status, if required, returning result.
-
         if task_status is not None:
 
             result_link_list = (
@@ -12875,7 +12909,6 @@ class CognateAnalysis(graphene.Mutation):
                 request.response.status = HTTPOk.code
 
                 if synchronous:
-
                     CognateAnalysis.perform_cognate_analysis(
                         language_str,
                         source_perspective_id,
@@ -12931,7 +12964,6 @@ class CognateAnalysis(graphene.Mutation):
                 return CognateAnalysis(triumph = True)
 
             # We do not use acoustic data, so we perform cognate analysis synchronously.
-
             else:
 
                 return CognateAnalysis.perform_cognate_analysis(
@@ -12966,6 +12998,515 @@ class CognateAnalysis(graphene.Mutation):
 
             log.warning(
                 'cognate_analysis {0}: exception'.format(
+                language_str))
+
+            log.warning(traceback_string)
+
+            return ResponseError(message =
+                'Exception:\n' + traceback_string)
+
+
+class SwadeshAnalysis(graphene.Mutation):
+    class Arguments:
+
+        source_perspective_id = LingvodocID(required = True)
+        base_language_id = LingvodocID(required = True)
+
+        group_field_id = LingvodocID(required = True)
+        perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
+
+    triumph = graphene.Boolean()
+
+    result = graphene.String()
+    xlsx_url = graphene.String()
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+    perspective_name_list = graphene.List(graphene.String)
+
+    @staticmethod
+    def export_dataframe(result_pool, distance_data_array, bundles):
+        '''
+        Keys:
+        result_pool[perspective_id][entry_id]
+        Fields:
+        'group': group_index,
+        'borrowed': bool,
+        'swadesh': swadesh_lex,
+        'transcription': transcription_list[0],
+        'translation': translation_lex
+        '''
+
+        groups = pd.DataFrame()
+        singles = pd.DataFrame()
+        distances = pd.DataFrame(distance_data_array,
+                                 columns=[perspective['name'] for perspective in result_pool.values()])
+        # Start index for distances from 1 to match with dictionaries numbers
+        distances.index += 1
+
+        row_index = 0
+        # re-group by group number and add joined values
+        for perspective in result_pool.values():
+            dict_name = perspective['name']
+            for entry in perspective.values():
+                # 'entry' iterator may present string value of 'name' or 'suite' field
+                # but not a dictionary for one of entries. Continue in this case.
+                if not isinstance(entry, dict):
+                    continue
+                group_num = entry['group']
+                entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
+                if group_num and group_num in bundles:
+                    groups.loc[group_num, dict_name] = entry_text
+                else:
+                    singles.loc[row_index, dict_name] = entry_text
+                    row_index += 1
+
+        return {
+            'Cognates': groups if groups.empty else groups.sort_values(groups.columns[0]),
+            'Singles': singles.sort_index(),
+            'Distances': distances.sort_index()
+        }
+
+    @staticmethod
+    def export_xlsx(
+            result,
+            base_language_name,
+            storage
+    ):
+        # Exporting analysis results as an Excel file.
+
+        current_datetime = datetime.datetime.now(datetime.timezone.utc)
+        xlsx_filename = pathvalidate.sanitize_filename(
+            '{0} {1} {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+                base_language_name[:64],
+                'glottochronology',
+                current_datetime.year,
+                current_datetime.month,
+                current_datetime.day))
+
+        cur_time = time.time()
+        storage_dir = os.path.join(storage['path'], 'glottochronology', str(cur_time))
+
+        # Storing Excel file with the results.
+
+        xlsx_path = os.path.join(storage_dir, xlsx_filename)
+        os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
+
+        with pd.ExcelWriter(xlsx_path, engine='xlsxwriter') as writer:
+            header_format = writer.book.add_format({'bold': True,
+                                                    'text_wrap': True,
+                                                    'valign': 'top',
+                                                    'fg_color': '#D7E4BC',
+                                                    'border': 1})
+            for sheet_name, df in result.items():
+                index = (sheet_name == 'Distances')
+                startcol = int(index)
+
+                df.to_excel(writer,
+                            sheet_name=sheet_name,
+                            index=index,
+                            startrow=1,
+                            header=False)
+
+                worksheet = writer.sheets[sheet_name]
+                worksheet.set_row(0, 70)
+                worksheet.set_column(startcol, df.shape[1] - 1 + startcol, 30)
+                # Write the column headers with the defined format.
+                for col_num, value in enumerate(df.columns.values):
+                    worksheet.write(0, col_num + startcol, value, header_format)
+
+        xlsx_url = ''.join([
+            storage['prefix'], storage['static_route'],
+            'glottochronology', '/', str(cur_time), '/', xlsx_filename])
+
+        return xlsx_url
+
+    @staticmethod
+    def swadesh_statistics(
+            language_str,
+            base_language_name,
+            group_field_id,
+            perspective_info_list,
+            locale_id,
+            storage):
+
+        swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
+                        'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
+                        'семя','лист','корень','кора','кожа','мясо','кровь','кость','жир','яйцо','рог','хвост','перо',
+                        'волосы','голова','ухо','глаз','нос','рот','зуб','язык (орган)','ноготь','нога (стопа)','колено',
+                        'рука (кисть)','живот','горло','грудь','сердце','печень','пить','есть (кушать)','кусать','видеть',
+                        'слышать','знать','спать','умирать','убивать','плавать','летать','гулять','приходить','лежать',
+                        'сидеть','стоять','дать','сказать','солнце','луна','звезда','вода','дождь','камень','песок',
+                        'земля','облако','дым','огонь','пепел','гореть','дорога,тропа','гора','красный','зелёный',
+                        'жёлтый','белый','чёрный','ночь','тёплый','холодный','полный','новый','хороший','круглый',
+                        'сухой','имя']
+
+        def compare_translations(swadesh_lex, dictionary_lex):
+            def split_lex(lex):
+                # Split by commas and open brackets to separate
+                # various forms of lexeme and extra note if is
+                return set(f" {form}".lower().replace(" заим.", "").strip()
+                           for form in lex.replace('(', ',').split(',')
+                           if form.strip()
+                           and ')' not in form)  # exclude notes
+            # return true if the intersection is not empty
+            return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
+
+        _, group_list, _ = (
+            CognateAnalysis.tag_data_plpgsql(
+                perspective_info_list, group_field_id))
+
+        # Getting text data for each perspective.
+        # entries_set gathers entry_id(s) of words met in Swadesh' list
+        # swadesh_total gathers numbers of words within Swadesh' list
+        entries_set = {}
+        swadesh_total = {}
+        result_pool = {}
+        tiny_dicts = set()
+        for index, (perspective_id, transcription_field_id, translation_field_id) in \
+                enumerate(perspective_info_list):
+
+            # Getting and saving perspective info.
+            perspective = (
+                DBSession
+                    .query(dbPerspective)
+                    .filter_by(client_id=perspective_id[0], object_id=perspective_id[1])
+                    .first()
+            )
+            dictionary_name = perspective.parent.get_translation(locale_id)
+
+            # GC
+            del perspective
+
+            # Getting text data.
+            transcription_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == transcription_field_id[0],
+                        dbEntity.field_object_id == transcription_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('transcription'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
+            translation_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == translation_field_id[0],
+                        dbEntity.field_object_id == translation_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('translation'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
+            # Main query for transcription/translation data.
+            data_query = (
+                DBSession
+                    .query(transcription_query)
+                    .outerjoin(translation_query, and_(
+                        transcription_query.c.client_id == translation_query.c.client_id,
+                        transcription_query.c.object_id == translation_query.c.object_id))
+                    .add_columns(
+                        translation_query.c.translation)
+                    .all())
+
+            # GC
+            del transcription_query
+            del translation_query
+
+            # Grouping translations by lexical entries.
+            entries_set[perspective_id] = set()
+            swadesh_total[perspective_id] = set()
+            result_pool[perspective_id] = {'name': dictionary_name}
+            for row_index, row in enumerate(data_query):
+                entry_id = tuple(row[:2])
+                transcription_list, translation_list = row[2:4]
+
+                # If we have no transcriptions for this lexical entry, we skip it altogether.
+                if not transcription_list:
+                    continue
+
+                translation_list = (
+                    [] if not translation_list else [
+                        translation.strip()
+                        for translation in translation_list
+                        if translation.strip()])
+
+                # Parsing translations and matching with Swadesh's words
+                transcription_lex = ', '.join(transcription_list)
+                for swadesh_num, swadesh_lex in enumerate(swadesh_list):
+                    for translation_lex in translation_list:
+                        if compare_translations(swadesh_lex, translation_lex):
+                            # Store the entry's content in human readable format
+                            result_pool[perspective_id][entry_id] = {
+                                'group': None,
+                                'borrowed': (" заим." in f" {transcription_lex} {translation_lex}"),
+                                'swadesh': swadesh_lex,
+                                'transcription': transcription_lex,
+                                'translation': translation_lex
+                            }
+                            # Store entry_id and number of the lex within Swadesh's list
+                            entries_set[perspective_id].add(entry_id)
+                            if not result_pool[perspective_id][entry_id]['borrowed']:
+                                # Total list of Swadesh's words in the perspective,
+                                # they can have no any etimological links
+                                swadesh_total[perspective_id].add(swadesh_num)
+
+            # Forget the dictionary if it contains less than 50 Swadesh words
+            if len(swadesh_total[perspective_id]) < 50:
+                del entries_set[perspective_id]
+                del swadesh_total[perspective_id]
+                del result_pool[perspective_id]
+                tiny_dicts.add(dictionary_name)
+
+            # GC
+            del data_query
+
+        # Checking if found entries have links
+        means = collections.OrderedDict()
+        for perspective_id, entries in entries_set.items():
+            means[perspective_id] = collections.defaultdict(set)
+            for group_index, group in enumerate(group_list):
+                # Select etimologically linked entries
+                linked = entries & group
+                if linked:
+                    entry_id = linked.pop()
+                    result_pool[perspective_id][entry_id]['group'] = group_index
+                    swadesh = result_pool[perspective_id][entry_id]['swadesh']
+                    # Store the correspondence: perspective { means(1/2/3) { etimological_groups(1.1/1.2/2.1/3.1)
+                    if not result_pool[perspective_id][entry_id]['borrowed']:
+                        means[perspective_id][swadesh].add(group_index)
+
+        dictionary_count = len(means)
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
+
+        # Calculate intersection between lists of linked means (Swadesh matching)
+        # So length of this intersection is the similarity of corresponding perspectives
+        # means_total is amount of Swadesh's lexems met in the both perspectives
+        bundles = set()
+        # Calculate each-to-each distances, exclude self-to-self
+        for n1, (perspective1, means1) in enumerate(means.items()):
+            # Numerate dictionaries
+            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
+            distance_header_array[n1] = result_pool[perspective1]['name']
+            for n2, (perspective2, means2) in enumerate(means.items()):
+                if n1 == n2:
+                    distance_data_array[n1][n2] = 0
+                else:
+                    # Common means of entries which have etimological linkes
+                    # but this linkes may be not mutual
+                    means_common = means1.keys() & means2.keys()
+                    means_linked = 0
+                    # Checking if the found means have common links
+                    for swadesh in means_common:
+                        links_common = means1[swadesh] & means2[swadesh]
+                        if links_common:
+                            # Bundles are linkes with two or more entries in the result table
+                            bundles.update(links_common)
+                            means_linked += 1
+
+                    means_total = len(swadesh_total[perspective1] & swadesh_total[perspective2])
+
+                    if n2 > n1 and len(means_common) > 0:
+                        log.debug(f"{n1+1},{n2+1} : "
+                                  f"{len(means_common)} but {means_linked} of {means_total} : "
+                                  f"{', '.join(sorted(means_common))}")
+
+                    # means_linked > 0 means that means_total > 0 even more so
+                    distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
+                    distance_data_array[n1][n2] = round(distance, 2)
+
+        result = SwadeshAnalysis.export_dataframe(result_pool, distance_data_array, bundles)
+
+        # GC
+        del result_pool
+
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        result_tables = (build_table(result['Distances'], 'orange_light', width="300px", index=True),
+                         build_table(result['Cognates'], 'blue_light', width="300px"),
+                         build_table(result['Singles'], 'green_light', width="300px"))
+
+        # Control output size
+        huge_size = 1048576
+        result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}<pre>\n\n</pre>{result_tables[2]}"
+        if len(result) > huge_size:
+            result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}" \
+                     f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
+        if len(result) > huge_size:
+            result = f"{result_tables[0]}" \
+                     f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
+        result += ("<pre>Note: The following dictionaries contain too less words and were not processed: \n\n" +
+                   '\n'.join(tiny_dicts) + "</pre>") if tiny_dicts else ""
+
+        # GC
+        del result_tables
+
+        _, mst_list, embedding_2d_pca, embedding_3d_pca = \
+            CognateAnalysis.distance_graph(
+                language_str,
+                base_language_name,
+                distance_data_array,
+                distance_header_array,
+                None,
+                None,
+                None,
+                __plot_flag__ = False
+            )
+
+        result_dict = (
+            dict(
+                triumph = True,
+
+                result = result,
+                xlsx_url = xlsx_url,
+                minimum_spanning_tree = mst_list,
+                embedding_2d = embedding_2d_pca,
+                embedding_3d = embedding_3d_pca,
+                perspective_name_list = distance_header_array))
+
+        return SwadeshAnalysis(**result_dict)
+
+    @staticmethod
+    def mutate(self, info, **args):
+        """
+        mutation SwadeshAnalysis {
+          swadesh_analysis(
+            base_language_id: [508, 41],
+            group_field_id: [66, 25],
+            perspective_info_list: [
+              [[425, 4], [66, 8], [66, 10]],
+              [[1552, 1759], [66, 8], [66, 10]],
+              [[418, 4], [66, 8], [66, 10]]])
+          {
+            triumph          }
+        }
+        """
+
+        # Administrator / perspective author / editing permission check.
+        error_str = (
+            'Only administrator, perspective author and users with perspective editing permissions '
+            'can perform Swadesh analysis.')
+
+        client_id = info.context.request.authenticated_userid
+
+        if not client_id:
+            raise ResponseError(error_str)
+
+        user = Client.get_user_by_client_id(client_id)
+
+        author_client_id_set = (
+
+            set(
+                client_id
+                for (client_id, _), _, _ in args['perspective_info_list']))
+
+        author_id_check = (
+
+            DBSession
+
+                .query(
+
+                    DBSession
+                        .query(literal(1))
+                        .filter(
+                            Client.id.in_(author_client_id_set),
+                            Client.user_id == user.id)
+                        .exists())
+
+                .scalar())
+
+        if (user.id != 1 and
+            not author_id_check and
+            not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
+
+            raise ResponseError(error_str)
+
+        # Getting arguments.
+
+        source_perspective_id = args['source_perspective_id']
+        base_language_id = args['base_language_id']
+
+        group_field_id = args['group_field_id']
+        perspective_info_list = args['perspective_info_list']
+
+        language_str = (
+            '{0}/{1}, language {2}/{3}'.format(
+                source_perspective_id[0], source_perspective_id[1],
+                base_language_id[0], base_language_id[1]))
+
+        try:
+
+            # Getting base language info.
+
+            locale_id = info.context.get('locale_id') or 2
+
+            base_language = DBSession.query(dbLanguage).filter_by(
+                client_id = base_language_id[0], object_id = base_language_id[1]).first()
+
+            base_language_name = base_language.get_translation(locale_id)
+
+            request = info.context.request
+            storage = request.registry.settings['storage']
+
+            # Transforming client/object pair ids from lists to 2-tuples.
+
+            source_perspective_id = tuple(source_perspective_id)
+            base_language_id = tuple(base_language_id)
+            group_field_id = tuple(group_field_id)
+
+            perspective_info_list = [
+
+                (tuple(perspective_id),
+                    tuple(transcription_field_id),
+                    tuple(translation_field_id))
+
+                for perspective_id,
+                    transcription_field_id,
+                    translation_field_id in perspective_info_list]
+
+            return SwadeshAnalysis.swadesh_statistics(
+                language_str,
+                base_language_name,
+                group_field_id,
+                perspective_info_list,
+                locale_id,
+                storage)
+
+        # Exception occured while we tried to perform swadesh analysis.
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.warning(
+                'swadesh_analysis {0}: exception'.format(
                 language_str))
 
             log.warning(traceback_string)
@@ -18807,6 +19348,7 @@ class MyMutations(graphene.ObjectType):
     starling_etymology = StarlingEtymology.Field()
     phonemic_analysis = PhonemicAnalysis.Field()
     cognate_analysis = CognateAnalysis.Field()
+    swadesh_analysis = SwadeshAnalysis.Field()
     phonology = Phonology.Field()
     phonological_statistical_distance = PhonologicalStatisticalDistance.Field()
     sound_and_markup = SoundAndMarkup.Field()
