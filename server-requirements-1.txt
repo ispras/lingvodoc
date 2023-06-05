@@ -48,9 +48,11 @@ numpy==1.22.0
 odfpy==1.4.0
 openpyxl==2.6.4
 packaging==20.3
+pandas==1.4.3
 passlib==1.6.5
 PasteDeploy==2.0.1
 pathvalidate==0.8.3
+pretty_html_table==0.9.16
 promise==2.1
 psycopg2==2.8.6
 pycparser==2.16
