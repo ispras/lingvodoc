@@ -367,8 +367,6 @@ from pretty_html_table import build_table
 
 # Setting up logging.
 log = logging.getLogger(__name__)
-logging.disable(level=logging.INFO)
-
 
 # Trying to set up celery logging.
 celery_log = get_task_logger(__name__)
@@ -13056,7 +13054,11 @@ class SwadeshAnalysis(graphene.Mutation):
                 group_num = entry['group']
                 entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
                 if group_num and group_num in bundles:
-                    groups.loc[group_num, dict_name] = entry_text
+                    value = ""
+                    if dict_name in groups:
+                        cell = groups[dict_name].get(group_num)
+                        value = cell if pd.notnull(cell) else value
+                    groups.loc[group_num, dict_name] = f"{value}\n{entry_text}".strip()
                 else:
                     singles.loc[row_index, dict_name] = entry_text
                     row_index += 1
@@ -13295,8 +13297,7 @@ class SwadeshAnalysis(graphene.Mutation):
             for group_index, group in enumerate(group_list):
                 # Select etimologically linked entries
                 linked = entries & group
-                if linked:
-                    entry_id = linked.pop()
+                for entry_id in linked:
                     result_pool[perspective_id][entry_id]['group'] = group_index
                     swadesh = result_pool[perspective_id][entry_id]['swadesh']
                     # Store the correspondence: perspective { means(1/2/3) { etimological_groups(1.1/1.2/2.1/3.1)
@@ -13349,9 +13350,10 @@ class SwadeshAnalysis(graphene.Mutation):
         del result_pool
 
         xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
-        result_tables = (build_table(result['Distances'], 'orange_light', width="300px", index=True),
-                         build_table(result['Cognates'], 'blue_light', width="300px"),
-                         build_table(result['Singles'], 'green_light', width="300px"))
+        result_tables = (
+            build_table(result['Distances'], 'orange_light', width="300px", index=True),
+            build_table(result['Cognates'], 'blue_light', width="300px").replace("\\n","<br>"),
+            build_table(result['Singles'], 'green_light', width="300px"))
 
         # Control output size
         huge_size = 1048576
