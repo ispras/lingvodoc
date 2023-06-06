@@ -13035,12 +13035,16 @@ class SwadeshAnalysis(graphene.Mutation):
         'translation': translation_lex
         '''
 
-        groups = pd.DataFrame()
-        singles = pd.DataFrame()
         distances = pd.DataFrame(distance_data_array,
                                  columns=[perspective['name'] for perspective in result_pool.values()])
         # Start index for distances from 1 to match with dictionaries numbers
         distances.index += 1
+
+        groups = pd.DataFrame()
+        # Insert 'lines' column as the first one
+        groups['lines'] = 0
+
+        singles = pd.DataFrame()
 
         row_index = 0
         # re-group by group number and add joined values
@@ -13053,7 +13057,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     continue
                 group_num = entry['group']
                 entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
-                if group_num and group_num in bundles:
+                if group_num is not None and group_num in bundles:
                     # Concatinate existing value if is and a new one, store the result to 'groups' dataframe
                     value = ""
                     if dict_name in groups:
@@ -13072,7 +13076,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     row_index += 1
 
         return {
-            'Cognates': groups if groups.empty else groups.sort_values(groups.columns[0]),
+            'Cognates': groups if len(groups) < 2 else groups.sort_values(groups.columns[1]),
             'Singles': singles.sort_index(),
             'Distances': distances.sort_index()
         }
@@ -13080,7 +13084,6 @@ class SwadeshAnalysis(graphene.Mutation):
     @staticmethod
     def export_xlsx(
             result,
-            columns,
             base_language_name,
             storage
     ):
@@ -13112,6 +13115,8 @@ class SwadeshAnalysis(graphene.Mutation):
             for sheet_name, df in result.items():
                 index = (sheet_name == 'Distances')
                 startcol = int(index)
+                # Exclude 'lines' column
+                columns = df.columns[int(sheet_name == 'Cognates'):]
 
                 df.to_excel(writer,
                             sheet_name=sheet_name,
@@ -13364,7 +13369,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # GC
         del result_pool
 
-        xlsx_url = SwadeshAnalysis.export_xlsx(result, distance_header_array, base_language_name, storage)
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
