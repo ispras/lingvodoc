@@ -13047,18 +13047,26 @@ class SwadeshAnalysis(graphene.Mutation):
         for perspective in result_pool.values():
             dict_name = perspective['name']
             for entry in perspective.values():
-                # 'entry' iterator may present string value of 'name' or 'suite' field
+                # 'entry' iterator may present string value of 'name' field
                 # but not a dictionary for one of entries. Continue in this case.
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
                 entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
                 if group_num and group_num in bundles:
+                    # Concatinate existing value if is and a new one, store the result to 'groups' dataframe
                     value = ""
                     if dict_name in groups:
                         cell = groups[dict_name].get(group_num)
                         value = cell if pd.notnull(cell) else value
-                    groups.loc[group_num, dict_name] = f"{value}\n{entry_text}".strip()
+                    value = f"{value}\n{entry_text}".strip()
+                    groups.loc[group_num, dict_name] = value
+
+                    # Count result lines to set rows height in xlsx after
+                    lines = value.count('\n') + 1
+                    cell = groups.loc[group_num].get('lines')
+                    if pd.isnull(cell) or cell < lines:
+                        groups.loc[group_num, 'lines'] = lines
                 else:
                     singles.loc[row_index, dict_name] = entry_text
                     row_index += 1
@@ -13072,6 +13080,7 @@ class SwadeshAnalysis(graphene.Mutation):
     @staticmethod
     def export_xlsx(
             result,
+            columns,
             base_language_name,
             storage
     ):
@@ -13108,14 +13117,20 @@ class SwadeshAnalysis(graphene.Mutation):
                             sheet_name=sheet_name,
                             index=index,
                             startrow=1,
+                            columns=columns,
                             header=False)
 
                 worksheet = writer.sheets[sheet_name]
                 worksheet.set_row(0, 70)
-                worksheet.set_column(startcol, df.shape[1] - 1 + startcol, 30)
+                worksheet.set_column(startcol, len(columns) - 1 + startcol, 30)
                 # Write the column headers with the defined format.
-                for col_num, value in enumerate(df.columns.values):
+                for col_num, value in enumerate(columns):
                     worksheet.write(0, col_num + startcol, value, header_format)
+                # Set rows specifical height
+                if sheet_name == 'Cognates':
+                    for row_num, coeff in enumerate(df['lines']):
+                        if coeff > 1:
+                            worksheet.set_row(row_num + 1, 14 * coeff)
 
         xlsx_url = ''.join([
             storage['prefix'], storage['static_route'],
@@ -13349,7 +13364,11 @@ class SwadeshAnalysis(graphene.Mutation):
         # GC
         del result_pool
 
-        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, distance_header_array, base_language_name, storage)
+
+        # 'lines' field is not needed any more
+        del result['Cognates']['lines']
+
         result_tables = (
             build_table(result['Distances'], 'orange_light', width="300px", index=True),
             build_table(result['Cognates'], 'blue_light', width="300px").replace("\\n","<br>"),
