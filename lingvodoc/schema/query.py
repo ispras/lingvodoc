@@ -13076,7 +13076,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     row_index += 1
 
         return {
-            'Cognates': groups if groups.empty else groups.sort_values(groups.columns[0]),
+            'Cognates': groups if len(groups) < 2 else groups.sort_values(groups.columns[1]),
             'Singles': singles.sort_index(),
             'Distances': distances.sort_index()
         }
