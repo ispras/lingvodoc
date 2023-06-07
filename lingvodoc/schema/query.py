@@ -13117,6 +13117,9 @@ class SwadeshAnalysis(graphene.Mutation):
                 startcol = int(index)
                 # Exclude 'lines' column
                 columns = df.columns[int(sheet_name == 'Cognates'):]
+                # Check if the table is empty
+                if columns.empty:
+                    continue
 
                 df.to_excel(writer,
                             sheet_name=sheet_name,
@@ -13355,7 +13358,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
                     means_total = len(swadesh_total[perspective1] & swadesh_total[perspective2])
 
-                    if n2 > n1 and len(means_common) > 0:
+                    if n2 > n1 and means_linked >= means_total:
                         log.debug(f"{n1+1},{n2+1} : "
                                   f"{len(means_common)} but {means_linked} of {means_total} : "
                                   f"{', '.join(sorted(means_common))}")
