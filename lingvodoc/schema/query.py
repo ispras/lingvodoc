@@ -13117,6 +13117,9 @@ class SwadeshAnalysis(graphene.Mutation):
                 startcol = int(index)
                 # Exclude 'lines' column
                 columns = df.columns[int(sheet_name == 'Cognates'):]
+                # Check if the table is empty
+                if columns.empty:
+                    continue
 
                 df.to_excel(writer,
                             sheet_name=sheet_name,
