@@ -37,6 +37,7 @@ services:
     depends_on:
       - pg
       - redis
+      - keycloak
     links:
       - pg
       - redis
@@ -75,7 +76,7 @@ services:
   #      - ${KC_POSTGRES_PORT_MAPPING:-5435}:5432
 
   keycloak:
-    image: quay.io/keycloak/keycloak:20.0.1
+    image: quay.io/keycloak/keycloak:21.1.1
     container_name: keycloak_new
     restart: always
     volumes:
@@ -111,4 +112,7 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+      - "9090:8080"
+    expose:
+      - "9090"
 

@@ -7,46 +7,35 @@ LingvoDoc is intended to provide natural language documentation service as Web-s
 ajax-based client application.
 
 
-Dependencies
----------------
-
-- pyramid (framework)
-
-- sqlalchemy (ORM)
-
-- RDBMS compatible with sqlalchemy
-
-
 Running the project for development
 ---------------
 
-- Create virtual python environment for Python (3.3+ recommended; 2.7+ should work too but is not tested)
+1. Create virtual python environment for Python (3.8+ recommended)
+```
+    export VIRTUALENV_HOME=<path to your virtual environment>
+    python3 -m venv $VIRTUALENV_HOME/lingvodoc
+    source $VIRTUALENV_HOME/lingvodoc/bin/activate
+```
+2. Create database. You may use docker-compose file from directory **docker** 
 
-- Declare env variable for your virtual environment: export VENV=<path to your virtual environment>
-
-- cd <directory containing this file>
-
-- launch every command from this directory
-
-- create database
-
-- create development.ini from production.ini. You must set at least sqlalchemy.url pointing to
-  created database
-
-- create alembic.ini from alembic_base.ini. Again, you must set at least sqlalchemy.url pointing to
-  created database
-  
-- pip install -r requirements.txt
-
-- $VENV/bin/python setup.py develop
-
-- alembic upgrade head
-
-- $VENV/bin/initialize_lingvodoc_db development.ini
-
-- $VENV/bin/pserve development.ini
-
-Example for PostgreSQL:
+3. create development.ini from production.ini. You must set at least sqlalchemy.url pointing to
+  created database. **Example for container:** `sqlalchemy.url = postgresql+psycopg2://postgres:password@127.0.0.1:15432/lingvodoc`
+4. Create alembic.ini from alembic_base.ini. Again, you must set at least sqlalchemy.url pointing to created database
+5. Install requirements
+```
+apt-get update && apt install -y python3-dev
+pip3 install --upgrade setuptools==44.0
+pip3 install -r server-requirements-1.txt
+pip3 install -r server-requirements-final.txt
+python3 setup.py develop
+```
+5. Build
+```
+alembic upgrade head
+initialize_lingvodoc_db development.ini
+pserve development.ini
+```
+FullExample for PostgreSQL:
 
 ```
 # from psql:
@@ -68,7 +57,7 @@ pserve development.ini
 Installing as server (full-speed) environment for Ubuntu.
 ---------------
 
-0. Install (if you do not have one) Python 3.4 or later.
+0. Install (if you do not have one) Python 3.6 or later.
 1. Install PostgreSQL server 9.6. 
     * Ensure that all your locale settings are UTF-8 in your current bash (run `locale` to see it).
     * Create file `/etc/apt/sources.list.d/pgdg.list` with `deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main`. 

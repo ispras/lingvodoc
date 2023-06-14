@@ -1069,22 +1069,16 @@ def main(global_config, **settings):
     if parser.has_section('keycloak'):
         keycloak_dict = dict(parser.items('keycloak'))
         KeycloakSession.client_name = keycloak_dict["client_id"]
-        ldadmin = KeycloakAdmin(server_url=keycloak_dict["server_url"],
-                                username='admin',
-                                password='admin',
+        KeycloakSession.keycloak_admin = KeycloakAdmin(server_url=keycloak_dict["server_url"],
+                                username=keycloak_dict["admin"],
+                                password=keycloak_dict["password"],
                                 realm_name=keycloak_dict["realm_name_admin"],
                                 auto_refresh_token=["get", "post", "put", "delete"])
-        KeycloakSession.keycloak_admin = ldadmin
-        KeycloakSession.keycloak_admin.create_realm(payload={"realm": keycloak_dict["realm_name"]}, skip_exists=True)
         KeycloakSession.keycloak_admin.realm_name = keycloak_dict["realm_name"]
-        KeycloakSession.keycloak_admin.create_client(
-            payload={"name": keycloak_dict["client_name"], "clientId": keycloak_dict["client_id"]}, skip_exists=True
-        )
-        openid = KeycloakOpenID(server_url=keycloak_dict["server_url"],
+        KeycloakSession.openid_client = KeycloakOpenID(server_url=keycloak_dict["server_url"],
                                 client_id=keycloak_dict["client_id"],
                                 realm_name=keycloak_dict["realm_name"],
                                 client_secret_key=keycloak_dict["client_secret_key"])
-        KeycloakSession.openid_client = openid
         keycloak_connection = KeycloakOpenIDConnection(
             custom_headers={"Content-Type": "application/x-www-form-urlencoded"},
             server_url=keycloak_dict["server_url"],

@@ -293,9 +293,13 @@ def login_post(request):
         headers = remember(request, userid=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
-        locale_id = LOCALES_DICT.get(KeycloakSession.keycloak_admin.get_user(keycloak_user_id)["attributes"].get("locale", None)[0], None)
-        if not locale_id:
-            locale_id = 1
+        locale_id = 1
+        try:
+            locale_id = LOCALES_DICT.get(
+                KeycloakSession.keycloak_admin.get_user(keycloak_user_id).get("attributes", None).get("locale", None)[
+                    0], None)
+        except Exception:
+            logging.debug("Locale does not set up")
         response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
         response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
         response.set_cookie('auth_tkt', value=token['access_token'], max_age=datetime.timedelta(days=3650),
@@ -323,10 +327,12 @@ def signin(request):
         headers = remember(request, userid=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
+        locale_id = 1
+        try:
+            locale_id = LOCALES_DICT.get(KeycloakSession.keycloak_admin.get_user(keycloak_user_id).get("attributes", None).get("locale", None)[0], None)
+        except Exception:
+            logging.debug("Locale does not set up")
 
-        locale_id = LOCALES_DICT.get(KeycloakSession.keycloak_admin.get_user(keycloak_user_id).get("attributes", None).get("locale", None)[0], None)
-        if not locale_id:
-            locale_id = 1
 
         response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
         response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
@@ -425,9 +431,14 @@ def new_client_server(request):
             headers = remember(request, userid=client.id, max_age=315360000)
             response = Response()
             response.headers = headers
-            locale_id = LOCALES_DICT.get(KeycloakSession.keycloak_admin.get_user(user.id).get("attributes", None).get("locale", None)[0], None)
-            if not locale_id:
-                locale_id = 1
+            locale_id = 1
+            try:
+                locale_id = LOCALES_DICT.get(
+                    KeycloakSession.keycloak_admin.get_user(keycloak_user_id).get("attributes", None).get("locale",
+                                                                                                          None)[0],
+                    None)
+            except Exception:
+                logging.debug("Locale does not set up")
             response.set_cookie('locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650), samesite='lax')
             response.set_cookie('client_id', value=str(client.id), max_age=datetime.timedelta(days=3650), samesite='lax')
             result = dict()
@@ -485,9 +496,13 @@ def login_cheat(request):  # TODO: test
         headers = remember(request, userid=client.id)
         response = Response()
         response.headers = headers
-        locale_id = LOCALES_DICT.get(KeycloakSession.keycloak_admin.get_user(keycloak_user_id).get("attributes", None).get("locale", None)[0], None)
-        if not locale_id:
-            locale_id = 1
+        locale_id = 1
+        try:
+            locale_id = LOCALES_DICT.get(
+                KeycloakSession.keycloak_admin.get_user(keycloak_user_id).get("attributes", None).get("locale", None)[
+                    0], None)
+        except Exception:
+            logging.debug("Locale does not set up")
         response.set_cookie('locale_id', value=str(locale_id), samesite='lax')
         response.set_cookie('client_id', value=str(client.id), samesite='lax')
         return response
@@ -559,7 +574,12 @@ def get_user_info(request):  # tested
     response['login'] = user["username"]
     response['name'] = user["firstName"]
     response['intl_name'] = user["username"]
-    response['default_locale_id'] = LOCALES_DICT.get(user.get("attributes", None).get("locale", None)[0], None)
+    locale_id = 1
+    try:
+        locale_id = LOCALES_DICT.get(user.get("attributes", None).get("locale", None)[0], None)
+    except Exception:
+        logging.debug("Locale does not set up")
+    response['default_locale_id'] = locale_id
     response['created_at'] = user["createdTimestamp"]
     response['is_active'] = user["enabled"]
     response['email'] = user["email"]

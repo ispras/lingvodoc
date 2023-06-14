@@ -1425,7 +1425,7 @@ class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
 
 
 user_to_group_association = Table('user_to_group_association', Base.metadata,
-                                  Column('user_id', VARCHAR(length=36), ForeignKey('user.id')),
+                                  Column('user_id', VARCHAR(length=36), ForeignKey('user.id', onupdate="cascade")),
                                   Column('group_id', UUIDType, ForeignKey('group.id'))
                                   )
 
@@ -1531,11 +1531,12 @@ class Organization(
 
     users = relationship("User",
                          secondary=user_to_organization_association,
+                         cascade="save-update",
                          backref=backref("organizations"))
 
 
 class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), nullable=False)
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id', onupdate="cascade"), nullable=False)
     hash = Column(UnicodeText, nullable=False)
 
     def __init__(self, password):
@@ -1543,16 +1544,16 @@ class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 
 class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(VARCHAR(length=255), ForeignKey('user.id'), nullable=False)
+    user_id = Column(VARCHAR(length=255), ForeignKey('user.id',onupdate="cascade"), nullable=False)
     email = Column(UnicodeText, unique=True)
-    user = relationship("User", backref=backref('email', uselist=False))
+    user = relationship("User", cascade="save-update", backref=backref('email', uselist=False))
 
 
 class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
-    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), nullable=False)
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id', onupdate="cascade"), nullable=False)
     # creation_time = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     is_browser_client = Column(Boolean, default=True, nullable=False)
-    user = relationship("User", backref='clients')
+    user = relationship("User", cascade="save-update", backref='clients')
     counter = Column(SLBigInteger(), default=1, nullable=False)
 
     @classmethod
@@ -1580,8 +1581,8 @@ class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, MarkedFo
     real_storage_path = Column(UnicodeText, nullable=False)
     data_type = Column(UnicodeText, nullable=False)
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'))
-    user = relationship("User", backref='userblobs')
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id', onupdate="cascade"))
+    user = relationship("User", cascade="save-update", backref='userblobs')
 
 
 # todo: make indexes detectable by alembic
@@ -1968,7 +1969,7 @@ class ValencyAnnotationData(
     __tablename__ = 'valency_annotation_data'
 
     instance_id = Column(SLBigInteger(), ForeignKey('valency_instance_data.id'), primary_key = True)
-    user_id = Column(VARCHAR(length=36), ForeignKey('user.id'), primary_key = True)
+    user_id = Column(VARCHAR(length=36), ForeignKey('user.id', onupdate="cascade"), primary_key = True)
     accepted = Column(Boolean, default = None)
 
 

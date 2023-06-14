@@ -72,35 +72,34 @@ class KeycloakLD:
 
         users = DBSession.query(User).all()
         for user in users:
-            try:
-                keycloak_user_id = self._keycloak_admin.get_user_id(user.login)
-                if keycloak_user_id:
-                    self._keycloak_admin.set_user_password(user_id=keycloak_user_id, password="secret", temporary=False)
-                else:
-                    attributes = dict()
-                    self.create_user_associated_resources(attributes, user)
-                    attributes.update({"locale": [LOCALES_DICT.get(user.default_locale_id, "en")]})
-                    user_id = self._keycloak_admin.create_user({"email": user.email.email,
-                                                                "username": user.login,
-                                                                "enabled": user.is_active,
-                                                                "createdTimestamp": user.created_at,
-                                                                "firstName": user.name,
-                                                                "credentials": [
-                                                                    {"value": "secret", "type": "password"}],
-                                                                "attributes": attributes,
-                                                                })
+            if user.login == "aralova":
+                try:
+                    keycloak_user_id = self._keycloak_admin.get_user_id(user.login)
+                    if keycloak_user_id:
+                        self._keycloak_admin.set_user_password(user_id=keycloak_user_id, password="secret", temporary=False)
+                    else:
+                        attributes = dict()
+                        self.create_user_associated_resources(attributes, user)
+                        attributes.update({"locale": [LOCALES_DICT.get(user.default_locale_id, "en")]})
+                        user_id = self._keycloak_admin.create_user({"email": user.email.email,
+                                                                    "username": user.login,
+                                                                    "enabled": user.is_active,
+                                                                    "createdTimestamp": user.created_at,
+                                                                    "firstName": user.name,
+                                                                    "credentials": [
+                                                                        {"value": "secret", "type": "password"}],
+                                                                    "attributes": attributes,
+                                                                    })
 
-                    # DBSession.query(user).filter_by(id=user.id).update(values={"id": user_id},
-                    #                                                    synchronize_session='fetch')
-                    # DBSession.flush()
+                        DBSession.query(User).filter_by(id=user.id).update(values={"id": user_id},
+                                                                           synchronize_session='fetch')
+                        DBSession.flush()
 
-            except (KeycloakGetError, KeycloakOperationError, KeycloakPostError) as e:
-                logging.debug(e.error_message)
-                with open("users.txt", 'a+') as f:
-                    if user:
-                        f.write("user: {} error: {}\n".format(user.__dict__, e.error_message))
-            except Exception as e:
-                logging.debug("User keycloak create error")
+                except (KeycloakGetError, KeycloakOperationError, KeycloakPostError, Exception) as e:
+                    logging.debug(e.error_message)
+                    with open("users.txt", 'a+') as f:
+                        if user:
+                            f.write("user: {} error: {}\n".format(user.__dict__, e.error_message))
 
     def create_user_associated_resources(self, attributes=None, user=User):
         if attributes is None:
@@ -138,8 +137,8 @@ class KeycloakLD:
                             }
                             try:
                                 created_resource = self.keycloak_uma.resource_set_create(resource_to_create)
-                            except (KeycloakGetError, KeycloakOperationError, KeycloakPostError) as err:
-                                logging.debug("Keycloak could not create resource with name " + name + err)
+                            except (KeycloakGetError, KeycloakOperationError, KeycloakPostError) :
+                                logging.debug("Keycloak could not create resource with name " + name)
                                 try:
                                     already_created_resource = self.keycloak_uma.resource_set_list_ids(
                                         name=name)
@@ -153,7 +152,7 @@ class KeycloakLD:
                                 except (KeycloakGetError, KeycloakOperationError, KeycloakPostError) as e:
                                     logging.debug("Keycloak could not update resource with new scope" + e.error_message)
                     if len(ids) > 0:
-                        attributes.update({resource + ";" + subject: ids})
+                        attributes.update({resource + ";" + scope: ids})
         return attributes
 
     def add_mappers(self):

@@ -1,3 +1,4 @@
+from keycloak.uma_permissions import UMAPermission
 from pyramid.security import Allow, Deny, Everyone
 
 from .models import (
@@ -18,11 +19,14 @@ from pyramid.security import forget
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
+from lingvodoc.keycloakld import KeycloakSession
+from lingvodoc.models import User as dbUser
+from lingvodoc.models import Client as dbClient
 
 import logging
 from time import time
 
-from .utils.verification import check_is_admin
+from .utils.verification import check_is_admin, check_is_active
 
 log = logging.getLogger(__name__)
 
@@ -55,12 +59,9 @@ def groupfinder(client_id, request, factory=None, subject=None):
             subject = factory.get_subject()
         except AttributeError as e:
             pass
-
     if not subject or subject == 'no op subject':
         try:
-            user = DBSession.query(User) \
-                .join(Client) \
-                .filter(Client.id == client_id).first()
+            client = DBSession.query(dbClient).filter_by(id=client_id).first()
 
         except AttributeError as e:
             log.error('forget in acl.py')
@@ -68,7 +69,9 @@ def groupfinder(client_id, request, factory=None, subject=None):
             return None
 
         groupset = set()
-        if user is not None and check_is_admin(user.id):
+
+        # if user is not None and user.id == 1:
+        if check_is_admin(client.user_id):
             groupset.add('Admin')
         return groupset
 
@@ -104,7 +107,7 @@ def groupfinder(client_id, request, factory=None, subject=None):
 
         # If the user is deactivated, we won't allow any actions except for viewing.
 
-        if not user.is_active and base_group.action != 'view':
+        if not check_is_active(user.id) and base_group.action != 'view':
             continue
 
         if group.subject_override:
@@ -126,7 +129,7 @@ def groupfinder(client_id, request, factory=None, subject=None):
 
             # If the user is deactivated, we won't allow any actions except for viewing.
 
-            if not user.is_active and base_group.action != 'view':
+            if not check_is_active(user.id) and base_group.action != 'view':
                 continue
 
             if group.subject_override:
@@ -183,16 +186,15 @@ def check(client_id, request, action, subject, subject_id):
     return False
 
 
-def check_direct(client_id, request, action, subject, subject_id):
+def check_direct(self, client_id, request, action, subject, subject_id):
     """
     Checks if a given action on a given subject is permitted for the specified client, accesses DB directly,
     so should be faster.
     """
-
     client_id = get_effective_client_id(client_id, request)
-
+    client = DBSession.query(Client).filter_by(id=client_id).first()
     try:
-        user = Client.get_user_by_client_id(client_id)
+        user = KeycloakSession.keycloak_admin.get_user(client.user_id)
 
     except:
         return False
@@ -234,42 +236,45 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         # If the user is deactivated, we won't allow any actions except for viewing.
 
-        if not user.is_active and action != 'view':
+        if not check_is_active(user["id"]) and action != 'view':
             return False
 
         # Ok, checking as usual, first through by-user permissions...
+        permissions = list()
+        permissions = (
+            UMAPermission(resource=subject + "/" + str(subject_client_id) + "/" + str(subject_object_id),
+                          scope="urn:lingvodoc:scopes:delete"),
+        )
+        tkt = ""
+        if self.cookies:
+            tkt = self.cookies["auth_tkt"]
+        elif self.request.cookies:
+            tkt = self.request.cookies["auth_tkt"]
+        else:
+            return False
+        response = KeycloakSession.keycloak_uma.permissions_check(
+            token=tkt,
+            permissions=permissions)
+        return response
 
-        user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
-            BaseGroup.subject == subject,
-            BaseGroup.action == action,
-            Group.base_group_id == BaseGroup.id,
-            or_(Group.subject_override, and_(
-                Group.subject_client_id == subject_client_id,
-                Group.subject_object_id == subject_object_id)),
-            user_to_group_association.c.user_id == user.id,
-            user_to_group_association.c.group_id == Group.id)).limit(1).count()
-
-        if user_count > 0:
-            return True
 
         # ...and then through by-organization permissions.
 
-        organization_count = DBSession.query(BaseGroup, Group,
-                                             user_to_organization_association,
-                                             organization_to_group_association).filter(and_(
-            BaseGroup.subject == subject,
-            BaseGroup.action == action,
-            Group.base_group_id == BaseGroup.id,
-            or_(Group.subject_override, and_(
-                Group.subject_client_id == subject_client_id,
-                Group.subject_object_id == subject_object_id)),
-            user_to_organization_association.c.user_id == user.id,
-            organization_to_group_association.c.organization_id ==
-            user_to_organization_association.c.organization_id,
-            organization_to_group_association.c.group_id == Group.id)).limit(1).count()
-
-        if organization_count > 0:
-            return True
+        # organization_count = DBSession.query(BaseGroup, Group,
+        #     user_to_organization_association, organization_to_group_association).filter(and_(
+        #         BaseGroup.subject == subject,
+        #         BaseGroup.action == action,
+        #         Group.base_group_id == BaseGroup.id,
+        #         or_(Group.subject_override, and_(
+        #             Group.subject_client_id == subject_client_id,
+        #             Group.subject_object_id == subject_object_id)),
+        #         user_to_organization_association.c.user_id == user.id,
+        #         organization_to_group_association.c.organization_id ==
+        #             user_to_organization_association.c.organization_id,
+        #         organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+        #
+        # if organization_count > 0:
+        #     return True
 
         return False
 
@@ -280,7 +285,7 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         # If the user is deactivated, we won't allow any actions except for viewing.
 
-        if not user.is_active and action != 'view':
+        if not check_is_active(user["id"]) and action != 'view':
             return False
 
         # Checking as usual, first through by-user permissions...
@@ -299,21 +304,20 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         # ...and then through by-organization permissions.
 
-        organization_count = DBSession.query(BaseGroup, Group,
-                                             user_to_organization_association,
-                                             organization_to_group_association).filter(and_(
-            BaseGroup.subject == subject,
-            BaseGroup.action == action,
-            Group.base_group_id == BaseGroup.id,
-            or_(Group.subject_override,
-                Group.subject_object_id == subject_object_id),
-            user_to_organization_association.c.user_id == user.id,
-            organization_to_group_association.c.organization_id ==
-            user_to_organization_association.c.organization_id,
-            organization_to_group_association.c.group_id == Group.id)).limit(1).count()
-
-        if organization_count > 0:
-            return True
+        # organization_count = DBSession.query(BaseGroup, Group,
+        #     user_to_organization_association, organization_to_group_association).filter(and_(
+        #         BaseGroup.subject == subject,
+        #         BaseGroup.action == action,
+        #         Group.base_group_id == BaseGroup.id,
+        #         or_(Group.subject_override,
+        #             Group.subject_object_id == subject_object_id),
+        #         user_to_organization_association.c.user_id == user.id,
+        #         organization_to_group_association.c.organization_id ==
+        #             user_to_organization_association.c.organization_id,
+        #         organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+        #
+        # if organization_count > 0:
+        #     return True
 
         return False
 
@@ -323,7 +327,7 @@ def check_direct(client_id, request, action, subject, subject_id):
     else:
         # If the user is deactivated, we won't allow any actions except for viewing.
 
-        if not user.is_active and action != 'view':
+        if not user["enabled"] and action != 'view':
             return False
 
         user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
