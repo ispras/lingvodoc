@@ -191,7 +191,7 @@ def check_permissions(info, parser_result):
             raise KeyError(
                     'Failed to get perspective of the parser result.',
                     (parser_result.client_id, parser_result.object_id))
-        info.context.acl_check(
+        info.context.acl_check(info.context,
                     'delete', 'lexical_entries_and_entities', perspective_id)
 
 class DeleteParserResult(graphene.Mutation):

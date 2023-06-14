@@ -443,7 +443,7 @@ class AddDictionaryToGrant(graphene.Mutation):
         req['type'] = 'add_dict_to_grant'
         req['subject'] = request_json
         req['message'] = ''
-        info.context.acl_check('edit', 'dictionary',
+        info.context.acl_check(info.context, 'edit', 'dictionary',
                                (client_id,object_id))
         cur_dict = DBSession.query(dbDictionary).filter_by(client_id=client_id,
                                                          object_id=object_id,
@@ -611,7 +611,7 @@ class AddDictionaryToOrganization(graphene.Mutation):
                 'org_id': organization_id},
             'type': 'add_dict_to_org'}
 
-        info.context.acl_check('edit', 'dictionary', dictionary_id)
+        info.context.acl_check(info.context, 'edit', 'dictionary', dictionary_id)
 
         # dictionary = (
         #     DBSession.query(dbDictionary).filter_by(

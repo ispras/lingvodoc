@@ -240,7 +240,7 @@ class CreateEntity(graphene.Mutation):
         if not parent:
             raise ResponseError(message="No such lexical entry in the system")
 
-        info.context.acl_check('create', 'lexical_entries_and_entities',
+        info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
             (parent.parent_client_id, parent.parent_object_id))
 
         additional_metadata = args.get('additional_metadata')
@@ -489,15 +489,15 @@ class UpdateEntity(graphene.Mutation):
         published = args.get('published')
         accepted = args.get('accepted')
         if published is not None and not dbpublishingentity.published:
-            info.context.acl_check('create', 'approve_entities',
+            info.context.acl_check(info.context, 'create', 'approve_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
         if published is not None and not published and dbpublishingentity.published:
-            info.context.acl_check('delete', 'approve_entities',
+            info.context.acl_check(info.context, 'delete', 'approve_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
         if accepted is not None and not dbpublishingentity.accepted:
-            info.context.acl_check('create', 'lexical_entries_and_entities',
+            info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
         if accepted is not None and not accepted and dbpublishingentity.accepted:
@@ -707,12 +707,12 @@ class ApproveAllForUser(graphene.Mutation):
 
             if published is not None and not check_is_admin(request_user.id):
 
-                info.context.acl_check('create', 'approve_entities',
+                info.context.acl_check(info.context, 'create', 'approve_entities',
                                        (perspective_id[0], perspective_id[1]))
 
             if accepted is not None and not check_is_admin(request_user.id):
 
-                info.context.acl_check('create', 'lexical_entries_and_entities',
+                info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
                                        (perspective_id[0], perspective_id[1]))
 
             # Performing bulk approve.
@@ -907,7 +907,7 @@ class DeleteEntity(graphene.Mutation):
         if not dbentity or dbentity.marked_for_deletion:
             raise ResponseError(message="No such entity in the system")
         lexical_entry = dbentity.parent
-        info.context.acl_check('delete', 'lexical_entries_and_entities',
+        info.context.acl_check(info.context, 'delete', 'lexical_entries_and_entities',
                                (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
         settings = info.context["request"].registry.settings
@@ -971,7 +971,7 @@ class BulkCreateEntity(graphene.Mutation):
                     dbLexicalEntry : (parent_id, )
                 },
             DBSession=DBSession)
-            info.context.acl_check('create', 'lexical_entries_and_entities',
+            info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
             additional_metadata = None
@@ -1051,7 +1051,7 @@ class UpdateEntityContent(graphene.Mutation):
         if dbentity_old.field.data_type != "Text":
             raise ResponseError(message="Can't edit non-text entities")
         lexical_entry = dbentity_old.parent
-        info.context.acl_check('delete', 'lexical_entries_and_entities',
+        info.context.acl_check(info.context, 'delete', 'lexical_entries_and_entities',
                                (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
         settings = info.context["request"].registry.settings
@@ -1075,7 +1075,7 @@ class UpdateEntityContent(graphene.Mutation):
         if not parent:
             raise ResponseError(message="No such lexical entry in the system")
 
-        info.context.acl_check('create', 'lexical_entries_and_entities',
+        info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
                                (parent.parent_client_id, parent.parent_object_id))
         dbentity = dbEntity(client_id=client_id,
                         object_id=None,
@@ -1139,7 +1139,7 @@ class BulkUpdateEntityContent(graphene.Mutation):
                 raise ResponseError(message="Can't edit non-text entity" + format(old_id))
 
             lexical_entry = dbentity_old.parent
-            info.context.acl_check('delete', 'lexical_entries_and_entities',
+            info.context.acl_check(info.context, 'delete', 'lexical_entries_and_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
             settings = info.context["request"].registry.settings
@@ -1169,7 +1169,7 @@ class BulkUpdateEntityContent(graphene.Mutation):
             if not parent:
                 raise ResponseError(message="No such lexical entry in the system")
 
-            info.context.acl_check('create', 'lexical_entries_and_entities',
+            info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
                                    (parent.parent_client_id, parent.parent_object_id))
             dbentity = dbEntity(client_id=client_id,
                                 object_id=None,

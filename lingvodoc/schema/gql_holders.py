@@ -537,7 +537,7 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
             context = args[1].context
 
             if ACLSubject and ACLKey == 'id':
-                context.acl_check('view', ACLSubject, cls.id)
+                context.acl_check(context, 'view', ACLSubject, cls.id)
             if cls.ErrorHappened:
                 return None
 
@@ -570,7 +570,7 @@ def fetch_object(attrib_name=None, ACLSubject=None, ACLKey=None):
                         #cls.ErrorHappened = True
                         raise ResponseError(message="%s was not found" % cls.__class__, self_object=cls)
             if ACLSubject and '_' in ACLKey:
-                context.acl_check('view', ACLSubject,
+                context.acl_check(context, 'view', ACLSubject,
                                   [getattr(cls.dbObject, ACLKey.replace('_', '_client_')),
                                    getattr(cls.dbObject, ACLKey.replace('_', '_object_'))])
             return func(*args, **kwargs)

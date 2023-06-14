@@ -13731,7 +13731,7 @@ class SaveDictionary(graphene.Mutation):
 
         for persp in dictionary_obj.dictionaryperspective:
             if mode == 'all':
-                info.context.acl_check('view', 'lexical_entries_and_entities',
+                info.context.acl_check(info.context, 'view', 'lexical_entries_and_entities',
                                    (persp.client_id, persp.object_id))
 
         save_dictionary(
@@ -13820,7 +13820,7 @@ class MoveColumn(graphene.Mutation):
                                                                          marked_for_deletion=False).first()
         if not perspective:
             raise ResponseError('No such perspective')
-        info.context.acl_check('edit', 'perspective',
+        info.context.acl_check(info.context, 'edit', 'perspective',
                            (perspective.client_id, perspective.object_id))
 
         lexes = DBSession.query(dbLexicalEntry).join(dbEntity).join(dbPublishingEntity).filter(
@@ -17861,7 +17861,7 @@ class Context(dict):
         if (action, subject, subject_id) in self.cache:
             return self.cache[(action, subject, subject_id)]
 
-        result = acl.check_direct(self.client_id, self.request, action, subject, subject_id)
+        result = acl.check_direct(self, self.client_id, self.request, action, subject, subject_id)
         self.cache[(action, subject, subject_id)] = result
 
         return result

@@ -471,7 +471,7 @@ class CopySingleField(graphene.Mutation):
         elif not check_lingvodoc_id(pid2):
             raise ResponseError('no perspective_2 id provided')
 
-        info.context.acl_check('create', 'lexical_entries_and_entities',
+        info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
                                (pid2[0], pid2[1]))
 
         dbfield1 = DBSession.query(dbField).filter_by(client_id=fid1[0], object_id=fid1[1]).first()
@@ -553,7 +553,7 @@ class CopySoundMarkupFields(graphene.Mutation):
         elif not check_lingvodoc_id(pid2):
             raise ResponseError('no perspective_2 id provided')
 
-        info.context.acl_check('create', 'lexical_entries_and_entities',
+        info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities',
                                (pid2[0], pid2[1]))
 
         dbsfield1 = DBSession.query(dbField).filter_by(client_id=sfid1[0], object_id=sfid1[1]).first()

@@ -184,7 +184,7 @@ class CreateLexicalEntry(graphene.Mutation):
         client_id = id[0] if id else info.context["client_id"]
         object_id = id[1] if id else None
         id = [client_id, object_id]
-        info.context.acl_check('create', 'lexical_entries_and_entities', perspective_id)
+        info.context.acl_check(info.context, 'create', 'lexical_entries_and_entities', perspective_id)
         dblexentry = create_lexicalentry(id, perspective_id, True)
         """
         perspective_client_id = perspective_id[0]
@@ -267,7 +267,7 @@ class DeleteLexicalEntry(graphene.Mutation):
         DBSession=DBSession)
         if not dblexicalentry or dblexicalentry.marked_for_deletion:
             raise ResponseError(message="Error: No such entry in the system")
-        info.context.acl_check('delete', 'lexical_entries_and_entities',
+        info.context.acl_check(info.context, 'delete', 'lexical_entries_and_entities',
                                    (dblexicalentry.parent_client_id, dblexicalentry.parent_object_id))
         settings = info.context["request"].registry.settings
         if 'desktop' in settings:
@@ -306,7 +306,7 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
             if not dblexicalentry or dblexicalentry.marked_for_deletion:
                 raise ResponseError(message="Error: No such entry in the system")
 
-            info.context.acl_check(
+            info.context.acl_check(info.context,
                 'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
 
             if 'desktop' in settings:
@@ -362,7 +362,7 @@ class BulkUndeleteLexicalEntry(graphene.Mutation):
             if not dblexicalentry.marked_for_deletion:
                 raise ResponseError(message = f"Entry {dblexicalentry.id} is not deleted")
 
-            info.context.acl_check(
+            info.context.acl_check(info.context,
                 'delete', 'lexical_entries_and_entities', dblexicalentry.parent_id)
 
             undel_object(
@@ -613,7 +613,7 @@ class DeleteGroupingTags(graphene.Mutation):
 
         # Checking permissions.
 
-        info.context.acl_check(
+        info.context.acl_check(info.context,
             'delete',
             'lexical_entries_and_entities',
             perspective_id)
