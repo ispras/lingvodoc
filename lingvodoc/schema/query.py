@@ -4490,7 +4490,7 @@ class Query(graphene.ObjectType):
         # Check if the current user is administrator
         client_id = info.context.get('client_id')
         user_id = DBSession.query(Client.user_id).filter_by(id=client_id).scalar()
-        if user_id != 1:
+        if int(user_id) != 1:
             return "Only administrator can fill in logs using request"
 
         period = 300
