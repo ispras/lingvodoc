@@ -1,4 +1,4 @@
-"""empty message
+"""Prepare Lingvodoc DB for a Keycloak migration
 
 Revision ID: 98a07e65f1bb
 Revises: be06149acd44

@@ -37,7 +37,6 @@ services:
     depends_on:
       - pg
       - redis
-      - keycloak
     links:
       - pg
       - redis
@@ -96,7 +95,7 @@ services:
 #      - PROXY_ADDRESS_FORWARDING=true
 #      - LETSENCRYPT_HOST=dev-keycloak.mydomain.com
       - KC_DB=postgres #build option
-      - KC_FEATURES=admin2 #build option
+      - KC_FEATURES=admin2,authorization #build option
       - KC_DB_URL_HOST=pg_new_keycloak
       - KC_DB_URL_DATABASE=keycloak
       - KC_DB_USERNAME=postgres
