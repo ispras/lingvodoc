@@ -4484,6 +4484,23 @@ class Query(graphene.ObjectType):
             organization_id = graphene.Int(),
             debug_flag = graphene.Boolean()))
 
+    fill_logs = graphene.String(worker = graphene.Int())
+
+    def resolve_fill_logs(self, info, worker=1):
+        # Check if the current user is administrator
+        client_id = info.context.get('client_id')
+        user_id = DBSession.query(Client.user_id).filter_by(id=client_id).scalar()
+        if int(user_id) != 1:
+            return "Only administrator can fill in logs using request"
+
+        period = 300
+        step = 0.25
+        times = int(period // step)
+        for _ in range(times):
+            log.debug(f"Lingvodoc({worker}) " * 500)
+            time.sleep(step)
+        return "Done"
+
     def resolve_language_tree(
         self,
         info,
