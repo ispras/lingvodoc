@@ -50,15 +50,9 @@ services:
       - ../:/api
       - /tmp:/tmp
 
-    env_file:
-      - ./locale_env.sh
-    command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --preload --paster /api/docker/docker.ini"
-    ports:
-      - "16543:6543"
-
-  pg_new_keycloak:
+  pg_keycloak:
     image: postgres:13.2
-    container_name: pg_new_keycloak
+    container_name: pg_keycloak
     restart: on-failure
     environment:
       POSTGRES_PASSWORD: password
@@ -76,7 +70,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:21.1.1
-    container_name: keycloak_new
+    container_name: keycloak
     restart: always
     volumes:
       - type: bind
@@ -96,7 +90,7 @@ services:
 #      - LETSENCRYPT_HOST=dev-keycloak.mydomain.com
       - KC_DB=postgres #build option
       - KC_FEATURES=admin2,authorization #build option
-      - KC_DB_URL_HOST=pg_new_keycloak
+      - KC_DB_URL_HOST=pg_keycloak
       - KC_DB_URL_DATABASE=keycloak
       - KC_DB_USERNAME=postgres
       - KC_DB_PASSWORD=password
@@ -107,7 +101,7 @@ services:
       retries: 3
       timeout: 5s
     depends_on:
-      pg_new_keycloak:
+      pg_keycloak:
         condition: service_healthy
     ports:
       - "8080:8080"

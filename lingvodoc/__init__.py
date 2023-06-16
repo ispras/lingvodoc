@@ -1089,10 +1089,6 @@ def main(global_config, **settings):
         KeycloakSession.keycloak_uma = uma
         KeycloakSession.keycloak_url = keycloak_dict["client_secret_key"]
 
-        if bool(distutils.util.strtobool(keycloak_dict["migrate"])) == True:
-            KeycloakSession.migrate_users()
-            transaction.manager.commit()
-
     # TODO: DANGER
 
     storage_dict = (
