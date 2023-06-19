@@ -100,7 +100,7 @@ class ThroughCache(ICache):
             log.error("Missing DBSession parameter in CACHE.get()")
             return None
         # try:
-        log.warning(objects)
+        log.debug(objects)
         result = dict()
         for obj_type in objects:
             result[obj_type] = []
@@ -197,7 +197,7 @@ class ThroughCache(ICache):
                     result.append(True)
                 except:
                     result.append(False)
-                    log.warn(f"Error in saving {key} to database")
+                    log.warning(f"Error in saving {key} to database")
             return result
 
     def rem(self, keys):

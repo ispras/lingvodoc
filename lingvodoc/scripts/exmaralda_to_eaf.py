@@ -2121,6 +2121,6 @@ if __name__ == '__main__':
 
     else:
 
-        log.warn(
+        log.warning(
             '\nUnknown command \'{0}\'.'.format(arg_list[0]))
 

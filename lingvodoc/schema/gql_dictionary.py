@@ -499,7 +499,7 @@ class Dictionary(LingvodocObjectType):  # tested
 
             t3 = time.time()
 
-            log.warn(
+            log.warning(
                 f'\nt1 - t0: {t1 - t0:.6f}s'
                 f'\nt2 - t1: {t2 - t1:.6f}s'
                 f'\nt3 - t2: {t3 - t2:.6f}s')
@@ -509,7 +509,8 @@ class Dictionary(LingvodocObjectType):  # tested
             result_str = self.published_cte_str(True)
             result_orm = self.published_cte_orm(True)
 
-            log.warn((result_search, result_str, result_orm))
+            log.warning(
+                (result_search, result_str, result_orm))
 
             return result_orm
 
