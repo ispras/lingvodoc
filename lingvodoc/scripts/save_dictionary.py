@@ -78,6 +78,8 @@ from shutil import copyfileobj
 import uuid
 
 
+log = logging.getLogger(__name__)
+
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
@@ -85,9 +87,6 @@ EAF_TIERS = {
     "transcription": "Transcription",
     "translation": "Translation"
 }
-
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 field_ids_to_str = lambda x: str(x.field_client_id) + '_' + str(x.field_object_id)
 

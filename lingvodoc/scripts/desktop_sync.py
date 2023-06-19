@@ -48,6 +48,9 @@ from sqlalchemy.orm import (
 from lingvodoc.scripts import elan_parser
 from pdb import set_trace
 
+
+log = logging.getLogger(__name__)
+
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
@@ -56,8 +59,6 @@ EAF_TIERS = {
     "transcription": "Transcription",
     "translation": "Translation"
 }
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 def make_request(path, cookies, req_type='get', json_data=None):
@@ -463,7 +464,6 @@ def download(
     session = Session()
     # SyncDBSession.configure(bind=engine)
     # session = SyncDBSession
-    log.setLevel(logging.DEBUG)
     # with transaction.manager:
     new_jsons = dict()
     for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField,
