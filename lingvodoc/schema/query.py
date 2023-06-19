@@ -316,8 +316,6 @@ from lingvodoc.utils.creation import create_entity, edit_role
 from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_holders import del_object
 
-from celery.utils.log import get_task_logger
-
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
@@ -365,12 +363,9 @@ import lingvodoc.scripts.docx_import as docx_import
 import pandas as pd
 from pretty_html_table import build_table
 
+
 # Setting up logging.
 log = logging.getLogger(__name__)
-
-# Trying to set up celery logging.
-celery_log = get_task_logger(__name__)
-celery_log.setLevel(logging.DEBUG)
 
 
 # Mikhail Oslon's analysis functions.
@@ -3363,7 +3358,7 @@ class Language_Resolver(object):
 
                 if id_list != reference_list:
 
-                    log.warn(
+                    log.warning(
                         f'\nid_list:\n{pprint.pformat(id_list, width = 192)}'
                         f'\nreference_list:\n{pprint.pformat(reference_list, width = 192)}')
 
@@ -12711,7 +12706,7 @@ class CognateAnalysis(graphene.Mutation):
         client_id = info.context.request.authenticated_userid
 
         if not client_id:
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
 
@@ -12740,7 +12735,7 @@ class CognateAnalysis(graphene.Mutation):
             not author_id_check and
             not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
 
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
         # Getting arguments.
 
@@ -12765,6 +12760,13 @@ class CognateAnalysis(graphene.Mutation):
 
         __debug_flag__ = args.get('debug_flag', False)
         __intermediate_flag__ = args.get('intermediate_flag', False)
+
+        if __debug_flag__ and user.id != 1:
+
+            return (
+
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
 
         synchronous = args.get('synchronous', False)
 
@@ -14448,6 +14450,13 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 Client.get_user_by_client_id(client_id).id
                     if client_id else anonymous_userid(request))
 
+            if __debug_flag__ and user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
+
             task_status = TaskStatus(
                 user_id,
                 'Phonological statistical distance computation',
@@ -14574,15 +14583,18 @@ class SaveDictionary(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    # @client_id_check()
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        id,
+        mode,
+        sound_flag = False,
+        markup_flag = False,
+        synchronous = False,
+        debug_flag = False):
 
         request = info.context.request
         locale_id = int(request.cookies.get('locale_id') or 2)
-        dict_id = args['id']
-        mode = args['mode']
-        sound_flag = args.get('sound_flag', False)
-        markup_flag = args.get('markup_flag', False)
 
         client_id = authenticated_userid(request)
 
@@ -14590,31 +14602,47 @@ class SaveDictionary(graphene.Mutation):
             Client.get_user_by_client_id(client_id).id
                 if client_id else anonymous_userid(request))
 
-        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
-                                                               object_id=dict_id[1]).first()
+        if debug_flag and user_id != 1:
+
+            return (
+
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
+
+        dictionary = (
+
+            DBSession
+                .query(dbDictionary)
+                .filter_by(client_id = id[0], object_id = id[1])
+                .first())
+
         if mode == 'published':
             publish = True
         elif mode == 'all':
             publish = None
         else:
-            raise ResponseError(message="mode: <all|published>")
+            return ResponseError(message="mode: <all|published>")
 
-        for persp in dictionary_obj.dictionaryperspective:
-            if mode == 'all':
-                info.context.acl_check('view', 'lexical_entries_and_entities',
-                                   (persp.client_id, persp.object_id))
+        if mode == 'all':
+
+            for perspective in dictionary.dictionaryperspective:
+
+                info.context.acl_check(
+                    'view',
+                    'lexical_entries_and_entities',
+                    perspective.id)
 
         save_dictionary(
-            dict_id,
-            dictionary_obj,
+            id,
+            dictionary,
             request,
             user_id,
             locale_id,
             publish,
             sound_flag,
             markup_flag,
-            args.get('synchronous', False),
-            args.get('debug_flag', False))
+            synchronous,
+            debug_flag)
 
         return DownloadDictionary(triumph=True)
 
@@ -15492,6 +15520,8 @@ class XlsxBulkDisconnect(graphene.Mutation):
 
                 worksheet = workbook[sheet_name]
 
+                # Assuming the first row has field names.
+
                 field_name_list = []
                 cognates_index = None
 
@@ -16100,15 +16130,17 @@ class Docx2Eaf(graphene.Mutation):
     Tries to convert a table-containing .docx to .eaf.
 
     curl 'http://localhost:6543/graphql'
-      -H 'Cookie: locale_id=2; auth_tkt=5f65a2fb86f96c48db0606867ec26d973abab88eb85112734e1f20b4b3438c3b7a606df37da360e59a0a8d248ade82ca93bdc3c349a6d6bb69e82fb35b793d0761b465414211!userid_type:int; client_id=4211'
+      -H 'Cookie: locale_id=2; auth_tkt=__token__; client_id=4211'
       -H 'Content-Type: multipart/form-data'
       -F operations='{
          "query": "mutation docx2eaf($docxFile: Upload, $separateFlag: Boolean) {
            docx2eaf(docx_file: $docxFile, separate_flag: $separateFlag, debug_flag: true) {
              triumph eaf_url alignment_url check_txt_url check_docx_url message } }",
          "variables": { "docxFile": null, "separateFlag": false } }'
-      -F map='{ "0": ["variables.docx_file"] }'
-      -F 0=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+      -F map='{ "1": ["variables.docx_file"] }'
+      -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+
+    Replace __token__ with a valid user authentication token.
     """
 
     class Arguments:
@@ -16161,6 +16193,13 @@ class Docx2Eaf(graphene.Mutation):
             no_parsing_flag = args.get('no_parsing_flag', False)
 
             __debug_flag__ = args.get('debug_flag', False)
+
+            if __debug_flag__ and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             log.debug(
                 '\n{}\n{}'.format(
@@ -16392,8 +16431,10 @@ class Valency(graphene.Mutation):
 
     curl 'http://localhost:6543/graphql' \
       -H 'content-type: application/json' \
-      -H 'Cookie: auth_tkt=f697cdb8f16ec3ca6f01df92df4de1fec7a50978c849ad2c3f3980be87971b21c7ce3ba26a71caf3e5ad9dc985e1976914a509efe4c5ebd09e1d13ef9e78cfae61b6058b4217!userid_type:int; client_id=4217; locale_id=2' \
+      -H 'Cookie: auth_tkt=__token__; client_id=4217; locale_id=2' \
       --data-raw '{"operationName":"valency","variables":{"perspectiveId":[3648,8]},"query":"mutation valency($perspectiveId: LingvodocID!) { valency(perspective_id: $perspectiveId, synchronous: true, debug_flag: true) { triumph }}"}'
+
+    Replace __token__ with a valid user authentication token.
     """
 
     class Arguments:
@@ -16689,7 +16730,12 @@ class Valency(graphene.Mutation):
             task_status.set(1, 100, 'Finished', result_link_list = url_list)
 
     @staticmethod
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        debug_flag = False,
+        synchronous = False):
 
         try:
 
@@ -16703,10 +16749,12 @@ class Valency(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can compute valency information.'))
 
-            perspective_id = args['perspective_id']
-            debug_flag = args.get('debug_flag', False)
+            if debug_flag and client.user_id != 1:
 
-            synchronous = args.get('synchronous', False)
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -17635,7 +17683,7 @@ class CreateValencyData(graphene.Mutation):
 
                     if key.tier != 'translation':
 
-                        log.warn(f'\nkey: {key}')
+                        log.warning(f'\nkey: {key}')
                         raise NotImplementedError
 
                     xlat = key.text
@@ -18078,7 +18126,11 @@ class CreateValencyData(graphene.Mutation):
                 break
 
     @staticmethod
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        debug_flag = False):
 
         try:
 
@@ -18092,8 +18144,12 @@ class CreateValencyData(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can create valency data.'))
 
-            perspective_id = args['perspective_id']
-            debug_flag = args.get('debug_flag', False)
+            if debug_flag and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -18316,7 +18372,11 @@ class SaveValencyData(graphene.Mutation):
             'user_list': user_data_list}
 
     @staticmethod
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        debug_flag = False):
 
         try:
 
@@ -18330,8 +18390,12 @@ class SaveValencyData(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can create valency data.'))
 
-            perspective_id = args['perspective_id']
-            debug_flag = args.get('debug_flag', False)
+            if debug_flag and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -18928,6 +18992,13 @@ class ValencyVerbCases(graphene.Mutation):
 
                     ResponseError(
                         message = 'Only registered users can get valency verb cases info.'))
+
+            if debug_flag and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             if perspective_id is None and language_arg_list is None:
 

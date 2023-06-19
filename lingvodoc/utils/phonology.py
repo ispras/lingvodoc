@@ -28,7 +28,6 @@ import zipfile
 # External imports.
 
 import cchardet as chardet
-from celery.utils.log import get_task_logger
 
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
@@ -96,11 +95,6 @@ from lingvodoc.views.v2.utils import anonymous_userid, message, storage_file, un
 
 # Setting up logging.
 log = logging.getLogger(__name__)
-
-
-# Trying to set up celery logging.
-celery_log = get_task_logger(__name__)
-celery_log.setLevel(logging.DEBUG)
 
 
 def gql_phonology(request, locale_id, args):
