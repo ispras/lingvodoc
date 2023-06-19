@@ -1581,7 +1581,3 @@ def convert_all(
 
     return status
 
-if __name__ == "__main__":
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-    logging.basicConfig(format='%(asctime)s\t%(levelname)s\t[%(name)s]\t%(message)s')

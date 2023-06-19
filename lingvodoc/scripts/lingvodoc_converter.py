@@ -457,7 +457,6 @@ def convert_one(filename, login, password_hash, language_client_id, language_obj
                 dictionary_client_id, dictionary_object_id, perspective_client_id, perspective_object_id,
                 server_url="http://localhost:6543/", task_id=None):
     log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
     log.debug("Starting convert_one")
     log.debug("Creating session")
     session = requests.Session()
