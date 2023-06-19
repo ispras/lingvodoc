@@ -10665,7 +10665,7 @@ class CognateAnalysis(graphene.Mutation):
     @staticmethod
     def graph_2d_embedding(d_ij, verbose = False):
         """
-        Computes 2d embedding of a graph specified by non-negative simmetrix distance matrix via stress
+        Computes 2d embedding of a graph specified by non-negative simmetric distance matrix via stress
         minimization.
 
         Stress is based on relative strain for non-zero distances and absolute strain for zero distances.
@@ -10773,12 +10773,26 @@ class CognateAnalysis(graphene.Mutation):
             iter_count += 1
 
         # Performing minization, returning minimization results.
+        #
+        # To get deterministic results we use the source distance matrix to seed the initial pseudo-random
+        # coordinates we start optimization from.
 
-        result = scipy.optimize.minimize(f,
-            numpy.random.rand(N * 2),
-            jac = df,
-            callback = f_callback if verbose else None,
-            options = {'disp': verbose})
+        rng = (
+
+            numpy.random.Generator(
+                numpy.random.PCG64(
+
+                    tuple(
+                        hash(value)
+                        for value in d_ij.flat))))
+
+        result = (
+
+            scipy.optimize.minimize(f,
+                rng.random(N * 2),
+                jac = df,
+                callback = f_callback if verbose else None,
+                options = {'disp': verbose}))
 
         result_x = numpy.stack((result.x[:N], result.x[N:])).T
 
@@ -10787,7 +10801,7 @@ class CognateAnalysis(graphene.Mutation):
     @staticmethod
     def graph_3d_embedding(d_ij, verbose = False):
         """
-        Computes 3d embedding of a graph specified by non-negative simmetrix distance matrix via stress
+        Computes 3d embedding of a graph specified by non-negative simmetric distance matrix via stress
         minimization.
 
         The same as with 2d embedding, see graph_2d_embedding.
@@ -10889,12 +10903,26 @@ class CognateAnalysis(graphene.Mutation):
             iter_count += 1
 
         # Performing minization, returning minimization results.
+        #
+        # To get deterministic results we use the source distance matrix to seed the initial pseudo-random
+        # coordinates we start optimization from.
 
-        result = scipy.optimize.minimize(f,
-            numpy.random.rand(N * 3),
-            jac = df,
-            callback = f_callback if verbose else None,
-            options = {'disp': verbose})
+        rng = (
+
+            numpy.random.Generator(
+                numpy.random.PCG64(
+                    
+                    tuple(
+                        hash(value)
+                        for value in d_ij.flat))))
+
+        result = (
+
+            scipy.optimize.minimize(f,
+                rng.random(N * 3),
+                jac = df,
+                callback = f_callback if verbose else None,
+                options = {'disp': verbose}))
 
         result_x = numpy.stack((result.x[:N], result.x[N:N2], result.x[N2:])).T
 
@@ -10909,20 +10937,17 @@ class CognateAnalysis(graphene.Mutation):
             mode,
             storage,
             storage_dir,
+            analysis_str = 'cognate_analysis',
             __debug_flag__ = False,
             __plot_flag__ = True):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
 
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\ndistance_header_array:\n{1}'
-            '\ndistance_data_array:\n{2}'
-            '\nd_ij:\n{3}'.format(
-            language_str,
-            distance_header_array,
-            distance_data_array,
-            d_ij))
+            f'\n{analysis_str} {language_str}:'
+            f'\ndistance_header_array:\n{distance_header_array}'
+            f'\ndistance_data_array:\n{distance_data_array}'
+            f'\nd_ij:\n{d_ij}')
 
         # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
         # orient it left-right.
@@ -10947,19 +10972,12 @@ class CognateAnalysis(graphene.Mutation):
 
             distance_2d = numpy.zeros((1, 1))
 
-        # Showing what we computed.
-
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\nembedding 2d:\n{1}'
-            '\nembedding 2d (PCA-oriented):\n{2}'
-            '\nstrain 2d:\n{3}'
-            '\ndistances 2d:\n{4}'.format(
-            language_str,
-            embedding_2d,
-            embedding_2d_pca,
-            strain_2d,
-            distance_2d))
+            f'\n{analysis_str} {language_str}:'
+            f'\nembedding 2d:\n{embedding_2d}'
+            f'\nembedding 2d (PCA-oriented):\n{embedding_2d_pca}'
+            f'\nstrain 2d:\n{strain_2d}'
+            f'\ndistances 2d:\n{distance_2d}')
 
         # And now the same with 3d embedding.
 
@@ -11008,19 +11026,12 @@ class CognateAnalysis(graphene.Mutation):
 
             distance_3d = numpy.zeros((1, 1))
 
-        # Showing what we've get.
-
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\nembedding 3d:\n{1}'
-            '\nembedding 3d (PCA-oriented):\n{2}'
-            '\nstrain 3d:\n{3}'
-            '\ndistances 3d:\n{4}'.format(
-            language_str,
-            embedding_3d,
-            embedding_3d_pca,
-            strain_3d,
-            distance_3d))
+            f'\n{analysis_str} {language_str}:'
+            f'\nembedding 3d:\n{embedding_3d}'
+            f'\nembedding 3d (PCA-oriented):\n{embedding_3d_pca}'
+            f'\nstrain 3d:\n{strain_3d}'
+            f'\ndistances 3d:\n{distance_3d}')
 
         # Computing minimum spanning tree via standard Jarnik-Prim-Dijkstra algorithm using 2d and 3d
         # embedding distances to break ties.
@@ -11075,10 +11086,8 @@ class CognateAnalysis(graphene.Mutation):
                         mst_dict[i_to] = (d_to, i_min)
 
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\nminimum spanning tree:\n{1}'.format(
-            language_str,
-            pprint.pformat(mst_list)))
+            f'\n{analysis_str} {language_str}:'
+            f'\nminimum spanning tree:\n{pprint.pformat(mst_list)}')
 
         # Plotting with matplotlib.
         figure_url = None
@@ -12675,7 +12684,32 @@ class CognateAnalysis(graphene.Mutation):
         return CognateAnalysis(**result_dict)
 
     @staticmethod
-    def mutate(self, info, **args):
+    def mutate(
+        self,
+        info,
+
+        source_perspective_id,
+        base_language_id,
+
+        group_field_id,
+        perspective_info_list,
+        multi_list = None,
+
+        mode = None,
+
+        distance_flag = None,
+        reference_perspective_id = None,
+
+        figure_flag = None,
+        distance_vowel_flag = None,
+        distance_consonant_flag = None,
+
+        match_translations_value = 1,
+        only_orphans_flag = True,
+
+        debug_flag = False,
+        intermediate_flag = False,
+        synchronous = False):
         """
         mutation CognateAnalysis {
           cognate_analysis(
@@ -12714,7 +12748,7 @@ class CognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _ in args['perspective_info_list']))
+                for (client_id, _), _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -12733,42 +12767,18 @@ class CognateAnalysis(graphene.Mutation):
 
         if (user.id != 1 and
             not author_id_check and
-            not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
+            not info.context.acl_check_if('edit', 'perspective', source_perspective_id)):
 
             return ResponseError(error_str)
 
-        # Getting arguments.
+        # Debug mode check.
 
-        source_perspective_id = args['source_perspective_id']
-        base_language_id = args['base_language_id']
-
-        group_field_id = args['group_field_id']
-        perspective_info_list = args['perspective_info_list']
-        multi_list = args.get('multi_list')
-
-        mode = args.get('mode')
-
-        distance_flag = args.get('distance_flag')
-        reference_perspective_id = args.get('reference_perspective_id')
-
-        figure_flag = args.get('figure_flag')
-        distance_vowel_flag = args.get('distance_vowel_flag')
-        distance_consonant_flag = args.get('distance_consonant_flag')
-
-        match_translations_value = args.get('match_translations_value', 1)
-        only_orphans_flag = args.get('only_orphans_flag', True)
-
-        __debug_flag__ = args.get('debug_flag', False)
-        __intermediate_flag__ = args.get('intermediate_flag', False)
-
-        if __debug_flag__ and user.id != 1:
+        if debug_flag and user.id != 1:
 
             return (
 
                 ResponseError(
                     message = 'Only administrator can use debug mode.'))
-
-        synchronous = args.get('synchronous', False)
 
         language_str = (
             '{0}/{1}, language {2}/{3}'.format(
@@ -12834,8 +12844,8 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  distance_consonant_flag: {}'
                  '\n  match_translations_value: {}'
                  '\n  only_orphans_flag: {} ({})'
-                 '\n  __debug_flag__: {}'
-                 '\n  __intermediate_flag__: {}'
+                 '\n  debug_flag: {}'
+                 '\n  intermediate_flag: {}'
                  '\n  cognate_analysis_f: {}'
                  '\n  cognate_acoustic_analysis_f: {}'
                  '\n  cognate_distance_analysis_f: {}'
@@ -12856,8 +12866,8 @@ class CognateAnalysis(graphene.Mutation):
                     distance_consonant_flag,
                     match_translations_value,
                     only_orphans_flag, int(only_orphans_flag),
-                    __debug_flag__,
-                    __intermediate_flag__,
+                    debug_flag,
+                    intermediate_flag,
                     repr(cognate_analysis_f),
                     repr(cognate_acoustic_analysis_f),
                     repr(cognate_distance_analysis_f),
@@ -12946,8 +12956,8 @@ class CognateAnalysis(graphene.Mutation):
                         locale_id,
                         storage,
                         task_status,
-                        __debug_flag__,
-                        __intermediate_flag__)
+                        debug_flag,
+                        intermediate_flag)
 
                 else:
 
@@ -12973,8 +12983,8 @@ class CognateAnalysis(graphene.Mutation):
                         task_status.key,
                         request.registry.settings['cache_kwargs'],
                         request.registry.settings['sqlalchemy.url'],
-                        __debug_flag__,
-                        __intermediate_flag__)
+                        debug_flag,
+                        intermediate_flag)
 
                 # Signifying that we've successfully launched asynchronous cognate acoustic analysis.
 
@@ -13003,8 +13013,8 @@ class CognateAnalysis(graphene.Mutation):
                     locale_id,
                     storage,
                     None,
-                    __debug_flag__,
-                    __intermediate_flag__)
+                    debug_flag,
+                    intermediate_flag)
 
         # Exception occured while we tried to perform cognate analysis.
 
@@ -13031,6 +13041,8 @@ class SwadeshAnalysis(graphene.Mutation):
 
         group_field_id = LingvodocID(required = True)
         perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
+
+        debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -13168,11 +13180,13 @@ class SwadeshAnalysis(graphene.Mutation):
     @staticmethod
     def swadesh_statistics(
             language_str,
+            base_language_id,
             base_language_name,
             group_field_id,
             perspective_info_list,
             locale_id,
-            storage):
+            storage,
+            debug_flag = False):
 
         swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
                         'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
@@ -13196,9 +13210,50 @@ class SwadeshAnalysis(graphene.Mutation):
             # return true if the intersection is not empty
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
 
-        _, group_list, _ = (
-            CognateAnalysis.tag_data_plpgsql(
-                perspective_info_list, group_field_id))
+        # Gathering entry grouping data.
+
+        if not debug_flag:
+
+            _, group_list, _ = (
+                CognateAnalysis.tag_data_plpgsql(
+                    perspective_info_list, group_field_id))
+
+        else:
+
+            # If we are in debug mode, we try to load existing tag data to reduce debugging time.
+
+            tag_data_digest = (
+
+                hashlib.md5(
+
+                    repr(list(group_field_id) +
+                        [perspective_info[0] for perspective_info in perspective_info_list])
+
+                    .encode('utf-8'))
+
+                .hexdigest())
+
+            tag_data_file_name = (
+                f'__tag_data_{base_language_id[0]}_{base_language_id[1]}_{tag_data_digest}__.gz')
+
+            # Checking if we have saved data.
+
+            if os.path.exists(tag_data_file_name):
+
+                with gzip.open(tag_data_file_name, 'rb') as tag_data_file:
+                    _, group_list, _ = pickle.load(tag_data_file)
+
+            else:
+
+                # Don't have existing data, so we gather it and then save it for later use.
+
+                r1, group_list, r3 = (
+
+                    CognateAnalysis.tag_data_plpgsql(
+                        perspective_info_list, group_field_id))
+
+                with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
+                    pickle.dump((r1, group_list, r3), tag_data_file)
 
         # Getting text data for each perspective.
         # entries_set gathers entry_id(s) of words met in Swadesh' list
@@ -13425,6 +13480,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 None,
                 None,
                 None,
+                analysis_str = 'swadesh_analysis',
+                __debug_flag__ = debug_flag,
                 __plot_flag__ = False
             )
 
@@ -13442,7 +13499,14 @@ class SwadeshAnalysis(graphene.Mutation):
         return SwadeshAnalysis(**result_dict)
 
     @staticmethod
-    def mutate(self, info, **args):
+    def mutate(
+        self,
+        info,
+        source_perspective_id,
+        base_language_id,
+        group_field_id,
+        perspective_info_list,
+        debug_flag = False):
         """
         mutation SwadeshAnalysis {
           swadesh_analysis(
@@ -13465,7 +13529,7 @@ class SwadeshAnalysis(graphene.Mutation):
         client_id = info.context.request.authenticated_userid
 
         if not client_id:
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
 
@@ -13473,7 +13537,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _ in args['perspective_info_list']))
+                for (client_id, _), _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -13492,17 +13556,18 @@ class SwadeshAnalysis(graphene.Mutation):
 
         if (user.id != 1 and
             not author_id_check and
-            not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
+            not info.context.acl_check_if('edit', 'perspective', source_perspective_id)):
 
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
-        # Getting arguments.
+        # Debug mode check.
 
-        source_perspective_id = args['source_perspective_id']
-        base_language_id = args['base_language_id']
+        if debug_flag and user.id != 1:
 
-        group_field_id = args['group_field_id']
-        perspective_info_list = args['perspective_info_list']
+            return (
+
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
 
         language_str = (
             '{0}/{1}, language {2}/{3}'.format(
@@ -13541,11 +13606,13 @@ class SwadeshAnalysis(graphene.Mutation):
 
             return SwadeshAnalysis.swadesh_statistics(
                 language_str,
+                base_language_id,
                 base_language_name,
                 group_field_id,
                 perspective_info_list,
                 locale_id,
-                storage)
+                storage,
+                debug_flag)
 
         # Exception occured while we tried to perform swadesh analysis.
         except Exception as exception:
