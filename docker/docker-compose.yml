@@ -23,7 +23,7 @@ services:
       - /tmp:/tmp
     depends_on:
       - pg
-      - api
+#      - api
   redis:
     image: 'redis:latest'
     environment:
@@ -37,6 +37,7 @@ services:
     depends_on:
       - pg
       - redis
+      - keycloak
     links:
       - pg
       - redis
@@ -49,6 +50,11 @@ services:
       - /api/build/
       - ../:/api
       - /tmp:/tmp
+    env_file:
+      - ./locale_env.sh
+    command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --preload --paster /api/docker/docker.ini"
+    ports:
+      - "16543:6543"
 
   pg_keycloak:
     image: postgres:13.2
@@ -59,7 +65,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: keycloak
     healthcheck:
-      test: pg_isready -d postgres
+      test: ["CMD-SHELL", "pg_isready -U postgres -d keycloak"]
       interval: 10s
       timeout: 5s
       retries: 3
