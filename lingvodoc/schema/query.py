@@ -13075,9 +13075,11 @@ class SwadeshAnalysis(graphene.Mutation):
         # Insert 'lines' column as the first one
         groups['lines'] = 0
 
+        borrowed = pd.DataFrame()
         singles = pd.DataFrame()
 
-        row_index = 0
+        singles_index = 0
+        borrowed_index = 0
         # re-group by group number and add joined values
         for perspective in result_pool.values():
             dict_name = perspective['name']
@@ -13102,13 +13104,17 @@ class SwadeshAnalysis(graphene.Mutation):
                     cell = groups.loc[group_num].get('lines')
                     if pd.isnull(cell) or cell < lines:
                         groups.loc[group_num, 'lines'] = lines
+                elif entry['borrowed']:
+                    borrowed.loc[borrowed_index, dict_name] = entry_text
+                    borrowed_index += 1
                 else:
-                    singles.loc[row_index, dict_name] = entry_text
-                    row_index += 1
+                    singles.loc[singles_index, dict_name] = entry_text
+                    singles_index += 1
 
         return {
             'Cognates': groups if len(groups) < 2 else groups.sort_values(groups.columns[1]),
             'Singles': singles.sort_index(),
+            'Borrowed': borrowed.sort_index(),
             'Distances': distances.sort_index()
         }
 
@@ -13176,6 +13182,39 @@ class SwadeshAnalysis(graphene.Mutation):
             'glottochronology', '/', str(cur_time), '/', xlsx_filename])
 
         return xlsx_url
+
+    @staticmethod
+    def export_html(result, tiny_dicts=None, huge_size=1048576):
+        result_tables = (
+            build_table(result['Distances'], 'orange_light', width="300px", index=True),
+            build_table(result['Cognates'], 'blue_light', width="300px").replace("\\n","<br>"),
+            build_table(result['Singles'], 'green_light', width="300px"),
+            build_table(result['Borrowed'], 'yellow_light', width="300px"))
+
+        # Control output size
+        spl = "<pre>\n\n</pre>"
+        html_result = f"{result_tables[0]}" \
+                      f"{spl}" \
+                      f"{result_tables[1]}" \
+                      f"{spl}" \
+                      f"{result_tables[2]}" \
+                      f"{spl}" \
+                      f"{result_tables[3]}"
+
+        if len(html_result) > huge_size:
+            html_result = f"{result_tables[0]}" \
+                          f"{spl}" \
+                          f"{result_tables[1]}" \
+                          f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
+
+        if len(html_result) > huge_size:
+            html_result = f"{result_tables[0]}" \
+                          f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
+
+        html_result += ("<pre>Note: The following dictionaries contain too less words and were not processed: \n\n" +
+                        '\n'.join(tiny_dicts) + "</pre>") if tiny_dicts else ""
+
+        return html_result
 
     @staticmethod
     def swadesh_statistics(
@@ -13451,25 +13490,7 @@ class SwadeshAnalysis(graphene.Mutation):
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
 
-        result_tables = (
-            build_table(result['Distances'], 'orange_light', width="300px", index=True),
-            build_table(result['Cognates'], 'blue_light', width="300px").replace("\\n","<br>"),
-            build_table(result['Singles'], 'green_light', width="300px"))
-
-        # Control output size
-        huge_size = 1048576
-        result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}<pre>\n\n</pre>{result_tables[2]}"
-        if len(result) > huge_size:
-            result = f"{result_tables[0]}<pre>\n\n</pre>{result_tables[1]}" \
-                     f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
-        if len(result) > huge_size:
-            result = f"{result_tables[0]}" \
-                     f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
-        result += ("<pre>Note: The following dictionaries contain too less words and were not processed: \n\n" +
-                   '\n'.join(tiny_dicts) + "</pre>") if tiny_dicts else ""
-
-        # GC
-        del result_tables
+        html_result = SwadeshAnalysis.export_html(result, tiny_dicts)
 
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
@@ -13489,7 +13510,7 @@ class SwadeshAnalysis(graphene.Mutation):
             dict(
                 triumph = True,
 
-                result = result,
+                result = html_result,
                 xlsx_url = xlsx_url,
                 minimum_spanning_tree = mst_list,
                 embedding_2d = embedding_2d_pca,
