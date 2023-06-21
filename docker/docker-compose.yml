@@ -9,6 +9,12 @@ services:
       POSTGRES_DB: lingvodoc
     volumes:
       - ./dbdump:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d lingvodoc && psql --username=postgres --list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     ports:
       - "15432:5432"
   nginx:
@@ -23,7 +29,7 @@ services:
       - /tmp:/tmp
     depends_on:
       - pg
-#      - api
+      - api
   redis:
     image: 'redis:latest'
     environment:
@@ -35,9 +41,13 @@ services:
   api:
     build: ..
     depends_on:
-      - pg
-      - redis
-      - keycloak
+#      keycloak:
+#        condition: service_healthy
+      pg:
+        condition: service_started
+      redis:
+        condition: service_started
+
     links:
       - pg
       - redis
@@ -88,7 +98,7 @@ services:
         target: /opt/keycloak/providers/custom-scripts.jar
         read_only: true
     command:
-      - start-dev --db postgres --import-realm
+      - start-dev --db postgres --import-realm --health-enabled=true
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
@@ -100,18 +110,17 @@ services:
       - KC_DB_URL_DATABASE=keycloak
       - KC_DB_USERNAME=postgres
       - KC_DB_PASSWORD=password
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://0.0.0.0:8080/realms/master" ]
-      start_period: 10s
-      interval: 30s
-      retries: 3
-      timeout: 5s
-    depends_on:
-      pg_keycloak:
-        condition: service_healthy
+#    healthcheck:
+#      test: [ "CMD", "curl", "--head","-fsS", "http://localhost:8080/health/ready" ]
+#      start_period: 10s
+#      interval: 30s
+#      retries: 3
+#      timeout: 5s
+#    depends_on:
+#      pg_keycloak:
+#        condition: service_healthy
     ports:
       - "8080:8080"
       - "9090:8080"
     expose:
       - "9090"
-

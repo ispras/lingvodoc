@@ -11,9 +11,13 @@ import logging
 import transaction
 from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakOpenIDConnection, KeycloakUMA, KeycloakOperationError, \
     KeycloakGetError, KeycloakPostError
-from sqlalchemy import and_, pool, engine_from_config
+from sqlalchemy import and_, pool, engine_from_config, select
+
+from alembic import op
+from sqlalchemy.orm import Session
+
 from lingvodoc.models import (
-    DBSession,
+
     User,
     BaseGroup, Group, user_to_group_association, Base)
 
@@ -32,7 +36,7 @@ from alembic.config import Config
 config = Config("alembic.ini")
 
 LOG = logging.getLogger('keycloak')
-
+Session = Session(bind=op.get_bind())
 
 def upgrade():
     LOG.debug('CONNECT TO THE KEYCLOAK')
@@ -58,16 +62,9 @@ def upgrade():
             client_secret_key=keycloak_dict["client_secret_key"])
         LOG.debug('set keycloak_connection')
         uma = KeycloakUMA(connection=keycloak_connection)
-        LOG.debug(KeycloakSession.keycloak_admin.connection.realm_name)
         KeycloakSession.keycloak_uma = uma
         KeycloakSession.keycloak_url = keycloak_dict["client_secret_key"]
 
-        engine = engine_from_config(
-            config.get_section(config.config_ini_section),
-            prefix='sqlalchemy.',
-            poolclass=pool.NullPool)
-        DBSession.configure(bind=engine)
-        Base.metadata.bind = engine
 
         add_mappers(keycloak_dict["client_name"])
         migrate_users()
@@ -83,7 +80,7 @@ def downgrade():
 
 def migrate_users():
     LOG.debug('START MIGRATION TO THE KEYCLOAK')
-    users = DBSession.query(User).all()
+    users = Session.query(User).all()
     for user in users:
         try:
             keycloak_user_id = KeycloakSession.keycloak_admin.get_user_id(user.login)
@@ -105,9 +102,9 @@ def migrate_users():
                                                                       })
                 LOG.debug("User created:" + user.login)
 
-                DBSession.query(User).filter_by(id=user.id).update(values={"id": user_id},
+                Session.query(User).filter_by(id=user.id).update(values={"id": user_id},
                                                                    synchronize_session='fetch')
-                DBSession.flush()
+                Session.flush()
 
         except (KeycloakGetError, KeycloakOperationError, KeycloakPostError, Exception) as e:
             logging.debug(str(e))
@@ -125,7 +122,7 @@ def create_user_associated_resources(attributes=None, user=User):
     actions = ["approve", "create", "delete", "edit", "view"]
     for subject in subjects:
         for action in actions:
-            objects = DBSession.query(BaseGroup, Group, user_to_group_association, Group.subject_client_id,
+            objects = Session.query(BaseGroup, Group, user_to_group_association, Group.subject_client_id,
                                       Group.subject_object_id).filter(and_(
                 BaseGroup.subject == subject,
                 BaseGroup.action == action,
