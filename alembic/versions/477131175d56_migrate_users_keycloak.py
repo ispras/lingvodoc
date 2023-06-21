@@ -39,7 +39,7 @@ def upgrade():
 
     keycloak_dict = config.get_section("keycloak")
     if keycloak_dict:
-        KeycloakSession.client_name = keycloak_dict["client_id"]
+        KeycloakSession.client_name = keycloak_dict["client_name"]
         KeycloakSession.keycloak_admin = KeycloakAdmin(server_url=keycloak_dict["server_url"],
                                                        username=keycloak_dict["admin"],
                                                        password=keycloak_dict["password"],
@@ -47,21 +47,20 @@ def upgrade():
                                                        auto_refresh_token=["get", "post", "put", "delete"])
         KeycloakSession.keycloak_admin.realm_name = keycloak_dict["realm_name"]
         KeycloakSession.openid_client = KeycloakOpenID(server_url=keycloak_dict["server_url"],
-                                                       client_id=keycloak_dict["client_id"],
+                                                       client_id=keycloak_dict["client_name"],
                                                        realm_name=keycloak_dict["realm_name"],
                                                        client_secret_key=keycloak_dict["client_secret_key"])
         keycloak_connection = KeycloakOpenIDConnection(
             custom_headers={"Content-Type": "application/x-www-form-urlencoded"},
             server_url=keycloak_dict["server_url"],
             realm_name=keycloak_dict["realm_name"],
-            client_id=keycloak_dict["client_id"],
+            client_id=keycloak_dict["client_name"],
             client_secret_key=keycloak_dict["client_secret_key"])
         LOG.debug('set keycloak_connection')
         uma = KeycloakUMA(connection=keycloak_connection)
+        LOG.debug(KeycloakSession.keycloak_admin.connection.realm_name)
         KeycloakSession.keycloak_uma = uma
         KeycloakSession.keycloak_url = keycloak_dict["client_secret_key"]
-
-        LOG.debug('create_user')
 
         engine = engine_from_config(
             config.get_section(config.config_ini_section),
@@ -70,7 +69,7 @@ def upgrade():
         DBSession.configure(bind=engine)
         Base.metadata.bind = engine
 
-        add_mappers(keycloak_dict["client_id"])
+        add_mappers(keycloak_dict["client_name"])
         migrate_users()
         transaction.manager.commit()
 
@@ -172,7 +171,8 @@ def create_user_associated_resources(attributes=None, user=User):
     return attributes
 
 
-def add_mappers(client_id):
+def add_mappers(client_name):
+    id = KeycloakSession.keycloak_admin.get_client_id(client_id=client_name)
     subjects = ["dictionary", "language", "translation_string", "edit_user", "perspective_role", "dictionary_role",
                 "organization", "perspective", "lexical_entries_and_entities", "approve_entities", "merge",
                 "translations", "grant", "dictionary_status", "perspective_status"]
@@ -181,7 +181,7 @@ def add_mappers(client_id):
         for action in actions:
             try:
                 KeycloakSession.keycloak_admin.add_mapper_to_client(
-                    client_id=client_id,
+                    client_id=id,
                     payload={
                         "name": action + '_' + subject,
                         "protocol": "openid-connect",
@@ -195,7 +195,8 @@ def add_mappers(client_id):
                             "id.token.claim": "true",
                             "access.token.claim": "true",
                             "claim.name": "urn:" + KeycloakSession.client_name + ":resources:" + subject + ";" + "urn:" + KeycloakSession.client_name + ":scopes:" + action}
-                    }, )
+                    },
+                )
             except KeycloakPostError as e:
                 logging.debug(e.error_message)
 
