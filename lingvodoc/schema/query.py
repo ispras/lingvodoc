@@ -316,8 +316,6 @@ from lingvodoc.utils.creation import create_entity, edit_role
 from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_holders import del_object
 
-from celery.utils.log import get_task_logger
-
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
@@ -365,12 +363,9 @@ import lingvodoc.scripts.docx_import as docx_import
 import pandas as pd
 from pretty_html_table import build_table
 
+
 # Setting up logging.
 log = logging.getLogger(__name__)
-
-# Trying to set up celery logging.
-celery_log = get_task_logger(__name__)
-celery_log.setLevel(logging.DEBUG)
 
 
 # Mikhail Oslon's analysis functions.
@@ -3363,7 +3358,7 @@ class Language_Resolver(object):
 
                 if id_list != reference_list:
 
-                    log.warn(
+                    log.warning(
                         f'\nid_list:\n{pprint.pformat(id_list, width = 192)}'
                         f'\nreference_list:\n{pprint.pformat(reference_list, width = 192)}')
 
@@ -4483,6 +4478,23 @@ class Query(graphene.ObjectType):
             by_organizations = graphene.Boolean(),
             organization_id = graphene.Int(),
             debug_flag = graphene.Boolean()))
+
+    fill_logs = graphene.String(worker = graphene.Int())
+
+    def resolve_fill_logs(self, info, worker=1):
+        # Check if the current user is administrator
+        client_id = info.context.get('client_id')
+        user_id = DBSession.query(Client.user_id).filter_by(id=client_id).scalar()
+        if user_id != 1:
+            return ResponseError("Only administrator can fill in logs using request.")
+
+        period = 300
+        step = 0.25
+        times = int(period // step)
+        for _ in range(times):
+            log.debug(f"Lingvodoc({worker}) " * 500)
+            time.sleep(step)
+        return "Done"
 
     def resolve_language_tree(
         self,
@@ -10653,7 +10665,7 @@ class CognateAnalysis(graphene.Mutation):
     @staticmethod
     def graph_2d_embedding(d_ij, verbose = False):
         """
-        Computes 2d embedding of a graph specified by non-negative simmetrix distance matrix via stress
+        Computes 2d embedding of a graph specified by non-negative simmetric distance matrix via stress
         minimization.
 
         Stress is based on relative strain for non-zero distances and absolute strain for zero distances.
@@ -10761,12 +10773,26 @@ class CognateAnalysis(graphene.Mutation):
             iter_count += 1
 
         # Performing minization, returning minimization results.
+        #
+        # To get deterministic results we use the source distance matrix to seed the initial pseudo-random
+        # coordinates we start optimization from.
 
-        result = scipy.optimize.minimize(f,
-            numpy.random.rand(N * 2),
-            jac = df,
-            callback = f_callback if verbose else None,
-            options = {'disp': verbose})
+        rng = (
+
+            numpy.random.Generator(
+                numpy.random.PCG64(
+
+                    tuple(
+                        hash(value)
+                        for value in d_ij.flat))))
+
+        result = (
+
+            scipy.optimize.minimize(f,
+                rng.random(N * 2),
+                jac = df,
+                callback = f_callback if verbose else None,
+                options = {'disp': verbose}))
 
         result_x = numpy.stack((result.x[:N], result.x[N:])).T
 
@@ -10775,7 +10801,7 @@ class CognateAnalysis(graphene.Mutation):
     @staticmethod
     def graph_3d_embedding(d_ij, verbose = False):
         """
-        Computes 3d embedding of a graph specified by non-negative simmetrix distance matrix via stress
+        Computes 3d embedding of a graph specified by non-negative simmetric distance matrix via stress
         minimization.
 
         The same as with 2d embedding, see graph_2d_embedding.
@@ -10877,12 +10903,26 @@ class CognateAnalysis(graphene.Mutation):
             iter_count += 1
 
         # Performing minization, returning minimization results.
+        #
+        # To get deterministic results we use the source distance matrix to seed the initial pseudo-random
+        # coordinates we start optimization from.
 
-        result = scipy.optimize.minimize(f,
-            numpy.random.rand(N * 3),
-            jac = df,
-            callback = f_callback if verbose else None,
-            options = {'disp': verbose})
+        rng = (
+
+            numpy.random.Generator(
+                numpy.random.PCG64(
+                    
+                    tuple(
+                        hash(value)
+                        for value in d_ij.flat))))
+
+        result = (
+
+            scipy.optimize.minimize(f,
+                rng.random(N * 3),
+                jac = df,
+                callback = f_callback if verbose else None,
+                options = {'disp': verbose}))
 
         result_x = numpy.stack((result.x[:N], result.x[N:N2], result.x[N2:])).T
 
@@ -10897,20 +10937,17 @@ class CognateAnalysis(graphene.Mutation):
             mode,
             storage,
             storage_dir,
+            analysis_str = 'cognate_analysis',
             __debug_flag__ = False,
             __plot_flag__ = True):
 
         d_ij = (distance_data_array + distance_data_array.T) / 2
 
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\ndistance_header_array:\n{1}'
-            '\ndistance_data_array:\n{2}'
-            '\nd_ij:\n{3}'.format(
-            language_str,
-            distance_header_array,
-            distance_data_array,
-            d_ij))
+            f'\n{analysis_str} {language_str}:'
+            f'\ndistance_header_array:\n{distance_header_array}'
+            f'\ndistance_data_array:\n{distance_data_array}'
+            f'\nd_ij:\n{d_ij}')
 
         # Projecting the graph into a 2d plane via relative distance strain optimization, using PCA to
         # orient it left-right.
@@ -10935,19 +10972,12 @@ class CognateAnalysis(graphene.Mutation):
 
             distance_2d = numpy.zeros((1, 1))
 
-        # Showing what we computed.
-
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\nembedding 2d:\n{1}'
-            '\nembedding 2d (PCA-oriented):\n{2}'
-            '\nstrain 2d:\n{3}'
-            '\ndistances 2d:\n{4}'.format(
-            language_str,
-            embedding_2d,
-            embedding_2d_pca,
-            strain_2d,
-            distance_2d))
+            f'\n{analysis_str} {language_str}:'
+            f'\nembedding 2d:\n{embedding_2d}'
+            f'\nembedding 2d (PCA-oriented):\n{embedding_2d_pca}'
+            f'\nstrain 2d:\n{strain_2d}'
+            f'\ndistances 2d:\n{distance_2d}')
 
         # And now the same with 3d embedding.
 
@@ -10996,19 +11026,12 @@ class CognateAnalysis(graphene.Mutation):
 
             distance_3d = numpy.zeros((1, 1))
 
-        # Showing what we've get.
-
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\nembedding 3d:\n{1}'
-            '\nembedding 3d (PCA-oriented):\n{2}'
-            '\nstrain 3d:\n{3}'
-            '\ndistances 3d:\n{4}'.format(
-            language_str,
-            embedding_3d,
-            embedding_3d_pca,
-            strain_3d,
-            distance_3d))
+            f'\n{analysis_str} {language_str}:'
+            f'\nembedding 3d:\n{embedding_3d}'
+            f'\nembedding 3d (PCA-oriented):\n{embedding_3d_pca}'
+            f'\nstrain 3d:\n{strain_3d}'
+            f'\ndistances 3d:\n{distance_3d}')
 
         # Computing minimum spanning tree via standard Jarnik-Prim-Dijkstra algorithm using 2d and 3d
         # embedding distances to break ties.
@@ -11063,10 +11086,8 @@ class CognateAnalysis(graphene.Mutation):
                         mst_dict[i_to] = (d_to, i_min)
 
         log.debug(
-            '\ncognate_analysis {0}:'
-            '\nminimum spanning tree:\n{1}'.format(
-            language_str,
-            pprint.pformat(mst_list)))
+            f'\n{analysis_str} {language_str}:'
+            f'\nminimum spanning tree:\n{pprint.pformat(mst_list)}')
 
         # Plotting with matplotlib.
         figure_url = None
@@ -12663,7 +12684,32 @@ class CognateAnalysis(graphene.Mutation):
         return CognateAnalysis(**result_dict)
 
     @staticmethod
-    def mutate(self, info, **args):
+    def mutate(
+        self,
+        info,
+
+        source_perspective_id,
+        base_language_id,
+
+        group_field_id,
+        perspective_info_list,
+        multi_list = None,
+
+        mode = None,
+
+        distance_flag = None,
+        reference_perspective_id = None,
+
+        figure_flag = None,
+        distance_vowel_flag = None,
+        distance_consonant_flag = None,
+
+        match_translations_value = 1,
+        only_orphans_flag = True,
+
+        debug_flag = False,
+        intermediate_flag = False,
+        synchronous = False):
         """
         mutation CognateAnalysis {
           cognate_analysis(
@@ -12694,7 +12740,7 @@ class CognateAnalysis(graphene.Mutation):
         client_id = info.context.request.authenticated_userid
 
         if not client_id:
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
 
@@ -12702,7 +12748,7 @@ class CognateAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _ in args['perspective_info_list']))
+                for (client_id, _), _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -12721,35 +12767,18 @@ class CognateAnalysis(graphene.Mutation):
 
         if (user.id != 1 and
             not author_id_check and
-            not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
+            not info.context.acl_check_if('edit', 'perspective', source_perspective_id)):
 
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
-        # Getting arguments.
+        # Debug mode check.
 
-        source_perspective_id = args['source_perspective_id']
-        base_language_id = args['base_language_id']
+        if debug_flag and user.id != 1:
 
-        group_field_id = args['group_field_id']
-        perspective_info_list = args['perspective_info_list']
-        multi_list = args.get('multi_list')
+            return (
 
-        mode = args.get('mode')
-
-        distance_flag = args.get('distance_flag')
-        reference_perspective_id = args.get('reference_perspective_id')
-
-        figure_flag = args.get('figure_flag')
-        distance_vowel_flag = args.get('distance_vowel_flag')
-        distance_consonant_flag = args.get('distance_consonant_flag')
-
-        match_translations_value = args.get('match_translations_value', 1)
-        only_orphans_flag = args.get('only_orphans_flag', True)
-
-        __debug_flag__ = args.get('debug_flag', False)
-        __intermediate_flag__ = args.get('intermediate_flag', False)
-
-        synchronous = args.get('synchronous', False)
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
 
         language_str = (
             '{0}/{1}, language {2}/{3}'.format(
@@ -12815,8 +12844,8 @@ class CognateAnalysis(graphene.Mutation):
                  '\n  distance_consonant_flag: {}'
                  '\n  match_translations_value: {}'
                  '\n  only_orphans_flag: {} ({})'
-                 '\n  __debug_flag__: {}'
-                 '\n  __intermediate_flag__: {}'
+                 '\n  debug_flag: {}'
+                 '\n  intermediate_flag: {}'
                  '\n  cognate_analysis_f: {}'
                  '\n  cognate_acoustic_analysis_f: {}'
                  '\n  cognate_distance_analysis_f: {}'
@@ -12837,8 +12866,8 @@ class CognateAnalysis(graphene.Mutation):
                     distance_consonant_flag,
                     match_translations_value,
                     only_orphans_flag, int(only_orphans_flag),
-                    __debug_flag__,
-                    __intermediate_flag__,
+                    debug_flag,
+                    intermediate_flag,
                     repr(cognate_analysis_f),
                     repr(cognate_acoustic_analysis_f),
                     repr(cognate_distance_analysis_f),
@@ -12927,8 +12956,8 @@ class CognateAnalysis(graphene.Mutation):
                         locale_id,
                         storage,
                         task_status,
-                        __debug_flag__,
-                        __intermediate_flag__)
+                        debug_flag,
+                        intermediate_flag)
 
                 else:
 
@@ -12954,8 +12983,8 @@ class CognateAnalysis(graphene.Mutation):
                         task_status.key,
                         request.registry.settings['cache_kwargs'],
                         request.registry.settings['sqlalchemy.url'],
-                        __debug_flag__,
-                        __intermediate_flag__)
+                        debug_flag,
+                        intermediate_flag)
 
                 # Signifying that we've successfully launched asynchronous cognate acoustic analysis.
 
@@ -12984,8 +13013,8 @@ class CognateAnalysis(graphene.Mutation):
                     locale_id,
                     storage,
                     None,
-                    __debug_flag__,
-                    __intermediate_flag__)
+                    debug_flag,
+                    intermediate_flag)
 
         # Exception occured while we tried to perform cognate analysis.
 
@@ -13012,6 +13041,8 @@ class SwadeshAnalysis(graphene.Mutation):
 
         group_field_id = LingvodocID(required = True)
         perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
+
+        debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
@@ -13188,11 +13219,13 @@ class SwadeshAnalysis(graphene.Mutation):
     @staticmethod
     def swadesh_statistics(
             language_str,
+            base_language_id,
             base_language_name,
             group_field_id,
             perspective_info_list,
             locale_id,
-            storage):
+            storage,
+            debug_flag = False):
 
         swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
                         'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
@@ -13221,9 +13254,51 @@ class SwadeshAnalysis(graphene.Mutation):
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
 
 
-        _, group_list, _ = (
-            CognateAnalysis.tag_data_plpgsql(
-                perspective_info_list, group_field_id))
+        # Gathering entry grouping data.
+
+        if not debug_flag:
+
+            _, group_list, _ = (
+                CognateAnalysis.tag_data_plpgsql(
+                    perspective_info_list, group_field_id))
+
+        else:
+
+            # If we are in debug mode, we try to load existing tag data to reduce debugging time.
+
+            tag_data_digest = (
+
+                hashlib.md5(
+
+                    repr(list(group_field_id) +
+                        [perspective_info[0] for perspective_info in perspective_info_list])
+
+                    .encode('utf-8'))
+
+                .hexdigest())
+
+            tag_data_file_name = (
+                f'__tag_data_{base_language_id[0]}_{base_language_id[1]}_{tag_data_digest}__.gz')
+
+            # Checking if we have saved data.
+
+            if os.path.exists(tag_data_file_name):
+
+                with gzip.open(tag_data_file_name, 'rb') as tag_data_file:
+                    _, group_list, _ = pickle.load(tag_data_file)
+
+            else:
+
+                # Don't have existing data, so we gather it and then save it for later use.
+
+                r1, group_list, r3 = (
+
+                    CognateAnalysis.tag_data_plpgsql(
+                        perspective_info_list, group_field_id))
+
+                with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
+                    pickle.dump((r1, group_list, r3), tag_data_file)
+
 
         # Getting text data for each perspective.
         # entries_set gathers entry_id(s) of words met in Swadesh' list
@@ -13432,6 +13507,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 None,
                 None,
                 None,
+                analysis_str = 'swadesh_analysis',
+                __debug_flag__ = debug_flag,
                 __plot_flag__ = False
             )
 
@@ -13449,7 +13526,14 @@ class SwadeshAnalysis(graphene.Mutation):
         return SwadeshAnalysis(**result_dict)
 
     @staticmethod
-    def mutate(self, info, **args):
+    def mutate(
+        self,
+        info,
+        source_perspective_id,
+        base_language_id,
+        group_field_id,
+        perspective_info_list,
+        debug_flag = False):
         """
         mutation SwadeshAnalysis {
           swadesh_analysis(
@@ -13472,7 +13556,7 @@ class SwadeshAnalysis(graphene.Mutation):
         client_id = info.context.request.authenticated_userid
 
         if not client_id:
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
         user = Client.get_user_by_client_id(client_id)
 
@@ -13480,7 +13564,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             set(
                 client_id
-                for (client_id, _), _, _ in args['perspective_info_list']))
+                for (client_id, _), _, _ in perspective_info_list))
 
         author_id_check = (
 
@@ -13499,17 +13583,18 @@ class SwadeshAnalysis(graphene.Mutation):
 
         if (user.id != 1 and
             not author_id_check and
-            not info.context.acl_check_if('edit', 'perspective', args['source_perspective_id'])):
+            not info.context.acl_check_if('edit', 'perspective', source_perspective_id)):
 
-            raise ResponseError(error_str)
+            return ResponseError(error_str)
 
-        # Getting arguments.
+        # Debug mode check.
 
-        source_perspective_id = args['source_perspective_id']
-        base_language_id = args['base_language_id']
+        if debug_flag and user.id != 1:
 
-        group_field_id = args['group_field_id']
-        perspective_info_list = args['perspective_info_list']
+            return (
+
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
 
         language_str = (
             '{0}/{1}, language {2}/{3}'.format(
@@ -13548,11 +13633,13 @@ class SwadeshAnalysis(graphene.Mutation):
 
             return SwadeshAnalysis.swadesh_statistics(
                 language_str,
+                base_language_id,
                 base_language_name,
                 group_field_id,
                 perspective_info_list,
                 locale_id,
-                storage)
+                storage,
+                debug_flag)
 
         # Exception occured while we tried to perform swadesh analysis.
         except Exception as exception:
@@ -14457,6 +14544,13 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 Client.get_user_by_client_id(client_id).id
                     if client_id else anonymous_userid(request))
 
+            if __debug_flag__ and user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
+
             task_status = TaskStatus(
                 user_id,
                 'Phonological statistical distance computation',
@@ -14583,15 +14677,18 @@ class SaveDictionary(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    # @client_id_check()
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        id,
+        mode,
+        sound_flag = False,
+        markup_flag = False,
+        synchronous = False,
+        debug_flag = False):
 
         request = info.context.request
         locale_id = int(request.cookies.get('locale_id') or 2)
-        dict_id = args['id']
-        mode = args['mode']
-        sound_flag = args.get('sound_flag', False)
-        markup_flag = args.get('markup_flag', False)
 
         client_id = authenticated_userid(request)
 
@@ -14599,31 +14696,47 @@ class SaveDictionary(graphene.Mutation):
             Client.get_user_by_client_id(client_id).id
                 if client_id else anonymous_userid(request))
 
-        dictionary_obj = DBSession.query(dbDictionary).filter_by(client_id=dict_id[0],
-                                                               object_id=dict_id[1]).first()
+        if debug_flag and user_id != 1:
+
+            return (
+
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
+
+        dictionary = (
+
+            DBSession
+                .query(dbDictionary)
+                .filter_by(client_id = id[0], object_id = id[1])
+                .first())
+
         if mode == 'published':
             publish = True
         elif mode == 'all':
             publish = None
         else:
-            raise ResponseError(message="mode: <all|published>")
+            return ResponseError(message="mode: <all|published>")
 
-        for persp in dictionary_obj.dictionaryperspective:
-            if mode == 'all':
-                info.context.acl_check('view', 'lexical_entries_and_entities',
-                                   (persp.client_id, persp.object_id))
+        if mode == 'all':
+
+            for perspective in dictionary.dictionaryperspective:
+
+                info.context.acl_check(
+                    'view',
+                    'lexical_entries_and_entities',
+                    perspective.id)
 
         save_dictionary(
-            dict_id,
-            dictionary_obj,
+            id,
+            dictionary,
             request,
             user_id,
             locale_id,
             publish,
             sound_flag,
             markup_flag,
-            args.get('synchronous', False),
-            args.get('debug_flag', False))
+            synchronous,
+            debug_flag)
 
         return DownloadDictionary(triumph=True)
 
@@ -15501,6 +15614,8 @@ class XlsxBulkDisconnect(graphene.Mutation):
 
                 worksheet = workbook[sheet_name]
 
+                # Assuming the first row has field names.
+
                 field_name_list = []
                 cognates_index = None
 
@@ -16109,15 +16224,17 @@ class Docx2Eaf(graphene.Mutation):
     Tries to convert a table-containing .docx to .eaf.
 
     curl 'http://localhost:6543/graphql'
-      -H 'Cookie: locale_id=2; auth_tkt=5f65a2fb86f96c48db0606867ec26d973abab88eb85112734e1f20b4b3438c3b7a606df37da360e59a0a8d248ade82ca93bdc3c349a6d6bb69e82fb35b793d0761b465414211!userid_type:int; client_id=4211'
+      -H 'Cookie: locale_id=2; auth_tkt=__token__; client_id=4211'
       -H 'Content-Type: multipart/form-data'
       -F operations='{
          "query": "mutation docx2eaf($docxFile: Upload, $separateFlag: Boolean) {
            docx2eaf(docx_file: $docxFile, separate_flag: $separateFlag, debug_flag: true) {
              triumph eaf_url alignment_url check_txt_url check_docx_url message } }",
          "variables": { "docxFile": null, "separateFlag": false } }'
-      -F map='{ "0": ["variables.docx_file"] }'
-      -F 0=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+      -F map='{ "1": ["variables.docx_file"] }'
+      -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+
+    Replace __token__ with a valid user authentication token.
     """
 
     class Arguments:
@@ -16170,6 +16287,13 @@ class Docx2Eaf(graphene.Mutation):
             no_parsing_flag = args.get('no_parsing_flag', False)
 
             __debug_flag__ = args.get('debug_flag', False)
+
+            if __debug_flag__ and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             log.debug(
                 '\n{}\n{}'.format(
@@ -16401,8 +16525,10 @@ class Valency(graphene.Mutation):
 
     curl 'http://localhost:6543/graphql' \
       -H 'content-type: application/json' \
-      -H 'Cookie: auth_tkt=f697cdb8f16ec3ca6f01df92df4de1fec7a50978c849ad2c3f3980be87971b21c7ce3ba26a71caf3e5ad9dc985e1976914a509efe4c5ebd09e1d13ef9e78cfae61b6058b4217!userid_type:int; client_id=4217; locale_id=2' \
+      -H 'Cookie: auth_tkt=__token__; client_id=4217; locale_id=2' \
       --data-raw '{"operationName":"valency","variables":{"perspectiveId":[3648,8]},"query":"mutation valency($perspectiveId: LingvodocID!) { valency(perspective_id: $perspectiveId, synchronous: true, debug_flag: true) { triumph }}"}'
+
+    Replace __token__ with a valid user authentication token.
     """
 
     class Arguments:
@@ -16698,7 +16824,12 @@ class Valency(graphene.Mutation):
             task_status.set(1, 100, 'Finished', result_link_list = url_list)
 
     @staticmethod
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        debug_flag = False,
+        synchronous = False):
 
         try:
 
@@ -16712,10 +16843,12 @@ class Valency(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can compute valency information.'))
 
-            perspective_id = args['perspective_id']
-            debug_flag = args.get('debug_flag', False)
+            if debug_flag and client.user_id != 1:
 
-            synchronous = args.get('synchronous', False)
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -17644,7 +17777,7 @@ class CreateValencyData(graphene.Mutation):
 
                     if key.tier != 'translation':
 
-                        log.warn(f'\nkey: {key}')
+                        log.warning(f'\nkey: {key}')
                         raise NotImplementedError
 
                     xlat = key.text
@@ -18087,7 +18220,11 @@ class CreateValencyData(graphene.Mutation):
                 break
 
     @staticmethod
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        debug_flag = False):
 
         try:
 
@@ -18101,8 +18238,12 @@ class CreateValencyData(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can create valency data.'))
 
-            perspective_id = args['perspective_id']
-            debug_flag = args.get('debug_flag', False)
+            if debug_flag and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -18325,7 +18466,11 @@ class SaveValencyData(graphene.Mutation):
             'user_list': user_data_list}
 
     @staticmethod
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        debug_flag = False):
 
         try:
 
@@ -18339,8 +18484,12 @@ class SaveValencyData(graphene.Mutation):
                     ResponseError(
                         message = 'Only registered users can create valency data.'))
 
-            perspective_id = args['perspective_id']
-            debug_flag = args.get('debug_flag', False)
+            if debug_flag and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             perspective = (
                 DBSession.query(dbPerspective).filter_by(
@@ -18937,6 +19086,13 @@ class ValencyVerbCases(graphene.Mutation):
 
                     ResponseError(
                         message = 'Only registered users can get valency verb cases info.'))
+
+            if debug_flag and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
 
             if perspective_id is None and language_arg_list is None:
 

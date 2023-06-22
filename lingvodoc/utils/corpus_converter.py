@@ -2260,7 +2260,6 @@ def convert_five_tiers(
                                 sp_le_id,
                                 backref_fid,
                                 backref_dtype,
-                                client_id,
                                 link_id = fp_le_id)
 
                         create_le_flag = False

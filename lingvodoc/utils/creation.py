@@ -507,8 +507,13 @@ def create_parser_result(
 
     with storage_file(storage, entity.content) as source_stream:
 
-        files = {'file': source_stream}
+        files = {
+            'file': (
+                os.path.basename(urllib.parse.urlparse(entity.content).path),
+                source_stream)}
+
         data = {'return_html': True}
+
         r = requests.post(url=dedoc_url, files=files, data=data)
         dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
 
