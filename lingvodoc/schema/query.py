@@ -13209,7 +13209,7 @@ class SwadeshAnalysis(graphene.Mutation):
             def split_lex(lex):
                 # Split by commas and open brackets to separate
                 # various forms of lexeme and extra note if is
-                if "убрать из стословника" in lex.lower():
+                if "убрать из стословника" in ' '.join(lex.lower().split()):
                     return set()
                 return set(f" {form}".lower().replace(" заим.", "").strip()
                            for form in lex.replace('(', ',').split(',')
