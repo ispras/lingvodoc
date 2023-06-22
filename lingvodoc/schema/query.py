@@ -13209,14 +13209,17 @@ class SwadeshAnalysis(graphene.Mutation):
             def split_lex(lex):
                 # Split by commas and open brackets to separate
                 # various forms of lexeme and extra note if is
-                if "убрать из стословника" in ' '.join(lex.lower().split()):
+                lex = ' '.join(lex.lower().split()) # reduce multi spaces
+                if "убрать из стословника" in lex:
                     return set()
-                return set(f" {form}".lower().replace(" заим.", "").strip()
+
+                return set(form.strip()
                            for form in lex.replace('(', ',').split(',')
-                           if form.strip()
-                           and ')' not in form)  # exclude notes
+                           if form.strip() and ')' not in form)  # exclude notes
+
             # return true if the intersection is not empty
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
+
 
         _, group_list, _ = (
             CognateAnalysis.tag_data_plpgsql(
