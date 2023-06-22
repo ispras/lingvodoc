@@ -13242,12 +13242,17 @@ class SwadeshAnalysis(graphene.Mutation):
             def split_lex(lex):
                 # Split by commas and open brackets to separate
                 # various forms of lexeme and extra note if is
-                return set(f" {form}".lower().replace(" заим.", "").strip()
+                lex = ' '.join(lex.lower().split()) # reduce multi spaces
+                if "убрать из стословника" in lex:
+                    return set()
+
+                return set(form.strip()
                            for form in lex.replace('(', ',').split(',')
-                           if form.strip()
-                           and ')' not in form)  # exclude notes
+                           if form.strip() and ')' not in form)  # exclude notes
+
             # return true if the intersection is not empty
             return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
+
 
         # Gathering entry grouping data.
 
@@ -13293,6 +13298,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
                 with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
                     pickle.dump((r1, group_list, r3), tag_data_file)
+
 
         # Getting text data for each perspective.
         # entries_set gathers entry_id(s) of words met in Swadesh' list
