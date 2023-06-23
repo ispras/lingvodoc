@@ -30,10 +30,9 @@ revision = '477131175d56'
 down_revision = '98a07e65f1bb'
 branch_labels = None
 depends_on = None
+from alembic import context
 
-from alembic.config import Config
-
-config = Config("alembic.ini")
+config = context.config
 
 LOG = logging.getLogger('keycloak')
 Session = Session(bind=op.get_bind())
