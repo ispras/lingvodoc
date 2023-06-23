@@ -1,17 +1,11 @@
-from keycloak.uma_permissions import UMAPermission
+import functools
+from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakOpenIDConnection, KeycloakUMA
+
 from pyramid.authentication import CallbackAuthenticationPolicy
-from sqlalchemy import and_, or_
-
-from .models import (
-    DBSession,
-    User,
-    BaseGroup, LOCALES_DICT, Group, user_to_group_association)
-
 import logging
 import warnings
 
-from keycloak.exceptions import KeycloakError, KeycloakGetError, KeycloakOperationError, KeycloakPostError, \
-    KeycloakPutError
+from keycloak.exceptions import KeycloakError
 from pyramid.interfaces import IAuthenticationPolicy
 from pyramid.security import Everyone, Authenticated
 from zope.interface import implementer
@@ -20,11 +14,19 @@ LOG = logging.getLogger(__name__)
 
 
 class KeycloakLD:
-    def __init__(self, openid_client, keycloak_admin, keycloak_uma, client_name="lingvodoc"):
+    def __init__(self, openid_client=None, keycloak_admin=None, keycloak_uma=None, realm_name=None, server_url=None,
+                 admin=None, password=None, realm_name_admin=None, client_name=None, client_secret_key=None, timeout=None):
         self._openid_client = openid_client
         self._keycloak_admin = keycloak_admin
         self._keycloak_uma = keycloak_uma
         self.client_name = client_name
+        self.realm_name = realm_name
+        self.server_url = server_url
+        self.admin = admin
+        self.password = password
+        self.realm_name_admin = realm_name_admin
+        self.client_secret_key = client_secret_key
+        self.timeout = timeout
 
     @property
     def client_name(self):
@@ -67,10 +69,68 @@ class KeycloakLD:
             LOG.debug("Could not create the token: {}"
                       .format(str(e)))
             return None
+    def connect(self, realm_name, server_url, admin, password, realm_name_admin, client_name, client_secret_key, timeout):
+        self.realm_name = realm_name
+        self.server_url = server_url
+        self.admin = admin
+        self.password = password
+        self.realm_name_admin = realm_name_admin
+        self.client_secret_key = client_secret_key
+        self.client_name = client_name
+        self.keycloak_url = client_secret_key
+        self.timeout = timeout
+        self.keycloak_admin = KeycloakAdmin(server_url=server_url,
+                                            username=admin,
+                                            password=password,
+                                            realm_name=realm_name_admin,
+                                            auto_refresh_token=["get", "post", "put", "delete"], timeout=timeout)
+        self.keycloak_admin.realm_name = realm_name
+        self.openid_client = KeycloakOpenID(server_url=server_url,
+                                            client_id=client_name,
+                                            realm_name=realm_name,
+                                            client_secret_key=client_secret_key, timeout=timeout)
+
+        uma = KeycloakUMA(connection=KeycloakOpenIDConnection(
+            custom_headers={"Content-Type": "application/x-www-form-urlencoded"},
+            server_url=server_url,
+            realm_name=realm_name,
+            client_id=client_name,
+            client_secret_key=client_secret_key, timeout=timeout))
+        self.keycloak_uma = uma
+
+KeycloakSession = KeycloakLD()
+
+def handle_with(handler, *exceptions):
+    try:
+        handler, cleanup = handler
+    except TypeError:
+        cleanup = lambda f, e: None
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            e = None
+            try:
+                return func(*args, **kwargs)
+            except exceptions or Exception as e:
+                return handler(func, e)
+            finally:
+                cleanup(func, exceptions)
+
+        return wrapper
+
+    return decorator
 
 
-KeycloakSession = KeycloakLD(openid_client=None, keycloak_admin=None, keycloak_uma=None)
+def message(func, e):
+    if type(e) is AttributeError:
+        KeycloakSession.connect(KeycloakSession.realm_name, KeycloakSession.server_url, KeycloakSession.admin,
+                                KeycloakSession.password, KeycloakSession.realm_name_admin, KeycloakSession.client_name,
+                                KeycloakSession.client_secret_key, KeycloakSession.timeout)
 
+    else:
+        logging.warning("Exception", type(e).__name__)
+        logging.warning(str(e))
 
 @implementer(IAuthenticationPolicy)
 class KeycloakBasedAuthenticationPolicy(CallbackAuthenticationPolicy):
@@ -82,6 +142,7 @@ class KeycloakBasedAuthenticationPolicy(CallbackAuthenticationPolicy):
         self.access_token_cookie_name = access_token_cookie_name
         self.refresh_token_cookie_name = refresh_token_cookie_name
 
+    @handle_with(message, AttributeError)
     def authenticated_userid(self, request):
 
         access_token, refresh_token, client_id = request.unauthenticated_userid
@@ -89,6 +150,7 @@ class KeycloakBasedAuthenticationPolicy(CallbackAuthenticationPolicy):
             return None
 
         principal = self._introspect(access_token)
+        principal = principal if principal is not None else {}
         principal["ld_client"] = client_id
 
         if not self._active_principal(principal):
@@ -117,6 +179,7 @@ class KeycloakBasedAuthenticationPolicy(CallbackAuthenticationPolicy):
 
         return client_id
 
+    @handle_with(message, AttributeError)
     def unauthenticated_userid(self, request):
         access_token = request.cookies.get(self.access_token_cookie_name)
         refresh_token = request.cookies.get(self.refresh_token_cookie_name)
@@ -124,6 +187,7 @@ class KeycloakBasedAuthenticationPolicy(CallbackAuthenticationPolicy):
 
         return access_token, refresh_token, client_id
 
+    @handle_with(message, AttributeError)
     def effective_principals(self, request):
         principals = [Everyone]
         user_principal = request.authenticated_userid
@@ -141,6 +205,7 @@ class KeycloakBasedAuthenticationPolicy(CallbackAuthenticationPolicy):
                       " has no effect.", stacklevel=3)
         return []
 
+    @handle_with(message, AttributeError)
     def forget(self, request):
         refresh_token = request.cookies.get(self.refresh_token_cookie_name)
 
@@ -158,10 +223,12 @@ class KeycloakBasedAuthenticationPolicy(CallbackAuthenticationPolicy):
                  "expires=Thu, 01 Jan 1970 00:00:00 GMT"
                  .format(cookie_name=self.refresh_token_cookie_name))]
 
+    @handle_with(message, AttributeError)
     def _introspect(self, access_token):
         principal = {}
         try:
             principal = self._openid_client.introspect(access_token)
+            principal = principal if principal is not None else {}
         except KeycloakError as e:
             LOG.debug("Could not introspect token: {}".format(str(e)))
 

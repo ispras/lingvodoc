@@ -9,10 +9,7 @@ import os.path
 import re
 import subprocess
 
-import transaction
-from keycloak import KeycloakUMA, KeycloakOpenIDConnection
-from keycloak.keycloak_admin import KeycloakAdmin
-from keycloak.keycloak_openid import KeycloakOpenID
+from keycloak import KeycloakConnectionError
 
 try:
     import git
@@ -1057,6 +1054,7 @@ def configure_routes(config):
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
+    log = logging.getLogger(__name__)
     multiprocess.set_start_method("spawn")
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -1068,27 +1066,15 @@ def main(global_config, **settings):
 
     if parser.has_section('keycloak'):
         keycloak_dict = dict(parser.items('keycloak'))
-        KeycloakSession.client_name = keycloak_dict["client_name"]
-        KeycloakSession.keycloak_admin = KeycloakAdmin(server_url=keycloak_dict["server_url"],
-                                username=keycloak_dict["admin"],
-                                password=keycloak_dict["password"],
-                                realm_name=keycloak_dict["realm_name_admin"],
-                                auto_refresh_token=["get", "post", "put", "delete"],
-                                                       timeout=5)
-        KeycloakSession.keycloak_admin.realm_name = keycloak_dict["realm_name"]
-        KeycloakSession.openid_client = KeycloakOpenID(server_url=keycloak_dict["server_url"],
-                                client_id=keycloak_dict["client_name"],
-                                realm_name=keycloak_dict["realm_name"],
-                                client_secret_key=keycloak_dict["client_secret_key"])
-        keycloak_connection = KeycloakOpenIDConnection(
-            custom_headers={"Content-Type": "application/x-www-form-urlencoded"},
-            server_url=keycloak_dict["server_url"],
-            realm_name=keycloak_dict["realm_name"],
-            client_id=keycloak_dict["client_name"],
-            client_secret_key=keycloak_dict["client_secret_key"])
-        uma = KeycloakUMA(connection=keycloak_connection)
-        KeycloakSession.keycloak_uma = uma
-        KeycloakSession.keycloak_url = keycloak_dict["client_secret_key"]
+        try:
+            KeycloakSession.connect(realm_name=keycloak_dict["realm_name"], server_url=keycloak_dict["server_url"],
+                                    admin=keycloak_dict["admin"], password=keycloak_dict["password"],
+                                    realm_name_admin=keycloak_dict["realm_name_admin"],
+                                    client_name=keycloak_dict["client_name"],
+                                    client_secret_key=keycloak_dict["client_secret_key"], timeout=int(keycloak_dict["timeout"]))
+
+        except KeycloakConnectionError as e:
+                log.warning(e.error_message)
 
     # TODO: DANGER
 
@@ -1115,8 +1101,6 @@ def main(global_config, **settings):
         for k, v in parser.items('app:desktop'):
             storage[k] = v
         settings['desktop'] = storage
-
-    log = logging.getLogger(__name__)
 
     # TODO: Find a more neat way
     try:
