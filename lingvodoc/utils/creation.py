@@ -55,6 +55,40 @@ def add_user_to_group(user, group):
     if user not in group.users:
         group.users.append(user)
 
+def get_attached_users(parent_id):
+    parent_client_id, parent_object_id = parent_id
+
+    base_cte = (
+        DBSession
+            .query(
+                dbLanguage.client_id,
+                dbLanguage.object_id,
+                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
+            .filter(
+                dbLanguage.client_id == parent_client_id,
+                dbLanguage.object_id == parent_object_id)
+            .cte(recursive=True))
+
+    recursive_query = (
+        DBSession
+            .query(
+                dbLanguage.client_id,
+                dbLanguage.object_id,
+                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
+            .filter(
+                dbLanguage.client_id == base_cte.c.parent_client_id,
+                dbLanguage.object_id == base_cte.c.parent_object_id))
+
+    language_cte = base_cte.union(recursive_query)
+
+    user_id_list_list = (
+        DBSession
+            .query(language_cte.c.attached_users)
+            .all())
+
+    user_id_list = list(set(sum(user_id_list_list, [])))
+    log.debug(f"Attached users: {user_id_list}")
+    return user_id_list
 
 def create_perspective(id = (None, None),
                        parent_id=None,
@@ -108,41 +142,6 @@ def create_perspective(id = (None, None),
             DBSession.add(new_group)
             DBSession.flush()
     return dbperspective
-
-def get_attached_users(parent_id)
-    parent_client_id, parent_object_id = parent_id
-
-    base_cte = (
-        DBSession
-            .query(
-                dbLanguage.client_id,
-                dbLanguage.object_id,
-                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
-            .filter(
-                dbLanguage.client_id == parent_client_id,
-                dbLanguage.object_id == parent_object_id)
-            .cte(recursive=True))
-
-    recursive_query = (
-        DBSession
-            .query(
-                dbLanguage.client_id,
-                dbLanguage.object_id,
-                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
-            .filter(
-                dbLanguage.client_id == base_cte.c.parent_client_id,
-                dbLanguage.object_id == base_cte.c.parent_object_id))
-
-    language_cte = base_cte.union(recursive_query)
-
-    user_id_list_list = (
-        DBSession
-            .query(language_cte.c.attached_users)
-            .all())
-
-    user_id_list = sum(user_id_list_list, [])
-    log.debug(f"Attached users: {user_id_list}")
-    return user_id_list
 
 def create_dbdictionary(id=None,
                         parent_id=None,
