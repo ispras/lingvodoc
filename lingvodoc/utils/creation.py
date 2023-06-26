@@ -146,7 +146,22 @@ def create_dbdictionary(id=None,
                                     )
 
     client = DBSession.query(Client).filter_by(id=client_id).first()
-    user = client.user
+    users = set(client.user)
+
+    while parent_object_id:
+        parrent_language = (
+            DBSession
+                .query(Language)
+                .filter_by(
+                    object_id=parent_object_id
+                    client_id=parent_client_id,
+                )
+                .first())
+
+        users.update(parrent_language.additional_metadata.get('allowed_users'))
+        parent_object_id = parrent_language.parent_object_id
+        parent_client_id = parrent_language.parren_client_id
+
     if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
@@ -156,12 +171,16 @@ def create_dbdictionary(id=None,
                 new_group.users.append(user)
             DBSession.add(new_group)
             DBSession.flush()
-    return dbdictionary_obj
+
+
+
+    return dbdictionary_obj, allowed_users
 
 def create_dictionary_persp_to_field(id=None,
                                      parent_id=None,
                                      field_id=None,
                                      self_id=None,
+
                                      link_id=None,
                                      upper_level=None,
                                      position=1):
