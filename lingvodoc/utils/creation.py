@@ -109,6 +109,40 @@ def create_perspective(id = (None, None),
             DBSession.flush()
     return dbperspective
 
+def get_attached_users(parent_id)
+    parent_client_id, parent_object_id = parent_id
+
+    base_cte = (
+        DBSession
+            .query(
+                dbLanguage.client_id,
+                dbLanguage.object_id,
+                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
+            .filter(
+                dbLanguage.client_id == parent_client_id,
+                dbLanguage.object_id == parent_object_id)
+            .cte(recursive=True))
+
+    recursive_query = (
+        DBSession
+            .query(
+                dbLanguage.client_id,
+                dbLanguage.object_id,
+                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
+            .filter(
+                dbLanguage.client_id == base_cte.c.parent_client_id,
+                dbLanguage.object_id == base_cte.c.parent_object_id))
+
+    language_cte = base_cte.union(recursive_query)
+
+    user_id_list_list = (
+        DBSession
+            .query(language_cte.c.attached_users)
+            .all())
+
+    user_id_list = sum(user_id_list_list, [])
+    log.debug(f"Attached users: {user_id_list}")
+    return user_id_list
 
 def create_dbdictionary(id=None,
                         parent_id=None,
@@ -146,35 +180,20 @@ def create_dbdictionary(id=None,
                                     )
 
     client = DBSession.query(Client).filter_by(id=client_id).first()
-    users = set(client.user)
-
-    while parent_object_id:
-        parrent_language = (
-            DBSession
-                .query(Language)
-                .filter_by(
-                    object_id=parent_object_id
-                    client_id=parent_client_id,
-                )
-                .first())
-
-        users.update(parrent_language.additional_metadata.get('allowed_users'))
-        parent_object_id = parrent_language.parent_object_id
-        parent_client_id = parrent_language.parren_client_id
+    cur_user = client.user
+    attached_users = get_attached_users(parent_id)
 
     if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
                               subject_object_id=dbdictionary_obj.object_id,
                               subject_client_id=dbdictionary_obj.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
+            new_group.users = \
+                list(set(new_group.users + attached_users + [cur_user]))
             DBSession.add(new_group)
             DBSession.flush()
 
-
-
-    return dbdictionary_obj, allowed_users
+    return dbdictionary_obj
 
 def create_dictionary_persp_to_field(id=None,
                                      parent_id=None,
