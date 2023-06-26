@@ -61,23 +61,23 @@ def get_attached_users(parent_id):
     base_cte = (
         DBSession
             .query(
-                dbLanguage.client_id,
-                dbLanguage.object_id,
-                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
+                Language.client_id,
+                Language.object_id,
+                Language.additional_metadata['attached_users'].label('attached_users'))
             .filter(
-                dbLanguage.client_id == parent_client_id,
-                dbLanguage.object_id == parent_object_id)
+                Language.client_id == parent_client_id,
+                Language.object_id == parent_object_id)
             .cte(recursive=True))
 
     recursive_query = (
         DBSession
             .query(
-                dbLanguage.client_id,
-                dbLanguage.object_id,
-                dbLanguage.additional_metadata['attached_users'].label('attached_users'))
+                Language.client_id,
+                Language.object_id,
+                Language.additional_metadata['attached_users'].label('attached_users'))
             .filter(
-                dbLanguage.client_id == base_cte.c.parent_client_id,
-                dbLanguage.object_id == base_cte.c.parent_object_id))
+                Language.client_id == base_cte.c.parent_client_id,
+                Language.object_id == base_cte.c.parent_object_id))
 
     language_cte = base_cte.union(recursive_query)
 
