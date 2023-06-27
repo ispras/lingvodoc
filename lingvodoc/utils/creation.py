@@ -188,8 +188,9 @@ def create_dbdictionary(id=None,
             new_group = Group(parent=base,
                               subject_object_id=dbdictionary_obj.object_id,
                               subject_client_id=dbdictionary_obj.client_id)
-            if cur_user not in new_group.users:
-                new_group.users.append(cur_user)
+
+            new_group.users = (new_group.users if new_group.users else [])
+            new_group.users = list(set(new_group.users + attached_users + [cur_user]))
             DBSession.add(new_group)
             DBSession.flush()
 
