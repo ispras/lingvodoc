@@ -61,9 +61,9 @@ def get_attached_users(parent_id):
     base_cte = (
         DBSession
             .query(
-                Language.client_id,
-                Language.object_id,
-                Language.additional_metadata['attached_users'].label('attached_users'))
+                Language.parent_client_id,
+                Language.parent_object_id,
+                Language.additional_metadata['younger_siblings'].label('younger_siblings'))
             .filter(
                 Language.client_id == parent_client_id,
                 Language.object_id == parent_object_id)
@@ -72,23 +72,24 @@ def get_attached_users(parent_id):
     recursive_query = (
         DBSession
             .query(
-                Language.client_id,
-                Language.object_id,
-                Language.additional_metadata['attached_users'].label('attached_users'))
-            .filter(
-                Language.client_id == base_cte.c.parent_client_id,
-                Language.object_id == base_cte.c.parent_object_id))
+                Language.parent_client_id,
+                Language.parent_object_id,
+                Language.additional_metadata['younger_siblings'].label('younger_siblings'))
+            .join(
+                base_cte, and_(
+                    Language.client_id == base_cte.c.parent_client_id,
+                    Language.object_id == base_cte.c.parent_object_id)))
 
     language_cte = base_cte.union(recursive_query)
 
     user_id_list_list = (
         DBSession
-            .query(language_cte.c.attached_users)
+            .query(language_cte.c.younger_siblings)
             .all())
 
-    user_id_list = list(set(sum(user_id_list_list, [])))
-    log.debug(f"Attached users: {user_id_list}")
-    return user_id_list
+    #user_id_list = list(set(sum(user_id_list_list)))
+    log.debug(f"Attached users: {user_id_list_list}")
+    return None
 
 def create_perspective(id = (None, None),
                        parent_id=None,
@@ -187,8 +188,8 @@ def create_dbdictionary(id=None,
             new_group = Group(parent=base,
                               subject_object_id=dbdictionary_obj.object_id,
                               subject_client_id=dbdictionary_obj.client_id)
-            new_group.users = \
-                list(set(new_group.users + attached_users + [cur_user]))
+            if cur_user not in new_group.users:
+                new_group.users.append(cur_user)
             DBSession.add(new_group)
             DBSession.flush()
 
