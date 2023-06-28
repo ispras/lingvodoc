@@ -55,8 +55,11 @@ def add_user_to_group(user, group):
     if user not in group.users:
         group.users.append(user)
 
-def get_attached_users(parent_id):
-    parent_client_id, parent_object_id = parent_id
+def uniq_list(input_list)
+    return list(set(input_list))
+
+def get_attached_users(language_id):
+    language_client_id, language_object_id = language_id
 
     base_cte = (
         DBSession
@@ -65,8 +68,8 @@ def get_attached_users(parent_id):
                 Language.parent_object_id,
                 Language.additional_metadata['attached_users'].label('attached_users'))
             .filter(
-                Language.client_id == parent_client_id,
-                Language.object_id == parent_object_id)
+                Language.client_id == language_client_id,
+                Language.object_id == language_object_id)
             .cte(recursive=True))
 
     recursive_query = (
@@ -86,10 +89,26 @@ def get_attached_users(parent_id):
             .query(language_cte.c.attached_users)
             .all())
 
+    # Concatinate results by tuples firstly and then by lists,
+    # exclude 'None' values, filter the values to be unique.
     user_id_list = sum(filter(None, sum(user_id_list_list, ())), [])
-    user_id_list = list(set(user_id_list))
-    log.debug(f"Attached users: {user_id_list}")
+    user_id_list = uniq_list(user_id_list)
+    #log.debug(f"Attached users: {user_id_list}")
     return user_id_list
+
+# Get human-readable names of users by their ids
+def get_attached_users_names(language_id):
+    user_id_list = get_attached_users(language_id)
+    user_name_list = (
+        DBSession
+            .query(
+                User.name)
+            .filter(
+                User.id.in_(user_id_list))
+            .all())
+
+    user_name_list = uniq_list(user_name_list)
+    return user_name_list
 
 def create_perspective(id = (None, None),
                        parent_id=None,
@@ -189,8 +208,7 @@ def create_dbdictionary(id=None,
                               subject_object_id=dbdictionary_obj.object_id,
                               subject_client_id=dbdictionary_obj.client_id)
 
-            new_group.users = (new_group.users if new_group.users else [])
-            new_group.users = list(set(new_group.users + attached_users + [cur_user]))
+            new_group.users = uniq_list(new_group.users + attached_users + [cur_user])
             DBSession.add(new_group)
             DBSession.flush()
 
