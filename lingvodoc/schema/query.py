@@ -4480,10 +4480,6 @@ class Query(graphene.ObjectType):
             debug_flag = graphene.Boolean()))
 
     fill_logs = graphene.String(worker = graphene.Int())
-    attached_users = graphene.List(LingvodocID(required = True))
-
-    def resolve_attached_users(self, info, language_id):
-        return get_attached_users_names(language_id)
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator

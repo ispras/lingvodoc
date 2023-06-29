@@ -55,7 +55,7 @@ def add_user_to_group(user, group):
     if user not in group.users:
         group.users.append(user)
 
-def uniq_list(input_list)
+def uniq_list(input_list):
     return list(set(input_list))
 
 def get_attached_users(language_id):
