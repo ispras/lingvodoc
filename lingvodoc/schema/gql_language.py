@@ -717,9 +717,8 @@ class UpdateLanguage(graphene.Mutation):
         new_user = args.get('new_user')
         if new_user:
             user_list = (
-                dblanguage
-                    .get('additional_metadata', {})
-                    .get('attached_users') or []
+                dblanguage.additional_metadata
+                .get('attached_users') or []
             )
             if new_user not in user_list:
                 user_list.append(new_user)
