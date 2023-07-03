@@ -311,7 +311,7 @@ from pyramid.httpexceptions import (
 )
 
 from lingvodoc.scripts import elan_parser
-from lingvodoc.utils.creation import create_entity, edit_role, get_attached_users_names
+from lingvodoc.utils.creation import create_entity, edit_role
 
 from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_holders import del_object
