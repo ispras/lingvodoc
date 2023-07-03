@@ -43,6 +43,7 @@ from lingvodoc.models import (
 from lingvodoc.utils.search import get_id_to_field_dict
 
 from lingvodoc.cache.caching import CACHE
+from lingvodoc.utils.creation import get_attached_users, uniq_list
 
 def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
     return DBSession.query(LexicalEntry) \
@@ -743,12 +744,12 @@ def convert_db_new(
 
             dictionary_client_id = dictionary.client_id
             dictionary_object_id = dictionary.object_id
+            attached_users = get_attached_users((language_client_id, language_object_id))
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
                 new_group = Group(parent=base,
                                   subject_object_id=dictionary.object_id,
                                   subject_client_id=dictionary.client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
+                new_group.users = uniq_list(new_group.users + attached_users + [user])
                 DBSession.add(new_group)
                 DBSession.flush()
         perspective_metadata = {"authors": []}
@@ -836,10 +837,7 @@ def convert_db_new(
                 new_group = Group(parent=base,
                                   subject_object_id=first_perspective.object_id,
                                   subject_client_id=first_perspective.client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
-                if owner not in new_group.users:
-                    new_group.users.append(owner)
+                new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
                 DBSession.flush()
             first_perspective_client_id = first_perspective.client_id
@@ -869,10 +867,7 @@ def convert_db_new(
                 new_group = Group(parent=base,
                                   subject_object_id=second_perspective.object_id,
                                   subject_client_id=second_perspective.client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
-                if owner not in new_group.users:
-                    new_group.users.append(owner)
+                new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
             second_perspective_client_id = second_perspective.client_id
             second_perspective_object_id = second_perspective.object_id

@@ -61,7 +61,7 @@ from lingvodoc.utils.elan_functions import tgt_to_eaf
 from lingvodoc.utils.search import get_id_to_field_dict
 
 from lingvodoc.views.v2.utils import storage_file
-
+from lingvodoc.utils.creation import get_attached_users, uniq_list
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -548,19 +548,16 @@ def convert_five_tiers(
             DBSession.add(dictionary)
 
             dictionary_id = dictionary.id
+            attached_users = get_attached_users(language_id)
 
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default = True):
-
                 new_group = (
-
                     Group(
-                        parent = base,
-                        subject_client_id = dictionary_id[0],
-                        subject_object_id = dictionary_id[1]))
+                        parent=base,
+                        subject_client_id=dictionary_id[0],
+                        subject_object_id=dictionary_id[1]))
 
-                if user not in new_group.users:
-                    new_group.users.append(user)
-
+                new_group.users = uniq_list(new_group.users + attached_users + [user])
                 DBSession.add(new_group)
 
         origin_perspective = (
@@ -836,16 +833,13 @@ def convert_five_tiers(
 
             DBSession.add(first_perspective)
 
-            owner_client = DBSession.query(Client).filter_by(id = dictionary.client_id).first()
+            owner_client = DBSession.query(Client).filter_by(id=dictionary.client_id).first()
             owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
                                   subject_object_id=first_perspective.object_id,
                                   subject_client_id=first_perspective.client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
-                if owner not in new_group.users:
-                    new_group.users.append(owner)
+                new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
         first_perspective_id = first_perspective.id
@@ -877,16 +871,13 @@ def convert_five_tiers(
 
             DBSession.add(second_perspective)
 
-            owner_client = DBSession.query(Client).filter_by(id = dictionary.client_id).first()
+            owner_client = DBSession.query(Client).filter_by(id=dictionary.client_id).first()
             owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
                                   subject_object_id=second_perspective.object_id,
                                   subject_client_id=second_perspective.client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
-                if owner not in new_group.users:
-                    new_group.users.append(owner)
+                new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
         second_perspective_id = second_perspective.id
