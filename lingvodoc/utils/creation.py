@@ -96,20 +96,6 @@ def get_attached_users(language_id):
     #log.debug(f"Attached users: {user_id_list}")
     return user_id_list
 
-# Get human-readable names of users by their ids
-def get_attached_users_names(language_id):
-    user_id_list = get_attached_users(language_id)
-    user_name_list = (
-        DBSession
-            .query(
-                User.name)
-            .filter(
-                User.id.in_(user_id_list))
-            .all())
-
-    user_name_list = uniq_list(user_name_list)
-    return user_name_list
-
 def create_perspective(id = (None, None),
                        parent_id=None,
                        translation_gist_id=(None, None),
@@ -148,17 +134,20 @@ def create_perspective(id = (None, None),
                                   )
     DBSession.add(dbperspective)
     DBSession.flush()
+
     owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
     owner = owner_client.user
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    attached_users = get_attached_users(parent_id)
+
     if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-            client = DBSession.query(Client).filter_by(id=client_id).first()
-            user = DBSession.query(User).filter_by(id=client.user_id).first()
             new_group = Group(parent=base,
-                                subject_object_id=dbperspective.object_id,
-                                subject_client_id=dbperspective.client_id)
-            add_user_to_group(user, new_group)
-            add_user_to_group(owner, new_group)
+                              subject_object_id=dbperspective.object_id,
+                              subject_client_id=dbperspective.client_id)
+
+            new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
             DBSession.add(new_group)
             DBSession.flush()
     return dbperspective
@@ -199,7 +188,7 @@ def create_dbdictionary(id=None,
                                     )
 
     client = DBSession.query(Client).filter_by(id=client_id).first()
-    cur_user = client.user
+    user = client.user
     attached_users = get_attached_users(parent_id)
 
     if not object_id or add_group:
@@ -208,10 +197,9 @@ def create_dbdictionary(id=None,
                               subject_object_id=dbdictionary_obj.object_id,
                               subject_client_id=dbdictionary_obj.client_id)
 
-            new_group.users = uniq_list(new_group.users + attached_users + [cur_user])
+            new_group.users = uniq_list(new_group.users + attached_users + [user])
             DBSession.add(new_group)
             DBSession.flush()
-
     return dbdictionary_obj
 
 def create_dictionary_persp_to_field(id=None,
