@@ -89,12 +89,12 @@ def get_attached_users(language_id):
             .query(language_cte.c.attached_users)
             .all())
 
-    # Concatinate results by tuples firstly and then by lists,
+    # Concatenate results by tuples firstly and then by lists,
     # exclude 'None' values, filter the values to be unique.
     user_id_list = sum(filter(None, sum(user_id_list_list, ())), [])
     user_id_list = uniq_list(user_id_list)
-    #log.debug(f"Attached users: {user_id_list}")
-    return user_id_list
+    user_list = DBSession.query(User).filter(User.id.in_(user_id_list)).all()
+    return user_list
 
 def create_perspective(id = (None, None),
                        parent_id=None,
