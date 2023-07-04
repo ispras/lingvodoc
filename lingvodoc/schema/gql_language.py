@@ -686,7 +686,8 @@ class UpdateLanguage(graphene.Mutation):
         id = LingvodocID(required=True)
         translation_gist_id = LingvodocID()
         additional_metadata = ObjectVal()
-        new_user = graphene.Int()
+        add_user = graphene.Int()
+        del_user = graphene.Int()
 
     language = graphene.Field(Language)
     triumph = graphene.Boolean()
@@ -714,7 +715,7 @@ class UpdateLanguage(graphene.Mutation):
         if additional_metadata:
             update_metadata(dblanguage, additional_metadata)
 
-        new_user = args.get('new_user')
+        new_user = args.get('add_user')
         if new_user:
             user_list = (
                 dblanguage.additional_metadata
@@ -722,6 +723,16 @@ class UpdateLanguage(graphene.Mutation):
             )
             if new_user not in user_list:
                 user_list.append(new_user)
+            update_metadata(dblanguage, {'attached_users': user_list})
+
+        del_user = args.get('del_user')
+        if del_user:
+            user_list = (
+                dblanguage.additional_metadata
+                .get('attached_users') or []
+            )
+            if del_user in user_list:
+                user_list.remove(del_user)
             update_metadata(dblanguage, {'attached_users': user_list})
 
         language = Language(id=[dblanguage.client_id, dblanguage.object_id])
