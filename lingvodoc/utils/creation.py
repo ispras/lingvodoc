@@ -55,6 +55,46 @@ def add_user_to_group(user, group):
     if user not in group.users:
         group.users.append(user)
 
+def uniq_list(input_list):
+    return list(set(input_list))
+
+def get_attached_users(language_id):
+    language_client_id, language_object_id = language_id
+
+    base_cte = (
+        DBSession
+            .query(
+                Language.parent_client_id,
+                Language.parent_object_id,
+                Language.additional_metadata['attached_users'].label('attached_users'))
+            .filter(
+                Language.client_id == language_client_id,
+                Language.object_id == language_object_id)
+            .cte(recursive=True))
+
+    recursive_query = (
+        DBSession
+            .query(
+                Language.parent_client_id,
+                Language.parent_object_id,
+                Language.additional_metadata['attached_users'].label('attached_users'))
+            .filter(
+                Language.client_id == base_cte.c.parent_client_id,
+                Language.object_id == base_cte.c.parent_object_id))
+
+    language_cte = base_cte.union(recursive_query)
+
+    user_id_list_list = (
+        DBSession
+            .query(language_cte.c.attached_users)
+            .all())
+
+    # Concatenate results by tuples firstly and then by lists,
+    # exclude 'None' values, filter the values to be unique.
+    user_id_list = sum(filter(None, sum(user_id_list_list, ())), [])
+    user_id_list = uniq_list(user_id_list)
+    user_list = DBSession.query(User).filter(User.id.in_(user_id_list)).all()
+    return user_list
 
 def create_perspective(id = (None, None),
                        parent_id=None,
@@ -94,21 +134,23 @@ def create_perspective(id = (None, None),
                                   )
     DBSession.add(dbperspective)
     DBSession.flush()
+
     owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
     owner = owner_client.user
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    attached_users = get_attached_users(parent_id)
+
     if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-            client = DBSession.query(Client).filter_by(id=client_id).first()
-            user = DBSession.query(User).filter_by(id=client.user_id).first()
             new_group = Group(parent=base,
-                                subject_object_id=dbperspective.object_id,
-                                subject_client_id=dbperspective.client_id)
-            add_user_to_group(user, new_group)
-            add_user_to_group(owner, new_group)
+                              subject_object_id=dbperspective.object_id,
+                              subject_client_id=dbperspective.client_id)
+
+            new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
             DBSession.add(new_group)
             DBSession.flush()
     return dbperspective
-
 
 def create_dbdictionary(id=None,
                         parent_id=None,
@@ -147,13 +189,15 @@ def create_dbdictionary(id=None,
 
     client = DBSession.query(Client).filter_by(id=client_id).first()
     user = client.user
+    attached_users = get_attached_users(parent_id)
+
     if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
                               subject_object_id=dbdictionary_obj.object_id,
                               subject_client_id=dbdictionary_obj.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
+
+            new_group.users = uniq_list(new_group.users + attached_users + [user])
             DBSession.add(new_group)
             DBSession.flush()
     return dbdictionary_obj
@@ -162,6 +206,7 @@ def create_dictionary_persp_to_field(id=None,
                                      parent_id=None,
                                      field_id=None,
                                      self_id=None,
+
                                      link_id=None,
                                      upper_level=None,
                                      position=1):

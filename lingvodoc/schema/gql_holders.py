@@ -977,6 +977,7 @@ class Metadata(graphene.ObjectType):
     bibliographicDataOfTheTranslation = graphene.String()
 
     toc_mark = graphene.Boolean()
+    attached_users = graphene.List(graphene.Int)
 
 
 metadata_key_set = {
