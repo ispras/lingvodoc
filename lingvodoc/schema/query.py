@@ -13488,7 +13488,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
-                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]} ({percent}%)"
+                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
 
         result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
 
