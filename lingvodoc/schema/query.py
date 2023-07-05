@@ -13448,6 +13448,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
         dictionary_count = len(means)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
         # Calculate intersection between lists of linked means (Swadesh matching)
@@ -13462,6 +13463,7 @@ class SwadeshAnalysis(graphene.Mutation):
             for n2, (perspective2, means2) in enumerate(means.items()):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
+                    complex_data_array[n1][n2] = "n/a"
                 else:
                     # Common means of entries which have etimological linkes
                     # but this linkes may be not mutual
@@ -13484,9 +13486,11 @@ class SwadeshAnalysis(graphene.Mutation):
 
                     # means_linked > 0 means that means_total > 0 even more so
                     distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
+                    percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
+                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]} ({percent}%)"
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, distance_data_array, bundles)
+        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
 
         # GC
         del result_pool
