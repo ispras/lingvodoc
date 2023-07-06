@@ -673,6 +673,7 @@ def convert_db_new(
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            client_id)
         user = client.user
+        attached_users = get_attached_users((language_client_id, language_object_id))
         if not user:
             log.debug("ERROR")
             return {}
