@@ -304,6 +304,7 @@ def convert_five_tiers(
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            client_id)
         user = client.user
+        attached_users = get_attached_users(language_id)
         if not user:
             log.debug('ERROR')
             raise ValueError('No user associated with the client.', client.id)
@@ -548,7 +549,6 @@ def convert_five_tiers(
             DBSession.add(dictionary)
 
             dictionary_id = dictionary.id
-            attached_users = get_attached_users(language_id)
 
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default = True):
                 new_group = (

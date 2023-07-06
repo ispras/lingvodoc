@@ -139,7 +139,7 @@ def create_perspective(id = (None, None),
     owner = owner_client.user
     client = DBSession.query(Client).filter_by(id=client_id).first()
     user = DBSession.query(User).filter_by(id=client.user_id).first()
-    attached_users = get_attached_users(parent_id)
+    attached_users = get_attached_users(parent.parent_id)
 
     if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
