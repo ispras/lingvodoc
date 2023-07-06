@@ -549,6 +549,7 @@ def convert_five_tiers(
             DBSession.add(dictionary)
 
             dictionary_id = dictionary.id
+            attached_users = get_attached_users(language_id)
 
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default = True):
                 new_group = (
