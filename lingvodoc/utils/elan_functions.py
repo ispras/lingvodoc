@@ -18,6 +18,7 @@ import os
 import random
 import string
 import requests
+import tempfile
 from sqlalchemy.exc import IntegrityError
 from lingvodoc.exceptions import CommonException
 from lingvodoc.scripts.convert_rules import praat_to_elan
@@ -141,72 +142,57 @@ def _export_to_elan(textGrid_file):
 
 
 def eaf_wordlist(entity):
-        if not entity:
-            raise KeyError("No such file")
-        resp = requests.get(entity.content)
-        if not resp:
-            raise KeyError("Cannot access file")
-        content = resp.content
-        try:
-            n = 10
-            filename = (
-                time.asctime(time.gmtime()) + ''.join(
-                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
-            # extension = os.path.splitext(blob.content)[1]
-            f = open(filename, 'wb')
-        except Exception as e:
-            raise KeyError(str(e))
-        try:
+    if not entity:
+        raise KeyError("No such file")
+    resp = requests.get(entity.content)
+    if not resp:
+        raise KeyError("Cannot access file")
+    content = resp.content
+    try:
+        fd, filename = tempfile.mkstemp()
+        with open(filename, 'wb') as f:
             f.write(content)
-            f.close()
-            if os.path.getsize(filename) / (50 * 1024 * 1024.0) < 1:
-                try:
-                    eaf_obj = pympi.Eaf(file_path=filename)
-                    word_list = eaf_words(eaf_obj)
-                    return word_list
-                except:
-                    textgrid_obj = pympi.TextGrid(file_path=filename)
-                    eaf_obj = textgrid_obj.to_eaf()
-                    word_list = eaf_words(eaf_obj)
-                    return word_list
-                #
-                # if 'data_type' in entity.additional_metadata :
-                #     if 'praat' in entity.additional_metadata['data_type']:
-                #         textgrid_obj = pympi.TextGrid(file_path=filename)
-                #         eaf_obj = textgrid_obj.to_eaf()
-                #         word_list = eaf_words(eaf_obj)
-                #         return word_list
-                #
-                #     elif 'elan' in entity.additional_metadata['data_type']:
-                #         eaf_obj = pympi.Eaf(file_path=filename)
-                #         word_list = eaf_words(eaf_obj)
-                #         return word_list
-                #     else:
-                #         raise KeyError("Not allowed convert option")
-                #raise KeyError("Not allowed convert option")
-            raise KeyError('File too big')
-        except Exception as e:
-            raise KeyError(e)
-        finally:
-            os.remove(filename)
-            pass
+        if os.path.getsize(filename) / (50 * 1024 * 1024.0) < 1:
+            try:
+                eaf_obj = pympi.Eaf(file_path=filename)
+                word_list = eaf_words(eaf_obj)
+                return word_list
+            except:
+                textgrid_obj = pympi.TextGrid(file_path=filename)
+                eaf_obj = textgrid_obj.to_eaf()
+                word_list = eaf_words(eaf_obj)
+                return word_list
+            #
+            # if 'data_type' in entity.additional_metadata :
+            #     if 'praat' in entity.additional_metadata['data_type']:
+            #         textgrid_obj = pympi.TextGrid(file_path=filename)
+            #         eaf_obj = textgrid_obj.to_eaf()
+            #         word_list = eaf_words(eaf_obj)
+            #         return word_list
+            #
+            #     elif 'elan' in entity.additional_metadata['data_type']:
+            #         eaf_obj = pympi.Eaf(file_path=filename)
+            #         word_list = eaf_words(eaf_obj)
+            #         return word_list
+            #     else:
+            #         raise KeyError("Not allowed convert option")
+            #raise KeyError("Not allowed convert option")
+        raise KeyError('File too big')
+    except Exception as e:
+        raise KeyError(e)
+    finally:
+        os.close(fd)
+        os.remove(filename)
+        pass
 
 
 def tgt_to_eaf(content, additional_metadata):
     from urllib import request
     try:
         try:
-            n = 10
-            filename = (
-                time.asctime(time.gmtime()) + ''.join(
-                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
-            # extension = os.path.splitext(blob.content)[1]
-            f = open(filename, 'wb')
-        except Exception as e:
-            return ResponseError(message=str(e))
-        try:
-            f.write(content)
-            f.close()
+            fd, filename = tempfile.mkstemp()
+            with open(filename, 'wb') as f:
+                f.write(content)
             #if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 2:
             if 'data_type' in additional_metadata :
                 if 'praat' in additional_metadata['data_type']:
@@ -226,7 +212,7 @@ def tgt_to_eaf(content, additional_metadata):
                         #     os.remove(filename2)
                     return content
                 elif 'elan' in additional_metadata['data_type']:
-                    with open(filename, 'r') as f:
+                    with open(filename, 'r', encoding="utf8") as f:
                         return f.read()
                 else:
                     raise KeyError("Not allowed convert option")
@@ -238,6 +224,7 @@ def tgt_to_eaf(content, additional_metadata):
             #request.response.status = HTTPInternalServerError.code
             #return {'error': str(e)}
         finally:
+            os.close(fd)
             os.remove(filename)
             pass
     except KeyError as e:
