@@ -56,7 +56,9 @@ def field_search(searchstring):
             .filter(
                 dbTranslationAtom.content == searchstring,
                 dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                dbTranslationGist.type == 'Field')
+                dbTranslationGist.type == 'Field',
+                dbTranslationAtom.marked_for_deletion == False,
+                dbTranslationGist.marked_for_deletion == False)
             .order_by(
                 dbTranslationGist.created_at,
                 dbTranslationGist.client_id,
