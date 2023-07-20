@@ -285,6 +285,7 @@ def convert_five_tiers(
     merge_by_meaning_all,
     additional_entries,
     additional_entries_all,
+    morphological_flag,
     no_sound_flag,
     debug_flag = False):
 
@@ -357,8 +358,14 @@ def convert_five_tiers(
             "Paradigm Markup",
             "Backref")
 
+        mp_fields = (
+            "Affixes",
+            "Meanings of affixes",
+            "Words with affixes")
+
         fp_structure = set([field_ids[x] for x in fp_fields])
         sp_structure = set([field_ids[x] for x in sp_fields])
+        mp_structure = set([field_ids[x] for x in mp_fields])
 
         if len(markup_id_list) <= 0:
             raise ValueError('You have to specify at least 1 markup entity.')
