@@ -5511,15 +5511,19 @@ class Query(graphene.ObjectType):
             except:
                 return ResponseError(f'Cannot access file \'{entity.content}\'.')
 
-            with tempfile.NamedTemporaryFile() as temp:
+            fd, filename = tempfile.mkstemp()
+            with open(filename, 'wb') as temp:
                 markup = tgt_to_eaf(content, entity.additional_metadata)
                 temp.write(markup.encode("utf-8"))
                 temp.flush()
-                elan_check = elan_parser.ElanCheck(temp.name)
+                elan_check = elan_parser.ElanCheck(filename)
                 elan_check.parse()
 
                 result_list.append(
                     elan_check.check())
+
+            os.close(fd)
+            os.remove(filename)
 
         return result_list
 

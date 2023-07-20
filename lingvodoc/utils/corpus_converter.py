@@ -1341,15 +1341,18 @@ def convert_five_tiers(
 
             result = False
 
-            with tempfile.NamedTemporaryFile() as temp:
-
+            fd, filename = tempfile.mkstemp()
+            with open(filename, 'wb') as temp:
                 markup = tgt_to_eaf(content, markup_entity.additional_metadata)
                 temp.write(markup.encode('utf-8'))
-
-                converter = elan_parser.Elan(temp.name)
+                temp.flush()
+                converter = elan_parser.Elan(filename)
                 converter.parse()
 
                 final_dicts = converter.proc()
+
+            os.close(fd)
+            os.remove(filename)
 
             # Showing what we've got from the corpus, if required.
 
