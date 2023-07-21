@@ -1224,7 +1224,7 @@ def convert_five_tiers(
                 'Uploading words')
 
         task_percent(
-            6, percent_uploading, message_uploading)
+            7, percent_uploading, message_uploading)
 
         # Parsing and processing markup, in order if markup ids we received.
 
@@ -1881,9 +1881,7 @@ def convert_five_tiers(
                     percent_delta_markup / len(final_dicts))
 
                 task_percent(
-
-                    6,
-
+                    7,
                     percent_uploading +
                         markup_id_index * percent_delta_markup +
                         (phrase_index + 1) * percent_delta_phrase,
@@ -1894,10 +1892,10 @@ def convert_five_tiers(
             (percent_uploading + percent_adding) / 2)
 
         task_percent(
-            6, percent_from, message_uploading)
+            7, percent_from, message_uploading)
 
         perform_insert(
-            6, percent_from, percent_adding - 0.5, message_uploading)
+            7, percent_from, percent_adding - 0.5, message_uploading)
 
         # Current data of lexical entries and paradigms.
 
@@ -2309,9 +2307,7 @@ def convert_five_tiers(
                     (2 * len(p_lexes_with_text_after_update)))
 
             task_percent(
-
-                7,
-
+                8,
                 percent_adding +
                     t_index * percent_delta,
 
@@ -2321,15 +2317,15 @@ def convert_five_tiers(
             (percent_adding + percent_finished) / 2)
 
         task_percent(
-            7, percent_from, 'Uploading translations with marks')
+            8, percent_from, 'Uploading translations with marks')
 
         perform_insert(
-            7, percent_from, percent_finished - 0.5, 'Uploading translations with marks')
+            8, percent_from, percent_finished - 0.5, 'Uploading translations with marks')
 
         mark_changed(DBSession())
 
     task_status.set(
-        8, percent_finished, 'Finished')
+        9, percent_finished, 'Finished')
 
     return dictionary_id
 
