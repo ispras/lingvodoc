@@ -45,8 +45,7 @@ def translation_gist_search(searchstring, gist_type='Service'):
     #                                          type=translationgist.type,
     #                                          created_at=translationgist.created_at,
     #                                          translationatoms=translationatoms_list)
-    if translationgist:
-        return translationgist.id
+    return translationgist
 
 def field_search(searchstring):
     field = (

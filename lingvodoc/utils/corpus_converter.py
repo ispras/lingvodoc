@@ -268,16 +268,19 @@ def created_at():
             .replace(tzinfo = datetime.timezone.utc)
             .timestamp())
 
-def get_field_id(english_name):
-    field = field_search(english_name)
-    if field:
-        return field.id
 
-    field = create_field({
-        "locale_id": ENGLISH_LOCALE,
-        "content": english_name})
-    if field:
-        return field.id
+def get_field_id(english_name):
+    static_field_id = get_id_to_field_dict(english_name)
+    if static_field_id:
+        return static_field_id
+
+    field = field_search(english_name)
+    if not field:
+        field = create_field({
+            "locale_id": ENGLISH_LOCALE,
+            "content": english_name})
+    return field.id
+
 
 def convert_five_tiers(
     dictionary_id,
@@ -297,7 +300,7 @@ def convert_five_tiers(
     additional_entries_all,
     morphological_flag,
     no_sound_flag,
-    debug_flag = False):
+    debug_flag=False):
 
     merge_by_meaning_all = (
         merge_by_meaning_all and merge_by_meaning)
@@ -309,7 +312,6 @@ def convert_five_tiers(
         2, percent_preparing, "Preparing")
 
     with transaction.manager:
-
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -320,17 +322,13 @@ def convert_five_tiers(
             log.debug('ERROR')
             raise ValueError('No user associated with the client.', client.id)
 
-        extra_client = (
-
-            Client(
-                user_id = user.id,
-                is_browser_client = False))
-
+        # Create extra client to jail new object_ids
+        extra_client = Client(user_id=user.id, is_browser_client=False)
         DBSession.add(extra_client)
         DBSession.flush()
-
         extra_client_id = extra_client.id
 
+        '''
         all_fieldnames = ("Markup",
                           "Paradigm Markup",
                           "Word",
@@ -342,67 +340,58 @@ def convert_five_tiers(
                           "Word of Paradigmatic forms",
                           "Transcription of Paradigmatic forms",
                           "Translation of Paradigmatic forms",
-                          "Sounds of Paradigmatic forms"
-                         )
+                          "Sounds of Paradigmatic forms",
+                          "Affixes",
+                          "Meanings of affixes",
+                          "Words with affixes"
+                          )
+        '''
 
         task_status.set(
             3, percent_check_fields, "Checking fields")
 
-        field_ids = (
-            get_id_to_field_dict())
+        le_fields = {
+            'word': get_field_id('Word'),
+            'transcription': get_field_id('Transcription'),
+            'translation': get_field_id('Translation'),
+            'sound': get_field_id('Sound'),
+            'markup': get_field_id('Markup'),
+            'etymology': get_field_id('Etymology'),
+            'backref': get_field_id('Backref')
+        }
 
-        fp_fields = (
-            "Word",
-            "Transcription",
-            "Translation",
-            "Sound",
-            "Markup",
-            "Etymology",
-            "Backref")
+        pa_fields = {
+            'word': get_field_id('Word of Paradigmatic forms'),
+            'transcription': get_field_id('Transcription of Paradigmatic forms'),
+            'translation': get_field_id('Translation of Paradigmatic forms'),
+            'sound': get_field_id('Sounds of Paradigmatic forms'),
+            'markup': get_field_id('Paradigm Markup'),
+            'backref': get_field_id('Backref')
+        }
 
-        sp_fields = (
-            "Word of Paradigmatic forms",
-            "Transcription of Paradigmatic forms",
-            "Translation of Paradigmatic forms",
-            "Sounds of Paradigmatic forms",
-            "Paradigm Markup",
-            "Backref")
+        mo_fields = {
+            'word': get_field_id('Word with affix'),
+            'affix': get_field_id('Affix'),
+            'meaning': get_field_id('Meaning of affix')
+        }
 
-        mp_fields = (
-            "Affixes",
-            "Meanings of affixes",
-            "Words with affixes")
-
-        fp_structure = set([field_ids[x] for x in fp_fields])
-        sp_structure = set([field_ids[x] for x in sp_fields])
-        mp_structure = set([get_field_id(x) for x in mp_fields])
+        le_structure = set(le_fields.values())
+        pa_structure = set(pa_fields.values())
+        mo_structure = set(mo_fields.values())
+        total_structure = list(le_structure | pa_structure | mo_structure)
 
         if len(markup_id_list) <= 0:
             raise ValueError('You have to specify at least 1 markup entity.')
 
-        markup_id_list = [
-            tuple(markup_id)
-            for markup_id in markup_id_list]
-
-        markup_id_query = (
-
-            ids_to_id_query(
-                markup_id_list))
+        markup_id_list = [tuple(markup_id) for markup_id in markup_id_list]
+        markup_id_query = (ids_to_id_query(markup_id_list))
 
         markup_entity_list = (
-
             DBSession
-
                 .query(Entity)
-
                 .filter(
-
-                    tuple_(
-                        Entity.client_id, Entity.object_id)
-
-                        .in_(
-                            markup_id_query))
-
+                    tuple_(Entity.client_id, Entity.object_id)
+                    .in_(markup_id_query))
                 .all())
 
         markup_entity_dict = {
@@ -419,33 +408,20 @@ def convert_five_tiers(
             raise KeyError(f'No markup entities {missing_id_list}.')
 
         if not no_sound_flag:
-
-            sound_id_list = [
-                entity.self_id
-                for entity in markup_entity_list]
-
-            Sound = (
-                aliased(Entity, name = 'Sound'))
+            # sound_id_list = [entity.self_id for entity in markup_entity_list]
+            Sound = (aliased(Entity, name='Sound'))
 
             result_list = (
-
                 DBSession
-
                     .query(
                         Entity.client_id,
                         Entity.object_id,
                         Sound)
-
                     .filter(
                         Sound.client_id == Entity.self_client_id,
                         Sound.object_id == Entity.self_object_id,
-
-                        tuple_(
-                            Entity.client_id, Entity.object_id)
-
-                            .in_(
-                                markup_id_query))
-
+                        tuple_(Entity.client_id, Entity.object_id)
+                        .in_(markup_id_query))
                     .all())
 
             sound_entity_dict = {
@@ -455,7 +431,8 @@ def convert_five_tiers(
 
         wip_state_id = None
 
-        if dictionary_id:
+        # TODO: update existent morphological dictionary
+        if dictionary_id and not morphological_flag:
 
             # Checking that the dictionary actually exists.
 
@@ -504,35 +481,25 @@ def convert_five_tiers(
                 log.debug(f'\nadvisory transaction lock ({dictionary_id[0]}, {dictionary_id[1]})')
 
         else:
-
             language = (
-
                 DBSession
-
                     .query(Language)
-
                     .filter_by(
-                        client_id = language_id[0],
-                        object_id = language_id[1])
-
+                        client_id=language_id[0],
+                        object_id=language_id[1])
                     .first())
 
             if not language:
-
                 raise (
                     KeyError(
                         f'No language ({language_id[0]}, {language_id[1]}).',
                         language_id))
 
             # Getting license from the markup's dictionary.
-
             license = (
-
                 DBSession
-
                     .query(
                         Dictionary.additional_metadata['license'].astext)
-
                     .filter(
                         LexicalEntry.client_id == markup_entity_list[0].parent_client_id,
                         LexicalEntry.object_id == markup_entity_list[0].parent_object_id,
@@ -540,17 +507,12 @@ def convert_five_tiers(
                         DictionaryPerspective.object_id == LexicalEntry.parent_object_id,
                         Dictionary.client_id == DictionaryPerspective.parent_client_id,
                         Dictionary.object_id == DictionaryPerspective.parent_object_id)
-
                     .scalar())
 
-            response = (
-                translation_service_search('WiP'))
-
-            wip_state_id = (
-                response['client_id'], response['object_id'])
+            response = translation_service_search('WiP')
+            wip_state_id = response['client_id'], response['object_id']
 
             dictionary = (
-
                 Dictionary(
                     client_id = extra_client_id,
                     object_id = extra_client.next_object_id(),
@@ -564,7 +526,6 @@ def convert_five_tiers(
                     new_objecttoc = True))
 
             DBSession.add(dictionary)
-
             dictionary_id = dictionary.id
 
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default = True):
@@ -577,173 +538,141 @@ def convert_five_tiers(
                 new_group.users = uniq_list(new_group.users + attached_users + [user])
                 DBSession.add(new_group)
 
-        origin_perspective = (
-            markup_entity_list[0].parent.parent)
-
+        origin_perspective = markup_entity_list[0].parent.parent
         origin_metadata = {
             'origin_id': (
                 origin_perspective.client_id,
                 origin_perspective.object_id)}
 
         if not check_dictionary_perm(user.id, dictionary_id[0], dictionary_id[1]):
-
             task_status.set(
                 None, -1,
                 f'Wrong permissions: dictionary '
                 f'({dictionary_id[0]}, {dictionary_id[1]})')
-
             return
 
         # Checking perspectives.
-
-        first_perspective = None
-        second_perspective = None
+        le_perspective = None
+        pa_perspective = None
+        mo_perspective = None
 
         perspective_query = (
-
             DBSession
-
                 .query(DictionaryPerspective)
-
                 .filter_by(
                     parent = dictionary,
                     marked_for_deletion = False))
 
         for perspective in perspective_query:
-
-            structure = set()
-
             fields = (
-
                 DBSession
                     .query(DictionaryPerspectiveToField)
                     .filter_by(parent=perspective)
                     .all())
 
-            structure = (
+            structure = set(to_field.field_id for to_field in fields)
 
-                set(
-                    to_field.field_id
-                    for to_field in fields))
+            # If no one structure matches
+            if (le_structure.difference(structure) and
+                pa_structure.difference(structure) and
+                mo_structure.difference(structure)):
+                continue
 
-            if not fp_structure.difference(structure):
+            # If no permissions
+            if not check_perspective_perm(user.id, perspective.client_id, perspective.object_id):
+                task_status.set(
+                    None, -1,
+                    f'Wrong permissions: perspective '
+                    f'({perspective.client_id}, {perspective.object_id})')
+                return
 
-                if not check_perspective_perm(user.id, perspective.client_id, perspective.object_id):
-
-                    task_status.set(
-                        None, -1,
-                        f'Wrong permissions: perspective '
-                        f'({perspective.client_id}, {perspective.object_id})')
-
-                    return
-
-                first_perspective = perspective
-
-            elif not sp_structure.difference(structure):
-
-                if not check_perspective_perm(user.id, perspective.client_id, perspective.object_id):
-
-                    task_status.set(
-                        None, -1,
-                        f'Wrong permissions: perspective '
-                        f'({perspective.client_id}, {perspective.object_id})')
-
-                    return
-
-                second_perspective = perspective
+            if not le_structure.difference(structure):
+                le_perspective = perspective
+            elif not pa_structure.difference(structure):
+                pa_perspective = perspective
+            elif not mo_structure.difference(structure):
+                mo_perspective = perspective
 
             structure.clear()
 
         # Checking any existing data.
 
-        lexes = []
-
-        if first_perspective:
-
-            lexes = (
-
+        le_lexes = []
+        if le_perspective:
+            le_lexes = (
                 DBSession
-
-                    .query(
-                        Entity)
-
+                    .query(Entity)
                     .filter(
-                        LexicalEntry.parent_client_id == first_perspective.client_id,
-                        LexicalEntry.parent_object_id == first_perspective.object_id,
+                        LexicalEntry.parent_client_id == le_perspective.client_id,
+                        LexicalEntry.parent_object_id == le_perspective.object_id,
                         LexicalEntry.marked_for_deletion == False,
                         Entity.parent_client_id == LexicalEntry.client_id,
                         Entity.parent_object_id == LexicalEntry.object_id,
                         Entity.marked_for_deletion == False)
-
                     .all())
 
-        p_lexes = []
-
-        if second_perspective:
-
-            p_lexes = (
-
+        pa_lexes = []
+        if pa_perspective:
+            pa_lexes = (
                 DBSession
-
-                    .query(
-                        Entity)
-
+                    .query(Entity)
                     .filter(
-                        LexicalEntry.parent_client_id == second_perspective.client_id,
-                        LexicalEntry.parent_object_id == second_perspective.object_id,
+                        LexicalEntry.parent_client_id == pa_perspective.client_id,
+                        LexicalEntry.parent_object_id == pa_perspective.object_id,
                         LexicalEntry.marked_for_deletion == False,
                         Entity.parent_client_id == LexicalEntry.client_id,
                         Entity.parent_object_id == LexicalEntry.object_id,
                         Entity.marked_for_deletion == False)
-
                     .all())
 
-        le_sound_fid = field_ids['Sound']
-        pa_sound_fid = field_ids['Sounds of Paradigmatic forms']
-
-        backref_fid = field_ids['Backref']
-
-        le_word_fid = field_ids['Word']
-        le_xcript_fid = field_ids['Transcription']
-        le_xlat_fid = field_ids['Translation']
+        mo_lexes = []
+        if mo_perspective:
+            mo_lexes = (
+                DBSession
+                    .query(Entity)
+                    .filter(
+                        LexicalEntry.parent_client_id == mo_perspective.client_id,
+                        LexicalEntry.parent_object_id == mo_perspective.object_id,
+                        LexicalEntry.marked_for_deletion == False,
+                        Entity.parent_client_id == LexicalEntry.client_id,
+                        Entity.parent_object_id == LexicalEntry.object_id,
+                        Entity.marked_for_deletion == False)
+                    .all())
 
         le_text_fid_list = [
-            le_word_fid,
-            le_xcript_fid,
-            le_xlat_fid]
-
-        pa_word_fid = field_ids['Word of Paradigmatic forms']
-        pa_xcript_fid = field_ids['Transcription of Paradigmatic forms']
-        pa_xlat_fid = field_ids['Translation of Paradigmatic forms']
+            le_fields['word'],
+            le_fields['transcription'],
+            le_fields['translation']
+        ]
 
         pa_text_fid_list = [
-            pa_word_fid,
-            pa_xcript_fid,
-            pa_xlat_fid]
+            pa_fields['word'],
+            pa_fields['transcription'],
+            pa_fields['translation']
+        ]
 
-        hash_set = set(
+        mo_text_fid_list = [
+            mo_fields['word'],
+            mo_fields['affix'],
+            mo_fields['meaning']
+        ]
 
-            x.additional_metadata["hash"]
-            for x in lexes
-            if x.field_id == le_sound_fid)
+        le_sound_fid = le_fields['sound']
+        pa_sound_fid = pa_fields['sound']
+        backref_fid = le_fields['backref']
 
-        hash_set.update(
+        hash_set = set()
+        link_set = set()
+        for pair in (le_lexes, le_sound_fid), (pa_lexes, pa_sound_fid):
+            hash_set.update(
+                x.additional_metadata["hash"]
+                for x in pair[1]
+                if x.field_id == pair[2])
 
-            x.additional_metadata["hash"]
-            for x in p_lexes
-            if x.field_id == pa_sound_fid)
-
-        link_set = set(
-
-            (x.link_id, x.parent_id)
-            for x in lexes
-            if x.field_id == backref_fid)
-
-        link_set.update(
-
-            (x.link_id, x.parent_id)
-            for x in p_lexes
-            if x.field_id == backref_fid)
+            link_set.update(
+                (x.link_id, x.parent_id)
+                for x in pair[1]
+                if x.field_id == backref_fid)
 
         mark_re = re.compile('[-.][\dA-Z]+')
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
@@ -753,16 +682,12 @@ def convert_five_tiers(
         le_parent_id_text_entity_counter = Counter()
 
         if merge_by_meaning_all:
-
             le_meaning_dict = {}
-
             le_word_dict = defaultdict(set)
             le_xcript_dict = defaultdict(set)
 
         # Checking text data of all existing lexical entries.
-
-        for x in lexes:
-
+        for x in le_lexes:
             field_id = x.field_id
 
             if field_id not in le_text_fid_list:
@@ -782,13 +707,10 @@ def convert_five_tiers(
             content_text = content.strip()
             content_key = content_text.lower()
 
-            if field_id == le_word_fid:
-
+            if field_id == le_fields['word']:
                 le_word_dict[entry_id].add(content_key)
                 continue
-
-            elif field_id == le_xcript_fid:
-
+            elif field_id == le_fields['transcription']:
                 le_xcript_dict[entry_id].add(content_key)
                 continue
 
@@ -798,20 +720,15 @@ def convert_five_tiers(
                 re.search(mark_re, content_text))
 
             if mark_search:
-
                 content_text = (
                     content_text[ : mark_search.start()])
 
-            le_meaning_dict[
-                content_text .strip() .lower()] = (
-
-                entry_id)
+            le_meaning_dict[content_text .strip() .lower()] = entry_id
 
         pa_content_text_entity_dict = defaultdict(list)
         pa_parent_id_text_entity_counter = Counter()
 
-        for x in p_lexes:
-
+        for x in pa_lexes:
             if x.field_id not in pa_text_fid_list:
                 continue
 
@@ -819,7 +736,6 @@ def convert_five_tiers(
             pa_parent_id_text_entity_counter[x.parent_id] += 1
 
         if wip_state_id is None:
-
             response = translation_service_search('WiP')
             wip_state_id = (response['client_id'], response['object_id'])
 
@@ -829,13 +745,13 @@ def convert_five_tiers(
             4, percent_le_perspective, "Handling lexical entries perspective")
 
         new_fp_flag = (
-            first_perspective is None)
+            le_perspective is None)
 
         if new_fp_flag:
 
             response = translation_service_search_all("Lexical Entries")
             
-            first_perspective = (
+            le_perspective = (
 
                 DictionaryPerspective(
                     client_id = extra_client_id,
@@ -848,18 +764,18 @@ def convert_five_tiers(
                     translation_gist_object_id = response['object_id'],
                     new_objecttoc = True))
 
-            DBSession.add(first_perspective)
+            DBSession.add(le_perspective)
 
             owner_client = DBSession.query(Client).filter_by(id=dictionary.client_id).first()
             owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
-                                  subject_object_id=first_perspective.object_id,
-                                  subject_client_id=first_perspective.client_id)
+                                  subject_object_id=le_perspective.object_id,
+                                  subject_client_id=le_perspective.client_id)
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
-        first_perspective_id = first_perspective.id
+        first_perspective_id = le_perspective.id
 
         # Second perspective.
 
@@ -867,13 +783,13 @@ def convert_five_tiers(
             5, percent_pa_perspective, "Handling paradigms perspective")
 
         new_sp_flag = (
-            second_perspective is None)
+            pa_perspective is None)
 
         if new_sp_flag:
 
             response = translation_service_search_all("Paradigms")
 
-            second_perspective = (
+            pa_perspective = (
 
                 DictionaryPerspective(
                     client_id = extra_client_id,
@@ -886,18 +802,18 @@ def convert_five_tiers(
                     translation_gist_object_id = response['object_id'],
                     new_objecttoc = True))
 
-            DBSession.add(second_perspective)
+            DBSession.add(pa_perspective)
 
             owner_client = DBSession.query(Client).filter_by(id=dictionary.client_id).first()
             owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
-                                  subject_object_id=second_perspective.object_id,
-                                  subject_client_id=second_perspective.client_id)
+                                  subject_object_id=pa_perspective.object_id,
+                                  subject_client_id=pa_perspective.client_id)
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
-        second_perspective_id = second_perspective.id
+        second_perspective_id = pa_perspective.id
 
         # Creating fields of the first perspective if required.
 
@@ -918,8 +834,8 @@ def convert_five_tiers(
                 if fieldname == "Backref":
 
                     field_info_list.append({
-                        "client_id": field_ids[fieldname][0],
-                        "object_id": field_ids[fieldname][1],
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1],
                         "link": {
                             "client_id": second_perspective_id[0],
                             "object_id": second_perspective_id[1]}})
@@ -927,23 +843,23 @@ def convert_five_tiers(
                 elif fieldname == "Sound":
 
                     field_info_list.append({
-                        "client_id": field_ids[fieldname][0],
-                        "object_id": field_ids[fieldname][1],
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1],
                         "contains": [{
-                           "client_id": field_ids["Markup"][0],
-                           "object_id": field_ids["Markup"][1]}]})
+                           "client_id": get_field_id("Markup")[0],
+                           "object_id": get_field_id("Markup")[1]}]})
 
                 else:
 
                     field_info_list.append({
-                        "client_id": field_ids[fieldname][0],
-                        "object_id": field_ids[fieldname][1]})
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1]})
 
             for position, field_info in enumerate(field_info_list, 1):
 
                 create_nested_field(
                     field_info,
-                    first_perspective,
+                    le_perspective,
                     extra_client,
                     None,
                     position)
@@ -966,8 +882,8 @@ def convert_five_tiers(
                 if fieldname == "Backref":
 
                     field_info_list.append({
-                        "client_id": field_ids[fieldname][0],
-                        "object_id": field_ids[fieldname][1],
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1],
                         "link": {
                             "client_id": first_perspective_id[0],
                             "object_id": first_perspective_id[1]}})
@@ -975,23 +891,23 @@ def convert_five_tiers(
                 elif fieldname == "Sounds of Paradigmatic forms":
 
                     field_info_list.append({
-                        "client_id": field_ids[fieldname][0],
-                        "object_id": field_ids[fieldname][1],
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1],
                         "contains": [{
-                           "client_id": field_ids["Paradigm Markup"][0],
-                           "object_id": field_ids["Paradigm Markup"][1]}]})
+                           "client_id": get_field_id("Paradigm Markup")[0],
+                           "object_id": get_field_id("Paradigm Markup")[1]}]})
 
                 else:
 
                     field_info_list.append({
-                        "client_id": field_ids[fieldname][0],
-                        "object_id": field_ids[fieldname][1]})
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1]})
 
             for position, field_info in enumerate(field_info_list, 1):
 
                 create_nested_field(
                     field_info,
-                    second_perspective,
+                    pa_perspective,
                     extra_client,
                     None,
                     position)
@@ -1008,12 +924,8 @@ def convert_five_tiers(
                     TranslationAtom.content)
 
                 .filter(
-
-                    tuple_(
-                        Field.client_id, Field.object_id)
-
-                        .in_(
-                            field_ids.values()),
+                    tuple_(Field.client_id, Field.object_id)
+                        .in_(total_structure),
 
                     TranslationAtom.locale_id == ENGLISH_LOCALE,
                     TranslationAtom.parent_client_id ==
@@ -1027,8 +939,10 @@ def convert_five_tiers(
             (field_cid, field_oid): data_type.lower()
             for field_cid, field_oid, data_type in field_data_type_list}
 
+        '''
         for field_name, field_id in field_ids.items():
             field_data_type_dict[field_name] = field_data_type_dict[field_id]
+        '''
 
         if debug_flag:
 
@@ -1483,7 +1397,7 @@ def convert_five_tiers(
                     
                     for pword in paradigm_words:
                         match_list = pa_content_text_entity_dict[pword.text] #LEX COUNT OR RANDOM
-                        match_field_id = field_ids[EAF_TIERS[pword.tier]]
+                        match_field_id = get_field_id(EAF_TIERS[pword.tier])
                         for t in match_list:
                             if t.field_id == match_field_id:
                                p_match_dict[t.parent_id].append(t)
@@ -1540,8 +1454,7 @@ def convert_five_tiers(
                         if not text:
                             continue
 
-                        field_id = (
-                            field_ids[EAF_TIERS[other_word.tier]] )
+                        field_id = get_field_id(EAF_TIERS[other_word.tier])
 
                         if (not max_sim or
 
@@ -1698,7 +1611,7 @@ def convert_five_tiers(
                         for crt in column:
 
                             match_list = le_content_text_entity_dict[crt.text]
-                            match_field_id = field_ids[EAF_TIERS[crt.tier]]
+                            match_field_id = get_field_id(EAF_TIERS[crt.tier])
 
                             for t in match_list:
                                 if t.field_id == match_field_id:
@@ -1759,8 +1672,7 @@ def convert_five_tiers(
                             if not text:
                                 continue
 
-                            field_id = (
-                                field_ids[EAF_TIERS[other_word.tier]])
+                            field_id = get_field_id(EAF_TIERS[other_word.tier])
 
                             if (not max_sim or
 
@@ -1779,8 +1691,8 @@ def convert_five_tiers(
 
                                     le_check_dict = (
 
-                                        le_word_dict if field_id == le_word_fid else
-                                        le_xcript_dict if field_id == le_xcript_fid else
+                                        le_word_dict if field_id == le_fields['word'] else
+                                        le_xcript_dict if field_id == le_fields['transcription'] else
                                         None)
 
                                     if le_check_dict is not None:
@@ -1804,15 +1716,14 @@ def convert_five_tiers(
 
                                 continue
 
-                            field_id = (
-                                field_ids[EAF_TIERS[other_word.tier]])
+                            field_id = get_field_id(EAF_TIERS[other_word.tier])
 
-                            if field_id == le_word_fid:
+                            if field_id == le_fields['word']:
 
                                 le_check_set = (
                                     le_word_dict[fp_lexical_entry_id])
 
-                            elif field_id == le_xcript_fid:
+                            elif field_id == le_fields['transcription']:
 
                                 le_check_set = (
                                     le_xcript_dict[fp_lexical_entry_id])
@@ -1966,11 +1877,11 @@ def convert_five_tiers(
 
         lexes_with_text = []
 
-        le_word_dtype = field_data_type_dict[le_word_fid]
-        le_xcript_dtype = field_data_type_dict[le_xcript_fid]
-        le_xlat_dtype = field_data_type_dict[le_xlat_fid]
+        le_word_dtype = field_data_type_dict[le_fields['word']]
+        le_xcript_dtype = field_data_type_dict[le_fields['transcription']]
+        le_xlat_dtype = field_data_type_dict[le_fields['translation']]
 
-        if first_perspective:
+        if le_perspective:
 
             lexes_with_text = (
 
@@ -1982,8 +1893,8 @@ def convert_five_tiers(
                         LexicalEntry.client_id == Entity.parent_client_id,
                         LexicalEntry.object_id == Entity.parent_object_id,
                         LexicalEntry.marked_for_deletion == False,
-                        LexicalEntry.parent_client_id == first_perspective.client_id,
-                        LexicalEntry.parent_object_id == first_perspective.object_id,
+                        LexicalEntry.parent_client_id == le_perspective.client_id,
+                        LexicalEntry.parent_object_id == le_perspective.object_id,
 
                         tuple_(
                             Entity.field_client_id,
@@ -1995,7 +1906,7 @@ def convert_five_tiers(
 
         p_lexes_with_text_after_update = []
 
-        if second_perspective:
+        if pa_perspective:
 
             pa_already_set = (
 
@@ -2014,8 +1925,8 @@ def convert_five_tiers(
                         LexicalEntry.client_id == Entity.parent_client_id,
                         LexicalEntry.object_id == Entity.parent_object_id,
                         LexicalEntry.marked_for_deletion == False,
-                        LexicalEntry.parent_client_id == second_perspective.client_id,
-                        LexicalEntry.parent_object_id == second_perspective.object_id,
+                        LexicalEntry.parent_client_id == pa_perspective.client_id,
+                        LexicalEntry.parent_object_id == pa_perspective.object_id,
 
                         tuple_(
                             Entity.field_client_id,
@@ -2064,14 +1975,14 @@ def convert_five_tiers(
 
             entry_id = t.parent_id
 
-            if t.field_id == le_word_fid:
+            if t.field_id == le_fields['word']:
 
                 le_word_dict[entry_id].add(content_key)
                 word_le_set.add(entry_id)
 
                 continue
 
-            elif t.field_id == le_xcript_fid:
+            elif t.field_id == le_fields['transcription']:
 
                 le_xcript_dict[entry_id].add(content_key)
                 xcript_le_set.add(entry_id)
@@ -2120,10 +2031,10 @@ def convert_five_tiers(
 
         for t in p_lexes_with_text_after_update:
 
-            if t.field_id == pa_word_fid:
+            if t.field_id == pa_fields['word']:
                 pa_word_dict[t.parent_id].append(t.content)
 
-            elif t.field_id == pa_xcript_fid:
+            elif t.field_id == pa_fields['transcription']:
                 pa_xcript_dict[t.parent_id].append(t.content)
 
         def establish_link(
@@ -2182,7 +2093,7 @@ def convert_five_tiers(
                             create_entity(
                                 extra_client,
                                 le_entry_id,
-                                le_word_fid,
+                                le_fields['word'],
                                 le_word_dtype,
                                 pa_word)
 
@@ -2206,7 +2117,7 @@ def convert_five_tiers(
                             create_entity(
                                 extra_client,
                                 le_entry_id,
-                                le_xcript_fid,
+                                le_fields['transcription'],
                                 le_xcript_dtype,
                                 pa_xcript)
 
@@ -2215,7 +2126,7 @@ def convert_five_tiers(
         for t_index, t in (
             enumerate(p_lexes_with_text_after_update)):
 
-            if t.field_id != pa_xlat_fid:
+            if t.field_id != pa_fields['translation']:
                 continue
 
             translation_text = (
@@ -2356,7 +2267,7 @@ def convert_five_tiers(
                     create_entity(
                         extra_client,
                         fp_lexical_entry_id,
-                        le_xlat_fid,
+                        le_fields['translation'],
                         le_xlat_dtype,
                         translation_text)
 
