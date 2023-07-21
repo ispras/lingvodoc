@@ -934,4 +934,4 @@ def create_field(translation_atoms, client_id=66):
     DBSession.add(dbfield)
     DBSession.flush()
 
-    return dbfield.id
+    return dbfield

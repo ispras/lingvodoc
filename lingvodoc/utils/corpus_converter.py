@@ -58,10 +58,10 @@ from lingvodoc.scripts import elan_parser
 from lingvodoc.utils import ids_to_id_query
 from lingvodoc.utils.elan_functions import tgt_to_eaf
 
-from lingvodoc.utils.search import get_id_to_field_dict
+from lingvodoc.utils.search import get_id_to_field_dict, field_search
 
 from lingvodoc.views.v2.utils import storage_file
-from lingvodoc.utils.creation import get_attached_users, uniq_list
+from lingvodoc.utils.creation import get_attached_users, uniq_list, create_field
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -268,6 +268,16 @@ def created_at():
             .replace(tzinfo = datetime.timezone.utc)
             .timestamp())
 
+def get_field_id(english_name):
+    field = field_search(english_name)
+    if field:
+        return field.id
+
+    field = create_field({
+        "locale_id": ENGLISH_LOCALE,
+        "content": english_name})
+    if field:
+        return field.id
 
 def convert_five_tiers(
     dictionary_id,
@@ -365,7 +375,7 @@ def convert_five_tiers(
 
         fp_structure = set([field_ids[x] for x in fp_fields])
         sp_structure = set([field_ids[x] for x in sp_fields])
-        mp_structure = set([field_ids[x] for x in mp_fields])
+        mp_structure = set([get_field_id(x) for x in mp_fields])
 
         if len(markup_id_list) <= 0:
             raise ValueError('You have to specify at least 1 markup entity.')
