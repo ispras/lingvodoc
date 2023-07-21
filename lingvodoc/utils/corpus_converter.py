@@ -1484,9 +1484,7 @@ def convert_five_tiers(
                                 storage = storage)
 
                 for word in curr_dict:
-
                     if word.tier == 'translation':
-
                         word_text = word.text
 
                         if (word_text and
@@ -1495,9 +1493,7 @@ def convert_five_tiers(
 
                             tag = re.search(conj_re, word_text)
 
-                            if (not tag or
-                                word_text != tag.group(0)):
-
+                            if not tag or word_text != tag.group(0):
                                 continue
 
                     column = [word] + curr_dict[word]
@@ -1507,9 +1503,7 @@ def convert_five_tiers(
                     # translation.
 
                     if merge_by_meaning_all:
-
                         translation_list = [
-
                             word.text
                             for word in column
                             if word.tier == 'translation']
@@ -1521,13 +1515,11 @@ def convert_five_tiers(
                             (translation := translation_list[0]) is not None and
                             (translation := translation.strip())):
 
-                            mark_search = (
-                                re.search(mark_re, translation))
+                            mark_search = re.search(mark_re, translation)
 
                             if mark_search:
-
                                 translation = (
-                                    translation [ : mark_search.start()] .strip())
+                                    translation[: mark_search.start()] .strip())
 
                             lex_row = (
                                 translation.lower())
@@ -1537,24 +1529,18 @@ def convert_five_tiers(
                     # translation, trascription and word.
 
                     if lex_row is None:
-
-                        lex_row = (
-                            tuple(x.text for x in column))
+                        lex_row = tuple(x.text for x in column)
 
                         if all(x is None for x in lex_row):
                             continue
 
                     if debug_flag:
-
                         log.debug(
-
                             '\ncolumn:\n' +
-
                             pprint.pformat(
                                 column, width = 192) +
 
                             '\nlex_row:\n' +
-
                             pprint.pformat(
                                 lex_row, width = 192))
 
@@ -1562,9 +1548,7 @@ def convert_five_tiers(
                         lex_rows.get(lex_row))
 
                     if fp_lexical_entry_id is None:
-
                         match_dict = defaultdict(list)
-
                         for crt in column:
 
                             match_list = le_content_text_entity_dict[crt.text]
@@ -1575,29 +1559,22 @@ def convert_five_tiers(
                                    match_dict[t.parent_id].append(t)
 
                         match_dict = {
-
                             k: v
-
                             for k, v in match_dict.items()
-
                             if (len(v) >= 2 or
                                 len(v) == 1 and le_parent_id_text_entity_counter[k] == 1)}
 
                         max_sim = None
 
                         for le in match_dict:
-
                             if (max_sim is None or
                                 len(match_dict[le]) >= len(match_dict[max_sim])):
 
                                 max_sim = le
 
                         if max_sim:
-
                             fp_lexical_entry_id = max_sim
-
                         else:
-
                             entry_dict = {
                                 'created_at': created_at(),
                                 'client_id': extra_client_id,
@@ -1616,23 +1593,19 @@ def convert_five_tiers(
 
                             toc_insert_list.append(toc_dict)
                                     
-                            fp_lexical_entry_id = (
-                                extra_client_id, entry_dict['object_id'])
+                            fp_lexical_entry_id = extra_client_id, entry_dict['object_id']
 
                         lex_rows[lex_row] = (
                             fp_lexical_entry_id)
 
                         for other_word in column:
-
                             text = other_word.text
-
                             if not text:
                                 continue
 
                             field_id = get_field_id(EAF_TIERS[other_word.tier])
 
                             if (not max_sim or
-
                                 all(x.content != text or x.field_id != field_id
                                     for x in match_dict[max_sim])):
 
@@ -1647,53 +1620,37 @@ def convert_five_tiers(
                                     (text := text .strip())):
 
                                     le_check_dict = (
-
                                         le_word_dict if field_id == le_fields['word'] else
                                         le_xcript_dict if field_id == le_fields['transcription'] else
                                         None)
 
                                     if le_check_dict is not None:
-
-                                        (le_check_dict[
-                                            fp_lexical_entry_id]
-
-                                            .add(text.lower()))
+                                        le_check_dict[fp_lexical_entry_id].add(text.lower())
 
                     # If we check lexical entry identity only by meaning, we should add to it any
                     # transcriptions and words it doesn't have.
 
                     elif merge_by_meaning_all:
-
                         for other_word in column:
-
                             text = other_word.text
-
                             if (text is None or
                                 not (text := text.strip())):
-
                                 continue
 
                             field_id = get_field_id(EAF_TIERS[other_word.tier])
 
                             if field_id == le_fields['word']:
-
                                 le_check_set = (
                                     le_word_dict[fp_lexical_entry_id])
-
                             elif field_id == le_fields['transcription']:
-
                                 le_check_set = (
                                     le_xcript_dict[fp_lexical_entry_id])
-
                             else:
-
                                 continue
 
-                            text_key = (
-                                text .lower())
+                            text_key = text.lower()
 
                             if text_key not in le_check_set:
-
                                 le_check_set.add(text_key)
 
                                 create_entity(
