@@ -78,7 +78,8 @@ EAF_TIERS = {
 percent_preparing = 1
 percent_check_fields = 2
 percent_le_perspective = 4
-percent_pa_perspective = 7
+percent_pa_perspective = 6
+percent_mo_perspective = 8
 percent_uploading = 10
 percent_adding = 70
 percent_finished = 100
@@ -303,7 +304,6 @@ def convert_five_tiers(
     merge_by_meaning_all,
     additional_entries,
     additional_entries_all,
-    morphological_flag,
     no_sound_flag,
     debug_flag=False):
 
@@ -321,11 +321,13 @@ def convert_five_tiers(
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            client_id)
+
         user = client.user
-        attached_users = get_attached_users(language_id)
         if not user:
             log.debug('ERROR')
             raise ValueError('No user associated with the client.', client.id)
+
+        attached_users = get_attached_users(language_id)
 
         # Create extra client to jail new object_ids
         extra_client = Client(user_id=user.id, is_browser_client=False)
@@ -531,6 +533,9 @@ def convert_five_tiers(
                 new_group.users = uniq_list(new_group.users + attached_users + [user])
                 DBSession.add(new_group)
 
+        owner_client = DBSession.query(Client).filter_by(id=dictionary.client_id).first()
+        owner = owner_client.user
+
         origin_perspective = markup_entity_list[0].parent.parent
         origin_metadata = {
             'origin_id': (
@@ -671,15 +676,17 @@ def convert_five_tiers(
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
 
-        le_content_text_entity_dict = defaultdict(list)
-        le_parent_id_text_entity_counter = Counter()
+        # Checking text data of all existing lexical entries.
 
+        ## Lexical entries
         if merge_by_meaning_all:
             le_meaning_dict = {}
             le_word_dict = defaultdict(set)
             le_xcript_dict = defaultdict(set)
 
-        # Checking text data of all existing lexical entries.
+        le_content_text_entity_dict = defaultdict(list)
+        le_parent_id_text_entity_counter = Counter()
+
         for x in le_lexes:
             field_id = x.field_id
 
@@ -695,7 +702,7 @@ def convert_five_tiers(
             if not merge_by_meaning_all:
                 continue
 
-            # If we merge by meaning, we compile additional lexical entries info.
+            # If we merge by meaning, we compile additional lexical entries' info.
 
             content_text = content.strip()
             content_key = content_text.lower()
@@ -718,6 +725,7 @@ def convert_five_tiers(
 
             le_meaning_dict[content_text .strip() .lower()] = entry_id
 
+        ## Paradigms
         pa_content_text_entity_dict = defaultdict(list)
         pa_parent_id_text_entity_counter = Counter()
 
@@ -727,6 +735,17 @@ def convert_five_tiers(
 
             pa_content_text_entity_dict[x.content].append(x)
             pa_parent_id_text_entity_counter[x.parent_id] += 1
+
+        ## Morphology
+        mo_content_text_entity_dict = defaultdict(list)
+        mo_parent_id_text_entity_counter = Counter()
+
+        for x in mo_lexes:
+            if x.field_id not in mo_text_fid_list:
+                continue
+
+            mo_content_text_entity_dict[x.content].append(x)
+            mo_parent_id_text_entity_counter[x.parent_id] += 1
 
         # First perspective.
 
@@ -753,8 +772,6 @@ def convert_five_tiers(
 
             DBSession.add(le_perspective)
 
-            owner_client = DBSession.query(Client).filter_by(id=dictionary.client_id).first()
-            owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
                                   subject_object_id=le_perspective.object_id,
@@ -773,11 +790,9 @@ def convert_five_tiers(
             pa_perspective is None)
 
         if new_sp_flag:
-
             response = translation_service_search_all("Paradigms")
 
             pa_perspective = (
-
                 DictionaryPerspective(
                     client_id = extra_client_id,
                     object_id = extra_client.next_object_id(),
@@ -791,8 +806,6 @@ def convert_five_tiers(
 
             DBSession.add(pa_perspective)
 
-            owner_client = DBSession.query(Client).filter_by(id=dictionary.client_id).first()
-            owner = owner_client.user
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
                                   subject_object_id=pa_perspective.object_id,
@@ -801,6 +814,41 @@ def convert_five_tiers(
                 DBSession.add(new_group)
 
         pa_perspective_id = pa_perspective.id
+
+        # Third perspective.
+
+        task_status.set(
+            6, percent_mo_perspective, "Handling morphology perspective")
+
+        new_tp_flag = (
+            mo_perspective is None)
+
+        if new_tp_flag:
+            #TODO: check this service
+            response = translation_service_search_all("Morphology")
+
+            mo_perspective = (
+                DictionaryPerspective(
+                    client_id = extra_client_id,
+                    object_id = extra_client.next_object_id(),
+                    state_translation_gist_client_id = wip_state_id[0],
+                    state_translation_gist_object_id = wip_state_id[1],
+                    parent = dictionary,
+                    additional_metadata = origin_metadata,
+                    translation_gist_client_id = response['client_id'],
+                    translation_gist_object_id = response['object_id'],
+                    new_objecttoc = True))
+
+            DBSession.add(mo_perspective)
+
+            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+                new_group = Group(parent=base,
+                                  subject_object_id=mo_perspective.object_id,
+                                  subject_client_id=mo_perspective.client_id)
+                new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
+                DBSession.add(new_group)
+
+        mo_perspective_id = mo_perspective.id
 
         # Creating fields of the first perspective if required.
 
@@ -902,24 +950,19 @@ def convert_five_tiers(
         # Getting field data types.
 
         field_data_type_list = (
-
             DBSession
-
                 .query(
                     Field.client_id,
                     Field.object_id,
                     TranslationAtom.content)
-
                 .filter(
                     tuple_(Field.client_id, Field.object_id)
                         .in_(total_structure),
-
                     TranslationAtom.locale_id == ENGLISH_LOCALE,
                     TranslationAtom.parent_client_id ==
                         Field.data_type_translation_gist_client_id,
                     TranslationAtom.parent_object_id ==
                         Field.data_type_translation_gist_object_id)
-
                 .all())
 
         field_data_type_dict = {
