@@ -383,7 +383,7 @@ def convert_five_tiers(
         le_structure = set(le_fields.values())
         pa_structure = set(pa_fields.values())
         mo_structure = set(mo_fields.values())
-        total_structure = list(le_structure | pa_structure | mo_structure)
+        total_structure = le_structure | pa_structure | mo_structure
 
         if len(markup_id_list) <= 0:
             raise ValueError('You have to specify at least 1 markup entity.')
@@ -434,23 +434,17 @@ def convert_five_tiers(
                 for result in result_list
                 if result.Sound is not None}
 
-        wip_state_id = None
+        response = translation_service_search('WiP')
+        wip_state_id = response['client_id'], response['object_id']
 
-        # TODO: update existent morphological dictionary
-        if dictionary_id and not morphological_flag:
-
+        if dictionary_id:
             # Checking that the dictionary actually exists.
-
             dictionary = (
-
                 DBSession
-
                     .query(Dictionary)
-
                     .filter_by(
                         client_id = dictionary_id[0],
                         object_id = dictionary_id[1])
-
                     .first())
 
             if not dictionary:
@@ -473,13 +467,10 @@ def convert_five_tiers(
             # there will be just some wider locking, and one operation would just wait some more.
 
             result = (
-
                 DBSession
-
                     .query(
                         sqlalchemy.func.pg_advisory_xact_lock(
                             dictionary_id[0] << 38 | dictionary_id[1]))
-
                     .scalar())
 
             if debug_flag:
@@ -513,9 +504,6 @@ def convert_five_tiers(
                         Dictionary.client_id == DictionaryPerspective.parent_client_id,
                         Dictionary.object_id == DictionaryPerspective.parent_object_id)
                     .scalar())
-
-            response = translation_service_search('WiP')
-            wip_state_id = response['client_id'], response['object_id']
 
             dictionary = (
                 Dictionary(
@@ -740,10 +728,6 @@ def convert_five_tiers(
             pa_content_text_entity_dict[x.content].append(x)
             pa_parent_id_text_entity_counter[x.parent_id] += 1
 
-        if wip_state_id is None:
-            response = translation_service_search('WiP')
-            wip_state_id = (response['client_id'], response['object_id'])
-
         # First perspective.
 
         task_status.set(
@@ -753,11 +737,9 @@ def convert_five_tiers(
             le_perspective is None)
 
         if new_fp_flag:
-
             response = translation_service_search_all("Lexical Entries")
             
             le_perspective = (
-
                 DictionaryPerspective(
                     client_id = extra_client_id,
                     object_id = extra_client.next_object_id(),
@@ -780,7 +762,7 @@ def convert_five_tiers(
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
-        first_perspective_id = le_perspective.id
+        le_perspective_id = le_perspective.id
 
         # Second perspective.
 
@@ -818,7 +800,7 @@ def convert_five_tiers(
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
-        second_perspective_id = pa_perspective.id
+        pa_perspective_id = pa_perspective.id
 
         # Creating fields of the first perspective if required.
 
@@ -842,8 +824,8 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1],
                         "link": {
-                            "client_id": second_perspective_id[0],
-                            "object_id": second_perspective_id[1]}})
+                            "client_id": pa_perspective_id[0],
+                            "object_id": pa_perspective_id[1]}})
 
                 elif fieldname == "Sound":
 
@@ -890,8 +872,8 @@ def convert_five_tiers(
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1],
                         "link": {
-                            "client_id": first_perspective_id[0],
-                            "object_id": first_perspective_id[1]}})
+                            "client_id": le_perspective_id[0],
+                            "object_id": le_perspective_id[1]}})
 
                 elif fieldname == "Sounds of Paradigmatic forms":
 
@@ -1432,8 +1414,8 @@ def convert_five_tiers(
                             'created_at': created_at(),
                             'client_id': extra_client_id,
                             'object_id': extra_client.next_object_id(),
-                            'parent_client_id': second_perspective_id[0],
-                            'parent_object_id': second_perspective_id[1],
+                            'parent_client_id': pa_perspective_id[0],
+                            'parent_object_id': pa_perspective_id[1],
                             'marked_for_deletion': False}
 
                         entry_insert_list.append(entry_dict)
@@ -1650,8 +1632,8 @@ def convert_five_tiers(
                                 'created_at': created_at(),
                                 'client_id': extra_client_id,
                                 'object_id': extra_client.next_object_id(),
-                                'parent_client_id': first_perspective_id[0],
-                                'parent_object_id': first_perspective_id[1],
+                                'parent_client_id': le_perspective_id[0],
+                                'parent_object_id': le_perspective_id[1],
                                 'marked_for_deletion': False}
 
                             entry_insert_list.append(entry_dict)
@@ -2249,8 +2231,8 @@ def convert_five_tiers(
                         'created_at': created_at(),
                         'client_id': extra_client_id,
                         'object_id': extra_client.next_object_id(),
-                        'parent_client_id': first_perspective_id[0],
-                        'parent_object_id': first_perspective_id[1],
+                        'parent_client_id': le_perspective_id[0],
+                        'parent_object_id': le_perspective_id[1],
                         'marked_for_deletion': False}
 
                     entry_insert_list.append(entry_dict)
