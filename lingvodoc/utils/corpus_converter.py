@@ -1666,10 +1666,7 @@ def convert_five_tiers(
                         word.time[1] <= len(full_audio)):
 
                         with tempfile.NamedTemporaryFile() as temp:
-
-                            (full_audio[
-                                word.time[0] : word.time[1]]
-
+                            (full_audio[word.time[0] : word.time[1]]
                                 .export(
                                     temp.name,
                                     format = sound_format))
@@ -1680,19 +1677,14 @@ def convert_five_tiers(
                             create_entity_flag = True
 
                             if max_sim:
-
                                 hash = hashlib.sha224(audio_slice).hexdigest()
 
                                 if hash in hash_set:
-
                                     create_entity_flag = False
-
                                 else:
-
                                     hash_set.add(hash)
 
                             if create_entity_flag:
-
                                 common_name = word.index
                                 if common_name:
                                     fname, ext = os.path.splitext(common_name)
@@ -1721,18 +1713,15 @@ def convert_five_tiers(
                     if sp_lexical_entry_id == None:
                         continue
 
-                    dubl_tuple = (
-                        sp_lexical_entry_id, fp_lexical_entry_id)
+                    dubl_tuple = sp_lexical_entry_id, fp_lexical_entry_id
 
                     if not dubl_tuple in dubl_set:
-
                         dubl_set.add(dubl_tuple)
 
                         sp_fp_link_flag = True
                         fp_sp_link_flag = True
 
                         if max_sim:
-
                             if (sp_lexical_entry_id, fp_lexical_entry_id) in link_set:
                                 sp_fp_link_flag = False
 
@@ -1740,7 +1729,6 @@ def convert_five_tiers(
                                 fp_sp_link_flag = False
 
                         if sp_fp_link_flag:
-
                             create_entity(
                                 extra_client,
                                 sp_lexical_entry_id,
@@ -1749,7 +1737,6 @@ def convert_five_tiers(
                                 link_id = fp_lexical_entry_id)
 
                         if fp_sp_link_flag:
-
                             create_entity(
                                 extra_client,
                                 fp_lexical_entry_id,
@@ -1759,25 +1746,18 @@ def convert_five_tiers(
 
                 # Checking if we need to update task progress.
 
-                percent_delta = (
-                    (percent_adding - percent_uploading) / 2)
-
-                percent_delta_markup = (
-                    percent_delta / len(markup_id_list))
-
-                percent_delta_phrase = (
-                    percent_delta_markup / len(final_dicts))
+                percent_delta = (percent_adding - percent_uploading) / 2
+                percent_delta_markup = percent_delta / len(markup_id_list)
+                percent_delta_phrase = percent_delta_markup / len(final_dicts)
 
                 task_percent(
                     7,
                     percent_uploading +
                         markup_id_index * percent_delta_markup +
                         (phrase_index + 1) * percent_delta_phrase,
-
                     message_uploading)
 
-        percent_from = (
-            (percent_uploading + percent_adding) / 2)
+        percent_from = (percent_uploading + percent_adding) / 2
 
         task_percent(
             7, percent_from, message_uploading)
