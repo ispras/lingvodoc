@@ -853,7 +853,6 @@ def convert_five_tiers(
         # Creating fields of the first perspective if required.
 
         if new_fp_flag:
-
             fp_field_names = (
                 "Word",
                 "Transcription",
@@ -863,11 +862,8 @@ def convert_five_tiers(
                 "Backref")
 
             field_info_list = []
-
             for fieldname in fp_field_names:
-
                 if fieldname == "Backref":
-
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1],
@@ -876,7 +872,6 @@ def convert_five_tiers(
                             "object_id": pa_perspective_id[1]}})
 
                 elif fieldname == "Sound":
-
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1],
@@ -885,13 +880,11 @@ def convert_five_tiers(
                            "object_id": get_field_id("Markup")[1]}]})
 
                 else:
-
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
             for position, field_info in enumerate(field_info_list, 1):
-
                 create_nested_field(
                     field_info,
                     le_perspective,
@@ -902,7 +895,6 @@ def convert_five_tiers(
         # Creating fields of the second perspective, if required.
 
         if new_sp_flag:
-
             sp_field_names = (
                 "Word of Paradigmatic forms",
                 "Transcription of Paradigmatic forms",
@@ -911,11 +903,8 @@ def convert_five_tiers(
                 "Backref")
 
             field_info_list = []
-
             for fieldname in sp_field_names:
-
                 if fieldname == "Backref":
-
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1],
@@ -924,7 +913,6 @@ def convert_five_tiers(
                             "object_id": le_perspective_id[1]}})
 
                 elif fieldname == "Sounds of Paradigmatic forms":
-
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1],
@@ -933,16 +921,37 @@ def convert_five_tiers(
                            "object_id": get_field_id("Paradigm Markup")[1]}]})
 
                 else:
-
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
                         "object_id": get_field_id(fieldname)[1]})
 
             for position, field_info in enumerate(field_info_list, 1):
-
                 create_nested_field(
                     field_info,
                     pa_perspective,
+                    extra_client,
+                    None,
+                    position)
+
+        # Creating fields of the third perspective, if required.
+
+        if new_tp_flag:
+            tp_field_names = (
+                "Affix",
+                "Meaning of affix",
+                "Word with affix"
+            )
+
+            field_info_list = []
+            for fieldname in tp_field_names:
+                field_info_list.append({
+                    "client_id": get_field_id(fieldname)[0],
+                    "object_id": get_field_id(fieldname)[1]})
+
+            for position, field_info in enumerate(field_info_list, 1):
+                create_nested_field(
+                    field_info,
+                    mo_perspective,
                     extra_client,
                     None,
                     position)
@@ -975,7 +984,6 @@ def convert_five_tiers(
         '''
 
         if debug_flag:
-
             log.debug(
                 '\nfield_data_type_dict:\n' +
                 pprint.pformat(
@@ -1025,22 +1033,16 @@ def convert_five_tiers(
                 'additional_metadata': null()}
 
             if self_id is not None:
-
                 entity_dict['self_client_id'] = self_id[0]
                 entity_dict['self_object_id'] = self_id[1]
-
             else:
-
                 entity_dict['self_client_id'] = None
                 entity_dict['self_object_id'] = None
 
             if link_id is not None:
-
                 entity_dict['link_client_id'] = link_id[0]
                 entity_dict['link_object_id'] = link_id[1]
-
             else:
-
                 entity_dict['link_client_id'] = None
                 entity_dict['link_object_id'] = None
 
@@ -1049,16 +1051,11 @@ def convert_five_tiers(
                 'markup' in data_type):
 
                 entity_dict['content'] = (
-
                     create_object(
                         entity_dict, filename, folder_name, storage))
 
-                hash = (
-                    hash or hashlib.sha224(content).hexdigest())
-
-                additional_metadata = {
-                    'hash': hash}
-
+                hash = hash or hashlib.sha224(content).hexdigest()
+                additional_metadata = {'hash': hash}
                 entity_dict['additional_metadata'] = additional_metadata
 
                 if data_type == 'markup':
@@ -1090,7 +1087,6 @@ def convert_five_tiers(
             toc_insert_list.append(toc_dict)
 
             if debug_flag:
-
                 log.debug(
                     f'\n{entry_id} -> ({client_id}, {object_id}), '
                     f'{repr(data_type)}, '
