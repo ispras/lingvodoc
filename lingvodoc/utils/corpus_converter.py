@@ -1128,14 +1128,11 @@ def convert_five_tiers(
                 (percent_to - percent_from) / 4)
 
             if debug_flag:
-
                 log.debug(
                     f'\n{len(toc_insert_list)} objecttoc')
 
             if toc_insert_list:
-
                 DBSession.execute(
-
                     ObjectTOC.__table__
                         .insert()
                         .values(toc_insert_list))
@@ -1143,7 +1140,6 @@ def convert_five_tiers(
                 toc_insert_list.clear()
 
             if debug_flag:
-
                 log.debug(
                     f'\n{len(entry_insert_list)} lexicalentry')
 
@@ -1153,9 +1149,7 @@ def convert_five_tiers(
                 task_message)
 
             if entry_insert_list:
-
                 DBSession.execute(
-
                     LexicalEntry.__table__
                         .insert()
                         .values(entry_insert_list))
@@ -1163,7 +1157,6 @@ def convert_five_tiers(
                 entry_insert_list.clear()
 
             if debug_flag:
-
                 log.debug(
                     f'\n{len(entity_insert_list)} entity')
 
@@ -1173,9 +1166,7 @@ def convert_five_tiers(
                 task_message)
 
             if entity_insert_list:
-
                 DBSession.execute(
-
                     Entity.__table__
                         .insert()
                         .values(entity_insert_list))
@@ -1183,9 +1174,8 @@ def convert_five_tiers(
                 entity_insert_list.clear()
 
             if debug_flag:
-
                 log.debug(
-                    f'\n{len(publish_insert_list)} publishingentity')
+                    f'\n{len(publish_insert_list)} publishing entity')
 
             task_percent(
                 task_stage,
@@ -1193,9 +1183,7 @@ def convert_five_tiers(
                 task_message)
 
             if publish_insert_list:
-
                 DBSession.execute(
-
                     PublishingEntity.__table__
                         .insert()
                         .values(publish_insert_list))
