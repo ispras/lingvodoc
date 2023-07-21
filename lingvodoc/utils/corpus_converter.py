@@ -467,14 +467,14 @@ def convert_five_tiers(
             # | object_oid) values being bigger then the space of possible bigint values is not an issue,
             # locking would still work, and in the exceedinly unlikely case that we'll have a duplicate
             # there will be just some wider locking, and one operation would just wait some more.
-
+            '''
             result = (
                 DBSession
                     .query(
                         sqlalchemy.func.pg_advisory_xact_lock(
                             dictionary_id[0] << 38 | dictionary_id[1]))
                     .scalar())
-
+            '''
             if debug_flag:
                 log.debug(f'\nadvisory transaction lock ({dictionary_id[0]}, {dictionary_id[1]})')
 
@@ -1202,11 +1202,9 @@ def convert_five_tiers(
             le_meaning_dict if merge_by_meaning_all else {})
 
         par_rows = {}
-
         dubl_set = set()
 
         message_uploading = (
-
             'Uploading sounds and words'
                 if not no_sound_flag and sound_entity_dict else
                 'Uploading words')
@@ -1217,13 +1215,10 @@ def convert_five_tiers(
         # Parsing and processing markup, in order if markup ids we received.
 
         for markup_id_index, markup_id in enumerate(markup_id_list):
-
             markup_entity = markup_entity_dict[markup_id]
-
             no_sound = True
 
             if not no_sound_flag:
-
                 sound_entity = (
                     sound_entity_dict.get(markup_id))
 
@@ -1234,36 +1229,27 @@ def convert_five_tiers(
                     no_sound = False
 
             with warnings.catch_warnings():
-
                 warnings.filterwarnings('error')
-
                 try:
                     from pydub import AudioSegment
                 except Warning as e:
                     no_sound = True
 
             if not no_sound:
-
                 sound_format = 'wav'
-
                 if sound_url.endswith('.mp3'):
                     sound_format = 'mp3'
                 if sound_url.endswith('.flac'):
                     sound_format = 'flac'
 
                 with tempfile.NamedTemporaryFile() as temp:
-
                     try:
-
-                        with storage_file(
-                            storage, sound_url) as content_stream:
-
+                        with storage_file(storage, sound_url) as content_stream:
                             sound_data = content_stream.read()
-
                     except:
                         raise KeyError(f'Cannot access sound file \'{sound_url}\'.')
 
-                    with open(temp.name,'wb') as output:
+                    with open(temp.name, 'wb') as output:
                         output.write(sound_data)
 
                     if sound_format == 'wav':
@@ -1274,17 +1260,12 @@ def convert_five_tiers(
                         full_audio = AudioSegment.from_file(temp.name, 'flac')
 
             try:
-
-                with storage_file(
-                    storage, markup_entity.content) as content_stream:
-
+                with storage_file(storage, markup_entity.content) as content_stream:
                     content = content_stream.read()
-
             except:
-
                 raise KeyError(f'Cannot access markup file \'{markup_entity.content}\'.')
 
-            result = False
+            #result = False
 
             fd, filename = tempfile.mkstemp()
             with open(filename, 'wb') as temp:
@@ -1302,18 +1283,12 @@ def convert_five_tiers(
             # Showing what we've got from the corpus, if required.
 
             if debug_flag:
-
                 def f(value):
-
                     if isinstance(value, elan_parser.Word):
                         return value.get_tuple()
-
                     elif isinstance(value, list):
                         return [f(x) for x in value]
-
-                    return (
-                        OrderedDict(
-                            ((f(x), f(y)) for x, y in value.items())))
+                    return OrderedDict(((f(x), f(y)) for x, y in value.items()))
 
                 log.debug(
                     '\nfinal_dicts:\n' +
@@ -1325,7 +1300,6 @@ def convert_five_tiers(
             for phrase_index, phrase in enumerate(final_dicts):
 
                 if debug_flag:
-
                     log.debug(
                         f'\nphrase {phrase_index}:\n' +
                         pprint.pformat(
@@ -1335,9 +1309,7 @@ def convert_five_tiers(
                 paradigm_words = []
 
                 for word_translation in phrase:
-
                     if type(word_translation) is not list:
-
                         curr_dict = word_translation
                         mt_words = [word_translation[i][1].text for i in word_translation
                                     if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
@@ -1346,54 +1318,45 @@ def convert_five_tiers(
 
                         main_tier_text = " ".join(mt_words)
                         main_tier_time = None
+
                         if mt_times:
                             main_tier_time = (mt_times[0], mt_times[-1])
 
                         if main_tier_text:
-
                             paradigm_words.append(
-
                                 elan_parser.Word(
                                     text = main_tier_text,
                                     tier = "Word of Paradigmatic forms",
                                     time = main_tier_time))
 
                             if debug_flag:
-
                                 log.debug(
                                     '\nparadigm_word:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
 
                     else:
-
                         word = word_translation[0]
                         tier_name = word.tier
                         new = " ".join([i.text for i in word_translation if i.text is not None])
 
                         if new:
-
                             paradigm_words.append(
-
                                 elan_parser.Word(
                                     text = new,
                                     tier = tier_name,
                                     time = word.time))
 
                             if debug_flag:
-
                                 log.debug(
                                     '\nparadigm_word:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
 
-                par_row  = (
-                    tuple(x.text for x in paradigm_words))
+                par_row = tuple(x.text for x in paradigm_words)
 
                 if debug_flag:
-
                     log.debug(
-
                         '\nparadigm_words:\n' +
                         pprint.pformat(
                             f(paradigm_words), width = 192) +
@@ -1425,18 +1388,12 @@ def convert_five_tiers(
                     max_sim = None
 
                     for le in p_match_dict:
-
-                        if (max_sim is None or
-                            len(p_match_dict[le]) >= len(p_match_dict[max_sim])):
-
+                        if max_sim is None or len(p_match_dict[le]) >= len(p_match_dict[max_sim]):
                             max_sim = le
 
                     if max_sim:
-
                         sp_lexical_entry_id = max_sim
-
                     else:
-
                         entry_dict = {
                             'created_at': created_at(),
                             'client_id': extra_client_id,
@@ -1455,14 +1412,11 @@ def convert_five_tiers(
 
                         toc_insert_list.append(toc_dict)
                                 
-                        sp_lexical_entry_id = (
-                            extra_client_id, entry_dict['object_id'])
+                        sp_lexical_entry_id = extra_client_id, entry_dict['object_id']
 
-                    par_rows[par_row] = (
-                        sp_lexical_entry_id)
+                    par_rows[par_row] = sp_lexical_entry_id
 
                     for other_word in paradigm_words:
-
                         text = other_word.text
 
                         if not text:
@@ -1471,7 +1425,6 @@ def convert_five_tiers(
                         field_id = get_field_id(EAF_TIERS[other_word.tier])
 
                         if (not max_sim or
-
                             all(x.content != text or x.field_id != field_id
                                 for x in p_match_dict[max_sim])):
 
@@ -1483,7 +1436,6 @@ def convert_five_tiers(
                                 text)
 
                 elif par_row:
-
                     sp_lexical_entry_id = par_rows[par_row]
 
                 if (par_row and
@@ -1491,10 +1443,7 @@ def convert_five_tiers(
                     word.time[1] <= len(full_audio)):
 
                     with tempfile.NamedTemporaryFile() as temp:
-
-                        (full_audio[
-                            word.time[0] : word.time[1]]
-
+                        (full_audio[word.time[0]:word.time[1]]
                             .export(
                                 temp.name,
                                 format = sound_format))
@@ -1505,19 +1454,13 @@ def convert_five_tiers(
                         create_entity_flag = True
 
                         if max_sim:
-
                             hash = hashlib.sha224(audio_slice).hexdigest()
-
                             if hash in hash_set:
-
                                 create_entity_flag = False
-
                             else:
-
                                 hash_set.add(hash)
 
                         if create_entity_flag:
-
                             common_name = word.index
                             if common_name:
                                 fname, ext = os.path.splitext(common_name)
