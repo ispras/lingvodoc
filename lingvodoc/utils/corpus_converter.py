@@ -147,7 +147,7 @@ def translation_service_search(searchstring):
         return translationgist_contents(translationgist)
 
 
-def translation_service_search_all(searchstring):
+def translation_service_get(searchstring):
     translationgist = (
         DBSession
             .query(TranslationGist)
@@ -168,7 +168,7 @@ def translation_service_search_all(searchstring):
     translation_gist_id = create_gists_with_atoms([{'locale_id': ENGLISH_LOCALE,
                                                     'content': searchstring}],
                                                   None,
-                                                  [client_id, None],
+                                                  [66, None],
                                                   gist_type='Service')
 
     return {"client_id": translation_gist_id[0], "object_id": translation_gist_id[1]}
@@ -784,7 +784,7 @@ def convert_five_tiers(
             le_perspective is None)
 
         if new_fp_flag:
-            response = translation_service_search_all("Lexical Entries")
+            response = translation_service_get("Lexical Entries")
             
             le_perspective = (
                 DictionaryPerspective(
@@ -818,7 +818,7 @@ def convert_five_tiers(
             pa_perspective is None)
 
         if new_sp_flag:
-            response = translation_service_search_all("Paradigms")
+            response = translation_service_get("Paradigms")
 
             pa_perspective = (
                 DictionaryPerspective(
@@ -853,7 +853,7 @@ def convert_five_tiers(
 
         if new_tp_flag:
             #TODO: check this service
-            response = translation_service_search_all("Morphology")
+            response = translation_service_get("Morphology")
 
             mo_perspective = (
                 DictionaryPerspective(
