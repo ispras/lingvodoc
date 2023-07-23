@@ -135,15 +135,22 @@ def translation_service_search(searchstring):
 
 
 def translation_service_search_all(searchstring):
-    tralationgist = DBSession.query(TranslationGist)\
-        .join(TranslationAtom).\
-        filter(TranslationAtom.content == searchstring,
-               TranslationAtom.locale_id == ENGLISH_LOCALE)\
-        .order_by(TranslationGist.client_id)\
-        .first()
-    response = {"client_id": tralationgist.client_id, "object_id": tralationgist.object_id}
-    #response = translationgist_contents(translationatom.parent)
-    return response
+    translationgist = (
+        DBSession
+            .query(TranslationGist)
+            .filter(
+                TranslationGist.marked_for_deletion == False,
+                TranslationAtom.marked_for_deletion == False,
+                TranslationAtom.content == searchstring,
+                TranslationAtom.locale_id == ENGLISH_LOCALE)
+            .order_by(
+                TranslationGist.created_at,
+                TranslationGist.client_id,
+                TranslationGist.object_id)
+            .first())
+
+    if translationgist:
+        return {"client_id": translationgist.client_id, "object_id": translationgist.object_id}
 
 
 def create_nested_field(
