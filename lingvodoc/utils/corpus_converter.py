@@ -1776,10 +1776,8 @@ def convert_five_tiers(
         if le_perspective:
 
             lexes_with_text = (
-
                 DBSession
                     .query(Entity)
-
                     .filter(
                         Entity.marked_for_deletion == False,
                         LexicalEntry.client_id == Entity.parent_client_id,
@@ -1787,31 +1785,24 @@ def convert_five_tiers(
                         LexicalEntry.marked_for_deletion == False,
                         LexicalEntry.parent_client_id == le_perspective.client_id,
                         LexicalEntry.parent_object_id == le_perspective.object_id,
-
                         tuple_(
                             Entity.field_client_id,
                             Entity.field_object_id)
-
-                            .in_(le_text_fid_list))
-
+                                .in_(le_text_fid_list))
                     .all())
 
         p_lexes_with_text_after_update = []
 
         if pa_perspective:
-
             pa_already_set = (
-
                 set(
                     t.id
                     for t_list in pa_content_text_entity_dict.values()
                     for t in t_list))
 
             entity_query = (
-
                 DBSession
                     .query(Entity)
-
                     .filter(
                         Entity.marked_for_deletion == False,
                         LexicalEntry.client_id == Entity.parent_client_id,
@@ -1819,29 +1810,20 @@ def convert_five_tiers(
                         LexicalEntry.marked_for_deletion == False,
                         LexicalEntry.parent_client_id == pa_perspective.client_id,
                         LexicalEntry.parent_object_id == pa_perspective.object_id,
-
                         tuple_(
                             Entity.field_client_id,
                             Entity.field_object_id)
-
-                            .in_(pa_text_fid_list)))
+                                .in_(pa_text_fid_list)))
 
             if pa_already_set:
-
                 entity_query = (
-
                     entity_query.filter(
-
                         tuple_(
                             Entity.client_id,
                             Entity.object_id)
+                                .notin_(ids_to_id_query(pa_already_set))))
 
-                            .notin_(
-                                ids_to_id_query(pa_already_set))))
-
-            p_lexes_with_text_after_update = (
-
-                entity_query.all())
+            p_lexes_with_text_after_update = entity_query.all()
 
         # Info of words and transcriptions in the first perspective.
 
@@ -1861,24 +1843,18 @@ def convert_five_tiers(
         xcript_le_set = set()
 
         for t in lexes_with_text:
-
             content_text = t.content.strip()
             content_key = content_text.lower()
-
             entry_id = t.parent_id
 
             if t.field_id == le_fields['word']:
-
                 le_word_dict[entry_id].add(content_key)
                 word_le_set.add(entry_id)
-
                 continue
 
             elif t.field_id == le_fields['transcription']:
-
                 le_xcript_dict[entry_id].add(content_key)
                 xcript_le_set.add(entry_id)
-
                 continue
 
             # Processing translation.
@@ -1902,9 +1878,7 @@ def convert_five_tiers(
             # Checking for nominative / infinitive / canonical form info, if required.
 
             if merge_by_meaning:
-
                 if mark_search:
-
                     content_text = (
                         content_text [ : mark_search.start()] .strip())
 
@@ -1922,10 +1896,8 @@ def convert_five_tiers(
         pa_xcript_dict = defaultdict(list)
 
         for t in p_lexes_with_text_after_update:
-
             if t.field_id == pa_fields['word']:
                 pa_word_dict[t.parent_id].append(t.content)
-
             elif t.field_id == pa_fields['transcription']:
                 pa_xcript_dict[t.parent_id].append(t.content)
 
@@ -1938,7 +1910,6 @@ def convert_five_tiers(
             """
 
             if not (le_entry_id, pa_entry_id) in link_set:
-
                 link_set.add(
                     (le_entry_id, pa_entry_id))
 
@@ -1950,10 +1921,8 @@ def convert_five_tiers(
                     link_id = pa_entry_id)
 
             if not (pa_entry_id, le_entry_id) in link_set:
-
                 link_set.add(
                     (pa_entry_id, le_entry_id))
-
                 create_entity(
                     extra_client,
                     pa_entry_id,
@@ -1964,14 +1933,11 @@ def convert_five_tiers(
             # Adding paradigmatic word and transcriptions to lexical entries, if required.
 
             if additional_entries:
-
                 if (additional_entries_all or
                     le_entry_id not in word_le_set):
 
                     for pa_word in pa_word_dict[pa_entry_id]:
-
                         word_key = (
-
                             (pa_word := pa_word.strip())
                                 .lower())
 
@@ -1979,9 +1945,7 @@ def convert_five_tiers(
                             le_word_dict[le_entry_id])
 
                         if word_key not in le_word_set:
-
                             le_word_set.add(word_key)
-
                             create_entity(
                                 extra_client,
                                 le_entry_id,
@@ -1993,9 +1957,7 @@ def convert_five_tiers(
                     le_entry_id not in xcript_le_set):
 
                     for pa_xcript in pa_xcript_dict[pa_entry_id]:
-
                         xcript_key = (
-
                             (pa_xcript := pa_xcript.strip())
                                 .lower())
 
@@ -2003,7 +1965,6 @@ def convert_five_tiers(
                             le_xcript_dict[le_entry_id])
 
                         if xcript_key not in le_xcript_set:
-
                             le_xcript_set.add(xcript_key)
 
                             create_entity(
@@ -2033,27 +1994,19 @@ def convert_five_tiers(
             create_le_flag = False
 
             if not tag:
-
                 nom_flag = True
-
             else:
-
                 create_le_flag = True
                 tag_name = tag.group(0)
 
                 if translation_text[:3] != tag_name:
-
                     nom_flag = True
-
                 else:
-
                     fp_le_id = (
                         conj_dict.get(tag_name.lower()))
 
                     if fp_le_id is not None:
-
                         if (fp_le_id, sp_le_id) not in link_set:
-
                             link_set.add(
                                 (fp_le_id, sp_le_id))
 
@@ -2065,7 +2018,6 @@ def convert_five_tiers(
                                 link_id = sp_le_id)
 
                         if (sp_le_id, fp_le_id) not in link_set:
-
                             link_set.add(
                                 (sp_le_id, fp_le_id))
 
@@ -2079,20 +2031,16 @@ def convert_five_tiers(
                         create_le_flag = False
 
             if nom_flag:
-
                 create_le_flag = False
 
                 mark_search = (
                     re.search(mark_re, translation_text))
 
                 if mark_search:
-
                     create_le_flag = True
 
                     if merge_by_meaning:
-
                         nom_key = (
-
                             translation_text
                                 [ : mark_search.start()] .strip() .lower())
 
@@ -2100,7 +2048,6 @@ def convert_five_tiers(
                             nom_dict.get(nom_key))
 
                         if fp_le_id is not None:
-
                             establish_link(
                                 fp_le_id,
                                 sp_le_id)
@@ -2108,12 +2055,10 @@ def convert_five_tiers(
                             create_le_flag = False
 
             if create_le_flag:
-
                 mark_search = (
                     re.search(mark_re, translation_text))
 
                 if mark_search:
-
                     translation_text = (
                         translation_text [ : mark_search.start()] .strip())
 
@@ -2129,9 +2074,7 @@ def convert_five_tiers(
                     establish_link(
                         fp_lexical_entry_id,
                         sp_le_id)
-
                 else:
-
                     entry_dict = {
                         'created_at': created_at(),
                         'client_id': extra_client_id,
@@ -2170,7 +2113,6 @@ def convert_five_tiers(
             # Checking if we need to update task progress.
 
             percent_delta = (
-
                 (percent_finished - percent_adding) /
                     (2 * len(p_lexes_with_text_after_update)))
 
