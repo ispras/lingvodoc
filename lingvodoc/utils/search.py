@@ -48,17 +48,20 @@ def translation_gist_search(searchstring, gist_type='Service'):
     return translationgist
 
 def field_search(searchstring):
+    tg = aliased(dbTranslationGist)
     field = (
         DBSession
             .query(dbField)
-            .join(dbTranslationGist)
-            .join(dbTranslationAtom)
             .filter(
+                dbTranslationGist.client_id == dbField.translation_gist_client_id,
+                dbTranslationGist.object_id == dbField.translation_gist_object_id,
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationGist.type == 'Field',
+                tg.client_id == dbTranslationAtom.parent_client_id,
+                tg.object_id == dbTranslationAtom.parent_object_id,
                 dbTranslationAtom.content == searchstring,
                 dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                dbTranslationGist.type == 'Field',
-                dbTranslationAtom.marked_for_deletion == False,
-                dbTranslationGist.marked_for_deletion == False)
+                dbTranslationAtom.marked_for_deletion == False)
             .order_by(
                 dbTranslationGist.created_at,
                 dbTranslationGist.client_id,

@@ -398,7 +398,7 @@ def convert_five_tiers(
                 .query(Entity)
                 .filter(
                     tuple_(Entity.client_id, Entity.object_id)
-                    .in_(markup_id_query))
+                        .in_(markup_id_query))
                 .all())
 
         markup_entity_dict = {
@@ -428,7 +428,7 @@ def convert_five_tiers(
                         Sound.client_id == Entity.self_client_id,
                         Sound.object_id == Entity.self_object_id,
                         tuple_(Entity.client_id, Entity.object_id)
-                        .in_(markup_id_query))
+                            .in_(markup_id_query))
                     .all())
 
             sound_entity_dict = {
