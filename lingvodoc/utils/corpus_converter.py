@@ -61,7 +61,12 @@ from lingvodoc.utils.elan_functions import tgt_to_eaf
 from lingvodoc.utils.search import get_id_to_field_dict, field_search
 
 from lingvodoc.views.v2.utils import storage_file
-from lingvodoc.utils.creation import get_attached_users, uniq_list, create_field
+from lingvodoc.utils.creation import (
+    get_attached_users,
+    uniq_list,
+    create_field,
+    create_gists_with_atoms
+)
 
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
@@ -123,15 +128,23 @@ def translationgist_contents(translationgist):
 
 
 def translation_service_search(searchstring):
-    translationatom = DBSession.query(TranslationAtom)\
-        .join(TranslationGist).\
-        filter(TranslationAtom.content == searchstring,
-               TranslationAtom.locale_id == ENGLISH_LOCALE,
-               TranslationGist.type == 'Service')\
-        .order_by(TranslationAtom.client_id)\
-        .first()
-    response = translationgist_contents(translationatom.parent)
-    return response
+    translationgist = (
+        DBSession
+            .query(TranslationGist)
+            .filter(
+                TranslationGist.type == 'Service',
+                TranslationGist.marked_for_deletion == False,
+                TranslationAtom.content == searchstring,
+                TranslationAtom.locale_id == ENGLISH_LOCALE,
+                TranslationAtom.marked_for_deletion == False)
+            .order_by(
+                TranslationGist.created_at,
+                TranslationGist.client_id,
+                TranslationGist.object_id)
+            .first())
+
+    if translationgist:
+        return translationgist_contents(translationgist)
 
 
 def translation_service_search_all(searchstring):
@@ -151,6 +164,14 @@ def translation_service_search_all(searchstring):
 
     if translationgist:
         return {"client_id": translationgist.client_id, "object_id": translationgist.object_id}
+
+    translation_gist_id = create_gists_with_atoms([{'locale_id': ENGLISH_LOCALE,
+                                                    'content': searchstring}],
+                                                  None,
+                                                  [client_id, None],
+                                                  gist_type='Service')
+
+    return {"client_id": translation_gist_id[0], "object_id": translation_gist_id[1]}
 
 
 def create_nested_field(
