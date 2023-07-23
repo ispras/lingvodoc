@@ -278,7 +278,7 @@ def created_at():
 
 
 def get_field_id(english_name):
-    # Search between hardcoded fields
+    # Search among hardcoded fields
     static_field_id = get_id_to_field_dict().get(english_name)
     if static_field_id:
         return static_field_id
@@ -355,9 +355,9 @@ def convert_five_tiers(
                           "Transcription of Paradigmatic forms",
                           "Translation of Paradigmatic forms",
                           "Sounds of Paradigmatic forms",
-                          "Affixes",
-                          "Meanings of affixes",
-                          "Words with affixes"
+                          "Affix",
+                          "Meaning of affix",
+                          "Word with affix"
                           )
         '''
 
@@ -398,7 +398,7 @@ def convert_five_tiers(
             raise ValueError('You have to specify at least 1 markup entity.')
 
         markup_id_list = [tuple(markup_id) for markup_id in markup_id_list]
-        markup_id_query = (ids_to_id_query(markup_id_list))
+        markup_id_query = ids_to_id_query(markup_id_list)
 
         markup_entity_list = (
             DBSession
@@ -423,7 +423,7 @@ def convert_five_tiers(
 
         if not no_sound_flag:
             # sound_id_list = [entity.self_id for entity in markup_entity_list]
-            Sound = (aliased(Entity, name='Sound'))
+            Sound = aliased(Entity, name='Sound')
 
             result_list = (
                 DBSession
@@ -1450,7 +1450,7 @@ def convert_five_tiers(
                     word.time[1] <= len(full_audio)):
 
                     with tempfile.NamedTemporaryFile() as temp:
-                        (full_audio[word.time[0]:word.time[1]]
+                        (full_audio[word.time[0] : word.time[1]]
                             .export(
                                 temp.name,
                                 format = sound_format))
