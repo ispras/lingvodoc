@@ -664,12 +664,12 @@ def convert_five_tiers(
         for pair in (le_lexes, le_sound_fid), (pa_lexes, pa_sound_fid):
             hash_set.update(
                 x.additional_metadata["hash"]
-                for x in pair[1]
-                if x.field_id == pair[2])
+                for x in pair[0]
+                if x.field_id == pair[1])
 
             link_set.update(
                 (x.link_id, x.parent_id)
-                for x in pair[1]
+                for x in pair[0]
                 if x.field_id == backref_fid)
 
         mark_re = re.compile('[-.][\dA-Z]+')
