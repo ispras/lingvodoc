@@ -281,9 +281,9 @@ def get_field_id(english_name):
 
     # Create new field if not found
     if not field:
-        field = create_field({
+        field = create_field([{
             "locale_id": ENGLISH_LOCALE,
-            "content": english_name})
+            "content": english_name}])
 
     return field.id
 
