@@ -923,11 +923,11 @@ def create_field(translation_atoms, client_id=66):
                                                   [client_id, None],
                                                   gist_type="Field")
 
-    data_type_translation_gist_id = translation_gist_search('Text')
+    data_type_translation_gist = translation_gist_search('Text')
     dbfield = Field(client_id=client_id,
                     object_id=None,
-                    data_type_translation_gist_client_id=data_type_translation_gist_id[0],
-                    data_type_translation_gist_object_id=data_type_translation_gist_id[1],
+                    data_type_translation_gist_client_id=data_type_translation_gist.client_id,
+                    data_type_translation_gist_object_id=data_type_translation_gist.object_id,
                     translation_gist_client_id=translation_gist_id[0],
                     translation_gist_object_id=translation_gist_id[1],
                     marked_for_deletion=False)
