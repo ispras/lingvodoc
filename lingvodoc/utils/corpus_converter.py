@@ -300,20 +300,20 @@ def created_at():
             .timestamp())
 
 
-def get_field_id(english_name):
+def get_field_id(searchstring):
     # Search among hardcoded fields
-    static_field_id = get_id_to_field_dict().get(english_name)
+    static_field_id = get_id_to_field_dict().get(searchstring)
     if static_field_id:
         return static_field_id
 
     # Search field in db
-    field = field_search(english_name)
+    field = field_search(searchstring)
 
     # Create new field if not found
     if not field:
         field = create_field([{
             "locale_id": ENGLISH_LOCALE,
-            "content": english_name}])
+            "content": searchstring}])
 
     return field.id
 

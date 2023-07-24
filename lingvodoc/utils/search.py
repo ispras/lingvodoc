@@ -51,10 +51,11 @@ def field_search(searchstring):
     field = (
         DBSession
             .query(dbField)
+            .join(dbTranslationGist, and_(
+                dbTranslationGist.client_id == dbField.translation_gist_client_id,
+                dbTranslationGist.object_id == dbField.translation_gist_object_id))
             .join(dbTranslationAtom)
             .filter(
-                dbTranslationGist.client_id == dbField.translation_gist_client_id,
-                dbTranslationGist.object_id == dbField.translation_gist_object_id,
                 dbTranslationGist.marked_for_deletion == False,
                 dbTranslationGist.type == 'Field',
                 dbTranslationAtom.content == searchstring,
