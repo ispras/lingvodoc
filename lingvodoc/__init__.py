@@ -10,6 +10,7 @@ import re
 import subprocess
 
 from keycloak import KeycloakConnectionError
+from keycloak.uma_permissions import UMAPermission
 
 try:
     import git
@@ -1064,18 +1065,6 @@ def main(global_config, **settings):
     parser = ConfigParser()
     parser.read(config_file)
 
-    if parser.has_section('keycloak'):
-        keycloak_dict = dict(parser.items('keycloak'))
-        try:
-            KeycloakSession.connect(realm_name=keycloak_dict["realm_name"], server_url=keycloak_dict["server_url"],
-                                    admin=keycloak_dict["admin"], password=keycloak_dict["password"],
-                                    realm_name_admin=keycloak_dict["realm_name_admin"],
-                                    client_name=keycloak_dict["client_name"],
-                                    client_secret_key=keycloak_dict["client_secret_key"], timeout=int(keycloak_dict["timeout"]))
-
-        except KeycloakConnectionError as e:
-                log.warning(e.error_message)
-
     # TODO: DANGER
 
     storage_dict = (
@@ -1143,6 +1132,20 @@ def main(global_config, **settings):
         settings['signup'] = {'approve': False, 'address': []}
 
     config = Configurator(settings=settings)
+
+    if parser.has_section('keycloak'):
+        keycloak_dict = dict(parser.items('keycloak'))
+        try:
+            KeycloakSession.connect(realm_name=keycloak_dict["realm_name"], server_url=keycloak_dict["server_url"],
+                                    admin=keycloak_dict["admin"], password=keycloak_dict["password"],
+                                    realm_name_admin=keycloak_dict["realm_name_admin"],
+                                    client_name=keycloak_dict["client_name"],
+                                    client_secret_key=keycloak_dict["client_secret_key"],
+                                    timeout=int(keycloak_dict["timeout"]))
+
+        except KeycloakConnectionError as e:
+            log.warning(e.error_message)
+        KeycloakSession.migrate_users()
 
     # config.configure_celery('development_test.ini')
     authentication_policy = KeycloakBasedAuthenticationPolicy(openid_client=KeycloakSession.openid_client)

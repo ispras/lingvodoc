@@ -37,7 +37,7 @@ jdcal==1.4.1
 Jinja2==2.10.3
 joblib==0.14.1
 kombu==3.0.37
-python-keycloak==2.16.3
+python-keycloak==3.3.0
 Logbook==1.1.0
 lxml==4.4.1
 Mako==1.0.4

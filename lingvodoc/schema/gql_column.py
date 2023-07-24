@@ -135,7 +135,7 @@ class CreateColumn(graphene.Mutation):
         object_id = id[1] if id else None
         id = [client_id, object_id]
         parent_id = args.get('parent_id')
-        info.context.acl_check('edit', 'perspective', parent_id)
+        info.context.acl_check(info.context, 'edit', 'perspective', parent_id)
         field_id = args.get('field_id')
         self_id = args.get('self_id')
         link_id = args.get('link_id')
@@ -207,7 +207,7 @@ class UpdateColumn(graphene.Mutation):
         if not field_object or field_object.marked_for_deletion:
             raise ResponseError(message="Error: No such field object in the system")
 
-        info.context.acl_check(
+        info.context.acl_check(info.context,
             'edit', 'perspective', field_object.parent_id)
 
         field_id = args.get('field_id')
@@ -344,7 +344,7 @@ class DeleteColumn(graphene.Mutation):
                 ResponseError(
                     f'Column {id[0]}/{id[0]} is deleted.'))
 
-        info.context.acl_check(
+        info.context.acl_check(info.context,
             'edit', 'perspective', column_list[0].parent_id)
 
         client_id = (

@@ -1442,6 +1442,7 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 
 class User(Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
     id = Column(VARCHAR(length=36), primary_key=True, nullable=False)
+    v1_id = Column(SLBigInteger)
     login = Column(UnicodeText, unique=True, nullable=True)
     name = Column(UnicodeText)
     # this stands for name in English
