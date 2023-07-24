@@ -131,6 +131,7 @@ def translation_service_search(searchstring):
     translationgist = (
         DBSession
             .query(TranslationGist)
+            .join(TranslationAtom)
             .filter(
                 TranslationGist.type == 'Service',
                 TranslationGist.marked_for_deletion == False,
@@ -151,6 +152,7 @@ def translation_service_get(searchstring):
     translationgist = (
         DBSession
             .query(TranslationGist)
+            .join(TranslationAtom)
             .filter(
                 TranslationGist.marked_for_deletion == False,
                 TranslationAtom.marked_for_deletion == False,

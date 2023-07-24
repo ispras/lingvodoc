@@ -27,6 +27,7 @@ def translation_gist_search(searchstring, gist_type='Service'):
     translationgist = (
         DBSession
             .query(dbTranslationGist)
+            .join(dbTranslationAtom)
             .filter(
                 dbTranslationAtom.content == searchstring,
                 dbTranslationAtom.locale_id == ENGLISH_LOCALE,
@@ -50,6 +51,7 @@ def field_search(searchstring):
     field = (
         DBSession
             .query(dbField)
+            .join(dbTranslationAtom)
             .filter(
                 dbTranslationGist.client_id == dbField.translation_gist_client_id,
                 dbTranslationGist.object_id == dbField.translation_gist_object_id,
