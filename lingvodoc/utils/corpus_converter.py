@@ -74,7 +74,8 @@ EAF_TIERS = {
     "Word of Paradigmatic forms": "Word of Paradigmatic forms",
     "word": "Word",
     "transcription": "Transcription",
-    "translation": "Translation"
+    "translation": "Translation",
+    "mark": "Meaning of affix"
 }
 
 
@@ -1377,8 +1378,8 @@ def convert_five_tiers(
                                     tier = tier_name,
                                     time = word.time))
 
-                            if debug_flag:
-                                log.debug(
+                            if debug_flag and tier_name == 'transcription':
+                                print(
                                     '\nparadigm_word:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
@@ -1514,6 +1515,9 @@ def convert_five_tiers(
                                 storage = storage)
 
                 for word in curr_dict:
+                    if debug_flag and word.tier != 'translation':
+                        print(f'*** word.tier: {word.tier}')
+
                     if word.tier == 'translation':
                         word_text = word.text
 
