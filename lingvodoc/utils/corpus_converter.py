@@ -75,7 +75,9 @@ EAF_TIERS = {
     "word": "Word",
     "transcription": "Transcription",
     "translation": "Translation",
-    "mark": "Meaning of affix"
+    "Affix": "Affix",
+    "Meaning of affix": "Meaning of affix",
+    "Word with affix": "Word with affix"
 }
 
 
@@ -1352,12 +1354,17 @@ def convert_five_tiers(
                         tcr_times = [word_translation[i][0].time for i in word_translation
                                      if len(word_translation[i]) > 0 and word_translation[i][0].time is not None]
 
+                        def d(w):
+                            return (w[ w.index('-'): ]
+                                if '-' in w
+                                else "")
+
                         tcr_text = " ".join(tcr_words)
-                        afx_text = " | ".join(map(lambda w: w[ w.index('-'): ], tcr_words))
+                        afx_text = " | ".join(map(lambda w: d(w), tcr_words))
                         tcr_time = (tcr_times[0], tcr_times[-1]) if tcr_times else None
 
                         if debug_flag:
-                            log.debug(f'Affix(es): {afx_text}')
+                            log.debug(f'Affixes: {afx_text}')
 
                         # Translation
                         tlt_words = [word_translation[i][1].text for i in word_translation
@@ -1367,8 +1374,9 @@ def convert_five_tiers(
 
                         def m(w):
                             mark = re.search(mark_re, w)
-                            if mark and not re.search(nom_re, w):
-                                return mark.group(0)
+                            return (mark.group(0)
+                                if mark and not re.search(nom_re, w)
+                                else "")
 
                         tlt_text = " ".join(tlt_words)
                         mrk_text = " | ".join(map(lambda w: m(w), tlt_words))
@@ -1390,7 +1398,7 @@ def convert_five_tiers(
                             paradigm_words.append(
                                 elan_parser.Word(
                                     text = mrk_text,
-                                    tier = "Meaning of afix",
+                                    tier = "Meaning of affix",
                                     time = tlt_time))
 
                         if afx_text:
