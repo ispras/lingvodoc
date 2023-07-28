@@ -971,7 +971,8 @@ def convert_five_tiers(
             tp_field_names = (
                 "Affix",
                 "Meaning of affix",
-                "Word with affix"
+                "Word with affix",
+                "Etymology"
             )
 
             field_info_list = []
@@ -1314,6 +1315,7 @@ def convert_five_tiers(
 
             # Showing what we've got from the corpus, if required.
 
+            debug_flag = True
             if debug_flag:
                 def f(value):
                     if isinstance(value, elan_parser.Word):
@@ -1384,6 +1386,13 @@ def convert_five_tiers(
                                     tier = "Word of Paradigmatic forms",
                                     time = tlt_time))
 
+                        if mrk_text:
+                            paradigm_words.append(
+                                elan_parser.Word(
+                                    text = mrk_text,
+                                    tier = "Meaning of afix",
+                                    time = tlt_time))
+
                         if afx_text:
                             paradigm_words.append(
                                 elan_parser.Word(
@@ -1423,6 +1432,7 @@ def convert_five_tiers(
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
 
+                # Tuple with paradigm words
                 par_row = tuple(x.text for x in paradigm_words)
 
                 if debug_flag:
@@ -1435,78 +1445,92 @@ def convert_five_tiers(
                         pprint.pformat(
                             par_row, width = 192))
 
-                sp_lexical_entry_id = None
+                def par_to_entry(content_text_entity_dict,
+                                 parent_id_text_entity_counter,
+                                 perspective_id):
 
-                if (par_row and
-                    par_row not in par_rows):
+                    lexical_entry_id = None
 
-                    p_match_dict = defaultdict(list)
-                    
-                    for pword in paradigm_words:
-                        match_list = pa_content_text_entity_dict[pword.text] #LEX COUNT OR RANDOM
-                        match_field_id = get_field_id(EAF_TIERS[pword.tier])
-                        for t in match_list:
-                            if t.field_id == match_field_id:
-                               p_match_dict[t.parent_id].append(t)
+                    if (par_row and
+                        par_row not in par_rows):
 
-                    p_match_dict = {
-                        k: v
-                        for k, v in p_match_dict.items()
-                        if (len(v) >= 2 or
-                            len(v) == 1 and pa_parent_id_text_entity_counter[k] == 1)}
+                        match_dict = defaultdict(list)
 
-                    max_sim = None
+                        for pword in paradigm_words:
+                            match_list = content_text_entity_dict[pword.text] #LEX COUNT OR RANDOM
+                            match_field_id = get_field_id(EAF_TIERS[pword.tier])
+                            for t in match_list:
+                                if t.field_id == match_field_id:
+                                   match_dict[t.parent_id].append(t)
 
-                    for le in p_match_dict:
-                        if max_sim is None or len(p_match_dict[le]) >= len(p_match_dict[max_sim]):
-                            max_sim = le
+                        match_dict = {
+                            k: v
+                            for k, v in match_dict.items()
+                            if (len(v) >= 2 or
+                                len(v) == 1 and parent_id_text_entity_counter[k] == 1)}
 
-                    if max_sim:
-                        sp_lexical_entry_id = max_sim
-                    else:
-                        entry_dict = {
-                            'created_at': created_at(),
-                            'client_id': extra_client_id,
-                            'object_id': extra_client.next_object_id(),
-                            'parent_client_id': pa_perspective_id[0],
-                            'parent_object_id': pa_perspective_id[1],
-                            'marked_for_deletion': False}
+                        max_sim = None
 
-                        entry_insert_list.append(entry_dict)
+                        for le in match_dict:
+                            if max_sim is None or len(match_dict[le]) >= len(match_dict[max_sim]):
+                                max_sim = le
 
-                        toc_dict = {
-                            'client_id': extra_client_id,
-                            'object_id': entry_dict['object_id'],
-                            'table_name': 'lexicalentry',
-                            'marked_for_deletion': False}
+                        if max_sim:
+                            lexical_entry_id = max_sim
+                        else:
+                            entry_dict = {
+                                'created_at': created_at(),
+                                'client_id': extra_client_id,
+                                'object_id': extra_client.next_object_id(),
+                                'parent_client_id': perspective_id[0],
+                                'parent_object_id': perspective_id[1],
+                                'marked_for_deletion': False}
 
-                        toc_insert_list.append(toc_dict)
-                                
-                        sp_lexical_entry_id = extra_client_id, entry_dict['object_id']
+                            entry_insert_list.append(entry_dict)
 
-                    par_rows[par_row] = sp_lexical_entry_id
+                            toc_dict = {
+                                'client_id': extra_client_id,
+                                'object_id': entry_dict['object_id'],
+                                'table_name': 'lexicalentry',
+                                'marked_for_deletion': False}
 
-                    for other_word in paradigm_words:
-                        text = other_word.text
+                            toc_insert_list.append(toc_dict)
 
-                        if not text:
-                            continue
+                            lexical_entry_id = extra_client_id, entry_dict['object_id']
 
-                        field_id = get_field_id(EAF_TIERS[other_word.tier])
+                        par_rows[par_row] = lexical_entry_id
 
-                        if (not max_sim or
-                            all(x.content != text or x.field_id != field_id
-                                for x in p_match_dict[max_sim])):
+                        for other_word in paradigm_words:
+                            text = other_word.text
 
-                            create_entity(
-                                extra_client,
-                                sp_lexical_entry_id,
-                                field_id,
-                                field_data_type_dict[field_id],
-                                text)
+                            if not text:
+                                continue
 
-                elif par_row:
-                    sp_lexical_entry_id = par_rows[par_row]
+                            field_id = get_field_id(EAF_TIERS[other_word.tier])
+
+                            if (not max_sim or
+                                all(x.content != text or x.field_id != field_id
+                                    for x in match_dict[max_sim])):
+
+                                create_entity(
+                                    extra_client,
+                                    lexical_entry_id,
+                                    field_id,
+                                    field_data_type_dict[field_id],
+                                    text)
+
+                    elif par_row:
+                        lexical_entry_id = par_rows[par_row]
+
+                    return lexical_entry_id
+
+                sp_lexical_entry_id = par_to_entry(pa_content_text_entity_dict,
+                                                   pa_parent_id_text_entity_counter,
+                                                   pa_perspective_id)
+
+                mo_lexical_entry_id = par_to_entry(mo_content_text_entity_dict,
+                                                   mo_parent_id_text_entity_counter,
+                                                   mo_perspective_id)
 
                 if (par_row and
                     not no_sound and
@@ -1898,6 +1922,40 @@ def convert_five_tiers(
 
             p_lexes_with_text_after_update = entity_query.all()
 
+        m_lexes_with_text_after_update = []
+
+        if mo_perspective:
+            mo_already_set = (
+                set(
+                    t.id
+                    for t_list in mo_content_text_entity_dict.values()
+                    for t in t_list))
+
+            entity_query = (
+                DBSession
+                    .query(Entity)
+                    .filter(
+                        Entity.marked_for_deletion == False,
+                        LexicalEntry.client_id == Entity.parent_client_id,
+                        LexicalEntry.object_id == Entity.parent_object_id,
+                        LexicalEntry.marked_for_deletion == False,
+                        LexicalEntry.parent_client_id == mo_perspective.client_id,
+                        LexicalEntry.parent_object_id == mo_perspective.object_id,
+                        tuple_(
+                            Entity.field_client_id,
+                            Entity.field_object_id)
+                                .in_(mo_text_fid_list)))
+
+            if mo_already_set:
+                entity_query = (
+                    entity_query.filter(
+                        tuple_(
+                            Entity.client_id,
+                            Entity.object_id)
+                                .notin_(ids_to_id_query(mo_already_set))))
+
+            m_lexes_with_text_after_update = entity_query.all()
+
         # Info of words and transcriptions in the first perspective.
 
         task_percent(
@@ -1973,6 +2031,18 @@ def convert_five_tiers(
                 pa_word_dict[t.parent_id].append(t.content)
             elif t.field_id == pa_fields['transcription']:
                 pa_xcript_dict[t.parent_id].append(t.content)
+        '''
+        # Updated words and transcriptions in the third perspective.
+
+        mo_word_dict = defaultdict(list)
+        mo_xcript_dict = defaultdict(list)
+
+        for t in m_lexes_with_text_after_update:
+            if t.field_id == mo_fields['word']:
+                mo_word_dict[t.parent_id].append(t.content)
+            elif t.field_id == mo_fields['affix']:
+                mo_xcript_dict[t.parent_id].append(t.content)
+        '''
 
         def establish_link(
             le_entry_id,
