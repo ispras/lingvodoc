@@ -410,7 +410,8 @@ def convert_five_tiers(
         mo_fields = {
             'word': get_field_id('Word with affix'),
             'affix': get_field_id('Affix'),
-            'meaning': get_field_id('Meaning of affix')
+            'meaning': get_field_id('Meaning of affix'),
+            'etymology': get_field_id('Etymology')
         }
 
         le_structure = set(le_fields.values())
@@ -1342,29 +1343,67 @@ def convert_five_tiers(
                 for word_translation in phrase:
                     if type(word_translation) is not list:
                         curr_dict = word_translation
-                        mt_words = [word_translation[i][1].text for i in word_translation
-                                    if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
-                        mt_times = [word_translation[i][1].time for i in word_translation
-                                    if len(word_translation[i]) > 1 and word_translation[i][1].time is not None]
 
-                        main_tier_text = " ".join(mt_words)
-                        main_tier_time = None
+                        # Transcription
+                        tcr_words = [word_translation[i][0].text for i in word_translation
+                                     if len(word_translation[i]) > 0 and word_translation[i][0].text is not None]
+                        tcr_times = [word_translation[i][0].time for i in word_translation
+                                     if len(word_translation[i]) > 0 and word_translation[i][0].time is not None]
 
-                        if mt_times:
-                            main_tier_time = (mt_times[0], mt_times[-1])
+                        tcr_text = " ".join(tcr_words)
+                        afx_text = " | ".join(map(lambda w: w[ w.index('-'): ], tcr_words))
+                        tcr_time = (tcr_times[0], tcr_times[-1]) if tcr_times else None
 
-                        if main_tier_text:
+                        if debug_flag:
+                            log.debug(f'Affix(es): {afx_text}')
+
+                        # Translation
+                        tlt_words = [word_translation[i][1].text for i in word_translation
+                                     if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
+                        tlt_times = [word_translation[i][1].time for i in word_translation
+                                     if len(word_translation[i]) > 1 and word_translation[i][1].time is not None]
+
+                        def m(w):
+                            mark = re.search(mark_re, w)
+                            if mark and not re.search(nom_re, w):
+                                return mark.group(0)
+
+                        tlt_text = " ".join(tlt_words)
+                        mrk_text = " | ".join(map(lambda w: m(w), tlt_words))
+                        tlt_time = (tlt_times[0], tlt_times[-1]) if tlt_times else None
+
+                        # Complex translation plus transcription with ultra times
+                        cplx_text = f'{tlt_text} [{tcr_text}]'
+                        times = tlt_times + tcr_times #concated
+                        cplx_time = (min(times), max(times)) if times else None
+
+                        if tlt_text:
                             paradigm_words.append(
                                 elan_parser.Word(
-                                    text = main_tier_text,
+                                    text = tlt_text,
                                     tier = "Word of Paradigmatic forms",
-                                    time = main_tier_time))
+                                    time = tlt_time))
 
-                            if debug_flag:
-                                log.debug(
-                                    '\nparadigm_word:\n' +
-                                    pprint.pformat(
-                                        paradigm_words[-1].get_tuple(), width = 192))
+                        if afx_text:
+                            paradigm_words.append(
+                                elan_parser.Word(
+                                    text = afx_text,
+                                    tier = "Affix",
+                                    time = tcr_time))
+
+                        if cplx_text:
+                            paradigm_words.append(
+                                elan_parser.Word(
+                                    text = cplx_text,
+                                    tier = "Word with affix",
+                                    time = cplx_time))
+
+                        if debug_flag:
+                            log.debug(
+                                '\nparadigm_word:\n' +
+                                pprint.pformat(
+                                    paradigm_words[-1].get_tuple(), width = 192))
+
 
                     else:
                         word = word_translation[0]
@@ -1378,8 +1417,8 @@ def convert_five_tiers(
                                     tier = tier_name,
                                     time = word.time))
 
-                            if debug_flag and tier_name == 'transcription':
-                                print(
+                            if debug_flag:
+                                log.debug(
                                     '\nparadigm_word:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))

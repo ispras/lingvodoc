@@ -237,7 +237,7 @@ class Elan:
 
                         tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
 
-                        if tag and len(tr_text.replace(tag.group(0), "")) > 0 or not tag:
+                        if tag and tr_text != tag.group(0) or not tag:
                             le_to_paradigms = []
                             if lit_transl_data:
                                 le_to_paradigms.append([Word(lit_transl_data,
@@ -252,9 +252,6 @@ class Elan:
                                 le_to_paradigms.append([Word(translation_data,
                                                              self.word[translation_data],
                                                              "literary translation",
-                                                             (time_tup[0], time_tup[1])) ])
-                                le_to_paradigms.append([Word(translation_data,
-                                                             mark.group(0), "mark",
                                                              (time_tup[0], time_tup[1])) ])
                             perspectives.append(le_to_paradigms)
 
