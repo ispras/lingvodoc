@@ -791,7 +791,7 @@ def convert_five_tiers(
 
         if new_fp_flag:
             response = translation_service_get("Lexical Entries")
-            
+
             le_perspective = (
                 DictionaryPerspective(
                     client_id = extra_client_id,
@@ -858,7 +858,6 @@ def convert_five_tiers(
             mo_perspective is None)
 
         if new_tp_flag:
-            #TODO: check this service
             response = translation_service_get("Morphology")
 
             mo_perspective = (
@@ -1236,7 +1235,8 @@ def convert_five_tiers(
         lex_rows = (
             le_meaning_dict if merge_by_meaning_all else {})
 
-        par_rows = {}
+        pa_par_rows = {}
+        mo_per_rows = {}
         dubl_set = set()
 
         message_uploading = (
@@ -1354,23 +1354,33 @@ def convert_five_tiers(
                         tcr_times = [word_translation[i][0].time for i in word_translation
                                      if len(word_translation[i]) > 0 and word_translation[i][0].time is not None]
 
-                        def d(w):
+                        tcr_text = " ".join(tcr_words)
+                        tcr_time = (tcr_times[0], tcr_times[-1]) if tcr_times else None
+
+                        # Affixes
+                        def a(w):
                             return (w[ w.index('-'): ]
                                 if '-' in w
                                 else "")
 
-                        tcr_text = " ".join(tcr_words)
-                        afx_text = " | ".join(map(lambda w: d(w), tcr_words))
-                        tcr_time = (tcr_times[0], tcr_times[-1]) if tcr_times else None
+                        afx_text = " ".join(map(lambda w: a(w), tcr_words))
+                        afx_time = tcr_time
 
-                        if debug_flag:
-                            log.debug(f'Affixes: {afx_text}')
+                        # Paradigmatic forms
+                        pf_words = [word_translation[i][1].text for i in word_translation
+                                    if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
+                        pf_times = [word_translation[i][1].time for i in word_translation
+                                    if len(word_translation[i]) > 1 and word_translation[i][1].time is not None]
+
+                        pf_text = " ".join(pf_words)
+                        pf_time = (pf_times[0], pf_times[-1]) if pf_times else None
 
                         # Translation
-                        tlt_words = [word_translation[i][1].text for i in word_translation
-                                     if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
-                        tlt_times = [word_translation[i][1].time for i in word_translation
-                                     if len(word_translation[i]) > 1 and word_translation[i][1].time is not None]
+                        tlt_words = [i.text for i in word_translation if i.text is not None]
+                        tlt_times = [i.time for i in word_translation if i.time is not None]
+
+                        tlt_text = " ".join(tlt_words)
+                        tlt_time = (tlt_times[0], tlt_times[-1]) if tlt_times else None
 
                         def m(w):
                             mark = re.search(mark_re, w)
@@ -1378,35 +1388,43 @@ def convert_five_tiers(
                                 if mark and not re.search(nom_re, w)
                                 else "")
 
-                        tlt_text = " ".join(tlt_words)
-                        mrk_text = " | ".join(map(lambda w: m(w), tlt_words))
-                        tlt_time = (tlt_times[0], tlt_times[-1]) if tlt_times else None
+                        mrk_text = " ".join(map(lambda w: m(w), tlt_words))
+                        mrk_time = tlt_time
 
                         # Complex translation plus transcription with ultra times
-                        cplx_text = f'{tlt_text} [{tcr_text}]'
+                        cplx_text = f'[{tcr_text}] {tlt_text}'
                         times = tlt_times + tcr_times #concated
                         cplx_time = (min(times), max(times)) if times else None
 
-                        if tlt_text:
+                        if pf_text:
                             paradigm_words.append(
                                 elan_parser.Word(
-                                    text = tlt_text,
+                                    text = pf_text,
                                     tier = "Word of Paradigmatic forms",
-                                    time = tlt_time))
+                                    time = pf_time))
+
+                            if debug_flag:
+                                log.debug(
+                                    '\nparadigm_word1:\n' +
+                                    pprint.pformat(
+                                        paradigm_words[-1].get_tuple(), width=192))
 
                         if mrk_text:
                             paradigm_words.append(
                                 elan_parser.Word(
                                     text = mrk_text,
                                     tier = "Meaning of affix",
-                                    time = tlt_time))
+                                    time = mrk_time))
 
                         if afx_text:
                             paradigm_words.append(
                                 elan_parser.Word(
                                     text = afx_text,
                                     tier = "Affix",
-                                    time = tcr_time))
+                                    time = afx_time))
+
+                            if debug_flag:
+                                log.debug(f'Affixes: {afx_text}')
 
                         if cplx_text:
                             paradigm_words.append(
@@ -1414,13 +1432,6 @@ def convert_five_tiers(
                                     text = cplx_text,
                                     tier = "Word with affix",
                                     time = cplx_time))
-
-                        if debug_flag:
-                            log.debug(
-                                '\nparadigm_word:\n' +
-                                pprint.pformat(
-                                    paradigm_words[-1].get_tuple(), width = 192))
-
 
                     else:
                         word = word_translation[0]
@@ -1436,7 +1447,7 @@ def convert_five_tiers(
 
                             if debug_flag:
                                 log.debug(
-                                    '\nparadigm_word:\n' +
+                                    '\nparadigm_word2:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
 
@@ -1453,7 +1464,8 @@ def convert_five_tiers(
                         pprint.pformat(
                             par_row, width = 192))
 
-                def par_to_entry(content_text_entity_dict,
+                def par_to_entry(par_rows,
+                                 content_text_entity_dict,
                                  parent_id_text_entity_counter,
                                  perspective_id):
 
@@ -1532,11 +1544,13 @@ def convert_five_tiers(
 
                     return lexical_entry_id
 
-                sp_lexical_entry_id = par_to_entry(pa_content_text_entity_dict,
+                sp_lexical_entry_id = par_to_entry(pa_par_rows,
+                                                   pa_content_text_entity_dict,
                                                    pa_parent_id_text_entity_counter,
                                                    pa_perspective_id)
 
-                mo_lexical_entry_id = par_to_entry(mo_content_text_entity_dict,
+                mo_lexical_entry_id = par_to_entry(mo_par_rows,
+                                                   mo_content_text_entity_dict,
                                                    mo_parent_id_text_entity_counter,
                                                    mo_perspective_id)
 
@@ -1586,9 +1600,6 @@ def convert_five_tiers(
                                 storage = storage)
 
                 for word in curr_dict:
-                    if debug_flag and word.tier != 'translation':
-                        print(f'*** word.tier: {word.tier}')
-
                     if word.tier == 'translation':
                         word_text = word.text
 
@@ -1697,7 +1708,7 @@ def convert_five_tiers(
                                 'marked_for_deletion': False}
 
                             toc_insert_list.append(toc_dict)
-                                    
+
                             fp_lexical_entry_id = extra_client_id, entry_dict['object_id']
 
                         lex_rows[lex_row] = (
