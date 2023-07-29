@@ -1235,8 +1235,7 @@ def convert_five_tiers(
         lex_rows = (
             le_meaning_dict if merge_by_meaning_all else {})
 
-        pa_par_rows = {}
-        mo_par_rows = {}
+        txt_rows = {}
         dubl_set = set()
 
         message_uploading = (
@@ -1344,27 +1343,10 @@ def convert_five_tiers(
                 curr_dict = {}
                 paradigm_words = []
 
+                ## Paradigms
                 for word_translation in phrase:
                     if type(word_translation) is not list:
                         curr_dict = word_translation
-
-                        # Transcription
-                        tcr_words = [word_translation[i][0].text for i in word_translation
-                                     if len(word_translation[i]) > 0 and word_translation[i][0].text is not None]
-                        tcr_times = [word_translation[i][0].time for i in word_translation
-                                     if len(word_translation[i]) > 0 and word_translation[i][0].time is not None]
-
-                        tcr_text = " ".join(tcr_words)
-                        tcr_time = (tcr_times[0], tcr_times[-1]) if tcr_times else None
-
-                        # Affixes
-                        def a(w):
-                            return (w[ w.index('-'): ]
-                                if '-' in w
-                                else "")
-
-                        afx_text = " ".join(map(lambda w: a(w), tcr_words))
-                        afx_time = tcr_time
 
                         # Paradigmatic forms
                         pf_words = [word_translation[i][1].text for i in word_translation
@@ -1374,27 +1356,6 @@ def convert_five_tiers(
 
                         pf_text = " ".join(pf_words)
                         pf_time = (pf_times[0], pf_times[-1]) if pf_times else None
-
-                        # Translation
-                        tlt_words = [i.text for i in word_translation if i.text is not None]
-                        tlt_times = [i.time for i in word_translation if i.time is not None]
-
-                        tlt_text = " ".join(tlt_words)
-                        tlt_time = (tlt_times[0], tlt_times[-1]) if tlt_times else None
-
-                        def m(w):
-                            mark = re.search(mark_re, w)
-                            return (mark.group(0)
-                                if mark and not re.search(nom_re, w)
-                                else "")
-
-                        mrk_text = " ".join(map(lambda w: m(w), tlt_words))
-                        mrk_time = tlt_time
-
-                        # Complex translation plus transcription with ultra times
-                        cplx_text = f'[{tcr_text}] {tlt_text}'
-                        times = tlt_times + tcr_times #concated
-                        cplx_time = (min(times), max(times)) if times else None
 
                         if pf_text:
                             paradigm_words.append(
@@ -1408,30 +1369,6 @@ def convert_five_tiers(
                                     '\nparadigm_word1:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width=192))
-
-                        if mrk_text:
-                            paradigm_words.append(
-                                elan_parser.Word(
-                                    text = mrk_text,
-                                    tier = "Meaning of affix",
-                                    time = mrk_time))
-
-                        if afx_text:
-                            paradigm_words.append(
-                                elan_parser.Word(
-                                    text = afx_text,
-                                    tier = "Affix",
-                                    time = afx_time))
-
-                            if debug_flag:
-                                log.debug(f'Affixes: {afx_text}')
-
-                        if cplx_text:
-                            paradigm_words.append(
-                                elan_parser.Word(
-                                    text = cplx_text,
-                                    tier = "Word with affix",
-                                    time = cplx_time))
 
                     else:
                         word = word_translation[0]
@@ -1450,29 +1387,65 @@ def convert_five_tiers(
                                     '\nparadigm_word2:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
-
-                # Tuple with paradigm words
-                par_row = tuple(x.text for x in paradigm_words)
-
                 if debug_flag:
                     log.debug(
                         '\nparadigm_words:\n' +
                         pprint.pformat(
-                            f(paradigm_words), width = 192) +
+                            f(paradigm_words), width = 192))
 
-                        '\npar_row:\n' +
-                        pprint.pformat(
-                            par_row, width = 192))
+                ## Morphology
+                morphology_words = []
+                for word_translation in phrase:
 
-                def par_to_entry(par_rows,
+                    if type(word_translation) is list:
+                        continue
+
+                    for i, w in word_translation.items():
+                        mo_phrase = []
+
+                        # Transcription
+                        txc_word = w[0].text or ""
+                        afx_text = txc_word[ txc_word.index('-'): ] if '-' in txc_word else None
+
+                        # Translation
+                        txl_word = i.text or ""
+                        m = re.search(mark_re, txl_word)
+                        n = re.search(nom_re, txl_word)
+                        mrk_text = m.group(0) if m and not n else None
+
+                        # Complex text
+                        inf_text = f'[{txc_word}] {txl_word}'
+
+                        # The phrase will be appended if affix exists
+                        if afx_text:
+                            mo_phrase.append(
+                                elan_parser.Word(
+                                    text = afx_text,
+                                    tier = "Affix"))
+
+                            if mrk_text:
+                                mo_phrase.append(
+                                    elan_parser.Word(
+                                        text = mrk_text,
+                                        tier = "Meaning of affix"))
+
+                            if inf_text:
+                                mo_phrase.append(
+                                    elan_parser.Word(
+                                        text = inf_text,
+                                        tier = "Word with affix"))
+
+                            morphology_words.append(mo_phrase)
+
+                def par_to_entry(txt_row,
                                  content_text_entity_dict,
                                  parent_id_text_entity_counter,
                                  perspective_id):
 
                     lexical_entry_id = None
 
-                    if (par_row and
-                        par_row not in par_rows):
+                    if (txt_row and
+                        txt_row not in txt_rows):
 
                         match_dict = defaultdict(list)
 
@@ -1518,7 +1491,7 @@ def convert_five_tiers(
 
                             lexical_entry_id = extra_client_id, entry_dict['object_id']
 
-                        par_rows[par_row] = lexical_entry_id
+                        txt_rows[txt_row] = lexical_entry_id
 
                         for other_word in paradigm_words:
                             text = other_word.text
@@ -1539,20 +1512,24 @@ def convert_five_tiers(
                                     field_data_type_dict[field_id],
                                     text)
 
-                    elif par_row:
-                        lexical_entry_id = par_rows[par_row]
+                    elif txt_row:
+                        lexical_entry_id = txt_rows[txt_row]
 
                     return lexical_entry_id
 
-                sp_lexical_entry_id = par_to_entry(pa_par_rows,
+
+                par_row = tuple(x.text for x in paradigm_words)
+                sp_lexical_entry_id = par_to_entry(par_row,
                                                    pa_content_text_entity_dict,
                                                    pa_parent_id_text_entity_counter,
                                                    pa_perspective_id)
 
-                mo_lexical_entry_id = par_to_entry(mo_par_rows,
-                                                   mo_content_text_entity_dict,
-                                                   mo_parent_id_text_entity_counter,
-                                                   mo_perspective_id)
+                for mo_phrase in morphology_words:
+                    mor_row = tuple(x.text for x in morphology_words)
+                    mo_lexical_entry_id = par_to_entry(mor_row,
+                                                       mo_content_text_entity_dict,
+                                                       mo_parent_id_text_entity_counter,
+                                                       mo_perspective_id)
 
                 if (par_row and
                     not no_sound and
