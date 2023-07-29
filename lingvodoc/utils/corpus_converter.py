@@ -1437,6 +1437,12 @@ def convert_five_tiers(
 
                             morphology_words.append(mo_phrase)
 
+                if debug_flag:
+                    log.debug(
+                        '\nmorphology_words:\n' +
+                        pprint.pformat(
+                            f(morphology_words), width=192))
+
                 def par_to_entry(txt_row,
                                  content_text_entity_dict,
                                  parent_id_text_entity_counter,
@@ -1525,7 +1531,7 @@ def convert_five_tiers(
                                                    pa_perspective_id)
 
                 for mo_phrase in morphology_words:
-                    mor_row = tuple(x.text for x in morphology_words)
+                    mor_row = tuple(x.text for x in mo_phrase)
                     mo_lexical_entry_id = par_to_entry(mor_row,
                                                        mo_content_text_entity_dict,
                                                        mo_parent_id_text_entity_counter,
