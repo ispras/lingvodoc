@@ -1236,7 +1236,7 @@ def convert_five_tiers(
             le_meaning_dict if merge_by_meaning_all else {})
 
         pa_par_rows = {}
-        mo_per_rows = {}
+        mo_par_rows = {}
         dubl_set = set()
 
         message_uploading = (
