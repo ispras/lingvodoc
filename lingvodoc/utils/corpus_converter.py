@@ -1409,9 +1409,7 @@ def convert_five_tiers(
 
                         # Translation
                         txl_word = i.text or ""
-                        m = re.search(mark_re, txl_word)
-                        n = re.search(nom_re, txl_word)
-                        mrk_text = m.group(0) if m and not n else None
+                        mrk_text = " ".join(re.findall(mark_re, txl_word))
 
                         # Complex text
                         inf_text = f'[{txc_word}] {txl_word}'
@@ -1443,21 +1441,22 @@ def convert_five_tiers(
                         pprint.pformat(
                             f(morphology_words), width=192))
 
-                def par_to_entry(txt_row,
-                                 content_text_entity_dict,
-                                 parent_id_text_entity_counter,
-                                 perspective_id):
+                def words_to_entry(result_words,
+                                   content_text_entity_dict,
+                                   parent_id_text_entity_counter,
+                                   perspective_id):
 
                     lexical_entry_id = None
+                    txt_row = tuple(x.text for x in result_words)
 
                     if (txt_row and
                         txt_row not in txt_rows):
 
                         match_dict = defaultdict(list)
 
-                        for pword in paradigm_words:
-                            match_list = content_text_entity_dict[pword.text] #LEX COUNT OR RANDOM
-                            match_field_id = get_field_id(EAF_TIERS[pword.tier])
+                        for rword in result_words:
+                            match_list = content_text_entity_dict[rword.text] #LEX COUNT OR RANDOM
+                            match_field_id = get_field_id(EAF_TIERS[rword.tier])
                             for t in match_list:
                                 if t.field_id == match_field_id:
                                    match_dict[t.parent_id].append(t)
@@ -1499,7 +1498,7 @@ def convert_five_tiers(
 
                         txt_rows[txt_row] = lexical_entry_id
 
-                        for other_word in paradigm_words:
+                        for other_word in result_words:
                             text = other_word.text
 
                             if not text:
@@ -1524,20 +1523,19 @@ def convert_five_tiers(
                     return lexical_entry_id
 
 
-                par_row = tuple(x.text for x in paradigm_words)
-                sp_lexical_entry_id = par_to_entry(par_row,
-                                                   pa_content_text_entity_dict,
-                                                   pa_parent_id_text_entity_counter,
-                                                   pa_perspective_id)
+                sp_lexical_entry_id = words_to_entry(paradigm_words,
+                                                     pa_content_text_entity_dict,
+                                                     pa_parent_id_text_entity_counter,
+                                                     pa_perspective_id)
 
                 for mo_phrase in morphology_words:
-                    mor_row = tuple(x.text for x in mo_phrase)
-                    mo_lexical_entry_id = par_to_entry(mor_row,
-                                                       mo_content_text_entity_dict,
-                                                       mo_parent_id_text_entity_counter,
-                                                       mo_perspective_id)
+                    mo_lexical_entry_id = words_to_entry(mo_phrase,
+                                                         mo_content_text_entity_dict,
+                                                         mo_parent_id_text_entity_counter,
+                                                         mo_perspective_id)
 
-                if (par_row and
+                # TOCHECK
+                if (any(x.text for x in paradigm_words) and
                     not no_sound and
                     word.time[1] <= len(full_audio)):
 
