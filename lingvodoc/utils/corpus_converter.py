@@ -1332,6 +1332,7 @@ def convert_five_tiers(
 
             # Processing corpus info.
 
+            morphology_dict = []
             for phrase_index, phrase in enumerate(final_dicts):
 
                 if debug_flag:
@@ -1401,39 +1402,58 @@ def convert_five_tiers(
                         continue
 
                     for i, w in word_translation.items():
-                        mo_phrase = []
-
                         # Transcription
                         txc_word = w[0].text or ""
-                        afx_text = txc_word[ txc_word.index('-'): ] if '-' in txc_word else None
+                        afx_text = txc_word.split('-')[1:] if '-' in txc_word else []
 
                         # Translation
                         txl_word = i.text or ""
-                        mrk_text = " ".join(re.findall(mark_re, txl_word))
+                        mrk_text = re.findall(mark_re, txl_word)
 
                         # Complex text
                         inf_text = f'[{txc_word}] {txl_word}'
 
                         # The phrase will be appended if affix exists
-                        if afx_text:
-                            mo_phrase.append(
+                        for n in range(len(afx_text)):
+                            afx = f'-{afx_text[n]}'
+                            mrk = (mrk_text[n]
+                                   if n < len(mrk_text)
+                                   else " ".join(mrk_text))
+
+                            # Check if such affix is already in the list
+                            found = False
+                            for prs in morphology_dict:
+                                if found: break
+                                for wrd in prs:
+                                    if found: break
+                                    for fld in wrd:
+                                        if fld.tier == "Affix" and fld.text == afx:
+                                            found = True
+                                        if found and fld.tier == "Word with affix":
+                                            fld.text += f'\n{inf_text}'
+                            if found: continue
+
+                            mo_word = []
+
+                            mo_word.append(
                                 elan_parser.Word(
-                                    text = afx_text,
-                                    tier = "Affix"))
+                                    text=afx,
+                                    tier="Affix"))
 
-                            if mrk_text:
-                                mo_phrase.append(
-                                    elan_parser.Word(
-                                        text = mrk_text,
-                                        tier = "Meaning of affix"))
+                            mo_word.append(
+                                elan_parser.Word(
+                                    text=mrk,
+                                    tier="Meaning of affix"))
 
-                            if inf_text:
-                                mo_phrase.append(
-                                    elan_parser.Word(
-                                        text = inf_text,
-                                        tier = "Word with affix"))
+                            mo_word.append(
+                                elan_parser.Word(
+                                    text=inf_text,
+                                    tier="Word with affix"))
 
-                            morphology_words.append(mo_phrase)
+                            morphology_words.append(mo_word)
+
+                if morphology_words:
+                    morphology_dict.append(morphology_words)
 
                 if debug_flag:
                     log.debug(
@@ -1528,15 +1548,7 @@ def convert_five_tiers(
                                                      pa_parent_id_text_entity_counter,
                                                      pa_perspective_id)
 
-                for mo_phrase in morphology_words:
-                    mo_lexical_entry_id = words_to_entry(mo_phrase,
-                                                         mo_content_text_entity_dict,
-                                                         mo_parent_id_text_entity_counter,
-                                                         mo_perspective_id)
-
-                # TOCHECK
-                if (any(x.text for x in paradigm_words) and
-                    not no_sound and
+                if (new and not no_sound and
                     word.time[1] <= len(full_audio)):
 
                     with tempfile.NamedTemporaryFile() as temp:
@@ -1853,6 +1865,13 @@ def convert_five_tiers(
                         markup_id_index * percent_delta_markup +
                         (phrase_index + 1) * percent_delta_phrase,
                     message_uploading)
+
+            for morphology_words in morphology_dict:
+                for mo_word in morphology_words:
+                    mo_lexical_entry_id = words_to_entry(mo_word,
+                                                         mo_content_text_entity_dict,
+                                                         mo_parent_id_text_entity_counter,
+                                                         mo_perspective_id)
 
         percent_from = (percent_uploading + percent_adding) / 2
 
