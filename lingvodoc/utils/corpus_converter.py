@@ -1415,7 +1415,14 @@ def convert_five_tiers(
 
                         # The phrase will be appended if affix exists
                         for n in range(len(afx_text)):
-                            afx = f'-{afx_text[n]}'
+                            # Clean the affix from any non-alnum symbols after it
+                            # \u0301 is an accent mark
+                            afx = afx_text[n].replace(u'\u0301', '')
+                            afx = re.split(r'[\W]', afx.strip())[0]
+                            if not afx:
+                                continue
+
+                            afx = f'-{afx}'
                             mrk = (mrk_text[n]
                                    if n < len(mrk_text)
                                    else " ".join(mrk_text))
@@ -1519,7 +1526,7 @@ def convert_five_tiers(
                         txt_rows[txt_row] = lexical_entry_id
 
                         for other_word in result_words:
-                            text = other_word.text
+                            text = other_word.text.split('\n')
 
                             if not text:
                                 continue
@@ -1530,12 +1537,13 @@ def convert_five_tiers(
                                 all(x.content != text or x.field_id != field_id
                                     for x in match_dict[max_sim])):
 
-                                create_entity(
-                                    extra_client,
-                                    lexical_entry_id,
-                                    field_id,
-                                    field_data_type_dict[field_id],
-                                    text)
+                                for txt in text:
+                                    create_entity(
+                                        extra_client,
+                                        lexical_entry_id,
+                                        field_id,
+                                        field_data_type_dict[field_id],
+                                        txt)
 
                     elif txt_row:
                         lexical_entry_id = txt_rows[txt_row]
@@ -1941,6 +1949,7 @@ def convert_five_tiers(
 
             p_lexes_with_text_after_update = entity_query.all()
 
+        '''
         m_lexes_with_text_after_update = []
 
         if mo_perspective:
@@ -1974,6 +1983,7 @@ def convert_five_tiers(
                                 .notin_(ids_to_id_query(mo_already_set))))
 
             m_lexes_with_text_after_update = entity_query.all()
+            '''
 
         # Info of words and transcriptions in the first perspective.
 
