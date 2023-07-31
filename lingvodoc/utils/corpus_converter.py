@@ -1436,7 +1436,8 @@ def convert_five_tiers(
                                     for fld in wrd:
                                         if fld.tier == "Affix" and fld.text == afx:
                                             found = True
-                                        if found and fld.tier == "Word with affix":
+                                        if (found and fld.tier == "Word with affix"
+                                            and inf_text not in fld.text):
                                             fld.text += f'\n{inf_text}'
                             if found: continue
 
