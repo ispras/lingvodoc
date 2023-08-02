@@ -338,6 +338,7 @@ def convert_five_tiers(
     additional_entries,
     additional_entries_all,
     no_sound_flag,
+    morphology,
     debug_flag=False):
 
     merge_by_meaning_all = (
@@ -634,7 +635,7 @@ def convert_five_tiers(
         # Checking any existing data.
 
         le_lexes = []
-        if le_perspective:
+        if le_perspective and not morphology:
             le_lexes = (
                 DBSession
                     .query(Entity)
@@ -648,7 +649,7 @@ def convert_five_tiers(
                     .all())
 
         pa_lexes = []
-        if pa_perspective:
+        if pa_perspective and not morphology:
             pa_lexes = (
                 DBSession
                     .query(Entity)
@@ -662,7 +663,7 @@ def convert_five_tiers(
                     .all())
 
         mo_lexes = []
-        if mo_perspective:
+        if mo_perspective and morphology:
             mo_lexes = (
                 DBSession
                     .query(Entity)
@@ -700,6 +701,8 @@ def convert_five_tiers(
         hash_set = set()
         link_set = set()
         for pair in (le_lexes, le_sound_fid), (pa_lexes, pa_sound_fid):
+            if morphology: break
+
             hash_set.update(
                 x.additional_metadata["hash"]
                 for x in pair[0]
@@ -791,7 +794,8 @@ def convert_five_tiers(
             4, percent_le_perspective, "Handling lexical entries perspective")
 
         new_fp_flag = (
-            le_perspective is None)
+            le_perspective is None
+            and not morphology)
 
         if new_fp_flag:
             response = translation_service_get("Lexical Entries")
@@ -825,7 +829,8 @@ def convert_five_tiers(
             5, percent_pa_perspective, "Handling paradigms perspective")
 
         new_sp_flag = (
-            pa_perspective is None)
+            pa_perspective is None
+            and not morphology)
 
         if new_sp_flag:
             response = translation_service_get("Paradigms")
@@ -859,7 +864,8 @@ def convert_five_tiers(
             6, percent_mo_perspective, "Handling morphology perspective")
 
         new_tp_flag = (
-            mo_perspective is None)
+            mo_perspective is None
+            and morphology)
 
         if new_tp_flag:
             response = translation_service_get("Morphology")
@@ -1241,6 +1247,7 @@ def convert_five_tiers(
 
         txt_rows = {}
         dubl_set = set()
+        morphology_dict = []
 
         message_uploading = (
             'Uploading sounds and words'
@@ -1336,7 +1343,6 @@ def convert_five_tiers(
 
             # Processing corpus info.
 
-            morphology_dict = []
             for phrase_index, phrase in enumerate(final_dicts):
 
                 if debug_flag:
@@ -1350,6 +1356,7 @@ def convert_five_tiers(
 
                 ## Paradigms
                 for word_translation in phrase:
+                    if morphology: break
                     if type(word_translation) is not list:
                         curr_dict = word_translation
 
@@ -1401,7 +1408,7 @@ def convert_five_tiers(
                 ## Morphology
                 morphology_words = []
                 for word_translation in phrase:
-
+                    if not morphology: break
                     if type(word_translation) is list:
                         continue
 
@@ -1555,236 +1562,16 @@ def convert_five_tiers(
 
                     return lexical_entry_id
 
+                # The next several steps are for lexical entries and paradigms
+                # and not for morphology
+                if not morphology:
 
-                sp_lexical_entry_id = words_to_entry(paradigm_words,
-                                                     pa_content_text_entity_dict,
-                                                     pa_parent_id_text_entity_counter,
-                                                     pa_perspective_id)
+                    sp_lexical_entry_id = words_to_entry(paradigm_words,
+                                                         pa_content_text_entity_dict,
+                                                         pa_parent_id_text_entity_counter,
+                                                         pa_perspective_id)
 
-                if (new and not no_sound and
-                    word.time[1] <= len(full_audio)):
-
-                    with tempfile.NamedTemporaryFile() as temp:
-                        (full_audio[word.time[0] : word.time[1]]
-                            .export(
-                                temp.name,
-                                format = sound_format))
-
-                        audio_slice = temp.read()
-                        hash = None
-
-                        create_entity_flag = True
-
-                        if max_sim:
-                            hash = hashlib.sha224(audio_slice).hexdigest()
-                            if hash in hash_set:
-                                create_entity_flag = False
-                            else:
-                                hash_set.add(hash)
-
-                        if create_entity_flag:
-                            common_name = word.index
-                            if common_name:
-                                fname, ext = os.path.splitext(common_name)
-                                ext = ext.replace(".", "").replace(" ", "")
-                                fname = fname.replace(".", "_")
-                                if not ext:
-                                    ext = 'flac' if sound_format == 'flac' else 'wav'
-                                filename = "%s.%s" % (fname, ext)
-                            else:
-                                filename = 'noname.flac'
-
-                            create_entity(
-                                extra_client,
-                                sp_lexical_entry_id,
-                                pa_sound_fid,
-                                pa_sound_dtype,
-                                content = audio_slice,
-                                hash = hash,
-                                filename = filename,
-                                folder_name = 'corpus_paradigm_sounds',
-                                storage = storage)
-
-                for word in curr_dict:
-                    if word.tier == 'translation':
-                        word_text = word.text
-
-                        if (word_text and
-                            re.search(mark_re, word_text) and
-                            not re.search(nom_re, word_text)):
-
-                            tag = re.search(conj_re, word_text)
-
-                            if not tag or word_text != tag.group(0):
-                                continue
-
-                    column = [word] + curr_dict[word]
-                    lex_row = None
-
-                    # If we merge lexical entries by meaning, we get the lexical entry identifier from
-                    # translation.
-
-                    if merge_by_meaning_all:
-                        translation_list = [
-                            word.text
-                            for word in column
-                            if word.tier == 'translation']
-
-                        if len(translation_list) > 1:
-                            raise NotImplementedError
-
-                        if (translation_list and
-                            (translation := translation_list[0]) is not None and
-                            (translation := translation.strip())):
-
-                            mark_search = re.search(mark_re, translation)
-
-                            if mark_search:
-                                translation = (
-                                    translation[: mark_search.start()] .strip())
-
-                            lex_row = (
-                                translation.lower())
-
-                    # If we didn't do that because we do not merge by meaning, or we couldn't do that
-                    # because we do not have a translation, we get lexical entry identifier as befire from
-                    # translation, trascription and word.
-
-                    if lex_row is None:
-                        lex_row = tuple(x.text for x in column)
-
-                        if all(x is None for x in lex_row):
-                            continue
-
-                    if debug_flag:
-                        log.debug(
-                            '\ncolumn:\n' +
-                            pprint.pformat(
-                                column, width = 192) +
-
-                            '\nlex_row:\n' +
-                            pprint.pformat(
-                                lex_row, width = 192))
-
-                    fp_lexical_entry_id = (
-                        lex_rows.get(lex_row))
-
-                    if fp_lexical_entry_id is None:
-                        match_dict = defaultdict(list)
-                        for crt in column:
-
-                            match_list = le_content_text_entity_dict[crt.text]
-                            match_field_id = get_field_id(EAF_TIERS[crt.tier])
-
-                            for t in match_list:
-                                if t.field_id == match_field_id:
-                                   match_dict[t.parent_id].append(t)
-
-                        match_dict = {
-                            k: v
-                            for k, v in match_dict.items()
-                            if (len(v) >= 2 or
-                                len(v) == 1 and le_parent_id_text_entity_counter[k] == 1)}
-
-                        max_sim = None
-
-                        for le in match_dict:
-                            if (max_sim is None or
-                                len(match_dict[le]) >= len(match_dict[max_sim])):
-
-                                max_sim = le
-
-                        if max_sim:
-                            fp_lexical_entry_id = max_sim
-                        else:
-                            entry_dict = {
-                                'created_at': created_at(),
-                                'client_id': extra_client_id,
-                                'object_id': extra_client.next_object_id(),
-                                'parent_client_id': le_perspective_id[0],
-                                'parent_object_id': le_perspective_id[1],
-                                'marked_for_deletion': False}
-
-                            entry_insert_list.append(entry_dict)
-
-                            toc_dict = {
-                                'client_id': extra_client_id,
-                                'object_id': entry_dict['object_id'],
-                                'table_name': 'lexicalentry',
-                                'marked_for_deletion': False}
-
-                            toc_insert_list.append(toc_dict)
-
-                            fp_lexical_entry_id = extra_client_id, entry_dict['object_id']
-
-                        lex_rows[lex_row] = (
-                            fp_lexical_entry_id)
-
-                        for other_word in column:
-                            text = other_word.text
-                            if not text:
-                                continue
-
-                            field_id = get_field_id(EAF_TIERS[other_word.tier])
-
-                            if (not max_sim or
-                                all(x.content != text or x.field_id != field_id
-                                    for x in match_dict[max_sim])):
-
-                                create_entity(
-                                    extra_client,
-                                    fp_lexical_entry_id,
-                                    field_id,
-                                    field_data_type_dict[field_id],
-                                    text)
-
-                                if (merge_by_meaning_all and
-                                    (text := text .strip())):
-
-                                    le_check_dict = (
-                                        le_word_dict if field_id == le_fields['word'] else
-                                        le_xcript_dict if field_id == le_fields['transcription'] else
-                                        None)
-
-                                    if le_check_dict is not None:
-                                        le_check_dict[fp_lexical_entry_id].add(text.lower())
-
-                    # If we check lexical entry identity only by meaning, we should add to it any
-                    # transcriptions and words it doesn't have.
-
-                    elif merge_by_meaning_all:
-                        for other_word in column:
-                            text = other_word.text
-                            if (text is None or
-                                not (text := text.strip())):
-                                continue
-
-                            field_id = get_field_id(EAF_TIERS[other_word.tier])
-
-                            if field_id == le_fields['word']:
-                                le_check_set = (
-                                    le_word_dict[fp_lexical_entry_id])
-                            elif field_id == le_fields['transcription']:
-                                le_check_set = (
-                                    le_xcript_dict[fp_lexical_entry_id])
-                            else:
-                                continue
-
-                            text_key = text.lower()
-
-                            if text_key not in le_check_set:
-                                le_check_set.add(text_key)
-
-                                create_entity(
-                                    extra_client,
-                                    fp_lexical_entry_id,
-                                    field_id,
-                                    field_data_type_dict[field_id],
-                                    text)
-
-                    # Adding sounds if required.
-
-                    if (not no_sound and
+                    if (new and not no_sound and
                         word.time[1] <= len(full_audio)):
 
                         with tempfile.NamedTemporaryFile() as temp:
@@ -1800,7 +1587,6 @@ def convert_five_tiers(
 
                             if max_sim:
                                 hash = hashlib.sha224(audio_slice).hexdigest()
-
                                 if hash in hash_set:
                                     create_entity_flag = False
                                 else:
@@ -1820,71 +1606,295 @@ def convert_five_tiers(
 
                                 create_entity(
                                     extra_client,
-                                    fp_lexical_entry_id,
-                                    le_sound_fid,
-                                    le_sound_dtype,
+                                    sp_lexical_entry_id,
+                                    pa_sound_fid,
+                                    pa_sound_dtype,
                                     content = audio_slice,
                                     hash = hash,
                                     filename = filename,
-                                    folder_name = 'corpus_lexical_entry_sounds',
+                                    folder_name = 'corpus_paradigm_sounds',
                                     storage = storage)
 
-                    # If we don't have a paradigm entry (e.g. when we have no paradigm text and no paradigm
-                    # translation in the corpus), we obviously do not establish any links.
+                    for word in curr_dict:
+                        if word.tier == 'translation':
+                            word_text = word.text
 
-                    if sp_lexical_entry_id == None:
-                        continue
+                            if (word_text and
+                                re.search(mark_re, word_text) and
+                                not re.search(nom_re, word_text)):
 
-                    dubl_tuple = sp_lexical_entry_id, fp_lexical_entry_id
+                                tag = re.search(conj_re, word_text)
 
-                    if not dubl_tuple in dubl_set:
-                        dubl_set.add(dubl_tuple)
+                                if not tag or word_text != tag.group(0):
+                                    continue
 
-                        sp_fp_link_flag = True
-                        fp_sp_link_flag = True
+                        column = [word] + curr_dict[word]
+                        lex_row = None
 
-                        if max_sim:
-                            if (sp_lexical_entry_id, fp_lexical_entry_id) in link_set:
-                                sp_fp_link_flag = False
+                        # If we merge lexical entries by meaning, we get the lexical entry identifier from
+                        # translation.
 
-                            if (fp_lexical_entry_id, sp_lexical_entry_id) in link_set:
-                                fp_sp_link_flag = False
+                        if merge_by_meaning_all:
+                            translation_list = [
+                                word.text
+                                for word in column
+                                if word.tier == 'translation']
 
-                        if sp_fp_link_flag:
-                            create_entity(
-                                extra_client,
-                                sp_lexical_entry_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = fp_lexical_entry_id)
+                            if len(translation_list) > 1:
+                                raise NotImplementedError
 
-                        if fp_sp_link_flag:
-                            create_entity(
-                                extra_client,
-                                fp_lexical_entry_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = sp_lexical_entry_id)
+                            if (translation_list and
+                                (translation := translation_list[0]) is not None and
+                                (translation := translation.strip())):
 
-                # Checking if we need to update task progress.
+                                mark_search = re.search(mark_re, translation)
 
-                percent_delta = (percent_adding - percent_uploading) / 2
-                percent_delta_markup = percent_delta / len(markup_id_list)
-                percent_delta_phrase = percent_delta_markup / len(final_dicts)
+                                if mark_search:
+                                    translation = (
+                                        translation[: mark_search.start()] .strip())
 
-                task_percent(
-                    7,
-                    percent_uploading +
-                        markup_id_index * percent_delta_markup +
-                        (phrase_index + 1) * percent_delta_phrase,
-                    message_uploading)
+                                lex_row = (
+                                    translation.lower())
 
-            for morphology_words in morphology_dict:
-                for mo_word in morphology_words:
-                    mo_lexical_entry_id = words_to_entry(mo_word,
-                                                         mo_content_text_entity_dict,
-                                                         mo_parent_id_text_entity_counter,
-                                                         mo_perspective_id)
+                        # If we didn't do that because we do not merge by meaning, or we couldn't do that
+                        # because we do not have a translation, we get lexical entry identifier as befire from
+                        # translation, trascription and word.
+
+                        if lex_row is None:
+                            lex_row = tuple(x.text for x in column)
+
+                            if all(x is None for x in lex_row):
+                                continue
+
+                        if debug_flag:
+                            log.debug(
+                                '\ncolumn:\n' +
+                                pprint.pformat(
+                                    column, width = 192) +
+
+                                '\nlex_row:\n' +
+                                pprint.pformat(
+                                    lex_row, width = 192))
+
+                        fp_lexical_entry_id = (
+                            lex_rows.get(lex_row))
+
+                        if fp_lexical_entry_id is None:
+                            match_dict = defaultdict(list)
+                            for crt in column:
+
+                                match_list = le_content_text_entity_dict[crt.text]
+                                match_field_id = get_field_id(EAF_TIERS[crt.tier])
+
+                                for t in match_list:
+                                    if t.field_id == match_field_id:
+                                       match_dict[t.parent_id].append(t)
+
+                            match_dict = {
+                                k: v
+                                for k, v in match_dict.items()
+                                if (len(v) >= 2 or
+                                    len(v) == 1 and le_parent_id_text_entity_counter[k] == 1)}
+
+                            max_sim = None
+
+                            for le in match_dict:
+                                if (max_sim is None or
+                                    len(match_dict[le]) >= len(match_dict[max_sim])):
+
+                                    max_sim = le
+
+                            if max_sim:
+                                fp_lexical_entry_id = max_sim
+                            else:
+                                entry_dict = {
+                                    'created_at': created_at(),
+                                    'client_id': extra_client_id,
+                                    'object_id': extra_client.next_object_id(),
+                                    'parent_client_id': le_perspective_id[0],
+                                    'parent_object_id': le_perspective_id[1],
+                                    'marked_for_deletion': False}
+
+                                entry_insert_list.append(entry_dict)
+
+                                toc_dict = {
+                                    'client_id': extra_client_id,
+                                    'object_id': entry_dict['object_id'],
+                                    'table_name': 'lexicalentry',
+                                    'marked_for_deletion': False}
+
+                                toc_insert_list.append(toc_dict)
+
+                                fp_lexical_entry_id = extra_client_id, entry_dict['object_id']
+
+                            lex_rows[lex_row] = (
+                                fp_lexical_entry_id)
+
+                            for other_word in column:
+                                text = other_word.text
+                                if not text:
+                                    continue
+
+                                field_id = get_field_id(EAF_TIERS[other_word.tier])
+
+                                if (not max_sim or
+                                    all(x.content != text or x.field_id != field_id
+                                        for x in match_dict[max_sim])):
+
+                                    create_entity(
+                                        extra_client,
+                                        fp_lexical_entry_id,
+                                        field_id,
+                                        field_data_type_dict[field_id],
+                                        text)
+
+                                    if (merge_by_meaning_all and
+                                        (text := text .strip())):
+
+                                        le_check_dict = (
+                                            le_word_dict if field_id == le_fields['word'] else
+                                            le_xcript_dict if field_id == le_fields['transcription'] else
+                                            None)
+
+                                        if le_check_dict is not None:
+                                            le_check_dict[fp_lexical_entry_id].add(text.lower())
+
+                        # If we check lexical entry identity only by meaning, we should add to it any
+                        # transcriptions and words it doesn't have.
+
+                        elif merge_by_meaning_all:
+                            for other_word in column:
+                                text = other_word.text
+                                if (text is None or
+                                    not (text := text.strip())):
+                                    continue
+
+                                field_id = get_field_id(EAF_TIERS[other_word.tier])
+
+                                if field_id == le_fields['word']:
+                                    le_check_set = (
+                                        le_word_dict[fp_lexical_entry_id])
+                                elif field_id == le_fields['transcription']:
+                                    le_check_set = (
+                                        le_xcript_dict[fp_lexical_entry_id])
+                                else:
+                                    continue
+
+                                text_key = text.lower()
+
+                                if text_key not in le_check_set:
+                                    le_check_set.add(text_key)
+
+                                    create_entity(
+                                        extra_client,
+                                        fp_lexical_entry_id,
+                                        field_id,
+                                        field_data_type_dict[field_id],
+                                        text)
+
+                        # Adding sounds if required.
+
+                        if (not no_sound and
+                            word.time[1] <= len(full_audio)):
+
+                            with tempfile.NamedTemporaryFile() as temp:
+                                (full_audio[word.time[0] : word.time[1]]
+                                    .export(
+                                        temp.name,
+                                        format = sound_format))
+
+                                audio_slice = temp.read()
+                                hash = None
+
+                                create_entity_flag = True
+
+                                if max_sim:
+                                    hash = hashlib.sha224(audio_slice).hexdigest()
+
+                                    if hash in hash_set:
+                                        create_entity_flag = False
+                                    else:
+                                        hash_set.add(hash)
+
+                                if create_entity_flag:
+                                    common_name = word.index
+                                    if common_name:
+                                        fname, ext = os.path.splitext(common_name)
+                                        ext = ext.replace(".", "").replace(" ", "")
+                                        fname = fname.replace(".", "_")
+                                        if not ext:
+                                            ext = 'flac' if sound_format == 'flac' else 'wav'
+                                        filename = "%s.%s" % (fname, ext)
+                                    else:
+                                        filename = 'noname.flac'
+
+                                    create_entity(
+                                        extra_client,
+                                        fp_lexical_entry_id,
+                                        le_sound_fid,
+                                        le_sound_dtype,
+                                        content = audio_slice,
+                                        hash = hash,
+                                        filename = filename,
+                                        folder_name = 'corpus_lexical_entry_sounds',
+                                        storage = storage)
+
+                        # If we don't have a paradigm entry (e.g. when we have no paradigm text and no paradigm
+                        # translation in the corpus), we obviously do not establish any links.
+
+                        if sp_lexical_entry_id == None:
+                            continue
+
+                        dubl_tuple = sp_lexical_entry_id, fp_lexical_entry_id
+
+                        if not dubl_tuple in dubl_set:
+                            dubl_set.add(dubl_tuple)
+
+                            sp_fp_link_flag = True
+                            fp_sp_link_flag = True
+
+                            if max_sim:
+                                if (sp_lexical_entry_id, fp_lexical_entry_id) in link_set:
+                                    sp_fp_link_flag = False
+
+                                if (fp_lexical_entry_id, sp_lexical_entry_id) in link_set:
+                                    fp_sp_link_flag = False
+
+                            if sp_fp_link_flag:
+                                create_entity(
+                                    extra_client,
+                                    sp_lexical_entry_id,
+                                    backref_fid,
+                                    backref_dtype,
+                                    link_id = fp_lexical_entry_id)
+
+                            if fp_sp_link_flag:
+                                create_entity(
+                                    extra_client,
+                                    fp_lexical_entry_id,
+                                    backref_fid,
+                                    backref_dtype,
+                                    link_id = sp_lexical_entry_id)
+
+                    # Checking if we need to update task progress.
+
+                    percent_delta = (percent_adding - percent_uploading) / 2
+                    percent_delta_markup = percent_delta / len(markup_id_list)
+                    percent_delta_phrase = percent_delta_markup / len(final_dicts)
+
+                    task_percent(
+                        7,
+                        percent_uploading +
+                            markup_id_index * percent_delta_markup +
+                            (phrase_index + 1) * percent_delta_phrase,
+                        message_uploading)
+
+        for morphology_words in morphology_dict:
+            for mo_word in morphology_words:
+                mo_lexical_entry_id = words_to_entry(mo_word,
+                                                     mo_content_text_entity_dict,
+                                                     mo_parent_id_text_entity_counter,
+                                                     mo_perspective_id)
 
         percent_from = (percent_uploading + percent_adding) / 2
 
@@ -1896,396 +1906,398 @@ def convert_five_tiers(
 
         # Current data of lexical entries and paradigms.
 
-        lexes_with_text = []
+        if not morphology:
 
-        le_word_dtype = field_data_type_dict[le_fields['word']]
-        le_xcript_dtype = field_data_type_dict[le_fields['transcription']]
-        le_xlat_dtype = field_data_type_dict[le_fields['translation']]
+            lexes_with_text = []
 
-        if le_perspective:
+            le_word_dtype = field_data_type_dict[le_fields['word']]
+            le_xcript_dtype = field_data_type_dict[le_fields['transcription']]
+            le_xlat_dtype = field_data_type_dict[le_fields['translation']]
 
-            lexes_with_text = (
-                DBSession
-                    .query(Entity)
-                    .filter(
-                        Entity.marked_for_deletion == False,
-                        LexicalEntry.client_id == Entity.parent_client_id,
-                        LexicalEntry.object_id == Entity.parent_object_id,
-                        LexicalEntry.marked_for_deletion == False,
-                        LexicalEntry.parent_client_id == le_perspective.client_id,
-                        LexicalEntry.parent_object_id == le_perspective.object_id,
-                        tuple_(
-                            Entity.field_client_id,
-                            Entity.field_object_id)
-                                .in_(le_text_fid_list))
-                    .all())
+            if le_perspective and not morphology:
 
-        p_lexes_with_text_after_update = []
+                lexes_with_text = (
+                    DBSession
+                        .query(Entity)
+                        .filter(
+                            Entity.marked_for_deletion == False,
+                            LexicalEntry.client_id == Entity.parent_client_id,
+                            LexicalEntry.object_id == Entity.parent_object_id,
+                            LexicalEntry.marked_for_deletion == False,
+                            LexicalEntry.parent_client_id == le_perspective.client_id,
+                            LexicalEntry.parent_object_id == le_perspective.object_id,
+                            tuple_(
+                                Entity.field_client_id,
+                                Entity.field_object_id)
+                                    .in_(le_text_fid_list))
+                        .all())
 
-        if pa_perspective:
-            pa_already_set = (
-                set(
-                    t.id
-                    for t_list in pa_content_text_entity_dict.values()
-                    for t in t_list))
+            p_lexes_with_text_after_update = []
 
-            entity_query = (
-                DBSession
-                    .query(Entity)
-                    .filter(
-                        Entity.marked_for_deletion == False,
-                        LexicalEntry.client_id == Entity.parent_client_id,
-                        LexicalEntry.object_id == Entity.parent_object_id,
-                        LexicalEntry.marked_for_deletion == False,
-                        LexicalEntry.parent_client_id == pa_perspective.client_id,
-                        LexicalEntry.parent_object_id == pa_perspective.object_id,
-                        tuple_(
-                            Entity.field_client_id,
-                            Entity.field_object_id)
-                                .in_(pa_text_fid_list)))
+            if pa_perspective and not morphology:
+                pa_already_set = (
+                    set(
+                        t.id
+                        for t_list in pa_content_text_entity_dict.values()
+                        for t in t_list))
 
-            if pa_already_set:
                 entity_query = (
-                    entity_query.filter(
-                        tuple_(
-                            Entity.client_id,
-                            Entity.object_id)
-                                .notin_(ids_to_id_query(pa_already_set))))
+                    DBSession
+                        .query(Entity)
+                        .filter(
+                            Entity.marked_for_deletion == False,
+                            LexicalEntry.client_id == Entity.parent_client_id,
+                            LexicalEntry.object_id == Entity.parent_object_id,
+                            LexicalEntry.marked_for_deletion == False,
+                            LexicalEntry.parent_client_id == pa_perspective.client_id,
+                            LexicalEntry.parent_object_id == pa_perspective.object_id,
+                            tuple_(
+                                Entity.field_client_id,
+                                Entity.field_object_id)
+                                    .in_(pa_text_fid_list)))
 
-            p_lexes_with_text_after_update = entity_query.all()
+                if pa_already_set:
+                    entity_query = (
+                        entity_query.filter(
+                            tuple_(
+                                Entity.client_id,
+                                Entity.object_id)
+                                    .notin_(ids_to_id_query(pa_already_set))))
 
-        '''
-        m_lexes_with_text_after_update = []
+                p_lexes_with_text_after_update = entity_query.all()
 
-        if mo_perspective:
-            mo_already_set = (
-                set(
-                    t.id
-                    for t_list in mo_content_text_entity_dict.values()
-                    for t in t_list))
-
-            entity_query = (
-                DBSession
-                    .query(Entity)
-                    .filter(
-                        Entity.marked_for_deletion == False,
-                        LexicalEntry.client_id == Entity.parent_client_id,
-                        LexicalEntry.object_id == Entity.parent_object_id,
-                        LexicalEntry.marked_for_deletion == False,
-                        LexicalEntry.parent_client_id == mo_perspective.client_id,
-                        LexicalEntry.parent_object_id == mo_perspective.object_id,
-                        tuple_(
-                            Entity.field_client_id,
-                            Entity.field_object_id)
-                                .in_(mo_text_fid_list)))
-
-            if mo_already_set:
+            '''
+            m_lexes_with_text_after_update = []
+    
+            if mo_perspective:
+                mo_already_set = (
+                    set(
+                        t.id
+                        for t_list in mo_content_text_entity_dict.values()
+                        for t in t_list))
+    
                 entity_query = (
-                    entity_query.filter(
-                        tuple_(
-                            Entity.client_id,
-                            Entity.object_id)
-                                .notin_(ids_to_id_query(mo_already_set))))
+                    DBSession
+                        .query(Entity)
+                        .filter(
+                            Entity.marked_for_deletion == False,
+                            LexicalEntry.client_id == Entity.parent_client_id,
+                            LexicalEntry.object_id == Entity.parent_object_id,
+                            LexicalEntry.marked_for_deletion == False,
+                            LexicalEntry.parent_client_id == mo_perspective.client_id,
+                            LexicalEntry.parent_object_id == mo_perspective.object_id,
+                            tuple_(
+                                Entity.field_client_id,
+                                Entity.field_object_id)
+                                    .in_(mo_text_fid_list)))
+    
+                if mo_already_set:
+                    entity_query = (
+                        entity_query.filter(
+                            tuple_(
+                                Entity.client_id,
+                                Entity.object_id)
+                                    .notin_(ids_to_id_query(mo_already_set))))
+    
+                m_lexes_with_text_after_update = entity_query.all()
+                '''
 
-            m_lexes_with_text_after_update = entity_query.all()
+            # Info of words and transcriptions in the first perspective.
+
+            task_percent(
+                7, percent_adding, 'Uploading translations with marks')
+
+            nom_dict = {}
+            conj_dict = {}
+
+            lex_entry_dict = (
+                nom_dict if merge_by_meaning_all else {})
+
+            le_word_dict = defaultdict(set)
+            le_xcript_dict = defaultdict(set)
+
+            word_le_set = set()
+            xcript_le_set = set()
+
+            for t in lexes_with_text:
+                content_text = t.content.strip()
+                content_key = content_text.lower()
+                entry_id = t.parent_id
+
+                if t.field_id == le_fields['word']:
+                    le_word_dict[entry_id].add(content_key)
+                    word_le_set.add(entry_id)
+                    continue
+
+                elif t.field_id == le_fields['transcription']:
+                    le_xcript_dict[entry_id].add(content_key)
+                    xcript_le_set.add(entry_id)
+                    continue
+
+                # Processing translation.
+
+                mark_search = (
+                    re.search(mark_re, content_text))
+
+                nom_search = (
+                    re.search(nom_re, content_text))
+
+                conj_search = (
+                    re.search(conj_re, content_text))
+
+                # Starting by checking for conjuration info.
+
+                if (conj_search and
+                    content_key not in conj_dict):
+
+                    conj_dict[content_key] = entry_id
+
+                # Checking for nominative / infinitive / canonical form info, if required.
+
+                if merge_by_meaning:
+                    if mark_search:
+                        content_text = (
+                            content_text [ : mark_search.start()] .strip())
+
+                    content_key = (
+                        content_text.lower())
+
+                    if ((merge_by_meaning_all or nom_search) and
+                        content_key not in nom_dict):
+
+                        nom_dict[content_key] = entry_id
+
+            # Updated words and transcriptions in the second perspective.
+
+            pa_word_dict = defaultdict(list)
+            pa_xcript_dict = defaultdict(list)
+
+            for t in p_lexes_with_text_after_update:
+                if t.field_id == pa_fields['word']:
+                    pa_word_dict[t.parent_id].append(t.content)
+                elif t.field_id == pa_fields['transcription']:
+                    pa_xcript_dict[t.parent_id].append(t.content)
+            '''
+            # Updated words and transcriptions in the third perspective.
+    
+            mo_word_dict = defaultdict(list)
+            mo_xcript_dict = defaultdict(list)
+    
+            for t in m_lexes_with_text_after_update:
+                if t.field_id == mo_fields['word']:
+                    mo_word_dict[t.parent_id].append(t.content)
+                elif t.field_id == mo_fields['affix']:
+                    mo_xcript_dict[t.parent_id].append(t.content)
             '''
 
-        # Info of words and transcriptions in the first perspective.
-
-        task_percent(
-            7, percent_adding, 'Uploading translations with marks')
-
-        nom_dict = {}
-        conj_dict = {}
-
-        lex_entry_dict = (
-            nom_dict if merge_by_meaning_all else {})
-
-        le_word_dict = defaultdict(set)
-        le_xcript_dict = defaultdict(set)
-
-        word_le_set = set()
-        xcript_le_set = set()
-
-        for t in lexes_with_text:
-            content_text = t.content.strip()
-            content_key = content_text.lower()
-            entry_id = t.parent_id
-
-            if t.field_id == le_fields['word']:
-                le_word_dict[entry_id].add(content_key)
-                word_le_set.add(entry_id)
-                continue
-
-            elif t.field_id == le_fields['transcription']:
-                le_xcript_dict[entry_id].add(content_key)
-                xcript_le_set.add(entry_id)
-                continue
-
-            # Processing translation.
-
-            mark_search = (
-                re.search(mark_re, content_text))
-
-            nom_search = (
-                re.search(nom_re, content_text))
-
-            conj_search = (
-                re.search(conj_re, content_text))
-
-            # Starting by checking for conjuration info.
-
-            if (conj_search and
-                content_key not in conj_dict):
-
-                conj_dict[content_key] = entry_id
-
-            # Checking for nominative / infinitive / canonical form info, if required.
-
-            if merge_by_meaning:
-                if mark_search:
-                    content_text = (
-                        content_text [ : mark_search.start()] .strip())
-
-                content_key = (
-                    content_text.lower())
-
-                if ((merge_by_meaning_all or nom_search) and
-                    content_key not in nom_dict):
-
-                    nom_dict[content_key] = entry_id
-
-        # Updated words and transcriptions in the second perspective.
-
-        pa_word_dict = defaultdict(list)
-        pa_xcript_dict = defaultdict(list)
-
-        for t in p_lexes_with_text_after_update:
-            if t.field_id == pa_fields['word']:
-                pa_word_dict[t.parent_id].append(t.content)
-            elif t.field_id == pa_fields['transcription']:
-                pa_xcript_dict[t.parent_id].append(t.content)
-        '''
-        # Updated words and transcriptions in the third perspective.
-
-        mo_word_dict = defaultdict(list)
-        mo_xcript_dict = defaultdict(list)
-
-        for t in m_lexes_with_text_after_update:
-            if t.field_id == mo_fields['word']:
-                mo_word_dict[t.parent_id].append(t.content)
-            elif t.field_id == mo_fields['affix']:
-                mo_xcript_dict[t.parent_id].append(t.content)
-        '''
-
-        def establish_link(
-            le_entry_id,
-            pa_entry_id):
-            """
-            Establishes link between lexical and paradigmatic entries, adds paradigmatic words and/or
-            transcriptions to lexical entries if required.
-            """
-
-            if not (le_entry_id, pa_entry_id) in link_set:
-                link_set.add(
-                    (le_entry_id, pa_entry_id))
-
-                create_entity(
-                    extra_client,
-                    le_entry_id,
-                    backref_fid,
-                    backref_dtype,
-                    link_id = pa_entry_id)
-
-            if not (pa_entry_id, le_entry_id) in link_set:
-                link_set.add(
-                    (pa_entry_id, le_entry_id))
-                create_entity(
-                    extra_client,
-                    pa_entry_id,
-                    backref_fid,
-                    backref_dtype,
-                    link_id = le_entry_id)
-
-            # Adding paradigmatic word and transcriptions to lexical entries, if required.
-
-            if additional_entries:
-                if (additional_entries_all or
-                    le_entry_id not in word_le_set):
-
-                    for pa_word in pa_word_dict[pa_entry_id]:
-                        word_key = (
-                            (pa_word := pa_word.strip())
-                                .lower())
-
-                        le_word_set = (
-                            le_word_dict[le_entry_id])
-
-                        if word_key not in le_word_set:
-                            le_word_set.add(word_key)
-                            create_entity(
-                                extra_client,
-                                le_entry_id,
-                                le_fields['word'],
-                                le_word_dtype,
-                                pa_word)
-
-                if (additional_entries_all or
-                    le_entry_id not in xcript_le_set):
-
-                    for pa_xcript in pa_xcript_dict[pa_entry_id]:
-                        xcript_key = (
-                            (pa_xcript := pa_xcript.strip())
-                                .lower())
-
-                        le_xcript_set = (
-                            le_xcript_dict[le_entry_id])
-
-                        if xcript_key not in le_xcript_set:
-                            le_xcript_set.add(xcript_key)
-
-                            create_entity(
-                                extra_client,
-                                le_entry_id,
-                                le_fields['transcription'],
-                                le_xcript_dtype,
-                                pa_xcript)
-
-        # Linking updated paradigms, adding words and transcriptions from them if required.
-
-        for t_index, t in (
-            enumerate(p_lexes_with_text_after_update)):
-
-            if t.field_id != pa_fields['translation']:
-                continue
-
-            translation_text = (
-                t.content.strip())
-
-            sp_le_id = t.parent_id
-
-            tag = (
-                re.search(conj_re, translation_text))
-
-            nom_flag = False
-            create_le_flag = False
-
-            if not tag:
-                nom_flag = True
-            else:
-                create_le_flag = True
-                tag_name = tag.group(0)
-
-                if translation_text[:3] != tag_name:
-                    nom_flag = True
-                else:
-                    fp_le_id = (
-                        conj_dict.get(tag_name.lower()))
-
-                    if fp_le_id is not None:
-                        if (fp_le_id, sp_le_id) not in link_set:
-                            link_set.add(
-                                (fp_le_id, sp_le_id))
-
-                            create_entity(
-                                extra_client,
-                                fp_le_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = sp_le_id)
-
-                        if (sp_le_id, fp_le_id) not in link_set:
-                            link_set.add(
-                                (sp_le_id, fp_le_id))
-
-                            create_entity(
-                                extra_client,
-                                sp_le_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = fp_le_id)
-
-                        create_le_flag = False
-
-            if nom_flag:
-                create_le_flag = False
-
-                mark_search = (
-                    re.search(mark_re, translation_text))
-
-                if mark_search:
-                    create_le_flag = True
-
-                    if merge_by_meaning:
-                        nom_key = (
-                            translation_text
-                                [ : mark_search.start()] .strip() .lower())
-
-                        fp_le_id = (
-                            nom_dict.get(nom_key))
-
-                        if fp_le_id is not None:
-                            establish_link(
-                                fp_le_id,
-                                sp_le_id)
-
-                            create_le_flag = False
-
-            if create_le_flag:
-                mark_search = (
-                    re.search(mark_re, translation_text))
-
-                if mark_search:
-                    translation_text = (
-                        translation_text [ : mark_search.start()] .strip())
-
-                translation_key = (
-                    translation_text.lower())
-
-                fp_lexical_entry_id = (
-                    lex_entry_dict.get(translation_key))
-
-                if (fp_lexical_entry_id is not None and
-                    merge_by_meaning):
-
-                    establish_link(
-                        fp_lexical_entry_id,
-                        sp_le_id)
-                else:
-                    entry_dict = {
-                        'created_at': created_at(),
-                        'client_id': extra_client_id,
-                        'object_id': extra_client.next_object_id(),
-                        'parent_client_id': le_perspective_id[0],
-                        'parent_object_id': le_perspective_id[1],
-                        'marked_for_deletion': False}
-
-                    entry_insert_list.append(entry_dict)
-
-                    toc_dict = {
-                        'client_id': extra_client_id,
-                        'object_id': entry_dict['object_id'],
-                        'table_name': 'lexicalentry',
-                        'marked_for_deletion': False}
-
-                    toc_insert_list.append(toc_dict)
-                            
-                    fp_lexical_entry_id = (
-                        extra_client_id, entry_dict['object_id'])
-
-                    lex_entry_dict[
-                        translation_key] = fp_lexical_entry_id
+            def establish_link(
+                le_entry_id,
+                pa_entry_id):
+                """
+                Establishes link between lexical and paradigmatic entries, adds paradigmatic words and/or
+                transcriptions to lexical entries if required.
+                """
+
+                if not (le_entry_id, pa_entry_id) in link_set:
+                    link_set.add(
+                        (le_entry_id, pa_entry_id))
 
                     create_entity(
                         extra_client,
-                        fp_lexical_entry_id,
-                        le_fields['translation'],
-                        le_xlat_dtype,
-                        translation_text)
+                        le_entry_id,
+                        backref_fid,
+                        backref_dtype,
+                        link_id = pa_entry_id)
 
-                    establish_link(
-                        fp_lexical_entry_id,
-                        sp_le_id)
+                if not (pa_entry_id, le_entry_id) in link_set:
+                    link_set.add(
+                        (pa_entry_id, le_entry_id))
+                    create_entity(
+                        extra_client,
+                        pa_entry_id,
+                        backref_fid,
+                        backref_dtype,
+                        link_id = le_entry_id)
+
+                # Adding paradigmatic word and transcriptions to lexical entries, if required.
+
+                if additional_entries:
+                    if (additional_entries_all or
+                        le_entry_id not in word_le_set):
+
+                        for pa_word in pa_word_dict[pa_entry_id]:
+                            word_key = (
+                                (pa_word := pa_word.strip())
+                                    .lower())
+
+                            le_word_set = (
+                                le_word_dict[le_entry_id])
+
+                            if word_key not in le_word_set:
+                                le_word_set.add(word_key)
+                                create_entity(
+                                    extra_client,
+                                    le_entry_id,
+                                    le_fields['word'],
+                                    le_word_dtype,
+                                    pa_word)
+
+                    if (additional_entries_all or
+                        le_entry_id not in xcript_le_set):
+
+                        for pa_xcript in pa_xcript_dict[pa_entry_id]:
+                            xcript_key = (
+                                (pa_xcript := pa_xcript.strip())
+                                    .lower())
+
+                            le_xcript_set = (
+                                le_xcript_dict[le_entry_id])
+
+                            if xcript_key not in le_xcript_set:
+                                le_xcript_set.add(xcript_key)
+
+                                create_entity(
+                                    extra_client,
+                                    le_entry_id,
+                                    le_fields['transcription'],
+                                    le_xcript_dtype,
+                                    pa_xcript)
+
+            # Linking updated paradigms, adding words and transcriptions from them if required.
+
+            for t_index, t in (
+                enumerate(p_lexes_with_text_after_update)):
+
+                if t.field_id != pa_fields['translation']:
+                    continue
+
+                translation_text = (
+                    t.content.strip())
+
+                sp_le_id = t.parent_id
+
+                tag = (
+                    re.search(conj_re, translation_text))
+
+                nom_flag = False
+                create_le_flag = False
+
+                if not tag:
+                    nom_flag = True
+                else:
+                    create_le_flag = True
+                    tag_name = tag.group(0)
+
+                    if translation_text[:3] != tag_name:
+                        nom_flag = True
+                    else:
+                        fp_le_id = (
+                            conj_dict.get(tag_name.lower()))
+
+                        if fp_le_id is not None:
+                            if (fp_le_id, sp_le_id) not in link_set:
+                                link_set.add(
+                                    (fp_le_id, sp_le_id))
+
+                                create_entity(
+                                    extra_client,
+                                    fp_le_id,
+                                    backref_fid,
+                                    backref_dtype,
+                                    link_id = sp_le_id)
+
+                            if (sp_le_id, fp_le_id) not in link_set:
+                                link_set.add(
+                                    (sp_le_id, fp_le_id))
+
+                                create_entity(
+                                    extra_client,
+                                    sp_le_id,
+                                    backref_fid,
+                                    backref_dtype,
+                                    link_id = fp_le_id)
+
+                            create_le_flag = False
+
+                if nom_flag:
+                    create_le_flag = False
+
+                    mark_search = (
+                        re.search(mark_re, translation_text))
+
+                    if mark_search:
+                        create_le_flag = True
+
+                        if merge_by_meaning:
+                            nom_key = (
+                                translation_text
+                                    [ : mark_search.start()] .strip() .lower())
+
+                            fp_le_id = (
+                                nom_dict.get(nom_key))
+
+                            if fp_le_id is not None:
+                                establish_link(
+                                    fp_le_id,
+                                    sp_le_id)
+
+                                create_le_flag = False
+
+                if create_le_flag:
+                    mark_search = (
+                        re.search(mark_re, translation_text))
+
+                    if mark_search:
+                        translation_text = (
+                            translation_text [ : mark_search.start()] .strip())
+
+                    translation_key = (
+                        translation_text.lower())
+
+                    fp_lexical_entry_id = (
+                        lex_entry_dict.get(translation_key))
+
+                    if (fp_lexical_entry_id is not None and
+                        merge_by_meaning):
+
+                        establish_link(
+                            fp_lexical_entry_id,
+                            sp_le_id)
+                    else:
+                        entry_dict = {
+                            'created_at': created_at(),
+                            'client_id': extra_client_id,
+                            'object_id': extra_client.next_object_id(),
+                            'parent_client_id': le_perspective_id[0],
+                            'parent_object_id': le_perspective_id[1],
+                            'marked_for_deletion': False}
+
+                        entry_insert_list.append(entry_dict)
+
+                        toc_dict = {
+                            'client_id': extra_client_id,
+                            'object_id': entry_dict['object_id'],
+                            'table_name': 'lexicalentry',
+                            'marked_for_deletion': False}
+
+                        toc_insert_list.append(toc_dict)
+
+                        fp_lexical_entry_id = (
+                            extra_client_id, entry_dict['object_id'])
+
+                        lex_entry_dict[
+                            translation_key] = fp_lexical_entry_id
+
+                        create_entity(
+                            extra_client,
+                            fp_lexical_entry_id,
+                            le_fields['translation'],
+                            le_xlat_dtype,
+                            translation_text)
+
+                        establish_link(
+                            fp_lexical_entry_id,
+                            sp_le_id)
 
             # Checking if we need to update task progress.
 
@@ -2335,6 +2347,7 @@ def convert_all(
     additional_entries_all = True,
     no_sound_flag = False,
     debug_flag = False,
+    morphology = False,
     synchronous = False):
 
     if not synchronous:
@@ -2369,6 +2382,7 @@ def convert_all(
                 additional_entries,
                 additional_entries_all,
                 no_sound_flag,
+                morphology,
                 debug_flag))
 
     except Exception as err:
