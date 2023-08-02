@@ -241,6 +241,7 @@ class ConvertFiveTiers(graphene.Mutation):
         no_sound_flag = graphene.Boolean()
         debug_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
+        morphology = graphene.Boolean()
 
     dictionary_id = LingvodocID()
     triumph = graphene.Boolean()

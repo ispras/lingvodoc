@@ -360,6 +360,10 @@ def convert_five_tiers(
             log.debug('ERROR')
             raise ValueError('No user associated with the client.', client.id)
 
+        debug_flag = True
+        if debug_flag:
+            log.debug(f'language_id: {language_id}')
+
         attached_users = get_attached_users(language_id)
 
         # Create extra client to jail new object_ids
