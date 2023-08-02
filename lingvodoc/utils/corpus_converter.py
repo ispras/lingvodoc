@@ -821,7 +821,7 @@ def convert_five_tiers(
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
-        le_perspective_id = le_perspective.id
+        le_perspective_id = le_perspective.id if le_perspective else None
 
         # Second perspective.
 
@@ -856,7 +856,7 @@ def convert_five_tiers(
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
-        pa_perspective_id = pa_perspective.id
+        pa_perspective_id = pa_perspective.id if pa_perspective else None
 
         # Third perspective.
 
@@ -891,7 +891,7 @@ def convert_five_tiers(
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
 
-        mo_perspective_id = mo_perspective.id
+        mo_perspective_id = mo_perspective.id if mo_perspective else None
 
         # Creating fields of the first perspective if required.
 
