@@ -210,3 +210,13 @@ class ThroughCache(ICache):
             self.cache.delete(keys)
         elif isinstance(keys, list):
             self.cache.delete(*keys)
+
+    def get_pure(self, key):
+        cached = self.cache.get(key)
+        if cached is None:
+            return None
+        return dill.loads(cached)
+
+    # TODO: add try/catch handlers.
+    def set_pure(self, key, value):
+        self.cache.set(key, dill.dumps(value))

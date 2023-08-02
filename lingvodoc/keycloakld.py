@@ -233,24 +233,25 @@ class KeycloakLD:
         self.add_permissions(client_id)
         LOG.debug('START MIGRATION TO THE KEYCLOAK')
         users = DBSession.query(User).all()
-        self.REDIS_CACHE.set("keys", [])
+        self.REDIS_CACHE.set_pure("keys", [])
         for user in users:
             with open("users_test_alembic.txt", 'a+') as f:
                 user_name = user_login = secrets.token_hex(8)
                 user_email = user_name + "@ispras.ru"
                 try:
-                    user_id = user.id
                     keycloak_user_id = KeycloakSession.keycloak_admin.get_user_id(user.login)
                     if keycloak_user_id is not None:
                         KeycloakSession.keycloak_admin.set_user_password(user_id=keycloak_user_id, password=password,
                                                                          temporary=False)
-                        if DBSession.query(User).filter_by(id=keycloak_user_id).first() is not None:
+                        if DBSession.query(User).filter_by(id=keycloak_user_id).first() is None:
+                            DBSession.query(User).filter_by(id=user.id).update(values={"id": keycloak_user_id},
+                                                                               synchronize_session='fetch')
+                            DBSession.flush()
+                        else:
                             f.write(
                                 "User already migrated or duplicated: {} user email {} , Keycloak ID: {}\n".format(
-                                    user.__dict__, user_email,
+                                    user.__dict__, str(user.email.email),
                                     keycloak_user_id))
-                        else:
-                            user_id = keycloak_user_id
 
                     else:
                         attributes = dict()
@@ -280,7 +281,7 @@ class KeycloakLD:
                         for key, value in attributes.items():
                             attributes[key] = ','.join(map(str, attributes[key]))
 
-                        user_id = KeycloakSession.keycloak_admin.create_user({"email": user_email,
+                        keycloak_user_id = KeycloakSession.keycloak_admin.create_user({"email": user_email,
                                                                               "username": user_login,
                                                                               "enabled": user.is_active,
                                                                               "createdTimestamp": user.created_at,
@@ -291,11 +292,11 @@ class KeycloakLD:
                                                                                    "type": "password"}],
                                                                               })
 
-                        DBSession.query(User).filter_by(id=user.id).update(values={"id": user_id},
+                        DBSession.query(User).filter_by(id=user.id).update(values={"id": keycloak_user_id},
                                                                            synchronize_session='fetch')
                         DBSession.flush()
 
-                    self.create_user_associated_resources(user, user_id)
+                        self.create_user_associated_resources(keycloak_user_id)
 
 
 
@@ -305,11 +306,12 @@ class KeycloakLD:
                         f.write(
                             "User with error: {} user email {} error: {}\n".format(user.__dict__, user_email,
                                                                                    str(e)))
-        keys = self.REDIS_CACHE.get("keys")
+        keys = self.REDIS_CACHE.get_pure("keys")
         if keys is not None:
             for key in keys:
+                attributes = {}
                 try:
-                    resource = self.REDIS_CACHE.get(key)
+                    resource = self.REDIS_CACHE.get_pure(key)
                     attributes = resource.get("attributes", None)
                     if attributes is not None:
                         for key, value in attributes.items():
@@ -319,11 +321,11 @@ class KeycloakLD:
 
                 except (KeycloakGetError, KeycloakOperationError, KeycloakPostError, KeycloakPutError, Exception) as e:
                     logging.debug(
-                        "Keycloak could not update resource " + key + " with error: " + str(
-                            e.error_message))
+                        "Keycloak could not update resource with key: " + key + "with error: " + str(
+                            e.error_message)+"\n")
             self.REDIS_CACHE.rem(keys)
 
-    def create_user_associated_resources(self, user=User, keycloak_user_id=None, ):
+    def create_user_associated_resources(self, keycloak_user_id=None, ):
         if keycloak_user_id is None:
             raise KeycloakOperationError(error_message="User id could not be null")
         subjects = ["dictionary", "language", "translation_string", "edit_user", "perspective_role", "dictionary_role",
@@ -337,11 +339,11 @@ class KeycloakLD:
                     BaseGroup.subject == subject,
                     BaseGroup.action == action,
                     Group.base_group_id == BaseGroup.id,
-                    user_to_group_association.c.user_id == str(user.v1_id),
+                    user_to_group_association.c.user_id == str(keycloak_user_id),
                     user_to_group_association.c.group_id == Group.id)).all()
                 if len(objects):
                     scope = "urn:" + str(KeycloakSession.client_name) + ":scopes:" + str(action)
-                    resource = "urn:" + str(KeycloakSession.client_name) + ":resources:" + str(subject)
+                    type = "urn:" + str(KeycloakSession.client_name) + ":resources:" + str(subject)
                     for obj in objects:
                         if obj.Group.subject_client_id and obj.Group.subject_object_id:
                             name = str(subject) + "/" + str(obj.Group.subject_client_id) + "/" + str(
@@ -350,15 +352,15 @@ class KeycloakLD:
                             resource_to_create = {
                                 "name": name,
                                 "scopes": [scope],
-                                "type": resource,
+                                "type": type,
                                 "uri": str(obj.Group.subject_client_id) + "/" + str(
                                     obj.Group.subject_object_id),
                                 "attributes": {scope: [keycloak_user_id]}
                             }
-                            if self.REDIS_CACHE.get(name, None) is None:
-                                self.REDIS_CACHE.set(name, resource_to_create)
+                            if self.REDIS_CACHE.get_pure(name) is None:
+                                self.REDIS_CACHE.set_pure(name, resource_to_create)
                             else:
-                                resource = self.REDIS_CACHE.get(name)
+                                resource = self.REDIS_CACHE.get_pure(name)
                                 resource["scopes"].append(scope)
                                 resource["scopes"] = list(set(resource["scopes"]))
                                 temp = resource["attributes"].get(scope, None)
@@ -367,13 +369,14 @@ class KeycloakLD:
                                 else:
                                     temp.append(keycloak_user_id)
                                 resource["attributes"][scope] = list(set(temp))
-                                self.REDIS_CACHE.set(name, resource)
+                                self.REDIS_CACHE.set_pure(name, resource)
 
-                            keys = self.REDIS_CACHE.get("keys")
+                            keys = self.REDIS_CACHE.get_pure("keys")
 
                             if keys is not None:
                                 keys.append(name)
-                                self.REDIS_CACHE.set("keys", list(set(keys)))
+                                keys = list(set(keys))
+                                self.REDIS_CACHE.set_pure("keys", keys)
 
 KeycloakSession = KeycloakLD()
 
