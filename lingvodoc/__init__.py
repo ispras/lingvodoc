@@ -9,6 +9,7 @@ import os.path
 import re
 import subprocess
 
+import transaction
 from keycloak import KeycloakConnectionError
 from keycloak.uma_permissions import UMAPermission
 
@@ -1145,7 +1146,6 @@ def main(global_config, **settings):
 
         except KeycloakConnectionError as e:
             log.warning(e.error_message)
-        KeycloakSession.migrate_users()
 
     # config.configure_celery('development_test.ini')
     authentication_policy = KeycloakBasedAuthenticationPolicy(openid_client=KeycloakSession.openid_client)

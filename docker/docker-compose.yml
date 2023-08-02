@@ -34,6 +34,7 @@ services:
     image: 'redis:latest'
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
+    command: [sh, -c, "rm -f /data/dump.rdb && redis-server --save '' --dbfilename '' --appendonly no --appendfsync no"]
     labels:
       kompose.service.type: nodeport
     ports:
