@@ -361,10 +361,6 @@ def convert_five_tiers(
             log.debug('ERROR')
             raise ValueError('No user associated with the client.', client.id)
 
-        debug_flag = True
-        if debug_flag:
-            log.debug(f'language_id: {language_id}')
-
         # Create extra client to jail new object_ids
         extra_client = Client(user_id=user.id, is_browser_client=False)
         DBSession.add(extra_client)
@@ -797,6 +793,9 @@ def convert_five_tiers(
             content = x.content
             entry_id = x.parent_id
 
+            if not content:
+                continue
+
             mo_content_text_entity_dict[content].append(x)
             mo_parent_id_text_entity_counter[entry_id] += 1
 
@@ -808,6 +807,9 @@ def convert_five_tiers(
                 mo_word_dict[entry_id].add(content_key)
             elif field_id == mo_fields['affix']:
                 mo_affix_dict[content_key] = entry_id
+
+        if debug_flag:
+            log.debug(pprint.pformat(f'mo_affix_dict: {mo_affix_dict}', width=192))
 
         # First perspective.
 
@@ -1348,7 +1350,6 @@ def convert_five_tiers(
 
             # Showing what we've got from the corpus, if required.
 
-            debug_flag = True
             if debug_flag:
                 def f(value):
                     if isinstance(value, elan_parser.Word):
@@ -1451,18 +1452,21 @@ def convert_five_tiers(
                             # \u0301 is an accent mark
                             afx = afx_text[n].replace(u'\u0301', '')
                             afx = re.split(r'[\W]', afx.strip())[0]
+
                             if not afx:
                                 continue
 
                             afx = f'-{afx}'
-                            mrk = (mrk_text[n]
-                                   if n < len(mrk_text)
-                                   else " ".join(mrk_text))
+                            mrk = mrk_text[n] if n < len(mrk_text) else ""
+
+                            if not mrk:
+                                continue
 
                             # Check if such affix is already in dictionary
                             if mo_entry_id := mo_affix_dict.get(afx.lower()):
 
                                 if mrk.lower() not in mo_meaning_dict[mo_entry_id]:
+                                    mo_meaning_dict[mo_entry_id].add(mrk.lower())
                                     field_id = mo_fields['meaning']
                                     create_entity(
                                         extra_client,
@@ -1472,6 +1476,7 @@ def convert_five_tiers(
                                         mrk)
 
                                 if inf_text.lower() not in mo_word_dict[mo_entry_id]:
+                                    mo_word_dict[mo_entry_id].add(inf_text.lower())
                                     field_id = mo_fields['word']
                                     create_entity(
                                         extra_client,
@@ -1479,6 +1484,9 @@ def convert_five_tiers(
                                         field_id,
                                         field_data_type_dict[field_id],
                                         inf_text)
+
+                                if debug_flag:
+                                    log.debug(f'mo_entry_id: {mo_entry_id}, {afx}')
 
                                 continue
 
@@ -2410,7 +2418,7 @@ def convert_all(
     task_status = TaskStatus.get_from_cache(task_key)
 
     try:
-
+        debug_flag = True
         result = (
 
             convert_five_tiers(
