@@ -71,7 +71,7 @@ class Elan:
         #sorted([a[2] for a in anns if a[1] >= start and a[0] <= end],  key=lambda time_tup: time_tup[0] )
 
 
-    def parse(self):
+    def parse(self, debug_flag=False):
 
         # Choosing top-level text tier as first top-level tier referring to 'literary translation' and
         # 'translation' tiers.
@@ -184,13 +184,16 @@ class Elan:
 
                             self.result[annot_ref].append(annotation_id)
 
+                    if debug_flag:
+                        print(f'*** {self.word_tier[annotation_id]}: {self.word[annotation_id]}')
+
     def get_word_text(self, word):
         return list(word)[0].text
 
     def get_word_aid(self, word):
         return word.attrib['ANNOTATION_ID']
 
-    def proc(self):
+    def proc(self, debug_flag=False):
         for tier in self.tiers:
             tier_data = self.get_annotation_data_for_tier(tier)
 
@@ -206,11 +209,9 @@ class Elan:
 
         perspectives = []
 
-        ans = (
-                
-            sorted(
+        ans = sorted(
                 self.eafob.get_annotation_data_for_tier(self.top_level_tier),
-                key = lambda time_tup: time_tup[0])) # text
+                key = lambda time_tup: time_tup[0]) # text
 
         for text_an in ans:
             next = []
@@ -227,66 +228,37 @@ class Elan:
                 if len(res[translation_data]) > 1:
                     lit_transl_data = res[translation_data][1]
                 tr_text = hyphen_to_dash(self.word[translation_data])
+
                 if type(tr_text) is str:
-                    if re.search('[-.][\dA-Z]+', tr_text) and \
-                            not re.search("[-]INF", tr_text) and \
-                            not re.search("[-]SG.NOM", tr_text) and \
-                            not re.search("[-]NOM", tr_text):
+                    mark = re.search('[-.][\dA-Z]+', tr_text)
+                    if (mark and not re.search("[-]INF", tr_text)
+                             and not re.search("[-]SG.NOM", tr_text)
+                             and not re.search("[-]NOM", tr_text)):
+
                         tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
-                        if tag:
-                            text_without_tag = tr_text.replace(tag.group(0), "")
-                            if len(text_without_tag) > 0:
-                                le_to_paradigms = []
-                                if lit_transl_data:
-                                    le_to_paradigms.append([Word(lit_transl_data ,
-                                                                 self.word[lit_transl_data],
-                                                                 "Word of Paradigmatic forms",
-                                                                 (time_tup[0], time_tup[1])) ])
-                                if text_data:
-                                    le_to_paradigms.append([Word(text_data ,
-                                                                 self.word[text_data], "text",
-                                                                 (time_tup[0], time_tup[1])) ])
-                                if translation_data:
-                                    le_to_paradigms.append([Word(translation_data ,
-                                                                 self.word[translation_data],
-                                                                 "literary translation",
-                                                                 (time_tup[0], time_tup[1])) ])
-                                perspectives.append(le_to_paradigms)
-                                new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
-                                if new_list:
-                                    perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
-                            else:
-                                new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
-                                if new_list:
-                                    perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
-                        else:
+
+                        if tag and tr_text != tag.group(0) or not tag:
                             le_to_paradigms = []
                             if lit_transl_data:
-                                le_to_paradigms.append([Word(lit_transl_data ,
+                                le_to_paradigms.append([Word(lit_transl_data,
                                                              self.word[lit_transl_data],
                                                              "Word of Paradigmatic forms",
                                                              (time_tup[0], time_tup[1])) ])
                             if text_data:
-                                le_to_paradigms.append([Word(text_data ,
+                                le_to_paradigms.append([Word(text_data,
                                                              self.word[text_data], "text",
                                                              (time_tup[0], time_tup[1])) ])
                             if translation_data:
-                                le_to_paradigms.append([Word(translation_data ,
+                                le_to_paradigms.append([Word(translation_data,
                                                              self.word[translation_data],
                                                              "literary translation",
                                                              (time_tup[0], time_tup[1])) ])
                             perspectives.append(le_to_paradigms)
-                            new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
-                            if new_list:
-                                perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
-                    else:
-                        new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
-                        if new_list:
-                            perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
-                else:
-                    new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
-                    if new_list:
-                        perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
+
+
+                new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
+                if new_list:
+                    perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
 
             if perspectives2:
                 next.append(perspectives2)

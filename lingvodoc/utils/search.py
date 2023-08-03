@@ -23,26 +23,51 @@ from lingvodoc.utils.static_fields import fields_static
 #from lingvodoc.views.v2.translations import translationgist_contents
 
 
-def translation_gist_search(searchstring):
-        translationatom = DBSession.query(dbTranslationAtom) \
-            .join(dbTranslationGist). \
-            filter(dbTranslationAtom.content == searchstring,
-                   dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                   dbTranslationGist.type == 'Service') \
-            .first()
+def translation_gist_search(searchstring, gist_type='Service'):
+    translationgist = (
+        DBSession
+            .query(dbTranslationGist)
+            .join(dbTranslationAtom)
+            .filter(
+                dbTranslationAtom.content == searchstring,
+                dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationGist.type == gist_type)
+            .order_by(
+                dbTranslationGist.created_at,
+                dbTranslationGist.client_id,
+                dbTranslationGist.object_id)
+            .first())
 
-        if translationatom and translationatom.parent:
-            translationgist = translationatom.parent
+    # translationatoms_list = list()
+    # for translationatom in translationgist.translationatom:
+    #     translationatoms_list.append(translationatom)
+    # translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
+    #                                          type=translationgist.type,
+    #                                          created_at=translationgist.created_at,
+    #                                          translationatoms=translationatoms_list)
+    return translationgist
 
-            # translationatoms_list = list()
-            # for translationatom in translationgist.translationatom:
-            #     translationatoms_list.append(translationatom)
-            # translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
-            #                                          type=translationgist.type,
-            #                                          created_at=translationgist.created_at,
-            #                                          translationatoms=translationatoms_list)
-            return translationgist
+def field_search(searchstring):
+    field = (
+        DBSession
+            .query(dbField)
+            .join(dbTranslationGist, and_(
+                dbTranslationGist.client_id == dbField.translation_gist_client_id,
+                dbTranslationGist.object_id == dbField.translation_gist_object_id))
+            .join(dbTranslationAtom)
+            .filter(
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationGist.type == 'Field',
+                dbTranslationAtom.content == searchstring,
+                dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationAtom.marked_for_deletion == False)
+            .order_by(
+                dbTranslationGist.created_at,
+                dbTranslationGist.client_id,
+                dbTranslationGist.object_id)
+            .first())
 
+    return field
 
 def recursive_sort(
     langs,
