@@ -365,8 +365,6 @@ def convert_five_tiers(
         if debug_flag:
             log.debug(f'language_id: {language_id}')
 
-        attached_users = get_attached_users(language_id)
-
         # Create extra client to jail new object_ids
         extra_client = Client(user_id=user.id, is_browser_client=False)
         DBSession.add(extra_client)
@@ -491,6 +489,9 @@ def convert_five_tiers(
             if not dictionary:
                 raise KeyError(f'No dictionary ({dictionary_id[0]}, {dictionary_id[1]}).')
 
+            language_id = dictionary.parent_id
+            attached_users = get_attached_users(language_id)
+
             # If we are updating dictionary, we advisory lock with its id to prevent possible unintended
             # consequences.
             #
@@ -562,6 +563,7 @@ def convert_five_tiers(
             DBSession.add(dictionary)
             dictionary_id = dictionary.id
 
+            attached_users = get_attached_users(language_id)
             for base in DBSession.query(BaseGroup).filter_by(dictionary_default = True):
                 new_group = (
                     Group(
@@ -779,15 +781,33 @@ def convert_five_tiers(
             pa_parent_id_text_entity_counter[x.parent_id] += 1
 
         ## Morphology
+        mo_affix_dict = {}
+        mo_word_dict = defaultdict(set)
+        mo_meaning_dict = defaultdict(set)
+
         mo_content_text_entity_dict = defaultdict(list)
         mo_parent_id_text_entity_counter = Counter()
 
         for x in mo_lexes:
-            if x.field_id not in mo_text_fid_list:
+            field_id = x.field_id
+
+            if field_id not in mo_text_fid_list:
                 continue
 
-            mo_content_text_entity_dict[x.content].append(x)
-            mo_parent_id_text_entity_counter[x.parent_id] += 1
+            content = x.content
+            entry_id = x.parent_id
+
+            mo_content_text_entity_dict[content].append(x)
+            mo_parent_id_text_entity_counter[entry_id] += 1
+
+            content_key = content.strip().lower()
+
+            if field_id == mo_fields['meaning']:
+                mo_meaning_dict[entry_id].add(content_key)
+            elif field_id == mo_fields['word']:
+                mo_word_dict[entry_id].add(content_key)
+            elif field_id == mo_fields['affix']:
+                mo_affix_dict[content_key] = entry_id
 
         # First perspective.
 
@@ -1439,6 +1459,29 @@ def convert_five_tiers(
                                    if n < len(mrk_text)
                                    else " ".join(mrk_text))
 
+                            # Check if such affix is already in dictionary
+                            if mo_entry_id := mo_affix_dict.get(afx.lower()):
+
+                                if mrk.lower() not in mo_meaning_dict[mo_entry_id]:
+                                    field_id = mo_fields['meaning']
+                                    create_entity(
+                                        extra_client,
+                                        mo_entry_id,
+                                        field_id,
+                                        field_data_type_dict[field_id],
+                                        mrk)
+
+                                if inf_text.lower() not in mo_word_dict[mo_entry_id]:
+                                    field_id = mo_fields['word']
+                                    create_entity(
+                                        extra_client,
+                                        mo_entry_id,
+                                        field_id,
+                                        field_data_type_dict[field_id],
+                                        inf_text)
+
+                                continue
+
                             # Check if such affix is already in the list
                             found = False
                             for prs in morphology_dict:
@@ -1458,6 +1501,7 @@ def convert_five_tiers(
 
                             mo_word = []
 
+                            # Affix must be appended first
                             mo_word.append(
                                 elan_parser.Word(
                                     text=afx,

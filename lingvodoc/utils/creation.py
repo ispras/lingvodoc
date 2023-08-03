@@ -59,9 +59,6 @@ def uniq_list(input_list):
     return list(set(input_list))
 
 def get_attached_users(language_id):
-    #TODO: fix this
-    if not language_id:
-        return []
     language_client_id, language_object_id = language_id
 
     base_cte = (
