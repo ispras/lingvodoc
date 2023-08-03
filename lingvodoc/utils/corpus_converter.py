@@ -1270,7 +1270,7 @@ def convert_five_tiers(
 
         txt_rows = {}
         dubl_set = set()
-        morphology_dict = []
+        morphology_words = {}
 
         message_uploading = (
             'Uploading sounds and words'
@@ -1428,7 +1428,6 @@ def convert_five_tiers(
                             f(paradigm_words), width = 192))
 
                 ## Morphology
-                morphology_words = []
                 for word_translation in phrase:
                     if not morphology: break
                     if type(word_translation) is list:
@@ -1488,26 +1487,24 @@ def convert_five_tiers(
                                 continue
 
                             # Check if such affix is already in the list
-                            found = False
-                            for prs in morphology_dict:
-                                if found: break
-                                for wrd in prs:
-                                    if found: break
+                            exists = False
+                            for afx_wrd, wrd in morphology_words.items():
+                                if exists := (afx_wrd.text == afx):
                                     for fld in wrd:
-                                        if fld.tier == "Affix" and fld.text == afx:
-                                            found = True
-                                        if (found and fld.tier == "Meaning of affix"
+                                        if (fld.tier == "Meaning of affix"
                                             and mrk and mrk not in fld.text.split('\n')):
-                                            fld.text += f'\n{mrk}'
-                                        if (found and fld.tier == "Word with affix"
+                                                fld.text += f'\n{mrk}'
+                                        if (fld.tier == "Word with affix"
                                             and inf_text not in fld.text):
-                                            fld.text += f'\n{inf_text}'
-                            if found: continue
+                                                fld.text += f'\n{inf_text}'
+                                    break
+
+                            if exists:
+                                continue
 
                             mo_word = []
 
-                            # Affix must be appended first
-                            mo_word.append(
+                            afx_word = (
                                 elan_parser.Word(
                                     text=afx,
                                     tier="Affix"))
@@ -1523,16 +1520,7 @@ def convert_five_tiers(
                                     text=inf_text,
                                     tier="Word with affix"))
 
-                            morphology_words.append(mo_word)
-
-                if morphology_words:
-                    morphology_dict.append(morphology_words)
-
-                if debug_flag:
-                    log.debug(
-                        '\nmorphology_words:\n' +
-                        pprint.pformat(
-                            f(morphology_words), width=192))
+                            morphology_words[afx_word] = mo_word
 
                 def words_to_entry(result_words,
                                    content_text_entity_dict,
@@ -1943,12 +1931,17 @@ def convert_five_tiers(
                             (phrase_index + 1) * percent_delta_phrase,
                         message_uploading)
 
-        for morphology_words in morphology_dict:
-            for mo_word in morphology_words:
-                mo_lexical_entry_id = words_to_entry(mo_word,
-                                                     mo_content_text_entity_dict,
-                                                     mo_parent_id_text_entity_counter,
-                                                     mo_perspective_id)
+        if debug_flag:
+            log.debug(
+                '\nmorphology_words:\n' +
+                pprint.pformat(
+                    f(morphology_words), width=192))
+
+        for afx_word, mo_word in morphology_words.items():
+            mo_lexical_entry_id = words_to_entry([afx_word] + mo_word,
+                                                 mo_content_text_entity_dict,
+                                                 mo_parent_id_text_entity_counter,
+                                                 mo_perspective_id)
 
         percent_from = (percent_uploading + percent_adding) / 2
 
