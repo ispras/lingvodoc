@@ -1457,15 +1457,12 @@ def convert_five_tiers(
                                 continue
 
                             afx = f'-{afx}'
-                            mrk = mrk_text[n] if n < len(mrk_text) else ""
-
-                            if not mrk:
-                                continue
+                            mrk = mrk_text[n] if n < len(mrk_text) else None
 
                             # Check if such affix is already in dictionary
                             if mo_entry_id := mo_affix_dict.get(afx.lower()):
 
-                                if mrk.lower() not in mo_meaning_dict[mo_entry_id]:
+                                if mrk and mrk.lower() not in mo_meaning_dict[mo_entry_id]:
                                     mo_meaning_dict[mo_entry_id].add(mrk.lower())
                                     field_id = mo_fields['meaning']
                                     create_entity(
@@ -1500,7 +1497,7 @@ def convert_five_tiers(
                                         if fld.tier == "Affix" and fld.text == afx:
                                             found = True
                                         if (found and fld.tier == "Meaning of affix"
-                                            and mrk not in fld.text):
+                                            and mrk and mrk not in fld.text.split('\n')):
                                             fld.text += f'\n{mrk}'
                                         if (found and fld.tier == "Word with affix"
                                             and inf_text not in fld.text):
@@ -1515,10 +1512,11 @@ def convert_five_tiers(
                                     text=afx,
                                     tier="Affix"))
 
-                            mo_word.append(
-                                elan_parser.Word(
-                                    text=mrk,
-                                    tier="Meaning of affix"))
+                            if mrk:
+                                mo_word.append(
+                                    elan_parser.Word(
+                                        text=mrk,
+                                        tier="Meaning of affix"))
 
                             mo_word.append(
                                 elan_parser.Word(
