@@ -714,6 +714,7 @@ def convert_five_tiers(
                 if x.field_id == backref_fid)
 
         mark_re = re.compile('[-.][\dA-Z]+')
+        dash_re = re.compile('[-][.\dA-Z]+')
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
 
@@ -1419,7 +1420,7 @@ def convert_five_tiers(
 
                         # Translation
                         txl_word = i.text or ""
-                        mrk_text = re.findall(mark_re, txl_word)
+                        mrk_text = re.findall(dash_re, txl_word)
 
                         # Complex text
                         inf_text = f'[{txc_word}] {txl_word}'
@@ -1447,6 +1448,9 @@ def convert_five_tiers(
                                     for fld in wrd:
                                         if fld.tier == "Affix" and fld.text == afx:
                                             found = True
+                                        if (found and fld.tier == "Meaning of affix"
+                                            and mrk not in fld.text):
+                                            fld.text += f'\n{mrk}'
                                         if (found and fld.tier == "Word with affix"
                                             and inf_text not in fld.text):
                                             fld.text += f'\n{inf_text}'
