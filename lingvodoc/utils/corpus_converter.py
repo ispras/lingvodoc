@@ -1529,6 +1529,8 @@ def convert_five_tiers(
                                    parent_id_text_entity_counter,
                                    perspective_id):
 
+                    nonlocal max_sim
+
                     lexical_entry_id = None
                     txt_row = tuple(x.text for x in result_words)
 
@@ -2409,7 +2411,6 @@ def convert_all(
     task_status = TaskStatus.get_from_cache(task_key)
 
     try:
-        debug_flag = True
         result = (
 
             convert_five_tiers(
