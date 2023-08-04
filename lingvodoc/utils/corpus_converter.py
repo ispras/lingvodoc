@@ -1582,7 +1582,7 @@ def convert_five_tiers(
                         txt_rows[txt_row] = lexical_entry_id
 
                         for other_word in result_words:
-                            text = other_word.text.split('\n')
+                            text = other_word.text
 
                             if not text:
                                 continue
@@ -1593,7 +1593,7 @@ def convert_five_tiers(
                                 all(x.content != text or x.field_id != field_id
                                     for x in match_dict[max_sim])):
 
-                                for txt in text:
+                                for txt in text.split('\n'):
                                     create_entity(
                                         extra_client,
                                         lexical_entry_id,
