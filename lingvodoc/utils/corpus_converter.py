@@ -85,9 +85,9 @@ EAF_TIERS = {
 
 percent_preparing = 1
 percent_check_fields = 2
-percent_le_perspective = 4
-percent_pa_perspective = 6
-percent_mo_perspective = 8
+percent_le_perspective = 5
+percent_pa_perspective = 8
+percent_mo_perspective = 8 #this one goes alone
 percent_uploading = 10
 percent_adding = 70
 percent_finished = 100
@@ -884,7 +884,7 @@ def convert_five_tiers(
         # Third perspective.
 
         task_status.set(
-            6, percent_mo_perspective, "Handling morphology perspective")
+            5, percent_mo_perspective, "Handling morphology perspective")
 
         new_tp_flag = (
             mo_perspective is None
@@ -1278,7 +1278,7 @@ def convert_five_tiers(
                 'Uploading words')
 
         task_percent(
-            7, percent_uploading, message_uploading)
+            6, percent_uploading, message_uploading)
 
         # Parsing and processing markup, in order if markup ids we received.
 
@@ -1522,10 +1522,14 @@ def convert_five_tiers(
 
                             morphology_words[afx_word] = mo_word
 
+                max_sim = None
+
                 def words_to_entry(result_words,
                                    content_text_entity_dict,
                                    parent_id_text_entity_counter,
                                    perspective_id):
+
+                    nonlocal max_sim
 
                     lexical_entry_id = None
                     txt_row = tuple(x.text for x in result_words)
@@ -1547,8 +1551,6 @@ def convert_five_tiers(
                             for k, v in match_dict.items()
                             if (len(v) >= 2 or
                                 len(v) == 1 and parent_id_text_entity_counter[k] == 1)}
-
-                        max_sim = None
 
                         for le in match_dict:
                             if max_sim is None or len(match_dict[le]) >= len(match_dict[max_sim]):
@@ -1580,7 +1582,7 @@ def convert_five_tiers(
                         txt_rows[txt_row] = lexical_entry_id
 
                         for other_word in result_words:
-                            text = other_word.text.split('\n')
+                            text = other_word.text
 
                             if not text:
                                 continue
@@ -1591,7 +1593,7 @@ def convert_five_tiers(
                                 all(x.content != text or x.field_id != field_id
                                     for x in match_dict[max_sim])):
 
-                                for txt in text:
+                                for txt in text.split('\n'):
                                     create_entity(
                                         extra_client,
                                         lexical_entry_id,
@@ -1925,7 +1927,7 @@ def convert_five_tiers(
                     percent_delta_phrase = percent_delta_markup / len(final_dicts)
 
                     task_percent(
-                        7,
+                        6,
                         percent_uploading +
                             markup_id_index * percent_delta_markup +
                             (phrase_index + 1) * percent_delta_phrase,
@@ -1946,10 +1948,10 @@ def convert_five_tiers(
         percent_from = (percent_uploading + percent_adding) / 2
 
         task_percent(
-            7, percent_from, message_uploading)
+            6, percent_from, message_uploading)
 
         perform_insert(
-            7, percent_from, percent_adding - 0.5, message_uploading)
+            6, percent_from, percent_adding - 0.5, message_uploading)
 
         # Current data of lexical entries and paradigms.
 
@@ -2052,7 +2054,7 @@ def convert_five_tiers(
             # Info of words and transcriptions in the first perspective.
 
             task_percent(
-                7, percent_adding, 'Uploading translations with marks')
+                6, percent_adding, 'Uploading translations with marks')
 
             nom_dict = {}
             conj_dict = {}
@@ -2353,7 +2355,7 @@ def convert_five_tiers(
                     (2 * len(p_lexes_with_text_after_update)))
 
             task_percent(
-                8,
+                7,
                 percent_adding +
                     t_index * percent_delta,
 
@@ -2363,15 +2365,15 @@ def convert_five_tiers(
             (percent_adding + percent_finished) / 2)
 
         task_percent(
-            8, percent_from, 'Uploading translations with marks')
+            7, percent_from, 'Uploading translations with marks')
 
         perform_insert(
-            8, percent_from, percent_finished - 0.5, 'Uploading translations with marks')
+            7, percent_from, percent_finished - 0.5, 'Uploading translations with marks')
 
         mark_changed(DBSession())
 
     task_status.set(
-        9, percent_finished, 'Finished')
+        8, percent_finished, 'Finished')
 
     return dictionary_id
 
@@ -2409,7 +2411,6 @@ def convert_all(
     task_status = TaskStatus.get_from_cache(task_key)
 
     try:
-        debug_flag = True
         result = (
 
             convert_five_tiers(
