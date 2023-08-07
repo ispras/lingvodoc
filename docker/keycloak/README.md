@@ -2,24 +2,21 @@
 
 This folder contains keycloak installation files.
 
-## Run
+## Getting started
+
+This project contains all keycloak artifacts for deploy. Folder "scripts" contains JS-based ABAC policies for lingvodoc. You may run ```jar --create --file "custom-scripts.jar" --no-manifest -C "auth/lingvodoc-policies/scripts" .``` to create jar archive "custom-scripts.jar" for deploy. Also, this folder contains basic realm and authorization config for lingvodoc client.
 
 The needed files for running are the following:
 ```
 -- keycloak
    |__ custom-scripts.jar #prebuild policies
-   |__ realm-export.json  #realm configuration
-   |__ authz-config.json  #configuration for lingvodoc client authorization
+   |__ realm-export.json  #realm configuration with clients auth and users
 ```
 To run keycloak:
 
 - `docker-compose up`
 
 Keycloak will be available at http://localhost:9090/ and http://localhost:8080/
-
-Then, you must import authz-config.json by path: Clients->lingvodoc->Authorization-> Settings
-
-Provide all configurations to the *.ini file to work with lingvodoc api.
 
 ## Migrate users
 
@@ -32,18 +29,21 @@ After successful running you may migrate users by alembic script. Please, be sur
 
 For building new JS attribute policies clone "<project name>" and then build:
 
-- `mvn clean install`
+```
+jar --create --file "custom-scripts.jar" --no-manifest -C "auth/lingvodoc-policies/scripts" .
+```
 
 If you want to add new JS policy you need create new script, change meta info and build it. If you use new attribute, don't forget to add it to the Keycloak->Clients->lingvodoc->Client scopes->lingvodoc-dedicated->Add Mapper(bu configuration)->User Attribute
+
 Keycloak docs: <https://www.keycloak.org/docs-api/20.0.1/javadocs/org/keycloak/authorization/policy/evaluation/package-summary.html>
 
 ## Updates
 
-After any updates, please, export and save Realm and Authorization(Clients->lingvodoc->Authorization-> Settings) configs.
+After any updates, please, export and save Realm configs.
 
-### Useful api calls
+## Useful api calls
 
-**GET user token**
+**GET USER TOKEN**
 ```
 curl --request POST \
   --url http://localhost:9090/realms/lingvodoc/protocol/openid-connect/token \
@@ -54,7 +54,7 @@ curl --request POST \
   --data username= \
   --data password=
 ```
-**GET PAT client token**
+**GET PAT CLIENT TOKEN**
 ```
 curl --request POST \
   --url http://localhost:9090/realms/lingvodoc/protocol/openid-connect/token \

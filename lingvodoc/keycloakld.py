@@ -118,8 +118,8 @@ class KeycloakLD:
     # self.add_attribute("modis", "dictionary", "edit", 108, 3)
     def add_attribute(self, user_login, object_name, action, object_client_id, object_object_id):
         resource, scope, attributes, keycloak_user_id = self.set_attribute_fields(action,
-                                                                                  user_login,
                                                                                   object_name,
+                                                                                  user_login,
                                                                                   object_client_id,
                                                                                   object_object_id)
         try:
@@ -127,8 +127,8 @@ class KeycloakLD:
                 attributes = [keycloak_user_id]
             else:
                 attributes.append(keycloak_user_id)
+            resource["scopes"].append({"name": scope})
             resource["attributes"][scope] = list(set(attributes))
-
             KeycloakSession.keycloak_uma.resource_set_update(
                 resource["_id"], resource)
         except (KeycloakGetError, KeycloakOperationError, KeycloakPostError) as e:
@@ -138,6 +138,7 @@ class KeycloakLD:
 
     # self.delete_attribute("modis", "dictionary", "edit", 108, 3)
     def delete_attribute(self, user_login, object_name, action, object_client_id, object_object_id):
+
         resource, scope, attributes, keycloak_user_id = self.set_attribute_fields(action,
                                                                                   object_name,
                                                                                   user_login,
@@ -149,7 +150,6 @@ class KeycloakLD:
             else:
                 users_ids = list(resource["attributes"][scope])
                 users_ids.remove(keycloak_user_id)
-                attributes.append(keycloak_user_id)
                 resource["attributes"][scope] = users_ids
                 KeycloakSession.keycloak_uma.resource_set_update(
                     resource["_id"], resource)
