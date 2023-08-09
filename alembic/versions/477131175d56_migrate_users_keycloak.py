@@ -83,8 +83,6 @@ def upgrade():
         migrate_users(keycloak_dict["user_password"])
         transaction.manager.commit()
 
-    pass
-
 
 def downgrade():
     LOG.debug('unroll keycloak')
