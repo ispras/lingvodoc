@@ -87,7 +87,8 @@ percent_preparing = 1
 percent_check_fields = 2
 percent_le_perspective = 5
 percent_pa_perspective = 8
-percent_mo_perspective = 8 #this one goes alone
+percent_mo_perspective = 5
+percent_mp_perspective = 8
 percent_uploading = 10
 percent_adding = 70
 percent_finished = 100
@@ -409,16 +410,22 @@ def convert_five_tiers(
         }
 
         mo_fields = {
-            'word': get_field_id('Word with affix'),
             'affix': get_field_id('Affix'),
             'meaning': get_field_id('Meaning of affix'),
-            'etymology': get_field_id('Etymology')
+            'etymology': get_field_id('Etymology'),
+            'backref': get_field_id('Backref')
+        }
+
+        mp_fields = {
+            'word': get_field_id('Word with affix'),
+            'backref': get_field_id('Backref')
         }
 
         le_structure = set(le_fields.values())
         pa_structure = set(pa_fields.values())
         mo_structure = set(mo_fields.values())
-        total_structure = le_structure | pa_structure | mo_structure
+        mp_structure = set(mp_fields.values())
+        total_structure = le_structure | pa_structure | mo_structure | mp_structure
 
         if len(markup_id_list) <= 0:
             raise ValueError('You have to specify at least 1 markup entity.')
@@ -590,6 +597,7 @@ def convert_five_tiers(
         le_perspective = None
         pa_perspective = None
         mo_perspective = None
+        mp_perspective = None
 
         perspective_query = (
             DBSession
@@ -610,7 +618,8 @@ def convert_five_tiers(
             # If no one structure matches
             if (le_structure.difference(structure) and
                 pa_structure.difference(structure) and
-                mo_structure.difference(structure)):
+                mo_structure.difference(structure) and
+                mp_structure.difference(structure)):
                 continue
 
             # If no permissions
@@ -627,6 +636,8 @@ def convert_five_tiers(
                 pa_perspective = perspective
             elif not mo_structure.difference(structure):
                 mo_perspective = perspective
+            elif not mp_structure.difference(structure):
+                mp_perspective = perspective
 
             structure.clear()
 
@@ -674,6 +685,20 @@ def convert_five_tiers(
                         Entity.marked_for_deletion == False)
                     .all())
 
+        mp_lexes = []
+        if mp_perspective and morphology:
+            mp_lexes = (
+                DBSession
+                    .query(Entity)
+                    .filter(
+                        LexicalEntry.parent_client_id == mp_perspective.client_id,
+                        LexicalEntry.parent_object_id == mp_perspective.object_id,
+                        LexicalEntry.marked_for_deletion == False,
+                        Entity.parent_client_id == LexicalEntry.client_id,
+                        Entity.parent_object_id == LexicalEntry.object_id,
+                        Entity.marked_for_deletion == False)
+                    .all())
+
         le_text_fid_list = [
             le_fields['word'],
             le_fields['transcription'],
@@ -687,28 +712,35 @@ def convert_five_tiers(
         ]
 
         mo_text_fid_list = [
-            mo_fields['word'],
             mo_fields['affix'],
             mo_fields['meaning']
+        ]
+
+        mp_text_fid_list = [
+            mp_fields['word']
         ]
 
         le_sound_fid = le_fields['sound']
         pa_sound_fid = pa_fields['sound']
         backref_fid = le_fields['backref']
 
+        # Get sets of links and sound hashes for all the perspectives
         hash_set = set()
         link_set = set()
-        for pair in (le_lexes, le_sound_fid), (pa_lexes, pa_sound_fid):
-            if morphology: break
+        for (lexes, sound_fid) in [
+                (le_lexes, le_sound_fid),
+                (pa_lexes, pa_sound_fid),
+                (mo_lexes, None),
+                (mp_lexes, None)]:
 
             hash_set.update(
                 x.additional_metadata["hash"]
-                for x in pair[0]
-                if x.field_id == pair[1])
+                for x in lexes
+                if sound_fid and x.field_id == sound_fid)
 
             link_set.update(
                 (x.link_id, x.parent_id)
-                for x in pair[0]
+                for x in lexes
                 if x.field_id == backref_fid)
 
         mark_re = re.compile('[-.][\dA-Z]+')
@@ -777,9 +809,9 @@ def convert_five_tiers(
             pa_parent_id_text_entity_counter[x.parent_id] += 1
 
         ## Morphology
-        mo_affix_dict = {}
-        mo_word_dict = defaultdict(set)
-        mo_meaning_dict = defaultdict(set)
+        #mo_affix_dict = defaultdict(set)
+        #mo_meaning_dict = defaultdict(set)
+        #mo_backref_dict = defaultdict(set)
 
         mo_content_text_entity_dict = defaultdict(list)
         mo_parent_id_text_entity_counter = Counter()
@@ -792,6 +824,7 @@ def convert_five_tiers(
 
             content = x.content
             entry_id = x.parent_id
+            #link_id = x.link_id
 
             if not content:
                 continue
@@ -799,31 +832,55 @@ def convert_five_tiers(
             mo_content_text_entity_dict[content].append(x)
             mo_parent_id_text_entity_counter[entry_id] += 1
 
+        '''
             content_key = content.strip().lower()
 
             if field_id == mo_fields['meaning']:
                 mo_meaning_dict[entry_id].add(content_key)
-            elif field_id == mo_fields['word']:
-                mo_word_dict[entry_id].add(content_key)
+            elif field_id == mo_fields['backref']:
+                mo_backref_dict[entry_id].add(link_id)
             elif field_id == mo_fields['affix']:
-                mo_affix_dict[content_key] = entry_id
+                mo_affix_dict[content_key].add(entry_id)
+            
 
         if debug_flag:
             log.debug(pprint.pformat(f'mo_affix_dict: {mo_affix_dict}', width=192))
+        '''
 
-        # First perspective.
+        ## Morphological paradigms
+        #mp_word_dict = defaultdict(set)
+        #mp_backref_dict = defaultdict(set)
 
-        task_status.set(
-            4, percent_le_perspective, "Handling lexical entries perspective")
+        mp_content_text_entity_dict = defaultdict(list)
+        mp_parent_id_text_entity_counter = Counter()
 
-        new_fp_flag = (
-            le_perspective is None
-            and not morphology)
+        for x in mp_lexes:
+            field_id = x.field_id
+            link_id = x.link_id
 
-        if new_fp_flag:
-            response = translation_service_get("Lexical Entries")
+            if field_id not in mp_text_fid_list:
+                continue
 
-            le_perspective = (
+            content = x.content
+            entry_id = x.parent_id
+
+            if not content:
+                continue
+
+            mp_content_text_entity_dict[content].append(x)
+            mp_parent_id_text_entity_counter[entry_id] += 1
+
+            '''
+            content_key = content.strip().lower()
+
+            if field_id == mp_fields['word']:
+                mp_word_dict[entry_id].add(content_key)
+            elif field_id == mp_fields['backref']:
+                mp_backref_dict[link_id].add(entry_id)
+            '''
+
+        def add_perspective(pesponse):
+            perspective = (
                 DictionaryPerspective(
                     client_id = extra_client_id,
                     object_id = extra_client.next_object_id(),
@@ -835,14 +892,29 @@ def convert_five_tiers(
                     translation_gist_object_id = response['object_id'],
                     new_objecttoc = True))
 
-            DBSession.add(le_perspective)
+            DBSession.add(perspective)
 
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
                 new_group = Group(parent=base,
-                                  subject_object_id=le_perspective.object_id,
-                                  subject_client_id=le_perspective.client_id)
+                                  subject_object_id=perspective.object_id,
+                                  subject_client_id=perspective.client_id)
                 new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
                 DBSession.add(new_group)
+
+            return perspective
+
+        # First perspective.
+
+        task_status.set(
+            4, percent_le_perspective, "Handling lexical entries perspective")
+
+        new_p1_flag = (
+            le_perspective is None
+            and not morphology)
+
+        if new_p1_flag:
+            response = translation_service_get("Lexical Entries")
+            le_perspective = add_perspective(response)
 
         le_perspective_id = le_perspective.id if le_perspective else None
 
@@ -851,75 +923,50 @@ def convert_five_tiers(
         task_status.set(
             5, percent_pa_perspective, "Handling paradigms perspective")
 
-        new_sp_flag = (
+        new_p2_flag = (
             pa_perspective is None
             and not morphology)
 
-        if new_sp_flag:
+        if new_p2_flag:
             response = translation_service_get("Paradigms")
-
-            pa_perspective = (
-                DictionaryPerspective(
-                    client_id = extra_client_id,
-                    object_id = extra_client.next_object_id(),
-                    state_translation_gist_client_id = wip_state_id[0],
-                    state_translation_gist_object_id = wip_state_id[1],
-                    parent = dictionary,
-                    additional_metadata = origin_metadata,
-                    translation_gist_client_id = response['client_id'],
-                    translation_gist_object_id = response['object_id'],
-                    new_objecttoc = True))
-
-            DBSession.add(pa_perspective)
-
-            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-                new_group = Group(parent=base,
-                                  subject_object_id=pa_perspective.object_id,
-                                  subject_client_id=pa_perspective.client_id)
-                new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
-                DBSession.add(new_group)
+            pa_perspective = add_perspective(response)
 
         pa_perspective_id = pa_perspective.id if pa_perspective else None
 
         # Third perspective.
 
         task_status.set(
-            5, percent_mo_perspective, "Handling morphology perspective")
+            4, percent_mo_perspective, "Handling morphology perspective")
 
-        new_tp_flag = (
+        new_p3_flag = (
             mo_perspective is None
             and morphology)
 
-        if new_tp_flag:
+        if new_p3_flag:
             response = translation_service_get("Morphology")
-
-            mo_perspective = (
-                DictionaryPerspective(
-                    client_id = extra_client_id,
-                    object_id = extra_client.next_object_id(),
-                    state_translation_gist_client_id = wip_state_id[0],
-                    state_translation_gist_object_id = wip_state_id[1],
-                    parent = dictionary,
-                    additional_metadata = origin_metadata,
-                    translation_gist_client_id = response['client_id'],
-                    translation_gist_object_id = response['object_id'],
-                    new_objecttoc = True))
-
-            DBSession.add(mo_perspective)
-
-            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-                new_group = Group(parent=base,
-                                  subject_object_id=mo_perspective.object_id,
-                                  subject_client_id=mo_perspective.client_id)
-                new_group.users = uniq_list(new_group.users + attached_users + [user, owner])
-                DBSession.add(new_group)
+            mo_perspective = add_perspective(response)
 
         mo_perspective_id = mo_perspective.id if mo_perspective else None
 
+        # Fourth perspective.
+
+        task_status.set(
+            5, percent_mp_perspective, "Handling morphological paradigms perspective")
+
+        new_p4_flag = (
+            mp_perspective is None
+            and morphology)
+
+        if new_p4_flag:
+            response = translation_service_get("Morphological paradigms")
+            mp_perspective = add_perspective(response)
+
+        mp_perspective_id = mp_perspective.id if mp_perspective else None
+
         # Creating fields of the first perspective if required.
 
-        if new_fp_flag:
-            fp_field_names = (
+        if new_p1_flag:
+            p1_field_names = (
                 "Word",
                 "Transcription",
                 "Translation",
@@ -928,7 +975,7 @@ def convert_five_tiers(
                 "Backref")
 
             field_info_list = []
-            for fieldname in fp_field_names:
+            for fieldname in p1_field_names:
                 if fieldname == "Backref":
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
@@ -960,8 +1007,8 @@ def convert_five_tiers(
 
         # Creating fields of the second perspective, if required.
 
-        if new_sp_flag:
-            sp_field_names = (
+        if new_p2_flag:
+            p2_field_names = (
                 "Word of Paradigmatic forms",
                 "Transcription of Paradigmatic forms",
                 "Translation of Paradigmatic forms",
@@ -969,7 +1016,7 @@ def convert_five_tiers(
                 "Backref")
 
             field_info_list = []
-            for fieldname in sp_field_names:
+            for fieldname in p2_field_names:
                 if fieldname == "Backref":
                     field_info_list.append({
                         "client_id": get_field_id(fieldname)[0],
@@ -1001,24 +1048,62 @@ def convert_five_tiers(
 
         # Creating fields of the third perspective, if required.
 
-        if new_tp_flag:
-            tp_field_names = (
+        if new_p3_flag:
+            p3_field_names = (
                 "Affix",
                 "Meaning of affix",
-                "Word with affix",
+                "Backref",
                 "Etymology"
             )
 
             field_info_list = []
-            for fieldname in tp_field_names:
-                field_info_list.append({
-                    "client_id": get_field_id(fieldname)[0],
-                    "object_id": get_field_id(fieldname)[1]})
+            for fieldname in p3_field_names:
+                if fieldname == "Backref":
+                    field_info_list.append({
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1],
+                        "link": {
+                            "client_id": mp_perspective_id[0],
+                            "object_id": mp_perspective_id[1]}})
+                else:
+                    field_info_list.append({
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1]})
 
             for position, field_info in enumerate(field_info_list, 1):
                 create_nested_field(
                     field_info,
                     mo_perspective,
+                    extra_client,
+                    None,
+                    position)
+
+        # Creating fields of the fourth perspective, if required.
+
+        if new_p4_flag:
+            p4_field_names = (
+                "Word with affix",
+                "Backref"
+            )
+
+            field_info_list = []
+            for fieldname in p4_field_names:
+                if fieldname == "Backref":
+                    field_info_list.append({
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1],
+                        "link": {
+                            "client_id": mo_perspective_id[0],
+                            "object_id": mo_perspective_id[1]}})
+                else:
+                    field_info_list.append({
+                        "client_id": get_field_id(fieldname)[0],
+                        "object_id": get_field_id(fieldname)[1]})
+
+            for position, field_info in enumerate(field_info_list, 1):
+                create_nested_field(
+                    field_info,
+                    mp_perspective,
                     extra_client,
                     None,
                     position)
@@ -1270,7 +1355,6 @@ def convert_five_tiers(
 
         txt_rows = {}
         dubl_set = set()
-        morphology_words = {}
 
         message_uploading = (
             'Uploading sounds and words'
@@ -1427,101 +1511,6 @@ def convert_five_tiers(
                         pprint.pformat(
                             f(paradigm_words), width = 192))
 
-                ## Morphology
-                for word_translation in phrase:
-                    if not morphology: break
-                    if type(word_translation) is list:
-                        continue
-
-                    for i, w in word_translation.items():
-                        # Transcription
-                        txc_word = w[0].text or ""
-                        afx_text = txc_word.split('-')[1:] if '-' in txc_word else []
-
-                        # Translation
-                        txl_word = i.text or ""
-                        mrk_text = re.findall(dash_re, txl_word)
-
-                        # Complex text
-                        inf_text = f'[{txc_word}] {txl_word}'
-
-                        # The phrase will be appended if affix exists
-                        for n in range(len(afx_text)):
-                            # Clean the affix from any non-alnum symbols after it
-                            # \u0301 is an accent mark
-                            afx = afx_text[n].replace(u'\u0301', '')
-                            afx = re.split(r'[\W]', afx.strip())[0]
-
-                            if not afx:
-                                continue
-
-                            afx = f'-{afx}'
-                            mrk = mrk_text[n] if n < len(mrk_text) else None
-
-                            # Check if such affix is already in dictionary
-                            if mo_entry_id := mo_affix_dict.get(afx.lower()):
-
-                                if mrk and mrk.lower() not in mo_meaning_dict[mo_entry_id]:
-                                    mo_meaning_dict[mo_entry_id].add(mrk.lower())
-                                    field_id = mo_fields['meaning']
-                                    create_entity(
-                                        extra_client,
-                                        mo_entry_id,
-                                        field_id,
-                                        field_data_type_dict[field_id],
-                                        mrk)
-
-                                if inf_text.lower() not in mo_word_dict[mo_entry_id]:
-                                    mo_word_dict[mo_entry_id].add(inf_text.lower())
-                                    field_id = mo_fields['word']
-                                    create_entity(
-                                        extra_client,
-                                        mo_entry_id,
-                                        field_id,
-                                        field_data_type_dict[field_id],
-                                        inf_text)
-
-                                if debug_flag:
-                                    log.debug(f'mo_entry_id: {mo_entry_id}, {afx}')
-
-                                continue
-
-                            # Check if such affix is already in the list
-                            exists = False
-                            for afx_wrd, wrd in morphology_words.items():
-                                if exists := (afx_wrd.text == afx):
-                                    for fld in wrd:
-                                        if (fld.tier == "Meaning of affix"
-                                            and mrk and mrk not in fld.text.split('\n')):
-                                                fld.text += f'\n{mrk}'
-                                        if (fld.tier == "Word with affix"
-                                            and inf_text not in fld.text):
-                                                fld.text += f'\n{inf_text}'
-                                    break
-
-                            if exists:
-                                continue
-
-                            mo_word = []
-
-                            afx_word = (
-                                elan_parser.Word(
-                                    text=afx,
-                                    tier="Affix"))
-
-                            if mrk:
-                                mo_word.append(
-                                    elan_parser.Word(
-                                        text=mrk,
-                                        tier="Meaning of affix"))
-
-                            mo_word.append(
-                                elan_parser.Word(
-                                    text=inf_text,
-                                    tier="Word with affix"))
-
-                            morphology_words[afx_word] = mo_word
-
                 max_sim = None
 
                 def words_to_entry(result_words,
@@ -1606,11 +1595,101 @@ def convert_five_tiers(
 
                     return lexical_entry_id
 
+                ## Morphology
+                for word_translation in phrase:
+                    if not morphology: break
+                    if type(word_translation) is list:
+                        continue
+
+                    for i, w in word_translation.items():
+                        # Transcription
+                        txc_word = w[0].text or ""
+                        afx_text = txc_word.split('-')[1:] if '-' in txc_word else []
+
+                        # Translation
+                        txl_word = i.text or ""
+                        mrk_text = re.findall(dash_re, txl_word)
+
+                        # Complex text
+                        txc_txl = f'[{txc_word}] {txl_word}'
+
+                        # The phrase will be appended if any affix exists
+                        # Create a single entry with text for all the affixes in it
+                        if afx_text:
+                            mp_word = [
+                                elan_parser.Word(
+                                    text=txc_txl,
+                                    tier="Word with affix")]
+
+                            p4_lexical_entry_id = words_to_entry(mp_word,
+                                                                 mp_content_text_entity_dict,
+                                                                 mp_parent_id_text_entity_counter,
+                                                                 mp_perspective_id)
+
+                        # Create entry with affix and its meaning
+                        # for each affix+meaning variant
+                        for n in range(len(afx_text)):
+                            # Clean the affix from any non-alnum symbols after it
+                            # \u0301 is an accent mark
+                            afx = afx_text[n].replace(u'\u0301', '')
+                            afx = re.split(r'[\W]', afx.strip())[0]
+
+                            if not afx:
+                                continue
+
+                            afx = f'-{afx}'
+                            mrk = mrk_text[n] if n < len(mrk_text) else None
+
+                            '''
+                            # Check if such affix is already in dictionary
+                            if mo_entry_ids := mo_affix_dict.get(afx.lower()):
+                                marks = map(lambda id: mo_meaning_dict[id], mo_entry_ids)
+                                links = map(lambda id: mo_backref_dict[id], mo_entry_ids)
+                                lnk_words = map(lambda id: mp_word_dict[id], links)
+
+                                if mrk and mrk not in marks:
+                                    pass
+
+                            # Check if such affix is already in the list
+                            exists = False
+                            for afx_wrd, wrd in morphology_words.items():
+                                if exists := (afx_wrd.text == afx):
+                                    for fld in wrd:
+                                        if (fld.tier == "Meaning of affix"
+                                            and mrk and mrk not in fld.text.split('\n')):
+                                                fld.text += f'\n{mrk}'
+                                        if (fld.tier == "Word with affix"
+                                            and inf_text not in fld.text):
+                                                fld.text += f'\n{inf_text}'
+                                    break
+
+                            if exists:
+                                continue
+                            '''
+
+                            mo_word = [
+                                elan_parser.Word(
+                                    text=afx,
+                                    tier="Affix")]
+
+                            if mrk:
+                                mo_word.append(
+                                    elan_parser.Word(
+                                        text=mrk,
+                                        tier="Meaning of affix"))
+
+                            p3_lexical_entry_id = words_to_entry(mo_word,
+                                                                 mo_content_text_entity_dict,
+                                                                 mo_parent_id_text_entity_counter,
+                                                                 mo_perspective_id)
+
+                            link_set.add((p3_lexical_entry_id, p4_lexical_entry_id))
+
                 # The next several steps are for lexical entries and paradigms
                 # and not for morphology
                 if not morphology:
 
-                    sp_lexical_entry_id = words_to_entry(paradigm_words,
+                    p2_lexical_entry_id = words_to_entry(paradigm_words,
                                                          pa_content_text_entity_dict,
                                                          pa_parent_id_text_entity_counter,
                                                          pa_perspective_id)
@@ -1650,7 +1729,7 @@ def convert_five_tiers(
 
                                 create_entity(
                                     extra_client,
-                                    sp_lexical_entry_id,
+                                    p2_lexical_entry_id,
                                     pa_sound_fid,
                                     pa_sound_dtype,
                                     content = audio_slice,
@@ -1720,10 +1799,10 @@ def convert_five_tiers(
                                 pprint.pformat(
                                     lex_row, width = 192))
 
-                        fp_lexical_entry_id = (
+                        p1_lexical_entry_id = (
                             lex_rows.get(lex_row))
 
-                        if fp_lexical_entry_id is None:
+                        if p1_lexical_entry_id is None:
                             match_dict = defaultdict(list)
                             for crt in column:
 
@@ -1749,7 +1828,7 @@ def convert_five_tiers(
                                     max_sim = le
 
                             if max_sim:
-                                fp_lexical_entry_id = max_sim
+                                p1_lexical_entry_id = max_sim
                             else:
                                 entry_dict = {
                                     'created_at': created_at(),
@@ -1769,10 +1848,10 @@ def convert_five_tiers(
 
                                 toc_insert_list.append(toc_dict)
 
-                                fp_lexical_entry_id = extra_client_id, entry_dict['object_id']
+                                p1_lexical_entry_id = extra_client_id, entry_dict['object_id']
 
                             lex_rows[lex_row] = (
-                                fp_lexical_entry_id)
+                                p1_lexical_entry_id)
 
                             for other_word in column:
                                 text = other_word.text
@@ -1787,7 +1866,7 @@ def convert_five_tiers(
 
                                     create_entity(
                                         extra_client,
-                                        fp_lexical_entry_id,
+                                        p1_lexical_entry_id,
                                         field_id,
                                         field_data_type_dict[field_id],
                                         text)
@@ -1801,7 +1880,7 @@ def convert_five_tiers(
                                             None)
 
                                         if le_check_dict is not None:
-                                            le_check_dict[fp_lexical_entry_id].add(text.lower())
+                                            le_check_dict[p1_lexical_entry_id].add(text.lower())
 
                         # If we check lexical entry identity only by meaning, we should add to it any
                         # transcriptions and words it doesn't have.
@@ -1817,10 +1896,10 @@ def convert_five_tiers(
 
                                 if field_id == le_fields['word']:
                                     le_check_set = (
-                                        le_word_dict[fp_lexical_entry_id])
+                                        le_word_dict[p1_lexical_entry_id])
                                 elif field_id == le_fields['transcription']:
                                     le_check_set = (
-                                        le_xcript_dict[fp_lexical_entry_id])
+                                        le_xcript_dict[p1_lexical_entry_id])
                                 else:
                                     continue
 
@@ -1831,7 +1910,7 @@ def convert_five_tiers(
 
                                     create_entity(
                                         extra_client,
-                                        fp_lexical_entry_id,
+                                        p1_lexical_entry_id,
                                         field_id,
                                         field_data_type_dict[field_id],
                                         text)
@@ -1874,7 +1953,7 @@ def convert_five_tiers(
 
                                     create_entity(
                                         extra_client,
-                                        fp_lexical_entry_id,
+                                        p1_lexical_entry_id,
                                         le_sound_fid,
                                         le_sound_dtype,
                                         content = audio_slice,
@@ -1886,39 +1965,39 @@ def convert_five_tiers(
                         # If we don't have a paradigm entry (e.g. when we have no paradigm text and no paradigm
                         # translation in the corpus), we obviously do not establish any links.
 
-                        if sp_lexical_entry_id == None:
+                        if p2_lexical_entry_id == None:
                             continue
 
-                        dubl_tuple = sp_lexical_entry_id, fp_lexical_entry_id
+                        dubl_tuple = p2_lexical_entry_id, p1_lexical_entry_id
 
                         if not dubl_tuple in dubl_set:
                             dubl_set.add(dubl_tuple)
 
-                            sp_fp_link_flag = True
-                            fp_sp_link_flag = True
+                            p2_p1_link_flag = True
+                            p1_p2_link_flag = True
 
                             if max_sim:
-                                if (sp_lexical_entry_id, fp_lexical_entry_id) in link_set:
-                                    sp_fp_link_flag = False
+                                if (p2_lexical_entry_id, p1_lexical_entry_id) in link_set:
+                                    p2_p1_link_flag = False
 
-                                if (fp_lexical_entry_id, sp_lexical_entry_id) in link_set:
-                                    fp_sp_link_flag = False
+                                if (p1_lexical_entry_id, p2_lexical_entry_id) in link_set:
+                                    p1_p2_link_flag = False
 
-                            if sp_fp_link_flag:
+                            if p2_p1_link_flag:
                                 create_entity(
                                     extra_client,
-                                    sp_lexical_entry_id,
+                                    p2_lexical_entry_id,
                                     backref_fid,
                                     backref_dtype,
-                                    link_id = fp_lexical_entry_id)
+                                    link_id = p1_lexical_entry_id)
 
-                            if fp_sp_link_flag:
+                            if p1_p2_link_flag:
                                 create_entity(
                                     extra_client,
-                                    fp_lexical_entry_id,
+                                    p1_lexical_entry_id,
                                     backref_fid,
                                     backref_dtype,
-                                    link_id = sp_lexical_entry_id)
+                                    link_id = p2_lexical_entry_id)
 
                     # Checking if we need to update task progress.
 
@@ -2223,7 +2302,7 @@ def convert_five_tiers(
                 translation_text = (
                     t.content.strip())
 
-                sp_le_id = t.parent_id
+                p2_le_id = t.parent_id
 
                 tag = (
                     re.search(conj_re, translation_text))
@@ -2240,31 +2319,31 @@ def convert_five_tiers(
                     if translation_text[:3] != tag_name:
                         nom_flag = True
                     else:
-                        fp_le_id = (
+                        p1_le_id = (
                             conj_dict.get(tag_name.lower()))
 
-                        if fp_le_id is not None:
-                            if (fp_le_id, sp_le_id) not in link_set:
+                        if p1_le_id is not None:
+                            if (p1_le_id, p2_le_id) not in link_set:
                                 link_set.add(
-                                    (fp_le_id, sp_le_id))
+                                    (p1_le_id, p2_le_id))
 
                                 create_entity(
                                     extra_client,
-                                    fp_le_id,
+                                    p1_le_id,
                                     backref_fid,
                                     backref_dtype,
-                                    link_id = sp_le_id)
+                                    link_id = p2_le_id)
 
-                            if (sp_le_id, fp_le_id) not in link_set:
+                            if (p2_le_id, p1_le_id) not in link_set:
                                 link_set.add(
-                                    (sp_le_id, fp_le_id))
+                                    (p2_le_id, p1_le_id))
 
                                 create_entity(
                                     extra_client,
-                                    sp_le_id,
+                                    p2_le_id,
                                     backref_fid,
                                     backref_dtype,
-                                    link_id = fp_le_id)
+                                    link_id = p1_le_id)
 
                             create_le_flag = False
 
@@ -2282,13 +2361,13 @@ def convert_five_tiers(
                                 translation_text
                                     [ : mark_search.start()] .strip() .lower())
 
-                            fp_le_id = (
+                            p1_le_id = (
                                 nom_dict.get(nom_key))
 
-                            if fp_le_id is not None:
+                            if p1_le_id is not None:
                                 establish_link(
-                                    fp_le_id,
-                                    sp_le_id)
+                                    p1_le_id,
+                                    p2_le_id)
 
                                 create_le_flag = False
 
@@ -2303,15 +2382,15 @@ def convert_five_tiers(
                     translation_key = (
                         translation_text.lower())
 
-                    fp_lexical_entry_id = (
+                    p1_lexical_entry_id = (
                         lex_entry_dict.get(translation_key))
 
-                    if (fp_lexical_entry_id is not None and
+                    if (p1_lexical_entry_id is not None and
                         merge_by_meaning):
 
                         establish_link(
-                            fp_lexical_entry_id,
-                            sp_le_id)
+                            p1_lexical_entry_id,
+                            p2_le_id)
                     else:
                         entry_dict = {
                             'created_at': created_at(),
@@ -2331,22 +2410,26 @@ def convert_five_tiers(
 
                         toc_insert_list.append(toc_dict)
 
-                        fp_lexical_entry_id = (
+                        p1_lexical_entry_id = (
                             extra_client_id, entry_dict['object_id'])
 
                         lex_entry_dict[
-                            translation_key] = fp_lexical_entry_id
+                            translation_key] = p1_lexical_entry_id
 
                         create_entity(
                             extra_client,
-                            fp_lexical_entry_id,
+                            p1_lexical_entry_id,
                             le_fields['translation'],
                             le_xlat_dtype,
                             translation_text)
 
                         establish_link(
-                            fp_lexical_entry_id,
-                            sp_le_id)
+                            p1_lexical_entry_id,
+                            p2_le_id)
+
+            ## Morphological links
+            for (p3_lexical_entry_id, p4_lexical_entry_id) in link_set:
+                establish_link(p3_lexical_entry_id, p4_lexical_entry_id)
 
             # Checking if we need to update task progress.
 
