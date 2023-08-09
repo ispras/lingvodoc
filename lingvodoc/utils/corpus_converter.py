@@ -1355,6 +1355,7 @@ def convert_five_tiers(
 
         txt_rows = {}
         dubl_set = set()
+        new_link_set = set()
 
         message_uploading = (
             'Uploading sounds and words'
@@ -1633,12 +1634,10 @@ def convert_five_tiers(
                             # \u0301 is an accent mark
                             afx = afx_text[n].replace(u'\u0301', '')
                             afx = re.split(r'[\W]', afx.strip())[0]
-
-                            if not afx:
-                                continue
-
-                            afx = f'-{afx}'
                             mrk = mrk_text[n] if n < len(mrk_text) else None
+
+                            if not afx or not mrk:
+                                continue
 
                             '''
                             # Check if such affix is already in dictionary
@@ -1669,21 +1668,20 @@ def convert_five_tiers(
 
                             mo_word = [
                                 elan_parser.Word(
-                                    text=afx,
-                                    tier="Affix")]
+                                    text=f'-{afx}',
+                                    tier="Affix"),
 
-                            if mrk:
-                                mo_word.append(
-                                    elan_parser.Word(
+                                elan_parser.Word(
                                         text=mrk,
-                                        tier="Meaning of affix"))
+                                        tier="Meaning of affix")
+                            ]
 
                             p3_lexical_entry_id = words_to_entry(mo_word,
                                                                  mo_content_text_entity_dict,
                                                                  mo_parent_id_text_entity_counter,
                                                                  mo_perspective_id)
 
-                            link_set.add((p3_lexical_entry_id, p4_lexical_entry_id))
+                            new_link_set.add((p3_lexical_entry_id, p4_lexical_entry_id))
 
                 # The next several steps are for lexical entries and paradigms
                 # and not for morphology
@@ -2017,12 +2015,6 @@ def convert_five_tiers(
                 '\nmorphology_words:\n' +
                 pprint.pformat(
                     f(morphology_words), width=192))
-
-        for afx_word, mo_word in morphology_words.items():
-            mo_lexical_entry_id = words_to_entry([afx_word] + mo_word,
-                                                 mo_content_text_entity_dict,
-                                                 mo_parent_id_text_entity_counter,
-                                                 mo_perspective_id)
 
         percent_from = (percent_uploading + percent_adding) / 2
 
@@ -2428,7 +2420,7 @@ def convert_five_tiers(
                             p2_le_id)
 
             ## Morphological links
-            for (p3_lexical_entry_id, p4_lexical_entry_id) in link_set:
+            for (p3_lexical_entry_id, p4_lexical_entry_id) in new_link_set:
                 establish_link(p3_lexical_entry_id, p4_lexical_entry_id)
 
             # Checking if we need to update task progress.
