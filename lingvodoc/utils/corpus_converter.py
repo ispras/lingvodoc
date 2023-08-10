@@ -751,6 +751,7 @@ def convert_five_tiers(
         # Checking text data of all existing lexical entries.
 
         ## Lexical entries
+
         if merge_by_meaning_all:
             le_meaning_dict = {}
             le_word_dict = defaultdict(set)
@@ -798,6 +799,7 @@ def convert_five_tiers(
             le_meaning_dict[content_text .strip() .lower()] = entry_id
 
         ## Paradigms
+
         pa_content_text_entity_dict = defaultdict(list)
         pa_parent_id_text_entity_counter = Counter()
 
@@ -809,9 +811,6 @@ def convert_five_tiers(
             pa_parent_id_text_entity_counter[x.parent_id] += 1
 
         ## Morphology
-        #mo_affix_dict = defaultdict(set)
-        #mo_meaning_dict = defaultdict(set)
-        #mo_backref_dict = defaultdict(set)
 
         mo_content_text_entity_dict = defaultdict(list)
         mo_parent_id_text_entity_counter = Counter()
@@ -824,7 +823,6 @@ def convert_five_tiers(
 
             content = x.content
             entry_id = x.parent_id
-            #link_id = x.link_id
 
             if not content:
                 continue
@@ -832,24 +830,7 @@ def convert_five_tiers(
             mo_content_text_entity_dict[content].append(x)
             mo_parent_id_text_entity_counter[entry_id] += 1
 
-        '''
-            content_key = content.strip().lower()
-
-            if field_id == mo_fields['meaning']:
-                mo_meaning_dict[entry_id].add(content_key)
-            elif field_id == mo_fields['backref']:
-                mo_backref_dict[entry_id].add(link_id)
-            elif field_id == mo_fields['affix']:
-                mo_affix_dict[content_key].add(entry_id)
-            
-
-        if debug_flag:
-            log.debug(pprint.pformat(f'mo_affix_dict: {mo_affix_dict}', width=192))
-        '''
-
         ## Morphological paradigms
-        #mp_word_dict = defaultdict(set)
-        #mp_backref_dict = defaultdict(set)
 
         mp_content_text_entity_dict = defaultdict(list)
         mp_parent_id_text_entity_counter = Counter()
@@ -862,7 +843,6 @@ def convert_five_tiers(
 
             content = x.content
             entry_id = x.parent_id
-            #link_id = x.link_id
 
             if not content:
                 continue
@@ -870,14 +850,7 @@ def convert_five_tiers(
             mp_content_text_entity_dict[content].append(x)
             mp_parent_id_text_entity_counter[entry_id] += 1
 
-            '''
-            content_key = content.strip().lower()
-
-            if field_id == mp_fields['word']:
-                mp_word_dict[entry_id].add(content_key)
-            elif field_id == mp_fields['backref']:
-                mp_backref_dict[link_id].add(entry_id)
-            '''
+        ## Common function
 
         def add_perspective(pesponse):
             perspective = (
@@ -903,7 +876,7 @@ def convert_five_tiers(
 
             return perspective
 
-        # First perspective.
+        ## First perspective.
 
         task_status.set(
             4, percent_le_perspective, "Handling lexical entries perspective")
@@ -918,7 +891,7 @@ def convert_five_tiers(
 
         le_perspective_id = le_perspective.id if le_perspective else None
 
-        # Second perspective.
+        ## Second perspective.
 
         task_status.set(
             5, percent_pa_perspective, "Handling paradigms perspective")
@@ -933,7 +906,7 @@ def convert_five_tiers(
 
         pa_perspective_id = pa_perspective.id if pa_perspective else None
 
-        # Third perspective.
+        ## Third perspective.
 
         task_status.set(
             4, percent_mo_perspective, "Handling morphology perspective")
@@ -958,7 +931,7 @@ def convert_five_tiers(
             and morphology)
 
         if new_p4_flag:
-            response = translation_service_get("Morphological paradigms")
+            response = translation_service_get("Morphological Paradigms")
             mp_perspective = add_perspective(response)
 
         mp_perspective_id = mp_perspective.id if mp_perspective else None
@@ -1151,6 +1124,8 @@ def convert_five_tiers(
         entity_insert_list = []
         toc_insert_list = []
         publish_insert_list = []
+
+        ## Common functions
 
         def create_entity(
             client,
@@ -1462,6 +1437,7 @@ def convert_five_tiers(
                 paradigm_words = []
 
                 ## Paradigms
+
                 for word_translation in phrase:
                     if morphology: break
                     if type(word_translation) is not list:
@@ -1511,6 +1487,8 @@ def convert_five_tiers(
                         '\nparadigm_words:\n' +
                         pprint.pformat(
                             f(paradigm_words), width = 192))
+
+                ## Common function
 
                 def words_to_entry(result_words,
                                    content_text_entity_dict,
@@ -1598,12 +1576,14 @@ def convert_five_tiers(
                     return lexical_entry_id
 
                 ## Morphology
+
                 for word_translation in phrase:
                     if not morphology: break
                     if type(word_translation) is list:
                         continue
 
                     for i, w in word_translation.items():
+
                         # Transcription
                         txc_word = w[0].text or ""
                         afx_text = txc_word.split('-')[1:] if '-' in txc_word else []
@@ -1615,7 +1595,7 @@ def convert_five_tiers(
                         # Complex text
                         txc_txl = f'[{txc_word}] {txl_word}'
 
-                        # The phrase will be appended if any affix and mark exists
+                        # The phrase will be appended if any affix and mark exist
                         # Create a single entry with text for all the affixes in it
                         if afx_text and mrk_text:
                             mp_word = [
@@ -1628,7 +1608,7 @@ def convert_five_tiers(
                                                                  mp_parent_id_text_entity_counter,
                                                                  mp_perspective_id)
 
-                        # Create entry with affix and its meaning
+                        # Create an entry with affix and its meaning
                         # for each affix+meaning variant
                         for n in range(len(afx_text)):
                             # Clean the affix from any non-alnum symbols after it
@@ -1640,33 +1620,6 @@ def convert_five_tiers(
                             if not afx or not mrk:
                                 continue
 
-                            '''
-                            # Check if such affix is already in dictionary
-                            if mo_entry_ids := mo_affix_dict.get(afx.lower()):
-                                marks = map(lambda id: mo_meaning_dict[id], mo_entry_ids)
-                                links = map(lambda id: mo_backref_dict[id], mo_entry_ids)
-                                lnk_words = map(lambda id: mp_word_dict[id], links)
-
-                                if mrk and mrk not in marks:
-                                    pass
-
-                            # Check if such affix is already in the list
-                            exists = False
-                            for afx_wrd, wrd in morphology_words.items():
-                                if exists := (afx_wrd.text == afx):
-                                    for fld in wrd:
-                                        if (fld.tier == "Meaning of affix"
-                                            and mrk and mrk not in fld.text.split('\n')):
-                                                fld.text += f'\n{mrk}'
-                                        if (fld.tier == "Word with affix"
-                                            and inf_text not in fld.text):
-                                                fld.text += f'\n{inf_text}'
-                                    break
-
-                            if exists:
-                                continue
-                            '''
-
                             mo_word = [
                                 elan_parser.Word(
                                     text=f'-{afx}',
@@ -1674,8 +1627,7 @@ def convert_five_tiers(
 
                                 elan_parser.Word(
                                     text=mrk,
-                                    tier="Meaning of affix")
-                            ]
+                                    tier="Meaning of affix")]
 
                             p3_lexical_entry_id = words_to_entry(mo_word,
                                                                  mo_content_text_entity_dict,
@@ -1683,6 +1635,12 @@ def convert_five_tiers(
                                                                  mo_perspective_id)
 
                             new_link_set.add((p3_lexical_entry_id, p4_lexical_entry_id))
+
+                            if debug_flag:
+                                log.debug(
+                                    '\nmorphology_words:\n' +
+                                    pprint.pformat(
+                                        f(mp_word + mo_word), width=192))
 
                 # The next several steps are for lexical entries and paradigms
                 # and not for morphology
@@ -2011,11 +1969,6 @@ def convert_five_tiers(
                             (phrase_index + 1) * percent_delta_phrase,
                         message_uploading)
 
-        if debug_flag:
-            log.debug(
-                '\nmorphology_words:\n' +
-                pprint.pformat(
-                    f(morphology_words), width=192))
 
         percent_from = (percent_uploading + percent_adding) / 2
 
@@ -2163,6 +2116,8 @@ def convert_five_tiers(
                 elif t.field_id == pa_fields['transcription']:
                     pa_xcript_dict[t.parent_id].append(t.content)
 
+        ## Common function
+
         def establish_link(
             le_entry_id,
             pa_entry_id):
@@ -2274,15 +2229,16 @@ def convert_five_tiers(
 
             # Updated words and transcriptions in the third perspective.
     
-            mo_word_dict = defaultdict(list)
-            mo_xcript_dict = defaultdict(list)
+            mo_affix_dict = defaultdict(list)
+            mo_meaning_dict = defaultdict(list)
     
             for t in m_lexes_with_text_after_update:
-                if t.field_id == mo_fields['word']:
-                    mo_word_dict[t.parent_id].append(t.content)
-                elif t.field_id == mo_fields['affix']:
-                    mo_xcript_dict[t.parent_id].append(t.content)
+                if t.field_id == mo_fields['affix']:
+                    mo_affix_dict[t.parent_id].append(t.content)
+                elif t.field_id == mo_fields['meaning']:
+                    mo_meaning_dict[t.parent_id].append(t.content)
             '''
+
             ## Morphological links
             for (p3_lexical_entry_id, p4_lexical_entry_id) in new_link_set:
                 establish_link(p3_lexical_entry_id, p4_lexical_entry_id)
