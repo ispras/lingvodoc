@@ -856,13 +856,13 @@ def convert_five_tiers(
 
         for x in mp_lexes:
             field_id = x.field_id
-            link_id = x.link_id
 
             if field_id not in mp_text_fid_list:
                 continue
 
             content = x.content
             entry_id = x.parent_id
+            #link_id = x.link_id
 
             if not content:
                 continue
@@ -1512,14 +1512,13 @@ def convert_five_tiers(
                         pprint.pformat(
                             f(paradigm_words), width = 192))
 
-                max_sim = None
-
                 def words_to_entry(result_words,
                                    content_text_entity_dict,
                                    parent_id_text_entity_counter,
                                    perspective_id):
 
                     nonlocal max_sim
+                    max_sim = None
 
                     lexical_entry_id = None
                     txt_row = tuple(x.text for x in result_words)
@@ -1534,13 +1533,16 @@ def convert_five_tiers(
                             match_field_id = get_field_id(EAF_TIERS[rword.tier])
                             for t in match_list:
                                 if t.field_id == match_field_id:
-                                   match_dict[t.parent_id].append(t)
+                                    match_dict[t.parent_id].append(t)
 
                         match_dict = {
                             k: v
                             for k, v in match_dict.items()
                             if (len(v) >= 2 or
                                 len(v) == 1 and parent_id_text_entity_counter[k] == 1)}
+
+                        if debug_flag and match_dict:
+                            log.debug("match_dict:\n", pprint.pformat(match_dict, width=192))
 
                         for le in match_dict:
                             if max_sim is None or len(match_dict[le]) >= len(match_dict[max_sim]):
@@ -1616,7 +1618,7 @@ def convert_five_tiers(
 
                         # The phrase will be appended if any affix exists
                         # Create a single entry with text for all the affixes in it
-                        if afx_text:
+                        if afx_text and mrk_text:
                             mp_word = [
                                 elan_parser.Word(
                                     text=txc_txl,
@@ -1672,8 +1674,8 @@ def convert_five_tiers(
                                     tier="Affix"),
 
                                 elan_parser.Word(
-                                        text=mrk,
-                                        tier="Meaning of affix")
+                                    text=mrk,
+                                    tier="Meaning of affix")
                             ]
 
                             p3_lexical_entry_id = words_to_entry(mo_word,
