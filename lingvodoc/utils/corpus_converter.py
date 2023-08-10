@@ -1585,13 +1585,12 @@ def convert_five_tiers(
                                 all(x.content != text or x.field_id != field_id
                                     for x in match_dict[max_sim])):
 
-                                for txt in text.split('\n'):
-                                    create_entity(
-                                        extra_client,
-                                        lexical_entry_id,
-                                        field_id,
-                                        field_data_type_dict[field_id],
-                                        txt)
+                                create_entity(
+                                    extra_client,
+                                    lexical_entry_id,
+                                    field_id,
+                                    field_data_type_dict[field_id],
+                                    text)
 
                     elif txt_row:
                         lexical_entry_id = txt_rows[txt_row]
@@ -1616,7 +1615,7 @@ def convert_five_tiers(
                         # Complex text
                         txc_txl = f'[{txc_word}] {txl_word}'
 
-                        # The phrase will be appended if any affix exists
+                        # The phrase will be appended if any affix and mark exists
                         # Create a single entry with text for all the affixes in it
                         if afx_text and mrk_text:
                             mp_word = [
@@ -2122,7 +2121,7 @@ def convert_five_tiers(
                                     .notin_(ids_to_id_query(mo_already_set))))
     
                 m_lexes_with_text_after_update = entity_query.all()
-                '''
+            '''
 
             # Info of words and transcriptions in the first perspective.
 
@@ -2212,218 +2211,219 @@ def convert_five_tiers(
                     mo_xcript_dict[t.parent_id].append(t.content)
             '''
 
-            def establish_link(
-                le_entry_id,
-                pa_entry_id):
-                """
-                Establishes link between lexical and paradigmatic entries, adds paradigmatic words and/or
-                transcriptions to lexical entries if required.
-                """
+        def establish_link(
+            le_entry_id,
+            pa_entry_id):
+            """
+            Establishes link between lexical and paradigmatic entries, adds paradigmatic words and/or
+            transcriptions to lexical entries if required.
+            """
 
-                if not (le_entry_id, pa_entry_id) in link_set:
-                    link_set.add(
-                        (le_entry_id, pa_entry_id))
+            if not (le_entry_id, pa_entry_id) in link_set:
+                link_set.add(
+                    (le_entry_id, pa_entry_id))
 
-                    create_entity(
-                        extra_client,
-                        le_entry_id,
-                        backref_fid,
-                        backref_dtype,
-                        link_id = pa_entry_id)
+                create_entity(
+                    extra_client,
+                    le_entry_id,
+                    backref_fid,
+                    backref_dtype,
+                    link_id = pa_entry_id)
 
-                if not (pa_entry_id, le_entry_id) in link_set:
-                    link_set.add(
-                        (pa_entry_id, le_entry_id))
-                    create_entity(
-                        extra_client,
-                        pa_entry_id,
-                        backref_fid,
-                        backref_dtype,
-                        link_id = le_entry_id)
+            if not (pa_entry_id, le_entry_id) in link_set:
+                link_set.add(
+                    (pa_entry_id, le_entry_id))
+                create_entity(
+                    extra_client,
+                    pa_entry_id,
+                    backref_fid,
+                    backref_dtype,
+                    link_id = le_entry_id)
 
-                # Adding paradigmatic word and transcriptions to lexical entries, if required.
+            # Adding paradigmatic word and transcriptions to lexical entries, if required.
 
-                if additional_entries:
-                    if (additional_entries_all or
-                        le_entry_id not in word_le_set):
+            if additional_entries:
+                if (additional_entries_all or
+                    le_entry_id not in word_le_set):
 
-                        for pa_word in pa_word_dict[pa_entry_id]:
-                            word_key = (
-                                (pa_word := pa_word.strip())
-                                    .lower())
+                    for pa_word in pa_word_dict[pa_entry_id]:
+                        word_key = (
+                            (pa_word := pa_word.strip())
+                                .lower())
 
-                            le_word_set = (
-                                le_word_dict[le_entry_id])
+                        le_word_set = (
+                            le_word_dict[le_entry_id])
 
-                            if word_key not in le_word_set:
-                                le_word_set.add(word_key)
-                                create_entity(
-                                    extra_client,
-                                    le_entry_id,
-                                    le_fields['word'],
-                                    le_word_dtype,
-                                    pa_word)
+                        if word_key not in le_word_set:
+                            le_word_set.add(word_key)
+                            create_entity(
+                                extra_client,
+                                le_entry_id,
+                                le_fields['word'],
+                                le_word_dtype,
+                                pa_word)
 
-                    if (additional_entries_all or
-                        le_entry_id not in xcript_le_set):
+                if (additional_entries_all or
+                    le_entry_id not in xcript_le_set):
 
-                        for pa_xcript in pa_xcript_dict[pa_entry_id]:
-                            xcript_key = (
-                                (pa_xcript := pa_xcript.strip())
-                                    .lower())
+                    for pa_xcript in pa_xcript_dict[pa_entry_id]:
+                        xcript_key = (
+                            (pa_xcript := pa_xcript.strip())
+                                .lower())
 
-                            le_xcript_set = (
-                                le_xcript_dict[le_entry_id])
+                        le_xcript_set = (
+                            le_xcript_dict[le_entry_id])
 
-                            if xcript_key not in le_xcript_set:
-                                le_xcript_set.add(xcript_key)
+                        if xcript_key not in le_xcript_set:
+                            le_xcript_set.add(xcript_key)
 
-                                create_entity(
-                                    extra_client,
-                                    le_entry_id,
-                                    le_fields['transcription'],
-                                    le_xcript_dtype,
-                                    pa_xcript)
+                            create_entity(
+                                extra_client,
+                                le_entry_id,
+                                le_fields['transcription'],
+                                le_xcript_dtype,
+                                pa_xcript)
 
-            # Linking updated paradigms, adding words and transcriptions from them if required.
+        ## Morphological links
+        for (p3_lexical_entry_id, p4_lexical_entry_id) in new_link_set:
+            establish_link(p3_lexical_entry_id, p4_lexical_entry_id)
 
-            for t_index, t in (
-                enumerate(p_lexes_with_text_after_update)):
+        # Linking updated paradigms, adding words and transcriptions from them if required.
 
-                if t.field_id != pa_fields['translation']:
-                    continue
+        for t_index, t in (
+            enumerate(p_lexes_with_text_after_update)):
+            if morphology: break
 
-                translation_text = (
-                    t.content.strip())
+            if t.field_id != pa_fields['translation']:
+                continue
 
-                p2_le_id = t.parent_id
+            translation_text = (
+                t.content.strip())
 
-                tag = (
-                    re.search(conj_re, translation_text))
+            p2_le_id = t.parent_id
 
-                nom_flag = False
-                create_le_flag = False
+            tag = (
+                re.search(conj_re, translation_text))
 
-                if not tag:
+            nom_flag = False
+            create_le_flag = False
+
+            if not tag:
+                nom_flag = True
+            else:
+                create_le_flag = True
+                tag_name = tag.group(0)
+
+                if translation_text[:3] != tag_name:
                     nom_flag = True
                 else:
-                    create_le_flag = True
-                    tag_name = tag.group(0)
+                    p1_le_id = (
+                        conj_dict.get(tag_name.lower()))
 
-                    if translation_text[:3] != tag_name:
-                        nom_flag = True
-                    else:
+                    if p1_le_id is not None:
+                        if (p1_le_id, p2_le_id) not in link_set:
+                            link_set.add(
+                                (p1_le_id, p2_le_id))
+
+                            create_entity(
+                                extra_client,
+                                p1_le_id,
+                                backref_fid,
+                                backref_dtype,
+                                link_id = p2_le_id)
+
+                        if (p2_le_id, p1_le_id) not in link_set:
+                            link_set.add(
+                                (p2_le_id, p1_le_id))
+
+                            create_entity(
+                                extra_client,
+                                p2_le_id,
+                                backref_fid,
+                                backref_dtype,
+                                link_id = p1_le_id)
+
+                        create_le_flag = False
+
+            if nom_flag:
+                create_le_flag = False
+
+                mark_search = (
+                    re.search(mark_re, translation_text))
+
+                if mark_search:
+                    create_le_flag = True
+
+                    if merge_by_meaning:
+                        nom_key = (
+                            translation_text
+                                [ : mark_search.start()] .strip() .lower())
+
                         p1_le_id = (
-                            conj_dict.get(tag_name.lower()))
+                            nom_dict.get(nom_key))
 
                         if p1_le_id is not None:
-                            if (p1_le_id, p2_le_id) not in link_set:
-                                link_set.add(
-                                    (p1_le_id, p2_le_id))
-
-                                create_entity(
-                                    extra_client,
-                                    p1_le_id,
-                                    backref_fid,
-                                    backref_dtype,
-                                    link_id = p2_le_id)
-
-                            if (p2_le_id, p1_le_id) not in link_set:
-                                link_set.add(
-                                    (p2_le_id, p1_le_id))
-
-                                create_entity(
-                                    extra_client,
-                                    p2_le_id,
-                                    backref_fid,
-                                    backref_dtype,
-                                    link_id = p1_le_id)
+                            establish_link(
+                                p1_le_id,
+                                p2_le_id)
 
                             create_le_flag = False
 
-                if nom_flag:
-                    create_le_flag = False
+            if create_le_flag:
+                mark_search = (
+                    re.search(mark_re, translation_text))
 
-                    mark_search = (
-                        re.search(mark_re, translation_text))
+                if mark_search:
+                    translation_text = (
+                        translation_text [ : mark_search.start()] .strip())
 
-                    if mark_search:
-                        create_le_flag = True
+                translation_key = (
+                    translation_text.lower())
 
-                        if merge_by_meaning:
-                            nom_key = (
-                                translation_text
-                                    [ : mark_search.start()] .strip() .lower())
+                p1_lexical_entry_id = (
+                    lex_entry_dict.get(translation_key))
 
-                            p1_le_id = (
-                                nom_dict.get(nom_key))
+                if (p1_lexical_entry_id is not None and
+                    merge_by_meaning):
 
-                            if p1_le_id is not None:
-                                establish_link(
-                                    p1_le_id,
-                                    p2_le_id)
+                    establish_link(
+                        p1_lexical_entry_id,
+                        p2_le_id)
+                else:
+                    entry_dict = {
+                        'created_at': created_at(),
+                        'client_id': extra_client_id,
+                        'object_id': extra_client.next_object_id(),
+                        'parent_client_id': le_perspective_id[0],
+                        'parent_object_id': le_perspective_id[1],
+                        'marked_for_deletion': False}
 
-                                create_le_flag = False
+                    entry_insert_list.append(entry_dict)
 
-                if create_le_flag:
-                    mark_search = (
-                        re.search(mark_re, translation_text))
+                    toc_dict = {
+                        'client_id': extra_client_id,
+                        'object_id': entry_dict['object_id'],
+                        'table_name': 'lexicalentry',
+                        'marked_for_deletion': False}
 
-                    if mark_search:
-                        translation_text = (
-                            translation_text [ : mark_search.start()] .strip())
-
-                    translation_key = (
-                        translation_text.lower())
+                    toc_insert_list.append(toc_dict)
 
                     p1_lexical_entry_id = (
-                        lex_entry_dict.get(translation_key))
+                        extra_client_id, entry_dict['object_id'])
 
-                    if (p1_lexical_entry_id is not None and
-                        merge_by_meaning):
+                    lex_entry_dict[
+                        translation_key] = p1_lexical_entry_id
 
-                        establish_link(
-                            p1_lexical_entry_id,
-                            p2_le_id)
-                    else:
-                        entry_dict = {
-                            'created_at': created_at(),
-                            'client_id': extra_client_id,
-                            'object_id': extra_client.next_object_id(),
-                            'parent_client_id': le_perspective_id[0],
-                            'parent_object_id': le_perspective_id[1],
-                            'marked_for_deletion': False}
+                    create_entity(
+                        extra_client,
+                        p1_lexical_entry_id,
+                        le_fields['translation'],
+                        le_xlat_dtype,
+                        translation_text)
 
-                        entry_insert_list.append(entry_dict)
-
-                        toc_dict = {
-                            'client_id': extra_client_id,
-                            'object_id': entry_dict['object_id'],
-                            'table_name': 'lexicalentry',
-                            'marked_for_deletion': False}
-
-                        toc_insert_list.append(toc_dict)
-
-                        p1_lexical_entry_id = (
-                            extra_client_id, entry_dict['object_id'])
-
-                        lex_entry_dict[
-                            translation_key] = p1_lexical_entry_id
-
-                        create_entity(
-                            extra_client,
-                            p1_lexical_entry_id,
-                            le_fields['translation'],
-                            le_xlat_dtype,
-                            translation_text)
-
-                        establish_link(
-                            p1_lexical_entry_id,
-                            p2_le_id)
-
-            ## Morphological links
-            for (p3_lexical_entry_id, p4_lexical_entry_id) in new_link_set:
-                establish_link(p3_lexical_entry_id, p4_lexical_entry_id)
+                    establish_link(
+                        p1_lexical_entry_id,
+                        p2_le_id)
 
             # Checking if we need to update task progress.
 
