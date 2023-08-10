@@ -2087,42 +2087,6 @@ def convert_five_tiers(
 
                 p_lexes_with_text_after_update = entity_query.all()
 
-            '''
-            m_lexes_with_text_after_update = []
-    
-            if mo_perspective:
-                mo_already_set = (
-                    set(
-                        t.id
-                        for t_list in mo_content_text_entity_dict.values()
-                        for t in t_list))
-    
-                entity_query = (
-                    DBSession
-                        .query(Entity)
-                        .filter(
-                            Entity.marked_for_deletion == False,
-                            LexicalEntry.client_id == Entity.parent_client_id,
-                            LexicalEntry.object_id == Entity.parent_object_id,
-                            LexicalEntry.marked_for_deletion == False,
-                            LexicalEntry.parent_client_id == mo_perspective.client_id,
-                            LexicalEntry.parent_object_id == mo_perspective.object_id,
-                            tuple_(
-                                Entity.field_client_id,
-                                Entity.field_object_id)
-                                    .in_(mo_text_fid_list)))
-    
-                if mo_already_set:
-                    entity_query = (
-                        entity_query.filter(
-                            tuple_(
-                                Entity.client_id,
-                                Entity.object_id)
-                                    .notin_(ids_to_id_query(mo_already_set))))
-    
-                m_lexes_with_text_after_update = entity_query.all()
-            '''
-
             # Info of words and transcriptions in the first perspective.
 
             task_percent(
@@ -2198,18 +2162,6 @@ def convert_five_tiers(
                     pa_word_dict[t.parent_id].append(t.content)
                 elif t.field_id == pa_fields['transcription']:
                     pa_xcript_dict[t.parent_id].append(t.content)
-            '''
-            # Updated words and transcriptions in the third perspective.
-    
-            mo_word_dict = defaultdict(list)
-            mo_xcript_dict = defaultdict(list)
-    
-            for t in m_lexes_with_text_after_update:
-                if t.field_id == mo_fields['word']:
-                    mo_word_dict[t.parent_id].append(t.content)
-                elif t.field_id == mo_fields['affix']:
-                    mo_xcript_dict[t.parent_id].append(t.content)
-            '''
 
         def establish_link(
             le_entry_id,
@@ -2284,159 +2236,205 @@ def convert_five_tiers(
                                 le_xcript_dtype,
                                 pa_xcript)
 
-        ## Morphological links
-        for (p3_lexical_entry_id, p4_lexical_entry_id) in new_link_set:
-            establish_link(p3_lexical_entry_id, p4_lexical_entry_id)
+        if morphology:
+            '''
+            m_lexes_with_text_after_update = []
+
+            if mo_perspective:
+                mo_already_set = (
+                    set(
+                        t.id
+                        for t_list in mo_content_text_entity_dict.values()
+                        for t in t_list))
+
+                entity_query = (
+                    DBSession
+                        .query(Entity)
+                        .filter(
+                            Entity.marked_for_deletion == False,
+                            LexicalEntry.client_id == Entity.parent_client_id,
+                            LexicalEntry.object_id == Entity.parent_object_id,
+                            LexicalEntry.marked_for_deletion == False,
+                            LexicalEntry.parent_client_id == mo_perspective.client_id,
+                            LexicalEntry.parent_object_id == mo_perspective.object_id,
+                            tuple_(
+                                Entity.field_client_id,
+                                Entity.field_object_id)
+                                    .in_(mo_text_fid_list)))
+
+                if mo_already_set:
+                    entity_query = (
+                        entity_query.filter(
+                            tuple_(
+                                Entity.client_id,
+                                Entity.object_id)
+                                    .notin_(ids_to_id_query(mo_already_set))))
+
+                m_lexes_with_text_after_update = entity_query.all()
+
+            # Updated words and transcriptions in the third perspective.
+    
+            mo_word_dict = defaultdict(list)
+            mo_xcript_dict = defaultdict(list)
+    
+            for t in m_lexes_with_text_after_update:
+                if t.field_id == mo_fields['word']:
+                    mo_word_dict[t.parent_id].append(t.content)
+                elif t.field_id == mo_fields['affix']:
+                    mo_xcript_dict[t.parent_id].append(t.content)
+            '''
+            ## Morphological links
+            for (p3_lexical_entry_id, p4_lexical_entry_id) in new_link_set:
+                establish_link(p3_lexical_entry_id, p4_lexical_entry_id)
 
         # Linking updated paradigms, adding words and transcriptions from them if required.
+        if not morphology:
+            for t_index, t in (
+                enumerate(p_lexes_with_text_after_update)):
 
-        for t_index, t in (
-            enumerate(p_lexes_with_text_after_update)):
-            if morphology: break
+                if t.field_id != pa_fields['translation']:
+                    continue
 
-            if t.field_id != pa_fields['translation']:
-                continue
+                translation_text = (
+                    t.content.strip())
 
-            translation_text = (
-                t.content.strip())
+                p2_le_id = t.parent_id
 
-            p2_le_id = t.parent_id
+                tag = (
+                    re.search(conj_re, translation_text))
 
-            tag = (
-                re.search(conj_re, translation_text))
-
-            nom_flag = False
-            create_le_flag = False
-
-            if not tag:
-                nom_flag = True
-            else:
-                create_le_flag = True
-                tag_name = tag.group(0)
-
-                if translation_text[:3] != tag_name:
-                    nom_flag = True
-                else:
-                    p1_le_id = (
-                        conj_dict.get(tag_name.lower()))
-
-                    if p1_le_id is not None:
-                        if (p1_le_id, p2_le_id) not in link_set:
-                            link_set.add(
-                                (p1_le_id, p2_le_id))
-
-                            create_entity(
-                                extra_client,
-                                p1_le_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = p2_le_id)
-
-                        if (p2_le_id, p1_le_id) not in link_set:
-                            link_set.add(
-                                (p2_le_id, p1_le_id))
-
-                            create_entity(
-                                extra_client,
-                                p2_le_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = p1_le_id)
-
-                        create_le_flag = False
-
-            if nom_flag:
+                nom_flag = False
                 create_le_flag = False
 
-                mark_search = (
-                    re.search(mark_re, translation_text))
-
-                if mark_search:
+                if not tag:
+                    nom_flag = True
+                else:
                     create_le_flag = True
+                    tag_name = tag.group(0)
 
-                    if merge_by_meaning:
-                        nom_key = (
-                            translation_text
-                                [ : mark_search.start()] .strip() .lower())
-
+                    if translation_text[:3] != tag_name:
+                        nom_flag = True
+                    else:
                         p1_le_id = (
-                            nom_dict.get(nom_key))
+                            conj_dict.get(tag_name.lower()))
 
                         if p1_le_id is not None:
-                            establish_link(
-                                p1_le_id,
-                                p2_le_id)
+                            if (p1_le_id, p2_le_id) not in link_set:
+                                link_set.add(
+                                    (p1_le_id, p2_le_id))
+
+                                create_entity(
+                                    extra_client,
+                                    p1_le_id,
+                                    backref_fid,
+                                    backref_dtype,
+                                    link_id = p2_le_id)
+
+                            if (p2_le_id, p1_le_id) not in link_set:
+                                link_set.add(
+                                    (p2_le_id, p1_le_id))
+
+                                create_entity(
+                                    extra_client,
+                                    p2_le_id,
+                                    backref_fid,
+                                    backref_dtype,
+                                    link_id = p1_le_id)
 
                             create_le_flag = False
 
-            if create_le_flag:
-                mark_search = (
-                    re.search(mark_re, translation_text))
+                if nom_flag:
+                    create_le_flag = False
 
-                if mark_search:
-                    translation_text = (
-                        translation_text [ : mark_search.start()] .strip())
+                    mark_search = (
+                        re.search(mark_re, translation_text))
 
-                translation_key = (
-                    translation_text.lower())
+                    if mark_search:
+                        create_le_flag = True
 
-                p1_lexical_entry_id = (
-                    lex_entry_dict.get(translation_key))
+                        if merge_by_meaning:
+                            nom_key = (
+                                translation_text
+                                    [ : mark_search.start()] .strip() .lower())
 
-                if (p1_lexical_entry_id is not None and
-                    merge_by_meaning):
+                            p1_le_id = (
+                                nom_dict.get(nom_key))
 
-                    establish_link(
-                        p1_lexical_entry_id,
-                        p2_le_id)
-                else:
-                    entry_dict = {
-                        'created_at': created_at(),
-                        'client_id': extra_client_id,
-                        'object_id': extra_client.next_object_id(),
-                        'parent_client_id': le_perspective_id[0],
-                        'parent_object_id': le_perspective_id[1],
-                        'marked_for_deletion': False}
+                            if p1_le_id is not None:
+                                establish_link(
+                                    p1_le_id,
+                                    p2_le_id)
 
-                    entry_insert_list.append(entry_dict)
+                                create_le_flag = False
 
-                    toc_dict = {
-                        'client_id': extra_client_id,
-                        'object_id': entry_dict['object_id'],
-                        'table_name': 'lexicalentry',
-                        'marked_for_deletion': False}
+                if create_le_flag:
+                    mark_search = (
+                        re.search(mark_re, translation_text))
 
-                    toc_insert_list.append(toc_dict)
+                    if mark_search:
+                        translation_text = (
+                            translation_text [ : mark_search.start()] .strip())
+
+                    translation_key = (
+                        translation_text.lower())
 
                     p1_lexical_entry_id = (
-                        extra_client_id, entry_dict['object_id'])
+                        lex_entry_dict.get(translation_key))
 
-                    lex_entry_dict[
-                        translation_key] = p1_lexical_entry_id
+                    if (p1_lexical_entry_id is not None and
+                        merge_by_meaning):
 
-                    create_entity(
-                        extra_client,
-                        p1_lexical_entry_id,
-                        le_fields['translation'],
-                        le_xlat_dtype,
-                        translation_text)
+                        establish_link(
+                            p1_lexical_entry_id,
+                            p2_le_id)
+                    else:
+                        entry_dict = {
+                            'created_at': created_at(),
+                            'client_id': extra_client_id,
+                            'object_id': extra_client.next_object_id(),
+                            'parent_client_id': le_perspective_id[0],
+                            'parent_object_id': le_perspective_id[1],
+                            'marked_for_deletion': False}
 
-                    establish_link(
-                        p1_lexical_entry_id,
-                        p2_le_id)
+                        entry_insert_list.append(entry_dict)
 
-            # Checking if we need to update task progress.
+                        toc_dict = {
+                            'client_id': extra_client_id,
+                            'object_id': entry_dict['object_id'],
+                            'table_name': 'lexicalentry',
+                            'marked_for_deletion': False}
 
-            percent_delta = (
-                (percent_finished - percent_adding) /
-                    (2 * len(p_lexes_with_text_after_update)))
+                        toc_insert_list.append(toc_dict)
 
-            task_percent(
-                7,
-                percent_adding +
-                    t_index * percent_delta,
+                        p1_lexical_entry_id = (
+                            extra_client_id, entry_dict['object_id'])
 
-                'Uploading translations with marks')
+                        lex_entry_dict[
+                            translation_key] = p1_lexical_entry_id
+
+                        create_entity(
+                            extra_client,
+                            p1_lexical_entry_id,
+                            le_fields['translation'],
+                            le_xlat_dtype,
+                            translation_text)
+
+                        establish_link(
+                            p1_lexical_entry_id,
+                            p2_le_id)
+
+                # Checking if we need to update task progress.
+
+                percent_delta = (
+                    (percent_finished - percent_adding) /
+                        (2 * len(p_lexes_with_text_after_update)))
+
+                task_percent(
+                    7,
+                    percent_adding +
+                        t_index * percent_delta,
+
+                    'Uploading translations with marks')
 
         percent_from = (
             (percent_adding + percent_finished) / 2)
@@ -2475,6 +2473,9 @@ def convert_all(
     debug_flag = False,
     morphology = False,
     synchronous = False):
+
+    # No additional_entries in morphology
+    if morphology: additional_entries = False
 
     if not synchronous:
         from lingvodoc.cache.caching import initialize_cache
