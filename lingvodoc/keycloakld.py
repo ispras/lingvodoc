@@ -107,48 +107,77 @@ class KeycloakLD:
             client_secret_key=client_secret_key, timeout=timeout))
         self.keycloak_uma = uma
 
-    # self.add_attribute("modis", "dictionary", "edit", 108, 3)
-    def add_attribute(self, user_login, object_name, action, object_client_id, object_object_id):
-        resource, scope, attributes, keycloak_user_id = self.set_attribute_fields(action,
-                                                                                  object_name,
-                                                                                  user_login,
-                                                                                  object_client_id,
-                                                                                  object_object_id)
+    # group_number from keycloak. role_name could be "group_member" or "group_admin"
+    def add_member_to_organisation(self, user_login, group_number, role_name):
+        keycloak_user_id = self.keycloak_admin.get_user_id(user_login)
+        client_id = self.keycloak_admin.get_client_id(client_id=self.client_name)
+        role = self.keycloak_admin.get_client_role(client_id=client_id, role_name=role_name)
+        group_id = self.keycloak_admin.get_group_by_path(path="/organizations/" + str(group_number))["id"]
+        self.keycloak_admin.assign_client_role(client_id=client_id, user_id=keycloak_user_id,
+                                               roles=[role])
+        self.keycloak_admin.group_user_add(user_id=keycloak_user_id, group_id=group_id)
+
+    # group_number from keycloak. role_name could be "group_member" or "group_admin"
+    def remove_organization_member(self, user_login, group_number, role_name):
+        keycloak_user_id = self.keycloak_admin.get_user_id(user_login)
+        client_id = self.keycloak_admin.get_client_id(client_id=self.client_name)
+        role = self.keycloak_admin.get_client_role(client_id=client_id, role_name=role_name)
+        group_id = self.keycloak_admin.get_group_by_path(path="/organizations/" + str(group_number))["id"]
+        self.keycloak_admin.delete_client_roles_of_user(client_id=client_id, user_id=keycloak_user_id,
+                                               roles=[role])
+        self.keycloak_admin.group_user_remove(user_id=keycloak_user_id, group_id=group_id)
+
+    """Assign attributes to a resource.
+        Action could be one from scopes. ex: view, delete, add_member (for group). etc
+    """
+    # add_attribute("modis", "dictionary", "edit", 108, 3, 5)
+    def add_attribute(self, user_login, object_name, action, object_client_id, object_object_id, group_number = None):
         try:
+            resource, scope, attributes, keycloak_user_id = self.set_attribute_fields(action,
+                                                                                      object_name,
+                                                                                      user_login,
+                                                                                      object_client_id,
+                                                                                      object_object_id)
+            if group_number is not None:
+                keycloak_user_id = "group_number:" + str(group_number)
+
             if attributes is None:
                 attributes = [keycloak_user_id]
             else:
                 attributes.append(keycloak_user_id)
             resource["scopes"].append({"name": scope})
-            resource["attributes"][scope] = list(set(attributes))
+            resource["attributes"][scope] = ','.join(set(attributes))
             KeycloakSession.keycloak_uma.resource_set_update(
                 resource["_id"], resource)
-        except (KeycloakGetError, KeycloakOperationError, KeycloakPostError) as e:
+        except (KeycloakGetError, KeycloakOperationError, KeycloakPostError, Exception) as e:
             logging.debug(
-                "Keycloak could not update resource with new attribute by user_id " + str(keycloak_user_id) + str(
+                "Keycloak could not update resource with new attribute by name" + "/".join([object_name, object_client_id, object_object_id]) + str(
                     e.error_message))
 
     # self.delete_attribute("modis", "dictionary", "edit", 108, 3)
-    def delete_attribute(self, user_login, object_name, action, object_client_id, object_object_id):
-
-        resource, scope, attributes, keycloak_user_id = self.set_attribute_fields(action,
-                                                                                  object_name,
-                                                                                  user_login,
-                                                                                  object_client_id,
-                                                                                  object_object_id)
+    def delete_attribute(self, user_login, object_name, action, object_client_id, object_object_id, group_number = None):
         try:
+            resource, scope, attributes, keycloak_user_id = self.set_attribute_fields(action,
+                                                                                      object_name,
+                                                                                      user_login,
+                                                                                      object_client_id,
+                                                                                      object_object_id)
+            if group_number is not None:
+                keycloak_user_id = "group_number:" + str(group_number)
+
+
+
             if attributes is None:
                 raise KeycloakPostError(error_message="Could not find resource attribute")
             else:
                 users_ids = list(resource["attributes"][scope])
                 users_ids.remove(keycloak_user_id)
                 resource["attributes"][scope] = users_ids
-                KeycloakSession.keycloak_uma.resource_set_update(
+                self.keycloak_uma.resource_set_update(
                     resource["_id"], resource)
-        except (KeycloakGetError, KeycloakOperationError, KeycloakPostError) as e:
+        except (KeycloakGetError, KeycloakOperationError, KeycloakPostError, Exception) as e:
             logging.debug(
-                "Keycloak could not update resource with new attribute by user_id " + str(str(object_name) + "/" + str(object_client_id) + "/" + str(
-            object_object_id)) + str(
+                "Keycloak could not update resource with new attribute by user_id " + "/".join([object_name, object_client_id, object_object_id])  + str(
                     e.error_message))
 
     def set_attribute_fields(self, action, object_name, user_login, object_client_id, object_object_id):
@@ -165,6 +194,23 @@ class KeycloakLD:
         attributes = resource["attributes"].get(scope, None)
 
         return resource, scope, attributes, keycloak_user_id
+
+    def is_organization_admin(self, user_login, group_number, role_name):
+        keycloak_user_id = self.keycloak_admin.get_user_id(user_login)
+        group_id = self.keycloak_admin.get_group_by_path(path="/organizations/" + str(group_number))["id"]
+        groups = self.keycloak_admin.get_user_groups(user_id=keycloak_user_id)
+        is_member = False
+        for group in groups:
+            if group["id"] == group_id:
+                is_member = True
+                break
+        if is_member:
+            client_id = self.keycloak_admin.get_client_id(client_id=self.client_name)
+            roles = self.keycloak_admin.get_client_roles_of_user(user_id=keycloak_user_id, client_id=client_id)
+            roles_filtered = [role for role in roles if role["name"] == role_name]
+            if roles_filtered:
+                return True
+        return False
 
     def add_permissions(self, client_id):
         LOG.debug('ADD PERMISSIONS TO THE KEYCLOAK')
@@ -218,7 +264,6 @@ class KeycloakLD:
             except KeycloakPostError as e:
                 logging.debug(e.error_message)
         LOG.debug('PERMISSIONS ADDED TO THE KEYCLOAK')
-
 
 KeycloakSession = KeycloakLD()
 
