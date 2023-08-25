@@ -13665,6 +13665,633 @@ class SwadeshAnalysis(graphene.Mutation):
                 'Exception:\n' + traceback_string)
 
 
+class MorphCognateAnalysis(graphene.Mutation):
+    class Arguments:
+
+        source_perspective_id = LingvodocID(required = True)
+        base_language_id = LingvodocID(required = True)
+
+        group_field_id = LingvodocID(required = True)
+        perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
+
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    result = graphene.String()
+    xlsx_url = graphene.String()
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+    perspective_name_list = graphene.List(graphene.String)
+
+    @staticmethod
+    def export_dataframe(result_pool, distance_data_array, bundles):
+        '''
+        Keys:
+        result_pool[perspective_id][entry_id]
+        Fields:
+        'group': group_index,
+        'borrowed': bool,
+        'swadesh': swadesh_lex,
+        'transcription': transcription_list[0],
+        'translation': translation_lex
+        '''
+
+        distances = pd.DataFrame(distance_data_array,
+                                 columns=[perspective['name'] for perspective in result_pool.values()])
+        # Start index for distances from 1 to match with dictionaries numbers
+        distances.index += 1
+
+        groups = pd.DataFrame()
+        # Insert 'lines' column as the first one
+        groups['lines'] = 0
+
+        borrowed = pd.DataFrame()
+        singles = pd.DataFrame()
+
+        singles_index = 0
+        borrowed_index = 0
+        # re-group by group number and add joined values
+        for perspective in result_pool.values():
+            dict_name = perspective['name']
+            for entry in perspective.values():
+                # 'entry' iterator may present string value of 'name' field
+                # but not a dictionary for one of entries. Continue in this case.
+                if not isinstance(entry, dict):
+                    continue
+                group_num = entry['group']
+                entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
+                if group_num is not None and group_num in bundles:
+                    # Concatinate existing value if is and a new one, store the result to 'groups' dataframe
+                    value = ""
+                    if dict_name in groups:
+                        cell = groups[dict_name].get(group_num)
+                        value = cell if pd.notnull(cell) else value
+                    value = f"{value}\n{entry_text}".strip()
+                    groups.loc[group_num, dict_name] = value
+
+                    # Count result lines to set rows height in xlsx after
+                    lines = value.count('\n') + 1
+                    cell = groups.loc[group_num].get('lines')
+                    if pd.isnull(cell) or cell < lines:
+                        groups.loc[group_num, 'lines'] = lines
+                elif entry['borrowed']:
+                    borrowed.loc[borrowed_index, dict_name] = entry_text
+                    borrowed_index += 1
+                else:
+                    singles.loc[singles_index, dict_name] = entry_text
+                    singles_index += 1
+
+        return {
+            'Cognates': groups if len(groups) < 2 else groups.sort_values(groups.columns[1]),
+            'Singles': singles.sort_index(),
+            'Distances': distances.sort_index()
+        }
+
+    @staticmethod
+    def export_xlsx(
+            result,
+            base_language_name,
+            storage
+    ):
+        # Exporting analysis results as an Excel file.
+
+        current_datetime = datetime.datetime.now(datetime.timezone.utc)
+        xlsx_filename = pathvalidate.sanitize_filename(
+            '{0} {1} {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
+                base_language_name[:64],
+                'glottochronology',
+                current_datetime.year,
+                current_datetime.month,
+                current_datetime.day))
+
+        cur_time = time.time()
+        storage_dir = os.path.join(storage['path'], 'glottochronology', str(cur_time))
+
+        # Storing Excel file with the results.
+
+        xlsx_path = os.path.join(storage_dir, xlsx_filename)
+        os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
+
+        with pd.ExcelWriter(xlsx_path, engine='xlsxwriter') as writer:
+            header_format = writer.book.add_format({'bold': True,
+                                                    'text_wrap': True,
+                                                    'valign': 'top',
+                                                    'fg_color': '#D7E4BC',
+                                                    'border': 1})
+            for sheet_name, df in result.items():
+                index = (sheet_name == 'Distances')
+                startcol = int(index)
+                # Exclude 'lines' column
+                columns = df.columns[int(sheet_name == 'Cognates'):]
+                # Check if the table is empty
+                if columns.empty:
+                    continue
+
+                df.to_excel(writer,
+                            sheet_name=sheet_name,
+                            index=index,
+                            startrow=1,
+                            columns=columns,
+                            header=False)
+
+                worksheet = writer.sheets[sheet_name]
+                worksheet.set_row(0, 70)
+                worksheet.set_column(startcol, len(columns) - 1 + startcol, 30)
+                # Write the column headers with the defined format.
+                for col_num, value in enumerate(columns):
+                    worksheet.write(0, col_num + startcol, value, header_format)
+                # Set rows specifical height
+                if sheet_name == 'Cognates':
+                    for row_num, coeff in enumerate(df['lines']):
+                        if coeff > 1:
+                            worksheet.set_row(row_num + 1, 14 * coeff)
+
+        xlsx_url = ''.join([
+            storage['prefix'], storage['static_route'],
+            'glottochronology', '/', str(cur_time), '/', xlsx_filename])
+
+        return xlsx_url
+
+    @staticmethod
+    def export_html(result, tiny_dicts=None, huge_size=1048576):
+        result_tables = (
+            build_table(result['Distances'], 'orange_light', width="300px", index=True),
+            build_table(result['Cognates'], 'blue_light', width="300px").replace("\\n","<br>"),
+            build_table(result['Singles'], 'green_light', width="300px"),
+            build_table(result['Borrowed'], 'yellow_light', width="300px"))
+
+        # Control output size
+        spl = "<pre>\n\n</pre>"
+        html_result = f"{result_tables[0]}" \
+                      f"{spl}" \
+                      f"{result_tables[1]}" \
+                      f"{spl}" \
+                      f"{result_tables[2]}" \
+                      f"{spl}" \
+                      f"{result_tables[3]}"
+
+        if len(html_result) > huge_size:
+            html_result = f"{result_tables[0]}" \
+                          f"{spl}" \
+                          f"{result_tables[1]}" \
+                          f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
+
+        if len(html_result) > huge_size:
+            html_result = f"{result_tables[0]}" \
+                          f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
+
+        html_result += ("<pre>Note: The following dictionaries contain too less words and were not processed: \n\n" +
+                        '\n'.join(tiny_dicts) + "</pre>") if tiny_dicts else ""
+
+        return html_result
+
+    @staticmethod
+    def swadesh_statistics(
+            language_str,
+            base_language_id,
+            base_language_name,
+            group_field_id,
+            perspective_info_list,
+            locale_id,
+            storage,
+            debug_flag = False):
+
+        swadesh_list = ['я','ты','мы','этот, это','тот, то','кто','что','не','все','много','один','два','большой',
+                        'долгий','маленький','женщина','мужчина','человек','рыба','птица','собака','вошь','дерево',
+                        'семя','лист','корень','кора','кожа','мясо','кровь','кость','жир','яйцо','рог','хвост','перо',
+                        'волосы','голова','ухо','глаз','нос','рот','зуб','язык (орган)','ноготь','нога (стопа)','колено',
+                        'рука (кисть)','живот','горло','грудь','сердце','печень','пить','есть (кушать)','кусать','видеть',
+                        'слышать','знать','спать','умирать','убивать','плавать','летать','гулять','приходить','лежать',
+                        'сидеть','стоять','дать','сказать','солнце','луна','звезда','вода','дождь','камень','песок',
+                        'земля','облако','дым','огонь','пепел','гореть','дорога,тропа','гора','красный','зелёный',
+                        'жёлтый','белый','чёрный','ночь','тёплый','холодный','полный','новый','хороший','круглый',
+                        'сухой','имя']
+
+        def compare_translations(swadesh_lex, dictionary_lex):
+            def split_lex(lex):
+                # Split by commas and open brackets to separate
+                # various forms of lexeme and extra note if is
+                lex = ' '.join(lex.lower().split()) # reduce multi spaces
+                if "убрать из стословника" in lex:
+                    return set()
+
+                return set(form.strip()
+                           for form in lex.replace('(', ',').split(',')
+                           if form.strip() and ')' not in form)  # exclude notes
+
+            # return true if the intersection is not empty
+            return bool(split_lex(swadesh_lex) & split_lex(dictionary_lex))
+
+
+        # Gathering entry grouping data.
+
+        if not debug_flag:
+
+            _, group_list, _ = (
+                CognateAnalysis.tag_data_plpgsql(
+                    perspective_info_list, group_field_id))
+
+        else:
+
+            # If we are in debug mode, we try to load existing tag data to reduce debugging time.
+
+            tag_data_digest = (
+
+                hashlib.md5(
+
+                    repr(list(group_field_id) +
+                        [perspective_info[0] for perspective_info in perspective_info_list])
+
+                    .encode('utf-8'))
+
+                .hexdigest())
+
+            tag_data_file_name = (
+                f'__tag_data_{base_language_id[0]}_{base_language_id[1]}_{tag_data_digest}__.gz')
+
+            # Checking if we have saved data.
+
+            if os.path.exists(tag_data_file_name):
+
+                with gzip.open(tag_data_file_name, 'rb') as tag_data_file:
+                    _, group_list, _ = pickle.load(tag_data_file)
+
+            else:
+
+                # Don't have existing data, so we gather it and then save it for later use.
+
+                r1, group_list, r3 = (
+
+                    CognateAnalysis.tag_data_plpgsql(
+                        perspective_info_list, group_field_id))
+
+                with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
+                    pickle.dump((r1, group_list, r3), tag_data_file)
+
+
+        # Getting text data for each perspective.
+        # entries_set gathers entry_id(s) of words met in Swadesh' list
+        # swadesh_total gathers numbers of words within Swadesh' list
+        entries_set = {}
+        swadesh_total = {}
+        result_pool = {}
+        tiny_dicts = set()
+        for index, (perspective_id, transcription_field_id, translation_field_id) in \
+                enumerate(perspective_info_list):
+
+            # Getting and saving perspective info.
+            perspective = (
+                DBSession
+                    .query(dbPerspective)
+                    .filter_by(client_id=perspective_id[0], object_id=perspective_id[1])
+                    .first()
+            )
+            dictionary_name = perspective.parent.get_translation(locale_id)
+
+            # GC
+            del perspective
+
+            # Getting text data.
+            transcription_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == transcription_field_id[0],
+                        dbEntity.field_object_id == transcription_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('transcription'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
+            translation_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == translation_field_id[0],
+                        dbEntity.field_object_id == translation_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('translation'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
+            # Main query for transcription/translation data.
+            data_query = (
+                DBSession
+                    .query(transcription_query)
+                    .outerjoin(translation_query, and_(
+                        transcription_query.c.client_id == translation_query.c.client_id,
+                        transcription_query.c.object_id == translation_query.c.object_id))
+                    .add_columns(
+                        translation_query.c.translation)
+                    .all())
+
+            # GC
+            del transcription_query
+            del translation_query
+
+            # Grouping translations by lexical entries.
+            entries_set[perspective_id] = set()
+            swadesh_total[perspective_id] = set()
+            result_pool[perspective_id] = {'name': dictionary_name}
+            for row_index, row in enumerate(data_query):
+                entry_id = tuple(row[:2])
+                transcription_list, translation_list = row[2:4]
+
+                # If we have no transcriptions for this lexical entry, we skip it altogether.
+                if not transcription_list:
+                    continue
+
+                translation_list = (
+                    [] if not translation_list else [
+                        translation.strip()
+                        for translation in translation_list
+                        if translation.strip()])
+
+                # Parsing translations and matching with Swadesh's words
+                transcription_lex = ', '.join(transcription_list)
+                for swadesh_num, swadesh_lex in enumerate(swadesh_list):
+                    for translation_lex in translation_list:
+                        if compare_translations(swadesh_lex, translation_lex):
+                            # Store the entry's content in human readable format
+                            result_pool[perspective_id][entry_id] = {
+                                'group': None,
+                                'borrowed': (" заим." in f" {transcription_lex} {translation_lex}"),
+                                'swadesh': swadesh_lex,
+                                'transcription': transcription_lex,
+                                'translation': translation_lex
+                            }
+                            # Store entry_id and number of the lex within Swadesh's list
+                            entries_set[perspective_id].add(entry_id)
+                            if not result_pool[perspective_id][entry_id]['borrowed']:
+                                # Total list of Swadesh's words in the perspective,
+                                # they can have no any etimological links
+                                swadesh_total[perspective_id].add(swadesh_num)
+
+            # Forget the dictionary if it contains less than 50 Swadesh words
+            if len(swadesh_total[perspective_id]) < 50:
+                del entries_set[perspective_id]
+                del swadesh_total[perspective_id]
+                del result_pool[perspective_id]
+                tiny_dicts.add(dictionary_name)
+
+            # GC
+            del data_query
+
+        # Checking if found entries have links
+        means = collections.OrderedDict()
+        for perspective_id, entries in entries_set.items():
+            means[perspective_id] = collections.defaultdict(set)
+            for group_index, group in enumerate(group_list):
+                # Select etimologically linked entries
+                linked = entries & group
+                for entry_id in linked:
+                    result_pool[perspective_id][entry_id]['group'] = group_index
+                    swadesh = result_pool[perspective_id][entry_id]['swadesh']
+                    # Store the correspondence: perspective { means(1/2/3) { etimological_groups(1.1/1.2/2.1/3.1)
+                    if not result_pool[perspective_id][entry_id]['borrowed']:
+                        means[perspective_id][swadesh].add(group_index)
+
+        dictionary_count = len(means)
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
+        distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
+
+        # Calculate intersection between lists of linked means (Swadesh matching)
+        # So length of this intersection is the similarity of corresponding perspectives
+        # means_total is amount of Swadesh's lexems met in the both perspectives
+        bundles = set()
+        # Calculate each-to-each distances, exclude self-to-self
+        for n1, (perspective1, means1) in enumerate(means.items()):
+            # Numerate dictionaries
+            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
+            distance_header_array[n1] = result_pool[perspective1]['name']
+            for n2, (perspective2, means2) in enumerate(means.items()):
+                if n1 == n2:
+                    distance_data_array[n1][n2] = 0
+                    complex_data_array[n1][n2] = "n/a"
+                else:
+                    # Common means of entries which have etimological linkes
+                    # but this linkes may be not mutual
+                    means_common = means1.keys() & means2.keys()
+                    means_linked = 0
+                    # Checking if the found means have common links
+                    for swadesh in means_common:
+                        links_common = means1[swadesh] & means2[swadesh]
+                        if links_common:
+                            # Bundles are linkes with two or more entries in the result table
+                            bundles.update(links_common)
+                            means_linked += 1
+
+                    means_total = len(swadesh_total[perspective1] & swadesh_total[perspective2])
+
+                    if n2 > n1 and means_linked >= means_total:
+                        log.debug(f"{n1+1},{n2+1} : "
+                                  f"{len(means_common)} but {means_linked} of {means_total} : "
+                                  f"{', '.join(sorted(means_common))}")
+
+                    # means_linked > 0 means that means_total > 0 even more so
+                    distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
+                    percent = means_linked * 100 // means_total if means_total > 0 else 0
+                    distance_data_array[n1][n2] = round(distance, 2)
+                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
+
+        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
+
+        # GC
+        del result_pool
+
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+
+        # 'lines' field is not needed any more
+        del result['Cognates']['lines']
+
+        html_result = SwadeshAnalysis.export_html(result, tiny_dicts)
+
+        _, mst_list, embedding_2d_pca, embedding_3d_pca = \
+            CognateAnalysis.distance_graph(
+                language_str,
+                base_language_name,
+                distance_data_array,
+                distance_header_array,
+                None,
+                None,
+                None,
+                analysis_str = 'swadesh_analysis',
+                __debug_flag__ = debug_flag,
+                __plot_flag__ = False
+            )
+
+        result_dict = (
+            dict(
+                triumph = True,
+
+                result = html_result,
+                xlsx_url = xlsx_url,
+                minimum_spanning_tree = mst_list,
+                embedding_2d = embedding_2d_pca,
+                embedding_3d = embedding_3d_pca,
+                perspective_name_list = distance_header_array))
+
+        return SwadeshAnalysis(**result_dict)
+
+    @staticmethod
+    def mutate(
+        self,
+        info,
+        source_perspective_id,
+        base_language_id,
+        group_field_id,
+        perspective_info_list,
+        debug_flag = False):
+        """
+        mutation SwadeshAnalysis {
+          swadesh_analysis(
+            base_language_id: [508, 41],
+            group_field_id: [66, 25],
+            perspective_info_list: [
+              [[425, 4], [66, 8], [66, 10]],
+              [[1552, 1759], [66, 8], [66, 10]],
+              [[418, 4], [66, 8], [66, 10]]])
+          {
+            triumph          }
+        }
+        """
+
+        # Administrator / perspective author / editing permission check.
+        error_str = (
+            'Only administrator, perspective author and users with perspective editing permissions '
+            'can perform Swadesh analysis.')
+
+        client_id = info.context.request.authenticated_userid
+
+        if not client_id:
+            return ResponseError(error_str)
+
+        user = Client.get_user_by_client_id(client_id)
+
+        author_client_id_set = (
+
+            set(
+                client_id
+                for (client_id, _), _, _ in perspective_info_list))
+
+        author_id_check = (
+
+            DBSession
+
+                .query(
+
+                    DBSession
+                        .query(literal(1))
+                        .filter(
+                            Client.id.in_(author_client_id_set),
+                            Client.user_id == user.id)
+                        .exists())
+
+                .scalar())
+
+        if (user.id != 1 and
+            not author_id_check and
+            not info.context.acl_check_if('edit', 'perspective', source_perspective_id)):
+
+            return ResponseError(error_str)
+
+        # Debug mode check.
+
+        if debug_flag and user.id != 1:
+
+            return (
+
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
+
+        language_str = (
+            '{0}/{1}, language {2}/{3}'.format(
+                source_perspective_id[0], source_perspective_id[1],
+                base_language_id[0], base_language_id[1]))
+
+        try:
+
+            # Getting base language info.
+
+            locale_id = info.context.get('locale_id') or 2
+
+            base_language = DBSession.query(dbLanguage).filter_by(
+                client_id = base_language_id[0], object_id = base_language_id[1]).first()
+
+            base_language_name = base_language.get_translation(locale_id)
+
+            request = info.context.request
+            storage = request.registry.settings['storage']
+
+            # Transforming client/object pair ids from lists to 2-tuples.
+
+            source_perspective_id = tuple(source_perspective_id)
+            base_language_id = tuple(base_language_id)
+            group_field_id = tuple(group_field_id)
+
+            perspective_info_list = [
+
+                (tuple(perspective_id),
+                    tuple(transcription_field_id),
+                    tuple(translation_field_id))
+
+                for perspective_id,
+                    transcription_field_id,
+                    translation_field_id in perspective_info_list]
+
+            return SwadeshAnalysis.swadesh_statistics(
+                language_str,
+                base_language_id,
+                base_language_name,
+                group_field_id,
+                perspective_info_list,
+                locale_id,
+                storage,
+                debug_flag)
+
+        # Exception occured while we tried to perform swadesh analysis.
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.warning(
+                'swadesh_analysis {0}: exception'.format(
+                language_str))
+
+            log.warning(traceback_string)
+
+            return ResponseError(message =
+                'Exception:\n' + traceback_string)
+
+
 class Phonology(graphene.Mutation):
 
     class Arguments:
