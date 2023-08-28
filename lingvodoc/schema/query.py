@@ -13816,8 +13816,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         result_tables = (
             build_table(result['Distances'], 'orange_light', width="300px", index=True),
             build_table(result['Cognates'], 'blue_light', width="300px").replace("\\n","<br>"),
-            build_table(result['Singles'], 'green_light', width="300px"),
-            build_table(result['Borrowed'], 'yellow_light', width="300px"))
+            build_table(result['Singles'], 'green_light', width="300px"))
 
         # Control output size
         spl = "<pre>\n\n</pre>"
@@ -13825,9 +13824,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                       f"{spl}" \
                       f"{result_tables[1]}" \
                       f"{spl}" \
-                      f"{result_tables[2]}" \
-                      f"{spl}" \
-                      f"{result_tables[3]}"
+                      f"{result_tables[2]}"
 
         if len(html_result) > huge_size:
             html_result = f"{result_tables[0]}" \
@@ -13860,7 +13857,6 @@ class MorphCognateAnalysis(graphene.Mutation):
 
         if not debug_flag:
 
-            # TODO: needed another tag_data_plpgsql
             _, group_list, _ = (
                 CognateAnalysis.tag_data_plpgsql(
                     perspective_info_list, group_field_id))
@@ -20135,6 +20131,7 @@ class MyMutations(graphene.ObjectType):
     phonemic_analysis = PhonemicAnalysis.Field()
     cognate_analysis = CognateAnalysis.Field()
     swadesh_analysis = SwadeshAnalysis.Field()
+    morph_cognate_analysis = MorphCognateAnalysis.Field()
     phonology = Phonology.Field()
     phonological_statistical_distance = PhonologicalStatisticalDistance.Field()
     sound_and_markup = SoundAndMarkup.Field()
