@@ -14199,12 +14199,12 @@ class MorphCognateAnalysis(graphene.Mutation):
             perspective_info_list = [
 
                 (tuple(perspective_id),
-                    tuple(transcription_field_id),
-                    tuple(translation_field_id))
+                    tuple(affix_field_id),
+                    tuple(meaning_field_id))
 
                 for perspective_id,
-                    transcription_field_id,
-                    translation_field_id in perspective_info_list]
+                    affix_field_id,
+                    meaning_field_id in perspective_info_list]
 
             return SwadeshAnalysis.swadesh_statistics(
                 language_str,
@@ -14223,7 +14223,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                 exception, exception, exception.__traceback__))[:-1]
 
             log.warning(
-                'swadesh_analysis {0}: exception'.format(
+                'morph_cognate_analysis {0}: exception'.format(
                 language_str))
 
             log.warning(traceback_string)
