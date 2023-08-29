@@ -14086,7 +14086,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                 None,
                 None,
                 None,
-                analysis_str = 'swadesh_analysis',
+                analysis_str = 'morph_cognate_analysis',
                 __debug_flag__ = debug_flag,
                 __plot_flag__ = False
             )
@@ -14114,8 +14114,8 @@ class MorphCognateAnalysis(graphene.Mutation):
         perspective_info_list,
         debug_flag = False):
         """
-        mutation SwadeshAnalysis {
-          swadesh_analysis(
+        mutation MorphCognateAnalysis {
+          morph_cognate_analysis(
             base_language_id: [508, 41],
             group_field_id: [66, 25],
             perspective_info_list: [
@@ -14210,7 +14210,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                     affix_field_id,
                     meaning_field_id in perspective_info_list]
 
-            return SwadeshAnalysis.swadesh_statistics(
+            return MorphCognateAnalysis.morph_cognate_statistics(
                 language_str,
                 base_language_id,
                 base_language_name,
