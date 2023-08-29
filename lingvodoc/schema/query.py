@@ -13058,7 +13058,11 @@ class SwadeshAnalysis(graphene.Mutation):
     perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
-    def export_dataframe(result_pool, distance_data_array, bundles):
+    def get_entry_text(entry):
+        return f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
+
+    @staticmethod
+    def export_dataframe(result_pool, distance_data_array, bundles, get_entry_text):
         '''
         Keys:
         result_pool[perspective_id][entry_id]
@@ -13093,7 +13097,8 @@ class SwadeshAnalysis(graphene.Mutation):
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
-                entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
+                #entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
+                entry_text = get_entry_text(entry)
                 if group_num is not None and group_num in bundles:
                     # Concatinate existing value if is and a new one, store the result to 'groups' dataframe
                     value = ""
@@ -13494,7 +13499,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
+        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
 
         # GC
         del result_pool
@@ -13684,6 +13689,11 @@ class MorphCognateAnalysis(graphene.Mutation):
     embedding_2d = graphene.List(graphene.List(graphene.Float))
     embedding_3d = graphene.List(graphene.List(graphene.Float))
     perspective_name_list = graphene.List(graphene.String)
+
+
+    @staticmethod
+    def get_entry_text(entry):
+        return f"{entry['affix']} ( {entry['meaning']} )"
 
     """
     @staticmethod
@@ -14055,7 +14065,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
+        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
 
         # GC
         del result_pool
