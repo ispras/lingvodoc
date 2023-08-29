@@ -13423,7 +13423,7 @@ class SwadeshAnalysis(graphene.Mutation):
                             entries_set[perspective_id].add(entry_id)
                             if not result_pool[perspective_id][entry_id]['borrowed']:
                                 # Total list of Swadesh's words in the perspective,
-                                # they can have no any etimological links
+                                # they can have not any etymological links
                                 swadesh_total[perspective_id].add(swadesh_num)
 
             # Forget the dictionary if it contains less than 50 Swadesh words
@@ -13441,12 +13441,12 @@ class SwadeshAnalysis(graphene.Mutation):
         for perspective_id, entries in entries_set.items():
             means[perspective_id] = collections.defaultdict(set)
             for group_index, group in enumerate(group_list):
-                # Select etimologically linked entries
+                # Select etymologically linked entries
                 linked = entries & group
                 for entry_id in linked:
                     result_pool[perspective_id][entry_id]['group'] = group_index
                     swadesh = result_pool[perspective_id][entry_id]['swadesh']
-                    # Store the correspondence: perspective { means(1/2/3) { etimological_groups(1.1/1.2/2.1/3.1)
+                    # Store the correspondence: perspective { meanings(1/2/3) { etymological_groups(1.1/1.2/2.1/3.1)
                     if not result_pool[perspective_id][entry_id]['borrowed']:
                         means[perspective_id][swadesh].add(group_index)
 
@@ -13455,9 +13455,9 @@ class SwadeshAnalysis(graphene.Mutation):
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
-        # Calculate intersection between lists of linked means (Swadesh matching)
+        # Calculate intersection between lists of linked meanings (Swadesh matching)
         # So length of this intersection is the similarity of corresponding perspectives
-        # means_total is amount of Swadesh's lexems met in the both perspectives
+        # means_total is amount of Swadesh's lexemes met in the both perspectives
         bundles = set()
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (perspective1, means1) in enumerate(means.items()):
@@ -13469,15 +13469,15 @@ class SwadeshAnalysis(graphene.Mutation):
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
                 else:
-                    # Common means of entries which have etimological linkes
-                    # but this linkes may be not mutual
+                    # Common meanings of entries which have etymological links
+                    # but this links may be not mutual
                     means_common = means1.keys() & means2.keys()
                     means_linked = 0
-                    # Checking if the found means have common links
+                    # Checking if the found meanings have common links
                     for swadesh in means_common:
                         links_common = means1[swadesh] & means2[swadesh]
                         if links_common:
-                            # Bundles are linkes with two or more entries in the result table
+                            # Bundles are links with two or more entries in the result table
                             bundles.update(links_common)
                             means_linked += 1
 
@@ -13488,7 +13488,7 @@ class SwadeshAnalysis(graphene.Mutation):
                                   f"{len(means_common)} but {means_linked} of {means_total} : "
                                   f"{', '.join(sorted(means_common))}")
 
-                    # means_linked > 0 means that means_total > 0 even more so
+                    # means_linked > 0 meanings that means_total > 0 even more so
                     distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
@@ -13845,7 +13845,6 @@ class MorphCognateAnalysis(graphene.Mutation):
             base_language_id,
             base_language_name,
             group_field_id,
-            # TODO: needed another perspective_info_list with affixes and meanings
             perspective_info_list,
             locale_id,
             storage,
@@ -13893,8 +13892,6 @@ class MorphCognateAnalysis(graphene.Mutation):
                     pickle.dump((r1, group_list, r3), tag_data_file)
 
         # Getting text data for each perspective.
-        # entries_set gathers entry_id(s) of words met in Swadesh' list
-        # swadesh_total gathers numbers of words within Swadesh' list
         meaning_set = {}
         result_pool = {}
         tiny_dicts = set()
@@ -14008,7 +14005,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         for perspective_id, entries in result_pool.items():
             meaning_grps[perspective_id] = collections.defaultdict(set)
             for group_index, group in enumerate(group_list):
-                # Select etimologically linked entries
+                # Select etymologically linked entries
                 linked = entries.keys() & group
                 for entry_id in linked:
                     result_pool[perspective_id][entry_id]['group'] = group_index
@@ -14030,27 +14027,28 @@ class MorphCognateAnalysis(graphene.Mutation):
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
                 else:
-                    # Common means of entries which have etimological linkes
-                    # but this linkes may be not mutual
+                    # Common meanings of entries which have etymological links
+                    # but this links may be not mutual
                     meanings_common = meanings1.keys() & meanings2.keys()
                     meanings_linked = 0
-                    # Checking if the found means have common links
+                    # Checking if the found meanings have common links
                     for meaning in meanings_common:
                         links_common = meanings1[meaning] & meanings2[meaning]
                         if links_common:
-                            # Bundles are linkes with two or more entries in the result table
+                            # Bundles are links with two or more entries in the result table
                             bundles.update(links_common)
                             meanings_linked += 1
 
                     meanings_total = len(meaning_set[perspective1] & meaning_set[perspective2])
 
-                    if n2 > n1 and meanings_linked >= meanings_total:
+                    if debug_flag and n2 > n1 and meanings_linked >= meanings_total:
                         log.debug(f"{n1+1},{n2+1} : "
                                   f"{len(meanings_common)} but {meanings_linked} of {meanings_total} : "
                                   f"{', '.join(sorted(meanings_common))}")
 
-                    # meanings_linked > 0 means that meanings_total > 0 even more so
+                    # meanings_linked > 0 meanings that meanings_total > 0 even more so
                     distance = math.log(meanings_linked / meanings_total) / -0.14 if meanings_linked > 0 else 50
+                    singles = meanings_total - meanings_linked
                     percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
