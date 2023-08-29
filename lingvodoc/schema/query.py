@@ -13175,7 +13175,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 # Write the column headers with the defined format.
                 for col_num, value in enumerate(columns):
                     worksheet.write(0, col_num + startcol, value, header_format)
-                # Set rows specifical height
+                # Set rows specific height
                 if sheet_name == 'Cognates':
                     for row_num, coeff in enumerate(df['lines']):
                         if coeff > 1:
@@ -13411,7 +13411,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 for swadesh_num, swadesh_lex in enumerate(swadesh_list):
                     for translation_lex in translation_list:
                         if compare_translations(swadesh_lex, translation_lex):
-                            # Store the entry's content in human readable format
+                            # Store the entry's content in human-readable format
                             result_pool[perspective_id][entry_id] = {
                                 'group': None,
                                 'borrowed': (" заим." in f" {transcription_lex} {translation_lex}"),
@@ -13685,6 +13685,7 @@ class MorphCognateAnalysis(graphene.Mutation):
     embedding_3d = graphene.List(graphene.List(graphene.Float))
     perspective_name_list = graphene.List(graphene.String)
 
+    """
     @staticmethod
     def export_dataframe(result_pool, distance_data_array, bundles):
         '''
@@ -13797,7 +13798,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                 # Write the column headers with the defined format.
                 for col_num, value in enumerate(columns):
                     worksheet.write(0, col_num + startcol, value, header_format)
-                # Set rows specifical height
+                # Set rows specific height
                 if sheet_name == 'Cognates':
                     for row_num, coeff in enumerate(df['lines']):
                         if coeff > 1:
@@ -13838,6 +13839,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                         '\n'.join(tiny_dicts) + "</pre>") if tiny_dicts else ""
 
         return html_result
+    """
 
     @staticmethod
     def morph_cognate_statistics(
@@ -13984,7 +13986,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                 else:
                     continue
 
-                # Store the entry's content in human readable format
+                # Store the entry's content in human-readable format
                 result_pool[perspective_id][entry_id] = {
                     'group': None,
                     'affix': affix,
@@ -14053,17 +14055,17 @@ class MorphCognateAnalysis(graphene.Mutation):
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
 
-        result = MorphCognateAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
+        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
 
         # GC
         del result_pool
 
-        xlsx_url = MorphCognateAnalysis.export_xlsx(result, base_language_name, storage)
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
 
         # 'lines' field is not needed any more
         del result['Cognates']['lines']
 
-        html_result = MorphCognateAnalysis.export_html(result, tiny_dicts)
+        html_result = SwadeshAnalysis.export_html(result, tiny_dicts)
 
         _, mst_list, embedding_2d_pca, embedding_3d_pca = \
             CognateAnalysis.distance_graph(
