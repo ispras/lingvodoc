@@ -13707,11 +13707,9 @@ class MorphCognateAnalysis(graphene.Mutation):
         # Insert 'lines' column as the first one
         groups['lines'] = 0
 
-        #borrowed = pd.DataFrame()
         singles = pd.DataFrame()
 
         singles_index = 0
-        #borrowed_index = 0
         # re-group by group number and add joined values
         for perspective in result_pool.values():
             dict_name = perspective['name']
@@ -13723,7 +13721,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                 group_num = entry['group']
                 entry_text = f"{entry['affix']} ( {entry['meaning']} )"
                 if group_num is not None and group_num in bundles:
-                    # Concatinate existing value if is and a new one, store the result to 'groups' dataframe
+                    # Concatenate existing value if is and a new one, store the result to 'groups' dataframe
                     value = ""
                     if dict_name in groups:
                         cell = groups[dict_name].get(group_num)
