@@ -13113,7 +13113,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     cell = groups.loc[group_num].get('lines')
                     if pd.isnull(cell) or cell < lines:
                         groups.loc[group_num, 'lines'] = lines
-                elif entry['borrowed']:
+                elif entry.get('borrowed'):
                     borrowed.loc[borrowed_index, dict_name] = entry_text
                     borrowed_index += 1
                 else:
@@ -13690,166 +13690,9 @@ class MorphCognateAnalysis(graphene.Mutation):
     embedding_3d = graphene.List(graphene.List(graphene.Float))
     perspective_name_list = graphene.List(graphene.String)
 
-
     @staticmethod
     def get_entry_text(entry):
         return f"{entry['affix']} ( {entry['meaning']} )"
-
-    """
-    @staticmethod
-    def export_dataframe(result_pool, distance_data_array, bundles):
-        '''
-        Keys:
-        result_pool[perspective_id][entry_id]
-        Fields:
-        'group': group_index,
-        'borrowed': bool,
-        'swadesh': swadesh_lex,
-        'transcription': transcription_list[0],
-        'translation': translation_lex
-        '''
-
-        distances = pd.DataFrame(distance_data_array,
-                                 columns=[perspective['name'] for perspective in result_pool.values()])
-        # Start index for distances from 1 to match with dictionaries numbers
-        distances.index += 1
-
-        groups = pd.DataFrame()
-        # Insert 'lines' column as the first one
-        groups['lines'] = 0
-
-        singles = pd.DataFrame()
-
-        singles_index = 0
-        # re-group by group number and add joined values
-        for perspective in result_pool.values():
-            dict_name = perspective['name']
-            for entry in perspective.values():
-                # 'entry' iterator may present string value of 'name' field
-                # but not a dictionary for one of entries. Continue in this case.
-                if not isinstance(entry, dict):
-                    continue
-                group_num = entry['group']
-                entry_text = f"{entry['affix']} ( {entry['meaning']} )"
-                if group_num is not None and group_num in bundles:
-                    # Concatenate existing value if is and a new one, store the result to 'groups' dataframe
-                    value = ""
-                    if dict_name in groups:
-                        cell = groups[dict_name].get(group_num)
-                        value = cell if pd.notnull(cell) else value
-                    value = f"{value}\n{entry_text}".strip()
-                    groups.loc[group_num, dict_name] = value
-
-                    # Count result lines to set rows height in xlsx after
-                    lines = value.count('\n') + 1
-                    cell = groups.loc[group_num].get('lines')
-                    if pd.isnull(cell) or cell < lines:
-                        groups.loc[group_num, 'lines'] = lines
-                else:
-                    singles.loc[singles_index, dict_name] = entry_text
-                    singles_index += 1
-
-        return {
-            'Cognates': groups if len(groups) < 2 else groups.sort_values(groups.columns[1]),
-            'Singles': singles.sort_index(),
-            'Distances': distances.sort_index()
-        }
-
-    @staticmethod
-    def export_xlsx(
-            result,
-            base_language_name,
-            storage
-    ):
-        # Exporting analysis results as an Excel file.
-
-        current_datetime = datetime.datetime.now(datetime.timezone.utc)
-        xlsx_filename = pathvalidate.sanitize_filename(
-            '{0} {1} {2:04d}.{3:02d}.{4:02d}.xlsx'.format(
-                base_language_name[:64],
-                'glottochronology',
-                current_datetime.year,
-                current_datetime.month,
-                current_datetime.day))
-
-        cur_time = time.time()
-        storage_dir = os.path.join(storage['path'], 'glottochronology', str(cur_time))
-
-        # Storing Excel file with the results.
-
-        xlsx_path = os.path.join(storage_dir, xlsx_filename)
-        os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
-
-        with pd.ExcelWriter(xlsx_path, engine='xlsxwriter') as writer:
-            header_format = writer.book.add_format({'bold': True,
-                                                    'text_wrap': True,
-                                                    'valign': 'top',
-                                                    'fg_color': '#D7E4BC',
-                                                    'border': 1})
-            for sheet_name, df in result.items():
-                index = (sheet_name == 'Distances')
-                startcol = int(index)
-                # Exclude 'lines' column
-                columns = df.columns[int(sheet_name == 'Cognates'):]
-                # Check if the table is empty
-                if columns.empty:
-                    continue
-
-                df.to_excel(writer,
-                            sheet_name=sheet_name,
-                            index=index,
-                            startrow=1,
-                            columns=columns,
-                            header=False)
-
-                worksheet = writer.sheets[sheet_name]
-                worksheet.set_row(0, 70)
-                worksheet.set_column(startcol, len(columns) - 1 + startcol, 30)
-                # Write the column headers with the defined format.
-                for col_num, value in enumerate(columns):
-                    worksheet.write(0, col_num + startcol, value, header_format)
-                # Set rows specific height
-                if sheet_name == 'Cognates':
-                    for row_num, coeff in enumerate(df['lines']):
-                        if coeff > 1:
-                            worksheet.set_row(row_num + 1, 14 * coeff)
-
-        xlsx_url = ''.join([
-            storage['prefix'], storage['static_route'],
-            'glottochronology', '/', str(cur_time), '/', xlsx_filename])
-
-        return xlsx_url
-
-    @staticmethod
-    def export_html(result, tiny_dicts=None, huge_size=1048576):
-        result_tables = (
-            build_table(result['Distances'], 'orange_light', width="300px", index=True),
-            build_table(result['Cognates'], 'blue_light', width="300px").replace("\\n","<br>"),
-            build_table(result['Singles'], 'green_light', width="300px"))
-
-        # Control output size
-        spl = "<pre>\n\n</pre>"
-        html_result = f"{result_tables[0]}" \
-                      f"{spl}" \
-                      f"{result_tables[1]}" \
-                      f"{spl}" \
-                      f"{result_tables[2]}"
-
-        if len(html_result) > huge_size:
-            html_result = f"{result_tables[0]}" \
-                          f"{spl}" \
-                          f"{result_tables[1]}" \
-                          f"<pre>\n\nNote: The table with single words is not shown due to huge summary size</pre>"
-
-        if len(html_result) > huge_size:
-            html_result = f"{result_tables[0]}" \
-                          f"<pre>\n\nNote: The result tables with words are not shown due to huge summary size</pre>"
-
-        html_result += ("<pre>Note: The following dictionaries contain too less words and were not processed: \n\n" +
-                        '\n'.join(tiny_dicts) + "</pre>") if tiny_dicts else ""
-
-        return html_result
-    """
 
     @staticmethod
     def morph_cognate_statistics(
@@ -14024,6 +13867,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                     meaning = result_pool[perspective_id][entry_id]['meaning']
                     meaning_grps[perspective_id][meaning].add(group_index)
 
+        dictionary_count = len(meaning_grps)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
