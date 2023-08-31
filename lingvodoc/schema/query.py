@@ -13692,7 +13692,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
     @staticmethod
     def get_entry_text(entry):
-        return f"{entry['affix']} ( {entry['meaning']} )"
+        return f"{', '.join(entry['affix'])} ( {', '.join(entry['meaning'])} )"
 
     @staticmethod
     def morph_cognate_statistics(
@@ -13747,7 +13747,8 @@ class MorphCognateAnalysis(graphene.Mutation):
                     pickle.dump((r1, group_list, r3), tag_data_file)
 
         # Getting text data for each perspective.
-        meaning_set = {}
+        to_canon_meaning = collections.defaultdict(dict)
+        meaning_to_links = collections.defaultdict(dict)
         result_pool = {}
         tiny_dicts = set()
         for index, (perspective_id, affix_field_id, meaning_field_id) in \
@@ -13827,80 +13828,97 @@ class MorphCognateAnalysis(graphene.Mutation):
             del affix_query
             del meaning_query
 
-            # Grouping translations by lexical entries.
-            meaning_set[perspective_id] = set()
             result_pool[perspective_id] = {'name': dictionary_name}
 
             for row in data_query:
+
                 entry_id = tuple(row[:2])
                 if (affix_list := row[2]) and (meaning_list := row[3]):
-                    affix = affix_list[0].strip()
-                    meaning = meaning_list[0].strip()
+                    affix = map(lambda a: a.strip(), affix_list)
+                    meaning = map(lambda m: m.strip(), meaning_list)
                 else:
                     continue
 
-                # Store the entry's content in human-readable format
+                # Compounding a dictionary to convert every meaning to the first one within each row
+                # Initialize group of links for every sub_meaning to have a full set of sub_meanings
+                for sub_meaning in meaning:
+                    to_canon_meaning[perspective_id][sub_meaning] = meaning[0]
+                    meaning_to_links[perspective_id][sub_meaning] = set()
+
+                # Grouping affixes and meanings by lexical entries.
                 result_pool[perspective_id][entry_id] = {
                     'group': None,
                     'affix': affix,
                     'meaning': meaning
                 }
-                meaning_set[perspective_id].add(meaning)
 
-            # Forget the dictionary if it contains less than 50 affixes
-            if len(meaning_set[perspective_id]) < 50:
+            '''
+            # Forget the dictionary if it contains less than 50 meanings
+            if len(to_canon_meaning[perspective_id]) < 50:
+                del meaning_to_links[perspective_id]
                 del result_pool[perspective_id]
                 tiny_dicts.add(dictionary_name)
+            '''
 
             # GC
             del data_query
 
         # Checking if found entries have links
-        meaning_grps = collections.OrderedDict()
         for perspective_id, entries in result_pool.items():
-            meaning_grps[perspective_id] = collections.defaultdict(set)
             for group_index, group in enumerate(group_list):
                 # Select etymologically linked entries
                 linked = entries.keys() & group
                 for entry_id in linked:
                     result_pool[perspective_id][entry_id]['group'] = group_index
                     meaning = result_pool[perspective_id][entry_id]['meaning']
-                    meaning_grps[perspective_id][meaning].add(group_index)
+                    for sub_meaning in meaning:
+                        meaning_to_links[perspective_id][sub_meaning].add(group_index)
 
-        dictionary_count = len(meaning_grps)
+        dictionary_count = len(perspective_info_list)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
         bundles = set()
         # Calculate each-to-each distances, exclude self-to-self
-        for n1, (perspective1, meanings1) in enumerate(meaning_grps.items()):
+        for n1, (perspective1, meaning_to_links1) in enumerate(meaning_to_links.items()):
             # Numerate dictionaries
             result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
             distance_header_array[n1] = result_pool[perspective1]['name']
-            for n2, (perspective2, meanings2) in enumerate(meaning_grps.items()):
+
+            to_canon_meaning1 = to_canon_meaning[perspective1]
+            canon_meanings1_set = set(to_canon_meaning1.values())
+
+            for n2, (perspective2, meaning_to_links2) in enumerate(meaning_to_links.items()):
                 if n1 == n2:
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
                 else:
-                    # Common meanings of entries which have etymological links
-                    # but this links may be not mutual
-                    meanings_common = meanings1.keys() & meanings2.keys()
+                    # Compile new meaning_to_links2 using canon_meanings instead of sub_meanings
+                    canon_meaning_to_links2 = collections.defaultdict(set)
+                    for sub_meaning, links in meaning_to_links2.items():
+                        if canon_meaning := to_canon_meaning1.get(sub_meaning):
+                            canon_meaning_to_links2[canon_meaning].update(links)
+
+                    # Common canonical meanings of perspective1 and perspective2
+                    meanings_common = canon_meanings1_set & canon_meaning_to_links2.keys()
+                    meanings_total = len(meanings_common)
+
                     meanings_linked = 0
                     # Checking if the found meanings have common links
                     for meaning in meanings_common:
-                        links_common = meanings1[meaning] & meanings2[meaning]
+                        links_common = meaning_to_links1[meaning] & canon_meaning_to_links2[meaning]
                         if links_common:
                             # Bundles are links with two or more entries in the result table
                             bundles.update(links_common)
                             meanings_linked += 1
 
-                    meanings_total = len(meaning_set[perspective1] & meaning_set[perspective2])
-
+                    '''
                     if debug_flag and n2 > n1 and meanings_linked >= meanings_total:
                         log.debug(f"{n1+1},{n2+1} : "
                                   f"{len(meanings_common)} but {meanings_linked} of {meanings_total} : "
                                   f"{', '.join(sorted(meanings_common))}")
+                    '''
 
                     # meanings_linked > 0 meanings that meanings_total > 0 even more so
                     distance = math.log(meanings_linked / meanings_total) / -0.14 if meanings_linked > 0 else 50
