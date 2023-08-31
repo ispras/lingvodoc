@@ -13834,8 +13834,8 @@ class MorphCognateAnalysis(graphene.Mutation):
 
                 entry_id = tuple(row[:2])
                 if (affix_list := row[2]) and (meaning_list := row[3]):
-                    affix = map(lambda a: a.strip(), affix_list)
-                    meaning = map(lambda m: m.strip(), meaning_list)
+                    affix = tuple(map(lambda a: a.strip(), affix_list))
+                    meaning = tuple(map(lambda m: m.strip(), meaning_list))
                 else:
                     continue
 
@@ -13852,8 +13852,12 @@ class MorphCognateAnalysis(graphene.Mutation):
                     'meaning': meaning
                 }
 
+            debug_flag = True
+            if debug_flag:
+              log.debug(to_canon_meaning[perspective_id], len(to_canon_meaning[perspective_id]))
+
             # Forget the dictionary if it contains less than 50 meanings
-            if len(to_canon_meaning[perspective_id]) < 50:
+            if len(to_canon_meaning[perspective_id]) < 30:
                 del meaning_to_links[perspective_id]
                 del result_pool[perspective_id]
                 tiny_dicts.add(dictionary_name)
