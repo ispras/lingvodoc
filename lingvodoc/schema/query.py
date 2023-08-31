@@ -13692,7 +13692,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
     @staticmethod
     def get_entry_text(entry):
-        return f"{', '.join(entry['affix'])} ( {', '.join(entry['meaning'])} )"
+        return f"{'; '.join(entry['affix'])} ( {'; '.join(entry['meaning'])} )"
 
     @staticmethod
     def morph_cognate_statistics(
@@ -13854,7 +13854,8 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             debug_flag = True
             if debug_flag:
-              log.debug(to_canon_meaning[perspective_id], len(to_canon_meaning[perspective_id]))
+                print(f"to_canon_meaning: {sorted(to_canon_meaning[perspective_id].keys())}")
+                print(f"length: {len(to_canon_meaning[perspective_id])}")
 
             # Forget the dictionary if it contains less than 50 meanings
             if len(to_canon_meaning[perspective_id]) < 30:
