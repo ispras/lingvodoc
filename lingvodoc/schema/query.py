@@ -13852,13 +13852,11 @@ class MorphCognateAnalysis(graphene.Mutation):
                     'meaning': meaning
                 }
 
-            '''
             # Forget the dictionary if it contains less than 50 meanings
             if len(to_canon_meaning[perspective_id]) < 50:
                 del meaning_to_links[perspective_id]
                 del result_pool[perspective_id]
                 tiny_dicts.add(dictionary_name)
-            '''
 
             # GC
             del data_query
@@ -13874,7 +13872,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                     for sub_meaning in meaning:
                         meaning_to_links[perspective_id][sub_meaning].add(group_index)
 
-        dictionary_count = len(perspective_info_list)
+        dictionary_count = len(result_pool)
         distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
