@@ -13097,7 +13097,6 @@ class SwadeshAnalysis(graphene.Mutation):
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
-                #entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
                 entry_text = get_entry_text(entry)
                 if group_num is not None and group_num in bundles:
                     # Concatinate existing value if is and a new one, store the result to 'groups' dataframe
@@ -13852,12 +13851,7 @@ class MorphCognateAnalysis(graphene.Mutation):
                     'meaning': meaning
                 }
 
-            debug_flag = True
-            if debug_flag:
-                print(f"to_canon_meaning: {sorted(to_canon_meaning[perspective_id].keys())}")
-                print(f"length: {len(to_canon_meaning[perspective_id])}")
-
-            # Forget the dictionary if it contains less than 50 meanings
+            # Forget the dictionary if it contains less than 30 sub-meanings
             if len(to_canon_meaning[perspective_id]) < 30:
                 del meaning_to_links[perspective_id]
                 del result_pool[perspective_id]
