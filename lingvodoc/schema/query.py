@@ -13484,8 +13484,8 @@ class SwadeshAnalysis(graphene.Mutation):
                                   f"{len(means_common)} but {means_linked} of {means_total} : "
                                   f"{', '.join(sorted(means_common))}")
 
-                    # means_linked > 0 means that means_total > 0 even more so
-                    distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
+                    c = means_linked / means_total if means_total > 0 else 0
+                    distance = math.sqrt( math.log(c) / -0.1 / math.sqrt(c) ) if c > 0 else 25
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
