@@ -139,7 +139,7 @@ def create_perspective(id = (None, None),
     owner = owner_client.user
     client = DBSession.query(Client).filter_by(id=client_id).first()
     user = DBSession.query(User).filter_by(id=client.user_id).first()
-    attached_users = get_attached_users(parent_id)
+    attached_users = get_attached_users(parent.parent_id)
 
     if not object_id or add_group:
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
@@ -683,9 +683,6 @@ def create_gists_with_atoms(translation_atoms, translation_gist_id, ids, gist_ty
         return translation_gist_id
 
 
-
-
-
 def object_file_path(obj, settings, data_type, filename, create_dir=False):
     filename = sanitize_filename(filename)
     base_path = settings['storage']['path']
@@ -918,3 +915,23 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     tag_entity.publishingentity.accepted = True
                     # DBSession.add(tag_entity)
                     CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
+
+
+def create_field(translation_atoms, client_id=66):
+    translation_gist_id = create_gists_with_atoms(translation_atoms,
+                                                  None,
+                                                  [client_id, None],
+                                                  gist_type="Field")
+
+    data_type_translation_gist = translation_gist_search('Text')
+    dbfield = Field(client_id=client_id,
+                    object_id=None,
+                    data_type_translation_gist_client_id=data_type_translation_gist.client_id,
+                    data_type_translation_gist_object_id=data_type_translation_gist.object_id,
+                    translation_gist_client_id=translation_gist_id[0],
+                    translation_gist_object_id=translation_gist_id[1],
+                    marked_for_deletion=False)
+    DBSession.add(dbfield)
+    DBSession.flush()
+
+    return dbfield

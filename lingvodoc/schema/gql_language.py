@@ -708,8 +708,6 @@ class UpdateLanguage(graphene.Mutation):
         if translation_gist_id:
             dblanguage.translation_gist_client_id = translation_gist_id[0]
             dblanguage.translation_gist_object_id = translation_gist_id[1]
-            flag_modified(dblanguage, 'translation_gist_client_id')
-            flag_modified(dblanguage, 'translation_gist_object_id')
 
         additional_metadata = args.get('additional_metadata')
         if additional_metadata:
