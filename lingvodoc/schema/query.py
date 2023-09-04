@@ -312,6 +312,7 @@ from pyramid.httpexceptions import (
 
 from lingvodoc.scripts import elan_parser
 from lingvodoc.utils.creation import create_entity, edit_role
+from lingvodoc.utils.corpus_converter import dash_re
 
 from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_holders import del_object
@@ -13832,10 +13833,12 @@ class MorphCognateAnalysis(graphene.Mutation):
             for row in data_query:
 
                 entry_id = tuple(row[:2])
-                if (affix_list := row[2]) and (meaning_list := row[3]):
-                    affix = tuple(map(lambda a: a.strip(), affix_list))
-                    meaning = tuple(map(lambda m: m.strip(), meaning_list))
-                else:
+                affix = list(map(lambda a: a.strip(), row[2]))
+                meaning = []
+                for m in row[3]:
+                    if clean_m := re.search(dash_re, m):
+                        meaning.append(clean_m.group(1))
+                if not affix or not meaning:
                     continue
 
                 # Compounding a dictionary to convert every meaning to the first one within each row
