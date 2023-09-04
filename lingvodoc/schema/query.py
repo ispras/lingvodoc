@@ -13750,6 +13750,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         meaning_to_links = collections.defaultdict(dict)
         result_pool = {}
         tiny_dicts = set()
+        clean_meaning_re = re.compile('[.\dA-Z]+')
         for index, (perspective_id, affix_field_id, meaning_field_id) in \
                 enumerate(perspective_info_list):
 
@@ -13832,10 +13833,12 @@ class MorphCognateAnalysis(graphene.Mutation):
             for row in data_query:
 
                 entry_id = tuple(row[:2])
-                if (affix_list := row[2]) and (meaning_list := row[3]):
-                    affix = tuple(map(lambda a: a.strip(), affix_list))
-                    meaning = tuple(map(lambda m: m.strip(), meaning_list))
-                else:
+                affix = list(map(lambda a: a.strip(), row[2]))
+                meaning = []
+                for m in row[3]:
+                    if clean_m := re.search(clean_meaning_re, m):
+                        meaning.append(clean_m.group(0))
+                if not affix or not meaning:
                     continue
 
                 # Compounding a dictionary to convert every meaning to the first one within each row
