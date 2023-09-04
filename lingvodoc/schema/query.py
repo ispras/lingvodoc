@@ -312,7 +312,6 @@ from pyramid.httpexceptions import (
 
 from lingvodoc.scripts import elan_parser
 from lingvodoc.utils.creation import create_entity, edit_role
-from lingvodoc.utils.corpus_converter import dash_re
 
 from lingvodoc.queue.celery import celery
 from lingvodoc.schema.gql_holders import del_object
@@ -13751,6 +13750,7 @@ class MorphCognateAnalysis(graphene.Mutation):
         meaning_to_links = collections.defaultdict(dict)
         result_pool = {}
         tiny_dicts = set()
+        clean_meaning_re = re.compile('[.\dA-Z]+')
         for index, (perspective_id, affix_field_id, meaning_field_id) in \
                 enumerate(perspective_info_list):
 
@@ -13836,8 +13836,8 @@ class MorphCognateAnalysis(graphene.Mutation):
                 affix = list(map(lambda a: a.strip(), row[2]))
                 meaning = []
                 for m in row[3]:
-                    if clean_m := re.search(dash_re, m):
-                        meaning.append(clean_m.group(1))
+                    if clean_m := re.search(clean_meaning_re, m):
+                        meaning.append(clean_m.group(0))
                 if not affix or not meaning:
                     continue
 
