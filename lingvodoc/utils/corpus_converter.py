@@ -2389,7 +2389,6 @@ def convert_five_tiers(
                     7,
                     percent_adding +
                         t_index * percent_delta,
-
                     'Uploading translations with marks')
 
         percent_from = (
