@@ -13831,14 +13831,18 @@ class MorphCognateAnalysis(graphene.Mutation):
             result_pool[perspective_id] = {'name': dictionary_name}
 
             for row in data_query:
-
                 entry_id = tuple(row[:2])
-                affix = list(map(lambda a: a.strip(), row[2]))
+
+                if not (affix_list := row[2]) or not (meaning_list := row[3]):
+                    continue
+
+                affix = list(map(lambda a: a.strip(), affix_list))
                 meaning = []
-                for m in row[3]:
+                for m in meaning_list:
                     if clean_m := re.search(clean_meaning_re, m):
                         meaning.append(clean_m.group(0))
-                if not affix or not meaning:
+
+                if not meaning:
                     continue
 
                 # Compounding a dictionary to convert every meaning to the first one within each row
