@@ -13747,7 +13747,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
         # Getting text data for each perspective.
         to_canon_meaning = collections.defaultdict(dict)
-        meaning_to_links = collections.defaultdict(dict)
+        meaning_to_links = {}
         result_pool = {}
         tiny_dicts = set()
         clean_meaning_re = re.compile('[.\dA-Z]+')
@@ -13828,6 +13828,7 @@ class MorphCognateAnalysis(graphene.Mutation):
             del affix_query
             del meaning_query
 
+            meaning_to_links[perspective_id] = {}
             result_pool[perspective_id] = {'name': dictionary_name}
 
             for row in data_query:
