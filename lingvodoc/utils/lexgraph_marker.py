@@ -17,7 +17,9 @@ def get_lexgraph_list(string_number):
     length = ceil(log(string_number, base))
     for number in range(string_number):
         result = get_lexgraph_marker(number)
-        result = '0' * (length - len(result)) + result + ('h' if result == '0' else '')
+        result = ('0' * (length - len(result)) +
+                  result +
+                  ('h' if result == '0' else ''))
         markers.append(result)
     return markers
 
@@ -31,6 +33,8 @@ def delta(larger, smaller):
 # Get lexgraph marker between two closest
 def marker_between(marker_before='', marker_after=''):
 
+    # Supplement marker_before by '0'(s) and marker_after by 'z'(s) to have equal lengths
+    # Now marker can even consist of '0'(s) or 'z'(s) only if it was empty before
     marker1 = marker_before + '0' * (len(marker_after) - len(marker_before))
     marker2 = marker_after + 'z' * (len(marker_before) - len(marker_after))
 
