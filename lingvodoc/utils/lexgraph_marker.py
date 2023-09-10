@@ -15,10 +15,10 @@ def get_lexgraph_marker(number):
 def get_lexgraph_list(length):
     markers = []
     # First marker is '1'
-    length = ceil(log(length + 1, base))
+    dimension = ceil(log(length + 1, base))
     for number in range(length):
         result = get_lexgraph_marker(number + 1)
-        result = '0' * (length - len(result)) + result
+        result = '0' * (dimension - len(result)) + result
         markers.append(result)
     return markers
 
