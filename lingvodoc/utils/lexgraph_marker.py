@@ -11,15 +11,14 @@ def get_lexgraph_marker(number):
         number //= base
     return result or '0'
 
-# Get list of lexgraph markers with string_number entries
-def get_lexgraph_list(string_number):
+# Get list of lexgraph markers
+def get_lexgraph_list(length):
     markers = []
-    length = ceil(log(string_number, base))
-    for number in range(string_number):
-        result = get_lexgraph_marker(number)
-        result = ('0' * (length - len(result)) +
-                  result +
-                  ('h' if result == '0' else ''))
+    # First marker is '1'
+    length = ceil(log(length + 1, base))
+    for number in range(length):
+        result = get_lexgraph_marker(number + 1)
+        result = '0' * (length - len(result)) + result
         markers.append(result)
     return markers
 
@@ -35,6 +34,8 @@ def marker_between(marker_before='', marker_after=''):
 
     if marker_before and marker_after and marker_before > marker_after:
         raise ValueError("first argument must be less than second one")
+    if int(marker_after, base) == 0:
+        raise ValueError("not possible be less than just '0'(s)")
 
     # Supplement marker_before by '0'(s) and marker_after by 'z'(s) to have equal lengths
     # Now marker can even consist of '0'(s) or 'z'(s) only if it was empty before
