@@ -32,13 +32,13 @@ def delta(larger, smaller):
 # Get lexgraph marker between two closest
 def marker_between(marker_before='', marker_after=''):
 
-    if marker_before and marker_after and marker_before > marker_after:
+    if marker_before and marker_after and marker_before >= marker_after:
         raise ValueError("first argument must be less than second one")
     if int(marker_after, base) == 0:
         raise ValueError("not possible be less than just '0'(s)")
 
     # Supplement marker_before by '0'(s) and marker_after by 'z'(s) to have equal lengths
-    # Now marker can even consist of '0'(s) or 'z'(s) only if it was empty before
+    # Now marker can even consist just of '0'(s) or 'z'(s) if it was empty before
     marker1 = marker_before + '0' * (len(marker_after) - len(marker_before))
     marker2 = marker_after + 'z' * (len(marker_before) - len(marker_after))
 
