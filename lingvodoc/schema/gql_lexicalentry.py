@@ -170,8 +170,6 @@ class CreateLexicalEntry(graphene.Mutation):
 
     class Arguments:
         id = LingvodocID()
-        id_before = LingvodocID()
-        id_after = LingvodocID()
         perspective_id = LingvodocID(required=True)
 
     lexicalentry = graphene.Field(LexicalEntry)
