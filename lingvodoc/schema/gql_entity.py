@@ -469,6 +469,7 @@ class UpdateEntity(graphene.Mutation):
         id = LingvodocID(required=True)
         published = graphene.Boolean()
         accepted = graphene.Boolean()
+        new_parent_id = LingvodocID()
 
     entity = graphene.Field(Entity)
     triumph = graphene.Boolean()
@@ -488,6 +489,7 @@ class UpdateEntity(graphene.Mutation):
             raise ResponseError(message="No such lexical_entry in the system")
         published = args.get('published')
         accepted = args.get('accepted')
+        new_parent_id = args.get('new_parent_id')
         if published is not None and not dbpublishingentity.published:
             info.context.acl_check('create', 'approve_entities',
                                    (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
@@ -503,10 +505,18 @@ class UpdateEntity(graphene.Mutation):
         if accepted is not None and not accepted and dbpublishingentity.accepted:
             raise ResponseError(message="Not allowed action")
 
+        if new_parent_id is not None:
+            info.context.acl_check('delete', 'lexical_entries_and_entities',
+                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+            info.context.acl_check('create', 'lexical_entries_and_entities',
+                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
         if published is not None:
             dbpublishingentity.published = published
         if accepted is not None:
             dbpublishingentity.accepted = accepted
+        if new_parent_id is not None:
+            dbpublishingentity.parent_id = new_parent_id
 
         #CACHE get_entity
         dbentity = CACHE.get(objects =
