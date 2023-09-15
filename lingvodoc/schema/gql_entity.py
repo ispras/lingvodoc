@@ -66,6 +66,7 @@ from lingvodoc.utils.deletion import real_delete_entity
 from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
 
 from lingvodoc.utils.elan_functions import eaf_wordlist
+from lingvodoc.utils.lexgraph_marker import marker_between
 
 from lingvodoc.cache.caching import CACHE
 # Setting up logging.
@@ -1039,6 +1040,8 @@ class UpdateEntityContent(graphene.Mutation):
         """
         id = LingvodocID()
         content = graphene.String()
+        lexgraph_before = graphene.String()
+        lexgraph_after = graphene.String()
 
 
     entity = graphene.Field(Entity)
@@ -1050,6 +1053,11 @@ class UpdateEntityContent(graphene.Mutation):
         old_client_id, object_id = args.get('id')
         client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
         content = args.get("content")
+        lexgraph_before = args.get("lexgraph_before", '')
+        lexgraph_after = args.get("lexgraph_after", '')
+        if content is None and (lexgraph_before or lexgraph_after):
+            content = marker_between(lexgraph_before, lexgraph_after)
+
         dbentity_old = CACHE.get(objects =
             {
                 dbEntity : ((old_client_id, object_id), )
