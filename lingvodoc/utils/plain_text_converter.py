@@ -76,12 +76,27 @@ def txt_to_column(path, url, column_dict=collections.defaultdict(list), column=N
                 .read()
                 .decode('utf-8-sig', 'ignore'))
 
-    posn_marker = re.compile('\[[\d]+[ab]:[\d]+\]')
-    line_marker = re.compile('\([\d]+\)')
-    sntc_marker = re.compile('\[:+\]|\|\|+')
+    page = r'\d+[ab]'
+    line = r'\d+'
+    tib_end = r'\|\|+'
+    oir_end = r':+'
 
-    txt_file = txt_file.replace('\n', ' ').replace('  ', ' ')
-    txt_file = re.search(posn_marker.pattern + r'.*', txt_file).group(0)
+    posn_marker = re.compile(f'\[{page}:{line}\]|'
+                             f'\[{page}\]')
+
+    line_marker = re.compile(f'\({line}\)')
+
+    sntc_marker = re.compile(f'{tib_end}|'
+                             f'{oir_end}|'
+                             f'\[{oir_end}\]')
+
+    txt_start = re.search(posn_marker, txt_file).start()
+    txt_file = txt_file[txt_start:]
+
+    txt_file = txt_file.replace('\r\n', ' ').replace('\n', ' ').replace('  ', ' ')
+    # Replace colons in markers to another symbol to differ from colons in text
+    txt_file = re.sub(r':(\d)', r'#\1', txt_file)
+
     sentences = re.split(sntc_marker, txt_file)[:-1]
 
     if not column:
@@ -90,7 +105,7 @@ def txt_to_column(path, url, column_dict=collections.defaultdict(list), column=N
 
     count = 0
     for x in sentences:
-        line = x.strip()
+        line = x.replace('#', ':').strip()
 
         if not line:
             continue
@@ -113,6 +128,8 @@ def txt_to_parallel_columns(sources):
 
     column_dict['ORDER'] = get_lexgraph_list(max_count)
     column_dict['NUMBER'] = list(range(1, max_count + 1))
+
+    return column_dict
 
 
 def create_entity(
