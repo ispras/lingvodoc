@@ -288,29 +288,21 @@ def convert_start(ids, corpora_inf, cache_kwargs, sqlalchemy_url, task_key):
         }
     }
     """
-    # pr = cProfile.Profile()
-    # pr.enable()
     from lingvodoc.cache.caching import initialize_cache
     initialize_cache(cache_kwargs)
     global CACHE
     from lingvodoc.cache.caching import CACHE
     try:
         with transaction.manager:
-            n = 10
-            timestamp = (
-                time.asctime(time.gmtime()) + ''.join(
-                    random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
-
             task_status = TaskStatus.get_from_cache(task_key)
+
             task_status.set(1, 1, "Preparing")
             engine = create_engine(sqlalchemy_url)
-            #DBSession.remove()
             DBSession.configure(bind=engine, autoflush=False)
             obj_id = ObjectId()
 
             old_client_id = ids[0]
             old_client = DBSession.query(dbClient).filter_by(id=old_client_id).first()
-            #user_id = old_client.user_id
             user = DBSession.query(dbUser).filter_by(id=old_client.user_id).first()
             client = dbClient(user_id=user.id)
             user.clients.append(client)
@@ -318,11 +310,8 @@ def convert_start(ids, corpora_inf, cache_kwargs, sqlalchemy_url, task_key):
             DBSession.flush()
             client_id = client.id
 
-            link_col_to_blob = collections.defaultdict(dict)
-
             task_status.set(2, 50, "uploading...")
             blob_to_perspective = dict()
-            perspective_column_dict = {}
 
             persp_to_lexentry = collections.defaultdict(dict)
             task_status_counter = 0
@@ -337,11 +326,6 @@ def convert_start(ids, corpora_inf, cache_kwargs, sqlalchemy_url, task_key):
             # Getting TXT data, checking if the TXT file is not Lingvodoc-valid.
 
             column_dict = txt_to_parallel_columns(blobs)
-                
-
-#####################
-
-            #perspective_column_dict[blob_id] = column_dict
 
             atoms_to_create = corpus_inf.get("translation_atoms")
             if atoms_to_create:
@@ -351,255 +335,79 @@ def convert_start(ids, corpora_inf, cache_kwargs, sqlalchemy_url, task_key):
                                                                          None,
                                                                          (old_client_id, None),
                                                                          gist_type="Dictionary")
-                parent_id = corpus_inf.get("parent_id")
+            parent_id = corpus_inf.get("parent_id")
 
-                dbdictionary_obj = (
+            dbdictionary_obj = (
 
-                    create_dbdictionary(
-                        id = obj_id.id_pair(client_id),
-                        parent_id = parent_id,
-                        translation_gist_id = dictionary_translation_gist_id,
-                        add_group = True,
-                        additional_metadata = {
-                            'license': corpus_inf.get('license') or 'proprietary',
-                            'source_blob_id': blob_id}))
+                create_dbdictionary(
+                    id = obj_id.id_pair(client_id),
+                    parent_id = parent_id,
+                    translation_gist_id = dictionary_translation_gist_id,
+                    add_group = True,
+                    additional_metadata = {
+                        'license': corpus_inf.get('license') or 'proprietary',
+                        'source_blob_id': blob_id}))
 
-                if starling_flag:
+            atoms_to_create = [
+                {"locale_id": ENGLISH_LOCALE, "content": "Parallel corpora"},
+                {"locale_id": RUSSIAN_LOCALE, "content": "Параллельные корпуса"}]
 
-                    atoms_to_create = [
-                        {"locale_id": ENGLISH_LOCALE, "content": "CSV (Starling) data"},
-                        {"locale_id": RUSSIAN_LOCALE, "content": "CSV (Starling) данные"}]
+            persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
+                                                                None,
+                                                                (old_client_id, None),
+                                                                gist_type="Perspective")
 
-                else:
+            dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
 
-                    atoms_to_create = [
-                        {"locale_id": ENGLISH_LOCALE, "content": "CSV (Excel) data"},
-                        {"locale_id": RUSSIAN_LOCALE, "content": "CSV (Excel) данные"}]
+            new_persp = create_perspective(id=obj_id.id_pair(client_id),
+                                           parent_id=dictionary_id,  # TODO: use all object attrs
+                                           translation_gist_id=persp_translation_gist_id,
+                                           add_group=True)
 
-                persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
-                                                                    None,
-                                                                    (old_client_id, None),
-                                                                    gist_type="Perspective")
-                dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
-                new_persp = create_perspective(id=obj_id.id_pair(client_id),
-                                        parent_id=dictionary_id,  # TODO: use all object attrs
-                                        translation_gist_id=persp_translation_gist_id,
-                                        add_group=True
-                                        )
+            blob_to_perspective[blob_id] = new_persp
+            perspective_id = [new_persp.client_id, new_persp.object_id]
+            starlingname_to_column = collections.OrderedDict()
 
-                blob_to_perspective[blob_id] = new_persp
-                perspective_id = [new_persp.client_id, new_persp.object_id]
-                fields = corpus_inf.get("field_map")
-                starlingname_to_column = collections.OrderedDict()
+            le_list = []
+            for number in column_dict["NUMBER"]:  # range()
+                le_client_id, le_object_id = client_id, obj_id.next
+                lexentr = dbLexicalEntry(object_id=le_object_id,
+                                         client_id=le_client_id,
+                                         parent_client_id=perspective_id[0],
+                                         parent_object_id=perspective_id[1])
+                DBSession.add(lexentr)
+                le_list.append((le_client_id, le_object_id))
+                persp_to_lexentry[blob_id][number] = (le_client_id, le_object_id)
 
-                position_counter = 1
+            i = 0
+            for lexentr_tuple in le_list:
+                for starling_column_name in starlingname_to_column:
+                    field_id = starlingname_to_column[starling_column_name]
+                    col_data = column_dict[starling_column_name][i]
 
-                # perspective:field_id
+                    if col_data:
 
-                fields_fix = set()
-                for field in fields:
-                    starling_type = field.get("starling_type")
-                    field_id = tuple(field.get("field_id"))
-                    starling_name = field.get("starling_name")
-                    if starling_type == 1:
-                        if field_id in fields_fix:
-                            starlingname_to_column[starling_name] = field_id
-                            keep_field_dict[blob_id][field_id] = starling_name
-                            continue
-                        else:
-                            fields_fix.add(field_id)
-                        persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                         parent_id=perspective_id,
-                                         field_id=field_id,
-                                         upper_level=None,
-                                         link_id=None,
-                                         position=position_counter
-                                         )
-                        position_counter += 1
-                        starlingname_to_column[starling_name] = field_id
-                        keep_field_dict[blob_id][field_id] = starling_name
-                    elif starling_type == 2:
-                        if field_id in fields_fix:
-                            starlingname_to_column[starling_name] = field_id
-                            keep_field_dict[blob_id][field_id] = starling_name
-                            continue
-                        else:
-                            fields_fix.add(field_id)
-                        # copy
-                        persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                         parent_id=perspective_id,
-                                         field_id=field_id,
-                                         upper_level=None,
-                                         link_id=None,
-                                         position=position_counter
-                                         )
-                        position_counter += 1
-                        starlingname_to_column[starling_name] = field_id
-                        copy_field_dict[blob_id][field_id] = starling_name
-                    elif starling_type == 4:
-                        persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                         parent_id=perspective_id,
-                                         field_id=field_id,
-                                         upper_level=None,
-                                         link_id=None,
-                                         position=position_counter
-                                         )
-                        position_counter += 1
+                        new_ent = (
 
+                            create_entity(
+                                id = obj_id.id_pair(client_id),
+                                parent_id = lexentr_tuple,
+                                additional_metadata = None,
+                                field_id = field_id,
+                                self_id = None,
+                                link_id = None,
+                                locale_id = ENGLISH_LOCALE,
+                                filename = None,
+                                content = col_data,
+                                registry = None,
+                                request = None,
+                                save_object = False))
 
-                # blob_link -> perspective_link
-                csv_data = column_dict
-                collist = list(starlingname_to_column)
-                le_list = []
+                        CACHE.set(objects = [new_ent, ], DBSession=DBSession)
+                        # DBSession.add(new_ent)
+                i += 1
 
-                for number in csv_data["NUMBER"]:  # range()
-                    le_client_id, le_object_id = client_id, obj_id.next
-                    lexentr = dbLexicalEntry(object_id=le_object_id,
-                                             client_id=le_client_id,
-                                             parent_client_id=perspective_id[0],
-                                             parent_object_id=perspective_id[1])
-                    DBSession.add(lexentr)
-                    le_list.append((le_client_id, le_object_id))
-                    persp_to_lexentry[blob_id][number] = (le_client_id, le_object_id)
-                    #number += 1
-                #DBSession.bulk_save_objects(le_list)
-
-                i = 0
-                for lexentr_tuple in le_list:
-                    for starling_column_name in starlingname_to_column:
-                        field_id = starlingname_to_column[starling_column_name]
-                        col_data = csv_data[starling_column_name][i]
-
-                        if col_data:
-
-                            new_ent = (
-
-                                create_entity(
-                                    id = obj_id.id_pair(client_id),
-                                    parent_id = lexentr_tuple,
-                                    additional_metadata = None,
-                                    field_id = field_id,
-                                    self_id = None,
-                                    link_id = None,
-                                    locale_id = ENGLISH_LOCALE,
-                                    filename = None,
-                                    content = col_data,
-                                    registry = None,
-                                    request = None,
-                                    save_object = False))
-
-                            CACHE.set(objects = [new_ent, ], DBSession=DBSession)
-                            # DBSession.add(new_ent)
-                    i+=1
-            task_status.set(5, 70, "link, spread" )
-            tag_list = list()
-            d = dict()
-            for corpus_inf in corpora_inf:
-                blob_id = tuple(corpus_inf.get("blob_id"))
-                # if blob_id not in dictionary_id_links:
-                #     continue
-                if blob_id not in link_col_to_blob:
-                    continue
-                #persp = blob_to_perspective[blob_id]
-                copy_field_to_starlig = copy_field_dict[blob_id]
-                column_dict, starling_flag = perspective_column_dict[blob_id]
-
-                le_links = defaultdict(dict)
-                for num_col in link_field_dict[blob_id]:
-                    if num_col in link_col_to_blob[blob_id].keys():
-                        new_blob_link = link_col_to_blob[blob_id][num_col]
-                        link_numbers = list(zip(
-                                           [int(x) for x in column_dict["NUMBER"]],
-                                           [int(x) for x in column_dict[num_col]])
-                        )
-                        for link_pair in link_numbers:
-                            # TODO: fix
-                            le_numb = link_pair[1]
-                            if not le_numb:
-                                continue
-                            if not le_numb in persp_to_lexentry[new_blob_link]:
-                                #raise ResponseError(message="%s line not found (blob_id = %s)" % (le_numb, str(new_blob_link)))
-                                continue
-                            link_lexical_entry = persp_to_lexentry[new_blob_link][le_numb]
-                            lexical_entry_ids = persp_to_lexentry[blob_id][link_pair[0]]
-                            perspective = blob_to_perspective[new_blob_link]
-
-                            new_ent = (
-
-                                create_entity(
-                                    id = obj_id.id_pair(client_id),
-                                    parent_id = lexical_entry_ids,
-                                    additional_metadata = {
-                                        "link_perspective_id": perspective.id},
-                                    field_id = relation_field_id,
-                                    self_id = None,
-                                    link_id = link_lexical_entry,
-                                    locale_id = ENGLISH_LOCALE,
-                                    filename = None,
-                                    content = None,
-                                    registry = None,
-                                    request = None,
-                                    save_object = True))
-
-                            # DBSession.add(new_ent)
-                            le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
-                            # etymology tag
-                            #"""
-                            if corpus_inf.get("add_etymology"):
-                                if not new_blob_link in etymology_blobs:
-                                    continue
-                                tag = "%s_%s_%s_%s" % (num_col, str(new_blob_link), str(link_lexical_entry), timestamp)
-                                if not tag in etymology_set:
-                                    etymology_set.add(tag)
-                                    tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
-                                        field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=link_lexical_entry[0], parent_object_id=link_lexical_entry[1], content=tag)
-                                    # additional_metadata num_col
-                                    tag_entity.publishingentity.accepted = True
-                                    # DBSession.add(tag_entity)
-                                    CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
-                                tag_entity = dbEntity(client_id=client.id, object_id=obj_id.next,
-                                    field_client_id=etymology_field_id[0], field_object_id=etymology_field_id[1], parent_client_id=lexical_entry_ids[0], parent_object_id=lexical_entry_ids[1], content=tag)
-                                tag_entity.publishingentity.accepted = True
-                                # DBSession.add(tag_entity)
-                                CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
-
-
-
-                for field_id in copy_field_to_starlig:
-                    starling_field = copy_field_to_starlig[field_id]
-                    word_list = column_dict[starling_field]
-                    numb_list = iter(column_dict["NUMBER"])
-                    i = 0
-                    for word in word_list:
-                        i = next(numb_list)
-                        #word = word_list[i]
-                        lexical_entry_ids = persp_to_lexentry[blob_id][i]
-                        if lexical_entry_ids in le_links:
-                            for other_blob in le_links[lexical_entry_ids]:
-                                link_lexical_entry = le_links[lexical_entry_ids][other_blob]
-
-                                if word:
-
-                                    new_ent = (
-
-                                        create_entity(
-                                            id = obj_id.id_pair(client_id),
-                                            parent_id = link_lexical_entry,
-                                            additional_metadata = None,
-                                            field_id = field_id,
-                                            self_id = None,
-                                            link_id = None,
-                                            locale_id = ENGLISH_LOCALE,
-                                            filename = None,
-                                            content = word,
-                                            registry = None,
-                                            request = None,
-                                            save_object = False))
-
-                                    # DBSession.add(new_ent)
-                                    CACHE.set(objects = [new_ent, ], DBSession=DBSession)
-                        #i+=1
-            DBSession.flush()
+        DBSession.flush()
 
 
     except Exception as exception:
