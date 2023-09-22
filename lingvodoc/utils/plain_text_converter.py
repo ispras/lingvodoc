@@ -81,23 +81,23 @@ def txt_to_column(path, url, column_dict=collections.defaultdict(list), column=N
     tib_end = r'\|\|+'
     oir_end = r':+'
 
-    posn_marker = re.compile(f'\[{page}:{line}\]|'
-                             f'\[{page}\]')
+    position_marker = re.compile(f'\[{page}:{line}\]|'
+                                 f'\[{page}\]')
 
     line_marker = re.compile(f'\({line}\)')
 
-    sntc_marker = re.compile(f'{tib_end}|'
-                             f'{oir_end}|'
-                             f'\[{oir_end}\]')
+    sentence_marker = re.compile(f'{tib_end}|'
+                                 f'{oir_end}|'
+                                 f'\[{oir_end}\]')
 
-    txt_start = re.search(posn_marker, txt_file).start()
+    txt_start = re.search(position_marker, txt_file).start()
     txt_file = txt_file[txt_start:]
 
     txt_file = txt_file.replace('\r\n', ' ').replace('\n', ' ').replace('  ', ' ')
     # Replace colons in markers to another symbol to differ from colons in text
     txt_file = re.sub(r':(\d)', r'#\1', txt_file)
 
-    sentences = re.split(sntc_marker, txt_file)[:-1]
+    sentences = re.split(sentence_marker, txt_file)[:-1]
 
     if not column:
         column = path.split('/')[-1]
@@ -116,13 +116,13 @@ def txt_to_column(path, url, column_dict=collections.defaultdict(list), column=N
     return column_dict, count
 
 
-def txt_to_parallel_columns(sources):
+def txt_to_parallel_columns(blobs):
 
     column_dict = collections.defaultdict(list)
 
     max_count = 0
-    for path, url, name in sources:
-        column_dict, count = txt_to_column(path, url, column_dict, name)
+    for blob in blobs:
+        column_dict, count = txt_to_column(blob.real_storage_path, blob.content, column_dict)
         if count > max_count:
             max_count = count
 
@@ -137,84 +137,38 @@ def create_entity(
     parent_id = None,
     additional_metadata = None,
     field_id = None,
-    self_id = None,
-    link_id = None,
     locale_id = ENGLISH_LOCALE,
-    filename = None,
     content = None,
-    registry = None,
-    request = None,
     save_object = False):
 
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
-    parent_client_id, parent_object_id = parent_id
-    # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    # if not parent:
-    #     raise ResponseError(message="No such lexical entry in the system")
-
-    upper_level = None
-
-    field_client_id, field_object_id = field_id if field_id else (None, None)
-
-
-    if self_id:
-        # self_client_id, self_object_id = self_id
-        # upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
-        #                                                   object_id=self_object_id).first()
-        upper_level = CACHE.get(objects =
-            {
-                dbEntity : (self_id, )
-            },
-        DBSession=DBSession)
-
-        if not upper_level:
-            raise ResponseError(message="No such upper level in the system")
 
     client_id, object_id = id
+    parent_client_id, parent_object_id = parent_id
+    field_client_id, field_object_id = field_id if field_id else (None, None)
 
     # TODO: check permissions if object_id != None
 
+    dbentity = dbEntity(client_id=client_id,
+                        object_id=object_id,
+                        field_client_id=field_client_id,
+                        field_object_id=field_object_id,
+                        locale_id=locale_id,
+                        additional_metadata=additional_metadata,
+                        parent_client_id=parent_client_id,
+                        parent_object_id=parent_object_id,
+                        content = content,
+                        )
 
-    real_location = None
-    url = None
-
-    if link_id:
-        link_client_id, link_object_id = link_id
-        dbentity = dbEntity(client_id=client_id,
-                            object_id=object_id,
-                            field_client_id=field_client_id,
-                            field_object_id=field_object_id,
-                            locale_id=locale_id,
-                            additional_metadata=additional_metadata,
-                            parent_client_id=parent_client_id,
-                            parent_object_id=parent_object_id,
-                            link_client_id = link_client_id,
-                            link_object_id = link_object_id
-                            )
-        # else:
-        #     raise ResponseError(
-        #         message="The field is of link type. You should provide client_id and object id in the content")
-    else:
-        dbentity = dbEntity(client_id=client_id,
-                            object_id=object_id,
-                            field_client_id=field_client_id,
-                            field_object_id=field_object_id,
-                            locale_id=locale_id,
-                            additional_metadata=additional_metadata,
-                            parent_client_id=parent_client_id,
-                            parent_object_id=parent_object_id,
-                            content = content,
-                            )
-    if upper_level:
-        dbentity.upper_level = upper_level
     dbentity.publishingentity.accepted = True
+
     if save_object:
         CACHE.set(objects = [dbentity, ], DBSession=DBSession)
-        # DBSession.add(dbentity)
-        # DBSession.flush()
+
     return dbentity
 
+'''
 def graphene_to_dicts(starling_dictionaries):
     result = []
     for dictionary in starling_dictionaries:
@@ -256,40 +210,36 @@ class StarlingField(graphene.InputObjectType):
     field_id = LingvodocID(required=True)
     fake_id = graphene.String()
     link_fake_id = LingvodocID() #graphene.String()
+'''
 
-class StarlingDictionary(graphene.InputObjectType):
+class CorpusInf(graphene.InputObjectType):
     blob_id = LingvodocID()
     parent_id = LingvodocID(required=True)
     perspective_gist_id = LingvodocID()
     perspective_atoms = graphene.List(ObjectVal)
     translation_gist_id = LingvodocID()
     translation_atoms = graphene.List(ObjectVal)
-    field_map = graphene.List(StarlingField, required=True)
-    add_etymology = graphene.Boolean(required=True)
+    field_name = graphene.String()
     license = graphene.String()
 
 
-class GqlStarling(graphene.Mutation):
+class GqlParallelCorpora(graphene.Mutation):
     triumph = graphene.Boolean()
-    #convert_starling
 
     class Arguments:
-        starling_dictionaries=graphene.List(StarlingDictionary)
-        synchronous=graphene.Boolean()
+        corpora_inf = graphene.List(CorpusInf, required=True)
 
     def mutate(root, info, **args):
-        starling_dictionaries = args.get("starling_dictionaries")
-        if not starling_dictionaries:
-            raise ResponseError(message="The starling_dictionaries variable is not set")
+        corpora_inf = args.get("corpora_inf")
         cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
         sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
 
         task_names = []
 
-        for index, st_dict in enumerate(starling_dictionaries):
+        for index, corpus_inf in enumerate(corpora_inf):
 
-            translation_atoms = st_dict.get("translation_atoms")
-            default_name = f'dictionary {index + 1}'
+            translation_atoms = corpus_inf.get("translation_atoms")
+            default_name = f'corpus {index + 1}'
 
             task_names.append(
                 translation_atoms[0].get('content', default_name) if translation_atoms else
@@ -298,21 +248,16 @@ class GqlStarling(graphene.Mutation):
         name = ', '.join(task_names)
 
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
-        task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
+        task = TaskStatus(user_id, "Txt corpora conversion", name, 10)
 
-        convert(
+        convert_start(
             info,
-            starling_dictionaries,
+            corpora_inf,
             cache_kwargs,
             sqlalchemy_url,
-            task.key,
-            synchronous = args.get('synchronous', False))
+            task.key)
 
-        return GqlStarling(triumph=True)
-
-
-
-
+        return GqlParallelCorpora(triumph=True)
 
 
 
@@ -330,16 +275,12 @@ class ObjectId:
         self.object_id_counter += 1
         return self.object_id_counter
 
-
     def id_pair(self, client_id):
         return [client_id, self.next]
 
 
-
-
-
 #@contextlib.contextmanager
-def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
+def convert_start(ids, corpora_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
       convert_starling(starling_dictionaries: $starling_dictionaries){
@@ -360,7 +301,6 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                 time.asctime(time.gmtime()) + ''.join(
                     random.SystemRandom().choice(string.ascii_uppercase + string.digits) for c in range(n)))
 
-
             task_status = TaskStatus.get_from_cache(task_key)
             task_status.set(1, 1, "Preparing")
             engine = create_engine(sqlalchemy_url)
@@ -377,80 +317,41 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
             DBSession.add(client)
             DBSession.flush()
             client_id = client.id
-            id_to_field_dict = get_id_to_field_dict()
-            etymology_field_id = id_to_field_dict.get("Etymology")
-            relation_field_id = id_to_field_dict.get("Relation")
-
 
             link_col_to_blob = collections.defaultdict(dict)
 
-            dictionary_id_links = collections.defaultdict(list)
-            task_status.set(2, 5, "Checking links")
-            fake_link_to_field= {}#collections.defaultdict(list)
-            for starling_dictionary in starling_dictionaries:
-                fields = starling_dictionary.get("field_map")
-                blob_id_as_fake_id = starling_dictionary.get("blob_id")
-                for field in fields:
-                    link_fake_id = field.get("link_fake_id")
-                    if not link_fake_id:
-                        continue
-                    # dictionary_id_links[tuple(blob_id_as_fake_id)].append(tuple(link_fake_id))
-
-                    fake_link_to_field[tuple(link_fake_id)] = [x for x in fields if x["starling_type"] == 2]
-                    link_col_to_blob[tuple(blob_id_as_fake_id)][field.get("starling_name")] = tuple(link_fake_id)
-            # crutch
-            for starling_dictionary in starling_dictionaries:
-                fields = starling_dictionary.get("field_map")
-                blob_id = tuple(starling_dictionary.get("blob_id"))
-                if blob_id in fake_link_to_field:
-                    old_fields = fake_link_to_field[blob_id]
-                    for old_field in old_fields:
-                        fake_field = old_field.copy()
-                        fake_field["starling_type"] = 4
-                        if fake_field["field_id"] in [x.get("field_id") for x in fields]:
-                            continue
-                        fields.append(fake_field)
-                        starling_dictionary["field_map"] = fields
-            #
-
-            task_status.set(4, 50, "uploading...")
+            task_status.set(2, 50, "uploading...")
             blob_to_perspective = dict()
             perspective_column_dict = {}
 
             persp_to_lexentry = collections.defaultdict(dict)
-            copy_field_dict = collections.defaultdict(dict)
-            keep_field_dict = collections.defaultdict(dict)
-            link_field_dict = collections.defaultdict(dict)
             task_status_counter = 0
-            etymology_set = set()
-            etymology_blobs = set()
-            for starling_dictionary in starling_dictionaries:
+
+            blobs = []
+            for corpus_inf in corpora_inf:
                 task_status_counter += 1
-                blob_id = tuple(starling_dictionary.get("blob_id"))
+                blob_id = tuple(corpus_inf.get("blob_id"))
                 blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
+                blobs.append(blob)
 
-                # Getting CSV data, checking if the CSV file is not Lingvodoc-valid.
+            # Getting TXT data, checking if the TXT file is not Lingvodoc-valid.
 
-                column_dict, starling_flag = csv_to_columns(blob.real_storage_path, blob.content)
+            column_dict = txt_to_parallel_columns(blobs)
                 
-                if column_dict is None:
 
-                    task_status.set(None, -1,
-                        f'Convertion failed, invalid CSV file \'{blob.name}\'.')
+#####################
 
-                    return
+            #perspective_column_dict[blob_id] = column_dict
 
-                perspective_column_dict[blob_id] = column_dict, starling_flag
-
-                atoms_to_create = starling_dictionary.get("translation_atoms")
-                if atoms_to_create:
-                    content = atoms_to_create[0].get("content")
-                    task_status.set(4, 60, "%s (%s/%s)" % (content, task_status_counter, len(starling_dictionaries)))
+            atoms_to_create = corpus_inf.get("translation_atoms")
+            if atoms_to_create:
+                content = atoms_to_create[0].get("content")
+                task_status.set(4, 60, "%s (%s/%s)" % (content, task_status_counter, len(corpora_inf)))
                 dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create,
                                                                          None,
                                                                          (old_client_id, None),
                                                                          gist_type="Dictionary")
-                parent_id = starling_dictionary.get("parent_id")
+                parent_id = corpus_inf.get("parent_id")
 
                 dbdictionary_obj = (
 
@@ -460,7 +361,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         translation_gist_id = dictionary_translation_gist_id,
                         add_group = True,
                         additional_metadata = {
-                            'license': starling_dictionary.get('license') or 'proprietary',
+                            'license': corpus_inf.get('license') or 'proprietary',
                             'source_blob_id': blob_id}))
 
                 if starling_flag:
@@ -488,7 +389,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
                 blob_to_perspective[blob_id] = new_persp
                 perspective_id = [new_persp.client_id, new_persp.object_id]
-                fields = starling_dictionary.get("field_map")
+                fields = corpus_inf.get("field_map")
                 starlingname_to_column = collections.OrderedDict()
 
                 position_counter = 1
@@ -546,31 +447,6 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         position_counter += 1
 
 
-                add_etymology = starling_dictionary.get("add_etymology")
-                if add_etymology:
-                    persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                                     parent_id=perspective_id,
-                                     field_id=etymology_field_id,
-                                     upper_level=None,
-                                     link_id=None,
-                                     position=position_counter
-                                     )
-                    position_counter += 1
-                    etymology_blobs.add(blob_id)
-
-                if starling_flag:
-
-                    persp_to_field = create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
-                             parent_id=perspective_id,
-                             field_id=relation_field_id,
-                             upper_level=None,
-                             link_id=None,
-                             position=position_counter
-                             )
-
-                fields_marked_as_links = [x.get("starling_name") for x in fields if x.get("starling_type") == 3]
-                link_field_dict[blob_id] = fields_marked_as_links
-
                 # blob_link -> perspective_link
                 csv_data = column_dict
                 collist = list(starlingname_to_column)
@@ -618,8 +494,8 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
             task_status.set(5, 70, "link, spread" )
             tag_list = list()
             d = dict()
-            for starling_dictionary in starling_dictionaries:
-                blob_id = tuple(starling_dictionary.get("blob_id"))
+            for corpus_inf in corpora_inf:
+                blob_id = tuple(corpus_inf.get("blob_id"))
                 # if blob_id not in dictionary_id_links:
                 #     continue
                 if blob_id not in link_col_to_blob:
@@ -669,7 +545,7 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                             le_links[lexical_entry_ids][new_blob_link] = link_lexical_entry
                             # etymology tag
                             #"""
-                            if starling_dictionary.get("add_etymology"):
+                            if corpus_inf.get("add_etymology"):
                                 if not new_blob_link in etymology_blobs:
                                     continue
                                 tag = "%s_%s_%s_%s" % (num_col, str(new_blob_link), str(link_lexical_entry), timestamp)
@@ -725,15 +601,14 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
                         #i+=1
             DBSession.flush()
 
+
     except Exception as exception:
-
         traceback_string = (
-
             ''.join(
                 traceback.format_exception(
                     exception, exception, exception.__traceback__))[:-1])
 
-        log.warning('\nconvert_starling: exception')
+        log.warning('\nconvert_txt_corpora: exception')
         log.warning('\n' + traceback_string)
 
         task_status.set(None, -1,
@@ -741,18 +616,3 @@ def convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task
 
     else:
         task_status.set(10, 100, "Finished", "")
-
-    # pr.disable()
-    # s = StringIO()
-    # ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
-    # ps.print_stats()
-    # uncomment this to see who's calling what
-    # ps.print_callers()
-    # print(s.getvalue())
-
-@celery.task
-def convert_start_async(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
-    convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
-
-def convert_start_sync(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key):
-    convert_start(ids, starling_dictionaries, cache_kwargs, sqlalchemy_url, task_key)
