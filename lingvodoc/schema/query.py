@@ -266,7 +266,7 @@ from lingvodoc.utils.phonology import (
     gql_phonology_link_perspective_data,
     gql_sound_and_markup)
 
-from lingvodoc.utils import starling_converter, render_statement, ids_to_id_cte, ids_to_id_query
+from lingvodoc.utils import starling_converter, render_statement, ids_to_id_cte, ids_to_id_query, plain_text_converter
 
 from lingvodoc.utils.search import (
     translation_gist_search,
@@ -19928,6 +19928,7 @@ class MyMutations(graphene.ObjectType):
     for more beautiful imports
     """
     convert_starling = starling_converter.GqlStarling.Field()
+    convert_plain_text = plain_text_converter.GqlParallelCorpora.Field()
     convert_dialeqt = ConvertDictionary.Field()
     convert_corpus = ConvertFiveTiers.Field()
     create_field = CreateField.Field()

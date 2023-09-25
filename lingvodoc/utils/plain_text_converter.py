@@ -158,8 +158,7 @@ def create_entity(
                         additional_metadata=additional_metadata,
                         parent_client_id=parent_client_id,
                         parent_object_id=parent_object_id,
-                        content = content,
-                        )
+                        content=content)
 
     dbentity.publishingentity.accepted = True
 
@@ -168,49 +167,6 @@ def create_entity(
 
     return dbentity
 
-'''
-def graphene_to_dicts(starling_dictionaries):
-    result = []
-    for dictionary in starling_dictionaries:
-        dictionary = dict(dictionary)
-        fmap = [dict(x) for x in dictionary.get("field_map")]
-        dictionary["field_map"] = fmap
-        result.append(dictionary)
-
-    return result
-
-def convert(
-    info,
-    starling_dictionaries,
-    cache_kwargs,
-    sqlalchemy_url,
-    task_key,
-    synchronous = False):
-
-    ids = [info.context["client_id"], None]
-    locale_id = info.context.get('locale_id')
-
-    convert_f = (
-        convert_start_sync if synchronous else
-        convert_start_async.delay)
-
-    convert_f(
-        ids,
-        graphene_to_dicts(starling_dictionaries),
-        cache_kwargs,
-        sqlalchemy_url,
-        task_key)
-
-    return True
-
-
-class StarlingField(graphene.InputObjectType):
-    starling_name = graphene.String(required=True)
-    starling_type = graphene.Int(required=True)
-    field_id = LingvodocID(required=True)
-    fake_id = graphene.String()
-    link_fake_id = LingvodocID() #graphene.String()
-'''
 
 class CorpusInf(graphene.InputObjectType):
     blob_id = LingvodocID()
@@ -259,12 +215,6 @@ class GqlParallelCorpora(graphene.Mutation):
 
         return GqlParallelCorpora(triumph=True)
 
-
-
-import cProfile
-from io import StringIO
-import pstats
-import contextlib
 
 class ObjectId:
 
