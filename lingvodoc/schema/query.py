@@ -5848,7 +5848,7 @@ class Query(graphene.ObjectType):
             gql_statuses.append(gql_tr_gist)
         return gql_statuses
 
-    def resolve_all_fields(self, info, common=False):
+    def resolve_all_fields(self, info, common=False, parallel=False):
         fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all()
         if common:
             field_to_psersp_dict = collections.defaultdict(list)
@@ -5869,6 +5869,8 @@ class Query(graphene.ObjectType):
                     continue
                 if db_field.data_type != "Text":
                     continue
+            if parallel and not db_field.additional_metadata.get('parallel'):
+                continue
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
             gql_field.dbObject = db_field
             gql_fields.append(gql_field)
