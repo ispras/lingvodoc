@@ -4334,7 +4334,7 @@ class Query(graphene.ObjectType):
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(BaseGroup)
     all_data_types = graphene.List(TranslationGist)
-    all_fields = graphene.List(Field, common=graphene.Boolean())
+    all_fields = graphene.List(Field, common=graphene.Boolean(), parallel=graphene.Boolean())
     common_fields = graphene.List(Field)
     all_statuses = graphene.List(TranslationGist)
     template_fields = graphene.List(Field, mode=graphene.String())
@@ -5869,7 +5869,7 @@ class Query(graphene.ObjectType):
                     continue
                 if db_field.data_type != "Text":
                     continue
-            if parallel and not db_field.additional_metadata.get('parallel'):
+            if parallel and not (db_field.additional_metadata and db_field.additional_metadata.get('parallel')):
                 continue
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
             gql_field.dbObject = db_field
