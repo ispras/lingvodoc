@@ -1,60 +1,69 @@
+
+# Standard library imports.
+
 import logging
+
+# External imports.
 
 import graphene
 
+from sqlalchemy import (
+    and_,
+    Boolean,
+    cast,
+    func,
+    literal,
+    not_,
+    or_,
+    tuple_)
+
+from sqlalchemy.orm import aliased
+
+from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.util import identity_key
+
+# Lingvodoc imports.
+
 from lingvodoc.cache.caching import CACHE
+
 from lingvodoc.models import (
-    Language as dbLanguage,
+    BaseGroup as dbBaseGroup,
+    Client as dbClient,
+    DBSession,
     Dictionary as dbDictionary,
     DictionaryPerspective as dbPerspective,
+    Group as dbGroup,
+    Language as dbLanguage,
     TranslationAtom as dbTranslationAtom,
-    Client as dbClient,
-    User as dbUser,
-    DBSession,
     TranslationGist as dbTranslationGist,
-    BaseGroup as dbBaseGroup,
-    Group as dbGroup
-)
+    User as dbUser)
+
+from lingvodoc.schema.gql_dictionary import Dictionary
 
 from lingvodoc.schema.gql_holders import (
-    LingvodocObjectType,
-    CommonFieldsComposite,
-    TranslationHolder,
-    fetch_object,
-    del_object,
-    client_id_check,
-    ResponseError,
     acl_check_by_id,
+    client_id_check,
+    CommonFieldsComposite,
+    del_object,
+    fetch_object,
+    LingvodocID,
+    LingvodocObjectType,
     ObjectVal,
-    LingvodocID
-)
-from lingvodoc.schema.gql_translationgist import TranslationGistInterface
-from .gql_dictionary import Dictionary
+    ResponseError,
+    TranslationHolder)
 
-import lingvodoc.utils as utils
+from lingvodoc.schema.gql_translationgist import TranslationGistInterface
+
+from lingvodoc.utils import statistics
 
 from lingvodoc.utils.creation import (
+    add_user_to_group,
     create_dblanguage,
     create_gists_with_atoms,
-    add_user_to_group, update_metadata)
+    update_metadata)
 
 from lingvodoc.utils.deletion import real_delete_language
 from lingvodoc.utils.search import translation_gist_search
-
-# from lingvodoc.schema.gql_dictionary import Dictionary
-from sqlalchemy.orm import aliased
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.orm.util import identity_key
-from sqlalchemy import (
-    func,
-    or_,
-    and_,
-    tuple_,
-    not_,
-    literal,
-    cast,
-    Boolean
-)
 
 
 # Setting up logging.
@@ -97,6 +106,15 @@ class Language(LingvodocObjectType):
             published = graphene.Boolean()))
 
     in_toc = graphene.Boolean()
+
+    statistic = (
+
+        graphene.Field(
+            ObjectVal,
+            starting_time = graphene.Int(),
+            ending_time = graphene.Int(),
+            dictionaries = graphene.Boolean(),
+            corpora = graphene.Boolean()))
 
     class Meta:
         interfaces = (CommonFieldsComposite, TranslationHolder, TranslationGistInterface)
@@ -464,6 +482,26 @@ class Language(LingvodocObjectType):
         return (
             metadata is not None and
             metadata.get('toc_mark', False))
+
+    @fetch_object()
+    def resolve_statistic(
+        self,
+        info,
+        starting_time = None,
+        ending_time = None,
+        dictionaries = False,
+        corpora = False):
+
+        return (
+
+            statistics.new_format(
+                statistics.stat_language(
+                    self.id,
+                    starting_time,
+                    ending_time,
+                    dictionaries,
+                    corpora,
+                    locale_id = info.context.locale_id)))
 
 
 class CreateLanguage(graphene.Mutation):
