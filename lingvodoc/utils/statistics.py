@@ -12,16 +12,23 @@ import traceback
 
 # External imports.
 
-from pyramid.response import Response
-from pyramid.view import view_config
+from sqlalchemy import (
+    and_,
+    BigInteger,
+    cast,
+    extract,
+    Float,
+    func,
+    tuple_)
 
-from sqlalchemy import and_, BigInteger, cast, extract, Float, func, tuple_
 from sqlalchemy.orm import aliased
-from lingvodoc.schema.gql_holders import ResponseError
 
 # Lingvodoc imports.
 
+from lingvodoc.schema.gql_holders import ResponseError
+
 from lingvodoc.models import (
+    BaseGroup,
     Client,
     DBSession,
     Dictionary,
@@ -30,18 +37,16 @@ from lingvodoc.models import (
     ENGLISH_LOCALE,
     Entity,
     Field,
+    Group,
+    Language,
     LexicalEntry,
     PublishingEntity,
     RUSSIAN_LOCALE,
     TranslationAtom,
     TranslationGist,
-    User,
-    Group,
-    BaseGroup,
-    DictionaryPerspective
-)
+    User)
 
-from lingvodoc.views.v2.utils import message, unimplemented
+from lingvodoc.utils import ids_to_id_query
 from lingvodoc.utils.creation import add_user_to_group
 from lingvodoc.schema.gql_holders import ResponseError
 
@@ -55,59 +60,176 @@ log = logging.getLogger(__name__)
 simple_field_type_set = set(['image', 'link', 'markup', 'sound', 'text', "directed link"])
 
 
-def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
+def time_format(
+    time_begin,
+    time_end):
+
+    if time_begin:
+
+        time_begin_str = (
+
+            '\'{}\' ({})'.format(
+                datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '),
+                time_begin))
+
+    else:
+        
+        time_begin_str = 'None'
+
+    if time_end:
+
+        time_end_str = (
+
+            '\'{}\' ({})'.format(
+                datetime.datetime.utcfromtimestamp(time_end).isoformat(' '),
+                time_end))
+
+    else:
+        
+        time_end_str = 'None'
+
+    return (
+        time_begin_str, time_end_str)
+
+
+def with_time_filter(
+    query,
+    column,
+    time_begin,
+    time_end):
+
+    if time_begin is not None:
+
+        query = (
+
+            query.filter(
+                column >= time_begin))
+
+    if time_end is not None:
+
+        query = (
+
+            query.filter(
+                column < time_end))
+
+    return query
+
+
+def new_format(current_statistics):
+
+    new_format_statistics = []
+
+    for key, stat_dict in current_statistics.items():
+
+        new_dict = {
+            'user_id': key,
+            'name': stat_dict['name']}
+
+        # NOTE: 'lexical_entries' with underscore '_' for the new format.
+
+        if 'lexical entries' in stat_dict:
+            new_dict['lexical_entries'] = stat_dict['lexical entries']
+
+        if 'entities' in stat_dict:
+            new_dict['entities'] = stat_dict['entities']
+
+        new_format_statistics.append(new_dict)
+
+    log.debug(
+        '\nnew format:\n' +
+        pprint.pformat(
+            new_format_statistics, width = 144))
+
+    return new_format_statistics
+
+
+entry_client_id_e = (
+
+    func.coalesce(
+
+        cast(
+            LexicalEntry.additional_metadata[('merge', 'original_client_id')].astext,
+            BigInteger),
+
+        LexicalEntry.client_id)
+
+        .label('entry_client_id'))
+
+
+entry_created_at_e = (
+
+    func.coalesce(
+
+        cast(
+            LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext,
+            Float),
+
+        extract(
+            'epoch',
+            LexicalEntry.created_at))
+
+        .label('entry_created_at'))
+
+
+entity_client_id_e = (
+
+    func.coalesce(
+        cast(
+            Entity.additional_metadata[
+                ('merge', 'original_client_id')].astext,
+            BigInteger),
+        Entity.client_id)
+
+        .label('entity_client_id'))
+
+
+entity_created_at_e = (
+
+    func.coalesce(
+        cast(
+            Entity.additional_metadata[
+                ('merge', 'min_created_at')].astext,
+            Float),
+        extract(
+            'epoch',
+            Entity.created_at))
+
+        .label('entity_created_at'))
+
+
+def stat_perspective(
+    perspective_id,
+    time_begin = None,
+    time_end = None,
+    locale_id = None):
     """
     Gathers user participation statistics for a specified perspective in a given time interval
     [time_begin, time_end).
 
-    Parameters 'time_begin' and 'time_end' are Unix timestamps and are specified by URL parameters
-    'time_begin', 'time_end' as either YYYY-MM-DDtHH:MM:SS-formatted dates or Unix timestamps as Python
-    numeric literals.
+    Parameters 'time_begin' and 'time_end' are Unix timestamps if specified.
+
+    Significant difference compared to perspective statistics in views/v2/statistics.py is also statistics
+    of unaccepted entities.
     """
 
-    #log.debug('stat_perspective')
-
     try:
-        """
 
+        time_begin_str, time_end_str = (
 
-        # Trying to determine time interval.
+            time_format(
+                time_begin,
+                time_end))
 
-        time_begin_string = request.params.get('time_begin', '0')
-        time_begin = try_parse_datetime(time_begin_string) ####################
-
-        if time_begin is None:
-            return {'error': message('Invalid time representation \'{0}\'.'.format(time_begin_string))}
-
-        time_end_string = request.params.get('time_end', '2038-01-01t00:00:00')
-        time_end = try_parse_datetime(time_end_string)   ####################
-        ###################################################################################################
-        """
-        # TODO: id check
-        perspective_client_id = perspective_id[0] ###########
-        perspective_object_id = perspective_id[1] ############
-        if time_end is None:
-            raise ResponseError(message='Invalid time representation \'{0}\'.'.format(time_end))
-
-        log.debug('stat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5})'.format(
-            perspective_client_id, perspective_object_id,
-            datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
-            datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end))
+        log.debug(
+            f'\nstat_perspective {perspective_id} from {time_begin_str} to {time_end_str}')
 
         # Ok, now working, starting with perspective check.
 
-        # perspective = DBSession.query(DictionaryPerspective).filter_by(
-        #     client_id = perspective_client_id,
-        #     object_id = perspective_object_id).first()
-        perspective = CACHE.get(objects=
-            {
-                DictionaryPerspective : (perspective_id, )
-            },
-        DBSession=DBSession)
+        perspective = (
+            DictionaryPerspective.get(perspective_id))
 
         if not perspective:
-            raise ResponseError(message='No such perspective {0}/{1}.'.format(
-                perspective_client_id, perspective_object_id))
+            raise ResponseError(f'No perspective {perspective_id}.')
 
         # Getting lexical entries, using following base view:
         #
@@ -121,185 +243,273 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
         #     parent_object_id = perspective_object_id and
         #     marked_for_deletion = false;
 
-        entry_query = (DBSession.query(
+        entry_query = (
 
-            func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'original_client_id')].astext, BigInteger),
-                LexicalEntry.client_id).label('entry_client_id'),
+            DBSession
 
-            func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, Float),
-                extract('epoch', LexicalEntry.created_at)).label('entry_created_at'))
+                .query(
+                    entry_client_id_e,
+                    entry_created_at_e)
 
-            .filter(and_(
-                LexicalEntry.parent_client_id == perspective_client_id,
-                LexicalEntry.parent_object_id == perspective_object_id,
-                LexicalEntry.marked_for_deletion == False)).subquery())
+                .filter(
+                    LexicalEntry.parent_client_id == perspective_id[0],
+                    LexicalEntry.parent_object_id == perspective_id[1],
+                    LexicalEntry.marked_for_deletion == False)
 
-        entry_count_query = DBSession.query(
-            entry_query.c.entry_client_id, func.count('*').label('entry_count')).filter(and_(
-                entry_query.c.entry_created_at >= time_begin,
-                entry_query.c.entry_created_at < time_end)).group_by(
-                    entry_query.c.entry_client_id).subquery()
+                .subquery())
 
-        entry_count_list = DBSession.query(
-            Client.id, Client.user_id, Client.is_browser_client, entry_count_query.c.entry_count).join(
-                entry_count_query, Client.id == entry_count_query.c.entry_client_id).all()
+        entry_count_query = (
+
+            with_time_filter(
+
+                DBSession.query(
+                    entry_query.c.entry_client_id,
+                    func.count('*').label('entry_count')),
+
+                entry_query.c.entry_created_at,
+                time_begin,
+                time_end)
+
+                .group_by(entry_query.c.entry_client_id)
+                .subquery())
+
+        entry_count_list = (
+
+            DBSession
+
+                .query(
+                    Client.id,
+                    Client.user_id,
+                    Client.is_browser_client,
+                    entry_count_query.c.entry_count)
+
+                .join(
+                    entry_count_query,
+                    Client.id == entry_count_query.c.entry_client_id)
+
+                .all())
 
         # Counting lexical entries.
 
         user_data_dict = {}
 
+        if entry_count_list:
+
+            user_data_total = {
+                'login': None,
+                'name': None,
+                'lexical entries': {'web': 0, 'desktop': 0, 'total': 0}}
+
+            user_data_dict[None] = user_data_total
+
         for client_id, user_id, is_browser, entry_count in entry_count_list:
 
             if user_id not in user_data_dict:
-                user = DBSession.query(User).filter_by(id = user_id).first()
+
+                user = User.get(user_id)
 
                 user_data_dict[user_id] = {
-                    'login': user.login, 'name': user.name,
+                    'login': user.login,
+                    'name': user.name,
                     'lexical entries': {'web': 0, 'desktop': 0, 'total': 0}}
 
-            entry_data = user_data_dict[user_id]['lexical entries']
+            entry_data = (
+                user_data_dict[user_id]['lexical entries'])
 
-            entry_data['web' if is_browser else 'desktop'] += entry_count
+            entry_data_total = (
+                user_data_total['lexical entries'])
+
+            client_string = (
+                'web' if is_browser else 'desktop')
+
+            entry_data[client_string] += entry_count
+            entry_data_total[client_string] += entry_count
+
             entry_data['total'] += entry_count
+            entry_data_total['total'] += entry_count
 
         # Getting perspective's field data.
 
-        #####locale_id = int(request.cookies.get('locale_id') or 2)
+        field_data_list = (
 
-        field_data_list = DBSession.query(Field).filter(and_(
-            DictionaryPerspectiveToField.parent_client_id == perspective_client_id,
-            DictionaryPerspectiveToField.parent_object_id == perspective_object_id,
-            DictionaryPerspectiveToField.marked_for_deletion == False,
-            Field.client_id == DictionaryPerspectiveToField.field_client_id,
-            Field.object_id == DictionaryPerspectiveToField.field_object_id,
-            Field.marked_for_deletion == False)).all()
+            DBSession
+                .query(Field)
+
+                .filter(
+                    DictionaryPerspectiveToField.parent_client_id == perspective_id[0],
+                    DictionaryPerspectiveToField.parent_object_id == perspective_id[1],
+                    DictionaryPerspectiveToField.marked_for_deletion == False,
+                    Field.client_id == DictionaryPerspectiveToField.field_client_id,
+                    Field.object_id == DictionaryPerspectiveToField.field_object_id,
+                    Field.marked_for_deletion == False)
+
+                .all())
 
         for field in field_data_list:
+
             data_type = field.data_type.lower()
 
             # Standard entity type, we should just count entities in the same as with entries.
 
             if data_type in simple_field_type_set:
 
-                entity_query = (DBSession.query(
+                entity_query = (
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'original_client_id')].astext, BigInteger),
-                        Entity.client_id).label('entity_client_id'),
+                    DBSession
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, Float),
-                        extract('epoch', Entity.created_at)).label('entity_created_at'),
+                        .query(
+                            entity_client_id_e,
+                            entity_created_at_e,                        
 
-                    PublishingEntity.published, PublishingEntity.accepted)
+                            PublishingEntity.published,
+                            PublishingEntity.accepted)
 
-                    .filter(and_(
-                        LexicalEntry.parent_client_id == perspective_client_id,
-                        LexicalEntry.parent_object_id == perspective_object_id,
-                        LexicalEntry.marked_for_deletion == False,
-                        Entity.parent_client_id == LexicalEntry.client_id,
-                        Entity.parent_object_id == LexicalEntry.object_id,
-                        Entity.field_client_id == field.client_id,
-                        Entity.field_object_id == field.object_id,
-                        Entity.marked_for_deletion == False,
-                        PublishingEntity.client_id == Entity.client_id,
-                        PublishingEntity.object_id == Entity.object_id)).subquery())
+                        .filter(
+                            LexicalEntry.parent_client_id == perspective_id[0],
+                            LexicalEntry.parent_object_id == perspective_id[1],
+                            LexicalEntry.marked_for_deletion == False,
+                            Entity.parent_client_id == LexicalEntry.client_id,
+                            Entity.parent_object_id == LexicalEntry.object_id,
+                            Entity.field_client_id == field.client_id,
+                            Entity.field_object_id == field.object_id,
+                            Entity.marked_for_deletion == False,
+                            PublishingEntity.client_id == Entity.client_id,
+                            PublishingEntity.object_id == Entity.object_id)
+
+                        .subquery())
 
                 # Grouping by clients and publishing status.
 
-                entity_count_query = DBSession.query(
-                    entity_query.c.entity_client_id,
-                    entity_query.c.published,
-                    entity_query.c.accepted,
-                    func.count('*').label('entity_count')).filter(and_(
-                        entity_query.c.entity_created_at >= time_begin,
-                        entity_query.c.entity_created_at < time_end)).group_by(
+                entity_count_query = (
+
+                    with_time_filter(
+
+                        DBSession.query(
                             entity_query.c.entity_client_id,
                             entity_query.c.published,
-                            entity_query.c.accepted).subquery()
+                            entity_query.c.accepted,
+                            func.count('*').label('entity_count')),
+
+                        entity_query.c.entity_created_at,
+                        time_begin,
+                        time_end)
+
+                        .group_by(
+                            entity_query.c.entity_client_id,
+                            entity_query.c.published,
+                            entity_query.c.accepted)
+
+                        .subquery())
 
             # Grouping tags are counted in a special way.
 
             elif data_type == 'grouping tag':
 
-                entity_query = (DBSession.query(
+                entity_query = (
 
-                    LexicalEntry.client_id,
-                    LexicalEntry.object_id,
+                    DBSession
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'original_client_id')].astext, BigInteger),
-                        Entity.client_id).label('entity_client_id'),
+                        .query(
+                            LexicalEntry.client_id,
+                            LexicalEntry.object_id,
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, Float),
-                        extract('epoch', Entity.created_at)).label('entity_created_at'),
+                            entity_client_id_e,
+                            entity_created_at_e,
 
-                    PublishingEntity.published, PublishingEntity.accepted)
+                            PublishingEntity.published,
+                            PublishingEntity.accepted)
 
-                    .filter(and_(
-                        LexicalEntry.parent_client_id == perspective_client_id,
-                        LexicalEntry.parent_object_id == perspective_object_id,
-                        LexicalEntry.marked_for_deletion == False,
-                        Entity.parent_client_id == LexicalEntry.client_id,
-                        Entity.parent_object_id == LexicalEntry.object_id,
-                        Entity.field_client_id == field.client_id,
-                        Entity.field_object_id == field.object_id,
-                        Entity.marked_for_deletion == False,
-                        PublishingEntity.client_id == Entity.client_id,
-                        PublishingEntity.object_id == Entity.object_id)).subquery())
+                        .filter(
+                            LexicalEntry.parent_client_id == perspective_id[0],
+                            LexicalEntry.parent_object_id == perspective_id[1],
+                            LexicalEntry.marked_for_deletion == False,
+
+                            Entity.parent_client_id == LexicalEntry.client_id,
+                            Entity.parent_object_id == LexicalEntry.object_id,
+                            Entity.field_client_id == field.client_id,
+                            Entity.field_object_id == field.object_id,
+                            Entity.marked_for_deletion == False,
+
+                            PublishingEntity.client_id == Entity.client_id,
+                            PublishingEntity.object_id == Entity.object_id)
+
+                        .subquery())
 
                 # Grouping tags are grouped by lexical entries.
 
-                entry_group_query = DBSession.query(
-                    entity_query.c.entity_client_id,
-                    entity_query.c.published,
-                    entity_query.c.accepted).filter(and_(
-                        entity_query.c.entity_created_at >= time_begin,
-                        entity_query.c.entity_created_at < time_end)).group_by(
+                entry_group_query = (
+
+                    with_time_filter(
+
+                        DBSession.query(
+                            entity_query.c.entity_client_id,
+                            entity_query.c.published,
+                            entity_query.c.accepted),
+
+                        entity_query.c.entity_created_at,
+                        time_begin,
+                        time_end)
+
+                        .group_by(
                             entity_query.c.client_id,
                             entity_query.c.object_id,
                             entity_query.c.entity_client_id,
                             entity_query.c.published,
-                            entity_query.c.accepted).subquery()
+                            entity_query.c.accepted)
+
+                        .subquery())
 
                 # Grouping by clients and publishing status.
 
-                entity_count_query = DBSession.query(
-                    entry_group_query.c.entity_client_id,
-                    entry_group_query.c.published,
-                    entry_group_query.c.accepted,
-                    func.count('*').label('entity_count')).group_by(
-                        entry_group_query.c.entity_client_id,
-                        entry_group_query.c.published,
-                        entry_group_query.c.accepted).subquery()
+                entity_count_query = (
+
+                    DBSession
+
+                        .query(
+                            entry_group_query.c.entity_client_id,
+                            entry_group_query.c.published,
+                            entry_group_query.c.accepted,
+                            func.count('*').label('entity_count'))
+
+                        .group_by(
+                            entry_group_query.c.entity_client_id,
+                            entry_group_query.c.published,
+                            entry_group_query.c.accepted)
+
+                        .subquery())
 
             # Unknown field data type.
 
             else:
-                raise ResponseError(message='Unknown field data type \'{0}\'.'.format(data_type))
+
+                raise ResponseError(f'Unknown field data type \'{data_type}\'.')
 
             # Adding user/client info, getting final entity counts.
 
-            entity_count_list = DBSession.query(
-                Client.id, Client.user_id, Client.is_browser_client,
-                entity_count_query.c.published,
-                entity_count_query.c.accepted,
-                entity_count_query.c.entity_count).join(
-                    entity_count_query, Client.id == entity_count_query.c.entity_client_id).all()
+            entity_count_list = (
+
+                DBSession
+
+                    .query(
+                        Client.user_id,
+                        Client.is_browser_client,
+                        entity_count_query.c.published,
+                        entity_count_query.c.accepted,
+                        entity_count_query.c.entity_count)
+
+                    .join(
+                        entity_count_query,
+                        Client.id == entity_count_query.c.entity_client_id)
+
+                    .all())
 
             # Counting entities.
 
-            for client_id, user_id, is_browser, published, accepted, entity_count in entity_count_list:
+            for user_id, is_browser, published, accepted, entity_count in entity_count_list:
 
                 if user_id not in user_data_dict:
-                    user = DBSession.query(User).filter_by(id = user_id).first()
+
+                    user = User.get(user_id)
 
                     user_data_dict[user_id] = {
                         'login': user.login,
@@ -320,9 +530,21 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                         'total': {},
                         'unaccepted': {}}
 
-                entity_data = user_data['entities']
+                if 'entities' not in user_data_total:
+
+                    user_data_total['entities'] = {
+                        'published': {},
+                        'unpublished': {},
+                        'total': {},
+                        'unaccepted': {}}
 
                 # Counting entities by publishing status, data type and client type.
+
+                entity_data = (
+                    user_data['entities'])
+
+                entity_data_total = (
+                    user_data_total['entities'])
 
                 client_string = (
                     'web' if is_browser else 'desktop')
@@ -333,7 +555,12 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                 for p_string in [published_string, 'total']:
 
                     if p_string not in entity_data:
+
                         entity_data[p_string] = {}
+
+                    if p_string not in entity_data_total:
+
+                        entity_data_total[p_string] = {}
 
                     for f_string in [field.get_translation(locale_id), 'total']:
 
@@ -345,8 +572,18 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                                 'total': 0,
                                 'field_id': [field.client_id, field.object_id]}
 
+                        if f_string not in entity_data_total[p_string]:
+
+                            entity_data_total[p_string][f_string] = {
+                                'web': 0,
+                                'desktop': 0,
+                                'total': 0,
+                                'field_id': [field.client_id, field.object_id]}
+
                         for c_string in [client_string, 'total']:
+
                             entity_data[p_string][f_string][c_string] += entity_count
+                            entity_data_total[p_string][f_string][c_string] += entity_count
 
                 # Also counting unaccepted entities.
                 #
@@ -359,6 +596,9 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                 if 'unaccepted' not in entity_data:
                     entity_data['unaccepted'] = {}
 
+                if 'unaccepted' not in entity_data_total:
+                    entity_data_total['unaccepted'] = {}
+
                 for f_string in [field.get_translation(locale_id), 'total']:
 
                     if f_string not in entity_data['unaccepted']:
@@ -369,16 +609,25 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
                             'total': 0,
                             'field_id': [field.client_id, field.object_id]}
 
+                    if f_string not in entity_data_total['unaccepted']:
+
+                        entity_data_total['unaccepted'][f_string] = {
+                            'web': 0,
+                            'desktop': 0,
+                            'total': 0,
+                            'field_id': [field.client_id, field.object_id]}
+
                     for c_string in [client_string, 'total']:
+
                         entity_data['unaccepted'][f_string][c_string] += entity_count
+                        entity_data_total['unaccepted'][f_string][c_string] += entity_count
 
         # Returning gathered statistics.
 
-        log.debug('\nstat_perspective {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
-            perspective_client_id, perspective_object_id,
-            datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
-            datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,
-            pprint.pformat(user_data_dict, width = 144)))
+        log.debug(
+            f'\nstat_perspective {perspective_id} from {time_begin_str} to {time_end_str}:\n' +
+            pprint.pformat(
+                user_data_dict, width = 144))
 
         return user_data_dict
 
@@ -386,288 +635,286 @@ def stat_perspective(perspective_id, time_begin, time_end, locale_id=2):
 
     except Exception as exception:
 
-        traceback_string = ''.join(traceback.format_exception(
-            exception, exception, exception.__traceback__))[:-1]
+        traceback_string = (
 
-        log.debug('stat_perspective: exception')
-        log.debug('\n' + traceback_string)
+            ''.join(
+                traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1])
 
-        raise ResponseError(message='\n' + traceback_string)
+        log.warning('stat_perspective: exception')
+        log.warning('\n' + traceback_string)
+
+        raise (
+
+            ResponseError(
+                'Exception:\n' + traceback_string))
 
 
-def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
+def stat_condition_list(
+    condition_list,
+    time_begin = None,
+    time_end = None,
+    locale_id = None):
     """
-    Gathers cumulative user participation statistics for all perspectives of a specified dictionary in a
-    given time interval [time_begin, time_end).
+    Gathers cumulative user participation statistics for all perspectives by an SQLAlchemy query condition
+    list, in a given time interval [time_begin, time_end).
 
-    Parameters 'time_begin' and 'time_end' are Unix timestamps and are specified by URL parameters in the
-    same way as for 'stat_perspective'.
+    Parameters 'time_begin' and 'time_end' are Unix timestamps if specified.
     """
 
-    log.debug('stat_dictionary')
+    primary_locale_id = (
+        int(locale_id or ENGLISH_LOCALE))
 
-    try:
-        """
-        # Trying to determine time interval.
+    secondary_locale_id = (
+        ENGLISH_LOCALE if primary_locale_id != ENGLISH_LOCALE else
+        RUSSIAN_LOCALE)
 
-        time_begin_string = request.params.get('time_begin', '0')
-        time_begin = try_parse_datetime(time_begin_string) ######################
+    # And now we are going to count lexical entries, we begin with basic perspective/lexical entry view.
 
-        if time_begin is None:
-            return {'error': message('Invalid time representation \'{0}\'.'.format(time_begin_string))}
+    entry_query = (
 
-        time_end_string = request.params.get('time_end', '2038-01-01t00:00:00')
-        time_end = try_parse_datetime(time_end_string)    ###################
+        DBSession
 
-        if time_end is None:
-            return {'error': message('Invalid time representation \'{0}\'.'.format(time_end_string))}
-        """
-        dictionary_client_id = dictionary_id[0]#request.matchdict.get('dictionary_client_id')
-        dictionary_object_id = dictionary_id[1]#request.matchdict.get('dictionary_object_id')
-        log.debug('stat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5})'.format(
-            dictionary_client_id, dictionary_object_id,
-            datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
-            datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end))
+            .query(
+                entry_client_id_e,
+                entry_created_at_e,
+                DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
+                DictionaryPerspective.state_translation_gist_object_id.label('state_object_id'))
 
-        # Ok, now working, starting with dictionary check.
+            .filter(
+                *condition_list,
 
-        # dictionary = DBSession.query(Dictionary).filter_by(
-        #     client_id = dictionary_client_id,
-        #     object_id = dictionary_object_id).first()
-        dictionary = CACHE.get(objects =
-            {
-                Dictionary : (dictionary_id, )
-            },
-        DBSession=DBSession)
-
-        if not dictionary:
-            raise ResponseError(message='No such dictionary {0}/{1}.'.format(
-                dictionary_client_id, dictionary_object_id))
-
-        primary_locale_id = int(locale_id or 2)
-
-        secondary_locale_id = (ENGLISH_LOCALE
-            if primary_locale_id != ENGLISH_LOCALE else RUSSIAN_LOCALE)
-
-        # And now we are going to count lexical entries, we begin with basic perspective/lexical entry view.
-
-        entry_query = (DBSession.query(
-
-            func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'original_client_id')].astext, BigInteger),
-                LexicalEntry.client_id).label('entry_client_id'),
-
-            func.coalesce(
-                cast(LexicalEntry.additional_metadata[('merge', 'min_created_at')].astext, Float),
-                extract('epoch', LexicalEntry.created_at)).label('entry_created_at'),
-
-            DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
-            DictionaryPerspective.state_translation_gist_object_id.label('state_object_id'))
-
-            .filter(and_(
-                DictionaryPerspective.parent_client_id == dictionary_client_id,
-                DictionaryPerspective.parent_object_id == dictionary_object_id,
-                DictionaryPerspective.marked_for_deletion == False,
                 LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
                 LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
-                LexicalEntry.marked_for_deletion == False)).subquery())
+                LexicalEntry.marked_for_deletion == False)
 
-        # Selecting lexical entries inside the specified time interval, grouping by clients and perspective
-        # states.
+            .subquery())
 
-        entry_count_query = DBSession.query(
-            entry_query.c.entry_client_id,
-            entry_query.c.state_client_id,
-            entry_query.c.state_object_id,
-            func.count('*').label('entry_count')).filter(and_(
-                entry_query.c.entry_created_at >= time_begin,
-                entry_query.c.entry_created_at < time_end)).group_by(
+    # Selecting lexical entries inside the specified time interval, grouping by clients and perspective
+    # states.
+
+    entry_count_query = (
+
+        with_time_filter(
+
+            DBSession
+                .query(
                     entry_query.c.entry_client_id,
-                    entry_query.c.state_client_id, entry_query.c.state_object_id).subquery()
+                    entry_query.c.state_client_id,
+                    entry_query.c.state_object_id,
+                    func.count('*').label('entry_count')),
 
-        # Queries for translations of perspective states, works analogously to 'get_translation()' method in
-        # the 'models' module, just through SQL.
+            entry_query.c.entry_created_at,
+            time_begin,
+            time_end)
 
-        StateTranslation = aliased(TranslationGist, name = 'StateTranslation')
-        StatePrimaryAtom = aliased(TranslationAtom, name = 'StatePrimaryAtom')
-        StateSecondaryAtom = aliased(TranslationAtom, name = 'StateSecondaryAtom')
+            .group_by(
+                entry_query.c.entry_client_id,
+                entry_query.c.state_client_id,
+                entry_query.c.state_object_id)
 
-        state_primary_query = DBSession.query(StatePrimaryAtom.content).filter(and_(
-            StatePrimaryAtom.parent_client_id == StateTranslation.client_id,
-            StatePrimaryAtom.parent_object_id == StateTranslation.object_id,
-            StatePrimaryAtom.locale_id == primary_locale_id)).limit(1).subquery()
+            .subquery())
 
-        state_secondary_query = DBSession.query(StateSecondaryAtom.content).filter(and_(
-            StateSecondaryAtom.parent_client_id == StateTranslation.client_id,
-            StateSecondaryAtom.parent_object_id == StateTranslation.object_id,
-            StateSecondaryAtom.locale_id == secondary_locale_id)).limit(1).subquery()
+    # Queries for translations of perspective states, works analogously to 'get_translation()' method in
+    # the 'models' module, just through SQL.
 
-        perspective_state_query = DBSession.query(
-            StateTranslation.client_id, StateTranslation.object_id, func.coalesce(
-                state_primary_query.as_scalar(),
-                state_secondary_query.as_scalar(), 'UNDEFINED').label('content')).subquery()
+    StateTranslation = (
+        aliased(TranslationGist, name = 'StateTranslation'))
 
-        # Adding client and user info and perspective state translations, grouping by users, web/desktop
-        # clients and perspective states, aggregating entry counts.
+    StatePrimaryAtom = (
+        aliased(TranslationAtom, name = 'StatePrimaryAtom'))
 
-        entry_count_list = (DBSession.query(
+    StateSecondaryAtom = (
+        aliased(TranslationAtom, name = 'StateSecondaryAtom'))
 
-            Client.user_id, Client.is_browser_client,
-            func.sum(entry_count_query.c.entry_count),
-            perspective_state_query.c.content)
+    state_primary_query = (
+
+        DBSession
+            .query(StatePrimaryAtom.content)
+
+            .filter(
+                StatePrimaryAtom.parent_client_id == StateTranslation.client_id,
+                StatePrimaryAtom.parent_object_id == StateTranslation.object_id,
+                StatePrimaryAtom.locale_id == primary_locale_id)
+
+            .limit(1)
+            .subquery())
+
+    state_secondary_query = (
+
+        DBSession
+            .query(StateSecondaryAtom.content)
+
+            .filter(
+                StateSecondaryAtom.parent_client_id == StateTranslation.client_id,
+                StateSecondaryAtom.parent_object_id == StateTranslation.object_id,
+                StateSecondaryAtom.locale_id == secondary_locale_id)
+
+            .limit(1)
+            .subquery())
+
+    perspective_state_query = (
+
+        DBSession
+
+            .query(
+                StateTranslation.client_id,
+                StateTranslation.object_id,
+
+                func.coalesce(
+                    state_primary_query.as_scalar(),
+                    state_secondary_query.as_scalar(),
+                    'UNDEFINED')
+
+                    .label('content'))
+
+            .subquery())
+
+    # Adding client and user info and perspective state translations, grouping by users, web/desktop
+    # clients and perspective states, aggregating entry counts.
+
+    entry_count_list = (
+
+        DBSession
+
+            .query(
+                Client.user_id,
+                Client.is_browser_client,
+                func.sum(entry_count_query.c.entry_count),
+                perspective_state_query.c.content)
 
             .select_from(entry_count_query)
 
-            .join(Client,
+            .join(
+                Client,
                 Client.id == entry_count_query.c.entry_client_id)
 
-            .join(perspective_state_query, and_(
-                perspective_state_query.c.client_id == entry_count_query.c.state_client_id,
-                perspective_state_query.c.object_id == entry_count_query.c.state_object_id))
+            .join(
+                perspective_state_query,
+                and_(
+                    perspective_state_query.c.client_id == entry_count_query.c.state_client_id,
+                    perspective_state_query.c.object_id == entry_count_query.c.state_object_id))
 
-            .group_by(Client.user_id, Client.is_browser_client, perspective_state_query.c.content)).all()
+            .group_by(
+                Client.user_id,
+                Client.is_browser_client,
+                perspective_state_query.c.content)
 
-        # Aggregating lexical entry statistics.
+            .all())
 
-        user_data_dict = {}
+    # Aggregating lexical entry statistics.
 
-        for user_id, is_browser, entry_count, perspective_state in entry_count_list:
+    user_data_dict = {}
 
-            if user_id not in user_data_dict:
-                user = DBSession.query(User).filter_by(id = user_id).first()
+    if entry_count_list:
 
-                user_data_dict[user_id] = {
-                    'login': user.login, 'name': user.name,
-                    'lexical entries': {}}
+        user_data_total = {
+            'login': None,
+            'name': None,
+            'lexical entries': {}}
 
-            # For each user we aggregate by perspective state and client type.
+        user_data_dict[None] = user_data_total
 
-            entry_data = user_data_dict[user_id]['lexical entries']
-            client_string = 'web' if is_browser else 'desktop'
+    for user_id, is_browser, entry_count, perspective_state in entry_count_list:
 
-            for s_string in [perspective_state, 'total']:
+        if user_id not in user_data_dict:
 
-                if s_string not in entry_data:
-                    entry_data[s_string] = {'web': 0, 'desktop': 0, 'total': 0}
+            user = User.get(user_id)
 
-                for c_string in [client_string, 'total']:
-                    entry_data[s_string][c_string] += int(entry_count)
+            user_data_dict[user_id] = {
+                'login': user.login,
+                'name': user.name,
+                'lexical entries': {}}
 
-        # Getting info of all fields of all perspectives of the dictionary.
+        # For each user we aggregate by perspective state and client type.
 
-        field_data_list = DBSession.query(Field).filter(and_(
-            DictionaryPerspective.parent_client_id == dictionary_client_id,
-            DictionaryPerspective.parent_object_id == dictionary_object_id,
-            DictionaryPerspective.marked_for_deletion == False,
-            DictionaryPerspectiveToField.parent_client_id == DictionaryPerspective.client_id,
-            DictionaryPerspectiveToField.parent_object_id == DictionaryPerspective.object_id,
-            DictionaryPerspectiveToField.marked_for_deletion == False,
-            Field.client_id == DictionaryPerspectiveToField.field_client_id,
-            Field.object_id == DictionaryPerspectiveToField.field_object_id,
-            Field.marked_for_deletion == False)).distinct().all()
+        entry_data = (
+            user_data_dict[user_id]['lexical entries'])
 
-        # Sorting fields into simple and grouping categories.
+        entry_data_total = (
+            user_data_total['lexical entries'])
 
-        simple_field_id_list = []
-        grouping_field_id_list = []
+        client_string = (
+            'web' if is_browser else 'desktop')
 
-        for field in field_data_list:
-            data_type = field.data_type.lower()
+        for s_string in [perspective_state, 'total']:
 
-            if data_type in simple_field_type_set:
-                simple_field_id_list.append((field.client_id, field.object_id))
+            if s_string not in entry_data:
 
-            elif data_type == 'grouping tag':
-                grouping_field_id_list.append((field.client_id, field.object_id))
+                entry_data[s_string] = {'web': 0, 'desktop': 0, 'total': 0}
 
-            else:
-                raise ResponseError(message='Unknown field data type \'{0}\'.'.format(data_type))
+            if s_string not in entry_data_total:
 
-        # Some parts of the counting and aggregation process are shared for simple and grouping fields, so
-        # we process both these field types together.
+                entry_data_total[s_string] = {'web': 0, 'desktop': 0, 'total': 0}
 
-        simple_field_id_list.sort()
-        grouping_field_id_list.sort()
+            for c_string in [client_string, 'total']:
 
-        for field_id_list, field_type in [
-            (simple_field_id_list, 'simple'),
-            (grouping_field_id_list, 'grouping')]:
+                entry_count_value = int(entry_count)
 
-            # We are going to count entites of fields of simple type.
+                entry_data[s_string][c_string] += entry_count_value
+                entry_data_total[s_string][c_string] += entry_count_value
 
-            if field_type == 'simple':
+    # Getting info of all fields of all perspectives of the dictionary.
 
-                entity_query = (DBSession.query(
+    field_data_list = (
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'original_client_id')].astext, BigInteger),
-                        Entity.client_id).label('entity_client_id'),
+        DBSession
+            .query(Field)
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, Float),
-                        extract('epoch', Entity.created_at)).label('entity_created_at'),
+            .filter(
+                *condition_list,
 
-                    DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
-                    DictionaryPerspective.state_translation_gist_object_id.label('state_object_id'),
+                DictionaryPerspectiveToField.parent_client_id == DictionaryPerspective.client_id,
+                DictionaryPerspectiveToField.parent_object_id == DictionaryPerspective.object_id,
+                DictionaryPerspectiveToField.marked_for_deletion == False,
 
-                    Entity.field_client_id,
-                    Entity.field_object_id,
+                Field.client_id == DictionaryPerspectiveToField.field_client_id,
+                Field.object_id == DictionaryPerspectiveToField.field_object_id,
+                Field.marked_for_deletion == False)
 
-                    PublishingEntity.published)
+            .distinct()
+            .all())
 
-                    .filter(and_(
-                        DictionaryPerspective.parent_client_id == dictionary_client_id,
-                        DictionaryPerspective.parent_object_id == dictionary_object_id,
-                        DictionaryPerspective.marked_for_deletion == False,
-                        LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
-                        LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
-                        LexicalEntry.marked_for_deletion == False,
-                        Entity.parent_client_id == LexicalEntry.client_id,
-                        Entity.parent_object_id == LexicalEntry.object_id,
-                        Entity.marked_for_deletion == False,
-                        tuple_(Entity.field_client_id, Entity.field_object_id).in_(field_id_list),
-                        PublishingEntity.client_id == Entity.client_id,
-                        PublishingEntity.object_id == Entity.object_id)).subquery())
+    # Sorting fields into simple and grouping categories.
 
-                # Selecting entities inside the specified time interval, grouping by clients, perspective
-                # states, fields and publishing status.
+    simple_field_id_list = []
+    grouping_field_id_list = []
 
-                entity_count_query = (DBSession.query(
+    for field in field_data_list:
 
-                    entity_query.c.entity_client_id,
-                    entity_query.c.state_client_id, entity_query.c.state_object_id,
-                    entity_query.c.field_client_id, entity_query.c.field_object_id,
-                    entity_query.c.published,
-                    func.count('*').label('entity_count'))
+        data_type = field.data_type.lower()
 
-                    .filter(and_(
-                        entity_query.c.entity_created_at >= time_begin,
-                        entity_query.c.entity_created_at < time_end)).group_by(
-                            entity_query.c.entity_client_id,
-                            entity_query.c.state_client_id, entity_query.c.state_object_id,
-                            entity_query.c.field_client_id, entity_query.c.field_object_id,
-                            entity_query.c.published).subquery())
+        if data_type in simple_field_type_set:
 
-            # We are going to count entites of fields of grouping type.
+            simple_field_id_list.append(field.id)
 
-            else:
+        elif data_type == 'grouping tag':
 
-                entity_query = (DBSession.query(
+            grouping_field_id_list.append(field.id)
 
-                    LexicalEntry.client_id,
-                    LexicalEntry.object_id,
+        else:
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'original_client_id')].astext, BigInteger),
-                        Entity.client_id).label('entity_client_id'),
+            raise ResponseError(f'Unknown field data type \'{data_type}\'.')
 
-                    func.coalesce(
-                        cast(Entity.additional_metadata[
-                            ('merge', 'min_created_at')].astext, Float),
-                        extract('epoch', Entity.created_at)).label('entity_created_at'),
+    # Some parts of the counting and aggregation process are shared for simple and grouping fields, so
+    # we process both these field types together.
+
+    simple_field_id_list.sort()
+    grouping_field_id_list.sort()
+
+    for field_id_list, field_type in [
+        (simple_field_id_list, 'simple'),
+        (grouping_field_id_list, 'grouping')]:
+
+        # We are going to count entites of fields of simple type.
+
+        if field_type == 'simple':
+
+            entity_query = (
+
+                DBSession.query(
+                    entity_client_id_e,
+                    entity_created_at_e,
 
                     DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
                     DictionaryPerspective.state_translation_gist_object_id.label('state_object_id'),
@@ -677,110 +924,272 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
                     PublishingEntity.published)
 
-                    .filter(and_(
-                        DictionaryPerspective.parent_client_id == dictionary_client_id,
-                        DictionaryPerspective.parent_object_id == dictionary_object_id,
-                        DictionaryPerspective.marked_for_deletion == False,
-                        LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
-                        LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
-                        LexicalEntry.marked_for_deletion == False,
-                        Entity.parent_client_id == LexicalEntry.client_id,
-                        Entity.parent_object_id == LexicalEntry.object_id,
-                        Entity.marked_for_deletion == False,
-                        tuple_(Entity.field_client_id, Entity.field_object_id).in_(field_id_list),
-                        PublishingEntity.client_id == Entity.client_id,
-                        PublishingEntity.object_id == Entity.object_id)).subquery())
+                .filter(
+                    *condition_list,
 
-                # Grouping tags are first grouped by lexical entries.
+                    LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+                    LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
+                    LexicalEntry.marked_for_deletion == False,
 
-                entry_group_query = (DBSession.query(
+                    Entity.parent_client_id == LexicalEntry.client_id,
+                    Entity.parent_object_id == LexicalEntry.object_id,
+                    Entity.marked_for_deletion == False,
 
-                    entity_query.c.entity_client_id,
-                    entity_query.c.state_client_id, entity_query.c.state_object_id,
-                    entity_query.c.field_client_id, entity_query.c.field_object_id,
-                    entity_query.c.published)
+                    tuple_(
+                        Entity.field_client_id,
+                        Entity.field_object_id)
 
-                    .filter(and_(
-                        entity_query.c.entity_created_at >= time_begin,
-                        entity_query.c.entity_created_at < time_end)).group_by(
+                        .in_(
+                            ids_to_id_query(field_id_list)),
 
-                            entity_query.c.client_id,
-                            entity_query.c.object_id,
-                            entity_query.c.entity_client_id,
-                            entity_query.c.state_client_id, entity_query.c.state_object_id,
-                            entity_query.c.field_client_id, entity_query.c.field_object_id,
-                            entity_query.c.published).subquery())
+                    PublishingEntity.client_id == Entity.client_id,
+                    PublishingEntity.object_id == Entity.object_id)
 
-                # Grouping by clients, perspective states, fields and publishing status.
+                .subquery())
 
-                entity_count_query = (DBSession.query(
+            # Selecting entities inside the specified time interval, grouping by clients, perspective
+            # states, fields and publishing status.
 
-                    entry_group_query.c.entity_client_id,
-                    entry_group_query.c.state_client_id, entry_group_query.c.state_object_id,
-                    entry_group_query.c.field_client_id, entry_group_query.c.field_object_id,
-                    entry_group_query.c.published,
-                    func.count('*').label('entity_count'))
+            entity_count_query = (
+
+                with_time_filter(
+
+                    DBSession.query(
+                        entity_query.c.entity_client_id,
+
+                        entity_query.c.state_client_id,
+                        entity_query.c.state_object_id,
+
+                        entity_query.c.field_client_id,
+                        entity_query.c.field_object_id,
+
+                        entity_query.c.published,
+                        func.count('*').label('entity_count')),
+
+                    entity_query.c.entity_created_at,
+                    time_begin,
+                    time_end)
+
+                    .group_by(
+                        entity_query.c.entity_client_id,
+
+                        entity_query.c.state_client_id,
+                        entity_query.c.state_object_id,
+
+                        entity_query.c.field_client_id,
+                        entity_query.c.field_object_id,
+
+                        entity_query.c.published)
+
+                    .subquery())
+
+        # We are going to count entites of fields of grouping type.
+
+        else:
+
+            entity_query = (
+
+                DBSession
+
+                    .query(
+                        LexicalEntry.client_id,
+                        LexicalEntry.object_id,
+
+                        entity_client_id_e,
+                        entity_created_at_e,
+
+                        DictionaryPerspective.state_translation_gist_client_id.label('state_client_id'),
+                        DictionaryPerspective.state_translation_gist_object_id.label('state_object_id'),
+
+                        Entity.field_client_id,
+                        Entity.field_object_id,
+
+                        PublishingEntity.published)
+
+                .filter(
+                    *condition_list,
+
+                    LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+                    LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
+                    LexicalEntry.marked_for_deletion == False,
+
+                    Entity.parent_client_id == LexicalEntry.client_id,
+                    Entity.parent_object_id == LexicalEntry.object_id,
+                    Entity.marked_for_deletion == False,
+
+                    tuple_(
+                        Entity.field_client_id,
+                        Entity.field_object_id)
+
+                        .in_(
+                            ids_to_id_query(field_id_list)),
+
+                    PublishingEntity.client_id == Entity.client_id,
+                    PublishingEntity.object_id == Entity.object_id)
+
+                .subquery())
+
+            # Grouping tags are first grouped by lexical entries.
+
+            entry_group_query = (
+
+                with_time_filter(
+
+                    DBSession.query(
+                        entity_query.c.entity_client_id,
+
+                        entity_query.c.state_client_id,
+                        entity_query.c.state_object_id,
+
+                        entity_query.c.field_client_id,
+                        entity_query.c.field_object_id,
+
+                        entity_query.c.published),
+
+                    entity_query.c.entity_created_at,
+                    time_begin,
+                    time_end)
+
+                    .group_by(
+                        entity_query.c.client_id,
+                        entity_query.c.object_id,
+
+                        entity_query.c.entity_client_id,
+
+                        entity_query.c.state_client_id,
+                        entity_query.c.state_object_id,
+
+                        entity_query.c.field_client_id,
+                        entity_query.c.field_object_id,
+
+                        entity_query.c.published)
+
+                    .subquery())
+
+            # Grouping by clients, perspective states, fields and publishing status.
+
+            entity_count_query = (
+
+                DBSession
+
+                    .query(
+                        entry_group_query.c.entity_client_id,
+
+                        entry_group_query.c.state_client_id,
+                        entry_group_query.c.state_object_id,
+
+                        entry_group_query.c.field_client_id,
+                        entry_group_query.c.field_object_id,
+
+                        entry_group_query.c.published,
+                        func.count('*').label('entity_count'))
 
                     .group_by(
                         entry_group_query.c.entity_client_id,
-                        entry_group_query.c.state_client_id, entry_group_query.c.state_object_id,
-                        entry_group_query.c.field_client_id, entry_group_query.c.field_object_id,
-                        entry_group_query.c.published).subquery())
 
-            # Queries for translations of field names.
+                        entry_group_query.c.state_client_id,
+                        entry_group_query.c.state_object_id,
 
-            FieldTranslation = aliased(TranslationGist, name = 'FieldTranslation')
-            FieldPrimaryAtom = aliased(TranslationAtom, name = 'FieldPrimaryAtom')
-            FieldSecondaryAtom = aliased(TranslationAtom, name = 'FieldSecondaryAtom')
+                        entry_group_query.c.field_client_id,
+                        entry_group_query.c.field_object_id,
 
-            field_primary_query = DBSession.query(FieldPrimaryAtom.content).filter(and_(
-                FieldPrimaryAtom.parent_client_id == FieldTranslation.client_id,
-                FieldPrimaryAtom.parent_object_id == FieldTranslation.object_id,
-                FieldPrimaryAtom.locale_id == primary_locale_id)).limit(1).subquery()
+                        entry_group_query.c.published)
 
-            field_secondary_query = DBSession.query(FieldSecondaryAtom.content).filter(and_(
-                FieldSecondaryAtom.parent_client_id == FieldTranslation.client_id,
-                FieldSecondaryAtom.parent_object_id == FieldTranslation.object_id,
-                FieldSecondaryAtom.locale_id == secondary_locale_id)).limit(1).subquery()
+                    .subquery())
 
-            # Getting mapping from field ids to field names.
+        # Queries for translations of field names.
 
-            field_name_query = (DBSession.query(
+        FieldTranslation = (
+            aliased(TranslationGist, name = 'FieldTranslation'))
 
-                Field.client_id, Field.object_id,
-                func.coalesce(
-                    field_primary_query.as_scalar(),
-                    field_secondary_query.as_scalar(), 'UNDEFINED').label('content'))
+        FieldPrimaryAtom = (
+            aliased(TranslationAtom, name = 'FieldPrimaryAtom'))
 
-                .filter(and_(
+        FieldSecondaryAtom = (
+            aliased(TranslationAtom, name = 'FieldSecondaryAtom'))
+
+        field_primary_query = (
+
+            DBSession
+                .query(FieldPrimaryAtom.content)
+
+                .filter(
+                    FieldPrimaryAtom.parent_client_id == FieldTranslation.client_id,
+                    FieldPrimaryAtom.parent_object_id == FieldTranslation.object_id,
+                    FieldPrimaryAtom.locale_id == primary_locale_id)
+
+                .limit(1)
+                .subquery())
+
+        field_secondary_query = (
+
+            DBSession
+                .query(FieldSecondaryAtom.content)
+
+                .filter(
+                    FieldSecondaryAtom.parent_client_id == FieldTranslation.client_id,
+                    FieldSecondaryAtom.parent_object_id == FieldTranslation.object_id,
+                    FieldSecondaryAtom.locale_id == secondary_locale_id)
+
+                .limit(1)
+                .subquery())
+
+        # Getting mapping from field ids to field names.
+
+        field_name_query = (
+
+            DBSession
+
+                .query(
+                    Field.client_id,
+                    Field.object_id,
+
+                    func.coalesce(
+                        field_primary_query.as_scalar(),
+                        field_secondary_query.as_scalar(), 'UNDEFINED')
+
+                        .label('content'))
+
+                .filter(
                     Field.translation_gist_client_id == FieldTranslation.client_id,
-                    Field.translation_gist_object_id == FieldTranslation.object_id)).subquery())
+                    Field.translation_gist_object_id == FieldTranslation.object_id)
 
-            # Grouping entities and aggregating entity counts.
+                .subquery())
 
-            entity_count_list = (DBSession.query(
+        # Grouping entities and aggregating entity counts.
 
-                Client.user_id,
-                Client.is_browser_client,
-                func.sum(entity_count_query.c.entity_count),
-                perspective_state_query.c.content,
-                field_name_query.c.content,
-                entity_count_query.c.published)
+        entity_count_list = (
 
-                .select_from(entity_count_query)
+            DBSession
+
+                .query(
+                    Client.user_id,
+                    Client.is_browser_client,
+                    func.sum(entity_count_query.c.entity_count),
+                    perspective_state_query.c.content,
+                    field_name_query.c.content,
+                    entity_count_query.c.published)
+
+                .select_from(
+                    entity_count_query)
 
                 # Adding client/user info and perspective state / field name translations
 
-                .join(Client,
+                .join(
+                    Client,
                     Client.id == entity_count_query.c.entity_client_id)
 
-                .join(perspective_state_query, and_(
-                    perspective_state_query.c.client_id == entity_count_query.c.state_client_id,
-                    perspective_state_query.c.object_id == entity_count_query.c.state_object_id))
+                .join(
+                    perspective_state_query,
+                    and_(
+                        perspective_state_query.c.client_id == entity_count_query.c.state_client_id,
+                        perspective_state_query.c.object_id == entity_count_query.c.state_object_id))
 
-                .join(field_name_query, and_(
-                    field_name_query.c.client_id == entity_count_query.c.field_client_id,
-                    field_name_query.c.object_id == entity_count_query.c.field_object_id))
+                .join(
+                    field_name_query,
+                    and_(
+                        field_name_query.c.client_id == entity_count_query.c.field_client_id,
+                        field_name_query.c.object_id == entity_count_query.c.field_object_id))
 
                 # Grouping by users, web/desktop clients, perspective states, field names and publishing
                 # status.
@@ -790,56 +1199,139 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
                     Client.is_browser_client,
                     perspective_state_query.c.content,
                     field_name_query.c.content,
-                    entity_count_query.c.published)).all()
+                    entity_count_query.c.published)
 
-            # Aggregating statistics for entities of simple type.
+                .all())
 
-            for (user_id, is_browser, entity_count,
-                perspective_state, field_name, published) in entity_count_list:
+        # Aggregating statistics for entities of simple type.
 
-                if user_id not in user_data_dict:
-                    user = DBSession.query(User).filter_by(id = user_id).first()
+        for (user_id, is_browser, entity_count,
+            perspective_state, field_name, published) in entity_count_list:
 
-                    user_data_dict[user_id] = {
-                        'login': user.login, 'name': user.name,
-                        'entities': {}}
+            if user_id not in user_data_dict:
 
-                user_data = user_data_dict[user_id]
+                user = User.get(user_id)
 
-                if 'entities' not in user_data:
-                    user_data['entities'] = {}
+                user_data_dict[user_id] = {
+                    'login': user.login, 'name': user.name,
+                    'entities': {}}
 
-                # For each user we aggregate by perspective state, publishing status, field name and client
-                # type.
+            user_data = user_data_dict[user_id]
 
-                entity_data = user_data['entities']
+            if 'entities' not in user_data:
 
-                client_string = 'web' if is_browser else 'desktop'
-                published_string = 'published' if published else 'unpublished'
+                user_data['entities'] = {}
 
-                for s_string in [perspective_state, 'total']:
+            if 'entities' not in user_data_total:
 
-                    if s_string not in entity_data:
-                        entity_data[s_string] = {'published': {}, 'unpublished': {}, 'total': {}}
+                user_data_total['entities'] = {}
 
-                    for p_string in [published_string, 'total']:
-                        local_entity_data = entity_data[s_string][p_string]
+            # For each user we aggregate by perspective state, publishing status, field name and client
+            # type.
 
-                        for f_string in [field_name, 'total']:
+            entity_data = (
+                user_data['entities'])
 
-                            if f_string not in local_entity_data:
-                                local_entity_data[f_string] = {'web': 0, 'desktop': 0, 'total': 0}
+            entity_data_total = (
+                user_data_total['entities'])
 
-                            for c_string in [client_string, 'total']:
-                                local_entity_data[f_string][c_string] += int(entity_count)
+            client_string = (
+                'web' if is_browser else 'desktop')
+
+            published_string = (
+                'published' if published else 'unpublished')
+
+            for s_string in [perspective_state, 'total']:
+
+                if s_string not in entity_data:
+
+                    entity_data[s_string] = {'published': {}, 'unpublished': {}, 'total': {}}
+
+                if s_string not in entity_data_total:
+
+                    entity_data_total[s_string] = {'published': {}, 'unpublished': {}, 'total': {}}
+
+                for p_string in [published_string, 'total']:
+
+                    local_entity_data = (
+                        entity_data[s_string][p_string])
+
+                    local_entity_data_total = (
+                        entity_data_total[s_string][p_string])
+
+                    for f_string in [field_name, 'total']:
+
+                        if f_string not in local_entity_data:
+
+                            local_entity_data[f_string] = {'web': 0, 'desktop': 0, 'total': 0}
+
+                        if f_string not in local_entity_data_total:
+
+                            local_entity_data_total[f_string] = {'web': 0, 'desktop': 0, 'total': 0}
+
+                        for c_string in [client_string, 'total']:
+
+                            entity_count_value = int(entity_count)
+
+                            local_entity_data[f_string][c_string] += entity_count_value
+                            local_entity_data_total[f_string][c_string] += entity_count_value
+
+    return user_data_dict
+
+
+def stat_dictionary(
+    dictionary_id,
+    time_begin = None,
+    time_end = None,
+    locale_id = None):
+    """
+    Gathers cumulative user participation statistics for all perspectives of a specified dictionary in a
+    given time interval [time_begin, time_end).
+
+    Parameters 'time_begin' and 'time_end' are Unix timestamps if specified.
+    """
+
+    try:
+
+        time_begin_str, time_end_str = (
+
+            time_format(
+                time_begin,
+                time_end))
+
+        log.debug(
+            f'\nstat_dictionary {dictionary_id} from {time_begin_str} to {time_end_str}')
+
+        # Starting with dictionary check.
+
+        dictionary = (
+            Dictionary.get(dictionary_id))
+
+        if not dictionary:
+            raise ResponseError(f'No dictionary {dictionary_id}.')
+
+        # Getting statistics for all perspectives of a single dictionary.
+
+        condition_list = [
+
+            DictionaryPerspective.parent_client_id == dictionary_id[0],
+            DictionaryPerspective.parent_object_id == dictionary_id[1],
+            DictionaryPerspective.marked_for_deletion == False]
+
+        user_data_dict = (
+
+            stat_condition_list(
+                condition_list,
+                time_begin,
+                time_end,
+                locale_id))
 
         # Returning gathered statistics.
 
-        log.debug('\nstat_dictionary {0}/{1} from \'{2}\' ({3}) to \'{4}\' ({5}):\n{6}'.format(
-            dictionary_client_id, dictionary_object_id,
-            datetime.datetime.utcfromtimestamp(time_begin).isoformat(' '), time_begin,
-            datetime.datetime.utcfromtimestamp(time_end).isoformat(' '), time_end,
-            pprint.pformat(user_data_dict, width = 144)))
+        log.debug(
+            f'\nstat_dictionary {dictionary_id} from {time_begin_str} to {time_end_str}:\n' +
+            pprint.pformat(
+                user_data_dict, width = 144))
 
         return user_data_dict
 
@@ -847,10 +1339,140 @@ def stat_dictionary(dictionary_id, time_begin, time_end, locale_id=None):
 
     except Exception as exception:
 
-        traceback_string = ''.join(traceback.format_exception(
-            exception, exception, exception.__traceback__))[:-1]
+        traceback_string = (
 
-        log.debug('stat_dictionary: exception')
-        log.debug('\n' + traceback_string)
+            ''.join(
+                traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1])
 
-        raise ResponseError(message='\n' + traceback_string)
+        log.warning('stat_dictionary: exception')
+        log.warning('\n' + traceback_string)
+
+        raise (
+
+            ResponseError(
+                'Exception:\n' + traceback_string))
+
+
+def stat_language(
+    language_id,
+    time_begin = None,
+    time_end = None,
+    dictionaries = False,
+    corpora = False,
+    locale_id = None):
+
+    try:
+
+        time_begin_str, time_end_str = (
+
+            time_format(
+                time_begin,
+                time_end))
+
+        log.debug(
+            f'\nstat_language {language_id}'
+            f'\n from {time_begin_str} to {time_end_str},'
+            f'\n dictionaries: {dictionaries}, corpora: {corpora}')
+
+        # Ok, now working, starting with language check and checking if we actually need to get any data.
+
+        language = (
+            Language.get(language_id))
+
+        if not language:
+            raise ResponseError(f'No language {language_id}.')
+
+        if (not dictionaries and
+            not corpora):
+
+            return {}
+
+        # Base language-recursive CTE.
+
+        base_cte = (
+
+            ids_to_id_query(
+                (language_id,),
+                explicit_cast = True)
+
+                .cte(recursive = True))
+
+        recursive_query = (
+
+            DBSession
+
+                .query(
+                    Language.client_id,
+                    Language.object_id)
+
+                .filter(
+                    Language.parent_client_id == base_cte.c.client_id,
+                    Language.parent_object_id == base_cte.c.object_id,
+                    Language.marked_for_deletion == False))
+
+        language_cte = (
+            base_cte.union(recursive_query))
+
+        # Source perspective conditions, with dictionary/corpora conditions if required.
+
+        condition_list = [
+
+            Dictionary.parent_client_id == language_cte.c.client_id,
+            Dictionary.parent_object_id == language_cte.c.object_id,
+            Dictionary.marked_for_deletion == False,
+
+            DictionaryPerspective.parent_client_id == Dictionary.client_id,
+            DictionaryPerspective.parent_object_id == Dictionary.object_id,
+            DictionaryPerspective.marked_for_deletion == False]
+
+        if dictionaries and corpora:
+            pass
+
+        elif dictionaries:
+
+            condition_list.append(
+                Dictionary.category == 0)
+
+        elif corpora:
+
+            condition_list.append(
+                Dictionary.category == 1)
+
+        # Getting and returning statistics for all perspectives.
+
+        user_data_dict = (
+
+            stat_condition_list(
+                condition_list,
+                time_begin,
+                time_end,
+                locale_id))
+
+        log.debug(
+            f'\nstat_language {language_id}'
+            f'\n from {time_begin_str} to {time_end_str},'
+            f'\n dictionaries: {dictionaries}, corpora: {corpora}' +
+            pprint.pformat(
+                user_data_dict, width = 144))
+
+        return user_data_dict
+
+    # If something is not right, we report it.
+
+    except Exception as exception:
+
+        traceback_string = (
+
+            ''.join(
+                traceback.format_exception(
+                    exception, exception, exception.__traceback__))[:-1])
+
+        log.warning('stat_language: exception')
+        log.warning('\n' + traceback_string)
+
+        raise (
+
+            ResponseError(
+                'Exception:\n' + traceback_string))
+

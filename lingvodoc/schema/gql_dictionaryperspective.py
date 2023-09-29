@@ -1,12 +1,35 @@
+
+# Standard library imports.
+
+from collections import  defaultdict
 import datetime
 import itertools
 import logging
 import pprint
 
+# External imports.
+
 import graphene
-from collections import  defaultdict
+
+import sqlalchemy
+
+from sqlalchemy import (
+    and_,
+    cast,
+    column,
+    extract,
+    func,
+    literal,
+    or_,
+    tuple_,
+    union)
+
+from sqlalchemy.sql.expression import Grouping
+
+# Lingvodoc imports.
 
 from lingvodoc.cache.caching import CACHE
+
 from lingvodoc.models import (
     BaseGroup as dbBaseGroup,
     Client as dbClient,
@@ -25,59 +48,45 @@ from lingvodoc.models import (
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     User as dbUser,
+    user_to_group_association,
     ValencyEafData as dbValencyEafData,
     ValencyParserData as dbValencyParserData,
-    ValencySourceData as dbValencySourceData,
-    user_to_group_association,
-)
+    ValencySourceData as dbValencySourceData)
+
+from lingvodoc.schema.gql_column import Column
+from lingvodoc.schema.gql_dictionary import Dictionary
+from lingvodoc.schema.gql_entity import Entity
 
 from lingvodoc.schema.gql_holders import (
-    LingvodocObjectType,
-    LingvodocID,
-    CommonFieldsComposite,
-    StateHolder,
-    fetch_object,
-    client_id_check,
-    del_object,
-    undel_object,
-    ResponseError,
     acl_check_by_id,
-    ObjectVal
-)
+    client_id_check,
+    CommonFieldsComposite,
+    del_object,
+    fetch_object,
+    LingvodocID,
+    LingvodocObjectType,
+    ObjectVal,
+    ResponseError,
+    StateHolder,
+    undel_object,
+    UserAndOrganizationsRoles)
 
-from lingvodoc.schema.gql_dictionary import Dictionary
-from lingvodoc.schema.gql_column import Column
-from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_language import Language
-from lingvodoc.schema.gql_entity import Entity
+from lingvodoc.schema.gql_lexicalentry import LexicalEntry
 from lingvodoc.schema.gql_user import User
-from lingvodoc.utils.search import translation_gist_search
+
 from lingvodoc.utils import statistics
+
 from lingvodoc.utils.creation import (
     create_dictionary_persp_to_field,
-    create_perspective,
     create_gists_with_atoms,
+    create_perspective,
     edit_role,
-    update_metadata
-)
+    update_metadata)
+
 from lingvodoc.utils.deletion import real_delete_perspective
+from lingvodoc.utils.search import translation_gist_search
 
-import sqlalchemy
-from sqlalchemy import (
-    and_,
-    cast,
-    column,
-    extract,
-    func,
-    literal,
-    or_,
-    tuple_,
-    union,
-)
-
-from sqlalchemy.sql.expression import Grouping
-
-from lingvodoc.schema.gql_holders import UserAndOrganizationsRoles
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -839,38 +848,20 @@ class DictionaryPerspective(LingvodocObjectType):
                 action, subject, (self.dbObject.client_id, self.dbObject.object_id)))
 
     @fetch_object()
-    def resolve_statistic(self, info, starting_time=None, ending_time=None):
-        if starting_time is None or ending_time is None:
-            raise ResponseError(message="Bad time period")
-        locale_id = info.context.get('locale_id')
-        current_statistics = statistics.stat_perspective((self.dbObject.client_id, self.dbObject.object_id),
-                                                         starting_time,
-                                                         ending_time,
-                                                         locale_id=locale_id
-                                                         )
-        new_format_statistics = []
+    def resolve_statistic(
+        self,
+        info,
+        starting_time = None,
+        ending_time = None):
 
-        for key, stat_dict in current_statistics.items():
+        return (
 
-            new_dict = {
-                'user_id': key,
-                'name': stat_dict['name']}
-
-            # NOTE: 'lexical_entries' with underscore '_' for the new format.
-
-            if 'lexical entries' in stat_dict:
-                new_dict['lexical_entries'] = stat_dict['lexical entries']
-
-            if 'entities' in stat_dict:
-                new_dict['entities'] = stat_dict['entities']
-
-            new_format_statistics.append(new_dict)
-
-        log.debug(
-            '\nnew format:\n{0}'.format(
-                pprint.pformat(new_format_statistics, width = 144)))
-
-        return new_format_statistics
+            statistics.new_format(
+                statistics.stat_perspective(
+                    self.id,
+                    starting_time,
+                    ending_time,
+                    locale_id = info.context.locale_id)))
 
 
 class CreateDictionaryPerspective(graphene.Mutation):
