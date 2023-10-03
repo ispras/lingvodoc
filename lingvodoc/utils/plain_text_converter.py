@@ -168,14 +168,19 @@ def create_entity(
     return dbentity
 
 
+class FieldInf(graphene.InputObjectType):
+    column_name = graphene.String()
+    field_id = LingvodocID(required=True)
+
+
+class ColumnInf(graphene.InputObjectType):
+    blob_id = LingvodocID(required=True)
+    field_map = FieldInf(required=True)
+
+
 class CorpusInf(graphene.InputObjectType):
-    blob_id = LingvodocID()
     parent_id = LingvodocID(required=True)
-    perspective_gist_id = LingvodocID()
-    perspective_atoms = graphene.List(ObjectVal)
-    translation_gist_id = LingvodocID()
-    translation_atoms = graphene.List(ObjectVal)
-    field_name = graphene.String()
+    translation_atoms = graphene.List(ObjectVal, required=True)
     license = graphene.String()
 
 
@@ -183,32 +188,28 @@ class GqlParallelCorpora(graphene.Mutation):
     triumph = graphene.Boolean()
 
     class Arguments:
-        corpora_inf = graphene.List(CorpusInf, required=True)
+        corpus_inf = CorpusInf(required=True)
+        columns_inf = graphene.List(ColumnInf, required=True)
 
     def mutate(root, info, **args):
-        corpora_inf = args.get("corpora_inf")
+        corpus_inf = args.get("corpus_inf")
+        columns_inf = args.get("columns_inf")
         cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
         sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
 
-        task_names = []
-
-        for index, corpus_inf in enumerate(corpora_inf):
-
-            translation_atoms = corpus_inf.get("translation_atoms")
-            default_name = f'corpus {index + 1}'
-
-            task_names.append(
-                translation_atoms[0].get('content', default_name) if translation_atoms else
-                default_name)
-
-        name = ', '.join(task_names)
+        default_name = "corpus #1"
+        translation_atoms = corpus_inf.get("translation_atoms")
+        task_name = translation_atoms[0].get('content', default_name) if translation_atoms else default_name
 
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
-        task = TaskStatus(user_id, "Txt corpora conversion", name, 10)
+        task = TaskStatus(user_id, "Txt corpora conversion", task_name, 10)
+
+        return GqlParallelCorpora(triumph=True)
 
         convert_start(
             info,
-            corpora_inf,
+            corpus_inf,
+            columns_inf,
             cache_kwargs,
             sqlalchemy_url,
             task.key)
@@ -230,7 +231,7 @@ class ObjectId:
 
 
 #@contextlib.contextmanager
-def convert_start(ids, corpora_inf, cache_kwargs, sqlalchemy_url, task_key):
+def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
       convert_starling(starling_dictionaries: $starling_dictionaries){
