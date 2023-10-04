@@ -27,6 +27,8 @@ from sqlalchemy.orm import aliased
 
 from lingvodoc.schema.gql_holders import ResponseError
 
+import lingvodoc.scripts.export_parser_result as export_parser_result
+
 from lingvodoc.models import (
     BaseGroup,
     Client,
@@ -40,6 +42,7 @@ from lingvodoc.models import (
     Group,
     Language,
     LexicalEntry,
+    ParserResult,
     PublishingEntity,
     RUSSIAN_LOCALE,
     TranslationAtom,
@@ -48,7 +51,6 @@ from lingvodoc.models import (
 
 from lingvodoc.utils import ids_to_id_query
 from lingvodoc.utils.creation import add_user_to_group
-from lingvodoc.schema.gql_holders import ResponseError
 
 from lingvodoc.cache.caching import CACHE
 
@@ -133,6 +135,9 @@ def new_format(current_statistics):
         if 'entities' in stat_dict:
             new_dict['entities'] = stat_dict['entities']
 
+        if 'disambiguation' in stat_dict:
+            new_dict['disambiguation'] = stat_dict['disambiguation']
+
         new_format_statistics.append(new_dict)
 
     log.debug(
@@ -201,6 +206,7 @@ def stat_perspective(
     perspective_id,
     time_begin = None,
     time_end = None,
+    disambiguation_flag = False,
     locale_id = None):
     """
     Gathers user participation statistics for a specified perspective in a given time interval
@@ -622,6 +628,62 @@ def stat_perspective(
                         entity_data['unaccepted'][f_string][c_string] += entity_count
                         entity_data_total['unaccepted'][f_string][c_string] += entity_count
 
+        # Getting disambiguation statistics if required.
+
+        if disambiguation_flag:
+
+            token_count = 0
+            accepted_count = 0
+
+            parser_content_query = (
+
+                DBSession
+
+                    .query(
+                        ParserResult.content)
+
+                    .filter(
+                        LexicalEntry.parent_client_id == perspective_id[0],
+                        LexicalEntry.parent_object_id == perspective_id[1],
+                        LexicalEntry.marked_for_deletion == False,
+
+                        Entity.parent_client_id == LexicalEntry.client_id,
+                        Entity.parent_object_id == LexicalEntry.object_id,
+                        Entity.marked_for_deletion == False,
+
+                        PublishingEntity.client_id == Entity.client_id,
+                        PublishingEntity.object_id == Entity.object_id,
+                        PublishingEntity.published == True,
+                        PublishingEntity.accepted == True,
+
+                        ParserResult.entity_client_id == Entity.client_id,
+                        ParserResult.entity_object_id == Entity.object_id,
+                        ParserResult.marked_for_deletion == False))
+
+            for (parser_content,) in parser_content_query.yield_per(1):
+
+                _, content_token_count, content_accepted_count = (
+
+                    export_parser_result.process_content(
+                        parser_content,
+                        debug_flag = False,
+                        format_flag = True,
+                        iterate_f = export_parser_result.iterate_beautiful_soup,
+                        only_count_flag = True))
+
+                token_count += content_token_count
+                accepted_count += content_accepted_count
+
+            if None not in user_data_dict:
+
+                user_data_dict[None] = {
+                    'disambiguation': (token_count, accepted_count)}
+
+            else:
+
+                user_data_dict[None]['disambiguation'] = (
+                    token_count, accepted_count)
+
         # Returning gathered statistics.
 
         log.debug(
@@ -654,6 +716,7 @@ def stat_condition_list(
     condition_list,
     time_begin = None,
     time_end = None,
+    disambiguation_flag = False,
     locale_id = None):
     """
     Gathers cumulative user participation statistics for all perspectives by an SQLAlchemy query condition
@@ -905,6 +968,9 @@ def stat_condition_list(
     for field_id_list, field_type in [
         (simple_field_id_list, 'simple'),
         (grouping_field_id_list, 'grouping')]:
+
+        if not field_id_list:
+            continue
 
         # We are going to count entites of fields of simple type.
 
@@ -1203,7 +1269,7 @@ def stat_condition_list(
 
                 .all())
 
-        # Aggregating statistics for entities of simple type.
+        # Aggregating statistics for entities of a given type.
 
         for (user_id, is_browser, entity_count,
             perspective_state, field_name, published) in entity_count_list:
@@ -1276,6 +1342,65 @@ def stat_condition_list(
                             local_entity_data[f_string][c_string] += entity_count_value
                             local_entity_data_total[f_string][c_string] += entity_count_value
 
+    # Getting disambiguation statistics if required.
+
+    if disambiguation_flag:
+
+        token_count = 0
+        accepted_count = 0
+
+        parser_content_query = (
+
+            DBSession
+
+                .query(
+                    ParserResult.content)
+
+                .filter(
+                    *condition_list,
+
+                    LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+                    LexicalEntry.parent_object_id == DictionaryPerspective.object_id,
+                    LexicalEntry.marked_for_deletion == False,
+
+                    Entity.parent_client_id == LexicalEntry.client_id,
+                    Entity.parent_object_id == LexicalEntry.object_id,
+                    Entity.marked_for_deletion == False,
+
+                    PublishingEntity.client_id == Entity.client_id,
+                    PublishingEntity.object_id == Entity.object_id,
+                    PublishingEntity.published == True,
+                    PublishingEntity.accepted == True,
+
+                    ParserResult.entity_client_id == Entity.client_id,
+                    ParserResult.entity_object_id == Entity.object_id,
+                    ParserResult.marked_for_deletion == False))
+
+        for (parser_content,) in parser_content_query.yield_per(1):
+
+            _, content_token_count, content_accepted_count = (
+
+                export_parser_result.process_content(
+                    parser_content,
+                    debug_flag = False,
+                    format_flag = True,
+                    iterate_f = export_parser_result.iterate_beautiful_soup,
+                    only_count_flag = True))
+
+            token_count += content_token_count
+            accepted_count += content_accepted_count
+
+        if None not in user_data_dict:
+
+            user_data_dict[None] = {
+                'name': None,
+                'disambiguation': (token_count, accepted_count)}
+
+        else:
+
+            user_data_dict[None]['disambiguation'] = (
+                token_count, accepted_count)
+
     return user_data_dict
 
 
@@ -1283,6 +1408,7 @@ def stat_dictionary(
     dictionary_id,
     time_begin = None,
     time_end = None,
+    disambiguation_flag = False,
     locale_id = None):
     """
     Gathers cumulative user participation statistics for all perspectives of a specified dictionary in a
@@ -1324,6 +1450,7 @@ def stat_dictionary(
                 condition_list,
                 time_begin,
                 time_end,
+                disambiguation_flag,
                 locale_id))
 
         # Returning gathered statistics.
@@ -1358,6 +1485,7 @@ def stat_language(
     language_id,
     time_begin = None,
     time_end = None,
+    disambiguation_flag = False,
     dictionaries = False,
     corpora = False,
     locale_id = None):
@@ -1447,6 +1575,7 @@ def stat_language(
                 condition_list,
                 time_begin,
                 time_end,
+                disambiguation_flag,
                 locale_id))
 
         log.debug(

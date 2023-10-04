@@ -147,7 +147,15 @@ class Dictionary(LingvodocObjectType):  # tested
     category = graphene.Int()
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
-    statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
+
+    statistic = (
+
+        graphene.Field(
+            ObjectVal,
+            starting_time = graphene.Int(),
+            ending_time = graphene.Int(),
+            disambiguation_flag = graphene.Boolean()))
+
     last_modified_at = graphene.Float()
 
     # If the dictionary in 'Published' or 'Limited access' state and has at least one 'Published' or
@@ -556,7 +564,8 @@ class Dictionary(LingvodocObjectType):  # tested
         self,
         info,
         starting_time = None,
-        ending_time = None):
+        ending_time = None,
+        disambiguation_flag = False):
 
         return (
 
@@ -565,6 +574,7 @@ class Dictionary(LingvodocObjectType):  # tested
                     self.id,
                     starting_time,
                     ending_time,
+                    disambiguation_flag,
                     locale_id = info.context.locale_id)))
 
     @fetch_object('perspectives')
