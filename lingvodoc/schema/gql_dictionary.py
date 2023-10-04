@@ -1,9 +1,33 @@
+
+# Standard library imports.
+
 from collections import defaultdict
 import datetime
 import logging
 import pprint
 
+# External imports.
+
 import graphene
+
+import sqlalchemy
+
+from sqlalchemy import (
+    and_,
+    cast,
+    column,
+    extract,
+    func,
+    literal,
+    or_,
+    tuple_)
+
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm.attributes import flag_modified
+
+from sqlalchemy.sql.expression import Grouping
+
+# Lingvodoc imports.
 
 from lingvodoc.cache.caching import CACHE
 
@@ -29,8 +53,6 @@ from lingvodoc.models import (
     ValencyAnnotationData as dbValencyAnnotationData,
 )
 
-from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
-
 from lingvodoc.schema.gql_holders import (
     LingvodocObjectType,
     CommonFieldsComposite,
@@ -47,17 +69,17 @@ from lingvodoc.schema.gql_holders import (
     get_published_translation_gist_id_cte_query
 )
 
-import sqlalchemy
-from sqlalchemy import and_, cast, column, extract, func, or_, tuple_, literal
-from sqlalchemy.orm import aliased
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.sql.expression import Grouping
-
 from lingvodoc.utils import statistics, explain_analyze
-from lingvodoc.utils.creation import (create_perspective,
-                                      create_dbdictionary,
-                                      create_dictionary_persp_to_field,
-                                      edit_role)
+
+from lingvodoc.utils.creation import (
+    add_user_to_group,
+    create_dbdictionary,
+    create_dictionary_persp_to_field,
+    create_gists_with_atoms,
+    create_perspective,
+    edit_role,
+    update_metadata)
+
 from lingvodoc.utils.deletion import real_delete_dictionary
 from lingvodoc.utils.search import translation_gist_search
 
@@ -67,6 +89,7 @@ log = logging.getLogger(__name__)
 
 
 class UserToRoles(graphene.ObjectType):
+
     id_user = graphene.Int()
     roles = graphene.List(graphene.Int)
 
@@ -124,7 +147,15 @@ class Dictionary(LingvodocObjectType):  # tested
     category = graphene.Int()
     domain = graphene.Int()
     roles = graphene.Field(UserAndOrganizationsRoles)
-    statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
+
+    statistic = (
+
+        graphene.Field(
+            ObjectVal,
+            starting_time = graphene.Int(),
+            ending_time = graphene.Int(),
+            disambiguation_flag = graphene.Boolean()))
+
     last_modified_at = graphene.Float()
 
     # If the dictionary in 'Published' or 'Limited access' state and has at least one 'Published' or
@@ -529,39 +560,22 @@ class Dictionary(LingvodocObjectType):  # tested
         return [self] + language.resolve_tree(info)
 
     @fetch_object()
-    def resolve_statistic(self, info, starting_time=None, ending_time=None):
-        #print(starting_time)
-        if starting_time is None or ending_time is None:
-            raise ResponseError(message="Time period is not chosen")
-        locale_id = info.context.get('locale_id')
-        current_statistics = statistics.stat_dictionary(self.id,
-                                   starting_time,
-                                   ending_time,
-                                   locale_id=locale_id
-                                                        )
-        new_format_statistics = []
+    def resolve_statistic(
+        self,
+        info,
+        starting_time = None,
+        ending_time = None,
+        disambiguation_flag = False):
 
-        for key, stat_dict in current_statistics.items():
+        return (
 
-            new_dict = {
-                'user_id': key,
-                'name': stat_dict['name']}
-
-            # NOTE: 'lexical_entries' with underscore '_' for the new format.
-
-            if 'lexical entries' in stat_dict:
-                new_dict['lexical_entries'] = stat_dict['lexical entries']
-
-            if 'entities' in stat_dict:
-                new_dict['entities'] = stat_dict['entities']
-
-            new_format_statistics.append(new_dict)
-
-        log.debug(
-            '\nnew format:\n{0}'.format(
-                pprint.pformat(new_format_statistics, width = 144)))
-
-        return new_format_statistics
+            statistics.new_format(
+                statistics.stat_dictionary(
+                    self.id,
+                    starting_time,
+                    ending_time,
+                    disambiguation_flag,
+                    locale_id = info.context.locale_id)))
 
     @fetch_object('perspectives')
     def resolve_perspectives(

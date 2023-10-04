@@ -13058,7 +13058,11 @@ class SwadeshAnalysis(graphene.Mutation):
     perspective_name_list = graphene.List(graphene.String)
 
     @staticmethod
-    def export_dataframe(result_pool, distance_data_array, bundles):
+    def get_entry_text(entry):
+        return f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
+
+    @staticmethod
+    def export_dataframe(result_pool, distance_data_array, bundles, get_entry_text):
         '''
         Keys:
         result_pool[perspective_id][entry_id]
@@ -13093,7 +13097,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 if not isinstance(entry, dict):
                     continue
                 group_num = entry['group']
-                entry_text = f"{entry['swadesh']} [ {entry['transcription']} ] {entry['translation']}"
+                entry_text = get_entry_text(entry)
                 if group_num is not None and group_num in bundles:
                     # Concatinate existing value if is and a new one, store the result to 'groups' dataframe
                     value = ""
@@ -13108,7 +13112,7 @@ class SwadeshAnalysis(graphene.Mutation):
                     cell = groups.loc[group_num].get('lines')
                     if pd.isnull(cell) or cell < lines:
                         groups.loc[group_num, 'lines'] = lines
-                elif entry['borrowed']:
+                elif entry.get('borrowed'):
                     borrowed.loc[borrowed_index, dict_name] = entry_text
                     borrowed_index += 1
                 else:
@@ -13175,7 +13179,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 # Write the column headers with the defined format.
                 for col_num, value in enumerate(columns):
                     worksheet.write(0, col_num + startcol, value, header_format)
-                # Set rows specifical height
+                # Set rows specific height
                 if sheet_name == 'Cognates':
                     for row_num, coeff in enumerate(df['lines']):
                         if coeff > 1:
@@ -13411,7 +13415,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 for swadesh_num, swadesh_lex in enumerate(swadesh_list):
                     for translation_lex in translation_list:
                         if compare_translations(swadesh_lex, translation_lex):
-                            # Store the entry's content in human readable format
+                            # Store the entry's content in human-readable format
                             result_pool[perspective_id][entry_id] = {
                                 'group': None,
                                 'borrowed': (" заим." in f" {transcription_lex} {translation_lex}"),
@@ -13423,7 +13427,7 @@ class SwadeshAnalysis(graphene.Mutation):
                             entries_set[perspective_id].add(entry_id)
                             if not result_pool[perspective_id][entry_id]['borrowed']:
                                 # Total list of Swadesh's words in the perspective,
-                                # they can have no any etimological links
+                                # they can have not any etymological links
                                 swadesh_total[perspective_id].add(swadesh_num)
 
             # Forget the dictionary if it contains less than 50 Swadesh words
@@ -13441,12 +13445,12 @@ class SwadeshAnalysis(graphene.Mutation):
         for perspective_id, entries in entries_set.items():
             means[perspective_id] = collections.defaultdict(set)
             for group_index, group in enumerate(group_list):
-                # Select etimologically linked entries
+                # Select etymologically linked entries
                 linked = entries & group
                 for entry_id in linked:
                     result_pool[perspective_id][entry_id]['group'] = group_index
                     swadesh = result_pool[perspective_id][entry_id]['swadesh']
-                    # Store the correspondence: perspective { means(1/2/3) { etimological_groups(1.1/1.2/2.1/3.1)
+                    # Store the correspondence: perspective { meanings(1/2/3) { etymological_groups(1.1/1.2/2.1/3.1)
                     if not result_pool[perspective_id][entry_id]['borrowed']:
                         means[perspective_id][swadesh].add(group_index)
 
@@ -13455,9 +13459,9 @@ class SwadeshAnalysis(graphene.Mutation):
         complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
         distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
 
-        # Calculate intersection between lists of linked means (Swadesh matching)
+        # Calculate intersection between lists of linked meanings (Swadesh matching)
         # So length of this intersection is the similarity of corresponding perspectives
-        # means_total is amount of Swadesh's lexems met in the both perspectives
+        # means_total is amount of Swadesh's lexemes met in the both perspectives
         bundles = set()
         # Calculate each-to-each distances, exclude self-to-self
         for n1, (perspective1, means1) in enumerate(means.items()):
@@ -13469,15 +13473,15 @@ class SwadeshAnalysis(graphene.Mutation):
                     distance_data_array[n1][n2] = 0
                     complex_data_array[n1][n2] = "n/a"
                 else:
-                    # Common means of entries which have etimological linkes
-                    # but this linkes may be not mutual
+                    # Common meanings of entries which have etymological links
+                    # but this links may be not mutual
                     means_common = means1.keys() & means2.keys()
                     means_linked = 0
-                    # Checking if the found means have common links
+                    # Checking if the found meanings have common links
                     for swadesh in means_common:
                         links_common = means1[swadesh] & means2[swadesh]
                         if links_common:
-                            # Bundles are linkes with two or more entries in the result table
+                            # Bundles are links with two or more entries in the result table
                             bundles.update(links_common)
                             means_linked += 1
 
@@ -13488,13 +13492,13 @@ class SwadeshAnalysis(graphene.Mutation):
                                   f"{len(means_common)} but {means_linked} of {means_total} : "
                                   f"{', '.join(sorted(means_common))}")
 
-                    # means_linked > 0 means that means_total > 0 even more so
-                    distance = math.log(means_linked / means_total) / -0.14 if means_linked > 0 else 50
+                    c = means_linked / means_total if means_total > 0 else 0
+                    distance = math.sqrt( math.log(c) / -0.1 / math.sqrt(c) ) if c > 0 else 25
                     percent = means_linked * 100 // means_total if means_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
 
-        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles)
+        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, SwadeshAnalysis.get_entry_text)
 
         # GC
         del result_pool
@@ -13657,6 +13661,440 @@ class SwadeshAnalysis(graphene.Mutation):
 
             log.warning(
                 'swadesh_analysis {0}: exception'.format(
+                language_str))
+
+            log.warning(traceback_string)
+
+            return ResponseError(message =
+                'Exception:\n' + traceback_string)
+
+
+class MorphCognateAnalysis(graphene.Mutation):
+    class Arguments:
+
+        source_perspective_id = LingvodocID(required = True)
+        base_language_id = LingvodocID(required = True)
+
+        group_field_id = LingvodocID(required = True)
+        perspective_info_list = graphene.List(graphene.List(LingvodocID), required = True)
+
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    result = graphene.String()
+    xlsx_url = graphene.String()
+    minimum_spanning_tree = graphene.List(graphene.List(graphene.Int))
+    embedding_2d = graphene.List(graphene.List(graphene.Float))
+    embedding_3d = graphene.List(graphene.List(graphene.Float))
+    perspective_name_list = graphene.List(graphene.String)
+
+    @staticmethod
+    def get_entry_text(entry):
+        return f"{'; '.join(entry['affix'])} ( {'; '.join(entry['meaning'])} )"
+
+    @staticmethod
+    def morph_cognate_statistics(
+            language_str,
+            base_language_id,
+            base_language_name,
+            group_field_id,
+            perspective_info_list,
+            locale_id,
+            storage,
+            debug_flag = False):
+
+        # Gathering entry grouping data.
+
+        if not debug_flag:
+
+            _, group_list, _ = (
+                CognateAnalysis.tag_data_plpgsql(
+                    perspective_info_list, group_field_id))
+
+        else:
+
+            # If we are in debug mode, we try to load existing tag data to reduce debugging time.
+
+            tag_data_digest = (
+                hashlib.md5(
+                    repr(list(group_field_id) +
+                        [perspective_info[0] for perspective_info in perspective_info_list])
+                    .encode('utf-8'))
+                .hexdigest())
+
+            tag_data_file_name = (
+                f'__tag_data_{base_language_id[0]}_{base_language_id[1]}_{tag_data_digest}__.gz')
+
+            # Checking if we have saved data.
+
+            if os.path.exists(tag_data_file_name):
+
+                with gzip.open(tag_data_file_name, 'rb') as tag_data_file:
+                    _, group_list, _ = pickle.load(tag_data_file)
+
+            else:
+
+                # Don't have existing data, so we gather it and then save it for later use.
+
+                r1, group_list, r3 = (
+
+                    CognateAnalysis.tag_data_plpgsql(
+                        perspective_info_list, group_field_id))
+
+                with gzip.open(tag_data_file_name, 'wb') as tag_data_file:
+                    pickle.dump((r1, group_list, r3), tag_data_file)
+
+        # Getting text data for each perspective.
+        to_canon_meaning = collections.defaultdict(dict)
+        meaning_to_links = {}
+        result_pool = {}
+        tiny_dicts = set()
+        clean_meaning_re = re.compile('[.\dA-Z]+')
+        for index, (perspective_id, affix_field_id, meaning_field_id) in \
+                enumerate(perspective_info_list):
+
+            # Getting and saving perspective info.
+            perspective = (
+                DBSession
+                    .query(dbPerspective)
+                    .filter_by(client_id=perspective_id[0], object_id=perspective_id[1])
+                    .first()
+            )
+            dictionary_name = perspective.parent.get_translation(locale_id)
+
+            # GC
+            del perspective
+
+            # Getting text data.
+            affix_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == affix_field_id[0],
+                        dbEntity.field_object_id == affix_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('affix'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
+            meaning_query = (
+                DBSession
+                    .query(
+                        dbLexicalEntry.client_id,
+                        dbLexicalEntry.object_id)
+                    .filter(
+                        dbLexicalEntry.parent_client_id == perspective_id[0],
+                        dbLexicalEntry.parent_object_id == perspective_id[1],
+                        dbLexicalEntry.marked_for_deletion == False,
+                        dbEntity.parent_client_id == dbLexicalEntry.client_id,
+                        dbEntity.parent_object_id == dbLexicalEntry.object_id,
+                        dbEntity.field_client_id == meaning_field_id[0],
+                        dbEntity.field_object_id == meaning_field_id[1],
+                        dbEntity.marked_for_deletion == False,
+                        dbPublishingEntity.client_id == dbEntity.client_id,
+                        dbPublishingEntity.object_id == dbEntity.object_id,
+                        dbPublishingEntity.published == True,
+                        dbPublishingEntity.accepted == True)
+                    .add_columns(
+                        func.array_agg(dbEntity.content).label('meaning'))
+                    .group_by(dbLexicalEntry)
+                    .subquery())
+
+            # Main query for transcription/translation data.
+            data_query = (
+                DBSession
+                    .query(affix_query)
+                    .outerjoin(meaning_query, and_(
+                        affix_query.c.client_id == meaning_query.c.client_id,
+                        affix_query.c.object_id == meaning_query.c.object_id))
+                    .add_columns(
+                        meaning_query.c.meaning)
+                    .all())
+
+            # GC
+            del affix_query
+            del meaning_query
+
+            meaning_to_links[perspective_id] = {}
+            result_pool[perspective_id] = {'name': dictionary_name}
+
+            for row in data_query:
+                entry_id = tuple(row[:2])
+
+                if not (affix_list := row[2]) or not (meaning_list := row[3]):
+                    continue
+
+                affix = list(map(lambda a: a.strip(), affix_list))
+                meaning = []
+                for m in meaning_list:
+                    if clean_m := re.search(clean_meaning_re, m):
+                        meaning.append(clean_m.group(0))
+
+                if not meaning:
+                    continue
+
+                # Compounding a dictionary to convert every meaning to the first one within each row
+                # Initialize group of links for every sub_meaning to have a full set of sub_meanings
+                for sub_meaning in meaning:
+                    to_canon_meaning[perspective_id][sub_meaning] = meaning[0]
+                    meaning_to_links[perspective_id][sub_meaning] = set()
+
+                # Grouping affixes and meanings by lexical entries.
+                result_pool[perspective_id][entry_id] = {
+                    'group': None,
+                    'affix': affix,
+                    'meaning': meaning
+                }
+
+            # Forget the dictionary if it contains less than 30 sub-meanings
+            if len(to_canon_meaning[perspective_id]) < 30:
+                del meaning_to_links[perspective_id]
+                del result_pool[perspective_id]
+                tiny_dicts.add(dictionary_name)
+
+            # GC
+            del data_query
+
+        # Checking if found entries have links
+        for perspective_id, entries in result_pool.items():
+            for group_index, group in enumerate(group_list):
+                # Select etymologically linked entries
+                linked = entries.keys() & group
+                for entry_id in linked:
+                    result_pool[perspective_id][entry_id]['group'] = group_index
+                    meaning = result_pool[perspective_id][entry_id]['meaning']
+                    for sub_meaning in meaning:
+                        meaning_to_links[perspective_id][sub_meaning].add(group_index)
+
+        dictionary_count = len(result_pool)
+        distance_data_array = numpy.full((dictionary_count, dictionary_count), 50, dtype='float')
+        complex_data_array = numpy.full((dictionary_count, dictionary_count), "n/a", dtype='object')
+        distance_header_array = numpy.full(dictionary_count, "<noname>", dtype='object')
+
+        bundles = set()
+        # Calculate each-to-each distances, exclude self-to-self
+        for n1, (perspective1, meaning_to_links1) in enumerate(meaning_to_links.items()):
+            # Numerate dictionaries
+            result_pool[perspective1]['name'] = f"{n1 + 1}. {result_pool[perspective1]['name']}"
+            distance_header_array[n1] = result_pool[perspective1]['name']
+
+            to_canon_meaning1 = to_canon_meaning[perspective1]
+            canon_meanings1_set = set(to_canon_meaning1.values())
+
+            for n2, (perspective2, meaning_to_links2) in enumerate(meaning_to_links.items()):
+                if n1 == n2:
+                    distance_data_array[n1][n2] = 0
+                    complex_data_array[n1][n2] = "n/a"
+                else:
+                    # Compile new meaning_to_links2 using canon_meanings instead of sub_meanings
+                    canon_meaning_to_links2 = collections.defaultdict(set)
+                    for sub_meaning, links in meaning_to_links2.items():
+                        if canon_meaning := to_canon_meaning1.get(sub_meaning):
+                            canon_meaning_to_links2[canon_meaning].update(links)
+
+                    # Common canonical meanings of perspective1 and perspective2
+                    meanings_common = canon_meanings1_set & canon_meaning_to_links2.keys()
+                    meanings_total = len(meanings_common)
+
+                    meanings_linked = 0
+                    # Checking if the found meanings have common links
+                    for meaning in meanings_common:
+                        links_common = meaning_to_links1[meaning] & canon_meaning_to_links2[meaning]
+                        if links_common:
+                            # Bundles are links with two or more entries in the result table
+                            bundles.update(links_common)
+                            meanings_linked += 1
+
+                    '''
+                    if debug_flag and n2 > n1 and meanings_linked >= meanings_total:
+                        log.debug(f"{n1+1},{n2+1} : "
+                                  f"{len(meanings_common)} but {meanings_linked} of {meanings_total} : "
+                                  f"{', '.join(sorted(meanings_common))}")
+                    '''
+
+                    # meanings_linked > 0 meanings that meanings_total > 0 even more so
+                    distance = math.log(meanings_linked / meanings_total) / -0.14 if meanings_linked > 0 else 50
+                    singles = meanings_total - meanings_linked
+                    percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
+                    distance_data_array[n1][n2] = round(distance, 2)
+                    complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
+
+        result = SwadeshAnalysis.export_dataframe(result_pool, complex_data_array, bundles, MorphCognateAnalysis.get_entry_text)
+
+        # GC
+        del result_pool
+
+        xlsx_url = SwadeshAnalysis.export_xlsx(result, base_language_name, storage)
+
+        # 'lines' field is not needed any more
+        del result['Cognates']['lines']
+
+        html_result = SwadeshAnalysis.export_html(result, tiny_dicts)
+
+        _, mst_list, embedding_2d_pca, embedding_3d_pca = \
+            CognateAnalysis.distance_graph(
+                language_str,
+                base_language_name,
+                distance_data_array,
+                distance_header_array,
+                None,
+                None,
+                None,
+                analysis_str = 'morph_cognate_analysis',
+                __debug_flag__ = debug_flag,
+                __plot_flag__ = False
+            )
+
+        result_dict = (
+            dict(
+                triumph = True,
+
+                result = html_result,
+                xlsx_url = xlsx_url,
+                minimum_spanning_tree = mst_list,
+                embedding_2d = embedding_2d_pca,
+                embedding_3d = embedding_3d_pca,
+                perspective_name_list = distance_header_array))
+
+        return MorphCognateAnalysis(**result_dict)
+
+    @staticmethod
+    def mutate(
+        self,
+        info,
+        source_perspective_id,
+        base_language_id,
+        group_field_id,
+        perspective_info_list,
+        debug_flag = False):
+        """
+        mutation MorphCognateAnalysis {
+          morph_cognate_analysis(
+            base_language_id: [508, 41],
+            group_field_id: [66, 25],
+            perspective_info_list: [
+              [[425, 4], [66, 8], [66, 10]],
+              [[1552, 1759], [66, 8], [66, 10]],
+              [[418, 4], [66, 8], [66, 10]]])
+          {
+            triumph          }
+        }
+        """
+
+        # Administrator / perspective author / editing permission check.
+        error_str = (
+            'Only administrator, perspective author and users with perspective editing permissions '
+            'can perform Swadesh analysis.')
+
+        client_id = info.context.request.authenticated_userid
+
+        if not client_id:
+            return ResponseError(error_str)
+
+        user = Client.get_user_by_client_id(client_id)
+
+        author_client_id_set = (
+
+            set(
+                client_id
+                for (client_id, _), _, _ in perspective_info_list))
+
+        author_id_check = (
+
+            DBSession
+
+                .query(
+
+                    DBSession
+                        .query(literal(1))
+                        .filter(
+                            Client.id.in_(author_client_id_set),
+                            Client.user_id == user.id)
+                        .exists())
+
+                .scalar())
+
+        if (user.id != 1 and
+            not author_id_check and
+            not info.context.acl_check_if('edit', 'perspective', source_perspective_id)):
+
+            return ResponseError(error_str)
+
+        # Debug mode check.
+
+        if debug_flag and user.id != 1:
+
+            return (
+
+                ResponseError(
+                    message = 'Only administrator can use debug mode.'))
+
+        language_str = (
+            '{0}/{1}, language {2}/{3}'.format(
+                source_perspective_id[0], source_perspective_id[1],
+                base_language_id[0], base_language_id[1]))
+
+        try:
+
+            # Getting base language info.
+
+            locale_id = info.context.get('locale_id') or 2
+
+            base_language = DBSession.query(dbLanguage).filter_by(
+                client_id = base_language_id[0], object_id = base_language_id[1]).first()
+
+            base_language_name = base_language.get_translation(locale_id)
+
+            request = info.context.request
+            storage = request.registry.settings['storage']
+
+            # Transforming client/object pair ids from lists to 2-tuples.
+
+            source_perspective_id = tuple(source_perspective_id)
+            base_language_id = tuple(base_language_id)
+            group_field_id = tuple(group_field_id)
+
+            perspective_info_list = [
+
+                (tuple(perspective_id),
+                    tuple(affix_field_id),
+                    tuple(meaning_field_id))
+
+                for perspective_id,
+                    affix_field_id,
+                    meaning_field_id in perspective_info_list]
+
+            return MorphCognateAnalysis.morph_cognate_statistics(
+                language_str,
+                base_language_id,
+                base_language_name,
+                group_field_id,
+                perspective_info_list,
+                locale_id,
+                storage,
+                debug_flag)
+
+        # Exception occured while we tried to perform swadesh analysis.
+        except Exception as exception:
+
+            traceback_string = ''.join(traceback.format_exception(
+                exception, exception, exception.__traceback__))[:-1]
+
+            log.warning(
+                'morph_cognate_analysis {0}: exception'.format(
                 language_str))
 
             log.warning(traceback_string)
@@ -19568,6 +20006,7 @@ class MyMutations(graphene.ObjectType):
     phonemic_analysis = PhonemicAnalysis.Field()
     cognate_analysis = CognateAnalysis.Field()
     swadesh_analysis = SwadeshAnalysis.Field()
+    morph_cognate_analysis = MorphCognateAnalysis.Field()
     phonology = Phonology.Field()
     phonological_statistical_distance = PhonologicalStatisticalDistance.Field()
     sound_and_markup = SoundAndMarkup.Field()

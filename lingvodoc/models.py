@@ -281,22 +281,48 @@ class CreatedAtMixin(object):
 
 class IdMixin(object):
     """
-    It's used for automatically set id as primary key.
+    It's used for automatically setting id as primary key.
     """
-    id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
-    # __table_args__ = (
-    #     dict(
-    #         sqlite_autoincrement=True))
-    # __remove_this_table_args__ = (
-    #     dict(
-    #         sqlite_autoincrement=True))
+
+    id = Column(SLBigInteger(), primary_key = True, autoincrement = True)
+
+    @classmethod
+    def get(
+        cls,
+        id,
+        session = DBSession):
+        """
+        A conveniece method to get an object by its id, e.g. Client.get(client_id).
+        """
+
+        return (
+
+            session
+                .query(cls)
+                .filter_by(id = id)
+                .first())
 
 
-def get_client_counter(check_id):
-    DBSession.query(Client).filter_by(id=check_id).update(values={"counter": Client.counter + 1},
-                                                          synchronize_session='fetch')
-    DBSession.flush()
-    return DBSession.query(Client.counter).filter_by(id=check_id).with_for_update(of=Client).scalar()
+def get_client_counter(
+    client_id,
+    session = DBSession):
+
+    (session
+        .query(Client)
+        .filter_by(id = client_id)
+        .update(
+            values  ={'counter': Client.counter + 1},
+            synchronize_session = 'fetch'))
+
+    session.flush()
+
+    return (
+
+        session
+            .query(Client.counter)
+            .filter_by(id = client_id)
+            .with_for_update(of = Client)
+            .scalar())
 
 
 class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
@@ -343,24 +369,62 @@ class ObjectTOCMixin(object):
 
 class CompositeIdMixin(object):
     """
-    It's used for automatically set client_id and object_id as composite primary key.
+    It's used for automatically setting client_id and object_id as composite primary key.
     """
-    object_id = Column(SLBigInteger(), primary_key=True)
-    client_id = Column(SLBigInteger(), primary_key=True)
 
-    def __init__(self, **kwargs):
+    object_id = Column(SLBigInteger(), primary_key = True)
+    client_id = Column(SLBigInteger(), primary_key = True)
 
-        if not kwargs.get("object_id", None):
-            kwargs["object_id"] = get_client_counter(kwargs['client_id'])
+    @classmethod
+    def get(
+        cls,
+        id = None,
+        client_id = None,
+        object_id = None,
+        deleted = None,
+        session = DBSession):
+        """
+        A conveniece method to get an object by its composite id, e.g. Dictionary.get(dictionary_id).
+        """
 
-        if kwargs.get('session', None):
+        if id:
 
-            session = kwargs['session']
-            del kwargs['session']
+            client_id, object_id = id
 
-        else:
+        kwargs = {
+            'client_id': client_id,
+            'object_id': object_id}
 
-            session = DBSession
+        if deleted is not None:
+
+            kwargs['marked_for_deletion'] = deleted
+
+        return (
+
+            session
+                .query(cls)
+                .filter_by(**kwargs)
+                .first())
+
+    def __init__(self, *args, **kwargs):
+
+        session = (
+            kwargs.get('session') or DBSession)
+
+        id = (
+            kwargs.pop('id', None))
+
+        if id:
+
+            kwargs['client_id'] = id[0]
+            kwargs['object_id'] = id[1]
+
+        if not kwargs.get('object_id'):
+
+            kwargs['object_id'] = (
+
+                get_client_counter(
+                    kwargs['client_id'], session))
 
         object_toc = (
 
@@ -379,16 +443,14 @@ class CompositeIdMixin(object):
 
             session.merge(object_toc)
 
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
     def mark_deleted(self, message, marked_for_deletion = True, **kwargs):
 
         self.marked_for_deletion = marked_for_deletion
 
-        if kwargs.get("session", None):
-            session = kwargs['session']
-        else:
-            session = DBSession
+        session = (
+            kwargs.get('session') or DBSession)
 
         objecttoc = (
 
