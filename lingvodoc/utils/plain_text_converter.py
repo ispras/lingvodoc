@@ -1,17 +1,9 @@
-import time
-import random
-import string
-import collections
 import transaction
-import datetime
 from collections import defaultdict
-from itertools import chain
 import logging
 import traceback
-import pprint
 import re
 import urllib
-import io
 
 import graphene
 from sqlalchemy import create_engine
@@ -29,39 +21,24 @@ from lingvodoc.models import (
 )
 from lingvodoc.utils.creation import create_gists_with_atoms, update_metadata, add_user_to_group
 from lingvodoc.schema.gql_holders import (
-    LingvodocObjectType,
-    CommonFieldsComposite,
-    StateHolder,
-    TranslationHolder,
-    fetch_object,
-    del_object,
-    client_id_check,
     ResponseError,
     ObjectVal,
-    acl_check_by_id,
-    LingvodocID,
-    UserAndOrganizationsRoles
+    LingvodocID
 )
 
-from lingvodoc.utils import statistics
 from lingvodoc.utils.lexgraph_marker import get_lexgraph_list
 from lingvodoc.utils.creation import (create_perspective,
-                                      create_dbdictionary,
-                                      create_dictionary_persp_to_field,
-                                      edit_role,
-                                      create_group_entity)
+                                      create_dbdictionary)
+
 from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
-
-from lingvodoc.scripts.convert_five_tiers import convert_all
-from lingvodoc.queue.celery import celery
-
-from lingvodoc.cache.caching import CACHE
+from lingvodoc.cache.caching import CACHE, initialize_cache
+from lingvodoc.utils.corpus_converter import get_field_id
 
 # Setting up logging.
 log = logging.getLogger(__name__)
 
 
-def txt_to_column(path, url, column_dict=collections.defaultdict(list), column=None):
+def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 
     try:
         txt_file = (
@@ -101,7 +78,7 @@ def txt_to_column(path, url, column_dict=collections.defaultdict(list), column=N
 
     if not column:
         column = path.split('/')[-1]
-    col_num = len(column_dict)
+    col_num = len(columns_dict)
 
     count = 0
     for x in sentences:
@@ -110,26 +87,29 @@ def txt_to_column(path, url, column_dict=collections.defaultdict(list), column=N
         if not line:
             continue
 
-        column_dict[f'{col_num}:{column}'].append(line)
+        columns_dict[column].append(line)
         count += 1
 
-    return column_dict, count
+    return columns_dict, count
 
 
-def txt_to_parallel_columns(blobs):
-
-    column_dict = collections.defaultdict(list)
+def txt_to_parallel_columns(columns_inf):
+    columns_dict = defaultdict(list)
 
     max_count = 0
-    for blob in blobs:
-        column_dict, count = txt_to_column(blob.real_storage_path, blob.content, column_dict)
+    for column_inf in columns_inf:
+        blob_id = tuple(column_inf.get("blob_id"))
+        field_id = tuple(column_inf.field_map.get("field_id"))
+        blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
+
+        columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_id)
         if count > max_count:
             max_count = count
 
-    column_dict['ORDER'] = get_lexgraph_list(max_count)
-    column_dict['NUMBER'] = list(range(1, max_count + 1))
+    columns_dict[get_field_id('Order')] = get_lexgraph_list(max_count)
+    columns_dict[get_field_id('Number')] = list(range(1, max_count + 1))
 
-    return column_dict
+    return columns_dict, max_count
 
 
 def create_entity(
@@ -202,9 +182,7 @@ class GqlParallelCorpora(graphene.Mutation):
         task_name = translation_atoms[0].get('content', default_name) if translation_atoms else default_name
 
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
-        task = TaskStatus(user_id, "Txt corpora conversion", task_name, 10)
-
-        return GqlParallelCorpora(triumph=True)
+        task = TaskStatus(user_id, "Txt corpora conversion", task_name, 5)
 
         convert_start(
             info,
@@ -231,135 +209,105 @@ class ObjectId:
 
 
 #@contextlib.contextmanager
-def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
+def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
+    TODO: change the description below
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
       convert_starling(starling_dictionaries: $starling_dictionaries){
             triumph
         }
     }
     """
-    from lingvodoc.cache.caching import initialize_cache
     initialize_cache(cache_kwargs)
     global CACHE
-    from lingvodoc.cache.caching import CACHE
     try:
         with transaction.manager:
             task_status = TaskStatus.get_from_cache(task_key)
 
             task_status.set(1, 1, "Preparing")
+
             engine = create_engine(sqlalchemy_url)
             DBSession.configure(bind=engine, autoflush=False)
             obj_id = ObjectId()
-
-            old_client_id = ids[0]
+            old_client_id = info.context["client_id"]
             old_client = DBSession.query(dbClient).filter_by(id=old_client_id).first()
             user = DBSession.query(dbUser).filter_by(id=old_client.user_id).first()
             client = dbClient(user_id=user.id)
-            user.clients.append(client)
+            #user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
             client_id = client.id
 
-            task_status.set(2, 50, "uploading...")
-            blob_to_perspective = dict()
+            task_status.set(2, 20, "converting...")
 
-            persp_to_lexentry = collections.defaultdict(dict)
-            task_status_counter = 0
+            # Getting txt data, checking that the txt file is Lingvodoc-valid.
+            columns_dict, max_count = txt_to_parallel_columns(columns_inf)
 
-            blobs = []
-            for corpus_inf in corpora_inf:
-                task_status_counter += 1
-                blob_id = tuple(corpus_inf.get("blob_id"))
-                blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
-                blobs.append(blob)
-
-            # Getting TXT data, checking if the TXT file is not Lingvodoc-valid.
-
-            column_dict = txt_to_parallel_columns(blobs)
+            task_status.set(3, 50, "creating dictionary and perspective...")
 
             atoms_to_create = corpus_inf.get("translation_atoms")
-            if atoms_to_create:
-                content = atoms_to_create[0].get("content")
-                task_status.set(4, 60, "%s (%s/%s)" % (content, task_status_counter, len(corpora_inf)))
-                dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create,
-                                                                         None,
-                                                                         (old_client_id, None),
-                                                                         gist_type="Dictionary")
+            dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create,
+                                                                     None,
+                                                                     (old_client_id, None),
+                                                                     gist_type="Dictionary")
             parent_id = corpus_inf.get("parent_id")
-
             dbdictionary_obj = (
-
                 create_dbdictionary(
                     id = obj_id.id_pair(client_id),
                     parent_id = parent_id,
                     translation_gist_id = dictionary_translation_gist_id,
                     add_group = True,
                     additional_metadata = {
-                        'license': corpus_inf.get('license') or 'proprietary',
-                        'source_blob_id': blob_id}))
+                        'license': corpus_inf.get('license') or 'proprietary'
+                    }))
 
             atoms_to_create = [
                 {"locale_id": ENGLISH_LOCALE, "content": "Parallel corpora"},
                 {"locale_id": RUSSIAN_LOCALE, "content": "Параллельные корпуса"}]
-
             persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
                                                                 None,
                                                                 (old_client_id, None),
                                                                 gist_type="Perspective")
 
             dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
-
             new_persp = create_perspective(id=obj_id.id_pair(client_id),
                                            parent_id=dictionary_id,  # TODO: use all object attrs
                                            translation_gist_id=persp_translation_gist_id,
                                            add_group=True)
 
-            blob_to_perspective[blob_id] = new_persp
             perspective_id = [new_persp.client_id, new_persp.object_id]
-            starlingname_to_column = collections.OrderedDict()
 
-            le_list = []
-            for number in column_dict["NUMBER"]:  # range()
+            task_status.set(4, 70, "uploading...")
+
+            for i in range(max_count):
                 le_client_id, le_object_id = client_id, obj_id.next
                 lexentr = dbLexicalEntry(object_id=le_object_id,
                                          client_id=le_client_id,
                                          parent_client_id=perspective_id[0],
                                          parent_object_id=perspective_id[1])
                 DBSession.add(lexentr)
-                le_list.append((le_client_id, le_object_id))
-                persp_to_lexentry[blob_id][number] = (le_client_id, le_object_id)
+                lexentr_tuple = le_client_id, le_object_id
 
-            i = 0
-            for lexentr_tuple in le_list:
-                for starling_column_name in starlingname_to_column:
-                    field_id = starlingname_to_column[starling_column_name]
-                    col_data = column_dict[starling_column_name][i]
+                for field_id, contents in columns_dict.items():
+                    if i >= len(contents):
+                        continue
 
-                    if col_data:
+                    content = contents[i]
 
+                    if content:
                         new_ent = (
-
                             create_entity(
                                 id = obj_id.id_pair(client_id),
                                 parent_id = lexentr_tuple,
                                 additional_metadata = None,
                                 field_id = field_id,
-                                self_id = None,
-                                link_id = None,
                                 locale_id = ENGLISH_LOCALE,
-                                filename = None,
-                                content = col_data,
-                                registry = None,
-                                request = None,
+                                content = content,
                                 save_object = False))
 
                         CACHE.set(objects = [new_ent, ], DBSession=DBSession)
                         # DBSession.add(new_ent)
-                i += 1
-
         DBSession.flush()
-
 
     except Exception as exception:
         traceback_string = (
@@ -374,4 +322,4 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             'Convertion failed, exception:\n' + traceback_string)
 
     else:
-        task_status.set(10, 100, "Finished", "")
+        task_status.set(5, 100, "Finished", "")
