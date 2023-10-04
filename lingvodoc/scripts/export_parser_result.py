@@ -467,10 +467,13 @@ def process_content(
     content,
     debug_flag,
     format_flag,
-    iterate_f):
+    iterate_f,
+    only_count_flag = False):
 
     paragraph_list = []
+
     token_count = 0
+    approved_count = 0
 
     # Processing each paragraph.
 
@@ -508,25 +511,36 @@ def process_content(
 
                 if isinstance(item, str):
 
-                    token_str = re.sub(r'\s+', ' ', item.strip())
+                    if not only_count_flag:
 
-                    if token_str:
+                        token_str = re.sub(r'\s+', ' ', item.strip())
 
-                        token_list.append({'token': token_str})
-                        variant_list.append({'token': token_str})
+                        if token_str:
+
+                            token_list.append({'token': token_str})
+                            variant_list.append({'token': token_str})
 
                 # Parsed token without variants.
 
                 elif not item[1] and not item[2]:
 
-                    token_str = re.sub(r'\s+', ' ', item[0].strip())
+                    if not only_count_flag:
 
-                    if token_str:
+                        token_str = re.sub(r'\s+', ' ', item[0].strip())
 
-                        token_list.append({'token': token_str})
-                        variant_list.append({'token': token_str})
+                        if token_str:
+
+                            token_list.append({'token': token_str})
+                            variant_list.append({'token': token_str})
 
                 # Parsed token with variants.
+
+                elif only_count_flag:
+
+                    token_count += 1
+
+                    if item[1]:
+                        approved_count += 1
 
                 else:
 
@@ -548,11 +562,16 @@ def process_content(
 
                     token_count += 1
 
-            paragraph_dict = {
-                'index': paragraph_index,
-                'text': paragraph_text,
-                'tokens': token_list,
-                'variants': variant_list}
+                    if approved_list:
+                        approved_count += 1
+
+            if not only_count_flag:
+
+                paragraph_dict = {
+                    'index': paragraph_index,
+                    'text': paragraph_text,
+                    'tokens': token_list,
+                    'variants': variant_list}
 
         # All info.
 
@@ -581,9 +600,11 @@ def process_content(
                 '\nparagraph_dict:\n' +
                 pprint.pformat(paragraph_dict, width = 192))
 
-        paragraph_list.append(paragraph_dict)
+        if not only_count_flag:
 
-    return paragraph_list, token_count
+            paragraph_list.append(paragraph_dict)
+
+    return paragraph_list, token_count, approved_count
 
 def process_parser_result(
     content,

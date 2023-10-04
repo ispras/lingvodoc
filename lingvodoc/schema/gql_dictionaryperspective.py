@@ -224,7 +224,15 @@ class DictionaryPerspective(LingvodocObjectType):
     authors = graphene.List('lingvodoc.schema.gql_user.User')
     roles = graphene.Field(UserAndOrganizationsRoles)
     role_check = graphene.Boolean(subject = graphene.String(required = True), action = graphene.String(required = True))
-    statistic = graphene.Field(ObjectVal, starting_time=graphene.Int(), ending_time=graphene.Int())
+
+    statistic = (
+
+        graphene.Field(
+            ObjectVal,
+            starting_time = graphene.Int(),
+            ending_time = graphene.Int(),
+            disambiguation_flag = graphene.Boolean()))
+
     is_template = graphene.Boolean()
     counter = graphene.Int(mode=graphene.String())
     last_modified_at = graphene.Float()
@@ -852,7 +860,8 @@ class DictionaryPerspective(LingvodocObjectType):
         self,
         info,
         starting_time = None,
-        ending_time = None):
+        ending_time = None,
+        disambiguation_flag = False):
 
         return (
 
@@ -861,6 +870,7 @@ class DictionaryPerspective(LingvodocObjectType):
                     self.id,
                     starting_time,
                     ending_time,
+                    disambiguation_flag,
                     locale_id = info.context.locale_id)))
 
 

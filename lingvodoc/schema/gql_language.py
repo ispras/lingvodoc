@@ -113,6 +113,7 @@ class Language(LingvodocObjectType):
             ObjectVal,
             starting_time = graphene.Int(),
             ending_time = graphene.Int(),
+            disambiguation_flag = graphene.Boolean(),
             dictionaries = graphene.Boolean(),
             corpora = graphene.Boolean()))
 
@@ -489,6 +490,7 @@ class Language(LingvodocObjectType):
         info,
         starting_time = None,
         ending_time = None,
+        disambiguation_flag = False,
         dictionaries = False,
         corpora = False):
 
@@ -499,6 +501,7 @@ class Language(LingvodocObjectType):
                     self.id,
                     starting_time,
                     ending_time,
+                    disambiguation_flag,
                     dictionaries,
                     corpora,
                     locale_id = info.context.locale_id)))
