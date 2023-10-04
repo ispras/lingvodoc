@@ -17070,7 +17070,7 @@ class Valency(graphene.Mutation):
 
             for parser_result_index, parser_result in enumerate(parser_result_list):
 
-                paragraph_list, token_count = (
+                paragraph_list, token_count, _ = (
 
                     export_parser_result.process_parser_result(
                         parser_result.content,
