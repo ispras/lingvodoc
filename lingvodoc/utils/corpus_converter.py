@@ -744,7 +744,7 @@ def convert_five_tiers(
                 if x.field_id == backref_fid)
 
         mark_re = re.compile('[-.][\dA-Z]+')
-        dash_re = re.compile('[-]([.\dA-Z]+)')
+        dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?]*)')
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
 
