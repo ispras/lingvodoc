@@ -28,7 +28,8 @@ from lingvodoc.schema.gql_holders import (
 
 from lingvodoc.utils.lexgraph_marker import get_lexgraph_list
 from lingvodoc.utils.creation import (create_perspective,
-                                      create_dbdictionary)
+                                      create_dbdictionary,
+                                      create_dictionary_persp_to_field)
 
 from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
 from lingvodoc.cache.caching import CACHE, initialize_cache
@@ -96,6 +97,13 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 def txt_to_parallel_columns(columns_inf):
     columns_dict = defaultdict(list)
 
+    order_field_id = get_field_id('Order')
+    number_field_id = get_field_id('Number')
+
+    # Init the fields to be the first ones in the result table
+    columns_dict[order_field_id] = []
+    columns_dict[number_field_id] = []
+
     max_count = 0
     for column_inf in columns_inf:
         blob_id = tuple(column_inf.get("blob_id"))
@@ -106,8 +114,8 @@ def txt_to_parallel_columns(columns_inf):
         if count > max_count:
             max_count = count
 
-    columns_dict[get_field_id('Order')] = get_lexgraph_list(max_count)
-    columns_dict[get_field_id('Number')] = list(range(1, max_count + 1))
+    columns_dict[order_field_id] = get_lexgraph_list(max_count)
+    columns_dict[number_field_id] = list(range(1, max_count + 1))
 
     return columns_dict, max_count
 
@@ -208,7 +216,6 @@ class ObjectId:
         return [client_id, self.next]
 
 
-#@contextlib.contextmanager
 def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
@@ -276,6 +283,14 @@ def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, t
                                            add_group=True)
 
             perspective_id = [new_persp.client_id, new_persp.object_id]
+
+            for position, field_id in enumerate(columns_dict):
+                create_dictionary_persp_to_field(id=obj_id.id_pair(client_id),
+                                                 parent_id=perspective_id,
+                                                 field_id=field_id,
+                                                 upper_level=None,
+                                                 link_id=None,
+                                                 position=position)
 
             task_status.set(4, 70, "uploading...")
 
