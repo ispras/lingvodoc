@@ -7,6 +7,7 @@ import urllib
 
 import graphene
 from sqlalchemy import create_engine
+from lingvodoc.queue.celery import celery
 
 from lingvodoc.cache.caching import TaskStatus
 from lingvodoc.models import (
@@ -192,7 +193,7 @@ class GqlParallelCorpora(graphene.Mutation):
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Txt corpora conversion", task_name, 5)
 
-        convert_start(
+        convert_start.delay(
             info,
             corpus_inf,
             columns_inf,
@@ -215,7 +216,7 @@ class ObjectId:
     def id_pair(self, client_id):
         return [client_id, self.next]
 
-
+@celery.task
 def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
