@@ -216,6 +216,20 @@ class ObjectId:
     def id_pair(self, client_id):
         return [client_id, self.next]
 
+
+def get_translation_gist_id(translation_atoms, client_id, gist_type):
+    if (translation_gist := translation_gist_search(translation_atoms[0].get('content'),
+                                                    gist_type=gist_type)):
+        translation_gist_id = translation_gist.id
+        #print(f"Found {gist_type} gist: {translation_gist_id}")
+    else:
+        translation_gist_id = create_gists_with_atoms(translation_atoms,
+                                                      None,
+                                                      (client_id, None),
+                                                      gist_type=gist_type)
+    return translation_gist_id
+
+
 @celery.task
 def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
@@ -242,7 +256,6 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             old_client = DBSession.query(dbClient).filter_by(id=old_client_id).first()
             user = DBSession.query(dbUser).filter_by(id=old_client.user_id).first()
             client = dbClient(user_id=user.id)
-            #user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
             client_id = client.id
@@ -254,35 +267,30 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
 
             task_status.set(3, 50, "creating dictionary and perspective...")
 
-            atoms_to_create = corpus_inf.get("translation_atoms")
-            dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create,
-                                                                     None,
-                                                                     (old_client_id, None),
-                                                                     gist_type="Dictionary")
             parent_id = corpus_inf.get("parent_id")
             dbdictionary_obj = (
                 create_dbdictionary(
-                    id = obj_id.id_pair(client_id),
-                    parent_id = parent_id,
-                    translation_gist_id = dictionary_translation_gist_id,
-                    add_group = True,
-                    additional_metadata = {
+                    id=obj_id.id_pair(client_id),
+                    parent_id=parent_id,
+                    translation_gist_id=
+                        get_translation_gist_id(corpus_inf.get("translation_atoms"), old_client_id, "Dictionary"),
+                    add_group=True,
+                    additional_metadata={
                         'license': corpus_inf.get('license') or 'proprietary'
                     }))
 
-            atoms_to_create = [
+            dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
+            translation_atoms = [
                 {"locale_id": ENGLISH_LOCALE, "content": "Parallel corpora"},
                 {"locale_id": RUSSIAN_LOCALE, "content": "Параллельные корпуса"}]
-            persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
-                                                                None,
-                                                                (old_client_id, None),
-                                                                gist_type="Perspective")
 
-            dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
-            new_persp = create_perspective(id=obj_id.id_pair(client_id),
-                                           parent_id=dictionary_id,  # TODO: use all object attrs
-                                           translation_gist_id=persp_translation_gist_id,
-                                           add_group=True)
+            new_persp = (
+                create_perspective(
+                    id=obj_id.id_pair(client_id),
+                    parent_id=dictionary_id,  # TODO: use all object attrs
+                    translation_gist_id=
+                        get_translation_gist_id(translation_atoms, old_client_id, "Perspective"),
+                    add_group=True))
 
             perspective_id = [new_persp.client_id, new_persp.object_id]
 
