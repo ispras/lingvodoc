@@ -9,7 +9,7 @@ import graphene
 from sqlalchemy import create_engine
 from lingvodoc.queue.celery import celery
 
-from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.cache.caching import TaskStatus, initialize_cache
 from lingvodoc.models import (
     Client as dbClient,
     DBSession,
@@ -32,8 +32,7 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field)
 
-from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
-from lingvodoc.cache.caching import CACHE, initialize_cache
+from lingvodoc.utils.search import translation_gist_search
 from lingvodoc.utils.corpus_converter import get_field_id
 
 # Setting up logging.
@@ -67,6 +66,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 
     sentence_marker = re.compile(f'{tib_end}|'
                                  f'{oir_end}|'
+                                 f'\[{tib_end}\]|'
                                  f'\[{oir_end}\]')
 
     txt_start = re.search(position_marker, txt_file).start()
@@ -194,7 +194,7 @@ class GqlParallelCorpora(graphene.Mutation):
         task = TaskStatus(user_id, "Txt corpora conversion", task_name, 5)
 
         convert_start.delay(
-            info,
+            [info.context["client_id"], None],
             corpus_inf,
             columns_inf,
             cache_kwargs,
@@ -217,7 +217,7 @@ class ObjectId:
         return [client_id, self.next]
 
 @celery.task
-def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
+def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
@@ -228,6 +228,7 @@ def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, t
     """
     initialize_cache(cache_kwargs)
     global CACHE
+    from lingvodoc.cache.caching import CACHE
     try:
         with transaction.manager:
             task_status = TaskStatus.get_from_cache(task_key)
@@ -237,7 +238,7 @@ def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, t
             engine = create_engine(sqlalchemy_url)
             DBSession.configure(bind=engine, autoflush=False)
             obj_id = ObjectId()
-            old_client_id = info.context["client_id"]
+            old_client_id = ids[0]
             old_client = DBSession.query(dbClient).filter_by(id=old_client_id).first()
             user = DBSession.query(dbUser).filter_by(id=old_client.user_id).first()
             client = dbClient(user_id=user.id)
