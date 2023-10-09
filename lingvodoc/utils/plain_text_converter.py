@@ -98,12 +98,9 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 def txt_to_parallel_columns(columns_inf):
     columns_dict = defaultdict(list)
 
+    # Init field to be the first one in result table
     order_field_id = get_field_id('Order')
-    number_field_id = get_field_id('Number')
-
-    # Init the fields to be the first ones in the result table
     columns_dict[order_field_id] = []
-    columns_dict[number_field_id] = []
 
     max_count = 0
     for column_inf in columns_inf:
@@ -116,7 +113,6 @@ def txt_to_parallel_columns(columns_inf):
             max_count = count
 
     columns_dict[order_field_id] = get_lexgraph_list(max_count)
-    columns_dict[number_field_id] = list(range(1, max_count + 1))
 
     return columns_dict, max_count
 
