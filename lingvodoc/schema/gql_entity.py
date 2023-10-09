@@ -181,12 +181,11 @@ class CreateEntity(graphene.Mutation):
         link_perspective_id = LingvodocID()
 
         locale_id = graphene.Int()
-        filename = graphene.String(
-
-        )
+        filename = graphene.String()
         content = graphene.String()
         registry = ObjectVal()
         file_content = Upload()
+        lexgraph_after = graphene.String()
 
     # Result object
 
