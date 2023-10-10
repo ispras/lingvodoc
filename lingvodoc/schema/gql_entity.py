@@ -379,6 +379,11 @@ class CreateEntity(graphene.Mutation):
                 raise ResponseError(
                     message="The field is of link type. You should provide link_perspective_id id in the content")
 
+        elif lexgraph_after := args.get("lexgraph_after"):
+            dbentity.content = marker_between(marker_after=lexgraph_after)
+            print("Old lexgraph: " + lexgraph_after)
+            print("New lexgraph: " + dbentity.content)
+
         else:
             content = args.get("content")
             dbentity.content = content
