@@ -181,12 +181,11 @@ class CreateEntity(graphene.Mutation):
         link_perspective_id = LingvodocID()
 
         locale_id = graphene.Int()
-        filename = graphene.String(
-
-        )
+        filename = graphene.String()
         content = graphene.String()
         registry = ObjectVal()
         file_content = Upload()
+        lexgraph_after = graphene.String()
 
     # Result object
 
@@ -379,6 +378,11 @@ class CreateEntity(graphene.Mutation):
             else:
                 raise ResponseError(
                     message="The field is of link type. You should provide link_perspective_id id in the content")
+
+        elif lexgraph_after := args.get("lexgraph_after"):
+            dbentity.content = marker_between(marker_after=lexgraph_after)
+            print("Old lexgraph: " + lexgraph_after)
+            print("New lexgraph: " + dbentity.content)
 
         else:
             content = args.get("content")

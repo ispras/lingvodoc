@@ -26,6 +26,10 @@ def increased(marker, to_increase):
     new_value = digits[digits.index(marker[to_increase]) + 1]
     return marker[:to_increase] + new_value
 
+def decreased(marker, to_decrease):
+    new_value = digits[digits.index(marker[to_decrease]) - 1]
+    return marker[:to_decrease] + new_value
+
 def delta(larger, smaller):
     return int(larger, base) - int(smaller, base)
 
@@ -44,9 +48,15 @@ def marker_between(marker_before='', marker_after=''):
 
     result = ''
     for pos in range(len(marker1)):
-        result += marker1[pos]
         if delta(marker2[pos], marker1[pos]) <= 1:
+            result += marker1[pos]
             continue
-        else:
+        # under 'h' letter move down
+        elif marker2[pos] > 'h':
+            result += marker1[pos]
             return increased(result, pos)
+        # above 'h' letter move up
+        else:
+            result += marker2[pos]
+            return decreased(result, pos)
     return result + 'h'

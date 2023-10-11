@@ -7,8 +7,9 @@ import urllib
 
 import graphene
 from sqlalchemy import create_engine
+from lingvodoc.queue.celery import celery
 
-from lingvodoc.cache.caching import TaskStatus
+from lingvodoc.cache.caching import TaskStatus, initialize_cache
 from lingvodoc.models import (
     Client as dbClient,
     DBSession,
@@ -31,8 +32,7 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field)
 
-from lingvodoc.utils.search import translation_gist_search, get_id_to_field_dict
-from lingvodoc.cache.caching import CACHE, initialize_cache
+from lingvodoc.utils.search import translation_gist_search
 from lingvodoc.utils.corpus_converter import get_field_id
 
 # Setting up logging.
@@ -66,6 +66,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 
     sentence_marker = re.compile(f'{tib_end}|'
                                  f'{oir_end}|'
+                                 f'\[{tib_end}\]|'
                                  f'\[{oir_end}\]')
 
     txt_start = re.search(position_marker, txt_file).start()
@@ -97,12 +98,9 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 def txt_to_parallel_columns(columns_inf):
     columns_dict = defaultdict(list)
 
+    # Init field to be the first one in result table
     order_field_id = get_field_id('Order')
-    number_field_id = get_field_id('Number')
-
-    # Init the fields to be the first ones in the result table
     columns_dict[order_field_id] = []
-    columns_dict[number_field_id] = []
 
     max_count = 0
     for column_inf in columns_inf:
@@ -115,7 +113,6 @@ def txt_to_parallel_columns(columns_inf):
             max_count = count
 
     columns_dict[order_field_id] = get_lexgraph_list(max_count)
-    columns_dict[number_field_id] = list(range(1, max_count + 1))
 
     return columns_dict, max_count
 
@@ -192,8 +189,8 @@ class GqlParallelCorpora(graphene.Mutation):
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Txt corpora conversion", task_name, 5)
 
-        convert_start(
-            info,
+        convert_start.delay(
+            [info.context["client_id"], None],
             corpus_inf,
             columns_inf,
             cache_kwargs,
@@ -216,7 +213,21 @@ class ObjectId:
         return [client_id, self.next]
 
 
-def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
+def get_translation_gist_id(translation_atoms, client_id, gist_type):
+    if (translation_gist := translation_gist_search(translation_atoms[0].get('content'),
+                                                    gist_type=gist_type)):
+        translation_gist_id = translation_gist.id
+        #print(f"Found {gist_type} gist: {translation_gist_id}")
+    else:
+        translation_gist_id = create_gists_with_atoms(translation_atoms,
+                                                      None,
+                                                      (client_id, None),
+                                                      gist_type=gist_type)
+    return translation_gist_id
+
+
+@celery.task
+def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
@@ -227,6 +238,7 @@ def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, t
     """
     initialize_cache(cache_kwargs)
     global CACHE
+    from lingvodoc.cache.caching import CACHE
     try:
         with transaction.manager:
             task_status = TaskStatus.get_from_cache(task_key)
@@ -236,11 +248,10 @@ def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, t
             engine = create_engine(sqlalchemy_url)
             DBSession.configure(bind=engine, autoflush=False)
             obj_id = ObjectId()
-            old_client_id = info.context["client_id"]
+            old_client_id = ids[0]
             old_client = DBSession.query(dbClient).filter_by(id=old_client_id).first()
             user = DBSession.query(dbUser).filter_by(id=old_client.user_id).first()
             client = dbClient(user_id=user.id)
-            #user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
             client_id = client.id
@@ -252,35 +263,30 @@ def convert_start(info, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, t
 
             task_status.set(3, 50, "creating dictionary and perspective...")
 
-            atoms_to_create = corpus_inf.get("translation_atoms")
-            dictionary_translation_gist_id = create_gists_with_atoms(atoms_to_create,
-                                                                     None,
-                                                                     (old_client_id, None),
-                                                                     gist_type="Dictionary")
             parent_id = corpus_inf.get("parent_id")
             dbdictionary_obj = (
                 create_dbdictionary(
-                    id = obj_id.id_pair(client_id),
-                    parent_id = parent_id,
-                    translation_gist_id = dictionary_translation_gist_id,
-                    add_group = True,
-                    additional_metadata = {
+                    id=obj_id.id_pair(client_id),
+                    parent_id=parent_id,
+                    translation_gist_id=
+                        get_translation_gist_id(corpus_inf.get("translation_atoms"), old_client_id, "Dictionary"),
+                    add_group=True,
+                    additional_metadata={
                         'license': corpus_inf.get('license') or 'proprietary'
                     }))
 
-            atoms_to_create = [
+            dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
+            translation_atoms = [
                 {"locale_id": ENGLISH_LOCALE, "content": "Parallel corpora"},
                 {"locale_id": RUSSIAN_LOCALE, "content": "Параллельные корпуса"}]
-            persp_translation_gist_id = create_gists_with_atoms(atoms_to_create,
-                                                                None,
-                                                                (old_client_id, None),
-                                                                gist_type="Perspective")
 
-            dictionary_id = [dbdictionary_obj.client_id, dbdictionary_obj.object_id]
-            new_persp = create_perspective(id=obj_id.id_pair(client_id),
-                                           parent_id=dictionary_id,  # TODO: use all object attrs
-                                           translation_gist_id=persp_translation_gist_id,
-                                           add_group=True)
+            new_persp = (
+                create_perspective(
+                    id=obj_id.id_pair(client_id),
+                    parent_id=dictionary_id,  # TODO: use all object attrs
+                    translation_gist_id=
+                        get_translation_gist_id(translation_atoms, old_client_id, "Perspective"),
+                    add_group=True))
 
             perspective_id = [new_persp.client_id, new_persp.object_id]
 
