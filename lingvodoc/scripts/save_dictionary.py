@@ -57,6 +57,7 @@ from lingvodoc.cache.caching import TaskStatus, initialize_cache
 from lingvodoc.utils import explain_analyze, sanitize_worksheet_name
 from lingvodoc.utils.search import recursive_sort
 from lingvodoc.utils.static_fields import fields_static
+from lingvodoc.utils.corpus_converter import get_field_id
 from lingvodoc.views.v2.utils import as_storage_file, storage_file
 
 from sqlalchemy.orm import (
@@ -2627,7 +2628,7 @@ def compile_workbook(
             perspective,
             __debug_flag__ = __debug_flag__)
 
-        lexical_entries = session.query(LexicalEntry).join(Entity).join(PublishingEntity) \
+        lexical_entries = session.query(LexicalEntry, Entity).join(Entity).join(PublishingEntity) \
             .filter(LexicalEntry.parent_client_id == perspective.client_id,
                     LexicalEntry.parent_object_id == perspective.object_id,
                     LexicalEntry.marked_for_deletion == False,
@@ -2636,8 +2637,16 @@ def compile_workbook(
         if published is not None:
             lexical_entries = lexical_entries.filter(PublishingEntity.published == published)
 
-        for lex in lexical_entries:
+        lex_by_id = {}
+        lex_by_order = {}
+        order_field_id = get_field_id("Order")
+        for lex, entity in lexical_entries:
+            lex_by_id[lex.id] = lex
+            if entity.field_id == order_field_id:
+                lex_by_order[entity.content] = lex
+        lex_dict = lex_by_order if lex_by_order else lex_by_id
 
+        for (_, lex) in sorted(lex_dict.items()):
             context.save_lexical_entry(
                 lex,
                 published,

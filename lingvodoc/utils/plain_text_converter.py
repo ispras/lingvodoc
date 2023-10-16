@@ -54,7 +54,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
                 .read()
                 .decode('utf-8-sig', 'ignore'))
 
-    page = r'\d+[ab]'
+    page = r'\d+[ab]?'
     line = r'\d+'
     tib_end = r'\|\|+'
     oir_end = r':+'
@@ -69,14 +69,16 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
                                  f'\[{tib_end}\]|'
                                  f'\[{oir_end}\]')
 
-    txt_start = re.search(position_marker, txt_file).start()
-    txt_file = txt_file[txt_start:]
+    if not (txt_start := re.search(position_marker, txt_file)):
+        raise ValueError("Be careful, meaningful text must start with a marker like '[12a:23]' or '[12b]' or just '[12]'.")
 
+    txt_file = txt_file[txt_start.start():]
     txt_file = txt_file.replace('\r\n', ' ').replace('\n', ' ').replace('  ', ' ')
     # Replace colons in markers to another symbol to differ from colons in text
     txt_file = re.sub(r':(\d)', r'#\1', txt_file)
 
-    sentences = re.split(sentence_marker, txt_file)[:-1]
+    if not (sentences := re.split(sentence_marker, txt_file)[:-1]):
+        raise ValueError("No one sentence is found. Be careful, sentences must end with '||' or ':' simbols. These symbols may be closed in square brackets.")
 
     if not column:
         column = path.split('/')[-1]
