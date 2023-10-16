@@ -2639,7 +2639,7 @@ def compile_workbook(
 
         lex_by_id = {}
         lex_by_order = {}
-        order_field_id = get_field_id("Order")
+        order_field_id = get_field_id("Order", DBSession=session)
         for lex, entity in lexical_entries:
             lex_by_id[lex.id] = lex
             if entity.field_id == order_field_id:

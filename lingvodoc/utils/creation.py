@@ -917,7 +917,7 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
 
 
-def create_field(translation_atoms, client_id=66, gist_type="Field"):
+def create_field(translation_atoms, client_id=66, gist_type="Field", DBSession=DBSession):
     translation_gist_id = create_gists_with_atoms(translation_atoms,
                                                   None,
                                                   [client_id, None],
