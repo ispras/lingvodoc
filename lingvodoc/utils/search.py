@@ -47,7 +47,7 @@ def translation_gist_search(searchstring, gist_type='Service'):
     #                                          translationatoms=translationatoms_list)
     return translationgist
 
-def field_search(searchstring):
+def field_search(searchstring, DBSession=DBSession):
     field = (
         DBSession
             .query(dbField)
