@@ -82,6 +82,10 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 
     if not column:
         column = path.split('/')[-1]
+
+    if column in columns_dict:
+        raise ValueError("Different columns in the table have identical names.")
+
     col_num = len(columns_dict)
 
     count = 0
