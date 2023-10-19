@@ -126,7 +126,14 @@ def txt_to_parallel_columns(columns_inf):
 
 
 def join_sentences(columns_dict):
+    def pure_note(note):
+        return re.sub(f'{position_marker.pattern}|{line_marker.pattern}|{sentence_marker.pattern}|[^\w\s]', '', note)
+
+    def coeff(non_base):
+        return 8 if non_base else 10
+
     order_field_id = get_field_id('Order')
+
     iterators = {}
     for f_id, lines in columns_dict.items():
         if f_id == order_field_id:
@@ -140,13 +147,11 @@ def join_sentences(columns_dict):
         # Read all the columns to find the longest sentence
         sentence = {}
         words = {}
-        for f_id, it in iterators.items():
+        for non_base, (f_id, it) in enumerate(iterators.items()):
             if not (note := next(it, None)):
                 continue
             sentence[f_id] = note
-            pure_note = re.sub(f'{position_marker.pattern}|{line_marker.pattern}|{sentence_marker.pattern}|[^\w\s]', '', note)
-            words[f_id] = len(pure_note.split())
-            #print(pure_note, words[f_id])
+            words[f_id] = len(pure_note(note).split()) * coeff(non_base)
 
         # To interrupt if all the columns have ended
         if not sentence:
@@ -157,13 +162,12 @@ def join_sentences(columns_dict):
 
         longest = max(words.values())
 
-        for f_id, wrd in words.items():
+        for non_base, (f_id, wrd) in enumerate(words.items()):
             while wrd > 0 and longest // wrd > 1:
                 if not (note := next(iterators[f_id], None)):
                     break
                 sentence[f_id] += f' // {note}'
-                pure_note = re.sub(f'{position_marker.pattern}|{line_marker.pattern}|{sentence_marker.pattern}|[^\w\s]', '', note)
-                wrd += len(pure_note.split())
+                wrd += len(pure_note(note).split()) * coeff(non_base)
 
             result[f_id].append(sentence[f_id])
 
