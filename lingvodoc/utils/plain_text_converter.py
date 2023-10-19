@@ -40,6 +40,22 @@ log = logging.getLogger(__name__)
 
 #order_field_id = get_field_id('Order')
 
+page = r'\d+[ab]?'
+line = r'\d+'
+tib_end = r'\|\|+'
+oir_end = r':+'
+
+position_marker = re.compile(f'\[{page}:{line}\]|'
+                             f'\[{page}\]')
+
+line_marker = re.compile(f'\({line}\)')
+
+sentence_marker = re.compile(f'{tib_end}|'
+                             f'{oir_end}|'
+                             f'\[{tib_end}\]|'
+                             f'\[{oir_end}\]')
+
+
 def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 
     try:
@@ -54,21 +70,6 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
                 urllib.parse.quote(url, safe='/:'))
                 .read()
                 .decode('utf-8-sig', 'ignore'))
-
-    page = r'\d+[ab]?'
-    line = r'\d+'
-    tib_end = r'\|\|+'
-    oir_end = r':+'
-
-    position_marker = re.compile(f'\[{page}:{line}\]|'
-                                 f'\[{page}\]')
-
-    line_marker = re.compile(f'\({line}\)')
-
-    sentence_marker = re.compile(f'{tib_end}|'
-                                 f'{oir_end}|'
-                                 f'\[{tib_end}\]|'
-                                 f'\[{oir_end}\]')
 
     if not (txt_start := re.search(position_marker, txt_file)):
         raise ValueError("Be careful, meaningful text must start with a marker like '[12a:23]' or '[12b]' or just '[12]'.")
@@ -143,7 +144,9 @@ def join_sentences(columns_dict):
             if not (note := next(it, None)):
                 continue
             sentence[f_id] = note
-            words[f_id] = len(note.split())
+            pure_note = re.sub(f'{position_marker.pattern}|{line_marker.pattern}|{sentence_marker.pattern}|[^\w\s]', '', note)
+            words[f_id] = len(pure_note.split())
+            #print(pure_note, words[f_id])
 
         # To interrupt if all the columns have ended
         if not sentence:
@@ -159,7 +162,8 @@ def join_sentences(columns_dict):
                 if not (note := next(iterators[f_id], None)):
                     break
                 sentence[f_id] += f' // {note}'
-                wrd += len(note.split())
+                pure_note = re.sub(f'{position_marker.pattern}|{line_marker.pattern}|{sentence_marker.pattern}|[^\w\s]', '', note)
+                wrd += len(pure_note.split())
 
             result[f_id].append(sentence[f_id])
 
