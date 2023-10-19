@@ -38,7 +38,7 @@ from lingvodoc.utils.corpus_converter import get_field_id
 # Setting up logging.
 log = logging.getLogger(__name__)
 
-order_field_id = get_field_id('Order')
+#order_field_id = get_field_id('Order')
 
 def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 
@@ -106,6 +106,7 @@ def txt_to_parallel_columns(columns_inf):
     columns_dict = defaultdict(list)
 
     # Init field to be the first one in result table
+    order_field_id = get_field_id('Order')
     columns_dict[order_field_id] = []
 
     max_count = 0
@@ -124,6 +125,7 @@ def txt_to_parallel_columns(columns_inf):
 
 
 def join_sentences(columns_dict):
+    order_field_id = get_field_id('Order')
     iterators = {}
     for f_id, lines in columns_dict.items():
         if f_id == order_field_id:
