@@ -38,6 +38,7 @@ from lingvodoc.utils.corpus_converter import get_field_id
 # Setting up logging.
 log = logging.getLogger(__name__)
 
+order_field_id = get_field_id('Order')
 
 def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 
@@ -105,7 +106,6 @@ def txt_to_parallel_columns(columns_inf):
     columns_dict = defaultdict(list)
 
     # Init field to be the first one in result table
-    order_field_id = get_field_id('Order')
     columns_dict[order_field_id] = []
 
     max_count = 0
@@ -120,7 +120,48 @@ def txt_to_parallel_columns(columns_inf):
 
     columns_dict[order_field_id] = get_lexgraph_list(max_count)
 
-    return columns_dict, max_count
+    return columns_dict
+
+
+def join_sentences(columns_dict):
+    iterators = {}
+    for f_id, lines in columns_dict.items():
+        if f_id == order_field_id:
+            order_it = iter(lines)
+        else:
+            iterators[f_id] = iter(lines)
+
+    count = 0
+    result = defaultdict(list)
+    for order in order_it:
+        # Read all the columns to find the longest sentence
+        sentence = {}
+        words = {}
+        for f_id, it in iterators.items():
+            if not (note := next(it, None)):
+                continue
+            sentence[f_id] = note
+            words[f_id] = len(note.split())
+
+        # To interrupt if all the columns have ended
+        if not sentence:
+            break
+
+        count += 1
+        result[order_field_id].append(order)
+
+        longest = max(words.values())
+
+        for f_id, wrd in words.items():
+            while wrd > 0 and longest // wrd > 1:
+                if not (note := next(iterators[f_id], None)):
+                    break
+                sentence[f_id] += f' // {note}'
+                wrd += len(note.split())
+
+            result[f_id].append(sentence[f_id])
+
+    return result, count
 
 
 def create_entity(
@@ -195,7 +236,7 @@ class GqlParallelCorpora(graphene.Mutation):
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Txt corpora conversion", task_name, 5)
 
-        convert_start.delay(
+        convert_start( #.delay(
             [info.context["client_id"], None],
             corpus_inf,
             columns_inf,
@@ -232,7 +273,7 @@ def get_translation_gist_id(translation_atoms, client_id, gist_type):
     return translation_gist_id
 
 
-@celery.task
+#@celery.task
 def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
@@ -265,7 +306,7 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             task_status.set(2, 20, "converting...")
 
             # Getting txt data, checking that the txt file is Lingvodoc-valid.
-            columns_dict, max_count = txt_to_parallel_columns(columns_inf)
+            columns_dict, max_count = join_sentences(txt_to_parallel_columns(columns_inf))
 
             task_status.set(3, 50, "creating dictionary and perspective...")
 
