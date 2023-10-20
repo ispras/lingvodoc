@@ -130,8 +130,9 @@ def join_sentences(columns_dict):
         return re.sub(f'{position_marker.pattern}|{line_marker.pattern}|{sentence_marker.pattern}|[^\w\s]', '', note)
 
     def coeff(non_base):
-        return 8 if non_base else 10
+        return 10 if non_base else 8
 
+    threshold = 1.2
     order_field_id = get_field_id('Order')
 
     iterators = {}
@@ -142,16 +143,18 @@ def join_sentences(columns_dict):
             iterators[f_id] = iter(lines)
 
     count = 0
+    buffer = {}
     result = defaultdict(list)
     for order in order_it:
         # Read all the columns to find the longest sentence
-        sentence = {}
         words = {}
+        sentence = {}
         for non_base, (f_id, it) in enumerate(iterators.items()):
-            if not (note := next(it, None)):
-                continue
-            sentence[f_id] = note
+            if not (note := buffer.get(f_id)):
+                if not (note := next(it, None)):
+                    continue
             words[f_id] = len(pure_note(note).split()) * coeff(non_base)
+            sentence[f_id] = note
 
         # To interrupt if all the columns have ended
         if not sentence:
@@ -159,17 +162,25 @@ def join_sentences(columns_dict):
 
         count += 1
         result[order_field_id].append(order)
-
         longest = max(words.values())
+        buffer = {}
 
         for non_base, (f_id, wrd) in enumerate(words.items()):
-            while wrd > 0 and longest // wrd > 1:
+            while wrd > 0 and longest / wrd > threshold:
                 if not (note := next(iterators[f_id], None)):
                     break
-                sentence[f_id] += f' // {note}'
-                wrd += len(pure_note(note).split()) * coeff(non_base)
 
-            result[f_id].append(sentence[f_id])
+                next_wrd = len(pure_note(note).split()) * coeff(non_base)
+                wrd += next_wrd
+
+                if wrd / longest > threshold:
+                    buffer[f_id] = note
+                    wrd -= next_wrd
+                    break
+                else:
+                    sentence[f_id] += f' // {note}'
+
+            result[f_id].append(f'{sentence[f_id]} <{wrd//coeff(non_base)}>')
 
     return result, count
 
