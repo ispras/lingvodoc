@@ -126,9 +126,16 @@ def txt_to_parallel_columns(columns_inf):
 
 
 def join_sentences(columns_dict):
+    # Get text without punctuation ant metatextual markers
     def pure_note(note):
-        return re.sub(f'{position_marker.pattern}|{line_marker.pattern}|{sentence_marker.pattern}|[^\w\s]', '', note)
+        return re.sub(f'{position_marker.pattern}|'
+                      f'{line_marker.pattern}|'
+                      f'{sentence_marker.pattern}|'
+                      f'[^\w\s]', '', note)
 
+    # For some number of words from original text corresponds
+    # some number in translation. So we have to recalculate
+    # these numbers back to compare them with each other
     def coeff(non_base):
         return 10 if non_base else 8
 
@@ -146,10 +153,12 @@ def join_sentences(columns_dict):
     buffer = {}
     result = defaultdict(list)
     for order in order_it:
-        # Read all the columns to find the longest sentence
         words = {}
         sentence = {}
+        # Read all the columns to find the longest sentence
         for non_base, (f_id, it) in enumerate(iterators.items()):
+            # Firstly get sentence from buffer if is
+            # else get it from the source dictionary
             if not (note := buffer.get(f_id)):
                 if not (note := next(it, None)):
                     continue
@@ -163,6 +172,7 @@ def join_sentences(columns_dict):
         count += 1
         result[order_field_id].append(order)
         longest = max(words.values())
+        # Clean out buffer
         buffer = {}
 
         for non_base, (f_id, wrd) in enumerate(words.items()):
@@ -173,6 +183,8 @@ def join_sentences(columns_dict):
                 next_wrd = len(pure_note(note).split()) * coeff(non_base)
                 wrd += next_wrd
 
+                # If next sentence is too long we don't concatenate
+                # and put it into 'buffer' dictionary for next entity
                 if wrd / longest > threshold:
                     buffer[f_id] = note
                     wrd -= next_wrd
@@ -180,6 +192,7 @@ def join_sentences(columns_dict):
                 else:
                     sentence[f_id] += f' // {note}'
 
+            # Write into the result dictionary
             result[f_id].append(f'{sentence[f_id]} <{wrd//coeff(non_base)}>')
 
     return result, count
