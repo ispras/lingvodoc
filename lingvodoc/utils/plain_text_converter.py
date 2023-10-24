@@ -135,7 +135,7 @@ def join_sentences(columns_dict):
     # Hide dashes
     def hide_dashes(note, non_base):
         return (
-            re.sub(r'([\w’])-([\w’])', r'\1\2', note)
+            re.sub(r'([\w’])-([\w’])', r'\1 \2', note)
             if not non_base and dedash else note)
 
     # Get text without punctuation ant metatextual markers
