@@ -106,6 +106,9 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
 def txt_to_parallel_columns(columns_inf):
     columns_dict = defaultdict(list)
 
+    # Hide dashes in base column if it's needed
+    columns_dict["dadash"] = columns_inf[0].get("dedash")
+
     # Init field to be the first one in result table
     order_field_id = get_field_id('Order')
     columns_dict[order_field_id] = []
@@ -125,11 +128,13 @@ def txt_to_parallel_columns(columns_inf):
     return columns_dict
 
 
-def join_sentences(columns_dict, dedash):
+def join_sentences(columns_dict):
+    dedash = columns_dict.get("dedash")
+
     # Hide dashes
     def hide_dashes(note, non_base):
         return (
-            re.sub(r'([\w])-([\w])', '\1\2', note)
+            re.sub(r'([\w’])-([\w’])', r'\1\2', note)
             if not non_base and dedash else note)
 
     # Get text without punctuation ant metatextual markers
@@ -240,14 +245,10 @@ def create_entity(
     return dbentity
 
 
-class FieldInf(graphene.InputObjectType):
-    column_name = graphene.String()
-    field_id = LingvodocID(required=True)
-
-
 class ColumnInf(graphene.InputObjectType):
     blob_id = LingvodocID(required=True)
-    field_map = FieldInf(required=True)
+    field_id = LingvodocID(required=True)
+    dedash = graphene.Boolean()
 
 
 class CorpusInf(graphene.InputObjectType):
@@ -314,7 +315,7 @@ def get_translation_gist_id(translation_atoms, client_id, gist_type):
 
 
 #@celery.task
-def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key, dedash=True):
+def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
@@ -346,7 +347,7 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             task_status.set(2, 20, "converting...")
 
             # Getting txt data, checking that the txt file is Lingvodoc-valid.
-            columns_dict, max_count = join_sentences(txt_to_parallel_columns(columns_inf), dedash)
+            columns_dict, max_count = join_sentences(txt_to_parallel_columns(columns_inf))
 
             task_status.set(3, 50, "creating dictionary and perspective...")
 
