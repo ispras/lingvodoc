@@ -107,7 +107,7 @@ def txt_to_parallel_columns(columns_inf):
     columns_dict = defaultdict(list)
 
     # Hide dashes in base column if it's needed
-    columns_dict["dadash"] = columns_inf[0].get("dedash")
+    columns_dict["dedash"] = columns_inf[0].get("dedash")
 
     # Init field to be the first one in result table
     order_field_id = get_field_id('Order')
@@ -116,7 +116,7 @@ def txt_to_parallel_columns(columns_inf):
     max_count = 0
     for column_inf in columns_inf:
         blob_id = tuple(column_inf.get("blob_id"))
-        field_id = tuple(column_inf.field_map.get("field_id"))
+        field_id = tuple(column_inf.get("field_id"))
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
 
         columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_id)
@@ -129,6 +129,7 @@ def txt_to_parallel_columns(columns_inf):
 
 
 def join_sentences(columns_dict):
+
     dedash = columns_dict.get("dedash")
 
     # Hide dashes
@@ -157,7 +158,7 @@ def join_sentences(columns_dict):
     for f_id, lines in columns_dict.items():
         if f_id == order_field_id:
             order_it = iter(lines)
-        else:
+        elif type(lines) is list:
             iterators[f_id] = iter(lines)
 
     count = 0
