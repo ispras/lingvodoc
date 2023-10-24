@@ -278,7 +278,7 @@ class GqlParallelCorpora(graphene.Mutation):
         user_id = dbClient.get_user_by_client_id(info.context["client_id"]).id
         task = TaskStatus(user_id, "Txt corpora conversion", task_name, 5)
 
-        convert_start( #.delay(
+        convert_start.delay(
             [info.context["client_id"], None],
             corpus_inf,
             columns_inf,
@@ -315,7 +315,7 @@ def get_translation_gist_id(translation_atoms, client_id, gist_type):
     return translation_gist_id
 
 
-#@celery.task
+@celery.task
 def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
     """
     TODO: change the description below
