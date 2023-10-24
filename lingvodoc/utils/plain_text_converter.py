@@ -125,7 +125,13 @@ def txt_to_parallel_columns(columns_inf):
     return columns_dict
 
 
-def join_sentences(columns_dict):
+def join_sentences(columns_dict, dedash):
+    # Hide dashes
+    def hide_dashes(note, non_base):
+        return (
+            re.sub(r'([\w])-([\w])', '\1\2', note)
+            if not non_base and dedash else note)
+
     # Get text without punctuation ant metatextual markers
     def pure_note(note):
         return re.sub(f'{position_marker.pattern}|'
@@ -163,7 +169,7 @@ def join_sentences(columns_dict):
                 if not (note := next(it, None)):
                     continue
             words[f_id] = len(pure_note(note).split()) * coeff(non_base)
-            sentence[f_id] = note
+            sentence[f_id] = hide_dashes(note, non_base)
 
         # To interrupt if all the columns have ended
         if not sentence:
@@ -186,11 +192,11 @@ def join_sentences(columns_dict):
                 # If next sentence is too long we don't concatenate
                 # and put it into 'buffer' dictionary for next entity
                 if wrd / longest > threshold:
-                    buffer[f_id] = note
+                    buffer[f_id] = hide_dashes(note, non_base)
                     wrd -= next_wrd
                     break
                 else:
-                    sentence[f_id] += f' // {note}'
+                    sentence[f_id] += f' // {hide_dashes(note, non_base)}'
 
             # Write into the result dictionary
             result[f_id].append(f'{sentence[f_id]} <{wrd//coeff(non_base)}>')
@@ -308,7 +314,7 @@ def get_translation_gist_id(translation_atoms, client_id, gist_type):
 
 
 #@celery.task
-def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key):
+def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, task_key, dedash=True):
     """
     TODO: change the description below
         mutation myQuery($starling_dictionaries: [StarlingDictionary]) {
@@ -340,7 +346,7 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             task_status.set(2, 20, "converting...")
 
             # Getting txt data, checking that the txt file is Lingvodoc-valid.
-            columns_dict, max_count = join_sentences(txt_to_parallel_columns(columns_inf))
+            columns_dict, max_count = join_sentences(txt_to_parallel_columns(columns_inf), dedash)
 
             task_status.set(3, 50, "creating dictionary and perspective...")
 
