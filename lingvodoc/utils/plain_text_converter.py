@@ -45,15 +45,18 @@ line = r'\d+'
 tib_end = r'\|\|+'
 oir_end = r':+'
 
-position_marker = re.compile(f'\[{page}:{line}\]|'
-                             f'\[{page}\]')
+position_regexp = (f'\[{page}:{line}\]|'
+                   f'\[{page}\]')
 
-line_marker = re.compile(f'\({line}\)')
+line_regexp = f'\({line}\)'
 
-sentence_marker = re.compile(f'{tib_end}|'
-                             f'{oir_end}|'
-                             f'\[{tib_end}\]|'
-                             f'\[{oir_end}\]')
+sentence_regexp = (f'{tib_end}|'
+                   f'{oir_end}|'
+                   f'\[{tib_end}\]|'
+                   f'\[{oir_end}\]')
+
+missed_regexp = r'<(\d+)>'
+comment_regexp = r'<(.*)>'
 
 
 def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
@@ -71,7 +74,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
                 .read()
                 .decode('utf-8-sig', 'ignore'))
 
-    if not (txt_start := re.search(position_marker, txt_file)):
+    if not (txt_start := re.search(position_regexp, txt_file)):
         raise ValueError("Be careful, meaningful text must start with a marker like '[12a:23]' or '[12b]' or just '[12]'.")
 
     txt_file = txt_file[txt_start.start():]
@@ -79,7 +82,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
     # Replace colons in markers to another symbol to differ from colons in text
     txt_file = re.sub(r':(\d)', r'#\1', txt_file)
 
-    if not (sentences := re.split(sentence_marker, txt_file)[:-1]):
+    if not (sentences := re.split(sentence_regexp, txt_file)[:-1]):
         raise ValueError("No one sentence is found. Be careful, sentences must end with '||' or ':' simbols. These symbols may be closed in square brackets.")
 
     if not column:
@@ -130,20 +133,30 @@ def txt_to_parallel_columns(columns_inf):
 
 def join_sentences(columns_dict):
 
-    dedash = columns_dict.get("dedash")
+    def clean_text(note, non_base):
+        note = re.sub(missed_regexp, '/missed text/', note)
+        #note = re.sub(comment_regexp, r'\1', note)
 
-    # Hide dashes
-    def hide_dashes(note, non_base):
-        return (
-            re.sub(r'([\w’])-([\w’])', r'\1 \2', note)
-            if not non_base and dedash else note)
+        # Hide dashes
+        if columns_dict.get("dedash") and not non_base:
+            note = re.sub(r"([\w’'])-([\w’'])", r"\1 \2", note)
 
-    # Get text without punctuation ant metatextual markers
-    def pure_note(note):
-        return re.sub(f'{position_marker.pattern}|'
-                      f'{line_marker.pattern}|'
-                      f'{sentence_marker.pattern}|'
+        return note
+
+    # Count words without punctuation and metatextual markers
+    # Append missed words number if is
+    def words_number(note):
+        missed_number = 0
+        if missed_marker := re.search(missed_regexp, note):
+            missed_number = int(missed_marker.group(1))
+
+        note = re.sub(f'{position_regexp}|'
+                      f'{line_regexp}|'
+                      f'{sentence_regexp}|'
+                      f'{comment_regexp}|'
                       f'[^\w\s]', '', note)
+
+        return len(note.split()) + missed_number
 
     # For some number of words from original text corresponds
     # some number in translation. So we have to recalculate
@@ -174,8 +187,8 @@ def join_sentences(columns_dict):
             if not (note := buffer.get(f_id)):
                 if not (note := next(it, None)):
                     continue
-            words[f_id] = len(pure_note(note).split()) * coeff(non_base)
-            sentence[f_id] = hide_dashes(note, non_base)
+            words[f_id] = words_number(note) * coeff(non_base)
+            sentence[f_id] = clean_text(note, non_base)
 
         # To interrupt if all the columns have ended
         if not sentence:
@@ -192,17 +205,17 @@ def join_sentences(columns_dict):
                 if not (note := next(iterators[f_id], None)):
                     break
 
-                next_wrd = len(pure_note(note).split()) * coeff(non_base)
+                next_wrd = words_number(note) * coeff(non_base)
                 wrd += next_wrd
 
                 # If next sentence is too long we don't concatenate
                 # and put it into 'buffer' dictionary for next entity
                 if wrd / longest > threshold:
-                    buffer[f_id] = hide_dashes(note, non_base)
+                    buffer[f_id] = clean_text(note, non_base)
                     wrd -= next_wrd
                     break
                 else:
-                    sentence[f_id] += f' // {hide_dashes(note, non_base)}'
+                    sentence[f_id] += f' // {clean_text(note, non_base)}'
 
             # Write into the result dictionary
             result[f_id].append(f'{sentence[f_id]} <{wrd//coeff(non_base)}>')
