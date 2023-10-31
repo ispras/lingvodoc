@@ -388,7 +388,9 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
                     parent_id=dictionary_id,  # TODO: use all object attrs
                     translation_gist_id=
                         get_translation_gist_id(translation_atoms, old_client_id, "Perspective"),
-                    add_group=True))
+                    add_group=True,
+                    additional_metadata={"parallel": True}
+                ))
 
             perspective_id = [new_persp.client_id, new_persp.object_id]
 
