@@ -27,7 +27,7 @@ from lingvodoc.schema.gql_holders import (
     LingvodocID
 )
 
-from lingvodoc.utils.lexgraph_marker import get_lexgraph_list
+from lingvodoc.utils.lexgraph_marker import get_lexgraph_list_arith as get_lexgraph_list
 from lingvodoc.utils.creation import (create_perspective,
                                       create_dbdictionary,
                                       create_dictionary_persp_to_field)

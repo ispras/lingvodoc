@@ -66,7 +66,7 @@ from lingvodoc.utils.deletion import real_delete_entity
 from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
 
 from lingvodoc.utils.elan_functions import eaf_wordlist
-from lingvodoc.utils.lexgraph_marker import marker_between
+from lingvodoc.utils.lexgraph_marker import marker_between_arith as marker_between
 
 from lingvodoc.cache.caching import CACHE
 # Setting up logging.
