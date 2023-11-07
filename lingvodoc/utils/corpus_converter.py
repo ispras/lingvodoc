@@ -744,7 +744,7 @@ def convert_five_tiers(
                 if x.field_id == backref_fid)
 
         mark_re = re.compile('[-.][\dA-Z]+')
-        dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?]*)')
+        dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?/|]*)')
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
 
@@ -1611,7 +1611,7 @@ def convert_five_tiers(
                         # Create an entry with affix and its meaning
                         # for each affix+meaning variant
                         for n in range(len(afx_text)):
-                            # Clean the affix from any non-alnum symbols after it
+                            # Clean the affix of any non-alnum symbols after it
                             # \u0301 is an accent mark
                             afx = afx_text[n].replace(u'\u0301', '')
                             afx = re.split(r'[\W]', afx.strip())[0]
