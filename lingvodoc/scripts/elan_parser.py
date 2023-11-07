@@ -287,6 +287,9 @@ class Elan:
             wrong_obj = indexes[1]
             ordereddict = perspectives[index].pop(wrong_obj)
             perspectives[index].append(ordereddict)
+
+        import pdb; pdb.set_trace()
+
         return perspectives
 
 
