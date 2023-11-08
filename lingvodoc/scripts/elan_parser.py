@@ -163,7 +163,7 @@ class Elan:
                         self.result[annot_ref].append(annotation_id)
 
                     # If we have an improperly linked 'transcription' or 'word' sub-tier of 'translation'
-                    # tier, wuth 'Included In' type instead of 'Symbolic Association', we still try to get
+                    # tier, with 'Included In' type instead of 'Symbolic Association', we still try to get
                     # its contents.
 
                     elif (
@@ -267,12 +267,12 @@ class Elan:
                 Word(i[2], self.word[i[2]], 'text', (i[0], i[1]))
                 for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1])])
 
-            cur_tier = "literary translation"
-            for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1]):
-                if i[2] in self.result:
-                    for j in self.result[i[2]]:
-                        if self.word_tier[j] == cur_tier:
-                            next.append([Word(j, self.word[j], cur_tier, (i[0], i[1]))]) #time from text
+            for cur_tier in "literary translation", "other text":
+                for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1]):
+                    if i[2] in self.result:
+                        for j in self.result[i[2]]:
+                            if self.word_tier[j] == cur_tier:
+                                next.append([Word(j, self.word[j], cur_tier, (i[0], i[1]))]) #time from text
 
             perspectives.append(next)
 
@@ -287,8 +287,6 @@ class Elan:
             wrong_obj = indexes[1]
             ordereddict = perspectives[index].pop(wrong_obj)
             perspectives[index].append(ordereddict)
-
-        import pdb; pdb.set_trace()
 
         return perspectives
 

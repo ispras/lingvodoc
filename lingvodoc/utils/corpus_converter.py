@@ -71,6 +71,7 @@ from lingvodoc.utils.creation import (
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
+    "other text": "Specific transcription of Paradigmatic forms",
     "Word of Paradigmatic forms": "Word of Paradigmatic forms",
     "word": "Word",
     "transcription": "Transcription",
@@ -403,6 +404,7 @@ def convert_five_tiers(
         pa_fields = {
             'word': get_field_id('Word of Paradigmatic forms'),
             'transcription': get_field_id('Transcription of Paradigmatic forms'),
+            'specific transcription': get_field_id('Specific transcription of Paradigmatic forms'),
             'translation': get_field_id('Translation of Paradigmatic forms'),
             'sound': get_field_id('Sounds of Paradigmatic forms'),
             'markup': get_field_id('Paradigm Markup'),
@@ -984,6 +986,7 @@ def convert_five_tiers(
             p2_field_names = (
                 "Word of Paradigmatic forms",
                 "Transcription of Paradigmatic forms",
+                "Specific transcription of Paradigmatic forms",
                 "Translation of Paradigmatic forms",
                 "Sounds of Paradigmatic forms",
                 "Backref")
@@ -1435,6 +1438,7 @@ def convert_five_tiers(
 
                 curr_dict = {}
                 paradigm_words = []
+                tiers = set()
 
                 ## Paradigms
 
@@ -1477,11 +1481,16 @@ def convert_five_tiers(
                                     tier = tier_name,
                                     time = word.time))
 
+                            tiers.add(tier_name)
+
                             if debug_flag:
                                 log.debug(
                                     '\nparadigm_word2:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
+
+                print(tiers)
+
                 if debug_flag:
                     log.debug(
                         '\nparadigm_words:\n' +
