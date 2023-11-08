@@ -712,7 +712,7 @@ def main_processed():
                 with open(f'content_{parser_result_index:02d}.html', 'w') as content_file:
                     content_file.write(parser_result['content'])
 
-                paragraph_list, parser_result_token_count = (
+                paragraph_list, parser_result_token_count, _ = (
 
                     process_parser_result(
                         parser_result['content'],
@@ -727,7 +727,9 @@ def main_processed():
                     'title': comment_str,
                     'paragraphs': paragraph_list}
 
-                parser_result_list.append(parser_result_dict)
+                parser_result_list.append(
+                    parser_result_dict)
+
                 token_count += parser_result_token_count
 
     # Saving.

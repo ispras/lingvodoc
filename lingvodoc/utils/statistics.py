@@ -297,16 +297,16 @@ def stat_perspective(
 
         # Counting lexical entries.
 
-        user_data_dict = {}
+        user_data_total = {
+            'login': None, 'name': None}
+
+        user_data_dict = {
+            None: user_data_total}
 
         if entry_count_list:
 
-            user_data_total = {
-                'login': None,
-                'name': None,
-                'lexical entries': {'web': 0, 'desktop': 0, 'total': 0}}
-
-            user_data_dict[None] = user_data_total
+            user_data_total['lexical entries'] = {
+                'web': 0, 'desktop': 0, 'total': 0}
 
         for client_id, user_id, is_browser, entry_count in entry_count_list:
 
@@ -867,16 +867,15 @@ def stat_condition_list(
 
     # Aggregating lexical entry statistics.
 
-    user_data_dict = {}
+    user_data_total = {
+        'login': None, 'name': None}
+
+    user_data_dict = {
+        None: user_data_total}
 
     if entry_count_list:
 
-        user_data_total = {
-            'login': None,
-            'name': None,
-            'lexical entries': {}}
-
-        user_data_dict[None] = user_data_total
+        user_data_total['lexical entries'] = {}
 
     for user_id, is_browser, entry_count, perspective_state in entry_count_list:
 
