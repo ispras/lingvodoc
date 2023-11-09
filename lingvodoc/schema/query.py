@@ -19933,11 +19933,13 @@ class BidirectionalLinks(graphene.Mutation):
       -H 'Cookie: auth_tkt=_!userid_type:int; client_id=4217; locale_id=2' \
       --data-raw '{ \
         "operationName": "bidirectionalLinks", \
-        "variables":{"dictionaryIdList":[[4755,333330]]}, \
+        "variables":{"dictionaryIdList":[[4755,333300]]}, \
         "query": \
           "mutation bidirectionalLinks($dictionaryIdList: [LingvodocID]!) { \
             bidirectional_links(dictionary_id_list: $dictionaryIdList, debug_flag: true) { \
               triumph }}"}'
+
+    #! Remove any newline after --data-raw to call this from Ubuntu
     """
 
     class Arguments:
@@ -20144,28 +20146,28 @@ class BidirectionalLinks(graphene.Mutation):
                         perspective.id: perspective.get_translation()
                         for perspective in perspective_list}
 
-                for (from_id, to_id), perspective_id in link_dict.items():
+                fixed = 0
+                for (from_id, to_id) in link_dict:
 
                     if (to_id, from_id) in link_dict:
                         continue
 
+                    # if the linked lexical entry is deleted
+                    if  to_id not in entry_dict:
+                        continue
+
                     if debug_flag:
 
-                        import pdb
-                        pdb.set_trace()
+                        log.debug(f'\nfrom perspective: {translation_dict[entry_dict[from_id]]}'
+                                  f'\nto perspective: {translation_dict[entry_dict[to_id]]}')
 
-                        log.debug(
-                            f'\nperspective: {translation_dict[entry_dict[from_id]]}'
-                            f'\nperspective: {translation_dict[entry_dict[to_id]]}')
+                    create_entity(id=[entry_dict[to_id][0], None],
+                                  parent_id=to_id,
+                                  field_id=backref_fid,
+                                  link_id=from_id)
+                    fixed += 1
 
-                    import pdb
-                    pdb.set_trace()
-
-                    raise NotImplementedError
-
-                raise NotImplementedError
-
-            raise NotImplementedError
+                print(f'\nTotal fixed links: {fixed}')
 
         except Exception as exception:
 
