@@ -2256,61 +2256,8 @@ def convert_five_tiers(
 
                 p2_le_id = t.parent_id
 
-            sp_le_id = t.parent_id
-
-            tag = (
-                re.search(conj_re, translation_text))
-
-            nom_flag = False
-            create_le_flag = False
-
-            if not tag:
-
-                nom_flag = True
-
-            else:
-
-                create_le_flag = True
-                tag_name = tag.group(0)
-
-                if translation_text[:3] != tag_name:
-
-                    nom_flag = True
-
-                else:
-
-                    fp_le_id = (
-                        conj_dict.get(tag_name.lower()))
-
-                    if fp_le_id is not None:
-
-                        if (fp_le_id, sp_le_id) not in link_set:
-
-                            link_set.add(
-                                (fp_le_id, sp_le_id))
-
-                            create_entity(
-                                extra_client,
-                                fp_le_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = sp_le_id)
-
-                        if (sp_le_id, fp_le_id) not in link_set:
-
-                            link_set.add(
-                                (sp_le_id, fp_le_id))
-
-                            create_entity(
-                                extra_client,
-                                sp_le_id,
-                                backref_fid,
-                                backref_dtype,
-                                link_id = fp_le_id)
-
-                        create_le_flag = False
-
-            if nom_flag:
+                tag = (
+                    re.search(conj_re, translation_text))
 
                 nom_flag = False
                 create_le_flag = False
