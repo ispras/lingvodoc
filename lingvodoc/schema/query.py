@@ -19930,7 +19930,7 @@ class BidirectionalLinks(graphene.Mutation):
 
     curl 'http://localhost:6543/graphql' \
       -H 'Content-Type: application/json' \
-      -H 'Cookie: auth_tkt=_!userid_type:int; client_id=4217; locale_id=2' \
+      -H 'Cookie: auth_tkt=_tkn_!userid_type:int' \
       --data-raw '{ \
         "operationName": "bidirectionalLinks", \
         "variables":{"dictionaryIdList":[[4755,333300]]}, \
@@ -19939,7 +19939,9 @@ class BidirectionalLinks(graphene.Mutation):
             bidirectional_links(dictionary_id_list: $dictionaryIdList, debug_flag: true) { \
               triumph }}"}'
 
-    #! Remove any newline after --data-raw to call this from Ubuntu
+    #! Remove any newline after --data-raw to call this from Ubuntu.
+    #! Change _tkn_ to actual token for administrator.
+    #! Be careful, used token may be not actual after database restart.
     """
 
     class Arguments:
@@ -19957,26 +19959,16 @@ class BidirectionalLinks(graphene.Mutation):
         debug_flag = False):
 
         try:
+            client_id = info.context.get('client_id')
+            log.debug(f"client_id: {client_id}")
+
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client or client.user_id != 1:
+                return ResponseError('Only administrator can fix links using request.')
 
             backref_fid = (
                 get_id_to_field_dict()['Backref'])
-
-            backref_dtype = (
-
-                DBSession
-
-                    .query(
-                        dbTranslationAtom.content)
-
-                    .filter(
-                        dbField.client_id == backref_fid[0],
-                        dbField.object_id == backref_fid[1],
-                        dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                        dbTranslationAtom.parent_client_id == dbField.data_type_translation_gist_client_id,
-                        dbTranslationAtom.parent_object_id == dbField.data_type_translation_gist_object_id)
-
-                    .scalar()
-                    .lower())
 
             # Processing each dictionary.
 
@@ -19992,16 +19984,12 @@ class BidirectionalLinks(graphene.Mutation):
                         .get((dictionary_id[1], dictionary_id[0])))
 
                 if dictionary is None:
-
                     return (
-
                         ResponseError(
                             f'Dictionary {dictionary_id} does not exist.'))
 
                 if dictionary.marked_for_deletion:
-
                     return (
-
                         ResponseError(
                             f'Dictionary {dictionary_id} is deleted.'))
 
@@ -20064,33 +20052,6 @@ class BidirectionalLinks(graphene.Mutation):
                 link_dict = {
                     (entry_id, link_id): perspective_id
                     for perspective_id, entry_id, _, link_id, _ in link_list}
-
-                # __DEBUG__
-
-#               link_dict = {}
-
-#               for data_item in link_list:
-
-#                   _, entry_id, _, link_id, _ = data_item
-
-#                   link_key = (
-#                       entry_id, link_id)
-
-#                   if link_key in link_dict:
-
-#                       log.debug(f'\n{link_dict[link_key]}')
-#                       log.debug(f'\n{data_item}')
-
-
-
-#                       import pdb
-#                       pdb.set_trace()
-
-#                       raise NotImplementedError
-
-#                   link_dict[link_key] = data_item
-
-                # __
 
                 entry_list = (
 
