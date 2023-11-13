@@ -50,7 +50,6 @@ class Elan:
         self.tier_refs = collections.defaultdict(set)
         self.word = {}
         self.main_tier_elements = []
-        self.noref_tiers = []
         self.reader = ElementTree.parse(eaf_path)
         self.xml_obj = self.reader.getroot()
         self.eafob = pympi.Elan.Eaf(eaf_path)
@@ -151,11 +150,15 @@ class Elan:
 
                     annotation_id = elem2.attrib["ANNOTATION_ID"]
 
+                    # Get text value and tier id of current element
+                    self.word[annotation_id] = [x for x in elem2][0].text
                     self.word_tier[annotation_id] = tier_id
+
+                    # Collect annotation ids for 'translation' tier
                     if tier_id == "translation":
                         self.main_tier_elements.append(annotation_id)
-                    self.word[annotation_id] = [x for x in elem2][0].text
 
+                    # Collect annotation ids in dictionary by parent ('text' or 'translation') annotation id
                     if elem2.tag == 'REF_ANNOTATION':
                         annot_ref = elem2.attrib['ANNOTATION_REF']
                         if not annot_ref in self.result:
@@ -194,11 +197,8 @@ class Elan:
         return word.attrib['ANNOTATION_ID']
 
     def proc(self, debug_flag=False):
-        for tier in self.tiers:
-            tier_data = self.get_annotation_data_for_tier(tier)
 
-            if tier_data:
-                self.noref_tiers.append(tier)
+        # Get sub-tiers of 'translation' tier
         res = {}
         for aid in self.main_tier_elements:
             res[aid] = []
@@ -209,24 +209,36 @@ class Elan:
 
         perspectives = []
 
+        # Sort top_level_tier ('text') annotation ids chronologically
         ans = sorted(
                 self.eafob.get_annotation_data_for_tier(self.top_level_tier),
-                key = lambda time_tup: time_tup[0]) # text
+                key = lambda time_tup: time_tup[0])
 
         for text_an in ans:
-            next = []
-            #for cur_tier in ["text", "translation", "literary translation"]:
-            perspectives2 = collections.OrderedDict()
+            complex = []
+            raw_dict = collections.OrderedDict()
             cur_tier = "translation"
             for data in self.get_annotation_data_between_times(cur_tier, text_an[0], text_an[1]):
                 time_tup = (data[0], data[1])
                 translation_data = data[2]
-                text_data = ""
-                lit_transl_data = ""
+
+                # Dictionary of Words with real tier names without mixing and filtration
+
+                if raw_list := [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]:
+                    raw_dict[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = raw_list
+
+                # Here we get 'transcription' tier content and mix it with 'text' tier content,
+                # 'translation' tier content we mix with 'literary translation' content
+                # to show them together in same columns.
+
+                transcription_data = ""
+                word_data = ""
+
                 if res[translation_data]:
-                    text_data = res[translation_data][0]
+                    transcription_data = res[translation_data][0]
                 if len(res[translation_data]) > 1:
-                    lit_transl_data = res[translation_data][1]
+                    word_data = res[translation_data][1]
+
                 tr_text = hyphen_to_dash(self.word[translation_data])
 
                 if type(tr_text) is str:
@@ -238,32 +250,27 @@ class Elan:
                         tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
 
                         if tag and tr_text != tag.group(0) or not tag:
-                            le_to_paradigms = []
-                            if lit_transl_data:
-                                le_to_paradigms.append([Word(lit_transl_data,
-                                                             self.word[lit_transl_data],
+                            mixed_list = []
+                            if word_data:
+                                mixed_list.append([Word(word_data,
+                                                             self.word[word_data],
                                                              "Word of Paradigmatic forms",
                                                              (time_tup[0], time_tup[1])) ])
-                            if text_data:
-                                le_to_paradigms.append([Word(text_data,
-                                                             self.word[text_data], "text",
+                            if transcription_data:
+                                mixed_list.append([Word(transcription_data,
+                                                             self.word[transcription_data], "text",
                                                              (time_tup[0], time_tup[1])) ])
                             if translation_data:
-                                le_to_paradigms.append([Word(translation_data,
+                                mixed_list.append([Word(translation_data,
                                                              self.word[translation_data],
                                                              "literary translation",
                                                              (time_tup[0], time_tup[1])) ])
-                            perspectives.append(le_to_paradigms)
 
+                            # 'perspectives' odd element: [[Word_word], [Word_mixed_transcription], [Word_mixed_translation]]
+                            perspectives.append(mixed_list)
 
-                new_list = [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]
-                if new_list:
-                    perspectives2[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = new_list
-
-            if perspectives2:
-                next.append(perspectives2)
-
-            next.append([
+            # 'perspectives' even element: [[Word(s)_text], [Word_literary_translation], [Word_other_text], {Word_translation: [Word_transcription, Word_word]}]
+            complex.append([
                 Word(i[2], self.word[i[2]], 'text', (i[0], i[1]))
                 for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1])])
 
@@ -272,21 +279,13 @@ class Elan:
                     if i[2] in self.result:
                         for j in self.result[i[2]]:
                             if self.word_tier[j] == cur_tier:
-                                next.append([Word(j, self.word[j], cur_tier, (i[0], i[1]))]) #time from text
+                                complex.append([Word(j, self.word[j], cur_tier, (i[0], i[1]))]) #time from text
 
-            perspectives.append(next)
+            # 'raw_dict' goes at the end of 'complex' list
+            if raw_dict:
+                complex.append(raw_dict)
 
-        to_fix = []
-        #  Elements order fix
-        for i, annotations_list in enumerate(perspectives):
-            for j, obj in enumerate(annotations_list):
-                if type(obj) is not list:
-                    to_fix.append((i, j))
-        for indexes in to_fix:
-            index = indexes[0]
-            wrong_obj = indexes[1]
-            ordereddict = perspectives[index].pop(wrong_obj)
-            perspectives[index].append(ordereddict)
+            perspectives.append(complex)
 
         return perspectives
 

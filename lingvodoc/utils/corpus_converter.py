@@ -1489,7 +1489,7 @@ def convert_five_tiers(
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
 
-                print(tiers)
+                #print(tiers)
 
                 if debug_flag:
                     log.debug(
