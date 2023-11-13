@@ -158,7 +158,7 @@ class Elan:
                     if tier_id == "translation":
                         self.main_tier_elements.append(annotation_id)
 
-                    # Collect annotation ids in dictionary by parent ('text' or 'translation') annotation id
+                    # Collect annotation ids to dictionary by parent annotation id ('text' or 'translation')
                     if elem2.tag == 'REF_ANNOTATION':
                         annot_ref = elem2.attrib['ANNOTATION_REF']
                         if not annot_ref in self.result:
@@ -266,10 +266,10 @@ class Elan:
                                                              "literary translation",
                                                              (time_tup[0], time_tup[1])) ])
 
-                            # 'perspectives' odd element: [[Word_word], [Word_mixed_transcription], [Word_mixed_translation]]
+                            # 'perspectives' element with mark: [[Word_word], [Word_mixed_transcription], [Word_mixed_translation]]
                             perspectives.append(mixed_list)
 
-            # 'perspectives' even element: [[Word(s)_text], [Word_literary_translation], [Word_other_text], {Word_translation: [Word_transcription, Word_word]}]
+            # 'perspectives' regular element: [[Word(s)_text], [Word_literary_translation], [Word_other_text], {Word_translation: [Word_transcription, Word_word]}]
             complex.append([
                 Word(i[2], self.word[i[2]], 'text', (i[0], i[1]))
                 for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1])])
