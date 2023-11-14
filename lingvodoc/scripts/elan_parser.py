@@ -215,7 +215,7 @@ class Elan:
                 key = lambda time_tup: time_tup[0])
 
         for text_an in ans:
-            complex = []
+            complex_list = []
             raw_dict = collections.OrderedDict()
             cur_tier = "translation"
             for data in self.get_annotation_data_between_times(cur_tier, text_an[0], text_an[1]):
@@ -266,11 +266,27 @@ class Elan:
                                                              "literary translation",
                                                              (time_tup[0], time_tup[1])) ])
 
-                            # 'perspectives' element with mark: [[Word_word], [Word_mixed_transcription], [Word_mixed_translation]]
+                            # 'perspectives' list additional element
+                            #  if found mark:
+                            #
+                            # [ [Word_aliased_word],
+                            #   [Word_aliased_transcription],
+                            #   [Word_aliased_translation] ]
+                            #
                             perspectives.append(mixed_list)
 
-            # 'perspectives' regular element: [[Word(s)_text], [Word_literary_translation], [Word_other_text], {Word_translation: [Word_transcription, Word_word]}]
-            complex.append([
+            # 'perspectives' list regular element:
+            #
+            # [ [Word(s)_text],
+            #   [Word_literary_translation],
+            #   [Word_other_text],
+            #   { Word_translation: [
+            #       Word_transcription,
+            #       Word_word
+            #   ] }
+            # ]
+            #
+            complex_list.append([
                 Word(i[2], self.word[i[2]], 'text', (i[0], i[1]))
                 for i in self.get_annotation_data_between_times(self.top_level_tier, text_an[0], text_an[1])])
 
@@ -279,13 +295,13 @@ class Elan:
                     if i[2] in self.result:
                         for j in self.result[i[2]]:
                             if self.word_tier[j] == cur_tier:
-                                complex.append([Word(j, self.word[j], cur_tier, (i[0], i[1]))]) #time from text
+                                complex_list.append([Word(j, self.word[j], cur_tier, (i[0], i[1]))]) #time from text
 
-            # 'raw_dict' goes at the end of 'complex' list
+            # 'raw_dict' goes at the end of 'complex_list'
             if raw_dict:
-                complex.append(raw_dict)
+                complex_list.append(raw_dict)
 
-            perspectives.append(complex)
+            perspectives.append(complex_list)
 
         return perspectives
 

@@ -369,25 +369,6 @@ def convert_five_tiers(
         DBSession.flush()
         extra_client_id = extra_client.id
 
-        '''
-        all_fieldnames = ("Markup",
-                          "Paradigm Markup",
-                          "Word",
-                          "Transcription",
-                          "Translation",
-                          "Sound",
-                          "Etymology",
-                          "Backref",
-                          "Word of Paradigmatic forms",
-                          "Transcription of Paradigmatic forms",
-                          "Translation of Paradigmatic forms",
-                          "Sounds of Paradigmatic forms",
-                          "Affix",
-                          "Meaning of affix",
-                          "Word with affix"
-                          )
-        '''
-
         task_status.set(
             3, percent_check_fields, "Checking fields")
 
@@ -746,7 +727,7 @@ def convert_five_tiers(
                 if x.field_id == backref_fid)
 
         mark_re = re.compile('[-.][\dA-Z]+')
-        dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?]*)')
+        dash_re = re.compile('[-]([\dA-Z?][\dA-Za-z.?/|]*)')
         nom_re = re.compile('[-]NOM|[-]INF|[-]SG.NOM')
         conj_re = re.compile('[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]')
 
@@ -1489,7 +1470,7 @@ def convert_five_tiers(
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
 
-                #print(tiers)
+                print(tiers)
 
                 if debug_flag:
                     log.debug(
@@ -1714,7 +1695,10 @@ def convert_five_tiers(
 
                                 tag = re.search(conj_re, word_text)
 
-                                if not tag or word_text != tag.group(0):
+                                # Seems like there was an error: skipping
+                                # if in 'word_text' is any text except 'tag'.
+                                # This was fixed.
+                                if not tag or word_text == tag.group(0):
                                     continue
 
                         column = [word] + curr_dict[word]
@@ -1747,7 +1731,7 @@ def convert_five_tiers(
 
                         # If we didn't do that because we do not merge by meaning, or we couldn't do that
                         # because we do not have a translation, we get lexical entry identifier as befire from
-                        # translation, trascription and word.
+                        # translation, transcription and word.
 
                         if lex_row is None:
                             lex_row = tuple(x.text for x in column)
@@ -2204,11 +2188,11 @@ def convert_five_tiers(
             '''
             m_lexes_with_text_after_update = []
 
-            if mo_perspective:
-                mo_already_set = (
+            if mp_perspective:
+                mp_already_set = (
                     set(
                         t.id
-                        for t_list in mo_content_text_entity_dict.values()
+                        for t_list in mp_content_text_entity_dict.values()
                         for t in t_list))
 
                 entity_query = (
@@ -2219,33 +2203,30 @@ def convert_five_tiers(
                             LexicalEntry.client_id == Entity.parent_client_id,
                             LexicalEntry.object_id == Entity.parent_object_id,
                             LexicalEntry.marked_for_deletion == False,
-                            LexicalEntry.parent_client_id == mo_perspective.client_id,
-                            LexicalEntry.parent_object_id == mo_perspective.object_id,
+                            LexicalEntry.parent_client_id == mp_perspective.client_id,
+                            LexicalEntry.parent_object_id == mp_perspective.object_id,
                             tuple_(
                                 Entity.field_client_id,
                                 Entity.field_object_id)
-                                    .in_(mo_text_fid_list)))
+                                    .in_(mp_text_fid_list)))
 
-                if mo_already_set:
+                if mp_already_set:
                     entity_query = (
                         entity_query.filter(
                             tuple_(
                                 Entity.client_id,
                                 Entity.object_id)
-                                    .notin_(ids_to_id_query(mo_already_set))))
+                                    .notin_(ids_to_id_query(mp_already_set))))
 
                 m_lexes_with_text_after_update = entity_query.all()
 
             # Updated words and transcriptions in the third perspective.
     
-            mo_affix_dict = defaultdict(list)
-            mo_meaning_dict = defaultdict(list)
-    
+            mp_word_dict = defaultdict(list)
+
             for t in m_lexes_with_text_after_update:
-                if t.field_id == mo_fields['affix']:
-                    mo_affix_dict[t.parent_id].append(t.content)
-                elif t.field_id == mo_fields['meaning']:
-                    mo_meaning_dict[t.parent_id].append(t.content)
+                if t.field_id == mp_fields['word']:
+                    mp_word_dict[t.parent_id].append(t.content)
             '''
 
             ## Morphological links
