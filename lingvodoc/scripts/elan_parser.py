@@ -210,6 +210,9 @@ class Elan:
                     for j in self.result[i[2]]:
                         preview_dict[self.word_tier[j]].append(self.word[j])
 
+        for tier in preview_dict:
+            preview_dict[tier] = ' '.join(preview_dict[tier])
+
         return preview_dict
 
     def proc(self, debug_flag=False):
