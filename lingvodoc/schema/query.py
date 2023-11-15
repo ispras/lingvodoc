@@ -4411,7 +4411,7 @@ class Query(graphene.ObjectType):
     convert_five_tiers_validate = (
 
         graphene.Field(
-            graphene.List(graphene.Boolean),
+            graphene.List(ObjectVal),
             markup_id_list = graphene.List(LingvodocID, required=True)))
 
     merge_suggestions = graphene.Field(MergeSuggestions, perspective_id=LingvodocID(required=True),
@@ -5490,7 +5490,7 @@ class Query(graphene.ObjectType):
 
         result_list = []
 
-        for markup_id in markup_id_list:
+        for non_first, markup_id in enumerate(markup_id_list):
 
             client_id, object_id = markup_id
             entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
@@ -5516,11 +5516,17 @@ class Query(graphene.ObjectType):
                 markup = tgt_to_eaf(content, entity.additional_metadata)
                 temp.write(markup.encode("utf-8"))
                 temp.flush()
-                elan_check = elan_parser.ElanCheck(filename)
-                elan_check.parse()
 
-                result_list.append(
-                    elan_check.check())
+                if non_first:
+                    elan_check = elan_parser.ElanCheck(filename)
+                    elan_check.parse()
+                    result_list.append(
+                        elan_check.check())
+                else:
+                    elan_reader = elan_parser.Elan(filename)
+                    elan_reader.parse()
+                    result_list.append(
+                        elan_reader.preview())
 
             os.close(fd)
             os.remove(filename)

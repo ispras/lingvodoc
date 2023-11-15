@@ -46,7 +46,7 @@ class Elan:
         self.result = collections.OrderedDict()
         self.word_tier = {}
         self.tiers = []
-        self.top_tiers = []
+        self.top_tiers = set()
         self.tier_refs = collections.defaultdict(set)
         self.word = {}
         self.main_tier_elements = []
@@ -82,7 +82,7 @@ class Elan:
                     tier_ref = element.attrib['PARENT_REF']
                     self.tier_refs[tier_ref].add(tier_id)
                 else:
-                    self.top_tiers.append(tier_id)
+                    self.top_tiers.add(tier_id)
                 self.tiers.append(tier_id)
 
         self.top_level_tier = None
@@ -196,6 +196,22 @@ class Elan:
     def get_word_aid(self, word):
         return word.attrib['ANNOTATION_ID']
 
+    def preview(self):
+        preview_dict = collections.defaultdict(list)
+
+        text_an = min(
+                self.eafob.get_annotation_data_for_tier(self.top_level_tier),
+                key = lambda time_tup: time_tup[0])
+
+        for top_tier in 'text', 'translation':
+            for i in self.get_annotation_data_between_times(top_tier, text_an[0], text_an[1]):
+                preview_dict[top_tier].append(self.word[i[2]])
+                if i[2] in self.result:
+                    for j in self.result[i[2]]:
+                        preview_dict[self.word_tier[j]].append(self.word[j])
+
+        return preview_dict
+
     def proc(self, debug_flag=False):
 
         # Get sub-tiers of 'translation' tier
@@ -222,14 +238,10 @@ class Elan:
                 time_tup = (data[0], data[1])
                 translation_data = data[2]
 
-                # Dictionary of Words with real tier names without mixing and filtration
+                # Dictionary of Words with real tier names
 
                 if raw_list := [Word(i, self.word[i], self.word_tier[i], (time_tup[0], time_tup[1])) for i in res[translation_data]]:
                     raw_dict[Word(translation_data, self.word[translation_data], cur_tier, (time_tup[0], time_tup[1]))] = raw_list
-
-                # Here we get 'transcription' tier content and mix it with 'text' tier content,
-                # 'translation' tier content we mix with 'literary translation' content
-                # to show them together in same columns.
 
                 transcription_data = ""
                 word_data = ""
