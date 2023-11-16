@@ -205,10 +205,10 @@ class Elan:
 
         for top_tier in 'text', 'translation':
             for i in self.get_annotation_data_between_times(top_tier, text_an[0], text_an[1]):
-                preview_dict[top_tier].append(self.word[i[2]])
+                preview_dict[top_tier].append(self.word[i[2]] or '')
                 if i[2] in self.result:
                     for j in self.result[i[2]]:
-                        preview_dict[self.word_tier[j]].append(self.word[j])
+                        preview_dict[self.word_tier[j]].append(self.word[j] or '')
 
         for tier in preview_dict:
             preview_dict[tier] = ' '.join(preview_dict[tier])
