@@ -1422,7 +1422,7 @@ def convert_five_tiers(
 
                 curr_dict = {}
                 paradigm_words = []
-                tiers = set()
+                #tiers = set()
 
                 ## Paradigms
 
@@ -1432,18 +1432,27 @@ def convert_five_tiers(
                         curr_dict = word_translation
 
                         # Paradigmatic forms
+                        pf_times = [i.time for i in word_translation if i.time is not None]
+                        pf_xcrps = [word_translation[i][0].text for i in word_translation
+                                    if len(word_translation[i]) > 0 and word_translation[i][0].text is not None]
                         pf_words = [word_translation[i][1].text for i in word_translation
                                     if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
-                        pf_times = [word_translation[i][1].time for i in word_translation
-                                    if len(word_translation[i]) > 1 and word_translation[i][1].time is not None]
 
-                        pf_text = " ".join(pf_words)
                         pf_time = (pf_times[0], pf_times[-1]) if pf_times else None
+                        pf_syn_xcrp = " ".join(pf_xcrps)
+                        pf_syn_word = " ".join(pf_words)
 
-                        if pf_text:
+                        if pf_syn_xcrp:
                             paradigm_words.append(
                                 elan_parser.Word(
-                                    text = pf_text,
+                                    text = pf_syn_xcrp,
+                                    tier = "synthetic transcription",
+                                    time = pf_time))
+
+                        if pf_syn_word:
+                            paradigm_words.append(
+                                elan_parser.Word(
+                                    text = pf_syn_word,
                                     tier = "synthetic word",
                                     time = pf_time))
 
@@ -1465,7 +1474,7 @@ def convert_five_tiers(
                                     tier = tier_name,
                                     time = word.time))
 
-                            tiers.add(tier_name)
+                            #tiers.add(tier_name)
 
                             if debug_flag:
                                 log.debug(
