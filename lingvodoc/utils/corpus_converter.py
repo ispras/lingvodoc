@@ -341,7 +341,10 @@ def convert_five_tiers(
     additional_entries_all,
     no_sound_flag,
     morphology,
+    custom_eaf_tiers,
     debug_flag=False):
+
+    print(custom_eaf_tiers)
 
     merge_by_meaning_all = (
         merge_by_meaning_all and merge_by_meaning)
@@ -2417,6 +2420,7 @@ def convert_all(
     no_sound_flag = False,
     debug_flag = False,
     morphology = False,
+    custom_eaf_tiers = {},
     synchronous = False):
 
     # No additional_entries in morphology
@@ -2454,6 +2458,7 @@ def convert_all(
                 additional_entries_all,
                 no_sound_flag,
                 morphology,
+                custom_eaf_tiers,
                 debug_flag))
 
     except Exception as err:
