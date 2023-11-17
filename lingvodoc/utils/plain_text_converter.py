@@ -373,6 +373,7 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
                     translation_gist_id=
                         get_translation_gist_id(corpus_inf.get("translation_atoms"), old_client_id, "Dictionary"),
                     add_group=True,
+                    category=2,
                     additional_metadata={
                         'license': corpus_inf.get('license') or 'proprietary'
                     }))
