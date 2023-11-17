@@ -5949,7 +5949,7 @@ class Query(graphene.ObjectType):
 
         if category is not None:
             if category:
-                dbdicts = dbdicts.filter(dbDictionary.category == 1)
+                dbdicts = dbdicts.filter(dbDictionary.category == int(category))
             else:
                 dbdicts = dbdicts.filter(dbDictionary.category == 0)
         dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
