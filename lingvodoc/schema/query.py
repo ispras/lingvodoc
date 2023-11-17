@@ -5490,7 +5490,7 @@ class Query(graphene.ObjectType):
 
         result_list = []
 
-        for non_first, markup_id in enumerate(markup_id_list):
+        for index, markup_id in enumerate(markup_id_list):
 
             client_id, object_id = markup_id
             entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
@@ -5517,16 +5517,17 @@ class Query(graphene.ObjectType):
                 temp.write(markup.encode("utf-8"))
                 temp.flush()
 
-                if non_first:
-                    elan_check = elan_parser.ElanCheck(filename)
-                    elan_check.parse()
-                    result_list.append(
-                        elan_check.check())
-                else:
+                elan_check = elan_parser.ElanCheck(filename)
+                elan_check.parse()
+                is_valid = elan_check.check()
+
+                if index == 0 and is_valid:
                     elan_reader = elan_parser.Elan(filename)
                     elan_reader.parse()
                     result_list.append(
                         elan_reader.preview())
+                else:
+                    result_list.append(is_valid)
 
             os.close(fd)
             os.remove(filename)
