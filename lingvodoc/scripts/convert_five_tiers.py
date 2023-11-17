@@ -44,7 +44,7 @@ from lingvodoc.cache.caching import CACHE
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
-    "Word of Paradigmatic forms": "Word of Paradigmatic forms",
+    "synthetic word": "Word of Paradigmatic forms",
     "word": "Word",
     "transcription": "Transcription",
     "translation": "Translation"
@@ -683,7 +683,7 @@ def convert_five_tiers(
                         main_tier_time = (mt_times[0], mt_times[-1])
                     if main_tier_text:
                         paradigm_words.append(elan_parser.Word(text=main_tier_text,
-                                                               tier="Word of Paradigmatic forms",
+                                                               tier="synthetic word",
                                                                time=main_tier_time)
                                               )
                 else:

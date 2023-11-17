@@ -72,7 +72,7 @@ EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
     "other text": "Specific transcription of Paradigmatic forms",
-    "Word of Paradigmatic forms": "Word of Paradigmatic forms",
+    "synthetic word": "Word of Paradigmatic forms",
     "word": "Word",
     "transcription": "Transcription",
     "translation": "Translation",
@@ -344,7 +344,7 @@ def convert_five_tiers(
     custom_eaf_tiers,
     debug_flag=False):
 
-    print(custom_eaf_tiers)
+    print(f'custom_eaf_tiers: {custom_eaf_tiers}')
 
     merge_by_meaning_all = (
         merge_by_meaning_all and merge_by_meaning)
@@ -1444,7 +1444,7 @@ def convert_five_tiers(
                             paradigm_words.append(
                                 elan_parser.Word(
                                     text = pf_text,
-                                    tier = "Word of Paradigmatic forms",
+                                    tier = "synthetic word",
                                     time = pf_time))
 
                             if debug_flag:
@@ -1473,7 +1473,7 @@ def convert_five_tiers(
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
 
-                print(tiers)
+                #print(tiers)
 
                 if debug_flag:
                     log.debug(

@@ -269,7 +269,7 @@ class Elan:
                             if word_data:
                                 mixed_list.append([Word(word_data,
                                                              self.word[word_data],
-                                                             "Word of Paradigmatic forms",
+                                                             "synthetic word",
                                                              (time_tup[0], time_tup[1])) ])
                             if transcription_data:
                                 mixed_list.append([Word(transcription_data,
