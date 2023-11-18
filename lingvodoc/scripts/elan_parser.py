@@ -210,8 +210,8 @@ class Elan:
                     for j in self.result[i[2]]:
                         preview_dict[self.word_tier[j]].append(self.word[j] or '')
 
-        for tier in preview_dict:
-            preview_dict[tier] = ' '.join(preview_dict[tier])
+        for tier in 'word', 'transcription':
+            preview_dict[f'synthetic {tier}'] = ' '.join(preview_dict[tier])
 
         return preview_dict
 
@@ -264,6 +264,8 @@ class Elan:
 
                         tag = re.search("[1-3][Dd][Uu]|[1-3][Pp][Ll]|[1-3][Ss][Gg]", tr_text)
 
+                        # Collect single words in the following tiers
+                        # to print them along with rich text afterwards
                         if tag and tr_text != tag.group(0) or not tag:
                             mixed_list = []
                             if word_data:
@@ -272,21 +274,22 @@ class Elan:
                                                              "synthetic word",
                                                              (time_tup[0], time_tup[1])) ])
                             if transcription_data:
-                                mixed_list.append([Word(transcription_data,
-                                                             self.word[transcription_data], "text",
-                                                             (time_tup[0], time_tup[1])) ])
+                                for cur_tier in 'text', 'other text', 'synthetic transcription':
+                                    mixed_list.append([Word(transcription_data,
+                                                                 self.word[transcription_data],
+                                                                 cur_tier,
+                                                                 (time_tup[0], time_tup[1])) ])
                             if translation_data:
                                 mixed_list.append([Word(translation_data,
                                                              self.word[translation_data],
                                                              "literary translation",
                                                              (time_tup[0], time_tup[1])) ])
 
-                            # 'perspectives' list additional element
-                            #  if found mark:
+                            # 'perspectives' list additional element if marker is found:
                             #
-                            # [ [Word_aliased_word],
-                            #   [Word_aliased_transcription],
-                            #   [Word_aliased_translation] ]
+                            # [ [Word_synthetic_word],
+                            #   [Word_synthetic_transcription(/text/other_text)],
+                            #   [Word_synthetic_translation(literary_translation)] ]
                             #
                             perspectives.append(mixed_list)
 
