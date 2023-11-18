@@ -212,6 +212,7 @@ class Elan:
 
         for tier in 'word', 'transcription':
             preview_dict[f'synthetic {tier}'] = ' '.join(preview_dict[tier])
+            preview_dict.pop(tier)
 
         return preview_dict
 
