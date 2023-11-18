@@ -68,10 +68,9 @@ from lingvodoc.utils.creation import (
     create_gists_with_atoms
 )
 
-EAF_TIERS = {
+DEFAULT_EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
-    "other text": "Specific transcription of Paradigmatic forms",
     "synthetic word": "Word of Paradigmatic forms",
     "word": "Word",
     "transcription": "Transcription",
@@ -345,6 +344,13 @@ def convert_five_tiers(
     debug_flag=False):
 
     print(f'custom_eaf_tiers: {custom_eaf_tiers}')
+
+    EAF_TIERS = DEFAULT_EAF_TIERS
+    for tier, column in custom_eaf_tiers.items():
+        if column:
+            EAF_TIERS[tier] = column
+        else:
+            del EAF_TIERS[tier]
 
     merge_by_meaning_all = (
         merge_by_meaning_all and merge_by_meaning)
