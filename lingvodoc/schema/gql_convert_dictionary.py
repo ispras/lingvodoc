@@ -342,7 +342,7 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args["task_key"] = task.key
         cur_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
 
-        if synchronous or True:
+        if synchronous:
 
             convert_f = convert_all
 

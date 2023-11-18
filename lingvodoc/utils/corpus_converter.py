@@ -343,8 +343,6 @@ def convert_five_tiers(
     custom_eaf_tiers,
     debug_flag=False):
 
-    print(f'custom_eaf_tiers: {custom_eaf_tiers}')
-
     EAF_TIERS = DEFAULT_EAF_TIERS
     for tier, column in custom_eaf_tiers.items():
         if column:
@@ -1426,7 +1424,6 @@ def convert_five_tiers(
 
                 curr_dict = {}
                 paradigm_words = []
-                #tiers = set()
 
                 ## Paradigms
 
@@ -1478,15 +1475,11 @@ def convert_five_tiers(
                                     tier = tier_name,
                                     time = word.time))
 
-                            #tiers.add(tier_name)
-
                             if debug_flag:
                                 log.debug(
                                     '\nparadigm_word2:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
-
-                #print(tiers)
 
                 if debug_flag:
                     log.debug(
