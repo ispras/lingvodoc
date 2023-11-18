@@ -350,7 +350,7 @@ def convert_five_tiers(
         if column:
             EAF_TIERS[tier] = column
         else:
-            del EAF_TIERS[tier]
+            EAF_TIERS.pop(tier, None)
 
     merge_by_meaning_all = (
         merge_by_meaning_all and merge_by_meaning)
@@ -394,7 +394,6 @@ def convert_five_tiers(
         pa_fields = {
             'word': get_field_id('Word of Paradigmatic forms'),
             'transcription': get_field_id('Transcription of Paradigmatic forms'),
-            'specific transcription': get_field_id('Specific transcription of Paradigmatic forms'),
             'translation': get_field_id('Translation of Paradigmatic forms'),
             'sound': get_field_id('Sounds of Paradigmatic forms'),
             'markup': get_field_id('Paradigm Markup'),
@@ -976,7 +975,6 @@ def convert_five_tiers(
             p2_field_names = (
                 "Word of Paradigmatic forms",
                 "Transcription of Paradigmatic forms",
-                "Specific transcription of Paradigmatic forms",
                 "Translation of Paradigmatic forms",
                 "Sounds of Paradigmatic forms",
                 "Backref")
@@ -1515,6 +1513,8 @@ def convert_five_tiers(
                         match_dict = defaultdict(list)
 
                         for rword in result_words:
+                            if rword.tier not in EAF_TIERS:
+                                continue
                             match_list = content_text_entity_dict[rword.text] #LEX COUNT OR RANDOM
                             match_field_id = get_field_id(EAF_TIERS[rword.tier])
                             for t in match_list:
@@ -1562,7 +1562,7 @@ def convert_five_tiers(
                         for other_word in result_words:
                             text = other_word.text
 
-                            if not text:
+                            if not text or other_word.tier not in EAF_TIERS:
                                 continue
 
                             field_id = get_field_id(EAF_TIERS[other_word.tier])
@@ -1773,6 +1773,8 @@ def convert_five_tiers(
                         if p1_lexical_entry_id is None:
                             match_dict = defaultdict(list)
                             for crt in column:
+                                if crt.tier not in EAF_TIERS:
+                                    continue
 
                                 match_list = le_content_text_entity_dict[crt.text]
                                 match_field_id = get_field_id(EAF_TIERS[crt.tier])
@@ -1823,7 +1825,7 @@ def convert_five_tiers(
 
                             for other_word in column:
                                 text = other_word.text
-                                if not text:
+                                if not text or other_word.tier not in EAF_TIERS:
                                     continue
 
                                 field_id = get_field_id(EAF_TIERS[other_word.tier])
@@ -1855,9 +1857,9 @@ def convert_five_tiers(
 
                         elif merge_by_meaning_all:
                             for other_word in column:
-                                text = other_word.text
-                                if (text is None or
-                                    not (text := text.strip())):
+                                if (not (text := other_word.text) or
+                                        not (text := text.strip()) or
+                                        other_word.tier not in EAF_TIERS):
                                     continue
 
                                 field_id = get_field_id(EAF_TIERS[other_word.tier])
