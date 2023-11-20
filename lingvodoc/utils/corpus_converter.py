@@ -344,11 +344,11 @@ def convert_five_tiers(
     debug_flag=False):
 
     EAF_TIERS = DEFAULT_EAF_TIERS
+    for tier, column in EAF_TIERS.items():
+        if column in custom_eaf_tiers:
+            EAF_TIERS.pop(tier)
     for column, tier in custom_eaf_tiers.items():
-        if tier:
-            EAF_TIERS[tier] = column
-        else:
-            EAF_TIERS.pop(tier, None)
+        EAF_TIERS[tier] = column
 
     merge_by_meaning_all = (
         merge_by_meaning_all and merge_by_meaning)
