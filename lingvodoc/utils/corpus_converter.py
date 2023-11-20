@@ -344,8 +344,8 @@ def convert_five_tiers(
     debug_flag=False):
 
     EAF_TIERS = DEFAULT_EAF_TIERS
-    for tier, column in custom_eaf_tiers.items():
-        if column:
+    for column, tier in custom_eaf_tiers.items():
+        if tier:
             EAF_TIERS[tier] = column
         else:
             EAF_TIERS.pop(tier, None)
