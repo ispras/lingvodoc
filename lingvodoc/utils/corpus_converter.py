@@ -343,10 +343,7 @@ def convert_five_tiers(
     custom_eaf_tiers,
     debug_flag=False):
 
-    EAF_TIERS = DEFAULT_EAF_TIERS
-    for tier, column in EAF_TIERS.items():
-        if column in custom_eaf_tiers:
-            EAF_TIERS.pop(tier)
+    EAF_TIERS = {tier: column for tier, column in DEFAULT_EAF_TIERS.items() if column not in custom_eaf_tiers}
     for column, tier in custom_eaf_tiers.items():
         EAF_TIERS[tier] = column
 
