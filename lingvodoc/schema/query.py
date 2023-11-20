@@ -5492,6 +5492,10 @@ class Query(graphene.ObjectType):
 
         for index, markup_id in enumerate(markup_id_list):
 
+            if not markup_id:
+                result_list.append(False)
+                continue
+
             client_id, object_id = markup_id
             entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
 
