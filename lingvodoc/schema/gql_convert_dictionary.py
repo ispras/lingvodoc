@@ -175,7 +175,8 @@ def async_convert_five_tiers(
     additional_entries_all = True,
     no_sound_flag = False,
     debug_flag = False,
-    morphology = False):
+    morphology = False,
+    custom_eaf_tiers = {}):
 
     convert_all(
         dictionary_id,
@@ -195,7 +196,8 @@ def async_convert_five_tiers(
         additional_entries_all,
         no_sound_flag,
         debug_flag,
-        morphology)
+        morphology,
+        custom_eaf_tiers)
 
 
 class ConvertFiveTiers(graphene.Mutation):
@@ -244,6 +246,7 @@ class ConvertFiveTiers(graphene.Mutation):
         debug_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
         morphology = graphene.Boolean()
+        custom_eaf_tiers = ObjectVal()
 
     dictionary_id = LingvodocID()
     triumph = graphene.Boolean()
@@ -275,6 +278,7 @@ class ConvertFiveTiers(graphene.Mutation):
         cur_args['additional_entries_all'] = args.get('additional_entries_all', True)
         cur_args['no_sound_flag'] = args.get('no_sound_flag', False)
         cur_args['morphology'] = args.get('morphology', False)
+        cur_args['custom_eaf_tiers'] = args.get('custom_eaf_tiers', {})
         cur_args['debug_flag'] = args.get('debug_flag', False)
 
         if not args.get("dictionary_id"):

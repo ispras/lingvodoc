@@ -68,10 +68,10 @@ from lingvodoc.utils.creation import (
     create_gists_with_atoms
 )
 
-EAF_TIERS = {
+DEFAULT_EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
-    "Word of Paradigmatic forms": "Word of Paradigmatic forms",
+    "synthetic word": "Word of Paradigmatic forms",
     "word": "Word",
     "transcription": "Transcription",
     "translation": "Translation",
@@ -340,7 +340,12 @@ def convert_five_tiers(
     additional_entries_all,
     no_sound_flag,
     morphology,
+    custom_eaf_tiers,
     debug_flag=False):
+
+    EAF_TIERS = {tier: column for tier, column in DEFAULT_EAF_TIERS.items() if column not in custom_eaf_tiers}
+    for column, tier in custom_eaf_tiers.items():
+        EAF_TIERS[tier] = column
 
     merge_by_meaning_all = (
         merge_by_meaning_all and merge_by_meaning)
@@ -367,25 +372,6 @@ def convert_five_tiers(
         DBSession.add(extra_client)
         DBSession.flush()
         extra_client_id = extra_client.id
-
-        '''
-        all_fieldnames = ("Markup",
-                          "Paradigm Markup",
-                          "Word",
-                          "Transcription",
-                          "Translation",
-                          "Sound",
-                          "Etymology",
-                          "Backref",
-                          "Word of Paradigmatic forms",
-                          "Transcription of Paradigmatic forms",
-                          "Translation of Paradigmatic forms",
-                          "Sounds of Paradigmatic forms",
-                          "Affix",
-                          "Meaning of affix",
-                          "Word with affix"
-                          )
-        '''
 
         task_status.set(
             3, percent_check_fields, "Checking fields")
@@ -1444,19 +1430,28 @@ def convert_five_tiers(
                         curr_dict = word_translation
 
                         # Paradigmatic forms
+                        pf_times = [i.time for i in word_translation if i.time is not None]
+                        pf_xcrps = [word_translation[i][0].text for i in word_translation
+                                    if len(word_translation[i]) > 0 and word_translation[i][0].text is not None]
                         pf_words = [word_translation[i][1].text for i in word_translation
                                     if len(word_translation[i]) > 1 and word_translation[i][1].text is not None]
-                        pf_times = [word_translation[i][1].time for i in word_translation
-                                    if len(word_translation[i]) > 1 and word_translation[i][1].time is not None]
 
-                        pf_text = " ".join(pf_words)
                         pf_time = (pf_times[0], pf_times[-1]) if pf_times else None
+                        pf_syn_xcrp = " ".join(pf_xcrps)
+                        pf_syn_word = " ".join(pf_words)
 
-                        if pf_text:
+                        if pf_syn_xcrp:
                             paradigm_words.append(
                                 elan_parser.Word(
-                                    text = pf_text,
-                                    tier = "Word of Paradigmatic forms",
+                                    text = pf_syn_xcrp,
+                                    tier = "synthetic transcription",
+                                    time = pf_time))
+
+                        if pf_syn_word:
+                            paradigm_words.append(
+                                elan_parser.Word(
+                                    text = pf_syn_word,
+                                    tier = "synthetic word",
                                     time = pf_time))
 
                             if debug_flag:
@@ -1482,6 +1477,7 @@ def convert_five_tiers(
                                     '\nparadigm_word2:\n' +
                                     pprint.pformat(
                                         paradigm_words[-1].get_tuple(), width = 192))
+
                 if debug_flag:
                     log.debug(
                         '\nparadigm_words:\n' +
@@ -1507,6 +1503,8 @@ def convert_five_tiers(
                         match_dict = defaultdict(list)
 
                         for rword in result_words:
+                            if rword.tier not in EAF_TIERS:
+                                continue
                             match_list = content_text_entity_dict[rword.text] #LEX COUNT OR RANDOM
                             match_field_id = get_field_id(EAF_TIERS[rword.tier])
                             for t in match_list:
@@ -1554,7 +1552,7 @@ def convert_five_tiers(
                         for other_word in result_words:
                             text = other_word.text
 
-                            if not text:
+                            if not text or other_word.tier not in EAF_TIERS:
                                 continue
 
                             field_id = get_field_id(EAF_TIERS[other_word.tier])
@@ -1705,7 +1703,10 @@ def convert_five_tiers(
 
                                 tag = re.search(conj_re, word_text)
 
-                                if not tag or word_text != tag.group(0):
+                                # Seems like there was an error: skipping
+                                # if in 'word_text' is any text except 'tag'.
+                                # This was fixed.
+                                if not tag or word_text == tag.group(0):
                                     continue
 
                         column = [word] + curr_dict[word]
@@ -1738,7 +1739,7 @@ def convert_five_tiers(
 
                         # If we didn't do that because we do not merge by meaning, or we couldn't do that
                         # because we do not have a translation, we get lexical entry identifier as befire from
-                        # translation, trascription and word.
+                        # translation, transcription and word.
 
                         if lex_row is None:
                             lex_row = tuple(x.text for x in column)
@@ -1762,6 +1763,8 @@ def convert_five_tiers(
                         if p1_lexical_entry_id is None:
                             match_dict = defaultdict(list)
                             for crt in column:
+                                if crt.tier not in EAF_TIERS:
+                                    continue
 
                                 match_list = le_content_text_entity_dict[crt.text]
                                 match_field_id = get_field_id(EAF_TIERS[crt.tier])
@@ -1812,7 +1815,7 @@ def convert_five_tiers(
 
                             for other_word in column:
                                 text = other_word.text
-                                if not text:
+                                if not text or other_word.tier not in EAF_TIERS:
                                     continue
 
                                 field_id = get_field_id(EAF_TIERS[other_word.tier])
@@ -1844,9 +1847,9 @@ def convert_five_tiers(
 
                         elif merge_by_meaning_all:
                             for other_word in column:
-                                text = other_word.text
-                                if (text is None or
-                                    not (text := text.strip())):
+                                if (not (text := other_word.text) or
+                                        not (text := text.strip()) or
+                                        other_word.tier not in EAF_TIERS):
                                     continue
 
                                 field_id = get_field_id(EAF_TIERS[other_word.tier])
@@ -2195,11 +2198,11 @@ def convert_five_tiers(
             '''
             m_lexes_with_text_after_update = []
 
-            if mo_perspective:
-                mo_already_set = (
+            if mp_perspective:
+                mp_already_set = (
                     set(
                         t.id
-                        for t_list in mo_content_text_entity_dict.values()
+                        for t_list in mp_content_text_entity_dict.values()
                         for t in t_list))
 
                 entity_query = (
@@ -2210,33 +2213,30 @@ def convert_five_tiers(
                             LexicalEntry.client_id == Entity.parent_client_id,
                             LexicalEntry.object_id == Entity.parent_object_id,
                             LexicalEntry.marked_for_deletion == False,
-                            LexicalEntry.parent_client_id == mo_perspective.client_id,
-                            LexicalEntry.parent_object_id == mo_perspective.object_id,
+                            LexicalEntry.parent_client_id == mp_perspective.client_id,
+                            LexicalEntry.parent_object_id == mp_perspective.object_id,
                             tuple_(
                                 Entity.field_client_id,
                                 Entity.field_object_id)
-                                    .in_(mo_text_fid_list)))
+                                    .in_(mp_text_fid_list)))
 
-                if mo_already_set:
+                if mp_already_set:
                     entity_query = (
                         entity_query.filter(
                             tuple_(
                                 Entity.client_id,
                                 Entity.object_id)
-                                    .notin_(ids_to_id_query(mo_already_set))))
+                                    .notin_(ids_to_id_query(mp_already_set))))
 
                 m_lexes_with_text_after_update = entity_query.all()
 
             # Updated words and transcriptions in the third perspective.
     
-            mo_affix_dict = defaultdict(list)
-            mo_meaning_dict = defaultdict(list)
-    
+            mp_word_dict = defaultdict(list)
+
             for t in m_lexes_with_text_after_update:
-                if t.field_id == mo_fields['affix']:
-                    mo_affix_dict[t.parent_id].append(t.content)
-                elif t.field_id == mo_fields['meaning']:
-                    mo_meaning_dict[t.parent_id].append(t.content)
+                if t.field_id == mp_fields['word']:
+                    mp_word_dict[t.parent_id].append(t.content)
             '''
 
             ## Morphological links
@@ -2427,6 +2427,7 @@ def convert_all(
     no_sound_flag = False,
     debug_flag = False,
     morphology = False,
+    custom_eaf_tiers = {},
     synchronous = False):
 
     # No additional_entries in morphology
@@ -2464,6 +2465,7 @@ def convert_all(
                 additional_entries_all,
                 no_sound_flag,
                 morphology,
+                custom_eaf_tiers,
                 debug_flag))
 
     except Exception as err:
