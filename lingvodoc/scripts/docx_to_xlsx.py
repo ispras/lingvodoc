@@ -1,6 +1,7 @@
 import docx
 import sys
 import os
+import re
 import pyramid.paster as paster
 import logging
 import getopt
@@ -14,11 +15,24 @@ if __name__ != '__main__':
 
 def get_text(filename):
     doc = docx.Document(filename)
+    payload = False
     full_text = ''
     left_words = ''
     right_words = ''
 
     for p, para in enumerate(doc.paragraphs):
+        # Start parsing
+        if re.search('\u2014 \w \u2014', para.text):
+            payload = True
+            continue
+
+        # Pause parsing
+        if len(para.text) == 0:
+            payload = False
+
+        if not payload:
+            continue
+
         bold_words = ''
 
         for word in para.runs:
@@ -53,12 +67,11 @@ def get_text(filename):
                 dash_pos = word.text.index('\u2013 ')
                 left_words += word.text[:dash_pos].rstrip()
                 right_words += word.text[dash_pos+1:].lstrip()
-
-        if p > 500:
+        '''
+        if p > 400:
             break
-
+        '''
     return '\n'.join(full_text)
-    #return '\n'.join(full_text[324:350])
 
 
 def main_import(args):
