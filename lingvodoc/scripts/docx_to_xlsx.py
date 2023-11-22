@@ -13,10 +13,6 @@ if __name__ != '__main__':
 
 
 def get_text(filename):
-    # Leave one whitespace at the end of string
-    def text(word):
-        return f'{word.text.strip()} '
-
     doc = docx.Document(filename)
     full_text = ''
     left_words = ''
@@ -28,7 +24,7 @@ def get_text(filename):
         for word in para.runs:
             if not (word.bold or word.font.cs_bold):
                 break
-            bold_words += text(word)
+            bold_words += word.text
 
         if bold_words:
             print(f'Left: {left_words}')
@@ -41,20 +37,22 @@ def get_text(filename):
             right_words = ''
         else:
             is_left = False
-            right_words += '\n'
 
         full_text += para.text
 
-        for word in para.runs:
+        for w, word in enumerate(para.runs):
             if is_left and ('\u2013 ' not in word.text):
-                left_words += text(word)
+                left_words += word.text
             elif not is_left:
-                right_words += text(word)
+                if w == 0:
+                    right_words += f'\n{word.text.lstrip()}'
+                else:
+                    right_words += word.text
             else:
-                dash_pos = text(word).index('\u2013 ')
-                left_words += text(word)[:dash_pos].rstrip()
-                right_words += text(word)[dash_pos+1:].lstrip()
                 is_left = False
+                dash_pos = word.text.index('\u2013 ')
+                left_words += word.text[:dash_pos].rstrip()
+                right_words += word.text[dash_pos+1:].lstrip()
 
         if p > 500:
             break
