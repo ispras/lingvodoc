@@ -15,44 +15,65 @@ if __name__ != '__main__':
 
 def get_text(filename):
     doc = docx.Document(filename)
-    payload = False
-    full_text = ''
+    part = None
+    is_left = False
+    bold_words = ''
     left_words = ''
     right_words = ''
+    total = 0
+
+    def write_out():
+        nonlocal \
+            bold_words, \
+            left_words, \
+            right_words, \
+            total
+
+        if left_words:
+            print(f'Bold: {bold_words}\n'
+                  f'Left: {left_words}\n'
+                  f'Right: {right_words}\n'
+                  f'---')
+            bold_words = ''
+            left_words = ''
+            right_words = ''
+            total += 1
 
     for p, para in enumerate(doc.paragraphs):
-        # Start parsing
-        if re.search('\u2014 \w \u2014', para.text):
-            payload = True
+        # Start parsing on text like '- A -'
+        if header := re.search('\u2014 \w \u2014', para.text):
+            write_out()
+            print(f'\nHeader: {header.group()}\n')
+            part = 'header'
             continue
 
-        # Pause parsing
-        if len(para.text) == 0:
-            payload = False
+        # Pause parsing if two lines in a row
+        # are empty after dictionary body
+        if (part == 'body' and
+                not left_words and
+                not para.text):
+            part = None
 
-        if not payload:
+        if not part or not para.text:
             continue
 
-        bold_words = ''
+        # Checking if first word is bold
+        first_is_bold = para.runs and (para.runs[0].bold or para.runs[0].font.cs_bold)
 
+        if first_is_bold:
+            part = 'body'
+            is_left = True
+
+        # Bold words or empty string mean that the previous dictionary
+        # entry is over. Writing out collected words and clean variables.
+        if first_is_bold or not para.text:
+            write_out()
+
+        # Getting bold text at beginning of string
         for word in para.runs:
             if not (word.bold or word.font.cs_bold):
                 break
             bold_words += word.text
-
-        if bold_words:
-            print(f'Left: {left_words}')
-            print(f'Right: {right_words}')
-            print('---')
-            print(f'Bold: {bold_words}')
-            is_left = True
-            full_text = ''
-            left_words = ''
-            right_words = ''
-        else:
-            is_left = False
-
-        full_text += para.text
 
         for w, word in enumerate(para.runs):
             if is_left and ('\u2013 ' not in word.text):
@@ -63,15 +84,13 @@ def get_text(filename):
                 else:
                     right_words += word.text
             else:
-                is_left = False
                 dash_pos = word.text.index('\u2013 ')
                 left_words += word.text[:dash_pos].rstrip()
                 right_words += word.text[dash_pos+1:].lstrip()
-        '''
-        if p > 400:
-            break
-        '''
-    return '\n'.join(full_text)
+                is_left = False
+
+    write_out()
+    print(f'\nTotal Dictionary entries: {total}')
 
 
 def main_import(args):
@@ -89,7 +108,7 @@ def main_import(args):
         docx_path = arg_list[0]
 
     if os.path.isfile(docx_path):
-        text_file = get_text(docx_path)
+        get_text(docx_path)
     else:
         log.error(
             f'\nSpecified path {docx_path} is not correct.')
