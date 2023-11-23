@@ -1,3 +1,4 @@
+import collections
 import docx
 import sys
 import os
@@ -13,13 +14,15 @@ if __name__ != '__main__':
     log.debug('module init')
 
 
-def get_text(filename):
+def get_entries(filename, debug_flag=False):
     doc = docx.Document(filename)
     part = None
     is_left = False
     bold_words = ''
     left_words = ''
     right_words = ''
+    result_dict = collections.defaultdict(list)
+    header = 'n/a'
     total = 0
 
     def write_out():
@@ -27,13 +30,25 @@ def get_text(filename):
             bold_words, \
             left_words, \
             right_words, \
+            result_dict, \
+            header, \
             total
 
         if left_words:
-            print(f'Bold: {bold_words}\n'
-                  f'Left: {left_words}\n'
-                  f'Right: {right_words}\n'
-                  f'---')
+            result_dict[header].append(
+                {
+                    'bold': bold_words,
+                    'left': left_words,
+                    'right': right_words
+                }
+            )
+
+            if debug_flag:
+                log.info(f'Bold: {bold_words}\n'
+                         f'Left: {left_words}\n'
+                         f'Right: {right_words}\n'
+                         f'---')
+
             bold_words = ''
             left_words = ''
             right_words = ''
@@ -41,9 +56,11 @@ def get_text(filename):
 
     for p, para in enumerate(doc.paragraphs):
         # Start parsing on text like '- A -'
-        if header := re.search('\u2014 \w \u2014', para.text):
+        if hdr := re.search('\u2014 \w \u2014', para.text):
             write_out()
-            print(f'\nHeader: {header.group()}\n')
+            header = hdr.group()
+            if debug_flag:
+                log.info(f'\nHeader: {header}\n')
             part = 'header'
             continue
 
@@ -90,7 +107,15 @@ def get_text(filename):
                 is_left = False
 
     write_out()
-    print(f'\nTotal Dictionary entries: {total}')
+
+    if debug_flag:
+        log.info(f'\nTotal dictionary entries: {total}')
+
+    return result_dict
+
+
+def write_xlsx(result_dict, result_path, default_flag=False):
+    pass
 
 
 def main_import(args):
@@ -106,9 +131,11 @@ def main_import(args):
     opt_dict = dict(opt_list)
     if not (docx_path := opt_dict.get('--docx-file')):
         docx_path = arg_list[0]
+    debug_flag = '--debug' in opt_dict
 
     if os.path.isfile(docx_path):
-        get_text(docx_path)
+        result_dict = get_entries(docx_path, debug_flag)
+        pass
     else:
         log.error(
             f'\nSpecified path {docx_path} is not correct.')
