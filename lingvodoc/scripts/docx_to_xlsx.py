@@ -115,7 +115,7 @@ def get_entries(filename, debug_flag=False):
 
 
 def write_xlsx(result_dict, result_path, default_flag=False):
-    pass
+    log.debug(f'xlsx_path: {os.path.abspath(result_path)}')
 
 
 def main_import(args):
@@ -124,18 +124,30 @@ def main_import(args):
     opt_list, arg_list = (
         getopt.gnu_getopt(args, '', [
             'docx-file=',
-            'debug',
-            'no-header',
-            'separate-by-paragraphs']))
+            'xlsx-file=',
+            'debug'
+        ]))
 
     opt_dict = dict(opt_list)
+    debug_flag = '--debug' in opt_dict
+
     if not (docx_path := opt_dict.get('--docx-file')):
         docx_path = arg_list[0]
-    debug_flag = '--debug' in opt_dict
+    if not os.path.isfile(docx_path):
+        raise FileNotFoundError(f'\nSpecified path {docx_path} is not correct.')
+
+    if not (xlsx_path := opt_dict.get('--xlsx-file')):
+        if len(arg_list) > 1:
+            xlsx_path = arg_list[1]
+
+    if (not xlsx_path or
+            not os.path.exists(os.path.split(xlsx_path)[0])):
+        xlsx_path = os.path.splitext(docx_path)[0] + '.xlsx'
+        log.warning(f'\nSetting output path automatically: {os.path.abspath(xlsx_path)}')
 
     if os.path.isfile(docx_path):
         result_dict = get_entries(docx_path, debug_flag)
-        pass
+        write_xlsx(result_dict, xlsx_path, debug_flag)
     else:
         log.error(
             f'\nSpecified path {docx_path} is not correct.')
