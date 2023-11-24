@@ -6,7 +6,7 @@ import re
 import pyramid.paster as paster
 import logging
 import getopt
-
+import xlsxwriter
 
 # Setting up logging, if we are not being run as a script.
 if __name__ != '__main__':
@@ -44,7 +44,7 @@ def get_entries(filename, debug_flag=False):
             )
 
             if debug_flag:
-                log.info(f'Bold: {bold_words}\n'
+                log.info(f'\nBold: {bold_words}\n'
                          f'Left: {left_words}\n'
                          f'Right: {right_words}\n'
                          f'---')
@@ -114,9 +114,40 @@ def get_entries(filename, debug_flag=False):
     return result_dict
 
 
-def write_xlsx(result_dict, result_path, default_flag=False):
-    log.debug(f'xlsx_path: {os.path.abspath(result_path)}')
+def write_xlsx(result_dict, xlsx_path, base_name, alpha_groups=False):
 
+    def init_worksheet(worksheet):
+        bold = workbook.add_format({'bold': True})
+        worksheet.set_column(0, 0, 100)
+        worksheet.set_column(1, 1, 200)
+        worksheet.write('A1', '  Entry', bold)
+        worksheet.write('B1', '  Meaning', bold)
+
+    workbook = xlsxwriter.Workbook(xlsx_path)
+    align = workbook.add_format()
+    align.set_align('vcenter')
+    align.set_text_wrap()
+
+    if not alpha_groups:
+        worksheet = workbook.add_worksheet(base_name)
+        init_worksheet(worksheet)
+        row = 1
+
+    for header, group in result_dict.items():
+        if alpha_groups:
+            worksheet = workbook.add_worksheet(header)
+            init_worksheet(worksheet)
+            row = 1
+
+        for line in group:
+            h1 = (len(line['right']) // 200 + 1) * 17
+            h2 = len(line['right'].splitlines()) * 17
+            worksheet.set_row(row, max(h1, h2))
+            for column, item in enumerate([line['left'], line['right']]):
+                worksheet.write(row, column, item, align)
+            row += 1
+
+    workbook.close()
 
 def main_import(args):
 
@@ -125,11 +156,13 @@ def main_import(args):
         getopt.gnu_getopt(args, '', [
             'docx-file=',
             'xlsx-file=',
+            'alpha-groups',
             'debug'
         ]))
 
     opt_dict = dict(opt_list)
     debug_flag = '--debug' in opt_dict
+    alpha_groups = '--alpha-groups' in opt_dict
 
     if not (docx_path := opt_dict.get('--docx-file')):
         docx_path = arg_list[0]
@@ -140,14 +173,18 @@ def main_import(args):
         if len(arg_list) > 1:
             xlsx_path = arg_list[1]
 
-    if (not xlsx_path or
-            not os.path.exists(os.path.split(xlsx_path)[0])):
-        xlsx_path = os.path.splitext(docx_path)[0] + '.xlsx'
+    base_path = os.path.splitext(docx_path)[0]
+    base_name = os.path.basename(base_path)
+
+    if xlsx_path:
+        os.makedirs(os.path.dirname(xlsx_path), exist_ok=True)
+    else:
+        xlsx_path = base_path + '.xlsx'
         log.warning(f'\nSetting output path automatically: {os.path.abspath(xlsx_path)}')
 
     if os.path.isfile(docx_path):
         result_dict = get_entries(docx_path, debug_flag)
-        write_xlsx(result_dict, xlsx_path, debug_flag)
+        write_xlsx(result_dict, xlsx_path, base_name, alpha_groups)
     else:
         log.error(
             f'\nSpecified path {docx_path} is not correct.')
