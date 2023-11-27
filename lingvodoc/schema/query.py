@@ -16918,6 +16918,247 @@ class Docx2Eaf(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
+class Docs2Xlsx(graphene.Mutation):
+    """
+    Tries to convert a table-containing .docx to .xlsx.
+
+    curl 'http://localhost:6543/graphql'
+      -H 'Cookie: locale_id=2; auth_tkt=_!userid_type:int; client_id=4211'
+      -H 'Content-Type: multipart/form-data'
+      -F operations='{
+         "query": "mutation docx2xlsx($docxFile: Upload, $separateFlag: Boolean) {
+           docx2xlsx(docx_file: $docxFile, separate_flag: $separateFlag, debug_flag: true) {
+             triumph xlsx_url message } }",
+         "variables": { "docxFile": null, "separateFlag": false } }'
+      -F map='{ "1": ["variables.docx_file"] }'
+      -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+    """
+
+    class Arguments:
+
+        docx_file = Upload()
+        separate_flag = graphene.Boolean()
+        all_tables_flag = graphene.Boolean()
+        no_header_flag = graphene.Boolean()
+        no_parsing_flag = graphene.Boolean()
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    eaf_url = graphene.String()
+    alignment_url = graphene.String()
+    check_txt_url = graphene.String()
+    check_docx_url = graphene.String()
+
+    message = graphene.String()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+
+                return (
+
+                    Docs2Xlsx(
+                        triumph = False,
+                        message = 'Only registered users can convert .docx to .xlsx.'))
+
+            request = info.context.request
+
+            if '1' not in request.POST:
+                return ResponseError('.docx file is required.')
+
+            multipart = request.POST.pop('1')
+
+            docx_file_name = multipart.filename
+            docx_file = multipart.file
+
+            separate_flag = args.get('separate_flag', False)
+            all_tables_flag = args.get('all_tables_flag', False)
+            no_header_flag = args.get('no_header_flag', False)
+            no_parsing_flag = args.get('no_parsing_flag', False)
+
+            __debug_flag__ = args.get('debug_flag', False)
+
+            if __debug_flag__ and client.user_id != 1:
+
+                return (
+
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
+
+            log.debug(
+                '\n{}\n{}'.format(
+                    docx_file_name,
+                    type(docx_file)))
+
+            if __debug_flag__:
+
+                with open('docx2xlsx_input.docx', 'wb') as input_file:
+
+                    shutil.copyfileobj(docx_file, input_file)
+                    docx_file.seek(0)
+
+            url_list = []
+
+            with tempfile.TemporaryDirectory() as tmp_dir_path:
+
+                tmp_docx_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2xlsx_input.docx'))
+
+                tmp_eaf_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2xlsx_output.xlsx'))
+
+                tmp_check_txt_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2xlsx_check.txt'))
+
+                tmp_check_docx_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2xlsx_check.docx'))
+
+                with open(tmp_docx_file_path, 'wb') as tmp_docx_file:
+                    shutil.copyfileobj(docx_file, tmp_docx_file)
+
+                result = (
+
+                    docx_import.docx2xlsx(
+                        tmp_docx_file_path,
+                        tmp_eaf_file_path,
+                        separate_by_paragraphs_flag = separate_flag,
+                        modify_docx_flag = True,
+                        all_tables_flag = all_tables_flag,
+                        no_header_flag = no_header_flag,
+                        no_parsing_flag = no_parsing_flag,
+                        check_file_path = tmp_check_txt_file_path,
+                        check_docx_file_path = tmp_check_docx_file_path,
+                        __debug_flag__ = __debug_flag__))
+
+                # Saving local copies, if required.
+
+                if __debug_flag__:
+
+                    shutil.copyfile(tmp_eaf_file_path, 'docx2xlsx_output.xlsx')
+                    shutil.copyfile(tmp_check_txt_file_path, 'docx2xlsx_check.txt')
+
+                    if not separate_flag and not all_tables_flag:
+                        shutil.copyfile(tmp_check_docx_file_path, 'docx2xlsx_check.docx')
+
+                # Saving processed files.
+
+                storage = (
+                    request.registry.settings['storage'])
+
+                storage_temporary = storage['temporary']
+
+                host = storage_temporary['host']
+                bucket = storage_temporary['bucket']
+
+                minio_client = (
+
+                    minio.Minio(
+                        host,
+                        access_key = storage_temporary['access_key'],
+                        secret_key = storage_temporary['secret_key'],
+                        secure = True))
+
+                current_time = time.time()
+
+                input_file_name = (
+
+                    pathvalidate.sanitize_filename(
+                        os.path.splitext(os.path.basename(docx_file_name))[0]))
+
+                for file_path, suffix in (
+
+                    (tmp_eaf_file_path, '.xlsx'),
+                    (tmp_docx_file_path, ' alignment.docx'),
+                    (tmp_check_txt_file_path, ' check.txt'),
+                    (tmp_check_docx_file_path, ' check.docx')):
+
+                    if ((separate_flag or all_tables_flag) and
+                        (suffix == ' check.docx' or suffix == ' alignment.docx')):
+
+                        url_list.append(None)
+                        continue
+
+                    object_name = (
+
+                        storage_temporary['prefix'] +
+
+                        '/'.join((
+                            'docx2xlsx',
+                            '{:.6f}'.format(current_time),
+                            input_file_name + suffix)))
+
+                    (etag, version_id) = (
+
+                        minio_client.fput_object(
+                            bucket,
+                            object_name,
+                            file_path))
+
+                    url = (
+
+                        '/'.join((
+                            'https:/',
+                            host,
+                            bucket,
+                            object_name)))
+
+                    log.debug(
+                        '\nobject_name:\n{}'
+                        '\netag:\n{}'
+                        '\nversion_id:\n{}'
+                        '\nurl:\n{}'.format(
+                            object_name,
+                            etag,
+                            version_id,
+                            url))
+
+                    url_list.append(url)
+
+                log.debug(
+                    '\nurl_list:\n' +
+                    pprint.pformat(url_list, width = 192))
+
+            return (
+
+                Docs2Xlsx(
+                    triumph = True,
+                    eaf_url = url_list[0],
+                    alignment_url = url_list[1],
+                    check_txt_url = url_list[2],
+                    check_docx_url = url_list[3]))
+
+        except docx_import.Docx2EafError as exception:
+
+            return (
+
+                Docs2Xlsx(
+                    triumph = False,
+                    message = exception.args[0]))
+
+        except Exception as exception:
+
+            traceback_string = (
+
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('docx2xlsx: exception')
+            log.warning(traceback_string)
+
+            return (
+
+                ResponseError(
+                    'Exception:\n' + traceback_string))
+
+
 @celery.task
 def async_valency_compute(
     perspective_id,
@@ -20259,6 +20500,7 @@ class MyMutations(graphene.ObjectType):
     xlsx_bulk_disconnect = XlsxBulkDisconnect.Field()
     new_unstructured_data = NewUnstructuredData.Field()
     docx2eaf = Docx2Eaf.Field()
+    docx2xlsx = Docx2Xlsx.Field()
     valency = Valency.Field()
     create_valency_data = CreateValencyData.Field()
     save_valency_data = SaveValencyData.Field()
