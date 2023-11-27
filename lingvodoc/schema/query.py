@@ -16919,7 +16919,7 @@ class Docx2Eaf(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
-class Docs2Xlsx(graphene.Mutation):
+class Docx2Xlsx(graphene.Mutation):
     """
     Tries to convert a table-containing .docx to .xlsx.
 
@@ -16955,7 +16955,7 @@ class Docs2Xlsx(graphene.Mutation):
 
             if not client:
                 return (
-                    Docs2Xlsx(
+                    Docx2Xlsx(
                         triumph = False,
                         message = 'Only registered users can convert .docx to .xlsx.'))
 
@@ -17063,13 +17063,13 @@ class Docs2Xlsx(graphene.Mutation):
                     pprint.pformat(url_list, width = 192))
 
             return (
-                Docs2Xlsx(
+                Docx2Xlsx(
                     triumph = True,
                     xlsx_url = url))
 
         except docx_to_xlsx.Error as exception:
             return (
-                Docs2Xlsx(
+                Docx2Xlsx(
                     triumph = False,
                     message = exception.args[0]))
 
