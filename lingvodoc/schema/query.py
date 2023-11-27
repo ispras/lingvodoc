@@ -360,6 +360,7 @@ from lingvodoc.schema.gql_parserresult import ExecuteParser
 from lingvodoc.cache.caching import CACHE
 
 import lingvodoc.scripts.docx_import as docx_import
+import lingvodoc.scripts.docx_to_xlsx as docx_to_xlsx
 
 import pandas as pd
 from pretty_html_table import build_table
@@ -16918,6 +16919,172 @@ class Docx2Eaf(graphene.Mutation):
                     'Exception:\n' + traceback_string))
 
 
+class Docx2Xlsx(graphene.Mutation):
+    """
+    Tries to convert a table-containing .docx to .xlsx.
+
+    curl 'http://localhost:6543/graphql'
+      -H 'Cookie: locale_id=2; auth_tkt=_!userid_type:int; client_id=4211'
+      -H 'Content-Type: multipart/form-data'
+      -F operations='{
+         "query": "mutation docx2xlsx($docxFile: Upload, $separateFlag: Boolean) {
+           docx2xlsx(docx_file: $docxFile, separate_flag: $separateFlag, debug_flag: true) {
+             triumph xlsx_url message } }",
+         "variables": { "docxFile": null, "separateFlag": false } }'
+      -F map='{ "1": ["variables.docx_file"] }'
+      -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+    """
+
+    class Arguments:
+
+        docx_file = Upload()
+        separate_flag = graphene.Boolean()
+        debug_flag = graphene.Boolean()
+
+    triumph = graphene.Boolean()
+
+    xlsx_url = graphene.String()
+    message = graphene.String()
+
+    @staticmethod
+    def mutate(root, info, **args):
+
+        try:
+            client_id = info.context.get('client_id')
+            client = DBSession.query(Client).filter_by(id = client_id).first()
+
+            if not client:
+                return (
+                    Docx2Xlsx(
+                        triumph = False,
+                        message = 'Only registered users can convert .docx to .xlsx.'))
+
+            request = info.context.request
+
+            if '1' not in request.POST:
+                return ResponseError('.docx file is required.')
+
+            multipart = request.POST.pop('1')
+
+            docx_file_name = multipart.filename
+            docx_file = multipart.file
+
+            separate_flag = args.get('separate_flag', False)
+            __debug_flag__ = args.get('debug_flag', False)
+
+            if __debug_flag__ and client.user_id != 1:
+                return (
+                    ResponseError(
+                        message = 'Only administrator can use debug mode.'))
+
+            log.debug(
+                '\n{}\n{}'.format(
+                    docx_file_name,
+                    type(docx_file)))
+
+            if __debug_flag__:
+                with open('docx2xlsx_input.docx', 'wb') as input_file:
+                    shutil.copyfileobj(docx_file, input_file)
+                    docx_file.seek(0)
+
+            with tempfile.TemporaryDirectory() as tmp_dir_path:
+
+                tmp_docx_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2xlsx_input.docx'))
+
+                tmp_xlsx_file_path = (
+                    os.path.join(tmp_dir_path, 'docx2xlsx_output.xlsx'))
+
+                with open(tmp_docx_file_path, 'wb') as tmp_docx_file:
+                    shutil.copyfileobj(docx_file, tmp_docx_file)
+
+                input_file_name = (
+                    pathvalidate.sanitize_filename(
+                        os.path.splitext(os.path.basename(docx_file_name))[0]))
+
+                result_dict = docx_to_xlsx.get_entries(tmp_docx_file_path, __debug_flag__)
+                docx_to_xlsx.write_xlsx(result_dict, tmp_xlsx_file_path, input_file_name, separate_flag)
+
+                # Saving local copies, if required.
+
+                if __debug_flag__:
+                    shutil.copyfile(tmp_xlsx_file_path, 'docx2xlsx_output.xlsx')
+
+                # Saving processed files.
+                storage = (
+                    request.registry.settings['storage'])
+                storage_temporary = storage['temporary']
+                host = storage_temporary['host']
+                bucket = storage_temporary['bucket']
+
+                minio_client = (
+                    minio.Minio(
+                        host,
+                        access_key = storage_temporary['access_key'],
+                        secret_key = storage_temporary['secret_key'],
+                        secure = True))
+
+                current_time = time.time()
+
+                object_name = (
+                    storage_temporary['prefix'] +
+                    '/'.join((
+                        'docx2xlsx',
+                        '{:.6f}'.format(current_time),
+                        input_file_name + '.xlsx')))
+
+                (etag, version_id) = (
+                    minio_client.fput_object(
+                        bucket,
+                        object_name,
+                        tmp_xlsx_file_path))
+
+                url = (
+                    '/'.join((
+                        'https:/',
+                        host,
+                        bucket,
+                        object_name)))
+
+                log.debug(
+                    '\nobject_name:\n{}'
+                    '\netag:\n{}'
+                    '\nversion_id:\n{}'
+                    '\nurl:\n{}'.format(
+                        object_name,
+                        etag,
+                        version_id,
+                        url))
+
+                log.debug(
+                    '\nurl_list:\n' +
+                    pprint.pformat(url_list, width = 192))
+
+            return (
+                Docx2Xlsx(
+                    triumph = True,
+                    xlsx_url = url))
+
+        except docx_to_xlsx.Error as exception:
+            return (
+                Docx2Xlsx(
+                    triumph = False,
+                    message = exception.args[0]))
+
+        except Exception as exception:
+            traceback_string = (
+                ''.join(
+                    traceback.format_exception(
+                        exception, exception, exception.__traceback__))[:-1])
+
+            log.warning('docx2xlsx: exception')
+            log.warning(traceback_string)
+
+            return (
+                ResponseError(
+                    'Exception:\n' + traceback_string))
+
+
 @celery.task
 def async_valency_compute(
     perspective_id,
@@ -20259,6 +20426,7 @@ class MyMutations(graphene.ObjectType):
     xlsx_bulk_disconnect = XlsxBulkDisconnect.Field()
     new_unstructured_data = NewUnstructuredData.Field()
     docx2eaf = Docx2Eaf.Field()
+    docx2xlsx = Docx2Xlsx.Field()
     valency = Valency.Field()
     create_valency_data = CreateValencyData.Field()
     save_valency_data = SaveValencyData.Field()
