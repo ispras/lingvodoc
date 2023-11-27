@@ -360,6 +360,7 @@ from lingvodoc.schema.gql_parserresult import ExecuteParser
 from lingvodoc.cache.caching import CACHE
 
 import lingvodoc.scripts.docx_import as docx_import
+import lingvodoc.scripts.docx_to_xlsx as docx_to_xlsx
 
 import pandas as pd
 from pretty_html_table import build_table
@@ -16938,32 +16939,22 @@ class Docs2Xlsx(graphene.Mutation):
 
         docx_file = Upload()
         separate_flag = graphene.Boolean()
-        all_tables_flag = graphene.Boolean()
-        no_header_flag = graphene.Boolean()
-        no_parsing_flag = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
     triumph = graphene.Boolean()
 
-    eaf_url = graphene.String()
-    alignment_url = graphene.String()
-    check_txt_url = graphene.String()
-    check_docx_url = graphene.String()
-
+    xlsx_url = graphene.String()
     message = graphene.String()
 
     @staticmethod
     def mutate(root, info, **args):
 
         try:
-
             client_id = info.context.get('client_id')
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
-
                 return (
-
                     Docs2Xlsx(
                         triumph = False,
                         message = 'Only registered users can convert .docx to .xlsx.'))
@@ -16979,16 +16970,10 @@ class Docs2Xlsx(graphene.Mutation):
             docx_file = multipart.file
 
             separate_flag = args.get('separate_flag', False)
-            all_tables_flag = args.get('all_tables_flag', False)
-            no_header_flag = args.get('no_header_flag', False)
-            no_parsing_flag = args.get('no_parsing_flag', False)
-
             __debug_flag__ = args.get('debug_flag', False)
 
             if __debug_flag__ and client.user_id != 1:
-
                 return (
-
                     ResponseError(
                         message = 'Only administrator can use debug mode.'))
 
@@ -16998,9 +16983,7 @@ class Docs2Xlsx(graphene.Mutation):
                     type(docx_file)))
 
             if __debug_flag__:
-
                 with open('docx2xlsx_input.docx', 'wb') as input_file:
-
                     shutil.copyfileobj(docx_file, input_file)
                     docx_file.seek(0)
 
@@ -17011,54 +16994,32 @@ class Docs2Xlsx(graphene.Mutation):
                 tmp_docx_file_path = (
                     os.path.join(tmp_dir_path, 'docx2xlsx_input.docx'))
 
-                tmp_eaf_file_path = (
+                tmp_xlsx_file_path = (
                     os.path.join(tmp_dir_path, 'docx2xlsx_output.xlsx'))
-
-                tmp_check_txt_file_path = (
-                    os.path.join(tmp_dir_path, 'docx2xlsx_check.txt'))
-
-                tmp_check_docx_file_path = (
-                    os.path.join(tmp_dir_path, 'docx2xlsx_check.docx'))
 
                 with open(tmp_docx_file_path, 'wb') as tmp_docx_file:
                     shutil.copyfileobj(docx_file, tmp_docx_file)
 
-                result = (
+                input_file_name = (
+                    pathvalidate.sanitize_filename(
+                        os.path.splitext(os.path.basename(docx_file_name))[0]))
 
-                    docx_import.docx2xlsx(
-                        tmp_docx_file_path,
-                        tmp_eaf_file_path,
-                        separate_by_paragraphs_flag = separate_flag,
-                        modify_docx_flag = True,
-                        all_tables_flag = all_tables_flag,
-                        no_header_flag = no_header_flag,
-                        no_parsing_flag = no_parsing_flag,
-                        check_file_path = tmp_check_txt_file_path,
-                        check_docx_file_path = tmp_check_docx_file_path,
-                        __debug_flag__ = __debug_flag__))
+                result_dict = docx_to_xlsx.get_entries(tmp_docx_file_path, __debug_flag__)
+                docx_to_xlsx.write_xlsx(result_dict, tmp_xlsx_file_path, input_file_name, separate_flag)
 
                 # Saving local copies, if required.
 
                 if __debug_flag__:
-
-                    shutil.copyfile(tmp_eaf_file_path, 'docx2xlsx_output.xlsx')
-                    shutil.copyfile(tmp_check_txt_file_path, 'docx2xlsx_check.txt')
-
-                    if not separate_flag and not all_tables_flag:
-                        shutil.copyfile(tmp_check_docx_file_path, 'docx2xlsx_check.docx')
+                    shutil.copyfile(tmp_xlsx_file_path, 'docx2xlsx_output.xlsx')
 
                 # Saving processed files.
-
                 storage = (
                     request.registry.settings['storage'])
-
                 storage_temporary = storage['temporary']
-
                 host = storage_temporary['host']
                 bucket = storage_temporary['bucket']
 
                 minio_client = (
-
                     minio.Minio(
                         host,
                         access_key = storage_temporary['access_key'],
@@ -17067,85 +17028,53 @@ class Docs2Xlsx(graphene.Mutation):
 
                 current_time = time.time()
 
-                input_file_name = (
+                object_name = (
+                    storage_temporary['prefix'] +
+                    '/'.join((
+                        'docx2xlsx',
+                        '{:.6f}'.format(current_time),
+                        input_file_name + '.xlsx')))
 
-                    pathvalidate.sanitize_filename(
-                        os.path.splitext(os.path.basename(docx_file_name))[0]))
+                (etag, version_id) = (
+                    minio_client.fput_object(
+                        bucket,
+                        object_name,
+                        tmp_xlsx_file_path))
 
-                for file_path, suffix in (
+                url = (
+                    '/'.join((
+                        'https:/',
+                        host,
+                        bucket,
+                        object_name)))
 
-                    (tmp_eaf_file_path, '.xlsx'),
-                    (tmp_docx_file_path, ' alignment.docx'),
-                    (tmp_check_txt_file_path, ' check.txt'),
-                    (tmp_check_docx_file_path, ' check.docx')):
-
-                    if ((separate_flag or all_tables_flag) and
-                        (suffix == ' check.docx' or suffix == ' alignment.docx')):
-
-                        url_list.append(None)
-                        continue
-
-                    object_name = (
-
-                        storage_temporary['prefix'] +
-
-                        '/'.join((
-                            'docx2xlsx',
-                            '{:.6f}'.format(current_time),
-                            input_file_name + suffix)))
-
-                    (etag, version_id) = (
-
-                        minio_client.fput_object(
-                            bucket,
-                            object_name,
-                            file_path))
-
-                    url = (
-
-                        '/'.join((
-                            'https:/',
-                            host,
-                            bucket,
-                            object_name)))
-
-                    log.debug(
-                        '\nobject_name:\n{}'
-                        '\netag:\n{}'
-                        '\nversion_id:\n{}'
-                        '\nurl:\n{}'.format(
-                            object_name,
-                            etag,
-                            version_id,
-                            url))
-
-                    url_list.append(url)
+                log.debug(
+                    '\nobject_name:\n{}'
+                    '\netag:\n{}'
+                    '\nversion_id:\n{}'
+                    '\nurl:\n{}'.format(
+                        object_name,
+                        etag,
+                        version_id,
+                        url))
 
                 log.debug(
                     '\nurl_list:\n' +
                     pprint.pformat(url_list, width = 192))
 
             return (
-
                 Docs2Xlsx(
                     triumph = True,
-                    eaf_url = url_list[0],
-                    alignment_url = url_list[1],
-                    check_txt_url = url_list[2],
-                    check_docx_url = url_list[3]))
+                    xlsx_url = url))
 
-        except docx_import.Docx2EafError as exception:
-
+        except docx_to_xlsx.Error as exception:
             return (
-
                 Docs2Xlsx(
                     triumph = False,
                     message = exception.args[0]))
 
         except Exception as exception:
-
             traceback_string = (
-
                 ''.join(
                     traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1])
@@ -17154,7 +17083,6 @@ class Docs2Xlsx(graphene.Mutation):
             log.warning(traceback_string)
 
             return (
-
                 ResponseError(
                     'Exception:\n' + traceback_string))
 

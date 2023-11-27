@@ -14,8 +14,13 @@ if __name__ != '__main__':
     log.debug('module init')
 
 
+class Docx2EafError(Exception):
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
 def get_entries(filename, debug_flag=False):
-    doc = docx.Document(filename)
     part = None
     is_left = False
     bold_words = ''
@@ -24,6 +29,15 @@ def get_entries(filename, debug_flag=False):
     result_dict = collections.defaultdict(list)
     header = 'n/a'
     total = 0
+
+    log.debug(
+        '\ndocx_path: {0}'.format(filename))
+
+    try:
+        doc = docx.Document(filename)
+
+    except docx.opc.exceptions.PackageNotFoundError:
+        raise Docx2EafError('input file is not a .docx format file')
 
     def write_out():
         nonlocal \
@@ -56,7 +70,7 @@ def get_entries(filename, debug_flag=False):
 
     for p, para in enumerate(doc.paragraphs):
         # Start parsing on text like '- A -'
-        if hdr := re.search('\u2014 \w \u2014', para.text):
+        if hdr := re.search(r'\u2014 \w \u2014', para.text):
             write_out()
             header = hdr.group()
             if debug_flag:
