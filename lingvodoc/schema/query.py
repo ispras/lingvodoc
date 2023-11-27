@@ -16987,8 +16987,6 @@ class Docx2Xlsx(graphene.Mutation):
                     shutil.copyfileobj(docx_file, input_file)
                     docx_file.seek(0)
 
-            url_list = []
-
             with tempfile.TemporaryDirectory() as tmp_dir_path:
 
                 tmp_docx_file_path = (
