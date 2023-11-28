@@ -70,7 +70,7 @@ def get_entries(filename, debug_flag=False):
 
     for p, para in enumerate(doc.paragraphs):
         # Start parsing on text like '- A -'
-        if hdr := re.search(r'\u2014 \w \u2014', para.text):
+        if hdr := re.search(r'\u2014\s*\w\s*\u2014', para.text):
             write_out()
             header = hdr.group()
             if debug_flag:
