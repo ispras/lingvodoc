@@ -17056,16 +17056,12 @@ class Docx2Xlsx(graphene.Mutation):
                         version_id,
                         url))
 
-                log.debug(
-                    '\nurl_list:\n' +
-                    pprint.pformat(url_list, width = 192))
-
             return (
                 Docx2Xlsx(
                     triumph = True,
                     xlsx_url = url))
 
-        except docx_to_xlsx.Error as exception:
+        except docx_to_xlsx.Docx2XlsxError as exception:
             return (
                 Docx2Xlsx(
                     triumph = False,

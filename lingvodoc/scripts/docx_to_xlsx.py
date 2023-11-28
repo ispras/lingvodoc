@@ -14,7 +14,7 @@ if __name__ != '__main__':
     log.debug('module init')
 
 
-class Docx2EafError(Exception):
+class Docx2XlsxError(Exception):
 
     def __init__(self, message):
         super().__init__(message)
@@ -37,7 +37,7 @@ def get_entries(filename, debug_flag=False):
         doc = docx.Document(filename)
 
     except docx.opc.exceptions.PackageNotFoundError:
-        raise Docx2EafError('input file is not a .docx format file')
+        raise Docx2XlsxError('input file is not a .docx format file')
 
     def write_out():
         nonlocal \
