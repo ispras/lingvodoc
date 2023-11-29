@@ -2302,6 +2302,11 @@ def chart_data(f_2d_tt_list, f_3d_tt_list):
         filtered_3d_list, outlier_3d_list, mean_3d, sigma_3d, inverse_3d)
 
 
+chart_color_list = [
+    'black', 'blue', 'brown', 'green', 'navy', 'purple', 'red', 'orange', 'gray', 'cyan', 'lime', 'magenta',
+    'silver', 'yellow']
+
+
 def chart_definition_list(
     chart_data_2d_list,
     worksheet_table_2d,
@@ -2322,15 +2327,15 @@ def chart_definition_list(
     shape_list = ['square', 'diamond', 'triangle', 'x', 'star', 'short_dash', 'long_dash', 'circle',
         'plus']
 
-    color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red', 'orange', 'gray',
-        'cyan', 'lime', 'magenta', 'silver', 'yellow']
-
     chart_dict_list = []
 
     # Starting with data column headers.
 
-    max_f_2d_list_length = max(len(f_2d_list)
-        for c, tc, v, f_2d_list, o_list, m, e_list in chart_data_2d_list)
+    max_f_2d_list_length = (
+
+        max(
+            len(f_2d_list)
+            for c, tc, v, f_2d_list, o_list, m, e_list in chart_data_2d_list))
 
     heading_list = []
 
@@ -2359,14 +2364,18 @@ def chart_definition_list(
 
         chart_data_2d_list[i][4] = (
                 
-            list(filter(
-                lambda f_2d_tt:
-                    f_2d_tt[0][0] <= f1_limit and
-                    f_2d_tt[0][1] <= f2_limit,
-                chart_data_2d_list[i][4])))
+            list(
+                filter(
+                    lambda f_2d_tt:
+                        f_2d_tt[0][0] <= f1_limit and
+                        f_2d_tt[0][1] <= f2_limit,
+                    chart_data_2d_list[i][4])))
 
-    max_outlier_list_length = max(len(outlier_list)
-        for c, tc, v, f_list, outlier_list, m, e_list in chart_data_2d_list)
+    max_outlier_list_length = (
+
+        max(
+            len(outlier_list)
+            for c, tc, v, f_list, outlier_list, m, e_list in chart_data_2d_list))
 
     # Writing out chart data and compiling chart data series info.
 
@@ -2443,7 +2452,8 @@ def chart_definition_list(
 
         # Compiling and saving chart data series info.
 
-        color = color_list[index % len(color_list)]
+        color = (
+            chart_color_list[index % len(chart_color_list)])
 
         chart_dict_list.append({
             'name': vowel,
@@ -2902,10 +2912,15 @@ def compile_workbook(
     # frequent vowels of all result groups.
 
     chart_stream_list = []
+
     for group in group_list:
 
-        group_name_string = '' if group == None else ' (group {0})'.format(group_string_dict[group])
-        worksheet_table_2d, worksheet_chart, worksheet_table_3d = worksheet_dict[group][1:4]
+        group_name_string = (
+            '' if group == None else
+            f' (group {group_string_dict[group]})')
+
+        worksheet_table_2d, worksheet_chart, worksheet_table_3d = (
+            worksheet_dict[group][1:4])
 
         vowel_formant_list = []
 
@@ -2925,7 +2940,8 @@ def compile_workbook(
 
             if len(f_list_list) >= args.chart_threshold:
 
-                vowel_formant_list.append((vowel,
+                vowel_formant_list.append((
+                    vowel,
                     list(map(lambda f_list: (numpy.array(f_list[:2]), f_list[3:]), f_list_list)),
                     list(map(lambda f_list: (numpy.array(f_list[:3]), f_list[3:]), f_list_list))))
 
@@ -3008,7 +3024,7 @@ def compile_workbook(
 
         # Compiling info of the formant scatter chart data series, unless we actually don't have any.
 
-        if len(chart_data_2d_list) > 0:
+        if chart_data_2d_list:
 
             chart_dict_list = []
 
@@ -3016,7 +3032,8 @@ def compile_workbook(
             # F1/F2 points to vowels with the most number of F1/F2 points, otherwise scatter chart fails to
             # generate properly.
 
-            chart_data_2d_list.sort(reverse = True)
+            chart_data_2d_list.sort(
+                reverse = True)
 
             chart_dict_list, table_2d_row_index = (
                     
@@ -3053,16 +3070,38 @@ def compile_workbook(
 
         # Compiling info for F1/F2/F3 3-vector scatter charts, if we have any data.
 
-        if len(chart_data_3d_list) > 0:
+        if chart_data_3d_list:
 
-            column_list = list(string.ascii_uppercase) + [c1 + c2
-                for c1 in string.ascii_uppercase
-                for c2 in string.ascii_uppercase]
+            column_list = (
 
-            chart_data_3d_list.sort(reverse = True)
+                list(string.ascii_uppercase) +
 
-            max_f_3d_list_length = max(len(f_3d_list)
-                for c, tc, v, f_3d_list, o_list, m, s_3d, i_3d in chart_data_3d_list)
+                [c1 + c2
+                    for c1 in string.ascii_uppercase
+                    for c2 in string.ascii_uppercase])
+
+            # Sorting 3d data in the same order as 2d data if required, ensuring same colors for same vowels
+            # in both 2d and 3d charts.
+
+            if chart_data_2d_list:
+
+                vowel_order_dict = {
+                    vowel: index
+                    for index, (_, _, vowel, _, _, _, _) in enumerate(chart_data_2d_list)}
+
+                chart_data_3d_list.sort(
+                    key = lambda data: vowel_order_dict[data[2]])
+
+            else:
+
+                chart_data_3d_list.sort(
+                    reverse = True)
+
+            max_f_3d_list_length = (
+
+                max(
+                    len(f_3d_list)
+                    for c, tc, v, f_3d_list, o_list, m, s_3d, i_3d in chart_data_3d_list))
 
             heading_list = []
 
@@ -3076,10 +3115,12 @@ def compile_workbook(
                     ''])
 
             worksheet_table_3d.write_row(
-                'A1', heading_list)
+                'A1',
+                heading_list)
 
             worksheet_table_3d.write_row(
-                'A2', ['main part', '', '', '', ''] * len(chart_data_3d_list))
+                'A2',
+                ['main part', '', '', '', ''] * len(chart_data_3d_list))
 
             # Removing outliers that outlie too much.
 
@@ -3089,24 +3130,32 @@ def compile_workbook(
 
             for i in range(len(chart_data_3d_list)):
 
-                chart_data_3d_list[i] = list(chart_data_3d_list[i])
+                chart_data_3d_list[i] = (
+                    list(chart_data_3d_list[i]))
 
                 chart_data_3d_list[i][4] = (
                         
-                    list(filter(
-                        lambda f_3d_tt:
-                            f_3d_tt[0][0] <= f1_limit and
-                            f_3d_tt[0][1] <= f2_limit and
-                            f_3d_tt[0][2] <= f3_limit,
-                        chart_data_3d_list[i][4])))
+                    list(
+                        filter(
+                            lambda f_3d_tt:
+                                f_3d_tt[0][0] <= f1_limit and
+                                f_3d_tt[0][1] <= f2_limit and
+                                f_3d_tt[0][2] <= f3_limit,
+                            chart_data_3d_list[i][4])))
 
-            max_outlier_list_length = max(len(outlier_list)
-                for c, tc, v, f_list, outlier_list, m, s_3d, i_3d in chart_data_3d_list)
+            max_outlier_list_length = (
+
+                max(
+                    len(outlier_list)
+                    for c, tc, v, f_list, outlier_list, m, s_3d, i_3d in chart_data_3d_list))
 
             # Writing out chart data.
 
-            for index, (count, total_count, vowel,
-                f_3d_tt_list, outlier_list, mean, sigma_3d, inverse_3d) in enumerate(chart_data_3d_list):
+            for (
+                index,
+                (count, total_count, vowel, f_3d_tt_list, outlier_list, mean, sigma_3d, inverse_3d)) in (
+
+                enumerate(chart_data_3d_list)):
 
                 f_3d_list = [f_3d for f_3d, tt in f_3d_tt_list]
                 tt_list = [tt for f_3d, tt in f_3d_tt_list]
@@ -3119,11 +3168,17 @@ def compile_workbook(
 
                 if outlier_list:
 
-                    f_3d_list = [f_3d for f_3d, tt in outlier_list]
-                    tt_list = [tt for f_3d, tt in outlier_list]
+                    f_3d_list = [
+                        f_3d for f_3d, tt in outlier_list]
 
-                    f1_outlier_list, f2_outlier_list, f3_outlier_list = zip(*f_3d_list)
-                    xc_outlier_list, xl_outlier_list = zip(*tt_list)
+                    tt_list = [
+                        tt for f_3d, tt in outlier_list]
+
+                    f1_outlier_list, f2_outlier_list, f3_outlier_list = (
+                        zip(*f_3d_list))
+
+                    xc_outlier_list, xl_outlier_list = (
+                        zip(*tt_list))
                 
                 f1_column = column_list[index * 5]
                 f2_column = column_list[index * 5 + 1]
@@ -3182,197 +3237,297 @@ def compile_workbook(
                 worksheet_table_3d.set_column(index * 5, index * 5 + 2, 11)
                 worksheet_table_3d.set_column(index * 5 + 3, index * 5 + 4, 15)
 
-            # Creating 3d formant scatter charts, if we have any data.
+            # Creating 3d formant scatter charts.
 
-            if chart_data_3d_list:
+            figure = pyplot.figure()
+            figure.set_size_inches(16, 10)
 
-                figure = pyplot.figure()
-                figure.set_size_inches(16, 10)
+            axes = figure.add_subplot(111, projection = '3d')
 
-                axes = figure.add_subplot(111, projection = '3d')
+            axes.autoscale(tight = True)
+            axes.autoscale_view(tight = True)
 
-                axes.autoscale(tight = True)
-                axes.autoscale_view(tight = True)
+            axes.invert_xaxis()
+            axes.view_init(elev = 30, azim = -165)
 
-                axes.invert_xaxis()
-                axes.view_init(elev = 30, azim = -165)
+            x_min, x_max = min_3d_f1, max_3d_f1
+            y_min, y_max = min_3d_f2, max_3d_f2
+            z_min, z_max = min_3d_f3, max_3d_f3
 
-                x_min, x_max = min_3d_f1, max_3d_f1
-                y_min, y_max = min_3d_f2, max_3d_f2
-                z_min, z_max = min_3d_f3, max_3d_f3
+            legend_plot_list = []
+            legend_label_list = []
 
-                legend_plot_list = []
-                legend_label_list = []
+            # Graphing every vowel's data.
 
-                color_list = ['black', 'blue', 'brown', 'green', 'navy', 'purple', 'red',
-                    'orange', 'gray', 'cyan', 'lime', 'magenta', 'silver', 'yellow']
+            for (
+                index, (
+                    (c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, s_3d, inverse_3d),
+                    color)) in (
 
-                # Graphing every vowel's data.
+                enumerate(
+                    zip(
+                        chart_data_3d_list,
+                        itertools.cycle(chart_color_list)))):
 
-                for index, ((c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, s_3d, inverse_3d),
-                    color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
+                axes.scatter(
+                    [f_3d[0] for f_3d, tt in f_3d_tt_list],
+                    [f_3d[1] for f_3d, tt in f_3d_tt_list],
+                    [f_3d[2] for f_3d, tt in f_3d_tt_list],
+                    color = color,
+                    s = 4,
+                    depthshade = False,
+                    alpha = 0.5,
+                    zorder = 1000 + index)
+
+                if outlier_list:
 
                     axes.scatter(
-                        [f_3d[0] for f_3d, tt in f_3d_tt_list],
-                        [f_3d[1] for f_3d, tt in f_3d_tt_list],
-                        [f_3d[2] for f_3d, tt in f_3d_tt_list],
-                        color = color, s = 4, depthshade = False, alpha = 0.5, zorder = 1000 + index)
+                        [f_3d[0] for f_3d, tt in outlier_list],
+                        [f_3d[1] for f_3d, tt in outlier_list],
+                        [f_3d[2] for f_3d, tt in outlier_list],
+                        color = color,
+                        s = 1.44,
+                        depthshade = False,
+                        alpha = 0.5,
+                        zorder = index)
 
-                    if outlier_list:
+                # Using 'plot' and not 'scatter' so that z-ordering would work correctly and mean
+                # formant vector markers are in the forefront.
 
-                        axes.scatter(
-                            [f_3d[0] for f_3d, tt in outlier_list],
-                            [f_3d[1] for f_3d, tt in outlier_list],
-                            [f_3d[2] for f_3d, tt in outlier_list],
-                            color = color, s = 1.44, depthshade = False, alpha = 0.5, zorder = index)
+                axes.plot(
+                    [mean_3d[0]],
+                    [mean_3d[1]],
+                    [mean_3d[2]],
+                    '.',
+                    marker = 'o',
+                    c = color,
+                    markersize = 7,
+                    zorder = 4000 + index)
 
-                    # Using 'plot' and not 'scatter' so that z-ordering would work correctly and mean
-                    # formant vector markers are in the forefront.
+                plot_proxy = (
 
-                    axes.plot([mean_3d[0]], [mean_3d[1]], [mean_3d[2]], '.',
-                        marker = 'o', c = color, markersize = 7, zorder = 4000 + index)
+                    matplotlib.lines.Line2D(
+                        [0], [0],
+                        linestyle = "none",
+                        c = color,
+                        marker = 'o'))
 
-                    plot_proxy = matplotlib.lines.Line2D(
-                        [0], [0], linestyle = "none", c = color, marker = 'o')
+                legend_plot_list.append(plot_proxy)
+                legend_label_list.append(vowel)
 
-                    legend_plot_list.append(plot_proxy)
-                    legend_label_list.append(vowel)
-
-                    # Plotting one standard deviation ellipsoids for F1/F2/F3 3-vectors.
-                    #
-                    # See https://stackoverflow.com/questions/7819498/plotting-ellipsoid-with-matplotlib and
-                    # https://stackoverflow.com/questions/41955492/how-to-plot-efficiently-a-large-number-
-                    # of-3d-ellipsoids-with-matplotlib-axes3d for examples of parametrization with spherical
-                    # coordinates.
-
-                    phi = numpy.linspace(0, 2 * numpy.pi, 100)
-                    theta = numpy.linspace(0, numpy.pi, 100)
-
-                    # Getting scaling and rotation matrices from ellipsoid definition matrix Sigma^{-1}
-                    # by decomposing it via singular value decomposition.
-
-                    u, s, rotation = numpy.linalg.svd(inverse_3d)
-                    scale_x, scale_y, scale_z = 1.0 / numpy.sqrt(s)
-
-                    x = scale_x * numpy.outer(numpy.cos(phi), numpy.sin(theta))
-                    y = scale_y * numpy.outer(numpy.sin(phi), numpy.sin(theta))
-                    z = scale_z * numpy.outer(numpy.ones_like(theta), numpy.cos(theta))
-
-                    for i in range(len(x)):
-                        for j in range(len(x)):
-
-                            [x[i, j], y[i, j], z[i, j]] = (mean_3d +
-                                numpy.dot([x[i, j], y[i, j], z[i, j]], rotation))
-
-                    axes.plot_surface(x, y, z, rstride = 10, cstride = 10,
-                        color = color, linewidth = 0.1, alpha = 0.044, shade = True, zorder = 2000 + index)
-
-                    # And again, updating plot's minimums and maximums.
-
-                    ellipsoid_x_min = min(x.flat)
-                    ellipsoid_x_max = max(x.flat)
-
-                    if ellipsoid_x_min < x_min:
-                        x_min = ellipsoid_x_min - (ellipsoid_x_max - ellipsoid_x_min) / 16
-
-                    if ellipsoid_x_max > x_max:
-                        x_max = ellipsoid_x_max + (ellipsoid_x_max - ellipsoid_x_min) / 16
-
-                    ellipsoid_y_min = min(y.flat)
-                    ellipsoid_y_max = max(y.flat)
-
-                    if ellipsoid_y_min < y_min:
-                        y_min = ellipsoid_y_min - (ellipsoid_y_max - ellipsoid_y_min) / 16
-
-                    if ellipsoid_y_max > y_max:
-                        y_max = ellipsoid_y_max + (ellipsoid_y_max - ellipsoid_y_min) / 16
-
-                    ellipsoid_z_min = min(z.flat)
-                    ellipsoid_z_max = max(z.flat)
-
-                    if ellipsoid_z_min < z_min:
-                        z_min = ellipsoid_z_min - (ellipsoid_z_max - ellipsoid_z_min) / 16
-
-                    if ellipsoid_z_max > z_max:
-                        z_max = ellipsoid_z_max + (ellipsoid_z_max - ellipsoid_z_min) / 16
-
-                # And now plotting projections of mean F1/F2/F3 vectors, with vertial projection lines, and
-                # outlines of standard deviation ellipsoids.
+                # Plotting one standard deviation ellipsoids for F1/F2/F3 3-vectors.
                 #
-                # Separate cycle due to need for establishing a Z coordinate lower bound.
+                # See https://stackoverflow.com/questions/7819498/plotting-ellipsoid-with-matplotlib and
+                # https://stackoverflow.com/questions/41955492/how-to-plot-efficiently-a-large-number-
+                # of-3d-ellipsoids-with-matplotlib-axes3d for examples of parametrization with spherical
+                # coordinates.
 
-                z_min_current, z_max_current = axes.get_zlim3d()
-                z_level = z_min_current - (z_max - z_min_current) / 4
+                phi = numpy.linspace(0, 2 * numpy.pi, 100)
+                theta = numpy.linspace(0, numpy.pi, 100)
 
-                for index, ((c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, sigma_3d, i_3d),
-                    color) in enumerate(zip(chart_data_3d_list, itertools.cycle(color_list))):
+                # Getting scaling and rotation matrices from ellipsoid definition matrix Sigma^{-1}
+                # by decomposing it via singular value decomposition.
 
-                    axes.scatter(mean_3d[0], mean_3d[1], z_level,
-                        c = color, s = 36, marker = 'x', zorder = 5000 + index)
+                u, s, rotation = (
+                    numpy.linalg.svd(inverse_3d))
 
-                    axes.plot(
-                        [mean_3d[0], mean_3d[0]],
-                        [mean_3d[1], mean_3d[1]],
-                        [mean_3d[2], z_level],
-                        '--', color = color, zorder = 3000 + index)
+                scale_x, scale_y, scale_z = (
+                    1.0 / numpy.sqrt(s))
 
-                    # Projection of an ellipsoid is an ellipse, for info on computation of ellipsoid
-                    # projections see https://tcg.mae.cornell.edu/pubs/Pope_FDA_08.pdf.
+                x = scale_x * numpy.outer(numpy.cos(phi), numpy.sin(theta))
+                y = scale_y * numpy.outer(numpy.sin(phi), numpy.sin(theta))
+                z = scale_z * numpy.outer(numpy.ones_like(theta), numpy.cos(theta))
 
-                    projection = numpy.identity(3)
-                    projection[2, 2] = 0
+                for i in range(len(x)):
+                    for j in range(len(x)):
 
-                    mean_3d_p = numpy.dot(projection, mean_3d)[:2]
-                    transform = numpy.dot(projection, scipy.linalg.sqrtm(sigma_3d))[:2, :2]
+                        x[i, j], y[i, j], z[i, j] = (
 
-                    phi = numpy.linspace(0, 2 * numpy.pi, 64)
-                    x = numpy.cos(phi)
-                    y = numpy.sin(phi)
+                            mean_3d +
 
-                    for i in range(len(x)):
-                        x[i], y[i] = mean_3d_p + numpy.dot([x[i], y[i]], transform)
+                            numpy.dot(
+                                (x[i, j], y[i, j], z[i, j]),
+                                rotation))
 
-                    axes.plot(x, y, zs = z_level, zdir = 'z', color = color, linewidth = 0.25,
-                        zorder = 6000 + index)
+                axes.plot_surface(
+                    x,
+                    y,
+                    z,
+                    rstride = 10,
+                    cstride = 10,
+                    color = color,
+                    linewidth = 0.1,
+                    alpha = 0.044,
+                    shade = True,
+                    zorder = 2000 + index)
 
-                # Minimizing whitespace. Please remember that x-axis is inverted.
+                # And again, updating plot's minimums and maximums.
 
-                axes.set_xlim(x_max, x_min)
-                axes.set_ylim(y_min, y_max)
-                axes.set_zlim(z_level, z_max)
+                ellipsoid_x_min = min(x.flat)
+                ellipsoid_x_max = max(x.flat)
 
-                # Additional newlines for adjusting label positions, see https://stackoverflow.com/a/
-                # 5526717/2016856.
+                if ellipsoid_x_min < x_min:
+                    x_min = ellipsoid_x_min - (ellipsoid_x_max - ellipsoid_x_min) / 16
 
-                axes.set_xlabel('\nF1 (Hz)')
-                axes.set_ylabel('\nF2 (Hz)')
-                axes.set_zlabel('\nF3 (Hz)')
+                if ellipsoid_x_max > x_max:
+                    x_max = ellipsoid_x_max + (ellipsoid_x_max - ellipsoid_x_min) / 16
 
-                # Legend with manually selected font appropriate for various phonetic Unicode characters.
+                ellipsoid_y_min = min(y.flat)
+                ellipsoid_y_max = max(y.flat)
 
-                legend = axes.legend(legend_plot_list, legend_label_list,
-                    markerscale = 1.25, numpoints = 1)
+                if ellipsoid_y_min < y_min:
+                    y_min = ellipsoid_y_min - (ellipsoid_y_max - ellipsoid_y_min) / 16
 
-                pyplot.setp(legend.texts, family = 'Gentium')
+                if ellipsoid_y_max > y_max:
+                    y_max = ellipsoid_y_max + (ellipsoid_y_max - ellipsoid_y_min) / 16
 
-                pyplot.tight_layout()
-                figure.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
+                ellipsoid_z_min = min(z.flat)
+                ellipsoid_z_max = max(z.flat)
 
-                # Rendering charts to memory as PNG images.
+                if ellipsoid_z_min < z_min:
+                    z_min = ellipsoid_z_min - (ellipsoid_z_max - ellipsoid_z_min) / 16
 
-                chart_stream = io.BytesIO()
-                pyplot.savefig(chart_stream, format = 'png')
+                if ellipsoid_z_max > z_max:
+                    z_max = ellipsoid_z_max + (ellipsoid_z_max - ellipsoid_z_min) / 16
 
-                chart_stream_list.append((chart_stream, group_name_string))
+            # And now plotting projections of mean F1/F2/F3 vectors, with vertial projection lines, and
+            # outlines of standard deviation ellipsoids.
+            #
+            # Separate cycle due to need for establishing a Z coordinate lower bound.
+
+            z_min_current, z_max_current = axes.get_zlim3d()
+            z_level = z_min_current - (z_max - z_min_current) / 4
+
+            for (
+                index, (
+                    (c, tc, vowel, f_3d_tt_list, outlier_list, mean_3d, sigma_3d, i_3d),
+                    color)) in (
+
+                enumerate(
+                    zip(
+                        chart_data_3d_list,
+                        itertools.cycle(chart_color_list)))):
+
+                axes.scatter(
+                    mean_3d[0],
+                    mean_3d[1],
+                    z_level,
+                    c = color,
+                    s = 36,
+                    marker = 'x',
+                    zorder = 5000 + index)
+
+                axes.plot(
+                    [mean_3d[0], mean_3d[0]],
+                    [mean_3d[1], mean_3d[1]],
+                    [mean_3d[2], z_level],
+                    '--',
+                    color = color,
+                    zorder = 3000 + index)
+
+                # Projection of an ellipsoid is an ellipse, for info on computation of ellipsoid
+                # projections see https://tcg.mae.cornell.edu/pubs/Pope_FDA_08.pdf.
+
+                projection = numpy.identity(3)
+                projection[2, 2] = 0
+
+                mean_3d_p = (
+
+                    numpy.dot(
+                        projection,
+                        mean_3d)
+
+                        [:2])
+
+                transform = (
+
+                    numpy.dot(
+                        projection,
+                        scipy.linalg.sqrtm(sigma_3d))
+
+                        [:2, :2])
+
+                phi = numpy.linspace(0, 2 * numpy.pi, 64)
+
+                x = numpy.cos(phi)
+                y = numpy.sin(phi)
+
+                for i in range(len(x)):
+
+                    x[i], y[i] = (
+
+                        mean_3d_p +
+
+                        numpy.dot(
+                            (x[i], y[i]),
+                            transform))
+
+                axes.plot(
+                    x, y,
+                    zs = z_level,
+                    zdir = 'z',
+                    color = color,
+                    linewidth = 0.25,
+                    zorder = 6000 + index)
+
+            # Minimizing whitespace. Please remember that x-axis is inverted.
+
+            axes.set_xlim(x_max, x_min)
+            axes.set_ylim(y_min, y_max)
+            axes.set_zlim(z_level, z_max)
+
+            # Additional newlines for adjusting label positions, see https://stackoverflow.com/a/
+            # 5526717/2016856.
+
+            axes.set_xlabel('\nF1 (Hz)')
+            axes.set_ylabel('\nF2 (Hz)')
+            axes.set_zlabel('\nF3 (Hz)')
+
+            # Legend with manually selected font appropriate for various phonetic Unicode characters.
+
+            legend = (
+
+                axes.legend(
+                    legend_plot_list,
+                    legend_label_list,
+                    markerscale = 1.25,
+                    numpoints = 1))
+
+            pyplot.setp(
+                legend.texts,
+                family = 'Gentium')
+
+            pyplot.tight_layout()
+
+            figure.subplots_adjust(
+                left = 0,
+                right = 1,
+                bottom = 0,
+                top = 1)
+
+            # Rendering charts to memory as PNG images.
+
+            chart_stream = io.BytesIO()
+
+            pyplot.savefig(
+                chart_stream,
+                format = 'png')
+
+            chart_stream_list.append(
+                (chart_stream, group_name_string))
 
     # Finishing workbook compilation, returning some result counts.
 
     workbook.close()
 
-    entity_counter_dict = {group: row_counter - 2
+    entity_counter_dict = {
+        group: row_counter - 2
         for group, row_counter in row_counter_dict.items()}
 
-    return (entity_counter_dict, sound_counter_dict, chart_stream_list)
+    return (
+        entity_counter_dict,
+        sound_counter_dict,
+        chart_stream_list)
 
 
 class Phonology_Parameters(object):
