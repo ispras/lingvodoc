@@ -20410,18 +20410,35 @@ class Context(dict):
         self.headers = context_dict.get('headers')
         self.cookies = context_dict.get('cookies')
 
+        self.acl_cache = {}
+
     def acl_check_if(self, action, subject, subject_id):
         """
         Checks if the client has permission to perform given action on a specified subject via ACL.
         """
+
         if type(subject_id) is list:
+
             subject_id = tuple(subject_id)
 
-        if (action, subject, subject_id) in self.cache:
-            return self.cache[(action, subject, subject_id)]
+        result = (
 
-        result = acl.check_direct(self.client_id, self.request, action, subject, subject_id)
-        self.cache[(action, subject, subject_id)] = result
+            self.acl_cache.get(
+                (action, subject, subject_id)))
+
+        if result is not None:
+            return result
+
+        result = (
+
+            acl.check_direct(
+                self.client_id,
+                self.request,
+                action,
+                subject,
+                subject_id))
+
+        self.acl_cache[(action, subject, subject_id)] = result
 
         return result
 
