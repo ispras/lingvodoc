@@ -1289,10 +1289,6 @@ def graphql(request):
                 if "query" not in query:
                     return {'errors': [{"message": 'query key not found'}]}
 
-                request_string = 
-
-                    variable_values = 
-
                 result_item = (
 
                     schema.execute(
