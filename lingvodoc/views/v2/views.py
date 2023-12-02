@@ -1283,6 +1283,7 @@ def graphql(request):
             # Multiple queries.
 
             result = []
+            error_flag = False
 
             for query in json_req:
 
@@ -1303,6 +1304,7 @@ def graphql(request):
                     result = {
                         'errors': [{"message": str(e)} for e in result_item.errors]}
 
+                    error_flag = True
                     break
 
                 if result.errors:
@@ -1313,9 +1315,14 @@ def graphql(request):
                         "data": None,
                         'errors': [{"message": str(e)} for e in result_item.errors]}
 
+                    error_flag = True
                     break
 
                 result.append(result_item.data)
+
+            if not error_flag:
+
+                result = {'data': result}
 
         else:
 
@@ -1335,7 +1342,7 @@ def graphql(request):
                 result = {
                     'errors': [{'message': str(e)} for e in result.errors]}
 
-            if result.errors:
+            elif result.errors:
 
                 more_than_one = (
                     len(result.errors) > 1)
@@ -1372,6 +1379,11 @@ def graphql(request):
                 result = {
                     'data': None,
                     'errors': [{'message': str(e)} for e in error_list]}
+
+            else:
+
+                result = {
+                    'data': result.data}
 
         t_end_real, t_end_process = (
             time.time(), time.process_time())
