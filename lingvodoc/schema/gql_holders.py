@@ -140,6 +140,20 @@ class LingvodocObjectType(graphene.ObjectType):
     dbObject = None
     ErrorHappened = None
 
+    def __init__(
+        self,
+        dbObject = None,
+        **kwargs):
+
+        if dbObject is not None:
+
+            self.dbObject = dbObject
+
+            if hasattr(dbObject, 'id'):
+                kwargs['id'] = dbObject.id
+
+        super().__init__(**kwargs)
+
 
 class LingvodocID(Scalar):
     """

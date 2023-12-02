@@ -268,11 +268,11 @@ class DeleteLexicalEntry(graphene.Mutation):
             raise ResponseError(message="Error: No such entry in the system")
         info.context.acl_check('delete', 'lexical_entries_and_entities',
                                    (dblexicalentry.parent_client_id, dblexicalentry.parent_object_id))
-        settings = info.context["request"].registry.settings
+        settings = info.context.request.registry.settings
         if 'desktop' in settings:
             real_delete_lexical_entry(dblexicalentry, settings)
         else:
-            del_object(dblexicalentry, "delete_lexicalentry", info.context.get('client_id'))
+            del_object(dblexicalentry, "delete_lexicalentry", info.context.client_id)
         return DeleteLexicalEntry(triumph=True)
 
 
@@ -296,8 +296,8 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
             },
         DBSession=DBSession, keep_dims=True)
 
-        settings = info.context["request"].registry.settings
-        client_id = info.context.get('client_id')
+        settings = info.context.request.registry.settings
+        client_id = info.context.client_id
 
         for dblexicalentry in lexical_entries:
             # client_id, object_id = lex_id
@@ -349,8 +349,8 @@ class BulkUndeleteLexicalEntry(graphene.Mutation):
 
                 .all())
 
-        settings = info.context["request"].registry.settings
-        client_id = info.context.get('client_id')
+        settings = info.context.request.registry.settings
+        client_id = info.context.client_id
 
         for dblexicalentry in lexical_entries:
             # client_id, object_id = lex_id
@@ -577,7 +577,7 @@ class DeleteGroupingTags(graphene.Mutation):
                 }
             }
         """
-        settings = info.context["request"].registry.settings
+        settings = info.context.request.registry.settings
         request = info.context.request
         variables = {'auth': authenticated_userid(request)}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -588,9 +588,9 @@ class DeleteGroupingTags(graphene.Mutation):
         field = DBSession.query(dbField).filter_by(client_id=field_client_id,
                                                  object_id=field_object_id).first()
         if not field:
-            return {'error': str("No such field in the system")}
+            return ResponseError("No such field in the system")
         elif field.data_type != 'Grouping Tag':
-            return {'error': str("Wrong type of field")}
+            return ResponseError("Wrong type of field")
 
         perspective_id = (
 
@@ -626,7 +626,7 @@ class DeleteGroupingTags(graphene.Mutation):
                 if 'desktop' in settings:
                     real_delete_entity(dbentity, settings)
                 else:
-                    del_object(dbentity, "delete_grouping_tags", info.context.get('client_id'))
+                    del_object(dbentity, "delete_grouping_tags", info.context.client_id)
                 # entity.marked_for_deletion = True
                 # objecttoc = DBSession.query(dbObjectTOC).filter_by(client_id=entity.client_id,
                 #                                                  object_id=entity.object_id).one()

@@ -11,27 +11,27 @@ import psycopg2.errors
 from pyramid.response import Response
 from pyramid.view import view_config
 from lingvodoc.models import (
-    DBSession,
-    Locale,
-    TranslationAtom,
-    TranslationGist,
     BaseGroup,
-    User,
+    Client,
+    DBSession,
+    Dictionary,
     DictionaryPerspective,
     DictionaryPerspectiveToField,
-    Field,
-    Client,
-    Group,
-    UserBlobs,
-    Language,
-    ObjectTOC,
-    LexicalEntry,
-    Dictionary,
+    ENGLISH_LOCALE,
     Entity,
-    Passhash,
+    Field,
     Grant,
-    Organization
-)
+    Group,
+    Language,
+    LexicalEntry,
+    Locale,
+    ObjectTOC,
+    Organization,
+    Passhash,
+    TranslationAtom,
+    TranslationGist,
+    User,
+    UserBlobs)
 
 from sqlalchemy import (
     func,
@@ -258,7 +258,7 @@ def translation_service_search(searchstring):
     translationatom = DBSession.query(TranslationAtom) \
         .join(TranslationGist). \
         filter(TranslationAtom.content == searchstring,
-               TranslationAtom.locale_id == 2,
+               TranslationAtom.locale_id == ENGLISH_LOCALE,
                TranslationGist.type == 'Service') \
         .order_by(TranslationAtom.client_id) \
         .first()
@@ -989,11 +989,11 @@ def corpora_fields(request):
               and_(Field.translation_gist_object_id == TranslationGist.object_id,
                    Field.translation_gist_client_id == TranslationGist.client_id)) \
         .join(TranslationGist.translationatom)
-    sound_field = data_type_query.filter(TranslationAtom.locale_id == 2,
+    sound_field = data_type_query.filter(TranslationAtom.locale_id == ENGLISH_LOCALE,
                                          TranslationAtom.content == 'Sound').one()  # todo: a way to find this fields if wwe cannot use one
-    markup_field = data_type_query.filter(TranslationAtom.locale_id == 2,
+    markup_field = data_type_query.filter(TranslationAtom.locale_id == ENGLISH_LOCALE,
                                           TranslationAtom.content == 'Markup').one()
-    comment_field = data_type_query.filter(TranslationAtom.locale_id == 2,
+    comment_field = data_type_query.filter(TranslationAtom.locale_id == ENGLISH_LOCALE,
                                            TranslationAtom.content == 'Comment').one()
     response.append(view_field_from_object(request=request, field=sound_field))
     response[0]['contains'] = [view_field_from_object(request=request, field=markup_field)]
@@ -1171,41 +1171,49 @@ def graphql(request):
      ])
 
     """
+
     # TODO: rewrite this footwrap
     sp = request.tm.savepoint()
+
     try:
+
         batch = False
         variable_values = {}
-        variables = {'auth': request.authenticated_userid}
-        client_id = variables["auth"]
-        results = list()
 
-        if not client_id:
-            client_id = None
+        client_id = (
+            request.authenticated_userid or None)
 
-        locale_id = int(request.cookies.get('locale_id') or 2)
+        locale_id = (
+            int(request.cookies.get('locale_id') or ENGLISH_LOCALE))
 
-        if request.content_type in ['application/x-www-form-urlencoded', 'multipart/form-data'] \
-                and type(request.POST) == MultiDict:
+        if (
+            request.content_type in [
+                'application/x-www-form-urlencoded', 'multipart/form-data'] and
+            type(request.POST) == MultiDict):
+
             data = request.POST
 
             if not data:
                 return {'errors': [{"message": 'empty request'}]}
-            elif not "operations" in data:
+            elif "operations" not in data:
                 return {'errors': [{"message": 'operations key not found'}]}
-            elif not "query" in data["operations"]:
+            elif "query" not in data["operations"]:
                 return {'errors': [{"message": 'query key not found in operations'}]}
-            elif not "1" in data:
+            elif "1" not in data:
                 return {'errors': [{"message": '1 key not found'}]}
 
-            request_string = request.POST.pop("operations")
-            request_string = request_string.rstrip()
-            # body = request_string.decode('utf-8')
-            json_req = json.loads(request_string)
+            request_string = (
+                request.POST.pop("operations").rstrip())
+
+            json_req = (
+                json.loads(request_string))
+
             if "query" not in json_req:
                 return {'errors': [{"message": 'query key not found'}]}
-            request_string = json_req["query"]
-            request_string = request_string.rstrip()
+
+            request_string = (
+                json_req["query"].rstrip())
+
             if "variables" in json_req:
                 variable_values = json_req["variables"]
 
@@ -1221,110 +1229,175 @@ def graphql(request):
                 return {'errors': [{"message": 'wrong data'}]}
 
             '''
-        elif request.content_type == "application/graphql" and type(request.POST) == NoVars:
+
+        elif (
+            request.content_type == "application/graphql" and
+            type(request.POST) == NoVars):
+
             request_string = request.body.decode("utf-8")
-        elif request.content_type == "application/json" and type(request.POST) == NoVars:
-            body = request.body.decode('utf-8')
-            json_req = json.loads(body)
-            if type(json_req) is list:
-                batch = True
-            if not batch:
+
+        elif (
+            request.content_type == "application/json" and
+            type(request.POST) == NoVars):
+
+            json_req = (
+
+                json.loads(
+                    request.body.decode('utf-8')))
+
+            if type(json_req) is not list:
+
                 if "query" not in json_req:
                     return {'errors': [{"message": 'query key not found'}]}
+
                 request_string = json_req["query"]
+
                 if "variables" in json_req:
                     variable_values = json_req["variables"]
+
             else:
-                for query in json_req:
-                    if "query" not in query:
-                        return {'errors': [{"message": 'query key not found'}]}
-                    request_string = query["query"]
-                    if "variables" in query:
-                        variable_values = query["variables"]
-                    result = schema.execute(request_string,
-                                            context_value=Context({
-                                                'client_id': client_id,
-                                                'locale_id': locale_id,
-                                                'request': request,
-                                                'headers': request.headers,
-                                                'cookies': dict(request.cookies)}),
-                                            variable_values=variable_values)
-                    if result.invalid:
-                        return {'errors': [{"message": str(e)} for e in result.errors]}
-                    if result.errors:
-                        sp.rollback()
-                        return {"data": None, 'errors': [{"message": str(e)} for e in result.errors]}
-                    results.append(result.data)
-                # TODO: check errors
-                return {"data": results}
+
+                batch = True
+
         else:
+
             request.response.status = HTTPBadRequest.code
             return {'errors': [{"message": 'wrong content type'}]}
-        if not batch:
-            t_start_real, t_start_process = (time.time(), time.process_time())
-            result = schema.execute(request_string,
-                                    context_value=Context({
-                                        'client_id': client_id,
-                                        'locale_id': locale_id,
-                                        'request': request}),
-                                    variable_values=variable_values)
-            t_end_real, t_end_process = (time.time(), time.process_time())
-            t_elapsed_real = t_end_real - t_start_real
-            t_elapsed_process = t_end_process - t_start_process
-            log.debug(
-                '\nschema.execute() elapsed time real, process: '
-                f'{t_elapsed_real:.6f}s, {t_elapsed_process:.6f}s')
-            request.response.headerlist.append((
-                'Server-Timing',
-                f'real;dur={t_elapsed_real:.6f}, process;dur={t_elapsed_process:.6f}'))
 
-            if result.errors:
-                for error in result.errors:
-                    if hasattr(error, 'original_error'):
-                        if type(error.original_error) == ProxyPass:
-                            return json.loads(error.original_error.response_body.decode("utf-8"))
+        # Executing query / queries.
+
+        context = (
+
+            Context({
+                'client_id': client_id,
+                'locale_id': locale_id,
+                'request': request,
+                'headers': request.headers,
+                'cookies': dict(request.cookies)}))
+
+        t_start_real, t_start_process = (
+            time.time(), time.process_time())
+
+        if batch:
+
+            # Multiple queries.
+
+            result = []
+
+            for query in json_req:
+
+                if "query" not in query:
+                    return {'errors': [{"message": 'query key not found'}]}
+
+                request_string = 
+
+                    variable_values = 
+
+                result_item = (
+
+                    schema.execute(
+                        query["query"],
+                        context_value = context,
+                        variable_values = query.get("variables", {})))
+
+                if result_item.invalid:
+
+                    sp.rollback()
+
+                    result = {
+                        'errors': [{"message": str(e)} for e in result_item.errors]}
+
+                    break
+
+                if result.errors:
+
+                    sp.rollback()
+
+                    result = {
+                        "data": None,
+                        'errors': [{"message": str(e)} for e in result_item.errors]}
+
+                    break
+
+                result.append(result_item.data)
+
+        else:
+
+            # Single query.
+
+            result = (
+
+                schema.execute(
+                    request_string,
+                    context_value = context,
+                    variable_values = variable_values))
 
             if result.invalid:
 
-                return {
-                    'errors': [{'message': str(e)} for e in result.errors],
-                    'time_real': t_elapsed_real,
-                    'time_process': t_elapsed_process}
+                sp.rollback()
+
+                result = {
+                    'errors': [{'message': str(e)} for e in result.errors]}
 
             if result.errors:
 
-                # If we had an attempt to proceed with failed transaction because of another error, we don't
-                # need its superfluous error info.
+                more_than_one = (
+                    len(result.errors) > 1)
 
-                if len(result.errors) > 1:
+                error_list = []
 
-                    errors = [
+                for error in result.erros:
 
-                        error
-                        for error in result.errors
+                    # If it's a proxy error, we return it directly apparently?
 
-                        if (not isinstance(
-                                error.original_error,
-                                sqlalchemy.exc.InternalError) or
+                    if (hasattr(error, 'original_error') and
+                        type(error.original_error) == ProxyPass):
 
-                            not isinstance(
-                                error.original_error.orig,
-                                psycopg2.errors.InFailedSqlTransaction))]
+                        result = json.loads(error.original_error.response_body.decode("utf-8"))
+                        break
 
-                else:
+                    # If we had an attempt to proceed with failed transaction because of another error,
+                    # we don't need its superfluous error info.
 
-                    errors = result.errors
+                    if (not more_than_one or
 
-                return {
+                        not isinstance(
+                            error.original_error,
+                            sqlalchemy.exc.InternalError) or
+
+                        not isinstance(
+                            error.original_error.orig,
+                            psycopg2.errors.InFailedSqlTransaction)):
+
+                        error_list.append(error)
+
+                sp.rollback()
+
+                result = {
                     'data': None,
-                    'errors': [{'message': str(e)} for e in errors],
-                    'time_real': t_elapsed_real,
-                    'time_process': t_elapsed_process}
+                    'errors': [{'message': str(e)} for e in error_list]}
 
-            return {
-                'data': result.data,
-                'time_real': t_elapsed_real,
-                'time_process': t_elapsed_process}
+        t_end_real, t_end_process = (
+            time.time(), time.process_time())
+
+        t_elapsed_real = (
+            t_end_real - t_start_real)
+
+        t_elapsed_process = (
+            t_end_process - t_start_process)
+
+        log.debug(
+            '\nschema.execute() elapsed time real, process: '
+            f'{t_elapsed_real:.6f}s, {t_elapsed_process:.6f}s')
+
+        request.response.headerlist.append((
+            'Server-Timing',
+            f'real;dur={t_elapsed_real:.6f}, process;dur={t_elapsed_process:.6f}'))
+                        
+        result['time_real'] = t_elapsed_real
+        result['time_process'] = t_elapsed_process
+
+        return result
 
     except ProxyPass as e:
         return e.response_body
@@ -1340,23 +1413,8 @@ def graphql(request):
     except CommonException as e:
         # request.response.status = HTTPConflict.code
         return {'error': str(e)}
+
     except ValueError as e:
         # request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
-
-conn_err_msg = """\
-Pyramid is having a problem using your SQL database.  The problem
-might be caused by one of the following things:
-
-1.  You may need to run the "initialize_lingvodoc_db" script
-    to initialize your database tables.  Check your virtual
-    environment's "bin" directory for this script and try to run it.
-
-2.  Your database server may not be running.  Check that the
-    database server referred to by the "sqlalchemy.url" setting in
-    your "development.ini" file is running.
-
-After you fix the problem, please restart the Pyramid application to
-try it again.
-"""

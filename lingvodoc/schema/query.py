@@ -1,3 +1,6 @@
+
+# Standard library imports.
+
 import base64
 import collections
 import copy
@@ -7,182 +10,106 @@ import gzip
 import hashlib
 import io
 import itertools
+import json
 import logging
 import math
 import os.path
 import pickle
 import pprint
+import random
 import re
 import shutil
+import string
+import tempfile
 import textwrap
 import time
 import traceback
 import types
 import unicodedata
-import urllib.parse
 import uuid
 import zipfile
 
+# Library imports.
+
 import graphene
 import graphene.types
+
 from graphql.language.ast import BooleanValue, IntValue, ListValue
 
-import lingvodoc.utils as utils
-from lingvodoc.utils.deletion import real_delete_entity
-from lingvodoc.utils.elan_functions import tgt_to_eaf
-import requests
-from lingvodoc.schema.gql_entity import (
-    Entity,
-    CreateEntity,
-    UpdateEntity,
-    DeleteEntity,
-    UpdateEntityContent,
-    BulkCreateEntity,
-    ApproveAllForUser,
-    BulkUpdateEntityContent,
-    is_subject_for_parsing)
-from lingvodoc.schema.gql_column import (
-    Column,
-    CreateColumn,
-    UpdateColumn,
-    DeleteColumn
-)
-from lingvodoc.schema.gql_basegroup import (
-    BaseGroup,
-    CreateBasegroup,
-    AddUserToBasegroup)
-from lingvodoc.schema.gql_group import (
-    Group
-)
-from lingvodoc.schema.gql_organization import (
-    Organization,
-    CreateOrganization,
-    UpdateOrganization,
-    DeleteOrganization
-)
-# from lingvodoc.schema.gql_publishingentity import (
-#     PublishingEntity
-# )
-from lingvodoc.schema.gql_translationatom import (
-    TranslationAtom,
-    CreateTranslationAtom,
-    UpdateTranslationAtom,
-    DeleteTranslationAtom)
-from lingvodoc.schema.gql_translationgist import (
-    TranslationGist,
-    CreateTranslationGist,
-    DeleteTranslationGist
-)
-from lingvodoc.schema.gql_userblobs import (
-    UserBlobs,
-    CreateUserBlob,
-    DeleteUserBlob
-)
-from lingvodoc.schema.gql_field import (
-    Field,
-    CreateField,
-    # UpdateField,
-    # DeleteField
-)
+# So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
+# stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
+import matplotlib
+matplotlib.use('Agg', warn = False)
 
-from lingvodoc.schema.gql_dictionary import (
-    Dictionary,
-    CreateDictionary,
-    UpdateDictionary,
-    UpdateDictionaryStatus,
-    AddDictionaryRoles,
-    DeleteDictionaryRoles,
-    DeleteDictionary,
-    UndeleteDictionary,
-    UpdateDictionaryAtom)
+from matplotlib import pyplot
+from matplotlib.collections import LineCollection
 
-from lingvodoc.schema.gql_search import (
-    AdvancedSearch,
-    AdvancedSearchSimple,
-    EafSearch)
+import minio
 
-from lingvodoc.schema.gql_lexicalentry import (
-    LexicalEntry,
-    CreateLexicalEntry,
-    DeleteLexicalEntry,
-    BulkDeleteLexicalEntry,
-    BulkUndeleteLexicalEntry,
-    BulkCreateLexicalEntry,
-    ConnectLexicalEntries,
-    DeleteGroupingTags,
-)
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
-from lingvodoc.schema.gql_language import (
-    Language,
-    CreateLanguage,
-    UpdateLanguage,
-    DeleteLanguage,
-    MoveLanguage,
-    UpdateLanguageAtom)
-from lingvodoc.schema.gql_merge import MergeBulk
-from lingvodoc.schema.gql_dictionaryperspective import (
-    DictionaryPerspective as Perspective,
-    CreateDictionaryPerspective,
-    UpdateDictionaryPerspective,
-    UpdatePerspectiveStatus,
-    AddPerspectiveRoles,
-    DeletePerspectiveRoles,
-    DeleteDictionaryPerspective,
-    UndeleteDictionaryPerspective,
-    UpdatePerspectiveAtom)
-from lingvodoc.schema.gql_user import (
-    User,
-    CreateUser,
-    UpdateUser,
-    ActivateDeactivateUser
-)
-from lingvodoc.schema.gql_grant import (
-    Grant,
-    CreateGrant,
-    UpdateGrant,
-    # DeleteGrant
-)
-from lingvodoc.schema.gql_sync import (
-    DownloadDictionary,
-    DownloadDictionaries,
-    Synchronize
-)
+import numpy
+import openpyxl
+import pandas as pd
+import pathvalidate
 
-from lingvodoc.schema.gql_holders import (
-    AdditionalMetadata,
-    client_id_check,
-    CreatedAt,
-    gql_none_value,
-    LingvodocID,
-    ObjectVal,
-    PermissionException,
-    get_published_translation_gist_id_cte_query,
-    get_published_translation_gist_id_subquery_query,
-    ResponseError,
-    UnstructuredData,
-    Upload,
-)
+from pretty_html_table import build_table
 
-from lingvodoc.schema.gql_userrequest import (
-    UserRequest,
-    CreateGrantPermission,
-    AddDictionaryToGrant,
-    AdministrateOrg,
-    ParticipateOrg,
-    AddDictionaryToOrganization,
-    AcceptUserRequest,
-    # DeleteUserRequest
-)
+import psycopg2.errors
+import pylab
 
-from lingvodoc.schema.gql_parser import Parser
-from lingvodoc.schema.gql_parserresult import DeleteParserResult, UpdateParserResult, ParserResult
+from pyramid.httpexceptions import HTTPOk
+
+from pyramid.request import Request
+
+import scipy.optimize
+import scipy.sparse.csgraph
+
+import sklearn.decomposition
+import sklearn.manifold
+import sklearn.metrics
+import sklearn.mixture
+
+import sqlalchemy
+
+from sqlalchemy import (
+    and_,
+    Boolean,
+    cast,
+    create_engine,
+    func,
+    literal,
+    or_,
+    tuple_,
+    union)
+
+import sqlalchemy.dialects.postgresql as postgresql
+
+from sqlalchemy.orm import (
+    aliased,
+    joinedload)
+
+import sqlalchemy.types
+
+import sqlite3
+
+import transaction
+import xlsxwriter
+
+from zope.sqlalchemy import mark_changed
+
+# Project imports.
 
 import lingvodoc.acl as acl
-import time
-import random
-import string
+
+import lingvodoc.cache.caching as caching
+
+from lingvodoc.cache.caching import (
+    initialize_cache,
+    TaskStatus)
 
 import lingvodoc.models as models
+
 from lingvodoc.models import (
     BaseGroup as dbBaseGroup,
     Client,
@@ -190,8 +117,8 @@ from lingvodoc.models import (
     Dictionary as dbDictionary,
     DictionaryPerspective as dbPerspective,
     DictionaryPerspectiveToField as dbColumn,
-    ENGLISH_LOCALE,
     Email as dbEmail,
+    ENGLISH_LOCALE,
     Entity as dbEntity,
     Field as dbField,
     Grant as dbGrant,
@@ -203,12 +130,12 @@ from lingvodoc.models import (
     Parser as dbParser,
     ParserResult as dbParserResult,
     PublishingEntity as dbPublishingEntity,
-    RUSSIAN_LOCALE,
     SLBigInteger,
     TranslationAtom as dbTranslationAtom,
     TranslationGist as dbTranslationGist,
     UnstructuredData as dbUnstructuredData,
     User as dbUser,
+    user_to_group_association,
     UserBlobs as dbUserBlobs,
     UserRequest as dbUserRequest,
     ValencyAnnotationData as dbValencyAnnotationData,
@@ -218,46 +145,195 @@ from lingvodoc.models import (
     ValencyMergeIdSequence as dbValencyMergeIdSequence,
     ValencyParserData as dbValencyParserData,
     ValencySentenceData as dbValencySentenceData,
-    ValencySourceData as dbValencySourceData,
-    user_to_group_association,
-)
-from pyramid.request import Request
+    ValencySourceData as dbValencySourceData)
 
-from lingvodoc.utils.proxy import try_proxy, ProxyPass
+from lingvodoc.queue.celery import celery
 
-import sqlalchemy
+from lingvodoc.schema.gql_basegroup import (
+    AddUserToBasegroup,
+    BaseGroup,
+    CreateBasegroup)
 
-from sqlalchemy import (
-    func,
-    and_,
-    or_,
-    tuple_,
-    create_engine,
-    literal,
-    union,
-    cast,
-    Boolean,
-)
+from lingvodoc.schema.gql_column import (
+    Column,
+    CreateColumn,
+    DeleteColumn,
+    UpdateColumn)
 
-import sqlalchemy.dialects.postgresql as postgresql
+from lingvodoc.schema.gql_convert_dictionary import (
+    ConvertDictionary,
+    ConvertFiveTiers)
 
-from sqlalchemy.sql.elements import ColumnElement
+from lingvodoc.schema.gql_copy_field import (
+    CopySingleField,
+    CopySoundMarkupFields)
 
-import sqlalchemy.types
+from lingvodoc.schema.gql_dictionary import (
+    AddDictionaryRoles,
+    CreateDictionary,
+    DeleteDictionary,
+    DeleteDictionaryRoles,
+    Dictionary,
+    UndeleteDictionary,
+    UpdateDictionary,
+    UpdateDictionaryAtom,
+    UpdateDictionaryStatus)
 
-from zope.sqlalchemy import mark_changed
-from lingvodoc.views.v2.utils import (
-    view_field_from_object,
-    storage_file,
-    as_storage_file
-)
-from sqlalchemy.orm import aliased, joinedload
+from lingvodoc.schema.gql_dictionaryperspective import (
+    AddPerspectiveRoles,
+    CreateDictionaryPerspective,
+    DeleteDictionaryPerspective,
+    DeletePerspectiveRoles,
+    DictionaryPerspective as Perspective,
+    UndeleteDictionaryPerspective,
+    UpdateDictionaryPerspective,
+    UpdatePerspectiveAtom,
+    UpdatePerspectiveStatus)
 
-from sqlalchemy.sql.expression import Grouping
-from sqlalchemy.sql.functions import coalesce
-from lingvodoc.schema.gql_tasks import Task, DeleteTask
-from lingvodoc.schema.gql_convert_dictionary import ConvertDictionary, ConvertFiveTiers
-from pyramid.security import authenticated_userid
+from lingvodoc.schema.gql_entity import (
+    ApproveAllForUser,
+    BulkCreateEntity,
+    BulkDeleteEntity,
+    BulkUpdateEntityContent,
+    CreateEntity,
+    DeleteEntity,
+    Entity,
+    is_subject_for_parsing,
+    UpdateEntity,
+    UpdateEntityContent)
+
+from lingvodoc.schema.gql_field import (
+    CreateField,
+    Field)
+
+from lingvodoc.schema.gql_grant import (
+    CreateGrant,
+    Grant,
+    UpdateGrant)
+
+from lingvodoc.schema.gql_group import Group
+
+from lingvodoc.schema.gql_holders import (
+    AdditionalMetadata,
+    client_id_check,
+    CreatedAt,
+    del_object,
+    get_published_translation_gist_id_cte_query,
+    get_published_translation_gist_id_subquery_query,
+    gql_none_value,
+    LingvodocID,
+    ObjectVal,
+    PermissionException,
+    ResponseError,
+    UnstructuredData,
+    Upload)
+
+from lingvodoc.schema.gql_language import (
+    CreateLanguage,
+    DeleteLanguage,
+    Language,
+    MoveLanguage,
+    UpdateLanguage,
+    UpdateLanguageAtom)
+
+from lingvodoc.schema.gql_lexicalentry import (
+    BulkCreateLexicalEntry,
+    BulkDeleteLexicalEntry,
+    BulkUndeleteLexicalEntry,
+    ConnectLexicalEntries,
+    CreateLexicalEntry,
+    DeleteGroupingTags,
+    DeleteLexicalEntry,
+    LexicalEntry)
+
+from lingvodoc.schema.gql_merge import MergeBulk
+
+from lingvodoc.schema.gql_organization import (
+    CreateOrganization,
+    DeleteOrganization,
+    Organization,
+    UpdateOrganization)
+
+from lingvodoc.schema.gql_parser import Parser
+
+from lingvodoc.schema.gql_parserresult import (
+    DeleteParserResult,
+    ExecuteParser,
+    ParserResult,
+    UpdateParserResult)
+
+from lingvodoc.schema.gql_search import (
+    AdvancedSearch,
+    AdvancedSearchSimple,
+    EafSearch)
+
+from lingvodoc.schema.gql_sync import (
+    DownloadDictionaries,
+    DownloadDictionary,
+    Synchronize)
+
+from lingvodoc.schema.gql_tasks import (
+    DeleteTask,
+    Task)
+
+from lingvodoc.schema.gql_translationatom import (
+    CreateTranslationAtom,
+    DeleteTranslationAtom,
+    TranslationAtom,
+    UpdateTranslationAtom)
+
+from lingvodoc.schema.gql_translationgist import (
+    CreateTranslationGist,
+    DeleteTranslationGist,
+    TranslationGist)
+
+from lingvodoc.schema.gql_user import (
+    ActivateDeactivateUser,
+    CreateUser,
+    UpdateUser,
+    User)
+
+from lingvodoc.schema.gql_userblobs import (
+    CreateUserBlob,
+    DeleteUserBlob,
+    UserBlobs)
+
+from lingvodoc.schema.gql_userrequest import (
+    AcceptUserRequest,
+    AddDictionaryToGrant,
+    AddDictionaryToOrganization,
+    AdministrateOrg,
+    CreateGrantPermission,
+    ParticipateOrg,
+    UserRequest)
+
+from lingvodoc.scripts import elan_parser
+
+import lingvodoc.scripts.docx_import as docx_import
+import lingvodoc.scripts.docx_to_xlsx as docx_to_xlsx
+import lingvodoc.scripts.export_parser_result as export_parser_result
+
+from lingvodoc.scripts.save_dictionary import (
+    find_group_by_tags,
+    save_dictionary as sync_save_dictionary)
+
+import lingvodoc.scripts.valency as valency
+import lingvodoc.scripts.valency_verb_cases as valency_verb_cases
+
+import lingvodoc.utils as utils
+
+from lingvodoc.utils import (
+    ids_to_id_query,
+    render_statement,
+    starling_converter)
+
+from lingvodoc.utils.creation import (
+    create_entity,
+    edit_role)
+
+from lingvodoc.utils.deletion import real_delete_entity
+from lingvodoc.utils.elan_functions import tgt_to_eaf
+from lingvodoc.utils.merge import merge_suggestions
 
 from lingvodoc.utils.phonology import (
     gql_phonology as utils_phonology,
@@ -266,104 +342,31 @@ from lingvodoc.utils.phonology import (
     gql_phonology_link_perspective_data,
     gql_sound_and_markup)
 
-from lingvodoc.utils import starling_converter, render_statement, ids_to_id_cte, ids_to_id_query
+from lingvodoc.utils.proxy import try_proxy
 
 from lingvodoc.utils.search import (
-    translation_gist_search,
-    recursive_sort,
-    eaf_words,
     find_all_tags,
     find_lexical_entries_by_tags,
-    get_id_to_field_dict)
-
-import lingvodoc.cache.caching as caching
-from lingvodoc.cache.caching import initialize_cache, TaskStatus
-
-import lingvodoc.views.v2.phonology as phonology
-from lingvodoc.views.v2.phonology import (
-    AudioPraatLike,
-    format_textgrid_result,
-    get_vowel_class,
-    Phonology_Parameters,
-    process_sound,
-    process_sound_markup,
-    process_textgrid)
-
-from lingvodoc.views.v2.utils import anonymous_userid
-
-from sqlite3 import connect
-from lingvodoc.utils.merge import merge_suggestions
-import tempfile
-
-import lingvodoc.scripts.export_parser_result as export_parser_result
-import lingvodoc.scripts.valency as valency
-import lingvodoc.scripts.valency_verb_cases as valency_verb_cases
-
-from lingvodoc.scripts.save_dictionary import (
-    find_group_by_tags,
-    save_dictionary as sync_save_dictionary)
-
-from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
-import json
-
-from pyramid.httpexceptions import (
-    HTTPError,
-    HTTPOk
-)
-
-from lingvodoc.scripts import elan_parser
-from lingvodoc.utils.creation import create_entity, edit_role
-
-from lingvodoc.queue.celery import celery
-from lingvodoc.schema.gql_holders import del_object
-
-# So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
-# stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
-import matplotlib
-matplotlib.use('Agg', warn = False)
-
-from matplotlib.collections import LineCollection
-from matplotlib import pyplot
-
-import minio
-
-from mpl_toolkits.mplot3d import Axes3D
-from mpl_toolkits.mplot3d import proj3d
-
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
-import numpy
-import openpyxl
-import pathvalidate
-import psycopg2.errors
-import pydub
-import pylab
-import pympi
-
-import scipy.optimize
-import scipy.sparse.csgraph
-
-import sklearn.decomposition
-import sklearn.manifold
-import sklearn.metrics
-import sklearn.mixture
-
-import transaction
-import xlsxwriter
-
-from lingvodoc.schema.gql_copy_field import CopySingleField, CopySoundMarkupFields
+    get_id_to_field_dict,
+    recursive_sort,
+    translation_gist_search)
 
 import lingvodoc.version
 
-from lingvodoc.schema.gql_parserresult import ExecuteParser
+import lingvodoc.views.v2.phonology as phonology
 
-from lingvodoc.cache.caching import CACHE
+from lingvodoc.views.v2.phonology import (
+    get_vowel_class,
+    Phonology_Parameters,
+    process_sound_markup)
 
-import lingvodoc.scripts.docx_import as docx_import
-import lingvodoc.scripts.docx_to_xlsx as docx_to_xlsx
+from lingvodoc.views.v2.save_dictionary.core import async_save_dictionary
 
-import pandas as pd
-from pretty_html_table import build_table
+from lingvodoc.views.v2.utils import (
+    anonymous_userid,
+    as_storage_file,
+    storage_file,
+    view_field_from_object)
 
 
 # Setting up logging.
@@ -2682,7 +2685,7 @@ class Language_Resolver(object):
 
             self.translation_join(
                 ls,
-                ls.translation.locale_id or self.info.context.get('locale_id'),
+                ls.translation.locale_id or self.info.context.locale_id,
                 'translation_gist_client_id',
                 'translation_gist_object_id',
                 'translation')
@@ -2805,7 +2808,7 @@ class Language_Resolver(object):
 
                             sqlalchemy
 
-                                .literal_column(f'''
+                                .literal_column('''
                                     (case when ld_base.dictionary_client_id is null then null else
                                         coalesce(participant.id :: text, '') end)
                                     ''')
@@ -2856,7 +2859,7 @@ class Language_Resolver(object):
 
                             sqlalchemy
 
-                                .literal_column(f'''
+                                .literal_column('''
                                     (case when dictionary.client_id is null then null else
                                         coalesce(participant.id :: text, '') end)
                                     ''')
@@ -3522,7 +3525,7 @@ class Language_Resolver(object):
 
                 self.translation_join(
                     ds,
-                    ds.status.locale_id or self.info.context.get('locale_id'),
+                    ds.status.locale_id or self.info.context.locale_id,
                     'state_translation_gist_client_id',
                     'state_translation_gist_object_id',
                     'status')
@@ -3895,7 +3898,7 @@ class Language_Resolver(object):
 
                 self.translation_join(
                     ps,
-                    ps.status.locale_id or self.info.context.get('locale_id'),
+                    ps.status.locale_id or self.info.context.locale_id,
                     'state_translation_gist_client_id',
                     'state_translation_gist_object_id',
                     'status')
@@ -4015,7 +4018,7 @@ class Language_Resolver(object):
 
                     if gql_perspective_dict_flag:
 
-                        gql_perspective_dict[perspective_id] = gql_perspective
+                        gql_perspective_dict[perspective.id] = gql_perspective
 
             else:
 
@@ -4402,9 +4405,6 @@ class Query(graphene.ObjectType):
     convert_markup = graphene.Field(
         graphene.String, id=LingvodocID(required=True))
 
-    eaf_wordlist = graphene.Field(
-        graphene.List(graphene.String), id=LingvodocID(required=True))
-
     permission_lists = graphene.Field(Permissions, proxy=graphene.Boolean(required=True))
     tasks = graphene.List(Task)
     is_authenticated = graphene.Boolean()
@@ -4485,7 +4485,7 @@ class Query(graphene.ObjectType):
 
     def resolve_fill_logs(self, info, worker=1):
         # Check if the current user is administrator
-        client_id = info.context.get('client_id')
+        client_id = info.context.client_id
         user_id = DBSession.query(Client.user_id).filter_by(id=client_id).scalar()
         if user_id != 1:
             return ResponseError("Only administrator can fill in logs using request.")
@@ -5411,7 +5411,7 @@ class Query(graphene.ObjectType):
         if id:
             user = DBSession.query(dbUser).filter(dbUser.id == id).first()
         else:
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             user = Client.get_user_by_client_id(client_id)
         if not user:
             return None
@@ -5467,7 +5467,7 @@ class Query(graphene.ObjectType):
                                   field_selection_list=None
                                   ):
         request = info.context.request
-        locale_id = info.context.get('locale_id')
+        locale_id = info.context.locale_id
 
         old_field_selection_list = copy.deepcopy(field_selection_list)
 
@@ -5545,7 +5545,7 @@ class Query(graphene.ObjectType):
         blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
         if blob:
             filename = blob.real_storage_path
-            sqconn = connect(filename)
+            sqconn = sqlite3.connect(filename)
             try:
                 dict_attributes = get_dict_attributes(sqconn)
             except:
@@ -5555,12 +5555,12 @@ class Query(graphene.ObjectType):
 
     def resolve_tasks(self, info):
         request = info.context.request
-        client_id = authenticated_userid(request)
+        client_id = info.context.client_id
         if not client_id:
             tasks_dicts = TaskStatus.get_user_tasks(anonymous_userid(request), clear_out=True)
             tasks = [Task(**task_dict) for task_dict in tasks_dicts]
             return tasks
-        user = Client.get_user_by_client_id(authenticated_userid(request))
+        user = Client.get_user_by_client_id(client_id)
         tasks_dicts = TaskStatus.get_user_tasks(user.id, clear_out=True)
         tasks = [Task(**task_dict) for task_dict in tasks_dicts]
         return tasks
@@ -5569,7 +5569,7 @@ class Query(graphene.ObjectType):
         request = info.context.request
         if proxy:
             try_proxy(request)
-        client_id = authenticated_userid(request)
+        client_id = info.context.client_id
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
@@ -5818,11 +5818,11 @@ class Query(graphene.ObjectType):
                       and_(dbField.translation_gist_object_id == dbTranslationGist.object_id,
                            dbField.translation_gist_client_id == dbTranslationGist.client_id)) \
                 .join(dbTranslationGist.translationatom)
-            sound_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+            sound_field = data_type_query.filter(dbTranslationAtom.locale_id == ENGLISH_LOCALE,
                                                  dbTranslationAtom.content == 'Sound').one()  # todo: a way to find this fields if wwe cannot use one
-            markup_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+            markup_field = data_type_query.filter(dbTranslationAtom.locale_id == ENGLISH_LOCALE,
                                                   dbTranslationAtom.content == 'Markup').one()
-            comment_field = data_type_query.filter(dbTranslationAtom.locale_id == 2,
+            comment_field = data_type_query.filter(dbTranslationAtom.locale_id == ENGLISH_LOCALE,
                                                     dbTranslationAtom.content == 'Comment').one()
             sound_field =view_field_from_object(request=request, field=sound_field)
             markup_field = view_field_from_object(request=request, field=markup_field)
@@ -5851,8 +5851,8 @@ class Query(graphene.ObjectType):
             return response
         else:
             raise ResponseError(message='no such mode')
+
     def resolve_all_statuses(self, info):
-        request = info.context.request
         gql_statuses = list()
         for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
             db_tr_gist = translation_gist_search(status)
@@ -5920,7 +5920,7 @@ class Query(graphene.ObjectType):
         if proxy:
             try_proxy(request)
 
-        client_id = info.context.get('client_id')
+        client_id = info.context.client_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
 
         dbdicts = (
@@ -6065,17 +6065,6 @@ class Query(graphene.ObjectType):
             state_translation_gist_object_id = db_published_gist.object_id
             db_la_gist = translation_gist_search('Limited access')
             limited_client_id, limited_object_id = db_la_gist.client_id, db_la_gist.object_id
-
-            """
-            atom_perspective_name_alias = aliased(dbTranslationAtom, name="PerspectiveName")
-            atom_perspective_name_fallback_alias = aliased(dbTranslationAtom, name="PerspectiveNameFallback")
-            persps = DBSession.query(dbPerspective,
-                                     dbTranslationAtom,
-                                     coalesce(atom_perspective_name_alias.content,
-                                              atom_perspective_name_fallback_alias.content,
-                                              "No translation for your locale available").label("Translation")
-                                     ).filter(dbPerspective.marked_for_deletion == False)
-            """
 
             perspective_query = perspective_query.filter(
                 or_(and_(dbPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
@@ -6306,7 +6295,7 @@ class Query(graphene.ObjectType):
 
     def resolve_user(self, info, id=None):
         if id is None:
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id=client_id).first()
             if not client:
                 return None
@@ -6314,7 +6303,7 @@ class Query(graphene.ObjectType):
         return User(id=id)
 
     def resolve_is_authenticated(self, info):
-        client_id = info.context.get('client_id')
+        client_id = info.context.client_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
             return False
@@ -6518,7 +6507,7 @@ class Query(graphene.ObjectType):
                 if not participant_published:
                     raise NotImplementedError
 
-                dictionary_condition_list.append(f'''
+                dictionary_condition_list.append('''
 
                     and (
                       D.state_translation_gist_client_id,
@@ -7246,7 +7235,7 @@ class Query(graphene.ObjectType):
                     dbTranslationGist.marked_for_deletion == False,
                     dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
                     dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
-                    dbTranslationAtom.locale_id == 2,
+                    dbTranslationAtom.locale_id == ENGLISH_LOCALE,
                     dbTranslationAtom.marked_for_deletion == False,
                     dbTranslationAtom.content == tmpSearchString.search_string)
 
@@ -7320,7 +7309,7 @@ class Query(graphene.ObjectType):
             ''.join(insert_sql_str_list))
 
         locale_id = (
-            info.context.get('locale_id'))
+            info.context.locale_id)
 
         row_list = (
 
@@ -7421,7 +7410,7 @@ class Query(graphene.ObjectType):
             field_client_id, field_object_id = field_id[0], field_id[1]
             field = DBSession.query(dbField).filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
-        client_id = info.context.get('client_id')
+        client_id = info.context.client_id
 
         group = DBSession.query(dbGroup).filter(dbGroup.subject_override == True).join(dbBaseGroup) \
             .filter(dbBaseGroup.subject == 'lexical_entries_and_entities', dbBaseGroup.action == 'view') \
@@ -7443,7 +7432,7 @@ class Query(graphene.ObjectType):
                 .filter(
                     dbTranslationGist.type == 'Service',
                     dbTranslationAtom.content == 'Hidden',
-                    dbTranslationAtom.locale_id == 2)
+                    dbTranslationAtom.locale_id == ENGLISH_LOCALE)
 
                 .first())
 
@@ -7620,7 +7609,6 @@ class Query(graphene.ObjectType):
         }
 
         """
-        request = info.context.get('request')
 
         if not perspectives:
             db_published_gist = translation_gist_search('Published')
@@ -7677,7 +7665,7 @@ class Query(graphene.ObjectType):
                                dbField.translation_gist_object_id == dbTranslationAtom.parent_object_id,
                                dbField.marked_for_deletion == False)) \
                     .filter(dbTranslationAtom.content == adopted_type,
-                            dbTranslationAtom.locale_id == 2)
+                            dbTranslationAtom.locale_id == ENGLISH_LOCALE)
             pre_results = pre_results & set(results_cursor.all())
         if with_etimology:
             results_cursor = DBSession.query(dbLexicalEntry).join(dbEntity.parent).join(dbEntity.field) \
@@ -7686,7 +7674,7 @@ class Query(graphene.ObjectType):
                            dbField.data_type_translation_gist_object_id == dbTranslationAtom.parent_object_id,
                            dbField.marked_for_deletion == False)) \
                 .filter(dbTranslationAtom.content == 'Grouping Tag',
-                        dbTranslationAtom.locale_id == 2)
+                        dbTranslationAtom.locale_id == ENGLISH_LOCALE)
 
         pre_results = pre_results & set(results_cursor.all())
 
@@ -7705,8 +7693,13 @@ class Query(graphene.ObjectType):
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
                                 for lex in pre_results]
 
-        lexical_entries = dbLexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2),
-                                              publish=True, accept=True)
+        lexical_entries = (
+
+            dbLexicalEntry.track_multiple(
+                lexes_composite_list,
+                info.context.locale_id,
+                publish = True,
+                accept = True))
 
         lexical_entries_list = list()
         for entry in lexical_entries:
@@ -7754,7 +7747,7 @@ class Query(graphene.ObjectType):
     # @client_id_check()
     def resolve_user_blobs(self, info, data_type=None, is_global=None):
         allowed_global_types = ["sociolinguistics", "pdf"]
-        client_id = info.context.get('client_id')
+        client_id = info.context.client_id
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user_blobs = list()
         if not data_type and is_global:
@@ -7799,7 +7792,7 @@ class Query(graphene.ObjectType):
            }
         }
         """
-        client_id = info.context.get('client_id')
+        client_id = info.context.client_id
 
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
@@ -8003,7 +7996,7 @@ class Query(graphene.ObjectType):
                 if not participant_published:
                     raise NotImplementedError
 
-                dictionary_condition_list.append(f'''
+                dictionary_condition_list.append('''
 
                     and (
                       D.state_translation_gist_client_id,
@@ -8477,24 +8470,6 @@ class Query(graphene.ObjectType):
         answer = gql_phonology_link_perspective_data(perspective_id, field_id_list)
         return Link_Perspective_Data(**answer)
 
-    # def resolve_convert_starling(self, info, starling_dictionaries):
-    #     """
-    #     query myQuery {
-    #         convert_starling(parent_id:[1,1] blob_id:[1,1] translation_atoms:[], add_etymology:true , field_map:{min_created_at:1})
-    #     }
-    #     """
-    #     cache_kwargs = info.context["request"].registry.settings["cache_kwargs"]
-    #     sqlalchemy_url = info.context["request"].registry.settings["sqlalchemy.url"]
-    #     task_names = []
-    #     for st_dict in starling_dictionaries:
-    #         # TODO: fix
-    #         task_names.append(st_dict.get("translation_atoms")[0].get("content"))
-    #     name = ",".join(task_names)
-    #     user_id = Client.get_user_by_client_id(info.context["client_id"]).id
-    #     task = TaskStatus(user_id, "Starling dictionary conversion", name, 10)
-    #     starling_converter.convert(info, starling_dictionaries, cache_kwargs, sqlalchemy_url, task.key)
-    #     return True
-
     def resolve_connected_words(self, info, id, field_id, mode=None):
 
         client_id = id[0]
@@ -8611,90 +8586,6 @@ class Query(graphene.ObjectType):
         lexical_entries = [graphene_obj(lex, LexicalEntry) for lex in lexes]
         return LexicalEntriesAndEntities(entities=entities, lexical_entries=lexical_entries)
 
-
-
-    def resolve_eaf_wordlist(self, info, id):
-        # TODO: delete
-        import tempfile
-        import pympi
-        import sys
-        import os
-        import random
-        import string
-        import requests
-        from sqlalchemy.exc import IntegrityError
-        from lingvodoc.exceptions import CommonException
-        from lingvodoc.scripts.convert_rules import praat_to_elan
-
-        # TODO: permission check
-        """
-        query myQuery {
-            convert_markup(id: [742, 5494] )
-        }
-        """
-        client_id = info.context.get('client_id')
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-
-        try:
-            # out_type = req['out_type']
-            client_id, object_id = id
-
-            entity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
-            if not entity:
-                raise KeyError("No such file")
-            resp = requests.get(entity.content)
-            if not resp:
-                raise ResponseError("Cannot access file")
-            content = resp.content
-            try:
-                n = 10
-                filename = (
-                    time.asctime(time.gmtime()) + ''.join(
-                        random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                        for c in range(n)))
-                # extension = os.path.splitext(blob.content)[1]
-                f = open(filename, 'wb')
-            except Exception as e:
-                return ResponseError(message=str(e))
-            try:
-                f.write(content)
-                f.close()
-                if os.path.getsize(filename) / (10 * 1024 * 1024.0) < 1:
-                    if 'data_type' in entity.additional_metadata :
-                        if 'praat' in entity.additional_metadata['data_type']:
-                            textgrid_obj = pympi.TextGrid(file_path=filename)
-                            eaf_obj = textgrid_obj.to_eaf()
-                            word_list = eaf_words(eaf_obj)
-                            return word_list
-                            #elan = to_eaf("-",eafobj)
-
-                        elif 'elan' in entity.additional_metadata['data_type']:
-                            #with open(filename, 'r') as f:
-                            #    return f.read()
-                            eaf_obj = pympi.Eaf(file_path=filename)
-                            word_list = eaf_words(eaf_obj)
-                            return word_list
-                        else:
-                            raise KeyError("Not allowed convert option")
-                        raise KeyError('File too big')
-                    raise KeyError("Not allowed convert option")
-                raise KeyError('File too big')
-            except Exception as e:
-                raise ResponseError(message=e)
-            finally:
-                os.remove(filename)
-                pass
-        except KeyError as e:
-            raise ResponseError(message=str(e))
-
-        except IntegrityError as e:
-            raise ResponseError(message=str(e))
-
-        except CommonException as e:
-            raise ResponseError(message=str(e))
-
-
     def resolve_convert_markup(self, info, id):
 
         # TODO: permission check
@@ -8703,7 +8594,7 @@ class Query(graphene.ObjectType):
             convert_markup(id: [742, 5494] )
         }
         """
-        # client_id = info.context.get('client_id')
+        # client_id = info.context.client_id
         # client = DBSession.query(Client).filter_by(id=client_id).first()
         # user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         client_id, object_id = id
@@ -8726,7 +8617,6 @@ class Query(graphene.ObjectType):
             return ResponseError(f'Cannot access file \'{entity.content}\'.')
 
         return tgt_to_eaf(content, entity.additional_metadata)
-
 
     def resolve_parser_results(self, info, entity_id):
         entity_client_id, entity_object_id = entity_id
@@ -8782,9 +8672,8 @@ class StarlingEtymology(graphene.Mutation):
     @staticmethod
     @client_id_check()
     def mutate(root, info, **args):
-        request = info.context.request
 
-        client_id = info.context.get('client_id')
+        client_id = info.context.client_id
 
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
@@ -8846,7 +8735,7 @@ class StarlingEtymology(graphene.Mutation):
                     second_tag.publishingentity.accepted = True
                     second_tag.publishingentity.published = True
                     # DBSession.add(second_tag)
-                    CACHE.set(objects = [first_tag, second_tag], DBSession=DBSession)
+                    caching.CACHE.set(objects = [first_tag, second_tag], DBSession=DBSession)
 
         return StarlingEtymology(triumph=True)
 
@@ -8892,7 +8781,7 @@ class PhonemicAnalysis(graphene.Mutation):
 
         wrap_flag = args.get('wrap_flag', False)
 
-        locale_id = info.context.get('locale_id') or 2
+        locale_id = info.context.locale_id
 
         __debug_flag__ = args.get('debug_flag', False)
         __intermediate_flag__ = args.get('intermediate_flag', False)
@@ -8985,10 +8874,10 @@ class PhonemicAnalysis(graphene.Mutation):
             total_count = data_query.count()
 
             log.debug(
-                'phonemic_analysis {0}/{1}: {2} transcription entities'.format(
-                    perspective_cid, perspective_oid,
-                    total_count,
-                    transcription_field_cid, transcription_field_oid))
+                'phonemic_analysis {}/{}: {} transcription entities'.format(
+                    perspective_cid,
+                    perspective_oid,
+                    total_count))
 
             if total_count <= 0:
 
@@ -9053,13 +8942,13 @@ class PhonemicAnalysis(graphene.Mutation):
                     client_id = perspective_cid, object_id = perspective_oid).first()
 
                 perspective_name = (
-                    perspective.get_translation(2).strip())
+                    perspective.get_translation(ENGLISH_LOCALE).strip())
 
                 if len(perspective_name) > 48:
                     perspective_name = perspective_name[:48] + '...'
 
                 dictionary_name = (
-                    perspective.parent.get_translation(2).strip())
+                    perspective.parent.get_translation(ENGLISH_LOCALE).strip())
 
                 if len(dictionary_name) > 48:
                     dictionary_name = dictionary_name[:48] + '...'
@@ -10362,8 +10251,6 @@ class CognateAnalysis(graphene.Mutation):
         index = -1
         row_list = []
 
-        table_count = 0
-
         # Parsing result table rows.
 
         while index < len(output_str):
@@ -10667,7 +10554,7 @@ class CognateAnalysis(graphene.Mutation):
 
                         interval_str_list = interval_str.split()
 
-                        return [interval_str.split()[0], interval_str.split()[-3]] + f_list[:3]
+                        return [interval_str_list[0], interval_str_list[-3]] + f_list[:3]
 
         # Showing what we've finally got and returning it.
 
@@ -11401,8 +11288,6 @@ class CognateAnalysis(graphene.Mutation):
         entry_already_set = set()
         group_list = []
 
-        tag_dict = collections.defaultdict(set)
-
         text_dict = {}
         entry_id_dict = {}
 
@@ -11459,11 +11344,9 @@ class CognateAnalysis(graphene.Mutation):
 
         # Getting text data for each perspective.
 
-        dbTranslation = aliased(dbEntity, name = 'Translation')
         dbSound = aliased(dbEntity, name = 'Sound')
         dbMarkup = aliased(dbEntity, name = 'Markup')
 
-        dbPublishingTranslation = aliased(dbPublishingEntity, name = 'PublishingTranslation')
         dbPublishingSound = aliased(dbPublishingEntity, name = 'PublishingSound')
         dbPublishingMarkup = aliased(dbPublishingEntity, name = 'PublishingMarkup')
 
@@ -12754,7 +12637,7 @@ class CognateAnalysis(graphene.Mutation):
             'Only administrator, perspective author and users with perspective editing permissions '
             'can perform cognate analysis.')
 
-        client_id = info.context.request.authenticated_userid
+        client_id = info.context.client_id
 
         if not client_id:
             return ResponseError(error_str)
@@ -12806,7 +12689,7 @@ class CognateAnalysis(graphene.Mutation):
 
             # Getting base language info.
 
-            locale_id = info.context.get('locale_id') or 2
+            locale_id = info.context.locale_id
 
             base_language = DBSession.query(dbLanguage).filter_by(
                 client_id = base_language_id[0], object_id = base_language_id[1]).first()
@@ -12939,7 +12822,7 @@ class CognateAnalysis(graphene.Mutation):
 
             if mode == 'acoustic':
 
-                client_id = request.authenticated_userid
+                client_id = info.context.client_id
 
                 user_id = (
                     Client.get_user_by_client_id(client_id).id
@@ -13578,7 +13461,7 @@ class SwadeshAnalysis(graphene.Mutation):
             'Only administrator, perspective author and users with perspective editing permissions '
             'can perform Swadesh analysis.')
 
-        client_id = info.context.request.authenticated_userid
+        client_id = info.context.client_id
 
         if not client_id:
             return ResponseError(error_str)
@@ -13630,7 +13513,7 @@ class SwadeshAnalysis(graphene.Mutation):
 
             # Getting base language info.
 
-            locale_id = info.context.get('locale_id') or 2
+            locale_id = info.context.locale_id
 
             base_language = DBSession.query(dbLanguage).filter_by(
                 client_id = base_language_id[0], object_id = base_language_id[1]).first()
@@ -13940,7 +13823,6 @@ class MorphCognateAnalysis(graphene.Mutation):
 
                     # meanings_linked > 0 meanings that meanings_total > 0 even more so
                     distance = math.log(meanings_linked / meanings_total) / -0.14 if meanings_linked > 0 else 50
-                    singles = meanings_total - meanings_linked
                     percent = meanings_linked * 100 // meanings_total if meanings_total > 0 else 0
                     distance_data_array[n1][n2] = round(distance, 2)
                     complex_data_array[n1][n2] = f"{distance_data_array[n1][n2]:.2f} ({percent}%)"
@@ -14012,7 +13894,7 @@ class MorphCognateAnalysis(graphene.Mutation):
             'Only administrator, perspective author and users with perspective editing permissions '
             'can perform Swadesh analysis.')
 
-        client_id = info.context.request.authenticated_userid
+        client_id = info.context.client_id
 
         if not client_id:
             return ResponseError(error_str)
@@ -14064,7 +13946,7 @@ class MorphCognateAnalysis(graphene.Mutation):
 
             # Getting base language info.
 
-            locale_id = info.context.get('locale_id') or 2
+            locale_id = info.context.locale_id
 
             base_language = DBSession.query(dbLanguage).filter_by(
                 client_id = base_language_id[0], object_id = base_language_id[1]).first()
@@ -14165,7 +14047,7 @@ class Phonology(graphene.Mutation):
         parameters.__debug_flag__ = (
             args.get('debug_flag', False))
 
-        locale_id = info.context.get('locale_id')
+        locale_id = info.context.locale_id
         request = info.context.get('request')
 
         utils_phonology(request, locale_id, parameters)
@@ -14200,8 +14082,6 @@ def async_phonological_statistical_distance(
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind = engine)
     initialize_cache(cache_kwargs)
-    global CACHE
-    from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
 
     with transaction.manager:
@@ -14661,7 +14541,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 '\nphonological_statistical_distance:'
                 '\nperspective {0} ({1}, {2}/{3}):'
                 '\n{4} components, {5} ** 2 ({6}) samples in {7:.3f}s'
-                '\nintegral of interpolation {8:.6f}, {8:.6f} after normalization'.format(
+                '\nintegral of interpolation {8:.6f}, {9:.6f} after normalization'.format(
                 perspective_index, name, perspective.client_id, perspective.object_id,
                 len(mixture.weights_), n_step, n_step ** 2, elapsed_time,
                 integral, check))
@@ -14977,7 +14857,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
                 synchronous_flag,
                 __debug_flag__))
 
-            locale_id = info.context.get('locale_id')
+            locale_id = info.context.locale_id
 
             request = info.context.get('request')
             storage = request.registry.settings['storage']
@@ -14997,7 +14877,7 @@ class PhonologicalStatisticalDistance(graphene.Mutation):
 
             # Asynchronous phonological statistical distance computation with task status setup.
 
-            client_id = request.authenticated_userid
+            client_id = info.context.client_id
 
             user_id = (
                 Client.get_user_by_client_id(client_id).id
@@ -15063,7 +14943,7 @@ class SoundAndMarkup(graphene.Mutation):
         }
         """
 
-        locale_id = info.context.get('locale_id')
+        locale_id = info.context.locale_id
         request = info.context.get('request')
 
         gql_sound_and_markup(request, locale_id, args['perspective_id'], args['published_mode'])
@@ -15120,7 +15000,7 @@ def save_dictionary(
     my_args['markup_flag'] = markup_flag
     my_args['__debug_flag__'] = debug_flag
 
-    res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
+    (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
 
 
 class SaveDictionary(graphene.Mutation):
@@ -15147,9 +15027,9 @@ class SaveDictionary(graphene.Mutation):
         debug_flag = False):
 
         request = info.context.request
-        locale_id = int(request.cookies.get('locale_id') or 2)
 
-        client_id = authenticated_userid(request)
+        client_id = info.context.client_id
+        locale_id = info.context.locale_id
 
         user_id = (
             Client.get_user_by_client_id(client_id).id
@@ -15210,10 +15090,9 @@ class SaveAllDictionaries(graphene.Mutation):
     # @client_id_check()
     def mutate(root, info, **args):
         request = info.context.request
-        locale_id = int(request.cookies.get('locale_id') or 2)
+        locale_id = info.context.locale_id
         mode = args['mode']
-        variables = {'auth': authenticated_userid(request)}
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        client = DBSession.query(Client).filter_by(id=info.context.client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
         if user_id != 1:
@@ -15232,7 +15111,7 @@ class SaveAllDictionaries(graphene.Mutation):
 
             save_dictionary(
                 [dictionary.client_id, dictionary.object_id],
-                dictionary_obj,
+                dictionary,
                 request,
                 user_id,
                 locale_id,
@@ -15254,15 +15133,16 @@ class MoveColumn(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    # @client_id_check()
-    def mutate(root, info, **args):
+    def mutate(
+        root,
+        info,
+        perspective_id,
+        from_id,
+        to_id):
+
         request = info.context.request
-        locale_id = int(request.cookies.get('locale_id') or 2)
-        perspective_id = args['perspective_id']
-        from_id = args['from_id']
-        to_id = args['to_id']
-        variables = {'auth': authenticated_userid(request)}
-        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+
+        client = DBSession.query(Client).filter_by(id=info.context.client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         user_id = user.id
         client_ids = DBSession.query(Client.id).filter(Client.user_id==user_id).all()
@@ -15324,7 +15204,7 @@ class MoveColumn(graphene.Mutation):
                                   registry=None,
                                   request=request,
                                   )
-                del_object(entity, "move_column", info.context.get('client_id'))
+                del_object(entity, "move_column", info.context.client_id)
 
         return MoveColumn(triumph=True)
 
@@ -15352,7 +15232,7 @@ class AddRolesBulk(graphene.Mutation):
         user_id = args.get('user_id')
         language_id = args.get('language_id')
 
-        request_client_id = info.context.get('client_id')
+        request_client_id = info.context.client_id
         request_user = Client.get_user_by_client_id(request_client_id)
 
         if request_user.id != 1:
@@ -15456,6 +15336,35 @@ class AddRolesBulk(graphene.Mutation):
 class XlsxBulkDisconnect(graphene.Mutation):
     """
     Parses uploaded XLSX file, disconnects highlighted cognates.
+
+    Example:
+
+      curl 'http://localhost:6543/graphql'
+        -H 'Content-Type: multipart/form-data'
+        -H 'Cookie: locale_id=2; auth_tkt=$TOKEN; client_id=$ID'
+        -F operations='{
+          "query":
+            "mutation xlsxBulkDisconnect($xlsxFile: Upload) {
+              xlsx_bulk_disconnect(
+                xlsx_file: $xlsxFile,
+                debug_flag: false)
+              {
+                triumph
+                entry_info_count
+                skip_count
+                group_count
+                disconnect_count
+              }
+            }",
+          "variables": {
+            "xlsxFile": null
+          }}'
+        -F map='{ "1": ["variables.xlsx_file"] }'
+        -F 1=@"./Словарь_среднечепецкого_диалекта_северного_наречия_удмуртского_я.xlsx"
+  
+      Set $TOKEN and $ID to valid admin user authentication info.
+  
+      To use in a shell, join into a single line or add escaping backslashes at the end of the lines.
     """
 
     class Arguments:
@@ -15852,7 +15761,8 @@ class XlsxBulkDisconnect(graphene.Mutation):
     def get_entry_id(
         perspective_id,
         entry_info,
-        row_index_set):
+        row_index_set,
+        tag_table_name):
         """
         Tries to get id of a cognate entry.
         """
@@ -16032,7 +15942,7 @@ class XlsxBulkDisconnect(graphene.Mutation):
 
         try:
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client or client.user_id != 1:
@@ -16325,7 +16235,8 @@ class XlsxBulkDisconnect(graphene.Mutation):
                         XlsxBulkDisconnect.get_entry_id(
                             perspective_id,
                             entry_info,
-                            entry_info_dict[entry_info]))
+                            entry_info_dict[entry_info],
+                            tag_table_name))
 
                     if id_list:
 
@@ -16625,7 +16536,7 @@ class NewUnstructuredData(graphene.Mutation):
 
         try:
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -16682,16 +16593,40 @@ class Docx2Eaf(graphene.Mutation):
     """
     Tries to convert a table-containing .docx to .eaf.
 
-    curl 'http://localhost:6543/graphql'
-      -H 'Cookie: locale_id=2; auth_tkt=_!userid_type:int; client_id=4211'
-      -H 'Content-Type: multipart/form-data'
-      -F operations='{
-         "query": "mutation docx2eaf($docxFile: Upload, $separateFlag: Boolean) {
-           docx2eaf(docx_file: $docxFile, separate_flag: $separateFlag, debug_flag: true) {
-             triumph eaf_url alignment_url check_txt_url check_docx_url message } }",
-         "variables": { "docxFile": null, "separateFlag": false } }'
-      -F map='{ "1": ["variables.docx_file"] }'
-      -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+    Example:
+
+      curl 'http://localhost:6543/graphql'
+        -H 'Content-Type: multipart/form-data'
+        -H 'Cookie: locale_id=2; auth_tkt=$TOKEN; client_id=$ID'
+        -F operations='{
+          "query":
+            "mutation docx2eaf(
+              $docxFile: Upload,
+              $separateFlag: Boolean)
+            {
+              docx2eaf(
+                docx_file: $docxFile,
+                separate_flag: $separateFlag,
+                debug_flag: true)
+              {
+                triumph
+                eaf_url
+                alignment_url
+                check_txt_url
+                check_docx_url
+                message
+              }
+            }",
+          "variables": {
+            "docxFile": null,
+            "separateFlag": false
+          }}'
+        -F map='{ "1": ["variables.docx_file"] }'
+        -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+  
+      Set $TOKEN and $ID to valid admin user authentication info.
+  
+      To use in a shell, join into a single line or add escaping backslashes at the end of the lines.
     """
 
     class Arguments:
@@ -16717,7 +16652,7 @@ class Docx2Eaf(graphene.Mutation):
 
         try:
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -16783,19 +16718,17 @@ class Docx2Eaf(graphene.Mutation):
                 with open(tmp_docx_file_path, 'wb') as tmp_docx_file:
                     shutil.copyfileobj(docx_file, tmp_docx_file)
 
-                result = (
-
-                    docx_import.docx2eaf(
-                        tmp_docx_file_path,
-                        tmp_eaf_file_path,
-                        separate_by_paragraphs_flag = separate_flag,
-                        modify_docx_flag = True,
-                        all_tables_flag = all_tables_flag,
-                        no_header_flag = no_header_flag,
-                        no_parsing_flag = no_parsing_flag,
-                        check_file_path = tmp_check_txt_file_path,
-                        check_docx_file_path = tmp_check_docx_file_path,
-                        __debug_flag__ = __debug_flag__))
+                docx_import.docx2eaf(
+                    tmp_docx_file_path,
+                    tmp_eaf_file_path,
+                    separate_by_paragraphs_flag = separate_flag,
+                    modify_docx_flag = True,
+                    all_tables_flag = all_tables_flag,
+                    no_header_flag = no_header_flag,
+                    no_parsing_flag = no_parsing_flag,
+                    check_file_path = tmp_check_txt_file_path,
+                    check_docx_file_path = tmp_check_docx_file_path,
+                    __debug_flag__ = __debug_flag__)
 
                 # Saving local copies, if required.
 
@@ -16923,16 +16856,37 @@ class Docx2Xlsx(graphene.Mutation):
     """
     Tries to convert a table-containing .docx to .xlsx.
 
-    curl 'http://localhost:6543/graphql'
-      -H 'Cookie: locale_id=2; auth_tkt=_!userid_type:int; client_id=4211'
-      -H 'Content-Type: multipart/form-data'
-      -F operations='{
-         "query": "mutation docx2xlsx($docxFile: Upload, $separateFlag: Boolean) {
-           docx2xlsx(docx_file: $docxFile, separate_flag: $separateFlag, debug_flag: true) {
-             triumph xlsx_url message } }",
-         "variables": { "docxFile": null, "separateFlag": false } }'
-      -F map='{ "1": ["variables.docx_file"] }'
-      -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+    Example:
+
+      curl 'http://localhost:6543/graphql'
+        -H 'Content-Type: multipart/form-data'
+        -H 'Cookie: locale_id=2; auth_tkt=$TOKEN; client_id=$ID'
+        -F operations='{
+          "query":
+            "mutation docx2xlsx(
+              $docxFile: Upload,
+              $separateFlag: Boolean)
+            {
+              docx2xlsx(
+                docx_file: $docxFile,
+                separate_flag: $separateFlag,
+                debug_flag: true)
+              {
+                triumph
+                xlsx_url
+                message
+              }
+            }",
+          "variables": {
+            "docxFile": null,
+            "separateFlag": false
+          }}'
+        -F map='{ "1": ["variables.docx_file"] }'
+        -F 1=@"/root/lingvodoc-extra/Чертыкова_Беседы_14.09.2019.docx"
+  
+      Set $TOKEN and $ID to valid admin user authentication info.
+  
+      To use in a shell, join into a single line or add escaping backslashes at the end of the lines.
     """
 
     class Arguments:
@@ -16950,7 +16904,7 @@ class Docx2Xlsx(graphene.Mutation):
     def mutate(root, info, **args):
 
         try:
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -17142,16 +17096,22 @@ class Valency(graphene.Mutation):
     """
     Extracts valency info.
 
-    curl 'http://localhost:6543/graphql' \
-      -H 'Content-Type: application/json' \
-      -H 'Cookie: auth_tkt=_!userid_type:int; client_id=4217; locale_id=2' \
-      --data-raw '{ \
-        "operationName": "valency", \
-        "variables":{"perspectiveId":[3648,8]}, \
-        "query": \
-          "mutation valency($perspectiveId: LingvodocID!) { \
-            valency(perspective_id: $perspectiveId, synchronous: true, debug_flag: true) { \
-              triumph }}"}'
+    Example:
+
+      curl 'http://localhost:6543/graphql'
+        -H 'Content-Type: application/json'
+        -H 'Cookie: locale_id=2; auth_tkt=$TOKEN; client_id=$ID'
+        --data-raw '{
+          "operationName": "valency",
+          "variables": {"perspectiveId": [3648,8]},
+          "query":
+            "mutation valency($perspectiveId: LingvodocID!) {
+              valency(perspective_id: $perspectiveId, synchronous: true, debug_flag: true) {
+                triumph }}"}'
+  
+      Set $TOKEN and $ID to valid user authentication info.
+
+      To use in a shell, join into a single line or add escaping backslashes at the end of the lines.
     """
 
     class Arguments:
@@ -17456,7 +17416,7 @@ class Valency(graphene.Mutation):
 
         try:
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -17486,7 +17446,7 @@ class Valency(graphene.Mutation):
 
             dictionary = perspective.parent
 
-            locale_id = info.context.get('locale_id') or 2
+            locale_id = info.context.locale_id or ENGLISH_LOCALE
 
             dictionary_name = dictionary.get_translation(locale_id)
             perspective_name = perspective.get_translation(locale_id)
@@ -18851,7 +18811,7 @@ class CreateValencyData(graphene.Mutation):
 
         try:
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -18881,7 +18841,7 @@ class CreateValencyData(graphene.Mutation):
 
             dictionary = perspective.parent
 
-            locale_id = info.context.get('locale_id') or 2
+            locale_id = info.context.locale_id or 2
 
             dictionary_name = dictionary.get_translation(locale_id)
             perspective_name = perspective.get_translation(locale_id)
@@ -19097,7 +19057,7 @@ class SaveValencyData(graphene.Mutation):
 
         try:
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -19127,7 +19087,7 @@ class SaveValencyData(graphene.Mutation):
 
             dictionary = perspective.parent
 
-            locale_id = info.context.get('locale_id') or 2
+            locale_id = info.context.locale_id or 2
 
             dictionary_name = dictionary.get_translation(locale_id)
             perspective_name = perspective.get_translation(locale_id)
@@ -19324,7 +19284,7 @@ class SetValencyAnnotation(graphene.Mutation):
 
         try:
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -19448,7 +19408,7 @@ class ValencyVerbCases(graphene.Mutation):
             raise (
 
                 ResponseError(message =
-                    'Dictionary \'{}\' {}/{} of perspective \'{}\' is deleted.'.format(
+                    'Dictionary \'{}\' {}/{} of perspective \'{}\' {}/{} is deleted.'.format(
                         dictionary_name,
                         dictionary.client_id,
                         dictionary.object_id,
@@ -19700,7 +19660,7 @@ class ValencyVerbCases(graphene.Mutation):
 
             # Checking user and arguments.
 
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             client = DBSession.query(Client).filter_by(id = client_id).first()
 
             if not client:
@@ -19724,7 +19684,7 @@ class ValencyVerbCases(graphene.Mutation):
                     ResponseError(
                         message = 'Please specify either perspective or a set of languages.'))
 
-            locale_id = info.context.get('locale_id') or 2
+            locale_id = info.context.locale_id
 
             # For a single corpus.
 
@@ -20102,20 +20062,23 @@ class BidirectionalLinks(graphene.Mutation):
     Ensures that links between Lexical Entries and Paradigms perspectives of each specified dictionary are
     bidirectional.
 
-    curl 'http://localhost:6543/graphql' \
-      -H 'Content-Type: application/json' \
-      -H 'Cookie: auth_tkt=_tkn_!userid_type:int' \
-      --data-raw '{ \
-        "operationName": "bidirectionalLinks", \
-        "variables":{"dictionaryIdList":[[4755,333300]]}, \
-        "query": \
-          "mutation bidirectionalLinks($dictionaryIdList: [LingvodocID]!) { \
-            bidirectional_links(dictionary_id_list: $dictionaryIdList, debug_flag: true) { \
-              triumph }}"}'
+    Example:
 
-    #! Remove any newline after --data-raw to call this from Ubuntu.
-    #! Change _tkn_ to actual token for administrator.
-    #! Be careful, used token may be not actual after database restart.
+      curl 'http://localhost:6543/graphql' \
+        -H 'Content-Type: application/json' \
+        -H 'Cookie: locale_id=2; auth_tkt=$TOKEN; client_id=$ID' \
+        --data-raw '{ \
+          "operationName": "bidirectionalLinks", \
+          "variables":{"dictionaryIdList":[[4755,333300]]}, \
+          "query": \
+            "mutation bidirectionalLinks($dictionaryIdList: [LingvodocID]!) { \
+              bidirectional_links(dictionary_id_list: $dictionaryIdList, debug_flag: true) { \
+                triumph }}"}'
+  
+      Set $TOKEN and $ID to valid admin user authentication info.
+  
+      #! Remove any newline after --data-raw to call this from Ubuntu.
+      #! Be careful, used token may be not actual after database restart.
     """
 
     class Arguments:
@@ -20133,7 +20096,7 @@ class BidirectionalLinks(graphene.Mutation):
         debug_flag = False):
 
         try:
-            client_id = info.context.get('client_id')
+            client_id = info.context.client_id
             log.debug(f"client_id: {client_id}")
 
             client = DBSession.query(Client).filter_by(id = client_id).first()
@@ -20257,8 +20220,6 @@ class BidirectionalLinks(graphene.Mutation):
 
                 if debug_flag:
 
-                    perspective_dict = {}
-
                     perspective_list = (
 
                         DBSession
@@ -20272,10 +20233,6 @@ class BidirectionalLinks(graphene.Mutation):
                                 dbPerspective.marked_for_deletion == False)
 
                             .all())
-
-                    perspective_dict = {
-                        perspective.id: perspective
-                        for perspective in perspective_list}
 
                     translation_dict = {
                         perspective.id: perspective.get_translation()
@@ -20343,6 +20300,7 @@ class MyMutations(graphene.ObjectType):
     bulk_update_entity_content = BulkUpdateEntityContent.Field()
     approve_all_for_user = ApproveAllForUser.Field()
     bulk_create_entity = BulkCreateEntity.Field()
+    bulk_delete_entity = BulkDeleteEntity.Field()
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
     activate_deactivate_user = ActivateDeactivateUser.Field()
@@ -20452,8 +20410,6 @@ class Context(dict):
         self.headers = context_dict.get('headers')
         self.cookies = context_dict.get('cookies')
 
-        self.cache = {}
-
     def acl_check_if(self, action, subject, subject_id):
         """
         Checks if the client has permission to perform given action on a specified subject via ACL.
@@ -20486,6 +20442,14 @@ class Context(dict):
 
         return self.acl_check_if(action, subject, args.get('id'))
 
+    @property
+    def user(self):
+        """
+        Returns user of the client.
+        """
+
+        return Client.get_user_by_client_id(self.client_id)
+
 
 if __name__ == '__main__':
 
@@ -20516,3 +20480,4 @@ if __name__ == '__main__':
         input_buffer, dictionary_count, line_count, output_buffer, 1)
 
     print(result)
+

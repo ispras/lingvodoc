@@ -1,73 +1,75 @@
+
+# Standard library imports.
+
+import errno
+import hashlib
 import logging
 import os
 import shutil
-from pathvalidate import sanitize_filename
-import graphene
-from sqlalchemy import and_, BigInteger, cast, func, or_, tuple_
-from lingvodoc.schema.gql_holders import (
-    fetch_object,
-    ObjectVal,
-    Upload)
-from lingvodoc.models import (
-    Entity as dbEntity,
-    Client,
-    User as dbUser,
-    DBSession,
-    Dictionary as dbDictionary,
-    Language as dbLanguage,
-    LexicalEntry as dbLexicalEntry,
-    TranslationAtom as dbTranslationAtom,
-    TranslationGist as dbTranslationGist,
-    Field as dbField,
-    Group as dbGroup,
-    BaseGroup as dbBaseGroup,
-    PublishingEntity as dbPublishingEntity,
-    DictionaryPerspective as dbDictionaryPerspective
 
-)
-from lingvodoc.schema.gql_holders import (
-    LingvodocObjectType,
-    CompositeIdHolder,
-    CreatedAt,
-    DeletedAt,
-    Relationship,
-    SelfHolder,
-    FieldHolder,
-    ParentLink,
-    MarkedForDeletion,
-    AdditionalMetadata,
-    LocaleId,
-    Content,
-    del_object,
-    ResponseError,
-    client_id_check,
-    Published,
-    Accepted,
-    LingvodocID
-
-)
-from sqlalchemy import (
-    and_,
-)
-
-# from lingvodoc.views.v2.utils import (
-#     create_object
-# )
-
-import base64
-import hashlib
+# Library imports.
 
 import dateutil.parser
+import graphene
 
-from lingvodoc.models import DictionaryPerspective as dbPerspective
+from pathvalidate import sanitize_filename
+
+from sqlalchemy import (
+    and_,
+    BigInteger,
+    cast,
+    func,
+    or_,
+    tuple_)
+
+# Project imports.
+
+from lingvodoc.models import (
+    BaseGroup as dbBaseGroup,
+    Client,
+    DBSession,
+    Dictionary as dbDictionary,
+    DictionaryPerspective as dbPerspective,
+    ENGLISH_LOCALE,
+    Entity as dbEntity,
+    Field as dbField,
+    Group as dbGroup,
+    Language as dbLanguage,
+    LexicalEntry as dbLexicalEntry,
+    PublishingEntity as dbPublishingEntity,
+    TranslationAtom as dbTranslationAtom,
+    TranslationGist as dbTranslationGist,
+    User as dbUser)
+
+from lingvodoc.schema.gql_holders import (
+    Accepted,
+    AdditionalMetadata,
+    client_id_check,
+    CompositeIdHolder,
+    Content,
+    CreatedAt,
+    del_object,
+    DeletedAt,
+    fetch_object,
+    FieldHolder,
+    LingvodocID,
+    LingvodocObjectType,
+    LocaleId,
+    MarkedForDeletion,
+    ObjectVal,
+    ParentLink,
+    Published,
+    Relationship,
+    ResponseError,
+    SelfHolder,
+    Upload)
+
 from lingvodoc.utils.creation import create_entity
 from lingvodoc.utils.deletion import real_delete_entity
-
-from lingvodoc.utils.verification import check_lingvodoc_id, check_client_id
-
 from lingvodoc.utils.elan_functions import eaf_wordlist
+from lingvodoc.utils.verification import check_client_id, check_lingvodoc_id
 
-from lingvodoc.cache.caching import CACHE
+
 # Setting up logging.
 log = logging.getLogger(__name__)
 
@@ -82,7 +84,6 @@ def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
 
 
 def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
-    import errno
     storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
     directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
     try:
@@ -180,9 +181,7 @@ class CreateEntity(graphene.Mutation):
         link_perspective_id = LingvodocID()
 
         locale_id = graphene.Int()
-        filename = graphene.String(
-
-        )
+        filename = graphene.String()
         content = graphene.String()
         registry = ObjectVal()
         file_content = Upload()
@@ -215,67 +214,79 @@ class CreateEntity(graphene.Mutation):
 
     @staticmethod
     @client_id_check()
-    def mutate(root, info, **args):
-        id = args.get('id')
-        client_id = id[0] if id else info.context["client_id"]
+    def mutate(
+        root,
+        info,
+        parent_id,
+        field_id,
+        id = None,
+        self_id = None,
+        locale_id = ENGLISH_LOCALE,
+        filename = None,
+        content = None,
+        link_id = None,
+        link_perspective_id = None,
+        **args):
+
+        client_id = id[0] if id else info.context.client_id
         object_id = id[1] if id else None
-        lexical_entry_id = args.get('parent_id')
-        locale_id = args.get('locale_id')
-        if not locale_id:
-            locale_id=2
-        if not lexical_entry_id:
-            raise ResponseError(message="Lexical entry not found")
-        parent_client_id, parent_object_id = lexical_entry_id
+
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+            return ResponseError("This client id is orphaned. Try to logout and then login once more.")
 
-        # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        parent = CACHE.get(objects =
-            {
-                dbLexicalEntry : ((parent_client_id, parent_object_id), )
-            },
-        DBSession=DBSession)
+        parent = dbLexicalEntry.get(parent_id)
         if not parent:
-            raise ResponseError(message="No such lexical entry in the system")
+            return ResponseError("No such lexical entry in the system")
 
-        info.context.acl_check('create', 'lexical_entries_and_entities',
-            (parent.parent_client_id, parent.parent_object_id))
+        info.context.acl_check(
+            'create',
+            'lexical_entries_and_entities',
+            parent.parent_id)
 
         additional_metadata = args.get('additional_metadata')
         upper_level = None
 
-        field_client_id, field_object_id = args.get('field_id')
-        tr_atom = DBSession.query(dbTranslationAtom).join(dbTranslationGist, and_(
-            dbTranslationAtom.locale_id == 2,
-            dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
-            dbTranslationAtom.parent_object_id == dbTranslationGist.object_id)).join(dbField, and_(
-            dbTranslationGist.client_id == dbField.data_type_translation_gist_client_id,
-            dbTranslationGist.object_id == dbField.data_type_translation_gist_object_id)).filter(
-            dbField.client_id == field_client_id, dbField.object_id == field_object_id).first()
+        field_client_id, field_object_id = field_id
+
+        tr_atom = (
+
+            DBSession
+
+                .query(dbTranslationAtom)
+
+                .filter(
+                    dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                    dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
+                    dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
+                    dbTranslationGist.client_id == dbField.data_type_translation_gist_client_id,
+                    dbTranslationGist.object_id == dbField.data_type_translation_gist_object_id,
+                    dbField.client_id == field_client_id,
+                    dbField.object_id == field_object_id)
+
+                .first())
+
         if not tr_atom:
-             raise ResponseError(message="No such field in the system")
+             return ResponseError("No such field in the system")
+
         data_type = tr_atom.content.lower()
 
-        if args.get('self_id'):
-            # self_client_id, self_object_id = args.get('self_id')
-            # upper_level = DBSession.query(dbEntity).filter_by(client_id=self_client_id,
-            #                                                 object_id=self_object_id).first()
-            upper_level = CACHE.get(objects =
-                {
-                    dbEntity : (args.get('self_id'), )
-                },
-            DBSession=DBSession)
+        if self_id:
+            upper_level = dbEntity.get(self_id)
             if not upper_level:
-                raise ResponseError(message="No such upper level in the system")
-        dbentity = dbEntity(client_id=client_id,
-                        object_id=object_id,
-                        field_client_id=field_client_id,
-                        field_object_id=field_object_id,
-                        locale_id=locale_id,
-                        additional_metadata=additional_metadata,
-                        parent=parent)
+                return ResponseError("No such upper level in the system")
+
+        dbentity = (
+
+            dbEntity(
+                client_id = client_id,
+                object_id = object_id,
+                field_client_id = field_client_id,
+                field_object_id = field_object_id,
+                locale_id = locale_id,
+                additional_metadata = additional_metadata,
+                parent_id = parent_id))
 
         # Acception permission check.
         # Admin is assumed to have all permissions.
@@ -314,7 +325,6 @@ class CreateEntity(graphene.Mutation):
         if user.id == 1:
             dbentity.publishingentity.published = True
 
-        filename = args.get('filename')
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
@@ -352,50 +362,40 @@ class CreateEntity(graphene.Mutation):
                 bag_of_words = list(eaf_wordlist(dbentity))
                 dbentity.additional_metadata['bag_of_words'] = bag_of_words
         elif data_type == 'link':
-            if args.get('link_id'):
-                link_client_id, link_object_id = args.get('link_id')
-                dbentity.link_client_id = link_client_id
-                dbentity.link_object_id = link_object_id
+            if link_id:
+                dbentity.link_client_id = link_id[0]
+                dbentity.link_object_id = link_id[1]
             else:
-                raise ResponseError(
-                    message="The field is of link type. You should provide client_id and object id in the content")
+                return ResponseError(
+                    "The field is of link type. You should provide client_id and object id in the content")
         elif data_type == 'directed link':
-            if args.get('link_id'):
-                link_client_id, link_object_id = args.get('link_id') # TODO: le check
-                dbentity.link_client_id = link_client_id
-                dbentity.link_object_id = link_object_id
+            if link_id:
+                dbentity.link_client_id = link_id[0]
+                dbentity.link_object_id = link_id[1]
             else:
-                raise ResponseError(
-                    message="The field is of link type. You should provide client_id and object id in the content")
-            if args.get("link_perspective_id"):
-                # link_persp_client_id, link_persp_object_id = args.get('link_perspective_id')
-                # if not DBSession.query(dbPerspective)\
-                #         .filter_by(client_id=link_persp_client_id, object_id=link_persp_object_id).first():
-                if not CACHE.get(objects = { dbPerspective : (args.get('link_perspective_id'), ) }, DBSession=DBSession):
-                    raise ResponseError(message="link_perspective not found")
-                dbentity.additional_metadata['link_perspective_id'] = [link_persp_client_id, link_persp_object_id]
+                return ResponseError(
+                    "The field is of link type. You should provide client_id and object id in the content")
+
+            if link_perspective_id:
+                if not dbPerspective.exists(link_perspective_id):
+                    return ResponseError("link_perspective not found")
+                dbentity.additional_metadata['link_perspective_id'] = link_perspective_id
 
             else:
-                raise ResponseError(
-                    message="The field is of link type. You should provide link_perspective_id id in the content")
+                return ResponseError(
+                    "The field is of link type. You should provide link_perspective_id id in the content")
 
         else:
-            content = args.get("content")
             dbentity.content = content
 
-            # if args.get('is_translatable', None): # TODO: fix it
-            #     field.is_translatable = bool(args['is_translatable'])
-        #CACHE set_entity
-        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
-        # DBSession.add(dbentity)
-        # DBSession.flush()
-        entity = Entity(id = [dbentity.client_id, dbentity.object_id])
-        entity.dbObject = dbentity
-        return CreateEntity(entity=entity, triumph=True)
+        DBSession.add(dbentity)
+        DBSession.flush()
 
-        # if not perm_check(client_id, "field"):
-        #    return ResponseError(message = "Permission Denied (Entity)")
+        return (
 
+            CreateEntity(
+                entity = Entity(dbentity),
+                triumph = True))
 
     # Update
     """
@@ -508,16 +508,8 @@ class UpdateEntity(graphene.Mutation):
         if accepted is not None:
             dbpublishingentity.accepted = accepted
 
-        #CACHE get_entity
-        dbentity = CACHE.get(objects =
-            {
-                dbEntity : ((client_id, object_id), )
-            },
-        DBSession=DBSession)
-        # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        entity = Entity(id=[dbentity.client_id, dbentity.object_id])
-        entity.dbObject = dbentity
-        return UpdateEntity(entity=entity, triumph=True)
+        dbentity = dbEntity.get((client_id, object_id))
+        return UpdateEntity(entity=Entity(dbentity), triumph=True)
 
 
 class ApproveAllForUser(graphene.Mutation):
@@ -530,16 +522,24 @@ class ApproveAllForUser(graphene.Mutation):
 	}
     }
     """
+
     class Arguments:
+
         user_id = graphene.Int()
+
         published = graphene.Boolean()
         accepted = graphene.Boolean()
+
         field_ids = graphene.List(LingvodocID)
+
         skip_deleted_entities = graphene.Boolean()
+
         perspective_id = LingvodocID()
+
         language_id = LingvodocID()
         language_recursive = graphene.Boolean()
         language_all = graphene.Boolean()
+
         time_from = graphene.String()
 
     #entity = graphene.Field(Entity)
@@ -547,23 +547,19 @@ class ApproveAllForUser(graphene.Mutation):
     update_count = graphene.Int()
 
     @staticmethod
-    def mutate(root, info, **args):
-
-        user_id = args.get('user_id')
-
-        published = args.get('published', False)
-        accepted = args.get('accepted', False)
-
-        field_ids = args.get('field_ids')
-        skip_deleted_entities = args.get('skip_deleted_entities', True)
-
-        perspective_id = args.get('perspective_id')
-
-        language_id = args.get('language_id')
-        language_recursive = args.get('language_recursive', False)
-        language_all = args.get('language_all', False)
-
-        time_from = args.get('time_from')
+    def mutate(
+        root,
+        info,
+        user_id = None,
+        published = False,
+        accepted = False,
+        field_ids = None,
+        skip_deleted_entities = True,
+        perspective_id = None,
+        language_id = None,
+        language_recursive = False,
+        language_all = False,
+        time_from = None):
 
         # We have a starting time specification, trying to parse it.
 
@@ -572,19 +568,16 @@ class ApproveAllForUser(graphene.Mutation):
 
         log.debug(
             '\napprove_all_for_user'
-            '\n  args: {0}'
-            '\napprove_all_for_user'
-            '\n  user_id: {1}'
-            '\n  published: {2}'
-            '\n  accepted: {3}'
-            '\n  field_ids: {4}'
-            '\n  skip_deleted_entities: {5}'
-            '\n  perspective_id: {6}'
-            '\n  language_id: {7}'
-            '\n  language_recursive: {8}'
-            '\n  language_all: {9}'
-            '\n  time_from: {10}'.format(
-            args,
+            '\n  user_id: {}'
+            '\n  published: {}'
+            '\n  accepted: {}'
+            '\n  field_ids: {}'
+            '\n  skip_deleted_entities: {}'
+            '\n  perspective_id: {}'
+            '\n  language_id: {}'
+            '\n  language_recursive: {}'
+            '\n  language_all: {}'
+            '\n  time_from: {}'.format(
             user_id,
             published,
             accepted,
@@ -603,19 +596,19 @@ class ApproveAllForUser(graphene.Mutation):
             not language_id and
             not language_all):
 
-            raise ResponseError(
+            return ResponseError(
                 'Please specify either a perspective, a language or the flag for all languages.')
 
         if ((language_id or language_all) and
             request_user.id != 1):
 
-            raise ResponseError(
+            return ResponseError(
                 'Only administrator can perform bulk approve for languages.')
 
         if (user_id is None and
             request_user.id != 1):
 
-            raise ResponseError(
+            return ResponseError(
                 'Only administrator can perform bulk approve for all users.')
 
         # Entity selection condition.
@@ -633,7 +626,7 @@ class ApproveAllForUser(graphene.Mutation):
             entity_select_condition = dbPublishingEntity.accepted == False
 
         else:
-            raise ResponseError('Neither publish nor accept action is specified.')
+            return ResponseError('Neither publish nor accept action is specified.')
 
         # Filtering by user id, if required.
 
@@ -663,7 +656,7 @@ class ApproveAllForUser(graphene.Mutation):
             for field_id in field_ids:
                 field = DBSession.query(dbField).filter_by(client_id=field_id[0], object_id=field_id[1]).first()
                 if not field:
-                    raise ResponseError("field not found")
+                    return ResponseError("field not found")
                 list_of_fields.append((field.client_id, field.object_id))
 
         field_id_list = tuple(list_of_fields)
@@ -694,11 +687,11 @@ class ApproveAllForUser(graphene.Mutation):
 
         if perspective_id:
 
-            given_perspective = DBSession.query(dbDictionaryPerspective).filter_by(marked_for_deletion=False,
+            given_perspective = DBSession.query(dbPerspective).filter_by(marked_for_deletion=False,
                                                                                    client_id = perspective_id[0],
                                                                                    object_id = perspective_id[1]).first()
             if not given_perspective:
-                raise ResponseError("Perspective not found")
+                return ResponseError("Perspective not found")
 
             # Currently bulk approve can only give published/accepted status and can't remove it, so we
             # don't check for 'delete' permissions.
@@ -860,11 +853,11 @@ class ApproveAllForUser(graphene.Mutation):
                         tuple_(dbDictionary.parent_client_id, dbDictionary.parent_object_id).in_(
                             language_id_list),
                         dbDictionary.marked_for_deletion == False,
-                        dbDictionaryPerspective.parent_client_id == dbDictionary.client_id,
-                        dbDictionaryPerspective.parent_object_id == dbDictionary.object_id,
-                        dbDictionaryPerspective.marked_for_deletion == False,
-                        dbLexicalEntry.parent_client_id == dbDictionaryPerspective.client_id,
-                        dbLexicalEntry.parent_object_id == dbDictionaryPerspective.object_id,
+                        dbPerspective.parent_client_id == dbDictionary.client_id,
+                        dbPerspective.parent_object_id == dbDictionary.object_id,
+                        dbPerspective.marked_for_deletion == False,
+                        dbLexicalEntry.parent_client_id == dbPerspective.client_id,
+                        dbLexicalEntry.parent_object_id == dbPerspective.object_id,
                         dbLexicalEntry.marked_for_deletion == False,
                         dbEntity.parent_client_id == dbLexicalEntry.client_id,
                         dbEntity.parent_object_id == dbLexicalEntry.object_id,
@@ -888,6 +881,7 @@ class ApproveAllForUser(graphene.Mutation):
 
 
 class DeleteEntity(graphene.Mutation):
+
     class Arguments:
         id = LingvodocID(required=True)
 
@@ -895,31 +889,42 @@ class DeleteEntity(graphene.Mutation):
     entity = graphene.Field(Entity)
 
     @staticmethod
-    def mutate(root, info, **args):
-        client_id, object_id = args.get('id')
-        #CACHE get_entity
-        dbentity = CACHE.get(objects =
-            {
-                dbEntity : ((client_id, object_id),)
-            },
-        DBSession=DBSession)
-        # dbentity = DBSession.query(dbEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        if not dbentity or dbentity.marked_for_deletion:
-            raise ResponseError(message="No such entity in the system")
-        lexical_entry = dbentity.parent
-        info.context.acl_check('delete', 'lexical_entries_and_entities',
-                               (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+    def mutate(root, info, id):
 
-        settings = info.context["request"].registry.settings
+        db_entity = (
+
+            dbEntity.get(
+                id, deleted = False))
+
+        if not db_entity:
+            return ResponseError(f'No entity {id} in the system.')
+
+        info.context.acl_check(
+            'delete',
+            'lexical_entries_and_entities',
+            db_entity.parent.parent_id)
+
+        settings = (
+            info.context.request.registry.settings)
+
         if 'desktop' in settings:
-            real_delete_entity(dbentity, settings)
-        else:
-            #CACHE delete_entity
-            del_object(dbentity, "delete_entity", info.context.get('client_id'))
-        entity = Entity(id=[client_id, object_id])
-        entity.dbObject = dbentity
-        return DeleteEntity(entity=entity, triumph=True)
 
+            real_delete_entity(
+                db_entity,
+                settings)
+
+        else:
+
+            del_object(
+                db_entity,
+                'delete_entity',
+                info.context.client_id)
+
+        return (
+
+            DeleteEntity(
+                entity = Entity(db_entity),
+                triumph = True))
 
 
 class BulkCreateEntity(graphene.Mutation):
@@ -937,42 +942,39 @@ class BulkCreateEntity(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **args):
-        client = DBSession.query(Client).filter_by(id=info.context["client_id"]).first()
+    def mutate(root, info, entities = None):
+        client = Client.get(info.context.client_id)
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
-                           info.context["client_id"])
-        entity_objects = args.get('entities')
-        dbentities_list = list()
+                           info.context.client_id)
         request = info.context.request
-        entities = list()
-        for entity_obj in entity_objects:
+
+        dbentities_list = []
+
+        for entity_obj in entities:
             ids = entity_obj.get("id")  # TODO: id check
 
             if ids is None:
-                ids = (info.context["client_id"], None)
+                ids = (info.context.client_id, None)
             else:
                 if not check_lingvodoc_id(ids):
                     raise KeyError("Wrong id")
-                if not check_client_id(info.context["client_id"], ids[0]):
+                if not check_client_id(info.context.client_id, ids[0]):
                     raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                                    ids[0])
             parent_id = entity_obj.get("parent_id")
 
             if not parent_id:
-                raise ResponseError(message="Bad lexical_entry object")
+                return ResponseError(message="Bad lexical_entry object")
             if not check_lingvodoc_id(parent_id):
                 raise KeyError("Wrong parent_id")
-            #CACHE get_lexicalentry
-            # lexical_entry = DBSession.query(dbLexicalEntry) \
-            #     .filter_by(client_id=parent_id[0], object_id=parent_id[1]).one()
-            lexical_entry = CACHE.get(objects =
-                {
-                    dbLexicalEntry : (parent_id, )
-                },
-            DBSession=DBSession)
-            info.context.acl_check('create', 'lexical_entries_and_entities',
-                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
+            lexical_entry = dbLexicalEntry.get(parent_id)
+
+            info.context.acl_check(
+                'create',
+                'lexical_entries_and_entities',
+                lexical_entry.parent_id)
 
             additional_metadata = None
             if 'additional_metadata' in entity_obj:
@@ -993,21 +995,188 @@ class BulkCreateEntity(graphene.Mutation):
             content = entity_obj.get("content")
             registry = entity_obj.get("registry")
 
-            #CACHE внутри функции вставить set_entity
             dbentity = create_entity(ids, parent_id, additional_metadata, field_id, self_id, link_id, locale_id,
                                      filename, content, registry, request, False)
 
             dbentities_list.append(dbentity)
 
-        #CACHE set_entity
-        # DBSession.bulk_save_objects(dbentities_list)
-        # DBSession.flush()
-        CACHE.set(objects = dbentities_list, DBSession=DBSession)
-        for dbentity in dbentities_list:
-            entity =  Entity(id=[dbentity.client_id, dbentity.object_id])
-            entity.dbObject = dbentity
-            entities.append(entity)
-        return BulkCreateEntity(entities=entities, triumph=True)
+        DBSession.bulk_save_objects(dbentities_list)
+        DBSession.flush()
+
+        entity_list = (
+            list(map(Entity, dbentities_list)))
+
+        return (
+
+            BulkCreateEntity(
+                entities = entity_list,
+                triumph = True))
+
+
+class BulkDeleteEntity(graphene.Mutation):    
+    """
+    Deletes entities based on various criteria, entities of a user, of a client, of a perspective /
+    perspectives, created in a specified time interval.
+
+    Example:
+
+      curl 'http://localhost:6543/graphql'
+        -H 'content-type: application/json'
+        -H 'Cookie: locale_id=2; auth_tkt=$TOKEN; client_id=$ID'
+        --data-raw '{
+          "operationName": "bulkDeleteEntity",
+          "variables": {
+            "userId": 349,
+            "perspectiveIdList": [[5070, 3105], [5523, 2]]},
+          "query":
+            "mutation bulkDeleteEntity(
+              $userId: Int,
+              $perspectiveIdList: [LingvodocID])
+            {
+              bulk_delete_entity(
+                user_id: $userId,
+                field_id: [66, 25],
+                perspective_id_list: $perspectiveIdList)
+              {
+                triumph
+                delete_count
+              }
+            }"}'
+  
+      Set $TOKEN and $ID to valid admin user authentication info.
+  
+      To use in a shell, join into a single line or add escaping backslashes at the end of the lines.
+    """
+
+    class Arguments:
+
+        user_id = graphene.Int()
+
+        field_id = LingvodocID()
+        field_id_list = graphene.List(LingvodocID)
+
+        perspective_id = LingvodocID()
+        perspective_id_list = graphene.List(LingvodocID)
+
+        time_from = graphene.String()
+        time_to = graphene.String()
+
+    triumph = graphene.Boolean()
+    delete_count = graphene.Int()
+
+    @staticmethod
+    def mutate(
+        root,
+        info,
+        user_id = None,
+        field_id = None,
+        field_id_list = None,
+        perspective_id = None,
+        perspective_id_list = None,
+        time_from = None,
+        time_to = None):
+
+        # Conceivable filterting conditions we won't be implementing at the time.
+
+        if (field_id_list is not None or
+            perspective_id is not None or
+            time_from is not None or
+            time_to is not None):
+
+            raise NotImplementedError
+
+        user = info.context.user
+
+        if not user or user.id != 1:
+
+            return ResponseError(
+                'Only administrator can perform bulk entity deletion.')
+
+        # Entity selection conditions.
+
+        condition_list = [
+            dbEntity.marked_for_deletion == False]
+
+        if field_id is not None:
+
+            condition_list.extend([
+                dbEntity.field_client_id == field_id[0],
+                dbEntity.field_object_id == field_id[1]])
+
+        # Filtering by user id, if required.
+
+        if user_id is not None:
+
+            client_id_query = (
+                DBSession.query(Client.id).filter_by(user_id = user_id))
+
+            condition_list.append(
+
+                func.coalesce(
+                    cast(dbEntity.additional_metadata[
+                        ('merge', 'original_client_id')].astext, BigInteger),
+                    dbEntity.client_id)
+
+                    .in_(client_id_query))
+
+        # Filtering by perspectives, if required.
+
+        if perspective_id_list is not None:
+
+            if not perspective_id_list:
+
+                return ResponseError(
+                    'If specified, perspective id list should be non-empty.')
+
+            condition_list.extend([
+
+                dbLexicalEntry.client_id == dbEntity.parent_client_id,
+                dbLexicalEntry.object_id == dbEntity.parent_object_id,
+
+                tuple_(
+                    dbLexicalEntry.parent_client_id,
+                    dbLexicalEntry.parent_object_id)
+
+                    .in_(
+                        perspective_id_list)])
+
+        entity_list = (
+
+            DBSession
+                .query(dbEntity)
+                .filter(*condition_list)
+                .all())
+
+        log.debug(f'\n{len(entity_list)} entities')
+
+        # Deleting entities.
+        #
+        # Currently unoptimized, should think about bulk object deletion operations.
+
+        settings = info.context.request.registry.settings
+
+        if 'desktop' in settings:
+
+            for entity in entity_list:
+
+                real_delete_entity(
+                    entity,
+                    settings)
+
+        else:
+
+            for entity in entity_list:
+
+                del_object(
+                    entity,
+                    'bulk_delete_entity',
+                    info.context.client_id)
+
+        return (
+
+            BulkDeleteEntity(
+                triumph = True,
+                delete_count = len(entity_list)))
 
 
 class UpdateEntityContent(graphene.Mutation):
@@ -1038,42 +1207,34 @@ class UpdateEntityContent(graphene.Mutation):
     def mutate(root, info, **args):
         # delete
         old_client_id, object_id = args.get('id')
-        client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
+        client_id = DBSession.query(Client).filter_by(id=info.context.client_id).first().id
         content = args.get("content")
-        dbentity_old = CACHE.get(objects =
-            {
-                dbEntity : ((old_client_id, object_id), )
-            },
-        DBSession=DBSession)
-        # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_client_id, object_id=object_id).first()
-        if not dbentity_old or dbentity_old.marked_for_deletion:
+        dbentity_old = dbEntity.get((old_client_id, object_id), deleted = False)
+        if not dbentity_old:
             raise ResponseError(message="No such entity in the system")
         if dbentity_old.field.data_type != "Text":
             raise ResponseError(message="Can't edit non-text entities")
         lexical_entry = dbentity_old.parent
-        info.context.acl_check('delete', 'lexical_entries_and_entities',
-                               (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
-        settings = info.context["request"].registry.settings
+        info.context.acl_check(
+            'delete',
+            'lexical_entries_and_entities',
+            lexical_entry.parent_id)
+
+        settings = info.context.request.registry.settings
         if 'desktop' in settings:
             real_delete_entity(dbentity_old, settings)
         else:
-            del_object(dbentity_old, "update_entity_content",info.context.get('client_id'))
+            del_object(dbentity_old, "update_entity_content", info.context.client_id)
         # create
         client = DBSession.query(Client).filter_by(id=client_id).first()
         user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
         if not user:
-            raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
+            return ResponseError("This client id is orphaned. Try to logout and then login once more.")
 
-        # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentity_old.parent_client_id,
-        #                                                    object_id=dbentity_old.parent_object_id).first()
-        parent = CACHE.get(objects =
-            {
-                dbLexicalEntry : ((dbentity_old.parent_client_id, dbentity_old.parent_object_id), )
-            },
-        DBSession=DBSession)
+        parent = dbLexicalEntry.get(dbentity_old.parent_id)
         if not parent:
-            raise ResponseError(message="No such lexical entry in the system")
+            return ResponseError("No such lexical entry in the system")
 
         info.context.acl_check('create', 'lexical_entries_and_entities',
                                (parent.parent_client_id, parent.parent_object_id))
@@ -1087,14 +1248,12 @@ class UpdateEntityContent(graphene.Mutation):
 
         dbentity.publishingentity.accepted = dbentity_old.publishingentity.accepted
         dbentity.content = content
-            # if args.get('is_translatable', None): # TODO: fix it
-            #     field.is_translatable = bool(args['is_translatable'])
-        # DBSession.add(dbentity)
-        # DBSession.flush()
-        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
-        entity = Entity(id = [dbentity.client_id, dbentity.object_id])
-        entity.dbObject = dbentity
-        return UpdateEntityContent(entity=entity, triumph=True)
+
+        DBSession.add(dbentity)
+        DBSession.flush()
+
+        return UpdateEntityContent(entity = Entity(dbentity), triumph = True)
+
 
 class BulkUpdateEntityContent(graphene.Mutation):
     """
@@ -1124,53 +1283,56 @@ class BulkUpdateEntityContent(graphene.Mutation):
         contents = args.get('contents')
 
         if len(old_ids) != len(contents):
-            raise ResponseError(message="Length of contents list is not equal to length of entities list")
+            return ResponseError("Length of contents list is not equal to length of entities list")
 
-        client_id = DBSession.query(Client).filter_by(id=info.context["client_id"]).first().id
+        client = Client.get(info.context.client_id)
+        client_id = client.id
 
-        dbentities_old = list()
-        dbentities = CACHE.get(objects = {dbEntity : old_ids}, DBSession=DBSession)
-        for old_id, dbentity_old in zip(old_ids, dbentities):
-            # dbentity_old = DBSession.query(dbEntity).filter_by(client_id=old_id[0], object_id=old_id[1]).first()
+        user = dbUser.get(client.user_id)
+        if not user:
+            return ResponseError("This client id is orphaned. Try to logout and then login once more.")
 
-            if not dbentity_old or dbentity_old.marked_for_deletion:
-                raise ResponseError(message="No entity" + format(old_id) + " in the system")
+        dbentities_old = []
+
+        for old_id in old_ids:
+            dbentity_old = dbEntity.get(old_id, deleted = False)
+
+            if not dbentity_old:
+                return ResponseError("No entity " + format(old_id) + " in the system")
             if dbentity_old.field.data_type != "Text":
-                raise ResponseError(message="Can't edit non-text entity" + format(old_id))
+                return ResponseError("Can't edit non-text entity" + format(old_id))
 
             lexical_entry = dbentity_old.parent
-            info.context.acl_check('delete', 'lexical_entries_and_entities',
-                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
 
-            settings = info.context["request"].registry.settings
+            info.context.acl_check(
+                'delete',
+                'lexical_entries_and_entities',
+                lexical_entry.parent_id)
+
+            settings = info.context.request.registry.settings
             if 'desktop' in settings:
                 real_delete_entity(dbentity_old, settings)
             else:
-                del_object(dbentity_old, "update_entity_content", info.context.get('client_id'))
+                del_object(dbentity_old, "update_entity_content", info.context.client_id)
             dbentities_old.append(dbentity_old)
 
-        # create
-        dbentities_new = list()
+        # Creating new entities.
+
+        dbentities_new = []
+
         i = -1
         for content in contents:
             i += 1
-            client = DBSession.query(Client).filter_by(id=client_id).first()
-            user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-            if not user:
-                raise ResponseError(message="This client id is orphaned. Try to logout and then login once more.")
 
-            # parent = DBSession.query(dbLexicalEntry).filter_by(client_id=dbentities_old[i].parent_client_id,
-            #                                                    object_id=dbentities_old[i].parent_object_id).first()
-            parent = CACHE.get(objects=
-                {
-                    dbLexicalEntry : ((parent_client_id, parent_object_id), )
-                },
-            DBSession=DBSession)
+            parent = dbLexicalEntry.get(dbentities_old[i].parent_id)
             if not parent:
-                raise ResponseError(message="No such lexical entry in the system")
+                return ResponseError("No such lexical entry in the system")
 
-            info.context.acl_check('create', 'lexical_entries_and_entities',
-                                   (parent.parent_client_id, parent.parent_object_id))
+            info.context.acl_check(
+                'create',
+                'lexical_entries_and_entities',
+                parent.parent_id)
+
             dbentity = dbEntity(client_id=client_id,
                                 object_id=None,
                                 field_client_id=dbentities_old[i].field_client_id,
@@ -1185,14 +1347,10 @@ class BulkUpdateEntityContent(graphene.Mutation):
             #     field.is_translatable = bool(args['is_translatable'])
             dbentities_new.append(dbentity)
 
-        # DBSession.bulk_save_objects(dbentities_new)
-        # DBSession.flush()
-        CACHE.set(objects = dbentities_new, DBSession=DBSession)
+        DBSession.bulk_save_objects(dbentities_new)
+        DBSession.flush()
 
-        entities = list()
-        for dbentity in dbentities_new:
-            entity = Entity(id=[dbentity.client_id, dbentity.object_id])
-            entity.dbObject = dbentity
-            entities.append(entity)
+        entities = list(map(Entity, dbentities_new))
 
         return BulkUpdateEntityContent(entities=entities, triumph=True)
+

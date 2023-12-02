@@ -15,18 +15,18 @@ from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
 from sqlalchemy.sql import text
 
 from sqlalchemy import (
+    and_,
     Column,
-    Index,
-    ForeignKeyConstraint,
     event,
     ForeignKey,
-    Table,
-    UniqueConstraint,
-    and_,
+    ForeignKeyConstraint,
+    Index,
+    literal,
     or_,
-    tuple_,
     Sequence,
-)
+    Table,
+    tuple_,
+    UniqueConstraint)
 
 from sqlalchemy.types import (
     UnicodeText,
@@ -207,16 +207,10 @@ class PrimeTableArgs(object):
 
 class AdditionalMetadataMixin(object):
     additional_metadata = Column(JSONB)
-    protected_fields = []
 
     def update_additional_metadata(self, new_meta):
-        for key in self.protected_fields:
-            if key in new_meta:
-                return {'error': 'cannot change protected fields'}
         self.additional_metadata.update(new_meta)
         flag_modified(self, 'additional_metadata')
-        return None
-
 
 
 class MarkedForDeletionMixin(object):
@@ -406,6 +400,44 @@ class CompositeIdMixin(object):
                 .filter_by(**kwargs)
                 .first())
 
+    @classmethod
+    def exists(
+        cls,
+        id = None,
+        client_id = None,
+        object_id = None,
+        deleted = None,
+        session = DBSession):
+        """
+        A convenience method to check if an object exists by its composite id, e.g.
+        Language.exists(language_id).
+        """
+
+        if id:
+
+            client_id, object_id = id
+
+        condition_list = [
+            cls.client_id == client_id,
+            cls.object_id == object_id]
+
+        if deleted is not None:
+
+            condition_list.append(
+                cls.marked_for_deletion == deleted)
+
+        return (
+
+            session
+                .query(
+
+                    session
+                        .query(literal(1))
+                        .filter(*condition_list)
+                        .exists())
+
+                .scalar())
+
     def __init__(self, *args, **kwargs):
 
         session = (
@@ -521,6 +553,21 @@ class RelationshipMixin(PrimeTableArgs):
 
     parent_object_id = Column(SLBigInteger())  # , nullable=False
     parent_client_id = Column(SLBigInteger())  # , nullable=False
+
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        parent_id = (
+            kwargs.pop('parent_id', None))
+
+        if parent_id:
+
+            kwargs['parent_client_id'] = parent_id[0]
+            kwargs['parent_object_id'] = parent_id[1]
+
+        super().__init__(*args, **kwargs)
 
     @property
     def parent_id(self):
