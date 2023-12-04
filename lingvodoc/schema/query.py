@@ -15069,6 +15069,7 @@ def save_dictionary(
     publish,
     sound_flag,
     markup_flag,
+    format = 'xlsx',
     synchronous = False,
     debug_flag = False):
 
@@ -15117,6 +15118,7 @@ class SaveDictionary(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         mode = graphene.String(required=True)
+        format = graphene.String()
         sound_flag = graphene.Boolean()
         markup_flag = graphene.Boolean()
         synchronous = graphene.Boolean()
@@ -15183,6 +15185,7 @@ class SaveDictionary(graphene.Mutation):
             publish,
             sound_flag,
             markup_flag,
+            format,
             synchronous,
             debug_flag)
 

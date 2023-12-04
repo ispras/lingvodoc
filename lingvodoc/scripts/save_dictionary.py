@@ -68,7 +68,9 @@ from sqlalchemy import tuple_, and_, or_
 from lingvodoc.scripts import elan_parser
 from pdb import set_trace
 import io
-import xlsxwriter
+import xlsxwriter as xlsx
+import docx
+import PyRTF as rtf
 # from time import time
 import datetime
 import time
@@ -732,6 +734,7 @@ class Save_Context(object):
         sound_flag = False,
         markup_flag = False,
         storage = None,
+        format = 'xlsx',
         __debug_flag__ = False):
 
         self.locale_id = locale_id
@@ -742,7 +745,9 @@ class Save_Context(object):
         self.markup_flag = markup_flag
 
         self.stream = io.BytesIO()
-        self.workbook = xlsxwriter.Workbook(self.stream, {'in_memory': True})
+        self.workbook = xlsx.Workbook(self.stream, {'in_memory': True}) if format == 'xlsx' else None
+        self.document = docx.Document() if format == 'docx' else None
+        self.richtext = rtf.Document() if format == 'rtf' else None
 
         # Getting up-to-date text field info.
 
@@ -1371,11 +1376,13 @@ class Save_Context(object):
             sanitized_name = sanitize_worksheet_name(
                 perspective_name, max_width = 31 - len(id_str))
 
-            self.worksheet = (
-                self.workbook.add_worksheet(
-                    sanitize_worksheet_name(sanitized_name + id_str)))
-
-            self.row = 0
+            if self.workbook:
+                self.worksheet = (
+                    self.workbook.add_worksheet(
+                        sanitize_worksheet_name(sanitized_name + id_str)))
+                self.row = 0
+            elif self.document:
+                self.table = self.document.add_table(rows=1, cols=0, style="Table Grid")
 
         # Listing dictionary and perspective names, if required.
 
@@ -1578,7 +1585,7 @@ class Save_Context(object):
 
         # Making more space.
 
-        if worksheet_flag:
+        if worksheet_flag and self.workbook:
 
             self.worksheet.set_column(
                 0, len(self.fields) - 1, 13)
@@ -1593,11 +1600,12 @@ class Save_Context(object):
         column = 0
 
         for field in self.fields:
-
-            self.worksheet.write(self.row, column,
-                field.field.get_translation(self.locale_id, self.session))
-
-            column += 1
+            column_name = field.field.get_translation(self.locale_id, self.session)
+            if self.workbook:
+                self.worksheet.write(self.row, column, column_name)
+                column += 1
+            elif self.document:
+                self.table.add_column(13).cells[0].text = column_name
 
         if self.etymology_field:
 
@@ -2267,7 +2275,7 @@ class Save_Context(object):
         Save data of a lexical entry of the current perspective.
         """
 
-        rows_to_write = [[] for field in self.fields]
+        rows_to_write = [[] for _ in self.fields]
 
         entities = (
             self.session.query(Entity).filter(
@@ -2318,7 +2326,7 @@ class Save_Context(object):
                     else:
 
                         etymology_info = (
-                                
+
                             self.get_etymology_info(
                                 entity.content, published))
 
@@ -2363,7 +2371,7 @@ class Save_Context(object):
                     # Sound entity, getting sound file link, wrapping it in a list to show it's a link.
 
                     sound_link = (
-                            
+
                         self.get_sound_link(
                             entity.content,
                             entity.created_at))
@@ -2376,7 +2384,7 @@ class Save_Context(object):
                     # Markup entity, getting markup file link, wrapping it in a list to show it's a link.
 
                     markup_link = (
-                            
+
                         self.get_markup_link(
                             entity.content,
                             entity.created_at))
@@ -2425,46 +2433,67 @@ class Save_Context(object):
                 pprint.pformat(
                     rows_to_write, width = 192))
 
-        # Writing out lexical entry data, if we have any.
+        def xlsx():
+            # Writing out lexical entry data, if we have any.
+            if any(rows_to_write):
 
-        if any(rows_to_write):
+                for cell_list in (
+                    itertools.zip_longest(
+                        *rows_to_write,
+                        fillvalue = '')):
 
-            for cell_list in (
-                itertools.zip_longest(
-                    *rows_to_write,
-                    fillvalue = '')):
+                    for index, cell in enumerate(cell_list):
 
-                for index, cell in enumerate(cell_list):
+                        # Tuple means with format.
 
-                    # Tuple means with format.
+                        if isinstance(cell, tuple):
 
-                    if isinstance(cell, tuple):
+                            value, cell_format = cell
 
-                        value, cell_format = cell
+                            if isinstance(value, list):
 
-                        if isinstance(value, list):
+                                self.worksheet.write_url(
+                                    self.row, index, './' + value[0], cell_format, value[0])
+
+                            else:
+
+                                self.worksheet.write(
+                                    self.row, index, value, cell_format)
+
+                        # List means a local link.
+
+                        elif isinstance(cell, list):
 
                             self.worksheet.write_url(
-                                self.row, index, './' + value[0], cell_format, value[0])
+                                self.row, index, './' + cell[0], None, cell[0])
 
                         else:
 
                             self.worksheet.write(
-                                self.row, index, value, cell_format)
+                                self.row, index, cell)
 
-                    # List means a local link.
+                    self.row += 1
 
-                    elif isinstance(cell, list):
+        def docx():
+            # Writing out lexical entry data, if we have any.
+            if any(rows_to_write):
 
-                        self.worksheet.write_url(
-                            self.row, index, './' + cell[0], None, cell[0])
+                for cell_list in (
+                    itertools.zip_longest(
+                        *rows_to_write,
+                        fillvalue = '')):
 
-                    else:
+                    row_cells = self.table.add_row().cells
 
-                        self.worksheet.write(
-                            self.row, index, cell)
+                    for index, value in enumerate(cell_list):
 
-                self.row += 1
+                        if not isinstance(value, str):
+                            continue
+
+                        row_cells[index] = value
+
+        def rtf():
+            pass
 
     def get_zip_info(
         self,
@@ -2599,8 +2628,126 @@ class Save_Context(object):
 
         return zip_info.filename
 
+def write_xlsx(
+    context,
+    lex_dict,
+    published,
+    __debug_flag__ = False):
 
-def compile_workbook(
+    for (_, lex) in sorted(lex_dict.items()):
+        context.save_lexical_entry.xlsx(
+            lex,
+            published,
+            __debug_flag__ = __debug_flag__)
+
+    # Writing out additional perspective info, if we have any.
+
+    if context.perspective_fail_set:
+
+        context.row += 1
+
+        context.worksheet.write(
+            context.row, 0,
+            'Perspective{} without appropriate transcription / translation fields:'.format(
+                '' if len(context.perspective_fail_set) == 1 else 's'))
+
+        context.row += 1
+
+        for _, name_str in sorted(context.perspective_fail_set):
+
+            context.worksheet.write(
+                context.row, 0, name_str)
+
+            context.row += 1
+
+    # The same for missing sound fields.
+
+    if context.perspective_snd_fail_set:
+
+        context.row += 1
+
+        context.worksheet.write(
+            context.row, 0,
+            'Perspective{} without appropriate sound field:'.format(
+                '' if len(context.perspective_snd_fail_set) == 1 else 's'))
+
+        context.row += 1
+
+        for _, name_str in sorted(context.perspective_snd_fail_set):
+
+            context.worksheet.write(
+                context.row, 0, name_str)
+
+            context.row += 1
+
+    # And for missing markup fields.
+
+    if context.perspective_mrkp_fail_set:
+
+        context.row += 1
+
+        context.worksheet.write(
+            context.row, 0,
+            'Perspective{} without appropriate markup field:'.format(
+                '' if len(context.perspective_mrkp_fail_set) == 1 else 's'))
+
+        context.row += 1
+
+        for _, name_str in sorted(context.perspective_mrkp_fail_set):
+
+            context.worksheet.write(
+                context.row, 0, name_str)
+
+            context.row += 1
+
+    # And for missing joint sound / markup field pairs.
+
+    if context.perspective_snd_mrkp_fail_set:
+
+        context.row += 1
+
+        context.worksheet.write(
+            context.row, 0,
+            'Perspective{} without appropriate sound and markup fields:'.format(
+                '' if len(context.perspective_snd_mrkp_fail_set) == 1 else 's'))
+
+        context.row += 1
+
+        for _, name_str in sorted(context.perspective_snd_mrkp_fail_set):
+
+            context.worksheet.write(
+                context.row, 0, name_str)
+
+            context.row += 1
+
+
+def write_docx(
+    context,
+    lex_dict,
+    published,
+    __debug_flag__ = False):
+
+    for (_, lex) in sorted(lex_dict.items()):
+        context.save_lexical_entry.docx(
+            lex,
+            published,
+            __debug_flag__ = __debug_flag__)
+
+
+def write_rtf(
+    context,
+    lex_dict,
+    published,
+    __debug_flag__ = False):
+
+    for (_, lex) in sorted(lex_dict.items()):
+        context.save_lexical_entry.rtf(
+            lex,
+            published,
+            __debug_flag__ = __debug_flag__)
+
+
+def compile_document(
     context,
     client_id,
     object_id,
@@ -2610,7 +2757,7 @@ def compile_workbook(
     storage = None,
     __debug_flag__ = False):
     """
-    Compiles analysis results into an Excel workbook.
+    Compiles analysis results into xlsx/docx/rtf document.
     """
 
     dictionary = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id,
@@ -2628,6 +2775,7 @@ def compile_workbook(
             perspective,
             __debug_flag__ = __debug_flag__)
 
+        context.ready_table()
         lexical_entries = session.query(LexicalEntry, Entity).join(Entity).join(PublishingEntity) \
             .filter(LexicalEntry.parent_client_id == perspective.client_id,
                     LexicalEntry.parent_object_id == perspective.object_id,
@@ -2646,93 +2794,12 @@ def compile_workbook(
                 lex_by_order[entity.content] = lex
         lex_dict = lex_by_order if lex_by_order else lex_by_id
 
-        for (_, lex) in sorted(lex_dict.items()):
-            context.save_lexical_entry(
-                lex,
-                published,
-                __debug_flag__ = __debug_flag__)
-
-        # Writing out additional perspective info, if we have any.
-
-        if context.perspective_fail_set:
-
-            context.row += 1
-
-            context.worksheet.write(
-                context.row, 0,
-                'Perspective{} without appropriate transcription / translation fields:'.format(
-                    '' if len(context.perspective_fail_set) == 1 else 's'))
-
-            context.row += 1
-
-            for _, name_str in sorted(context.perspective_fail_set):
-
-                context.worksheet.write(
-                    context.row, 0, name_str)
-
-                context.row += 1
-
-        # The same for missing sound fields.
-
-        if context.perspective_snd_fail_set:
-
-            context.row += 1
-
-            context.worksheet.write(
-                context.row, 0,
-                'Perspective{} without appropriate sound field:'.format(
-                    '' if len(context.perspective_snd_fail_set) == 1 else 's'))
-
-            context.row += 1
-
-            for _, name_str in sorted(context.perspective_snd_fail_set):
-
-                context.worksheet.write(
-                    context.row, 0, name_str)
-
-                context.row += 1
-
-        # And for missing markup fields.
-
-        if context.perspective_mrkp_fail_set:
-
-            context.row += 1
-
-            context.worksheet.write(
-                context.row, 0,
-                'Perspective{} without appropriate markup field:'.format(
-                    '' if len(context.perspective_mrkp_fail_set) == 1 else 's'))
-
-            context.row += 1
-
-            for _, name_str in sorted(context.perspective_mrkp_fail_set):
-
-                context.worksheet.write(
-                    context.row, 0, name_str)
-
-                context.row += 1
-
-        # And for missing joint sound / markup field pairs.
-
-        if context.perspective_snd_mrkp_fail_set:
-
-            context.row += 1
-
-            context.worksheet.write(
-                context.row, 0,
-                'Perspective{} without appropriate sound and markup fields:'.format(
-                    '' if len(context.perspective_snd_mrkp_fail_set) == 1 else 's'))
-
-            context.row += 1
-
-            for _, name_str in sorted(context.perspective_snd_mrkp_fail_set):
-
-                context.worksheet.write(
-                    context.row, 0, name_str)
-
-                context.row += 1
-
-    context.workbook.close()
+        if context.workbook:
+            write_xlsx(context, lex_dict, published)
+        elif context.document:
+            write_docx(context, lex_dict, published)
+        elif context.richtext:
+            write_rtf(context, lex_dict, published)
 
 
 # @profile()
@@ -2748,6 +2815,7 @@ def save_dictionary(
     published,
     sound_flag,
     markup_flag,
+    format = 'xlsx',
     __debug_flag__ = False
 ):  # :(
 
@@ -2776,6 +2844,7 @@ def save_dictionary(
                 sound_flag,
                 markup_flag,
                 storage,
+                format,
                 __debug_flag__))
 
         if sound_flag or markup_flag:
@@ -2793,7 +2862,7 @@ def save_dictionary(
 
             save_context.zip_hash_dict = {}
 
-        compile_workbook(
+        compile_document(
             save_context,
             client_id,
             object_id,
@@ -2802,6 +2871,11 @@ def save_dictionary(
             published,
             storage,
             __debug_flag__ = __debug_flag__)
+
+        if save_context.workbook:
+            save_context.workbook.close()
+        elif save_context.document:
+            save_context.document.save(save_context.stream)
 
         # Name(s) of the resulting file(s) includes dictionary name, perspective name and current date.
 
@@ -2813,7 +2887,7 @@ def save_dictionary(
             current_datetime.month,
             current_datetime.day)
 
-        table_filename = sanitize_filename(result_filename + '.xlsx')
+        table_filename = sanitize_filename(f"{result_filename}.{format}")
 
         if __debug_flag__:
 
@@ -2979,7 +3053,7 @@ def save_dictionary(
                     current_datetime.month,
                     current_datetime.day)
 
-                table_filename = sanitize_filename(result_filename + '.xlsx')
+                table_filename = sanitize_filename(f"{result_filename}.{format}")
                 storage_path = path.join(storage_dir, table_filename)
 
                 with open(storage_path, 'wb+') as workbook_file:
