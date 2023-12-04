@@ -215,7 +215,7 @@ def join_sentences(columns_dict):
                     wrd -= next_wrd
                     break
                 else:
-                    sentence[f_id] += f' // {clean_text(note, non_base)}'
+                    sentence[f_id] += f' \u2260 {clean_text(note, non_base)}'
 
             # Write into the result dictionary
             result[f_id].append(f'{sentence[f_id]} <{wrd//coeff(non_base)}>')
