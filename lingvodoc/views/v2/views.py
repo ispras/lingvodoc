@@ -1,15 +1,49 @@
+
+# Standard library imports.
+
+import datetime
+import json
+import logging
+import multiprocessing
+import os
+import sys
+import time
+import urllib
+from uuid import uuid4
+
+# Library imports.
+
 from passlib.hash import bcrypt
-from lingvodoc.views.v2.utils import (
-    get_user_by_client_id,
-    view_field_from_object
-)
-from lingvodoc.utils.verification import check_client_id
+
+from sqlalchemy import (
+    and_,
+    or_,
+    tuple_)
+
 import sqlalchemy.exc
 from sqlalchemy.exc import IntegrityError
+
 import psycopg2.errors
 
-from pyramid.response import Response
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPInternalServerError,
+    HTTPOk)
+
+from pyramid.renderers import render_to_response
+from pyramid.request import Request
+from pyramid.security import authenticated_userid
 from pyramid.view import view_config
+
+import requests
+
+import transaction
+
+from webob.multidict import MultiDict, NoVars
+
+# Project imports.
+
 from lingvodoc.models import (
     BaseGroup,
     Client,
@@ -26,59 +60,36 @@ from lingvodoc.models import (
     LexicalEntry,
     Locale,
     ObjectTOC,
-    Organization,
     Passhash,
     TranslationAtom,
     TranslationGist,
-    User,
-    UserBlobs)
+    User)
 
-from sqlalchemy import (
-    func,
-    or_,
-    and_,
-    tuple_,
-    not_
-)
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPFound,
-    HTTPInternalServerError,
-    HTTPNotFound,
-    HTTPOk
-)
-from pyramid.security import authenticated_userid, forget
-# from pyramid.chameleon_zpt import render_template_to_response
-from pyramid.renderers import render_to_response
 from lingvodoc.exceptions import CommonException
 
-import sys
-import multiprocessing
+from lingvodoc.schema.gql_holders import (
+    delete_message,
+    del_object)
 
-import logging
-import urllib
-import json
-import requests
-from pyramid.request import Request
-import time
-from webob.multidict import MultiDict, NoVars
+from sqlalchemy.orm.attributes import flag_modified
+
 from lingvodoc.schema.query import schema, Context
 
-from copy import deepcopy
+from lingvodoc.utils.creation import translationgist_contents
+from lingvodoc.utils.proxy import ProxyPass
+from lingvodoc.utils.verification import check_client_id
+
+from lingvodoc.views.v2.utils import (
+    get_user_by_client_id,
+    view_field_from_object)
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 if sys.platform == 'darwin':
     multiprocessing.set_start_method('spawn')
-import os
-from lingvodoc.utils.creation import translationgist_contents, add_user_to_group
-from hashlib import sha224
-from base64 import urlsafe_b64decode
-from sqlalchemy.orm.attributes import flag_modified
-from lingvodoc.utils.proxy import ProxyPass
-from lingvodoc.utils.elan_functions import eaf_wordlist
-import datetime
-
-log = logging.getLogger(__name__)
 
 
 #
@@ -280,22 +291,6 @@ def add_role(name, subject, action, admin, perspective_default=False, dictionary
     DBSession.flush()
     return base_group
 
-
-from lingvodoc.utils.creation import update_metadata
-from lingvodoc.models import PublishingEntity
-from lingvodoc.models import UserRequest as dbUserRequest
-from lingvodoc.utils.search import translation_gist_search
-import transaction
-
-import random
-import string
-from lingvodoc.utils.search import get_id_to_field_dict
-import itertools
-from time import ctime
-import operator
-from lingvodoc.schema.gql_holders import delete_message, del_object
-from lingvodoc.utils.creation import update_metadata
-from uuid import uuid4
 
 @view_config(route_name='testing', renderer='json', permission='admin')
 def testing(request):
@@ -802,8 +797,6 @@ def new_interface(request):
 
 @view_config(route_name='all_statuses', renderer='json', request_method='GET')
 def all_statuses(request):
-    from pyramid.request import Request
-    import json
 
     response = list()
     for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
@@ -1005,8 +998,6 @@ def corpora_fields(request):
 
 @view_config(route_name='all_data_types', renderer='json', request_method='GET')
 def all_data_types(request):
-    from pyramid.request import Request
-    import json
 
     response = list()
     for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link', 'Grouping Tag']:
@@ -1349,7 +1340,7 @@ def graphql(request):
 
                 error_list = []
 
-                for error in result.erros:
+                for error in result.errors:
 
                     # If it's a proxy error, we return it directly apparently?
 

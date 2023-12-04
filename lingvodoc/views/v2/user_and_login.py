@@ -1,4 +1,45 @@
+
 __author__ = 'alexander'
+
+# Standard library imports.
+
+import datetime
+from hashlib import md5
+import json
+import logging
+import traceback
+import pprint
+
+# Library imports.
+
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPFound,
+    HTTPNotFound,
+    HTTPInternalServerError,
+    HTTPOk,
+    HTTPUnauthorized)
+
+from pyramid.renderers import render_to_response
+from pyramid.request import Request
+from pyramid.response import Response
+
+from pyramid.security import (
+    authenticated_userid,
+    forget,
+    remember)
+
+from pyramid.view import view_config
+
+from pyramid_mailer.message import Message
+
+import requests
+
+from sqlalchemy import or_
+import sqlalchemy.exc
+
+# Project imports.
 
 import lingvodoc.cache.caching as caching
 
@@ -15,42 +56,10 @@ from lingvodoc.models import (
 from lingvodoc.views.v2.utils import (
     get_user_by_client_id
 )
-
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPFound,
-    HTTPNotFound,
-    HTTPInternalServerError,
-    HTTPOk,
-    HTTPUnauthorized,
-    HTTPServiceUnavailable
-)
-from pyramid.renderers import render_to_response
-from pyramid.response import Response
-from pyramid.security import (
-    authenticated_userid,
-    forget,
-    remember
-)
-from pyramid.view import view_config
-
-from sqlalchemy import (
-    or_
-)
-import sqlalchemy.exc
-import logging
-import json
 from lingvodoc.utils.creation import add_user_to_group
-from pyramid_mailer.message import Message
-from pyramid.request import Request
-import datetime
-from time import sleep
-from hashlib import md5
-import requests
-import traceback
-import pprint
 
+
+# Setting up logging.
 log = logging.getLogger(__name__)
 
 
@@ -288,10 +297,14 @@ def login_post(request):  # tested
     log.debug(login)
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.check_password(password):
+
         client = Client(user_id=user.id)
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
+
+        caching.CACHE.set(f'user_id:{client.id}', user.id)
+
         headers = remember(request, userid=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
@@ -324,6 +337,9 @@ def signin(request):
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
+
+        caching.CACHE.set(f'user_id:{client.id}', user.id)
+
         headers = remember(request, userid=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
@@ -424,10 +440,14 @@ def new_client_server(request):
     if old_client:
         user = old_client.user
         if user:
+
             client = Client(user_id=user.id, is_browser_client=True)
             user.clients.append(client)
             DBSession.add(client)
             DBSession.flush()
+
+            caching.CACHE.set(f'user_id:{client.id}', user.id)
+
             headers = remember(request, userid=client.id, max_age=315360000)
             response = Response()
             response.headers = headers
@@ -482,27 +502,22 @@ def new_client(request):
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
-# @view_config(route_name='test', renderer='json', request_method='GET')
-# def test(request):
-#     client = Client(user_id=1, counter = 2147483647123)
-#     DBSession.add(client)
-#     DBSession.flush()
-#     return {}
-
-
 @view_config(route_name='cheatlogin', request_method='POST', renderer='json')
 def login_cheat(request):  # TODO: test
-    next = request.params.get('next') or request.route_url('dashboard')
     login = request.json_body.get('login', '')
     passwordhash = request.json_body.get('passwordhash', '')
     log.debug("Logging in with cheat method:" + login)
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.password.hash == passwordhash:
         log.debug("Login successful")
+
         client = Client(user_id=user.id)
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
+
+        caching.CACHE.set(f'user_id:{client.id}', user.id)
+
         headers = remember(request, userid=client.id)
         response = Response()
         response.headers = headers

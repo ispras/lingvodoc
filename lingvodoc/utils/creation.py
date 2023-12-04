@@ -1,26 +1,36 @@
+
+# Standard library imports.
+
 import base64
 import hashlib
+import logging
 import os
-import shutil
-import tempfile
-import time
 import random
-import string
-import urllib
-import requests
 import re
+import requests
+import shutil
+import string
+import time
+import urllib
+
+# Library imports.
+
+from pathvalidate import sanitize_filename
+
+from sqlalchemy import (
+    and_,
+    create_engine,
+)
+
+from sqlalchemy.orm.attributes import flag_modified
 
 import transaction
-from pathvalidate import sanitize_filename
-from sqlalchemy import (
-    and_, create_engine,
-)
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import or_
 
-from lingvodoc.cache.caching import TaskStatus
-from lingvodoc.queue.celery import celery
-from lingvodoc.utils.elan_functions import eaf_wordlist
+# Project imports.
+
+import lingvodoc.cache.caching as caching
+from lingvodoc.cache.caching import initialize_cache, TaskStatus
+
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -30,7 +40,7 @@ from lingvodoc.models import (
     User,
     Group,
     BaseGroup,
-    DictionaryPerspective,
+    DictionaryPerspective as Perspective,
     Language,
     DictionaryPerspectiveToField,
     LexicalEntry,
@@ -38,18 +48,22 @@ from lingvodoc.models import (
     Field,
     PublishingEntity,
     Organization as dbOrganization, Parser, ParserResult,
-    get_client_counter
-)
+    get_client_counter)
+
+from lingvodoc.queue.celery import celery
+
 from lingvodoc.schema.gql_holders import ResponseError
-from lingvodoc.utils.search import translation_gist_search
-from lingvodoc.views.v2.utils import storage_file
-
-from lingvodoc.cache.caching import CACHE
-
-import logging
-log = logging.getLogger(__name__)
 
 import lingvodoc.utils.doc_parser as ParseMethods
+from lingvodoc.utils.elan_functions import eaf_wordlist
+from lingvodoc.utils.search import translation_gist_search
+
+from lingvodoc.views.v2.utils import storage_file
+
+
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 
 def add_user_to_group(user, group):
     if user not in group.users:
@@ -120,7 +134,7 @@ def create_perspective(id = (None, None),
     resp = translation_gist_search("WiP")
     state_translation_gist_object_id, state_translation_gist_client_id = resp.object_id, resp.client_id
 
-    dbperspective = DictionaryPerspective(client_id=client_id,
+    dbperspective = Perspective(client_id=client_id,
                                   object_id=object_id,
                                   state_translation_gist_object_id=state_translation_gist_object_id,
                                   state_translation_gist_client_id=state_translation_gist_client_id,
@@ -214,7 +228,7 @@ def create_dictionary_persp_to_field(id=None,
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
     parent_client_id, parent_object_id = parent_id
-    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    parent = DBSession.query(Perspective).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         raise ResponseError(message="No such perspective in the system")
 
@@ -255,43 +269,49 @@ def create_dictionary_persp_to_field(id=None,
     DBSession.flush()
     return field_object
 
-def create_dblanguage(id=None,
-                      parent_id=None,
-                      translation_gist_id=None,
-                      additional_metadata=None):
-    parent = None
-    parent_client_id, parent_object_id = parent_id if parent_id else (None, None)
-    client_id, object_id = id
-    translation_gist_client_id, translation_gist_object_id = translation_gist_id if translation_gist_id else (None, None)
+def create_dblanguage(
+    client_id = None,
+    parent_id = None,
+    translation_gist_id = None,
+    additional_metadata = None):
 
-    if parent_client_id and parent_object_id:
-        parent = DBSession.query(Language).\
-            filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            raise ResponseError(message="No such language in the system")
+    if (parent_id is not None and
+        not Language.exists(parent_id, deleted = False)):
 
-    dblanguage = Language(
-        client_id=client_id,
-        object_id=object_id,
-        translation_gist_client_id=translation_gist_client_id,
-        translation_gist_object_id=translation_gist_object_id,
-        additional_metadata=additional_metadata
-    )
+        raise ResponseError(f'No language {parent_id} in the system.')
+
+    if additional_metadata is None:
+
+        additional_metadata = {}
+
+    dblanguage = (
+
+        Language(
+            client_id = client_id,
+            parent_id = parent_id,
+            translation_gist_id = translation_gist_id,
+            additional_metadata = additional_metadata))
+
     DBSession.add(dblanguage)
 
-    if parent:
-        dblanguage.parent = parent
+    prev_sibling = (
 
-    prev_sibling = DBSession.query(Language).filter(Language.parent_client_id == parent_client_id,
-                                                        Language.parent_object_id == parent_object_id,
-                                                        Language.marked_for_deletion == False,
-                                                    or_(Language.client_id != dblanguage.client_id,
-                                                        Language.object_id != dblanguage.object_id)).order_by(Language.parent_client_id,
-                                                                                        Language.parent_object_id,
-                                                                                        Language.additional_metadata[
-                                                                                            'younger_siblings'].desc()).first()
-    dblanguage.additional_metadata = dict()
-    dblanguage.additional_metadata['younger_siblings'] = list()
+        DBSession
+
+            .query(Language)
+
+            .filter(
+                Language.parent_id == parent_id,
+                Language.id != dblanguage.id,
+                Language.marked_for_deletion == False)
+
+            .order_by(
+                Language.parent_id,
+                Language.additional_metadata['younger_siblings'].desc())
+
+            .first())
+
+    dblanguage.additional_metadata['younger_siblings'] = []
     if prev_sibling and prev_sibling.additional_metadata:
         dblanguage.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
         dblanguage.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
@@ -310,13 +330,13 @@ def create_dblanguage(id=None,
     basegroups = []
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
-    if not object_id:
-        groups = []
-        for base in basegroups:
-            group = Group(subject_client_id=dblanguage.client_id, subject_object_id=dblanguage.object_id, parent=base)
-            groups += [group]
-        for group in groups:
-            add_user_to_group(user, group)
+
+    groups = []
+    for base in basegroups:
+        group = Group(subject_client_id=dblanguage.client_id, subject_object_id=dblanguage.object_id, parent=base)
+        groups += [group]
+    for group in groups:
+        add_user_to_group(user, group)
 
     DBSession.flush()
     return dblanguage
@@ -336,13 +356,8 @@ def create_entity(id=None,
 
     if not parent_id:
         raise ResponseError(message="Bad parent ids")
-    parent_client_id, parent_object_id = parent_id
-    # parent = DBSession.query(LexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    parent = CACHE.get(objects =
-        {
-            LexicalEntry : (parent_id, )
-        },
-    DBSession=DBSession)
+
+    parent = LexicalEntry.get(parent_id)
     if not parent:
         raise ResponseError(message="No such lexical entry in the system")
 
@@ -361,14 +376,7 @@ def create_entity(id=None,
     data_type = tr_atom.content.lower()
 
     if self_id:
-        # self_client_id, self_object_id = self_id
-        # upper_level = DBSession.query(Entity).filter_by(client_id=self_client_id,
-        #                                                   object_id=self_object_id).first()
-        upper_level = CACHE.get(objects =
-            {
-                Entity : (self_id, )
-            },
-        DBSession=DBSession)
+        upper_level = Entity.get(self_id)
         if not upper_level:
             raise ResponseError(message="No such upper level in the system")
 
@@ -445,7 +453,7 @@ def create_entity(id=None,
         dbentity.content = content
 
     if save_object:
-        CACHE.set(objects = [dbentity, ], DBSession=DBSession)
+        caching.CACHE.set(objects = [dbentity, ], DBSession=DBSession)
         # DBSession.add(dbentity)
         # DBSession.flush()
     return dbentity
@@ -457,13 +465,7 @@ def create_lexicalentry(id, perspective_id, save_object=False):
         raise ResponseError(message="Bad perspective ids")
     perspective_client_id, perspective_object_id = perspective_id
 
-    # perspective = DBSession.query(DictionaryPerspective). \
-    #     filter_by(client_id=perspective_client_id, object_id=perspective_object_id).first()
-    perspective = CACHE.get(objects =
-        {
-            DictionaryPerspective : (perspective_id, )
-        },
-    DBSession=DBSession)
+    perspective = Perspective.get(perspective_id)
     if not perspective:
         raise ResponseError(message="No such perspective in the system")
 
@@ -472,7 +474,7 @@ def create_lexicalentry(id, perspective_id, save_object=False):
     if save_object:
         # DBSession.add(dblexentry)
         # DBSession.flush()
-        CACHE.set(objects=[dblexentry,], DBSession=DBSession)
+        caching.CACHE.set(objects=[dblexentry,], DBSession=DBSession)
     return dblexentry
 
 @celery.task
@@ -489,19 +491,11 @@ def async_create_parser_result_method(id, parser_id, entity_id, apertium_path, s
                                task_key, cache_kwargs, sqlalchemy_url, dedoc_url,
                                arguments, save_object):
 
-    from lingvodoc.cache.caching import initialize_cache
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     initialize_cache(cache_kwargs)
-    global CACHE
-    from lingvodoc.cache.caching import CACHE
     task_status = TaskStatus.get_from_cache(task_key)
-    # entity = DBSession.query(Entity).filter_by(client_id=entity_id[0], object_id=entity_id[1]).first()
-    entity = CACHE.get(objects =
-        {
-            Entity : (entity_id, )
-        },
-    DBSession=DBSession)
+    entity = Entity.get(entity_id)
     content_filename = entity.content.split('/')[-1]
     task_status.set(1, 5, "Parsing of file " + content_filename + " started")
 
@@ -532,15 +526,8 @@ def create_parser_result(
     client_id, object_id = id
     parser_client_id, parser_object_id = parser_id
     entity_client_id, entity_object_id = entity_id
-    # entity = DBSession.query(Entity). \
-    #     filter_by(client_id=entity_client_id, object_id=entity_object_id).first()
-    entity = CACHE.get(objects =
-        {
-            Entity : (entity_id, )
-        },
-    DBSession=DBSession)
-    parser = DBSession.query(Parser). \
-        filter_by(client_id=parser_client_id, object_id=parser_object_id).first()
+    entity = Entity.get(entity_id)
+    parser = Parser.get(parser_id)
     if not parser:
         raise ResponseError(message="No such parser in the system")
 
@@ -856,7 +843,6 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id):
 
 
 def create_group_entity(request, client, user, obj_id):  # tested
-        response = dict()
         req = request
         tags = list()
         if 'tag' in req:
@@ -868,7 +854,7 @@ def create_group_entity(request, client, user, obj_id):  # tested
         #
         # if not field:
         #     return {'error': str("No such field in the system")}
-        parents = CACHE.get(objects =
+        parents = caching.CACHE.get(objects =
             {
                 LexicalEntry : ((par['client_id'], par['object_id']) for par in req['connections'])
             },
@@ -914,7 +900,7 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     # if user in group.users:
                     tag_entity.publishingentity.accepted = True
                     # DBSession.add(tag_entity)
-                    CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
+                    caching.CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
 
 
 def create_field(translation_atoms, client_id=66):

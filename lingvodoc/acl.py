@@ -1,26 +1,35 @@
-from pyramid.security import Allow, Deny, Everyone
 
-from .models import (
-    DBSession,
-    User,
-    Client,
-    Group,
-    BaseGroup,
-    acl_by_groups,
-    acl_by_groups_single_id,
-    user_to_group_association,
-    user_to_organization_association,
-    organization_to_group_association,
-    DictionaryPerspective
-    )
+# Standard library imports.
+
+import logging
+
+# Library imports.
 
 from pyramid.security import forget
 
-from sqlalchemy import and_, or_
+from sqlalchemy import (
+    literal,
+    or_)
+
 from sqlalchemy.orm import joinedload
 
-import logging
-from time import time
+# Project imports.
+
+from lingvodoc.models import (
+    acl_by_groups,
+    acl_by_groups_single_id,
+    BaseGroup,
+    Client,
+    DBSession,
+    DictionaryPerspective,
+    Group,
+    organization_to_group_association,
+    User,
+    user_to_group_association,
+    user_to_organization_association)
+
+
+# Setting up logging.
 log = logging.getLogger(__name__)
 
 
@@ -214,15 +223,13 @@ def check_direct(client_id, request, action, subject, subject_id):
     # Subject is specified by a client_id/object_id pair.
 
     if isinstance(subject_id, (list, tuple)):
-        subject_client_id, subject_object_id = subject_id[:2]
 
         # Special case for 'approve_entities' perspective subject, permission depends on perspective's
         # state, see function acls_by_groups() in models.py.
 
         if subject == 'approve_entities':
 
-            perspective = DBSession.query(DictionaryPerspective).filter_by(
-                client_id=subject_client_id, object_id=subject_object_id).first()
+            perspective = DictionaryPerspective.get(subject_id)
 
             if (perspective and
                 (perspective.state == 'Published' or perspective.state == 'Limited access') and
@@ -236,43 +243,67 @@ def check_direct(client_id, request, action, subject, subject_id):
             return False
 
         # Ok, checking as usual, first through by-user permissions...
+        #
+        # NOTE: using exists() as tests have shown it's slightly faster than limit-count-based method, see
+        # gql_entity.py, CreateEntity mutation.
 
-        user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
-            BaseGroup.subject == subject,
-            BaseGroup.action == action,
-            Group.base_group_id == BaseGroup.id,
-            or_(Group.subject_override, and_(
-                Group.subject_client_id == subject_client_id,
-                Group.subject_object_id == subject_object_id)),
-            user_to_group_association.c.user_id == user.id,
-            user_to_group_association.c.group_id == Group.id)).limit(1).count()
+        user_query = (
 
-        if user_count > 0:
+            DBSession
+
+                .query(literal(1))
+
+                .filter(
+                    BaseGroup.subject == subject,
+                    BaseGroup.action == action,
+                    Group.base_group_id == BaseGroup.id,
+
+                    or_(Group.subject_override,
+                        Group.subject_id == subject_id),
+
+                    user_to_group_association.c.user_id == user.id,
+                    user_to_group_association.c.group_id == Group.id))
+
+        user_exists = (
+
+            DBSession
+                .query(user_query.exists())
+                .scalar())
+
+        if user_exists:
             return True
 
         # ...and then through by-organization permissions.
 
-        organization_count = DBSession.query(BaseGroup, Group,
-            user_to_organization_association, organization_to_group_association).filter(and_(
-                BaseGroup.subject == subject,
-                BaseGroup.action == action,
-                Group.base_group_id == BaseGroup.id,
-                or_(Group.subject_override, and_(
-                    Group.subject_client_id == subject_client_id,
-                    Group.subject_object_id == subject_object_id)),
-                user_to_organization_association.c.user_id == user.id,
-                organization_to_group_association.c.organization_id ==
-                    user_to_organization_association.c.organization_id,
-                organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+        organization_query = (
 
-        if organization_count > 0:
-            return True
+            DBSession
 
-        return False
+                .query(literal(1))
+
+                .filter(
+                    BaseGroup.subject == subject,
+                    BaseGroup.action == action,
+                    Group.base_group_id == BaseGroup.id,
+
+                    or_(Group.subject_override,
+                        Group.subject_id == subject_id),
+
+                    user_to_organization_association.c.user_id == user.id,
+                    organization_to_group_association.c.organization_id ==
+                        user_to_organization_association.c.organization_id,
+                    organization_to_group_association.c.group_id == Group.id))
+
+        return (
+
+            DBSession
+                .query(organization_query.exists())
+                .scalar())
 
     # Subject is specified by a single object_id.
 
     elif isinstance(subject_id, int):
+
         subject_object_id = subject_id
 
         # If the user is deactivated, we won't allow any actions except for viewing.
@@ -282,60 +313,91 @@ def check_direct(client_id, request, action, subject, subject_id):
 
         # Checking as usual, first through by-user permissions...
 
-        user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
-            BaseGroup.subject == subject,
-            BaseGroup.action == action,
-            Group.base_group_id == BaseGroup.id,
-            or_(Group.subject_override,
-                Group.subject_object_id == subject_object_id),
-            user_to_group_association.c.user_id == user.id,
-            user_to_group_association.c.group_id == Group.id)).limit(1).count()
+        user_query = (
 
-        if user_count > 0:
+            DBSession
+
+                .query(literal(1))
+
+                .filter(
+                    BaseGroup.subject == subject,
+                    BaseGroup.action == action,
+                    Group.base_group_id == BaseGroup.id,
+
+                    or_(Group.subject_override,
+                        Group.subject_object_id == subject_object_id),
+
+                    user_to_group_association.c.user_id == user.id,
+                    user_to_group_association.c.group_id == Group.id))
+
+        user_exists = (
+
+            DBSession
+                .query(user_query.exists())
+                .scalar())
+
+        if user_exists:
             return True
 
         # ...and then through by-organization permissions.
 
-        organization_count = DBSession.query(BaseGroup, Group,
-            user_to_organization_association, organization_to_group_association).filter(and_(
-                BaseGroup.subject == subject,
-                BaseGroup.action == action,
-                Group.base_group_id == BaseGroup.id,
-                or_(Group.subject_override,
-                    Group.subject_object_id == subject_object_id),
-                user_to_organization_association.c.user_id == user.id,
-                organization_to_group_association.c.organization_id ==
-                    user_to_organization_association.c.organization_id,
-                organization_to_group_association.c.group_id == Group.id)).limit(1).count()
+        organization_query = (
 
-        if organization_count > 0:
-            return True
+            DBSession
 
-        return False
+                .query(literal(1))
+
+                .filter(
+                    BaseGroup.subject == subject,
+                    BaseGroup.action == action,
+                    Group.base_group_id == BaseGroup.id,
+
+                    or_(Group.subject_override,
+                        Group.subject_object_id == subject_object_id),
+
+                    user_to_organization_association.c.user_id == user.id,
+                    organization_to_group_association.c.organization_id ==
+                        user_to_organization_association.c.organization_id,
+                    organization_to_group_association.c.group_id == Group.id))
+
+        return (
+
+            DBSession
+                .query(organization_query.exists())
+                .scalar())
 
     # There could be subjects with no id, because they don't exist yet.
     # In that case we only need to check if user is authorized to create this type of objects.
 
     else:
+
         # If the user is deactivated, we won't allow any actions except for viewing.
 
         if not user.is_active and action != 'view':
             return False
 
-        user_count = DBSession.query(BaseGroup, Group, user_to_group_association).filter(and_(
-            BaseGroup.subject == subject,
-            BaseGroup.action == action,
-            Group.base_group_id == BaseGroup.id,
-            Group.subject_override,
-            user_to_group_association.c.user_id == user.id,
-            user_to_group_association.c.group_id == Group.id)).limit(1).count()
+        user_query = (
 
-        if user_count > 0:
-            return True
+            DBSession.
 
-        # There probably shouldn't be organizations with admin permissions.
+                query(literal(1))
 
-        return False
+                .filter(
+                    BaseGroup.subject == subject,
+                    BaseGroup.action == action,
+                    Group.base_group_id == BaseGroup.id,
+                    Group.subject_override,
+                    user_to_group_association.c.user_id == user.id,
+                    user_to_group_association.c.group_id == Group.id))
+
+        # There probably shouldn't be organizations with admin permissions, so not checking through
+        # organizations.
+
+        return (
+
+            DBSession
+                .query(user_query.exists())
+                .scalar())
 
     # Ok, we have a subject we do not know how to process, so we terminate with error.
     # 

@@ -19,6 +19,7 @@ from sqlalchemy import (
     BigInteger,
     cast,
     func,
+    literal,
     or_,
     tuple_)
 
@@ -38,13 +39,12 @@ from lingvodoc.models import (
     LexicalEntry as dbLexicalEntry,
     PublishingEntity as dbPublishingEntity,
     TranslationAtom as dbTranslationAtom,
-    TranslationGist as dbTranslationGist,
-    User as dbUser)
+    User as dbUser,
+    user_to_group_association)
 
 from lingvodoc.schema.gql_holders import (
     Accepted,
     AdditionalMetadata,
-    client_id_check,
     CompositeIdHolder,
     Content,
     CreatedAt,
@@ -168,23 +168,25 @@ class Entity(LingvodocObjectType):
 
 # Create
 class CreateEntity(graphene.Mutation):
+
     class Arguments:
         """
         input values from request. Look at "LD methods" exel table
         """
-        id = LingvodocID()
+
         parent_id = LingvodocID(required=True)
-        additional_metadata = ObjectVal()
         field_id = LingvodocID(required=True)
+
+        client_id = graphene.Int()
         self_id = LingvodocID()
         link_id = LingvodocID()
         link_perspective_id = LingvodocID()
 
         locale_id = graphene.Int()
-        filename = graphene.String()
         content = graphene.String()
-        registry = ObjectVal()
+        filename = graphene.String()
         file_content = Upload()
+        additional_metadata = ObjectVal()
 
     # Result object
 
@@ -213,117 +215,158 @@ class CreateEntity(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @client_id_check()
     def mutate(
         root,
         info,
+
         parent_id,
         field_id,
-        id = None,
+
+        client_id = None,
         self_id = None,
-        locale_id = ENGLISH_LOCALE,
-        filename = None,
-        content = None,
         link_id = None,
         link_perspective_id = None,
+
+        locale_id = ENGLISH_LOCALE,
+        content = None,
+        filename = None,
+        additional_metadata = None,
+
         **args):
 
-        client_id = id[0] if id else info.context.client_id
-        object_id = id[1] if id else None
+        context = info.context
 
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
-        if not user:
-            return ResponseError("This client id is orphaned. Try to logout and then login once more.")
+        # When creating object, we check, if a client id was supplied, if it's compatible.
 
-        parent = dbLexicalEntry.get(parent_id)
-        if not parent:
-            return ResponseError("No such lexical entry in the system")
+        client_id = (
+
+            context.effective_client_id(
+                client_id))
+
+        lexical_entry = dbLexicalEntry.get(parent_id)
+
+        if not lexical_entry:
+
+            return (
+                ResponseError("No such lexical entry in the system"))
+
+        perspective_id = (
+            lexical_entry.parent_id)
 
         info.context.acl_check(
             'create',
             'lexical_entries_and_entities',
-            parent.parent_id)
+            perspective_id)
 
-        additional_metadata = args.get('additional_metadata')
-        upper_level = None
-
-        field_client_id, field_object_id = field_id
-
-        tr_atom = (
+        data_type = (
 
             DBSession
 
-                .query(dbTranslationAtom)
+                .query(
+                    func.lower(dbTranslationAtom.content))
 
                 .filter(
                     dbTranslationAtom.locale_id == ENGLISH_LOCALE,
-                    dbTranslationAtom.parent_client_id == dbTranslationGist.client_id,
-                    dbTranslationAtom.parent_object_id == dbTranslationGist.object_id,
-                    dbTranslationGist.client_id == dbField.data_type_translation_gist_client_id,
-                    dbTranslationGist.object_id == dbField.data_type_translation_gist_object_id,
-                    dbField.client_id == field_client_id,
-                    dbField.object_id == field_object_id)
+                    dbTranslationAtom.parent_id == dbField.data_type_translation_gist_id,
+                    dbField.id == field_id)
 
-                .first())
+                .scalar())
 
-        if not tr_atom:
-             return ResponseError("No such field in the system")
+        if not data_type:
 
-        data_type = tr_atom.content.lower()
+            return (
+                ResponseError("No such field in the system"))
 
         if self_id:
-            upper_level = dbEntity.get(self_id)
-            if not upper_level:
+
+            if not dbEntity.exists(self_id):
                 return ResponseError("No such upper level in the system")
 
-        dbentity = (
+        db_entity = (
 
             dbEntity(
                 client_id = client_id,
-                object_id = object_id,
-                field_client_id = field_client_id,
-                field_object_id = field_object_id,
+                parent_id = parent_id,
+                self_id = self_id,
+                field_id = field_id,
                 locale_id = locale_id,
-                additional_metadata = additional_metadata,
-                parent_id = parent_id))
+                additional_metadata = additional_metadata))
 
         # Acception permission check.
         # Admin is assumed to have all permissions.
 
-        create_flag = (user.id == 1)
+        user_id = (
+            context.user_id)
 
-        if not create_flag:
+        if user_id == 1:
 
-            group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                dbBaseGroup.subject == 'lexical_entries_and_entities',
-                dbGroup.subject_client_id == parent.parent_client_id,
-                dbGroup.subject_object_id == parent.parent_object_id,
-                dbBaseGroup.action == 'create').one()
+            create_flag = True
 
-            create_flag = (
-                user.is_active and user in group.users)
+        elif user_id is not None:
 
-        if not create_flag:
+            # Not just calling acl.check_direct because ours is much more specific case.
 
-            override_group = DBSession.query(dbGroup).join(dbBaseGroup).filter(
-                dbBaseGroup.subject == 'lexical_entries_and_entities',
-                dbGroup.subject_override == True,
-                dbBaseGroup.action == 'create').one()
+            user = context.user
 
-            create_flag = (
-                user.is_active and user in override_group.users)
+            if (create_flag := user.is_active):
+
+                group_query = (
+
+                    DBSession
+
+                        .query(literal(1))
+
+                        .filter(
+                            dbBaseGroup.subject == 'lexical_entries_and_entities',
+                            dbBaseGroup.action == 'create',
+                            dbGroup.base_group_id == dbBaseGroup.id,
+                            or_(dbGroup.subject_override,
+                                dbGroup.subject_id == perspective_id),
+                            user_to_group_association.c.user_id == user_id,
+                            user_to_group_association.c.group_id == dbGroup.id))
+
+                create_flag = (
+
+                    DBSession
+                        .query(group_query.exists())
+                        .scalar())
+
+                #
+                # NOTE: tests show that exists is faster than the current limit-count-based way from acl.py,
+                # which is like this:
+                #
+                # create_flag = (
+                #
+                #     DBSession
+                #
+                #         .query(user_to_group_association)
+                #
+                #         .filter(
+                #             dbBaseGroup.subject == 'lexical_entries_and_entities',
+                #             dbBaseGroup.action == 'create',
+                #             dbGroup.base_group_id == dbBaseGroup.id,
+                #             or_(dbGroup.subject_override,
+                #                 dbGroup.subject_id == perspective_id),
+                #             user_to_group_association.c.user_id == user_id,
+                #             user_to_group_association.c.group_id == dbGroup.id)
+                #
+                #         .limit(1)
+                #         .count())
+                #
+
+        else:
+
+            create_flag = False
 
         if create_flag:
-            dbentity.publishingentity.accepted = True
 
-        if upper_level:
-            dbentity.upper_level = upper_level
+            db_entity.publishingentity.accepted = True
 
         # If the entity is being created by the admin, we automatically publish it.
 
-        if user.id == 1:
-            dbentity.publishingentity.published = True
+        if user_id == 1:
+
+            db_entity.publishingentity.published = True
 
         real_location = None
         url = None
@@ -332,9 +375,9 @@ class CreateEntity(graphene.Mutation):
             filename=blob.filename
             content = blob.file.read()
             #filename=
-            real_location, url = create_object(content, dbentity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
-            dbentity.content = url
-            old_meta = dbentity.additional_metadata
+            real_location, url = create_object(content, db_entity, data_type, filename, "graphql_files", info.context.request.registry.settings["storage"])
+            db_entity.content = url
+            old_meta = db_entity.additional_metadata
             need_hash = True
             if old_meta:
                 if old_meta.get('hash'):
@@ -346,7 +389,7 @@ class CreateEntity(graphene.Mutation):
                     old_meta.update(hash_dict)
                 else:
                     old_meta = hash_dict
-                dbentity.additional_metadata = old_meta
+                db_entity.additional_metadata = old_meta
             if 'markup' in data_type:
                 name = filename.split('.')
                 ext = name[len(name) - 1]
@@ -356,22 +399,20 @@ class CreateEntity(graphene.Mutation):
                 elif ext.lower() == 'eaf':
                     data_type = 'elan markup'
 
-            dbentity.additional_metadata['data_type'] = data_type
+            db_entity.additional_metadata['data_type'] = data_type
 
             if 'elan' in data_type:
-                bag_of_words = list(eaf_wordlist(dbentity))
-                dbentity.additional_metadata['bag_of_words'] = bag_of_words
+                bag_of_words = list(eaf_wordlist(db_entity))
+                db_entity.additional_metadata['bag_of_words'] = bag_of_words
         elif data_type == 'link':
             if link_id:
-                dbentity.link_client_id = link_id[0]
-                dbentity.link_object_id = link_id[1]
+                db_entity.link_id = link_id
             else:
                 return ResponseError(
                     "The field is of link type. You should provide client_id and object id in the content")
         elif data_type == 'directed link':
             if link_id:
-                dbentity.link_client_id = link_id[0]
-                dbentity.link_object_id = link_id[1]
+                db_entity.link_id = link_id
             else:
                 return ResponseError(
                     "The field is of link type. You should provide client_id and object id in the content")
@@ -379,22 +420,22 @@ class CreateEntity(graphene.Mutation):
             if link_perspective_id:
                 if not dbPerspective.exists(link_perspective_id):
                     return ResponseError("link_perspective not found")
-                dbentity.additional_metadata['link_perspective_id'] = link_perspective_id
+                db_entity.additional_metadata['link_perspective_id'] = link_perspective_id
 
             else:
                 return ResponseError(
                     "The field is of link type. You should provide link_perspective_id id in the content")
 
         else:
-            dbentity.content = content
+            db_entity.content = content
 
-        DBSession.add(dbentity)
+        DBSession.add(db_entity)
         DBSession.flush()
 
         return (
 
             CreateEntity(
-                entity = Entity(dbentity),
+                entity = Entity(db_entity),
                 triumph = True))
 
     # Update

@@ -1,23 +1,23 @@
-from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS, Everyone
 
-from sqlalchemy.orm import (
-    scoped_session,
-    sessionmaker,
-    relationship,
-    backref,
-    query,
-    aliased
-)
-from sqlalchemy.orm.attributes import flag_modified
+# Standard library imports.
 
-from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
+import datetime
+import logging
+import uuid
 
-from sqlalchemy.sql import text
+# Library imports.
+
+from passlib.hash import bcrypt
+
+from pyramid.security import (
+    ALL_PERMISSIONS,
+    Allow,
+    Authenticated,
+    Everyone)
 
 from sqlalchemy import (
     and_,
     Column,
-    event,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -25,65 +25,60 @@ from sqlalchemy import (
     or_,
     Sequence,
     Table,
-    tuple_,
-    UniqueConstraint)
+    tuple_)
 
-from sqlalchemy.types import (
-    UnicodeText,
-    String,
-    VARCHAR,
-    BigInteger,
-    Integer,
-    DateTime,
-    TIMESTAMP,
-    Boolean,
-    Date,
-    TypeDecorator
-)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+from sqlalchemy.ext.compiler import compiles
 
 from sqlalchemy.ext.declarative import (
     declarative_base,
     declared_attr
 )
 
-from sqlalchemy.engine import (
-    Engine, create_engine
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+
+from sqlalchemy.orm import (
+    backref,
+    joinedload,
+    relationship,
+    scoped_session,
+    sessionmaker)
+
+from sqlalchemy.orm.attributes import flag_modified
+
+from sqlalchemy.sql import text
+
+from sqlalchemy.types import (
+    UnicodeText,
+    String,
+    BigInteger,
+    Integer,
+    TIMESTAMP,
+    Boolean,
+    Date,
+    TypeDecorator
 )
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
-from passlib.hash import bcrypt
-
-import datetime
-
-import json
-
-from sqlalchemy.inspection import inspect
-
-from sqlalchemy.ext.compiler import compiles
-
-import logging
-
-import uuid
-
-from time import sleep
-from sqlalchemy.orm import joinedload
+# Project imports.
 
 import lingvodoc.cache.caching as caching
 
 
+# Setting up logging.
+log = logging.getLogger(__name__)
+
 RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
-log = logging.getLogger(__name__)
-
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 
-
-# DBSession = caching.DBSession
-
 Base = declarative_base()
+
+categories = {0: 'lingvodoc.ispras.ru/dictionary',
+              1: 'lingvodoc.ispras.ru/corpora'}
 
 
 class SLBigInteger(BigInteger):
@@ -98,12 +93,6 @@ def bi_c(element, compiler, **kw):
 @compiles(SLBigInteger)
 def bi_c(element, compiler, **kw):
     return compiler.visit_BIGINT(element, **kw)
-
-
-categories = {0: 'lingvodoc.ispras.ru/dictionary',
-              1: 'lingvodoc.ispras.ru/corpora'}
-
-from collections import deque
 
 
 def entity_content(xx, publish, root, delete_self=False):
@@ -319,11 +308,28 @@ def get_client_counter(
             .scalar())
 
 
-class ObjectTOC(Base, TableNameMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
+class ObjectTOC(
+    TableNameMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    Base):
 
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
     table_name = Column(UnicodeText, nullable=False)
+
+    def __init__(
+        self, *args, **kwargs):
+
+        id = (
+            kwargs.pop('id', None))
+
+        if id is not None:
+
+            kwargs['client_id'] = id[0]
+            kwargs['object_id'] = id[1]
+
+        super().__init__(*args, **kwargs)
 
 
 class ObjectTOCMixin(object):
@@ -359,6 +365,47 @@ class ObjectTOCMixin(object):
                 deleted_at = d
 
         return deleted_at
+
+
+class Composite_Id_Comparator(Comparator):
+    """
+    Comparisons between composite ids and other composite ids, nulls and list/tuple values.
+    """
+
+    def __init__(
+        self, client_id, object_id):
+
+        self.client_id = client_id
+        self.object_id = object_id
+
+        super().__init__(
+            tuple_(
+                client_id,
+                object_id))
+
+    def operate(
+        self, op, other, **kwargs):
+
+        if other is None:
+
+            return (
+                and_(
+                    op(self.client_id, None, **kwargs),
+                    op(self.object_id, None, **kwargs)))
+
+        if isinstance(other, (list, tuple)):
+
+            return (
+                and_(
+                    op(self.client_id, other[0], **kwargs),
+                    op(self.object_id, other[1], **kwargs)))
+
+        return (
+
+            op(
+                self.__clause_element__(),
+                other,
+                **kwargs))
 
 
 class CompositeIdMixin(object):
@@ -438,7 +485,10 @@ class CompositeIdMixin(object):
 
                 .scalar())
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        **kwargs):
 
         session = (
             kwargs.get('session') or DBSession)
@@ -446,12 +496,12 @@ class CompositeIdMixin(object):
         id = (
             kwargs.pop('id', None))
 
-        if id:
+        if id is not None:
 
             kwargs['client_id'] = id[0]
             kwargs['object_id'] = id[1]
 
-        if not kwargs.get('object_id'):
+        if kwargs.get('object_id') is None:
 
             kwargs['object_id'] = (
 
@@ -508,9 +558,33 @@ class CompositeIdMixin(object):
     def mark_undeleted(self, message, **kwargs):
         self.mark_deleted(message, marked_for_deletion = False, **kwargs)
 
-    @property
+    @hybrid_property
     def id(self):
-        return (self.client_id, self.object_id)
+
+        return (
+            self.client_id,
+            self.object_id)
+
+    @id.setter
+    def id(self, id):
+
+        if id is None:
+
+            self.client_id = None
+            self.object_id = None
+
+            return
+
+        self.client_id = id[0]
+        self.object_id = id[1]
+
+    @id.comparator
+    def id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.client_id,
+                cls.object_id))
 
 
 class CompositeKeysHelper(object):
@@ -527,7 +601,7 @@ class CompositeKeysHelper(object):
                                      [parent_name.lower() + '.object_id', parent_name.lower() + '.client_id']),)
 
 
-class RelationshipMixin(PrimeTableArgs):
+class ParentMixin(PrimeTableArgs):
     """
     It's used for automatically set parent attribute as relationship.
     Each class using this mixin should have __parentname__ attribute
@@ -562,16 +636,40 @@ class RelationshipMixin(PrimeTableArgs):
         parent_id = (
             kwargs.pop('parent_id', None))
 
-        if parent_id:
+        if parent_id is not None:
 
             kwargs['parent_client_id'] = parent_id[0]
             kwargs['parent_object_id'] = parent_id[1]
 
         super().__init__(*args, **kwargs)
 
-    @property
+    @hybrid_property
     def parent_id(self):
-        return (self.parent_client_id, self.parent_object_id)
+
+        return (
+            self.parent_client_id,
+            self.parent_object_id)
+
+    @parent_id.setter
+    def parent_id(self, parent_id):
+
+        if parent_id is None:
+
+            self.parent_client_id = None
+            self.parent_object_id = None
+
+            return
+
+        self.parent_client_id = parent_id[0]
+        self.parent_object_id = parent_id[1]
+
+    @parent_id.comparator
+    def parent_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.parent_client_id,
+                cls.parent_object_id))
 
 
 def get_translation(
@@ -585,7 +683,7 @@ def get_translation(
     Standard translation retrieval with caching.
     """
 
-    CACHE = caching.CACHE
+    cache = caching.CACHE
 
     main_locale = str(locale_id)
     fallback_locale = str(ENGLISH_LOCALE) if str(locale_id) != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
@@ -593,7 +691,7 @@ def get_translation(
     key_main = key_format_str % (
         str(client_id), str(object_id), str(main_locale))
 
-    translation = CACHE.get(key_main)
+    translation = cache.get(key_main)
     if translation:
         log.info("Got cached %s " % str(key_main))
         return translation
@@ -610,13 +708,13 @@ def get_translation(
 
     elif all_translations_dict.get(main_locale) is not None:
         translation = all_translations_dict.get(main_locale)
-        CACHE.set(key=key_main, value=translation)
+        cache.set(key=key_main, value=translation)
         return translation
     elif all_translations_dict.get(fallback_locale) is not None:
         translation = all_translations_dict.get(fallback_locale)
         key_fallback = key_format_str % (
             str(client_id), str(object_id), str(fallback_locale))
-        CACHE.set(key=key_fallback, value=translation)
+        cache.set(key=key_fallback, value=translation)
         return translation
 
     # Ok, no main, no fallback, so we get anything at all.
@@ -628,12 +726,15 @@ def get_translation(
             key = key_format_str % (
                 str(client_id), str(object_id), str(locale))
 
-            CACHE.set(key = key, value = translation)
+            cache.set(key = key, value = translation)
             return translation
 
     # Should be unreachable, so just in case.
 
-    return default if default is not None else "Translation missing for all locales"
+    if default is not None:
+        return default
+
+    return "Translation missing for all locales"
 
 
 def get_translations(
@@ -645,12 +746,12 @@ def get_translations(
     Standard translations retrieval with caching.
     """
 
-    CACHE = caching.CACHE
+    cache = caching.CACHE
 
     key_str = (
         key_format_str % (str(client_id), str(object_id)))
 
-    translations = CACHE.get(key_str)
+    translations = cache.get(key_str)
     if translations:
         log.info("Got cached %s " % str(key_str))
         return translations
@@ -675,7 +776,7 @@ def get_translations(
         str(locale_id): translation
         for locale_id, translation in all_translations}
 
-    CACHE.set(key = key_str, value = all_translations_dict)
+    cache.set(key = key_str, value = all_translations_dict)
 
     return all_translations_dict or None
 
@@ -690,12 +791,48 @@ class TranslationMixin(PrimeTableArgs):
                                      ['TranslationGist'.lower() + '.object_id',
                                       'TranslationGist'.lower() + '.client_id']),) + super().__table_args__
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        translation_gist_id = (
+            kwargs.pop('translation_gist_id', None))
+
+        if translation_gist_id is not None:
+
+            kwargs['translation_gist_client_id'] = translation_gist_id[0]
+            kwargs['translation_gist_object_id'] = translation_gist_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def translation_gist_id(self):
 
         return (
             self.translation_gist_client_id,
             self.translation_gist_object_id)
+
+    @translation_gist_id.setter
+    def translation_gist_id(self, translation_gist_id):
+
+        if translation_gist_id is None:
+
+            self.translation_gist_client_id = None
+            self.translation_gist_object_id = None
+
+            return
+
+        self.translation_gist_client_id = translation_gist_id[0]
+        self.translation_gist_object_id = translation_gist_id[1]
+
+    @translation_gist_id.comparator
+    def translation_gist_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.translation_gist_client_id,
+                cls.translation_gist_object_id))
 
     def get_translation(self, locale_id = 2, session = DBSession):
 
@@ -733,8 +870,14 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, Ma
             self.object_id)
 
 
-class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, MarkedForDeletionMixin,
-                      AdditionalMetadataMixin):
+class TranslationAtom(
+    TableNameMixin,
+    CompositeIdMixin,
+    ParentMixin,
+    CreatedAtMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    Base):
     """
     This is translations
     """
@@ -744,17 +887,28 @@ class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin,
     Index('parent_translation_atom_idx', 'parent_client_id', 'parent_object_id')
 
 
-class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, MarkedForDeletionMixin,
-               RelationshipMixin,
-               AdditionalMetadataMixin,
-               ObjectTOCMixin):
+class Language(
+    CompositeIdMixin,
+    ParentMixin,
+    TableNameMixin,
+    CreatedAtMixin,
+    TranslationMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    ObjectTOCMixin,
+    Base):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
     __parentname__ = 'Language'  # todo: sort by metadata  #todo: protected
 
 
-class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
+class Locale(
+    TableNameMixin,
+    IdMixin,
+    ParentMixin,
+    CreatedAtMixin,
+    Base):
     """
     This entity specifies list of available translations (for words in dictionaries and for UI).
     Should be added as admin only.
@@ -775,6 +929,49 @@ class StateMixin(PrimeTableArgs):
     state_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
     state_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
 
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        state_translation_gist_id = (
+            kwargs.pop('state_translation_gist_id', None))
+
+        if state_translation_gist_id is not None:
+
+            kwargs['state_translation_gist_client_id'] = state_translation_gist_id[0]
+            kwargs['state_translation_gist_object_id'] = state_translation_gist_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
+    def state_translation_gist_id(self):
+
+        return (
+            self.state_translation_gist_client_id,
+            self.state_translation_gist_object_id)
+
+    @state_translation_gist_id.setter
+    def state_translation_gist_id(self, state_translation_gist_id):
+
+        if state_translation_gist_id is None:
+
+            self.state_translation_gist_client_id = None
+            self.state_translation_gist_object_id = None
+
+            return
+
+        self.state_translation_gist_client_id = state_translation_gist_id[0]
+        self.state_translation_gist_object_id = state_translation_gist_id[1]
+
+    @state_translation_gist_id.comparator
+    def state_translation_gist_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.state_translation_gist_client_id,
+                cls.state_translation_gist_object_id))
+
     @property
     def state(self):
         return DBSession.query(TranslationAtom.content).filter_by(
@@ -789,16 +986,17 @@ class StateMixin(PrimeTableArgs):
             self.state_translation_gist_object_id)
 
 
-class Dictionary(CompositeIdMixin,
-                 Base,
-                 TableNameMixin,
-                 RelationshipMixin,
-                 CreatedAtMixin,
-                 TranslationMixin,
-                 StateMixin,
-                 MarkedForDeletionMixin,
-                 AdditionalMetadataMixin,
-                 ObjectTOCMixin):
+class Dictionary(
+    CompositeIdMixin,
+    TableNameMixin,
+    ParentMixin,
+    CreatedAtMixin,
+    TranslationMixin,
+    StateMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    ObjectTOCMixin,
+    Base):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -810,16 +1008,17 @@ class Dictionary(CompositeIdMixin,
     domain = Column(Integer, default=0)
 
 
-class DictionaryPerspective(CompositeIdMixin,
-                            Base,
-                            TableNameMixin,
-                            RelationshipMixin,
-                            CreatedAtMixin,
-                            TranslationMixin,
-                            StateMixin,
-                            MarkedForDeletionMixin,
-                            AdditionalMetadataMixin,
-                            ObjectTOCMixin):
+class DictionaryPerspective(
+    CompositeIdMixin,
+    TableNameMixin,
+    ParentMixin,
+    CreatedAtMixin,
+    TranslationMixin,
+    StateMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    ObjectTOCMixin,
+    Base):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -866,6 +1065,7 @@ class DictionaryPerspective(CompositeIdMixin,
 
 
 class SelfMixin(PrimeTableArgs):
+
     @declared_attr
     def __table_args__(cls):
         return (
@@ -883,12 +1083,52 @@ class SelfMixin(PrimeTableArgs):
                             remote_side=[cls.client_id,
                                          cls.object_id])
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        self_id = (
+            kwargs.pop('self_id', None))
+
+        if self_id is not None:
+
+            kwargs['self_client_id'] = self_id[0]
+            kwargs['self_object_id'] = self_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def self_id(self):
-        return (self.self_client_id, self.self_object_id)
+
+        return (
+            self.self_client_id,
+            self.self_object_id)
+
+    @self_id.setter
+    def self_id(self, self_id):
+
+        if self_id is None:
+
+            self.self_client_id = None
+            self.self_object_id = None
+
+            return
+
+        self.self_client_id = self_id[0]
+        self.self_object_id = self_id[1]
+
+    @self_id.comparator
+    def self_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.self_client_id,
+                cls.self_object_id))
 
 
 class FieldMixin(PrimeTableArgs):
+
     @declared_attr
     def __table_args__(cls):
         return (
@@ -904,9 +1144,49 @@ class FieldMixin(PrimeTableArgs):
         return relationship('Field',
                             backref=backref(cls.__tablename__.lower()))
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        field_id = (
+            kwargs.pop('field_id', None))
+
+        if field_id is not None:
+
+            kwargs['field_client_id'] = field_id[0]
+            kwargs['field_object_id'] = field_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def field_id(self):
-        return (self.field_client_id, self.field_object_id)
+
+        return (
+            self.field_client_id,
+            self.field_object_id)
+
+    @field_id.setter
+    def field_id(self, field_id):
+
+        if field_id is None:
+
+            self.field_client_id = None
+            self.field_object_id = None
+
+            return
+
+        self.field_client_id = field_id[0]
+        self.field_object_id = field_id[1]
+
+    @field_id.comparator
+    def field_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.field_client_id,
+                cls.field_object_id))
+
 
 class EntityMixin(PrimeTableArgs):
     @declared_attr
@@ -924,9 +1204,48 @@ class EntityMixin(PrimeTableArgs):
         return relationship('Entity',
                             backref=backref(cls.__tablename__.lower()))
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        entity_id = (
+            kwargs.pop('entity_id', None))
+
+        if entity_id is not None:
+
+            kwargs['entity_client_id'] = entity_id[0]
+            kwargs['entity_object_id'] = entity_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def entity_id(self):
-        return (self.entity_client_id, self.entity_object_id)
+
+        return (
+            self.entity_client_id,
+            self.entity_object_id)
+
+    @entity_id.setter
+    def entity_id(self, entity_id):
+
+        if entity_id is None:
+
+            self.entity_client_id = None
+            self.entity_object_id = None
+
+            return
+
+        self.entity_client_id = entity_id[0]
+        self.entity_object_id = entity_id[1]
+
+    @entity_id.comparator
+    def entity_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.entity_client_id,
+                cls.entity_object_id))
 
 
 class PerspectiveMixin(PrimeTableArgs):
@@ -945,9 +1264,48 @@ class PerspectiveMixin(PrimeTableArgs):
         return relationship('DictionaryPerspective',
                             backref=backref(cls.__tablename__.lower()))
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        perspective_id = (
+            kwargs.pop('perspective_id', None))
+
+        if perspective_id is not None:
+
+            kwargs['perspective_client_id'] = perspective_id[0]
+            kwargs['perspective_object_id'] = perspective_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def perspective_id(self):
-        return (self.perspective_client_id, self.perspective_object_id)
+
+        return (
+            self.perspective_client_id,
+            self.perspective_object_id)
+
+    @perspective_id.setter
+    def perspective_id(self, perspective_id):
+
+        if perspective_id is None:
+
+            self.perspective_client_id = None
+            self.perspective_object_id = None
+
+            return
+
+        self.perspective_client_id = perspective_id[0]
+        self.perspective_object_id = perspective_id[1]
+
+    @perspective_id.comparator
+    def perspective_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.perspective_client_id,
+                cls.perspective_object_id))
 
 
 class ParserMixin(PrimeTableArgs):
@@ -966,9 +1324,48 @@ class ParserMixin(PrimeTableArgs):
         return relationship('Parser',
                             backref=backref(cls.__tablename__.lower()))
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        parser_id = (
+            kwargs.pop('parser_id', None))
+
+        if parser_id is not None:
+
+            kwargs['parser_client_id'] = parser_id[0]
+            kwargs['parser_object_id'] = parser_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def parser_id(self):
-        return (self.parser_client_id, self.parser_object_id)
+
+        return (
+            self.parser_client_id,
+            self.parser_object_id)
+
+    @parser_id.setter
+    def parser_id(self, parser_id):
+
+        if parser_id is None:
+
+            self.parser_client_id = None
+            self.parser_object_id = None
+
+            return
+
+        self.parser_client_id = parser_id[0]
+        self.parser_object_id = parser_id[1]
+
+    @parser_id.comparator
+    def parser_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.parser_client_id,
+                cls.parser_object_id))
 
 
 class ParserResultMixin(PrimeTableArgs):
@@ -987,12 +1384,51 @@ class ParserResultMixin(PrimeTableArgs):
         return relationship('ParserResult',
                             backref=backref(cls.__tablename__.lower()))
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        parser_result_id = (
+            kwargs.pop('parser_result_id', None))
+
+        if parser_result_id is not None:
+
+            kwargs['parser_result_client_id'] = parser_result_id[0]
+            kwargs['parser_result_object_id'] = parser_result_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def parser_result_id(self):
-        return (self.parser_result_client_id, self.parser_result_object_id)
+
+        return (
+            self.parser_result_client_id,
+            self.parser_result_object_id)
+
+    @parser_result_id.setter
+    def parser_result_id(self, parser_result_id):
+
+        if parser_result_id is None:
+
+            self.parser_result_client_id = None
+            self.parser_result_object_id = None
+
+            return
+
+        self.parser_result_client_id = parser_result_id[0]
+        self.parser_result_object_id = parser_result_id[1]
+
+    @parser_result_id.comparator
+    def parser_result_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.parser_result_client_id,
+                cls.parser_result_object_id))
 
 
-class ParentLinkMixin(PrimeTableArgs):
+class LinkMixin(PrimeTableArgs):
     # @declared_attr
     # def __table_args__(cls):
     #     return (
@@ -1012,20 +1448,60 @@ class ParentLinkMixin(PrimeTableArgs):
                             foreign_keys=[cls.link_client_id,
                                           cls.link_object_id])
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        link_id = (
+            kwargs.pop('link_id', None))
+
+        if link_id is not None:
+
+            kwargs['link_client_id'] = link_id[0]
+            kwargs['link_object_id'] = link_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def link_id(self):
-        return (self.link_client_id, self.link_object_id)
+
+        return (
+            self.link_client_id,
+            self.link_object_id)
+
+    @link_id.setter
+    def link_id(self, link_id):
+
+        if link_id is None:
+
+            self.link_client_id = None
+            self.link_object_id = None
+
+            return
+
+        self.link_client_id = link_id[0]
+        self.link_object_id = link_id[1]
+
+    @link_id.comparator
+    def link_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.link_client_id,
+                cls.link_object_id))
 
 
-class DictionaryPerspectiveToField(CompositeIdMixin,
-                                   Base,
-                                   TableNameMixin,
-                                   CreatedAtMixin,
-                                   RelationshipMixin,
-                                   SelfMixin,
-                                   FieldMixin,
-                                   ParentLinkMixin, MarkedForDeletionMixin
-                                   ):
+class DictionaryPerspectiveToField(
+    CompositeIdMixin,
+    TableNameMixin,
+    CreatedAtMixin,
+    ParentMixin,
+    SelfMixin,
+    FieldMixin,
+    LinkMixin,
+    MarkedForDeletionMixin,
+    Base):
     """
     """
     __parentname__ = 'DictionaryPerspective'
@@ -1083,21 +1559,52 @@ class DataTypeMixin(PrimeTableArgs):
 
         return translation
 
-    @property
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        data_type_translation_gist_id = (
+            kwargs.pop('data_type_translation_gist_id', None))
+
+        if data_type_translation_gist_id is not None:
+
+            kwargs['data_type_translation_gist_client_id'] = data_type_translation_gist_id[0]
+            kwargs['data_type_translation_gist_object_id'] = data_type_translation_gist_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
     def data_type_translation_gist_id(self):
 
         return (
             self.data_type_translation_gist_client_id,
             self.data_type_translation_gist_object_id)
 
+    @data_type_translation_gist_id.setter
+    def data_type_translation_gist_id(self, data_type_translation_gist_id):
 
-class Field(CompositeIdMixin,
-            Base,
-            TableNameMixin,
-            CreatedAtMixin,
-            TranslationMixin,
-            DataTypeMixin, MarkedForDeletionMixin,
-            AdditionalMetadataMixin):
+        self.data_type_translation_gist_client_id = data_type_translation_gist_id[0]
+        self.data_type_translation_gist_object_id = data_type_translation_gist_id[1]
+
+    @data_type_translation_gist_id.comparator
+    def data_type_translation_gist_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.data_type_translation_gist_client_id,
+                cls.data_type_translation_gist_object_id))
+
+
+class Field(
+    CompositeIdMixin,
+    TableNameMixin,
+    CreatedAtMixin,
+    TranslationMixin,
+    DataTypeMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    Base):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
 
@@ -1132,15 +1639,16 @@ class ReprIdMixin(object):
             id(self))
 
 
-class LexicalEntry(CompositeIdMixin,
-                   Base,
-                   TableNameMixin,
-                   RelationshipMixin,
-                   CreatedAtMixin,
-                   MarkedForDeletionMixin,
-                   AdditionalMetadataMixin,
-                   ReprIdMixin,
-                   ObjectTOCMixin):
+class LexicalEntry(
+    CompositeIdMixin,
+    TableNameMixin,
+    ParentMixin,
+    CreatedAtMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    ReprIdMixin,
+    ObjectTOCMixin,
+    Base):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -1472,17 +1980,20 @@ class LexicalEntry(CompositeIdMixin,
         return entries
 
 
-class Entity(CompositeIdMixin,
-             Base,
-             TableNameMixin,
-             CreatedAtMixin,
-             RelationshipMixin,
-             SelfMixin,
-             FieldMixin,
-             ParentLinkMixin, MarkedForDeletionMixin,
-             AdditionalMetadataMixin,
-             ReprIdMixin,
-             ObjectTOCMixin):
+class Entity(
+    CompositeIdMixin,
+    TableNameMixin,
+    CreatedAtMixin,
+    ParentMixin,
+    SelfMixin,
+    FieldMixin,
+    LinkMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    ReprIdMixin,
+    ObjectTOCMixin,
+    Base):
+
     __parentname__ = "LexicalEntry"
 
     content = Column(UnicodeText)
@@ -1593,6 +2104,49 @@ class Group(Base, TableNameMixin, CreatedAtMixin):
                                  backref=backref("groups"))
     parent = relationship(__parentname__, backref=backref('group'))
 
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        subject_id = (
+            kwargs.pop('subject_id', None))
+
+        if subject_id is not None:
+
+            kwargs['subject_client_id'] = subject_id[0]
+            kwargs['subject_object_id'] = subject_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
+    def subject_id(self):
+
+        return (
+            self.subject_client_id,
+            self.subject_object_id)
+
+    @subject_id.setter
+    def subject_id(self, subject_id):
+
+        if subject_id is None:
+
+            self.subject_client_id = None
+            self.subject_object_id = None
+
+            return
+
+        self.subject_client_id = subject_id[0]
+        self.subject_object_id = subject_id[1]
+
+    @subject_id.comparator
+    def subject_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.subject_client_id,
+                cls.subject_object_id))
+
 
 class AboutMixin(PrimeTableArgs):
 
@@ -1611,6 +2165,49 @@ class AboutMixin(PrimeTableArgs):
                     'TranslationGist'.lower() + '.client_id']),) +
 
             super().__table_args__)
+
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        about_translation_gist_id = (
+            kwargs.pop('about_translation_gist_id', None))
+
+        if about_translation_gist_id is not None:
+
+            kwargs['about_translation_gist_client_id'] = about_translation_gist_id[0]
+            kwargs['about_translation_gist_object_id'] = about_translation_gist_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
+    def about_translation_gist_id(self):
+
+        return (
+            self.about_translation_gist_client_id,
+            self.about_translation_gist_object_id)
+
+    @about_translation_gist_id.setter
+    def about_translation_gist_id(self, about_translation_gist_id):
+
+        if about_translation_gist_id is None:
+
+            self.about_translation_gist_client_id = None
+            self.about_translation_gist_object_id = None
+
+            return
+
+        self.about_translation_gist_client_id = about_translation_gist_id[0]
+        self.about_translation_gist_object_id = about_translation_gist_id[1]
+
+    @about_translation_gist_id.comparator
+    def about_translation_gist_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.about_translation_gist_client_id,
+                cls.about_translation_gist_object_id))
 
     def get_about_translation(self, locale_id):
 
@@ -1663,16 +2260,53 @@ class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMi
     user = relationship("User", backref='clients')
     counter = Column(SLBigInteger(), default=1, nullable=False)
 
-    @classmethod
-    def get_user_by_client_id(cls, client_id):
-        if client_id:
-            client = DBSession.query(Client).filter(Client.id == client_id).first()
-            if client:
-                return client.user
-            else:
-                return None
-        else:
+    @staticmethod
+    def get_user_by_client_id(client_id):
+
+        if client_id is None:
+
             return None
+
+        return (
+
+            DBSession
+
+                .query(User)
+
+                .filter(
+                    User.id == Client.user_id,
+                    Client.id == client_id)
+
+                .first())
+
+    @staticmethod
+    def get_user_id(client_id):
+
+        if client_id is None:
+
+            return None
+
+        cache = caching.CACHE
+        cache_key = f'user_id:{client_id}'
+
+        user_id = (
+            cache.get(cache_key))
+
+        if user_id is not None:
+
+            return user_id
+
+        user_id = (
+
+            DBSession
+                .query(Client.user_id)
+                .filter(Client.id == client_id)
+                .scalar())
+
+        cache.set(
+            cache_key, user_id)
+
+        return user_id
 
     def next_object_id(self):
 
@@ -1704,7 +2338,14 @@ Index('parent_dictionary_idx', Dictionary.parent_client_id, Dictionary.parent_ob
 Index('parent_language_idx', Language.parent_client_id, Language.parent_object_id)
 
 
-class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, AdditionalMetadataMixin):
+class Grant(
+    IdMixin,
+    TableNameMixin,
+    CreatedAtMixin,
+    TranslationMixin,
+    AdditionalMetadataMixin,
+    Base):
+
     issuer_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
     issuer_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
 
@@ -1727,6 +2368,49 @@ class Grant(IdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, Add
     begin = Column(EpochTypeForDate)
     end = Column(EpochTypeForDate)
     owners = Column(JSONB)
+
+    def __init__(
+        self,
+        *args,
+        **kwargs):
+
+        issuer_translation_gist_id = (
+            kwargs.pop('issuer_translation_gist_id', None))
+
+        if issuer_translation_gist_id is not None:
+
+            kwargs['issuer_translation_gist_client_id'] = issuer_translation_gist_id[0]
+            kwargs['issuer_translation_gist_object_id'] = issuer_translation_gist_id[1]
+
+        super().__init__(*args, **kwargs)
+
+    @hybrid_property
+    def issuer_translation_gist_id(self):
+
+        return (
+            self.issuer_translation_gist_client_id,
+            self.issuer_translation_gist_object_id)
+
+    @issuer_translation_gist_id.setter
+    def issuer_translation_gist_id(self, issuer_translation_gist_id):
+
+        if issuer_translation_gist_id is None:
+
+            self.issuer_translation_gist_client_id = None
+            self.issuer_translation_gist_object_id = None
+
+            return
+
+        self.issuer_translation_gist_client_id = issuer_translation_gist_id[0]
+        self.issuer_translation_gist_object_id = issuer_translation_gist_id[1]
+
+    @issuer_translation_gist_id.comparator
+    def issuer_translation_gist_id(cls):
+
+        return (
+            Composite_Id_Comparator(
+                cls.issuer_translation_gist_client_id,
+                cls.issuer_translation_gist_object_id))
 
 
 class UserRequest(IdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):
@@ -1877,8 +2561,6 @@ class GrantAcl(NoIdAclMixin):
     subject = 'grant'
 
 
-
-
 class DictionaryAcl(ACLMixin):
     subject = 'dictionary'
     client_id = 'client_id'
@@ -1941,12 +2623,7 @@ class PerspectiveEntityAcl(ACLMixin):
     def __acl__(self):
         object_id = self.request.matchdict.get('object_id', None)
         client_id = self.request.matchdict.get('client_id', None)
-        levoneent = CACHE.get(
-            {
-                Entity : (client_id, object_id)
-            },
-        DBSession=DBSession)
-        # levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        levoneent = Entity.get((client_id, object_id))
         perspective = levoneent.parent.parent
         return acl_by_groups(perspective.object_id, perspective.client_id, self.subject)
 
@@ -1981,14 +2658,28 @@ class ApproveAllAcl(object):
 # 'method' attribute of Parser model should be the same as one of methods in utils/parser.py
 
 
-class Parser(Base, TableNameMixin, CompositeIdMixin, CreatedAtMixin, AdditionalMetadataMixin):
+class Parser(
+    TableNameMixin,
+    CompositeIdMixin,
+    CreatedAtMixin,
+    AdditionalMetadataMixin,
+    Base):
+
     method = Column(UnicodeText, nullable=False, unique=True)
     name = Column(UnicodeText, nullable=False, unique=True)
     parameters = Column(JSONB)
 
 
-class ParserResult(Base, TableNameMixin, CompositeIdMixin, EntityMixin, ParserMixin,
-                   CreatedAtMixin, MarkedForDeletionMixin, AdditionalMetadataMixin):
+class ParserResult(
+    TableNameMixin,
+    CompositeIdMixin,
+    EntityMixin,
+    ParserMixin,
+    CreatedAtMixin,
+    MarkedForDeletionMixin,
+    AdditionalMetadataMixin,
+    Base):
+
     arguments = Column(JSONB)
     content = Column(UnicodeText)
 
@@ -2084,8 +2775,8 @@ ValencyMergeIdSequence = Sequence('valency_merge_id_seq')
 
 
 class ValencyMergeData(
-    Base,
-    PerspectiveMixin):
+    PerspectiveMixin,
+    Base):
 
     __tablename__ = 'valency_merge_data'
 
