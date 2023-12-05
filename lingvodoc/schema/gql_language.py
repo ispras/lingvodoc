@@ -34,10 +34,10 @@ import lingvodoc.cache.caching as caching
 import lingvodoc.models as models
 
 from lingvodoc.models import (
-    Column as dbColumn,
     DBSession,
     Dictionary as dbDictionary,
     DictionaryPerspective as dbPerspective,
+    DictionaryPerspectiveToField as dbColumn,
     Language as dbLanguage,
     SLBigInteger,
     TranslationAtom as dbTranslationAtom,
