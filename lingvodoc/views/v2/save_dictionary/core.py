@@ -14,6 +14,7 @@ def async_save_dictionary(client_id,
                           published,
                           sound_flag,
                           markup_flag,
+                          format,
                           __debug_flag__ = False):
     save_dictionary(client_id,
                     object_id,
@@ -26,6 +27,7 @@ def async_save_dictionary(client_id,
                     published,
                     sound_flag,
                     markup_flag,
+                    format,
                     __debug_flag__ = __debug_flag__
                     )
     return

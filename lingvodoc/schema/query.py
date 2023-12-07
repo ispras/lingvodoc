@@ -15069,8 +15069,8 @@ def save_dictionary(
     publish,
     sound_flag,
     markup_flag,
-    #format = 'xlsx',
-    format = 'docx',
+    format = 'xlsx',
+    #format = 'docx',
     synchronous = False,
     debug_flag = False):
 
