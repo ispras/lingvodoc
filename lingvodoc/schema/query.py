@@ -15111,7 +15111,7 @@ def save_dictionary(
     my_args["f_type"] = f_type
     my_args["__debug_flag__"] = debug_flag
 
-    res = (sync_save_dictionary if synchronous or True else async_save_dictionary.delay)(**my_args)
+    res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
 
 
 class SaveDictionary(graphene.Mutation):
@@ -15187,7 +15187,7 @@ class SaveDictionary(graphene.Mutation):
             publish,
             sound_flag,
             markup_flag,
-            'docx',
+            f_type,
             synchronous,
             debug_flag)
 

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import pdb
 import sqlite3
 import base64
 import requests
@@ -2505,7 +2504,8 @@ class Save_Context(object):
                         #print(len(self.table.column_cells(0)), value)
                         if (len(self.fields) > index and
                                 self.fields[index].field.get_translation(2) == 'Order'):
-                            row_cells[index].text = str(len(self.table.column_cells(0)) - 1)
+                            row_cells[index].text = self.row #str(len(self.table.column_cells(0)) - 1)
+                            self.row += 1
                         else:
                             row_cells[index].text = value
 
