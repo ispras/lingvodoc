@@ -2503,8 +2503,11 @@ class Save_Context(object):
                             self.table.add_column(5)
 
                         #print(len(self.table.column_cells(0)), value)
-
-                        row_cells[index].text = value
+                        if (len(self.fields) > index and
+                                self.fields[index].field.get_translation(2) == 'Order'):
+                            row_cells[index].text = len(self.table.column_cells(0)) - 1
+                        else:
+                            row_cells[index].text = value
 
         def rtf():
             pass
@@ -2807,11 +2810,9 @@ def compile_document(
 
         lex_by_id = {}
         lex_by_order = {}
-        #order_field_id = get_field_id("Order", DBSession=session)
-        order_field_id = None
         for lex, entity in lexical_entries:
             lex_by_id[lex.id] = lex
-            if entity.field_id == order_field_id:
+            if entity.field.get_translation(2) == 'Order':
                 lex_by_order[entity.content] = lex
         lex_dict = lex_by_order if lex_by_order else lex_by_id
 
