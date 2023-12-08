@@ -1384,7 +1384,7 @@ class Save_Context(object):
                         sanitize_worksheet_name(sanitized_name + id_str)))
             elif self.document:
                 self.table = self.document.add_table(rows=1, cols=0, style="Table Grid")
-
+                self.table.rows[0].height = 17
             self.row = 0
 
         # Listing dictionary and perspective names, if required.
@@ -1608,14 +1608,14 @@ class Save_Context(object):
                 self.worksheet.write(self.row, column, column_name)
                 column += 1
             elif self.document:
-                self.table.add_column(13).cells[0].text = column_name
+                self.table.add_column(5).cells[0].text = column_name
 
         if self.etymology_field:
             etymology_name = self.etymology_field.field.get_translation(self.locale_id, self.session)
             if self.workbook:
                 self.worksheet.write(self.row, column, etymology_name)
             elif self.document:
-                self.table.add_column(13).cells[0].text = etymology_name
+                self.table.add_column(5).cells[0].text = etymology_name
 
         self.row += 1
 
@@ -2489,7 +2489,7 @@ class Save_Context(object):
                         *rows_to_write,
                         fillvalue = '')):
 
-                    row_cells = self.table.add_row().cells
+                    row_cells = self.table.add_row(height=17).cells
 
                     for index, value in enumerate(cell_list):
 
@@ -2501,7 +2501,7 @@ class Save_Context(object):
 
                         # Add columns if required
                         while len(row_cells) <= index:
-                            self.table.add_column(13)
+                            self.table.add_column(5)
 
                         #print(len(self.table.column_cells(0)), value)
 
