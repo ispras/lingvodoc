@@ -381,8 +381,8 @@ class CreateEntity(graphene.Mutation):
 
         elif lexgraph_after := args.get("lexgraph_after"):
             dbentity.content = marker_between(marker_after=lexgraph_after)
-            print("Old lexgraph: " + lexgraph_after)
-            print("New lexgraph: " + dbentity.content)
+            #print("Old lexgraph: " + lexgraph_after)
+            #print("New lexgraph: " + dbentity.content)
 
         else:
             content = args.get("content")

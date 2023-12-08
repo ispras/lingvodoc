@@ -15067,8 +15067,9 @@ def save_dictionary(
     user_id,
     locale_id,
     publish,
-    sound_flag,
-    markup_flag,
+    sound_flag = False,
+    markup_flag = False,
+    f_type = 'xlsx',
     synchronous = False,
     debug_flag = False):
 
@@ -15077,7 +15078,7 @@ def save_dictionary(
     my_args["object_id"] = dict_id[1]
     my_args["locale_id"] = locale_id
     my_args["storage"] = request.registry.settings["storage"]
-    my_args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
+    my_args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     try:
         gist = DBSession.query(dbTranslationGist). \
             filter_by(client_id=dictionary_obj.translation_gist_client_id,
@@ -15101,13 +15102,14 @@ def save_dictionary(
 
     except:
         raise ResponseError('bad request')
-    my_args['dict_name'] = dict_name
+    my_args["dict_name"] = dict_name
     my_args["task_key"] = task.key if not synchronous else None
     my_args["cache_kwargs"] = request.registry.settings["cache_kwargs"]
     my_args["published"] = publish
-    my_args['sound_flag'] = sound_flag
-    my_args['markup_flag'] = markup_flag
-    my_args['__debug_flag__'] = debug_flag
+    my_args["sound_flag"] = sound_flag
+    my_args["markup_flag"] = markup_flag
+    my_args["f_type"] = f_type
+    my_args["__debug_flag__"] = debug_flag
 
     res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
 
@@ -15119,6 +15121,7 @@ class SaveDictionary(graphene.Mutation):
         mode = graphene.String(required=True)
         sound_flag = graphene.Boolean()
         markup_flag = graphene.Boolean()
+        f_type = graphene.String()
         synchronous = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
@@ -15132,6 +15135,7 @@ class SaveDictionary(graphene.Mutation):
         mode,
         sound_flag = False,
         markup_flag = False,
+        f_type = 'xlsx',
         synchronous = False,
         debug_flag = False):
 
@@ -15183,6 +15187,7 @@ class SaveDictionary(graphene.Mutation):
             publish,
             sound_flag,
             markup_flag,
+            f_type,
             synchronous,
             debug_flag)
 

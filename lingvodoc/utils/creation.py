@@ -624,7 +624,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
                   filename))
     return real_location, url
 
-def create_gists_with_atoms(translation_atoms, translation_gist_id, ids, gist_type=None):
+def create_gists_with_atoms(translation_atoms, translation_gist_id, ids, gist_type=None, DBSession=DBSession):
         if translation_atoms is None:  # TODO: look at this
             if not translation_gist_id:
                 raise ResponseError(message="translation_gist_id arg not found")
@@ -921,7 +921,8 @@ def create_field(translation_atoms, client_id=66, gist_type="Field", DBSession=D
     translation_gist_id = create_gists_with_atoms(translation_atoms,
                                                   None,
                                                   [client_id, None],
-                                                  gist_type)
+                                                  gist_type,
+                                                  DBSession=DBSession)
 
     data_type_translation_gist = translation_gist_search('Text')
     dbfield = Field(client_id=client_id,
