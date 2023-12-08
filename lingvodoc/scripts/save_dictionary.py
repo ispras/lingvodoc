@@ -1384,7 +1384,6 @@ class Save_Context(object):
                         sanitize_worksheet_name(sanitized_name + id_str)))
             elif self.document:
                 self.table = self.document.add_table(rows=1, cols=0, style="Table Grid")
-                self.table.rows[0].height = 17
             self.row = 0
 
         # Listing dictionary and perspective names, if required.
@@ -2489,7 +2488,7 @@ class Save_Context(object):
                         *rows_to_write,
                         fillvalue = '')):
 
-                    row_cells = self.table.add_row(height=17).cells
+                    row_cells = self.table.add_row().cells
 
                     for index, value in enumerate(cell_list):
 
