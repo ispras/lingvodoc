@@ -2503,8 +2503,8 @@ class Save_Context(object):
 
                         #print(len(self.table.column_cells(0)), value)
                         if (len(self.fields) > index and
-                                self.fields[index].field.get_translation(2) == 'Order'):
-                            row_cells[index].text = self.row #str(len(self.table.column_cells(0)) - 1)
+                                self.fields[index].field.get_translation(2, self.session) == 'Order'):
+                            row_cells[index].text = str(self.row) #str(len(self.table.column_cells(0)) - 1)
                             self.row += 1
                         else:
                             row_cells[index].text = value
@@ -2812,7 +2812,7 @@ def compile_document(
         lex_by_order = {}
         for lex, entity in lexical_entries:
             lex_by_id[lex.id] = lex
-            if entity.field.get_translation(2) == 'Order':
+            if entity.field.get_translation(2, session) == 'Order':
                 lex_by_order[entity.content] = lex
         lex_dict = lex_by_order if lex_by_order else lex_by_id
 
