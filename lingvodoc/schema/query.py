@@ -15067,10 +15067,9 @@ def save_dictionary(
     user_id,
     locale_id,
     publish,
-    sound_flag,
-    markup_flag,
-    format = 'xlsx',
-    #format = 'docx',
+    sound_flag = False,
+    markup_flag = False,
+    f_type = 'xlsx',
     synchronous = False,
     debug_flag = False):
 
@@ -15109,7 +15108,7 @@ def save_dictionary(
     my_args["published"] = publish
     my_args["sound_flag"] = sound_flag
     my_args["markup_flag"] = markup_flag
-    my_args["format"] = format
+    my_args["f_type"] = f_type
     my_args["__debug_flag__"] = debug_flag
 
     res = (sync_save_dictionary if synchronous or True else async_save_dictionary.delay)(**my_args)
@@ -15120,9 +15119,9 @@ class SaveDictionary(graphene.Mutation):
     class Arguments:
         id = LingvodocID(required=True)
         mode = graphene.String(required=True)
-        format = graphene.String()
         sound_flag = graphene.Boolean()
         markup_flag = graphene.Boolean()
+        f_type = graphene.String()
         synchronous = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
@@ -15136,6 +15135,7 @@ class SaveDictionary(graphene.Mutation):
         mode,
         sound_flag = False,
         markup_flag = False,
+        f_type = 'xlsx',
         synchronous = False,
         debug_flag = False):
 
@@ -15187,7 +15187,7 @@ class SaveDictionary(graphene.Mutation):
             publish,
             sound_flag,
             markup_flag,
-            format,
+            'docx',
             synchronous,
             debug_flag)
 

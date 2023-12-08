@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import pdb
 import sqlite3
 import base64
 import requests
@@ -734,20 +735,21 @@ class Save_Context(object):
         sound_flag = False,
         markup_flag = False,
         storage = None,
-        format = 'xlsx',
+        f_type = 'xlsx',
         __debug_flag__ = False):
 
         self.locale_id = locale_id
         self.session = session
 
-        self.cognates_flag = cognates_flag
+        self.cognates_flag = (cognates_flag and
+                              f_type == 'xlsx')
         self.sound_flag = sound_flag
         self.markup_flag = markup_flag
 
         self.stream = io.BytesIO()
-        self.workbook = xlsx.Workbook(self.stream, {'in_memory': True}) if format == 'xlsx' else None
-        self.document = docx.Document() if format == 'docx' else None
-        self.richtext = rtf.Document() if format == 'rtf' else None
+        self.workbook = xlsx.Workbook(self.stream, {'in_memory': True}) if f_type == 'xlsx' else None
+        self.document = docx.Document() if f_type == 'docx' else None
+        self.richtext = rtf.Document() if f_type == 'rtf' else None
 
         # Getting up-to-date text field info.
 
@@ -2273,7 +2275,7 @@ class Save_Context(object):
         entry,
         published = None,
         accepted = True,
-        format = 'xlsx',
+        f_type = 'xlsx',
         __debug_flag__ = False):
         """
         Save data of a lexical entry of the current perspective.
@@ -2491,15 +2493,24 @@ class Save_Context(object):
 
                     for index, value in enumerate(cell_list):
 
-                        if not isinstance(value, str):
+                        if isinstance(value, tuple):
+                            value = value[0]
+
+                        if not value or not isinstance(value, str):
                             continue
 
-                        row_cells[index] = value
+                        # Add columns if required
+                        while len(row_cells) <= index:
+                            self.table.add_column(13)
+
+                        #print(len(self.table.column_cells(0)), value)
+
+                        row_cells[index].text = value
 
         def rtf():
             pass
 
-        return xlsx if format == 'xlsx' else docx
+        return xlsx if f_type == 'xlsx' else docx
 
     def get_zip_info(
         self,
@@ -2644,7 +2655,7 @@ def write_xlsx(
         context.save_lexical_entry(
             lex,
             published,
-            format='xlsx',
+            f_type = 'xlsx',
             __debug_flag__ = __debug_flag__)()
 
     # Writing out additional perspective info, if we have any.
@@ -2738,8 +2749,10 @@ def write_docx(
         context.save_lexical_entry(
             lex,
             published,
-            format='docx',
+            f_type = 'docx',
             __debug_flag__ = __debug_flag__)()
+
+    #print("Writing complete")
 
 
 def write_rtf(
@@ -2752,7 +2765,7 @@ def write_rtf(
         context.save_lexical_entry(
             lex,
             published,
-            format='rtf',
+            f_type = 'rtf',
             __debug_flag__ = __debug_flag__)()
 
 
@@ -2795,7 +2808,8 @@ def compile_document(
 
         lex_by_id = {}
         lex_by_order = {}
-        order_field_id = get_field_id("Order", DBSession=session)
+        #order_field_id = get_field_id("Order", DBSession=session)
+        order_field_id = None
         for lex, entity in lexical_entries:
             lex_by_id[lex.id] = lex
             if entity.field_id == order_field_id:
@@ -2803,11 +2817,11 @@ def compile_document(
         lex_dict = lex_by_order if lex_by_order else lex_by_id
 
         if context.workbook:
-            write_xlsx(context, lex_dict, published)
+            write_xlsx(context, lex_dict, published, __debug_flag__)
         elif context.document:
-            write_docx(context, lex_dict, published)
+            write_docx(context, lex_dict, published, __debug_flag__)
         elif context.richtext:
-            write_rtf(context, lex_dict, published)
+            write_rtf(context, lex_dict, published, __debug_flag__)
 
 
 # @profile()
@@ -2823,7 +2837,7 @@ def save_dictionary(
     published,
     sound_flag,
     markup_flag,
-    format = 'xlsx',
+    f_type = 'xlsx',
     __debug_flag__ = False
 ):  # :(
 
@@ -2852,7 +2866,7 @@ def save_dictionary(
                 sound_flag,
                 markup_flag,
                 storage,
-                format,
+                f_type,
                 __debug_flag__))
 
         if sound_flag or markup_flag:
@@ -2895,7 +2909,7 @@ def save_dictionary(
             current_datetime.month,
             current_datetime.day)
 
-        table_filename = sanitize_filename(f"{result_filename}.{format}")
+        table_filename = sanitize_filename(f"{result_filename}.{f_type}")
 
         if __debug_flag__:
 
@@ -3061,7 +3075,7 @@ def save_dictionary(
                     current_datetime.month,
                     current_datetime.day)
 
-                table_filename = sanitize_filename(f"{result_filename}.{format}")
+                table_filename = sanitize_filename(f"{result_filename}.{f_type}")
                 storage_path = path.join(storage_dir, table_filename)
 
                 with open(storage_path, 'wb+') as workbook_file:
