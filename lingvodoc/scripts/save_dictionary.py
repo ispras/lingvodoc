@@ -2505,7 +2505,7 @@ class Save_Context(object):
                         #print(len(self.table.column_cells(0)), value)
                         if (len(self.fields) > index and
                                 self.fields[index].field.get_translation(2) == 'Order'):
-                            row_cells[index].text = len(self.table.column_cells(0)) - 1
+                            row_cells[index].text = str(len(self.table.column_cells(0)) - 1)
                         else:
                             row_cells[index].text = value
 
