@@ -2273,6 +2273,7 @@ class Save_Context(object):
         entry,
         published = None,
         accepted = True,
+        format = 'xlsx',
         __debug_flag__ = False):
         """
         Save data of a lexical entry of the current perspective.
@@ -2498,6 +2499,8 @@ class Save_Context(object):
         def rtf():
             pass
 
+        return xlsx if format == 'xlsx' else docx
+
     def get_zip_info(
         self,
         name,
@@ -2638,10 +2641,11 @@ def write_xlsx(
     __debug_flag__ = False):
 
     for (_, lex) in sorted(lex_dict.items()):
-        context.save_lexical_entry.xlsx(
+        context.save_lexical_entry(
             lex,
             published,
-            __debug_flag__ = __debug_flag__)
+            format='xlsx',
+            __debug_flag__ = __debug_flag__)()
 
     # Writing out additional perspective info, if we have any.
 
@@ -2731,10 +2735,11 @@ def write_docx(
     __debug_flag__ = False):
 
     for (_, lex) in sorted(lex_dict.items()):
-        context.save_lexical_entry.docx(
+        context.save_lexical_entry(
             lex,
             published,
-            __debug_flag__ = __debug_flag__)
+            format='docx',
+            __debug_flag__ = __debug_flag__)()
 
 
 def write_rtf(
@@ -2744,10 +2749,11 @@ def write_rtf(
     __debug_flag__ = False):
 
     for (_, lex) in sorted(lex_dict.items()):
-        context.save_lexical_entry.rtf(
+        context.save_lexical_entry(
             lex,
             published,
-            __debug_flag__ = __debug_flag__)
+            format='rtf',
+            __debug_flag__ = __debug_flag__)()
 
 
 def compile_document(

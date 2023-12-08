@@ -15112,7 +15112,7 @@ def save_dictionary(
     my_args["format"] = format
     my_args["__debug_flag__"] = debug_flag
 
-    res = (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
+    res = (sync_save_dictionary if synchronous or True else async_save_dictionary.delay)(**my_args)
 
 
 class SaveDictionary(graphene.Mutation):
