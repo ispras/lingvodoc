@@ -88,6 +88,7 @@ class CreateField(graphene.Mutation):
         translation_gist_id = LingvodocID()
         data_type_translation_gist_id = LingvodocID()
         is_translatable = graphene.Boolean()
+        parallel = graphene.Boolean()
         translation_atoms = graphene.List(ObjectVal)
 
     marked_for_deletion = graphene.Boolean()
@@ -106,18 +107,21 @@ class CreateField(graphene.Mutation):
             data_type_translation_gist_id = args.get('data_type_translation_gist_id')
             translation_gist_id = args.get('translation_gist_id')
             translation_atoms = args.get("translation_atoms")
+            parallel = args.get("parallel", False)
             translation_gist_id = create_gists_with_atoms(translation_atoms,
                                                           translation_gist_id,
-                                                          [client_id,object_id],
+                                                          [client_id, object_id],
                                                           gist_type="Field")
+
             dbfield = dbField(client_id=client_id,
-                          object_id=object_id,
-                          data_type_translation_gist_client_id=data_type_translation_gist_id[0],
-                          data_type_translation_gist_object_id=data_type_translation_gist_id[1],
-                          translation_gist_client_id=translation_gist_id[0],
-                          translation_gist_object_id=translation_gist_id[1],
-                          marked_for_deletion=False
-                          )
+                              object_id=object_id,
+                              data_type_translation_gist_client_id=data_type_translation_gist_id[0],
+                              data_type_translation_gist_object_id=data_type_translation_gist_id[1],
+                              translation_gist_client_id=translation_gist_id[0],
+                              translation_gist_object_id=translation_gist_id[1],
+                              marked_for_deletion=False,
+                              additional_metadata={'parallel': parallel})
+
             if args.get('is_translatable'):
                 dbfield.is_translatable = args['is_translatable']
             DBSession.add(dbfield)

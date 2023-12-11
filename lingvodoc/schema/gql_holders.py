@@ -993,6 +993,8 @@ class Metadata(graphene.ObjectType):
     toc_mark = graphene.Boolean()
     attached_users = graphene.List(graphene.Int)
 
+    parallel = graphene.Boolean()
+
 
 metadata_key_set = {
 

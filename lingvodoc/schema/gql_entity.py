@@ -67,6 +67,7 @@ from lingvodoc.schema.gql_holders import (
 from lingvodoc.utils.creation import create_entity
 from lingvodoc.utils.deletion import real_delete_entity
 from lingvodoc.utils.elan_functions import eaf_wordlist
+from lingvodoc.utils.lexgraph_marker import marker_between_arith as marker_between
 from lingvodoc.utils.verification import check_client_id, check_lingvodoc_id
 
 
@@ -186,6 +187,7 @@ class CreateEntity(graphene.Mutation):
         content = graphene.String()
         filename = graphene.String()
         file_content = Upload()
+        lexgraph_after = graphene.String()
         additional_metadata = ObjectVal()
 
     # Result object
@@ -230,6 +232,7 @@ class CreateEntity(graphene.Mutation):
         locale_id = ENGLISH_LOCALE,
         content = None,
         filename = None,
+        lexgraph_after = None,
         additional_metadata = None,
 
         **args):
@@ -426,6 +429,10 @@ class CreateEntity(graphene.Mutation):
                 return ResponseError(
                     "The field is of link type. You should provide link_perspective_id id in the content")
 
+        elif lexgraph_after is not None:
+            dbentity.content = marker_between(marker_after=lexgraph_after)
+
+
         else:
             db_entity.content = content
 
@@ -510,6 +517,7 @@ class UpdateEntity(graphene.Mutation):
         id = LingvodocID(required=True)
         published = graphene.Boolean()
         accepted = graphene.Boolean()
+        new_parent_id = LingvodocID()
 
     entity = graphene.Field(Entity)
     triumph = graphene.Boolean()
@@ -550,6 +558,18 @@ class UpdateEntity(graphene.Mutation):
             dbpublishingentity.accepted = accepted
 
         dbentity = dbEntity.get((client_id, object_id))
+
+        new_parent_id = args.get('new_parent_id')
+
+        if new_parent_id is not None:
+
+            info.context.acl_check('delete', 'lexical_entries_and_entities',
+                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+            info.context.acl_check('create', 'lexical_entries_and_entities',
+                                   (lexical_entry.parent_client_id, lexical_entry.parent_object_id))
+
+            dbentity.parent_id = new_parent_id
+
         return UpdateEntity(entity=Entity(dbentity), triumph=True)
 
 
@@ -1239,7 +1259,8 @@ class UpdateEntityContent(graphene.Mutation):
         """
         id = LingvodocID()
         content = graphene.String()
-
+        lexgraph_before = graphene.String()
+        lexgraph_after = graphene.String()
 
     entity = graphene.Field(Entity)
     triumph = graphene.Boolean()
@@ -1250,6 +1271,11 @@ class UpdateEntityContent(graphene.Mutation):
         old_client_id, object_id = args.get('id')
         client_id = DBSession.query(Client).filter_by(id=info.context.client_id).first().id
         content = args.get("content")
+        lexgraph_before = args.get("lexgraph_before", '')
+        lexgraph_after = args.get("lexgraph_after", '')
+        if content is None and (lexgraph_before or lexgraph_after):
+            content = marker_between(lexgraph_before, lexgraph_after)
+
         dbentity_old = dbEntity.get((old_client_id, object_id), deleted = False)
         if not dbentity_old:
             raise ResponseError(message="No such entity in the system")

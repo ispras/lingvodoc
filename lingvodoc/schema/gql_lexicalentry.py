@@ -282,6 +282,7 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
     class Arguments:
         ids = graphene.List(LingvodocID, required=True)
 
+    deleted_entries = graphene.List(LexicalEntry)
     triumph = graphene.Boolean()
 
     @staticmethod
@@ -290,7 +291,7 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
         ids = args.get('ids')
         task_id = str(uuid4())
 
-        lexical_entries = CACHE.get(objects =
+        dblexicalentries = CACHE.get(objects =
             {
                dbLexicalEntry : ids
             },
@@ -299,7 +300,8 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
         settings = info.context.request.registry.settings
         client_id = info.context.client_id
 
-        for dblexicalentry in lexical_entries:
+        deleted_entries = []
+        for dblexicalentry in dblexicalentries:
             # client_id, object_id = lex_id
             # dblexicalentry = DBSession.query(dbLexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
             if not dblexicalentry or dblexicalentry.marked_for_deletion:
@@ -322,7 +324,11 @@ class BulkDeleteLexicalEntry(graphene.Mutation):
                     task_id = task_id,
                     counter = len(ids))
 
-        return BulkDeleteLexicalEntry(triumph=True)
+            lexicalentry = LexicalEntry(id=[dblexicalentry.client_id, dblexicalentry.object_id])
+            lexicalentry.dbObject = dblexicalentry
+            deleted_entries.append(lexicalentry)
+
+        return BulkDeleteLexicalEntry(deleted_entries=deleted_entries, triumph=True)
 
 
 class BulkUndeleteLexicalEntry(graphene.Mutation):

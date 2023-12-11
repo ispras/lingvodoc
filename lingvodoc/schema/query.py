@@ -305,6 +305,7 @@ from lingvodoc.scripts.save_dictionary import save_dictionary as sync_save_dicti
 import lingvodoc.utils as utils
 
 from lingvodoc.utils import (
+    plain_text_converter,
     render_statement,
     starling_converter)
 
@@ -487,7 +488,7 @@ class Query(graphene.ObjectType):
     userrequests = graphene.List(UserRequest)
     all_basegroups = graphene.List(BaseGroup)
     all_data_types = graphene.List(TranslationGist)
-    all_fields = graphene.List(Field, common=graphene.Boolean())
+    all_fields = graphene.List(Field, common=graphene.Boolean(), parallel=graphene.Boolean())
     common_fields = graphene.List(Field)
     all_statuses = graphene.List(TranslationGist)
     template_fields = graphene.List(Field, mode=graphene.String())
@@ -2009,7 +2010,7 @@ class Query(graphene.ObjectType):
             gql_statuses.append(gql_tr_gist)
         return gql_statuses
 
-    def resolve_all_fields(self, info, common=False):
+    def resolve_all_fields(self, info, common=False, parallel=False):
         fields = DBSession.query(dbField).filter_by(marked_for_deletion=False).all()
         if common:
             field_to_psersp_dict = collections.defaultdict(list)
@@ -2030,6 +2031,8 @@ class Query(graphene.ObjectType):
                     continue
                 if db_field.data_type != "Text":
                     continue
+            if parallel and not (db_field.additional_metadata and db_field.additional_metadata.get('parallel')):
+                continue
             gql_field = Field(id=[db_field.client_id, db_field.object_id])
             gql_field.dbObject = db_field
             gql_fields.append(gql_field)
@@ -2107,10 +2110,7 @@ class Query(graphene.ObjectType):
                     .group_by(dbDictionary))
 
         if category is not None:
-            if category:
-                dbdicts = dbdicts.filter(dbDictionary.category == 1)
-            else:
-                dbdicts = dbdicts.filter(dbDictionary.category == 0)
+            dbdicts = dbdicts.filter(dbDictionary.category == category)
         dbdicts = dbdicts.order_by(dbDictionary.created_at.desc())
         if mode is not None and client:
             user = DBSession.query(dbUser).filter_by(id=client.user_id).first()
@@ -5847,8 +5847,9 @@ def save_dictionary(
     user_id,
     locale_id,
     publish,
-    sound_flag,
-    markup_flag,
+    sound_flag = False,
+    markup_flag = False,
+    f_type = 'xlsx',
     synchronous = False,
     debug_flag = False):
 
@@ -5887,6 +5888,7 @@ def save_dictionary(
     my_args["published"] = publish
     my_args['sound_flag'] = sound_flag
     my_args['markup_flag'] = markup_flag
+    my_args['f_type'] = f_type
     my_args['__debug_flag__'] = debug_flag
 
     (sync_save_dictionary if synchronous else async_save_dictionary.delay)(**my_args)
@@ -5899,6 +5901,7 @@ class SaveDictionary(graphene.Mutation):
         mode = graphene.String(required=True)
         sound_flag = graphene.Boolean()
         markup_flag = graphene.Boolean()
+        f_type = graphene.String()
         synchronous = graphene.Boolean()
         debug_flag = graphene.Boolean()
 
@@ -5912,6 +5915,7 @@ class SaveDictionary(graphene.Mutation):
         mode,
         sound_flag = False,
         markup_flag = False,
+        f_type = 'xlsx',
         synchronous = False,
         debug_flag = False):
 
@@ -5963,6 +5967,7 @@ class SaveDictionary(graphene.Mutation):
             publish,
             sound_flag,
             markup_flag,
+            f_type,
             synchronous,
             debug_flag)
 
@@ -7044,6 +7049,7 @@ class MyMutations(graphene.ObjectType):
     for more beautiful imports
     """
     convert_starling = starling_converter.GqlStarling.Field()
+    convert_plain_text = plain_text_converter.GqlParallelCorpora.Field()
     convert_dialeqt = ConvertDictionary.Field()
     convert_corpus = ConvertFiveTiers.Field()
     create_field = CreateField.Field()

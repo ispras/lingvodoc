@@ -304,20 +304,20 @@ def created_at():
             .timestamp())
 
 
-def get_field_id(searchstring):
+def get_field_id(searchstring, DBSession=DBSession):
     # Search among hardcoded fields
     static_field_id = get_id_to_field_dict().get(searchstring)
     if static_field_id:
         return static_field_id
 
     # Search field in db
-    field = field_search(searchstring)
+    field = field_search(searchstring, DBSession=DBSession)
 
     # Create new field if not found
     if not field:
         field = create_field([{
             "locale_id": ENGLISH_LOCALE,
-            "content": searchstring}])
+            "content": searchstring}], DBSession=DBSession)
 
     return field.id
 
