@@ -280,9 +280,42 @@ def create_dblanguage(
 
         raise ResponseError(f'No language {parent_id} in the system.')
 
+    # Setting up metadata with language ordering.
+
     if additional_metadata is None:
 
         additional_metadata = {}
+
+    prev_sibling = (
+
+        DBSession
+
+            .query(Language)
+
+            .filter(
+                Language.parent_id == parent_id,
+                Language.marked_for_deletion == False)
+
+            .order_by(
+                Language.parent_id,
+                Language.additional_metadata['younger_siblings'].desc())
+
+            .first())
+
+    if prev_sibling:
+
+        sibling_list = (
+            prev_sibling.additional_metadata and
+            prev_sibling.additional_metadata.get('younger_siblings'))
+
+        additional_metadata['younger_siblings'] = (
+            list(sibling_list) if sibling_list else [])
+
+        additional_metadata['younger_siblings'].append(prev_sibling.id)
+
+    else:
+
+        additional_metadata['younger_siblings'] = []
 
     dblanguage = (
 
@@ -294,46 +327,15 @@ def create_dblanguage(
 
     DBSession.add(dblanguage)
 
-    prev_sibling = (
+    user = Client.get(client_id).user
 
-        DBSession
-
-            .query(Language)
-
-            .filter(
-                Language.parent_id == parent_id,
-                Language.id != dblanguage.id,
-                Language.marked_for_deletion == False)
-
-            .order_by(
-                Language.parent_id,
-                Language.additional_metadata['younger_siblings'].desc())
-
-            .first())
-
-    dblanguage.additional_metadata['younger_siblings'] = []
-    if prev_sibling and prev_sibling.additional_metadata:
-        dblanguage.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
-        dblanguage.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
-
-    # if not object_id:
-    #     for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-    #         new_group = Group(parent=base,
-    #                           subject_object_id=dblanguage.object_id,
-    #                           subject_client_id=dblanguage.client_id)
-    #         if user not in new_group.users:
-    #             new_group.users.append(user)
-    #         DBSession.add(new_group)
-    #         DBSession.flush()
-    client = DBSession.query(Client).filter_by(id=client_id).first()
-    user = client.user
     basegroups = []
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
 
     groups = []
     for base in basegroups:
-        group = Group(subject_client_id=dblanguage.client_id, subject_object_id=dblanguage.object_id, parent=base)
+        group = Group(subject_id=dblanguage.id, parent=base)
         groups += [group]
     for group in groups:
         add_user_to_group(user, group)
