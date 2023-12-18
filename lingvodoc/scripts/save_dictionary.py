@@ -1616,7 +1616,7 @@ class Save_Context(object):
                 self.table.add_column(5).cells[0].text = column_name
             elif self.richtext:
                 is_order = int(field.field.get_translation(2, self.session) == 'Order')
-                tabs.append(TabPropertySet.DEFAULT_WIDTH * (1.5 if is_order else 5))
+                tabs.append(TabPropertySet.DEFAULT_WIDTH * (2 if is_order else 5))
                 cells.append(Cell(Paragraph(column_name)))
 
         if self.etymology_field:
