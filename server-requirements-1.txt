@@ -79,6 +79,7 @@ regex==2019.6.8
 repoze.lru==0.6
 repoze.sendmail==4.4.1
 requests==2.11.1
+rtfunicode==2.0
 Rx==1.6.0
 scikit-learn==0.24.1
 scipy==1.6.1
