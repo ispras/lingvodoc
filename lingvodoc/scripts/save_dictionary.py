@@ -70,6 +70,7 @@ from pdb import set_trace
 import io, codecs
 from xlsxwriter import Workbook as xlsxDocument
 from docx import Document as docxDocument
+from docx.shared import Inches
 
 from PyRTF.Elements import Document as rtfDocument
 from PyRTF.document.section import Section
@@ -1609,13 +1610,13 @@ class Save_Context(object):
 
         for field in self.fields:
             column_name = field.field.get_translation(self.locale_id, self.session)
+            is_order = (field.field.get_translation(2, self.session) == 'Order')
             if self.workbook:
                 self.worksheet.write(self.row, column, column_name)
                 column += 1
             elif self.document:
-                self.table.add_column(5).cells[0].text = column_name
+                self.table.add_column(Inches(1) if is_order else Inches(3)).cells[0].text = column_name
             elif self.richtext:
-                is_order = int(field.field.get_translation(2, self.session) == 'Order')
                 tabs.append(TabPropertySet.DEFAULT_WIDTH * (2 if is_order else 5))
                 cells.append(Cell(Paragraph(column_name)))
 
@@ -1624,7 +1625,7 @@ class Save_Context(object):
             if self.workbook:
                 self.worksheet.write(self.row, column, etymology_name)
             elif self.document:
-                self.table.add_column(5).cells[0].text = etymology_name
+                self.table.add_column(Inches(2)).cells[0].text = etymology_name
             elif self.richtext:
                 tabs.append(TabPropertySet.DEFAULT_WIDTH * 5)
                 cells.append(Cell(Paragraph(etymology_name)))
@@ -2520,7 +2521,7 @@ class Save_Context(object):
 
                         # Add columns if required
                         while len(row_cells) <= index:
-                            self.table.add_column(5)
+                            self.table.add_column(Inches(2))
 
                         #print(len(self.table.column_cells(0)), value)
                         if (len(self.fields) > index and
