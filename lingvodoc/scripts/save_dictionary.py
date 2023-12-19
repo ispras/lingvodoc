@@ -75,7 +75,7 @@ from docx.shared import Inches
 from PyRTF.Elements import Document as rtfDocument
 from PyRTF.document.section import Section
 from PyRTF.document.paragraph import Cell, Paragraph, Table
-from PyRTF.PropertySets import ParagraphPropertySet, TabPropertySet
+from PyRTF.PropertySets import BorderPropertySet, FramePropertySet, TabPropertySet
 import rtfunicode
 
 # from time import time
@@ -2540,7 +2540,7 @@ class Save_Context(object):
         def rtf():
             # Writing out lexical entry data, if we have any.
             if any(rows_to_write):
-
+                frame = FramePropertySet(top=BorderPropertySet(width=20, style=BorderPropertySet.SINGLE))
                 for cell_list in (
                     itertools.zip_longest(
                         *rows_to_write,
@@ -2556,7 +2556,7 @@ class Save_Context(object):
                                 self.fields[index].field.get_translation(2, self.session) == 'Order'):
                             value = str(self.row)
 
-                        cells.append(Cell(Paragraph(self.fix_unicode(value))))
+                        cells.append(Cell(Paragraph(self.fix_unicode(value), frame)))
 
                     self.table.AddRow(*cells)
                     self.row += 1
