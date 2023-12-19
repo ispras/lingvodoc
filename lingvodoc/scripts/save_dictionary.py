@@ -76,6 +76,7 @@ from PyRTF.Elements import Document as rtfDocument
 from PyRTF.document.section import Section
 from PyRTF.document.paragraph import Cell, Paragraph, Table
 from PyRTF.PropertySets import ParagraphPropertySet, TabPropertySet
+import rtfunicode
 
 # from time import time
 import datetime
@@ -1345,6 +1346,10 @@ class Save_Context(object):
                 '''.format(
                     text_field_id_table_name = self.text_field_id_table_name))
 
+    @staticmethod
+    def fix_unicode(line):
+        return line.encode('rtfunicode').decode('utf-8')
+
     def ready_worksheet(
         self,
         worksheet_name):
@@ -1618,7 +1623,7 @@ class Save_Context(object):
                 self.table.add_column(Inches(1) if is_order else Inches(3)).cells[0].text = column_name
             elif self.richtext:
                 tabs.append(TabPropertySet.DEFAULT_WIDTH * (2 if is_order else 5))
-                cells.append(Cell(Paragraph(column_name)))
+                cells.append(Cell(Paragraph(self.fix_unicode(column_name))))
 
         if self.etymology_field:
             etymology_name = self.etymology_field.field.get_translation(self.locale_id, self.session)
@@ -1628,7 +1633,7 @@ class Save_Context(object):
                 self.table.add_column(Inches(2)).cells[0].text = etymology_name
             elif self.richtext:
                 tabs.append(TabPropertySet.DEFAULT_WIDTH * 5)
-                cells.append(Cell(Paragraph(etymology_name)))
+                cells.append(Cell(Paragraph(self.fix_unicode(etymology_name))))
 
         if self.richtext:
             self.table = Table(*tabs)
@@ -2551,7 +2556,7 @@ class Save_Context(object):
                                 self.fields[index].field.get_translation(2, self.session) == 'Order'):
                             value = str(self.row)
 
-                        cells.append(Cell(Paragraph(value)))
+                        cells.append(Cell(Paragraph(self.fix_unicode(value))))
 
                     self.table.AddRow(*cells)
                     self.row += 1
@@ -2869,8 +2874,7 @@ def compile_document(
         elif context.richtext:
             write_rtf(context, lex_dict, published, __debug_flag__)
             # Write utf to bytes
-            stream_writer = codecs.getwriter('utf-8')
-            wrapper_file = stream_writer(context.stream)
+            wrapper_file = codecs.getwriter('utf-8')(context.stream)
             context.richtext.write(wrapper_file)
 
 
