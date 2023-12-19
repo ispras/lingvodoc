@@ -67,10 +67,17 @@ from sqlalchemy.orm import (
 from sqlalchemy import tuple_, and_, or_
 from lingvodoc.scripts import elan_parser
 from pdb import set_trace
-import io
-import xlsxwriter as xlsx
-import docx
-import PyRTF as rtf
+import io, codecs
+from xlsxwriter import Workbook as xlsxDocument
+from docx import Document as docxDocument
+from docx.shared import Inches
+
+from PyRTF.Elements import Document as rtfDocument
+from PyRTF.document.section import Section
+from PyRTF.document.paragraph import Cell, Paragraph, Table
+from PyRTF.PropertySets import BorderPropertySet, FramePropertySet, TabPropertySet
+import rtfunicode
+
 # from time import time
 import datetime
 import time
@@ -746,9 +753,9 @@ class Save_Context(object):
         self.markup_flag = markup_flag
 
         self.stream = io.BytesIO()
-        self.workbook = xlsx.Workbook(self.stream, {'in_memory': True}) if f_type == 'xlsx' else None
-        self.document = docx.Document() if f_type == 'docx' else None
-        self.richtext = rtf.Document() if f_type == 'rtf' else None
+        self.workbook = xlsxDocument(self.stream, {'in_memory': True}) if f_type == 'xlsx' else None
+        self.document = docxDocument() if f_type == 'docx' else None
+        self.richtext = rtfDocument() if f_type == 'rtf' else None
 
         # Getting up-to-date text field info.
 
@@ -1339,6 +1346,10 @@ class Save_Context(object):
                 '''.format(
                     text_field_id_table_name = self.text_field_id_table_name))
 
+    @staticmethod
+    def fix_unicode(line):
+        return line.encode('rtfunicode').decode('utf-8')
+
     def ready_worksheet(
         self,
         worksheet_name):
@@ -1599,21 +1610,37 @@ class Save_Context(object):
         # Listing fields.
 
         column = 0
+        tabs = list()
+        cells = list()
 
         for field in self.fields:
             column_name = field.field.get_translation(self.locale_id, self.session)
+            is_order = (field.field.get_translation(2, self.session) == 'Order')
             if self.workbook:
                 self.worksheet.write(self.row, column, column_name)
                 column += 1
             elif self.document:
-                self.table.add_column(5).cells[0].text = column_name
+                self.table.add_column(Inches(1) if is_order else Inches(3)).cells[0].text = column_name
+            elif self.richtext:
+                tabs.append(TabPropertySet.DEFAULT_WIDTH * (2 if is_order else 5))
+                cells.append(Cell(Paragraph(self.fix_unicode(column_name))))
 
         if self.etymology_field:
             etymology_name = self.etymology_field.field.get_translation(self.locale_id, self.session)
             if self.workbook:
                 self.worksheet.write(self.row, column, etymology_name)
             elif self.document:
-                self.table.add_column(5).cells[0].text = etymology_name
+                self.table.add_column(Inches(2)).cells[0].text = etymology_name
+            elif self.richtext:
+                tabs.append(TabPropertySet.DEFAULT_WIDTH * 5)
+                cells.append(Cell(Paragraph(self.fix_unicode(etymology_name))))
+
+        if self.richtext:
+            self.table = Table(*tabs)
+            self.table.AddRow(*cells)
+            section = Section()
+            section.append(self.table)
+            self.richtext.Sections.append(section)
 
         self.row += 1
 
@@ -2499,20 +2526,44 @@ class Save_Context(object):
 
                         # Add columns if required
                         while len(row_cells) <= index:
-                            self.table.add_column(5)
+                            self.table.add_column(Inches(2))
 
                         #print(len(self.table.column_cells(0)), value)
                         if (len(self.fields) > index and
                                 self.fields[index].field.get_translation(2, self.session) == 'Order'):
-                            row_cells[index].text = str(self.row) #str(len(self.table.column_cells(0)) - 1)
-                            self.row += 1
+                            row_cells[index].text = str(self.row)
                         else:
                             row_cells[index].text = value
 
-        def rtf():
-            pass
+                    self.row += 1
 
-        return xlsx if f_type == 'xlsx' else docx
+        def rtf():
+            # Writing out lexical entry data, if we have any.
+            if any(rows_to_write):
+                frame = FramePropertySet(top=BorderPropertySet(width=20, style=BorderPropertySet.SINGLE))
+                for cell_list in (
+                    itertools.zip_longest(
+                        *rows_to_write,
+                        fillvalue = '')):
+
+                    cells = list()
+                    for index, value in enumerate(cell_list):
+                        if isinstance(value, tuple):
+                            value = value[0]
+                        if not isinstance(value, str):
+                            value = ''
+                        if (len(self.fields) > index and
+                                self.fields[index].field.get_translation(2, self.session) == 'Order'):
+                            value = str(self.row)
+
+                        cells.append(Cell(Paragraph(self.fix_unicode(value), frame)))
+
+                    self.table.AddRow(*cells)
+                    self.row += 1
+
+        return (xlsx if f_type == 'xlsx' else
+                docx if f_type == 'docx' else
+                rtf)
 
     def get_zip_info(
         self,
@@ -2754,8 +2805,6 @@ def write_docx(
             f_type = 'docx',
             __debug_flag__ = __debug_flag__)()
 
-    #print("Writing complete")
-
 
 def write_rtf(
     context,
@@ -2818,10 +2867,15 @@ def compile_document(
 
         if context.workbook:
             write_xlsx(context, lex_dict, published, __debug_flag__)
+            context.workbook.close()
         elif context.document:
             write_docx(context, lex_dict, published, __debug_flag__)
+            context.document.save(context.stream)
         elif context.richtext:
             write_rtf(context, lex_dict, published, __debug_flag__)
+            # Write utf to bytes
+            wrapper_file = codecs.getwriter('utf-8')(context.stream)
+            context.richtext.write(wrapper_file)
 
 
 # @profile()
@@ -2893,11 +2947,6 @@ def save_dictionary(
             published,
             storage,
             __debug_flag__ = __debug_flag__)
-
-        if save_context.workbook:
-            save_context.workbook.close()
-        elif save_context.document:
-            save_context.document.save(save_context.stream)
 
         # Name(s) of the resulting file(s) includes dictionary name, perspective name and current date.
 
