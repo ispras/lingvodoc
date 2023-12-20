@@ -83,9 +83,9 @@ def field_search(searchstring, data_type='Text', DBSession=DBSession):
                 dbTranslationAtomD.locale_id == ENGLISH_LOCALE,
                 dbTranslationAtomD.marked_for_deletion == False)
             .order_by(
-                dbTranslationGist.created_at,
-                dbTranslationGist.client_id,
-                dbTranslationGist.object_id)
+                dbTranslationGistF.created_at,
+                dbTranslationGistF.client_id,
+                dbTranslationGistF.object_id)
             .first())
 
     return field
