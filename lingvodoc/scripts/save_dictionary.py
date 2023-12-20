@@ -98,8 +98,6 @@ EAF_TIERS = {
     "translation": "Translation"
 }
 
-field_ids_to_str = lambda x: str(x.field_client_id) + '_' + str(x.field_object_id)
-
 
 def find_lexical_entries_by_tags(tags, session, published):
     result = session.query(LexicalEntry) \
@@ -1307,6 +1305,8 @@ class Save_Context(object):
                     
                     .first())
 
+        self.is_order_field_dict = {}
+
         if __debug_flag__:
 
             # Simple text field ids query.
@@ -1345,6 +1345,29 @@ class Save_Context(object):
 
                 '''.format(
                     text_field_id_table_name = self.text_field_id_table_name))
+
+    def is_order_field(self, field_id):
+        """
+        Checks if a field specified by its id is an ordering field.
+        """
+
+        result = self.is_order_field_dict.get(field_id)
+
+        if result is not None:
+            return result
+
+        field = (
+
+            Field.get(
+                field_id,
+                session = self.session))
+
+        result = (
+            field.get_translation(2, self.session) == 'Order')
+
+        self.is_order_field_dict[field_id] = result
+
+        return result
 
     @staticmethod
     def fix_unicode(line):
@@ -1592,7 +1615,7 @@ class Save_Context(object):
                     field_info_list, width = 192))
 
         self.field_to_column = {
-            field_ids_to_str(field): counter
+            field.field_id: counter
             for counter, field in enumerate(field_list)}
 
         # Making more space.
@@ -1615,7 +1638,7 @@ class Save_Context(object):
 
         for field in self.fields:
             column_name = field.field.get_translation(self.locale_id, self.session)
-            is_order = (field.field.get_translation(2, self.session) == 'Order')
+            is_order = self.is_order_field(field.field_id)
             if self.workbook:
                 self.worksheet.write(self.row, column, column_name)
                 column += 1
@@ -2338,11 +2361,11 @@ class Save_Context(object):
             """
 
             ent_field_ids = (
-                field_ids_to_str(entity))
+                entity.field_id)
 
             # Adding etymologycal info, if required.
 
-            if ent_field_ids == "66_25":
+            if ent_field_ids == (66, 25):
 
                 if (self.etymology_field and
                     len(rows_to_write) == len(self.fields)):
@@ -2518,22 +2541,27 @@ class Save_Context(object):
 
                     for index, value in enumerate(cell_list):
 
-                        if isinstance(value, tuple):
-                            value = value[0]
+                        # First checking if it's an order in case of unexpected yet possible irregular
+                        # ordering entity values, like '' or None, which we still don't want to skip.
 
-                        if not value or not isinstance(value, str):
-                            continue
+                        if (len(self.fields) > index and
+                                self.is_order_field(self.fields[index].field_id)):
+
+                            value = str(self.row)
+
+                        else:
+
+                            if isinstance(value, tuple):
+                                value = value[0]
+
+                            if not value or not isinstance(value, str):
+                                continue
 
                         # Add columns if required
                         while len(row_cells) <= index:
                             self.table.add_column(Inches(2))
 
-                        #print(len(self.table.column_cells(0)), value)
-                        if (len(self.fields) > index and
-                                self.fields[index].field.get_translation(2, self.session) == 'Order'):
-                            row_cells[index].text = str(self.row)
-                        else:
-                            row_cells[index].text = value
+                        row_cells[index].text = value
 
                     self.row += 1
 
@@ -2553,7 +2581,7 @@ class Save_Context(object):
                         if not isinstance(value, str):
                             value = ''
                         if (len(self.fields) > index and
-                                self.fields[index].field.get_translation(2, self.session) == 'Order'):
+                                self.is_order_field(self.fields[index].field_id)):
                             value = str(self.row)
 
                         cells.append(Cell(Paragraph(self.fix_unicode(value), frame)))
@@ -2859,10 +2887,17 @@ def compile_document(
 
         lex_by_id = {}
         lex_by_order = {}
+
         for lex, entity in lexical_entries:
             lex_by_id[lex.id] = lex
-            if entity.field.get_translation(2, session) == 'Order':
-                lex_by_order[entity.content] = lex
+
+            if context.is_order_field(entity.field_id):
+
+                # Safeguarding against unexpected yet possible irregular null ordering entity values, which
+                # should not appear but we can't guarantee against.
+
+                lex_by_order[(entity.content or '', lex.id)] = lex
+
         lex_dict = lex_by_order if lex_by_order else lex_by_id
 
         if context.workbook:
