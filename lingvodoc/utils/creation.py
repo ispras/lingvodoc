@@ -48,7 +48,8 @@ from lingvodoc.models import (
     Field,
     PublishingEntity,
     Organization as dbOrganization, Parser, ParserResult,
-    get_client_counter)
+    get_client_counter,
+    ENGLISH_LOCALE)
 
 from lingvodoc.queue.celery import celery
 
@@ -280,9 +281,42 @@ def create_dblanguage(
 
         raise ResponseError(f'No language {parent_id} in the system.')
 
+    # Setting up metadata with language ordering.
+
     if additional_metadata is None:
 
         additional_metadata = {}
+
+    prev_sibling = (
+
+        DBSession
+
+            .query(Language)
+
+            .filter(
+                Language.parent_id == parent_id,
+                Language.marked_for_deletion == False)
+
+            .order_by(
+                Language.parent_id,
+                Language.additional_metadata['younger_siblings'].desc())
+
+            .first())
+
+    if prev_sibling:
+
+        sibling_list = (
+            prev_sibling.additional_metadata and
+            prev_sibling.additional_metadata.get('younger_siblings'))
+
+        additional_metadata['younger_siblings'] = (
+            list(sibling_list) if sibling_list else [])
+
+        additional_metadata['younger_siblings'].append(prev_sibling.id)
+
+    else:
+
+        additional_metadata['younger_siblings'] = []
 
     dblanguage = (
 
@@ -294,46 +328,15 @@ def create_dblanguage(
 
     DBSession.add(dblanguage)
 
-    prev_sibling = (
+    user = Client.get(client_id).user
 
-        DBSession
-
-            .query(Language)
-
-            .filter(
-                Language.parent_id == parent_id,
-                Language.id != dblanguage.id,
-                Language.marked_for_deletion == False)
-
-            .order_by(
-                Language.parent_id,
-                Language.additional_metadata['younger_siblings'].desc())
-
-            .first())
-
-    dblanguage.additional_metadata['younger_siblings'] = []
-    if prev_sibling and prev_sibling.additional_metadata:
-        dblanguage.additional_metadata['younger_siblings'] = prev_sibling.additional_metadata.get('younger_siblings')
-        dblanguage.additional_metadata['younger_siblings'].append([prev_sibling.client_id, prev_sibling.object_id])
-
-    # if not object_id:
-    #     for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-    #         new_group = Group(parent=base,
-    #                           subject_object_id=dblanguage.object_id,
-    #                           subject_client_id=dblanguage.client_id)
-    #         if user not in new_group.users:
-    #             new_group.users.append(user)
-    #         DBSession.add(new_group)
-    #         DBSession.flush()
-    client = DBSession.query(Client).filter_by(id=client_id).first()
-    user = client.user
     basegroups = []
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
     basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
 
     groups = []
     for base in basegroups:
-        group = Group(subject_client_id=dblanguage.client_id, subject_object_id=dblanguage.object_id, parent=base)
+        group = Group(subject_id=dblanguage.id, parent=base)
         groups += [group]
     for group in groups:
         add_user_to_group(user, group)
@@ -903,21 +906,40 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     caching.CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
 
 
-def create_field(translation_atoms, client_id=66, gist_type="Field", DBSession=DBSession):
-    translation_gist_id = create_gists_with_atoms(translation_atoms,
-                                                  None,
-                                                  [client_id, None],
-                                                  gist_type,
-                                                  DBSession=DBSession)
+def create_field(translation_atoms, client_id, data_type="Text", DBSession=DBSession):
 
-    data_type_translation_gist = translation_gist_search('Text')
+    # Find or create translation_gist for field
+    if f_tg := translation_gist_search(translation_atoms[0].get('content'), gist_type="Field"):
+        field_translation_gist_id = (f_tg.client_id, f_tg.object_id)
+    else:
+        field_translation_gist_id = create_gists_with_atoms(
+            translation_atoms,
+            None,
+            [client_id, None],
+            "Field",
+            DBSession=DBSession
+        )
+
+    # Find or create translation_gist for data_type
+    if dt_tg := translation_gist_search(data_type, gist_type="Service"):
+        data_type_translation_gist_id = (dt_tg.client_id, dt_tg.object_id)
+    else:
+        data_type_translation_gist_id = create_gists_with_atoms(
+            [{"locale_id": ENGLISH_LOCALE, "content": data_type}],
+            None,
+            [client_id, None],
+            "Service",
+            DBSession=DBSession
+        )
+
     dbfield = Field(client_id=client_id,
                     object_id=None,
-                    data_type_translation_gist_client_id=data_type_translation_gist.client_id,
-                    data_type_translation_gist_object_id=data_type_translation_gist.object_id,
-                    translation_gist_client_id=translation_gist_id[0],
-                    translation_gist_object_id=translation_gist_id[1],
+                    data_type_translation_gist_client_id=data_type_translation_gist_id[0],
+                    data_type_translation_gist_object_id=data_type_translation_gist_id[1],
+                    translation_gist_client_id=field_translation_gist_id[0],
+                    translation_gist_object_id=field_translation_gist_id[1],
                     marked_for_deletion=False)
+
     DBSession.add(dbfield)
     DBSession.flush()
 

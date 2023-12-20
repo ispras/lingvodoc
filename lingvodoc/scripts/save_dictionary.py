@@ -57,7 +57,6 @@ from lingvodoc.cache.caching import TaskStatus, initialize_cache
 from lingvodoc.utils import explain_analyze, sanitize_worksheet_name
 from lingvodoc.utils.search import recursive_sort
 from lingvodoc.utils.static_fields import fields_static
-from lingvodoc.utils.corpus_converter import get_field_id
 from lingvodoc.views.v2.utils import as_storage_file, storage_file
 
 from sqlalchemy.orm import (
@@ -1363,7 +1362,7 @@ class Save_Context(object):
                 session = self.session))
 
         result = (
-            field.get_translation(2, self.session) == 'Order')
+            field.data_type_async(self.session) == 'Ordering')
 
         self.is_order_field_dict[field_id] = result
 

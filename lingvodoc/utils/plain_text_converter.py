@@ -33,12 +33,10 @@ from lingvodoc.utils.creation import (create_perspective,
                                       create_dictionary_persp_to_field)
 
 from lingvodoc.utils.search import translation_gist_search
-from lingvodoc.utils.corpus_converter import get_field_id
+from lingvodoc.utils.corpus_converter import get_field_tracker
 
 # Setting up logging.
 log = logging.getLogger(__name__)
-
-#order_field_id = get_field_id('Order')
 
 page = r'\d+[ab]?'
 line = r'\d+'
@@ -106,32 +104,7 @@ def txt_to_column(path, url, columns_dict=defaultdict(list), column=None):
     return columns_dict, count
 
 
-def txt_to_parallel_columns(columns_inf):
-    columns_dict = defaultdict(list)
-
-    # Hide dashes in base column if it's needed
-    columns_dict["dedash"] = columns_inf[0].get("dedash")
-
-    # Init field to be the first one in result table
-    order_field_id = get_field_id('Order')
-    columns_dict[order_field_id] = []
-
-    max_count = 0
-    for column_inf in columns_inf:
-        blob_id = tuple(column_inf.get("blob_id"))
-        field_id = tuple(column_inf.get("field_id"))
-        blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
-
-        columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_id)
-        if count > max_count:
-            max_count = count
-
-    columns_dict[order_field_id] = get_lexgraph_list(max_count)
-
-    return columns_dict
-
-
-def join_sentences(columns_dict):
+def join_sentences(columns_dict, order_field_id):
 
     def clean_text(note, non_base):
         note = re.sub(missed_regexp, '/missed text/', note)
@@ -165,7 +138,6 @@ def join_sentences(columns_dict):
         return 10 if non_base else 8
 
     threshold = 1.2
-    order_field_id = get_field_id('Order')
 
     iterators = {}
     for f_id, lines in columns_dict.items():
@@ -221,6 +193,30 @@ def join_sentences(columns_dict):
             result[f_id].append(f'{sentence[f_id]} <{wrd//coeff(non_base)}>')
 
     return result, count
+
+
+def txt_to_parallel_columns(columns_inf, order_field_id):
+    columns_dict = defaultdict(list)
+
+    # Hide dashes in base column if it's needed
+    columns_dict["dedash"] = columns_inf[0].get("dedash")
+
+    # Init field to be the first one in result table
+    columns_dict[order_field_id] = []
+
+    max_count = 0
+    for column_inf in columns_inf:
+        blob_id = tuple(column_inf.get("blob_id"))
+        field_id = tuple(column_inf.get("field_id"))
+        blob = DBSession.query(dbUserBlobs).filter_by(client_id=blob_id[0], object_id=blob_id[1]).first()
+
+        columns_dict, count = txt_to_column(blob.real_storage_path, blob.content, columns_dict, field_id)
+        if count > max_count:
+            max_count = count
+
+    columns_dict[order_field_id] = get_lexgraph_list(max_count)
+
+    return join_sentences(columns_dict, order_field_id)
 
 
 def create_entity(
@@ -361,7 +357,9 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             task_status.set(2, 20, "converting...")
 
             # Getting txt data, checking that the txt file is Lingvodoc-valid.
-            columns_dict, max_count = join_sentences(txt_to_parallel_columns(columns_inf))
+            order_field_id = get_field_tracker(
+                client_id, data_type='Ordering', DBSession=DBSession)(searchstring='Order')
+            columns_dict, max_count = txt_to_parallel_columns(columns_inf, order_field_id)
 
             task_status.set(3, 50, "creating dictionary and perspective...")
 
