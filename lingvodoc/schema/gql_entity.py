@@ -430,7 +430,7 @@ class CreateEntity(graphene.Mutation):
                     "The field is of link type. You should provide link_perspective_id id in the content")
 
         elif lexgraph_after is not None:
-            dbentity.content = marker_between(marker_after=lexgraph_after)
+            db_entity.content = marker_between(marker_after=lexgraph_after)
 
 
         else:
