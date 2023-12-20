@@ -358,8 +358,6 @@ def convert_five_tiers(
     task_status.set(
         2, percent_preparing, "Preparing")
 
-    get_field_id = get_field_tracker(client_id, data_type="Text", DBSession=DBSession)
-
     with transaction.manager:
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
@@ -376,6 +374,8 @@ def convert_five_tiers(
         DBSession.add(extra_client)
         DBSession.flush()
         extra_client_id = extra_client.id
+
+        get_field_id = get_field_tracker(extra_client_id, data_type="Text", DBSession=DBSession)
 
         task_status.set(
             3, percent_check_fields, "Checking fields")
