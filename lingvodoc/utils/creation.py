@@ -909,7 +909,7 @@ def create_group_entity(request, client, user, obj_id):  # tested
 def create_field(translation_atoms, client_id, data_type="Text", DBSession=DBSession):
 
     # Find or create translation_gist for field
-    if f_tg := translation_gist_search(translation_atoms[0].content, gist_type="Field"):
+    if f_tg := translation_gist_search(translation_atoms[0].get('content'), gist_type="Field"):
         field_translation_gist_id = (f_tg.client_id, f_tg.object_id)
     else:
         field_translation_gist_id = create_gists_with_atoms(
