@@ -1362,7 +1362,7 @@ class Save_Context(object):
                 session = self.session))
 
         result = (
-            field.get_translation(2, self.session) == 'Order')
+            field.data_type_async(self.session) == 'Ordering')
 
         self.is_order_field_dict[field_id] = result
 

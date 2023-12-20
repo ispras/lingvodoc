@@ -1279,7 +1279,7 @@ class UpdateEntityContent(graphene.Mutation):
         dbentity_old = dbEntity.get((old_client_id, object_id), deleted = False)
         if not dbentity_old:
             raise ResponseError(message="No such entity in the system")
-        if dbentity_old.field.data_type != "Text":
+        if dbentity_old.field.data_type != "Text" and dbentity_old.field.data_type != "Ordering":
             raise ResponseError(message="Can't edit non-text entities")
         lexical_entry = dbentity_old.parent
 
