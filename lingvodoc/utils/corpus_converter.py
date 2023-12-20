@@ -312,7 +312,7 @@ def get_field_tracker(client_id, data_type="Text", DBSession=DBSession):
             return static_field_id
 
         # Search field in db
-        field = field_search(searchstring, DBSession=DBSession)
+        field = field_search(searchstring, data_type, DBSession=DBSession)
 
         # Create new field if not found
         if not field:
