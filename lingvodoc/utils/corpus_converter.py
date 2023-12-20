@@ -304,22 +304,24 @@ def created_at():
             .timestamp())
 
 
-def get_field_id(searchstring, DBSession=DBSession):
-    # Search among hardcoded fields
-    static_field_id = get_id_to_field_dict().get(searchstring)
-    if static_field_id:
-        return static_field_id
+def get_field_tracker(client_id, data_type="Text", DBSession=DBSession):
+    def f(searchstring):
+        # Search among hardcoded fields
+        static_field_id = get_id_to_field_dict().get(searchstring)
+        if static_field_id:
+            return static_field_id
 
-    # Search field in db
-    field = field_search(searchstring, DBSession=DBSession)
+        # Search field in db
+        field = field_search(searchstring, DBSession=DBSession)
 
-    # Create new field if not found
-    if not field:
-        field = create_field([{
-            "locale_id": ENGLISH_LOCALE,
-            "content": searchstring}], DBSession=DBSession)
+        # Create new field if not found
+        if not field:
+            field = create_field([{
+                "locale_id": ENGLISH_LOCALE,
+                "content": searchstring}], client_id, data_type, DBSession=DBSession)
 
-    return field.id
+        return field.id
+    return f
 
 
 def convert_five_tiers(
@@ -355,6 +357,8 @@ def convert_five_tiers(
 
     task_status.set(
         2, percent_preparing, "Preparing")
+
+    get_field_id = get_field_tracker(client_id, data_type="Text", DBSession=DBSession)
 
     with transaction.manager:
         client = DBSession.query(Client).filter_by(id=client_id).first()
