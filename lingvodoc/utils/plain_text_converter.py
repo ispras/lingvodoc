@@ -357,7 +357,8 @@ def convert_start(ids, corpus_inf, columns_inf, cache_kwargs, sqlalchemy_url, ta
             task_status.set(2, 20, "converting...")
 
             # Getting txt data, checking that the txt file is Lingvodoc-valid.
-            order_field_id = get_field_tracker(client_id, data_type='Ordering', DBSession=DBSession)("Order")
+            order_field_id = get_field_tracker(
+                client_id, data_type='Ordering', DBSession=DBSession)(searchstring='Order')
             columns_dict, max_count = txt_to_parallel_columns(columns_inf, order_field_id)
 
             task_status.set(3, 50, "creating dictionary and perspective...")
