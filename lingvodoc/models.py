@@ -1539,7 +1539,8 @@ class DataTypeMixin(PrimeTableArgs):
     data_type_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
     data_type_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
 
-    def data_type_async(self, session):
+    @property
+    def data_type(self):
 
         cache_key = (
 
@@ -1555,7 +1556,7 @@ class DataTypeMixin(PrimeTableArgs):
 
         translation = (
 
-            session
+            DBSession
 
                 .query(TranslationAtom.content)
 
@@ -1571,10 +1572,6 @@ class DataTypeMixin(PrimeTableArgs):
             cache_key, translation)
 
         return translation
-
-    @property
-    def data_type(self):
-        return self.data_type_async(DBSession)
 
     def __init__(
         self,
