@@ -48,7 +48,8 @@ from lingvodoc.models import (
     Field,
     PublishingEntity,
     Organization as dbOrganization, Parser, ParserResult,
-    get_client_counter)
+    get_client_counter,
+    ENGLISH_LOCALE)
 
 from lingvodoc.queue.celery import celery
 
@@ -905,21 +906,38 @@ def create_group_entity(request, client, user, obj_id):  # tested
                     caching.CACHE.set(objects = [tag_entity, ], DBSession=DBSession)
 
 
-def create_field(translation_atoms, client_id=66, gist_type="Field", DBSession=DBSession):
-    translation_gist_id = create_gists_with_atoms(translation_atoms,
-                                                  None,
-                                                  [client_id, None],
-                                                  gist_type,
-                                                  DBSession=DBSession)
+def create_field(translation_atoms, client_id, data_type="Text", DBSession=DBSession):
 
-    data_type_translation_gist = translation_gist_search('Text')
+    # Find or create translation_gist for field
+    if f_tg := translation_gist_search(translation_atoms[0].get('content'), gist_type="Field"):
+        field_translation_gist_id = (f_tg.client_id, f_tg.object_id)
+    else:
+        field_translation_gist_id = create_gists_with_atoms(
+            translation_atoms,
+            None,
+            [client_id, None],
+            "Field",
+            DBSession=DBSession
+        )
+
+    # Find or create translation_gist for data_type
+    if dt_tg := translation_gist_search(data_type, gist_type="Service"):
+        data_type_translation_gist_id = (dt_tg.client_id, dt_tg.object_id)
+    else:
+        data_type_translation_gist_id = create_gists_with_atoms(
+            [{"locale_id": ENGLISH_LOCALE, "content": data_type}],
+            None,
+            [client_id, None],
+            "Service",
+            DBSession=DBSession
+        )
+
     dbfield = Field(client_id=client_id,
                     object_id=None,
-                    data_type_translation_gist_client_id=data_type_translation_gist.client_id,
-                    data_type_translation_gist_object_id=data_type_translation_gist.object_id,
-                    translation_gist_client_id=translation_gist_id[0],
-                    translation_gist_object_id=translation_gist_id[1],
+                    data_type_translation_gist_id=data_type_translation_gist_id,
+                    translation_gist_id=field_translation_gist_id,
                     marked_for_deletion=False)
+
     DBSession.add(dbfield)
     DBSession.flush()
 

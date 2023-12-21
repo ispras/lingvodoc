@@ -40,6 +40,7 @@ from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 
 from sqlalchemy.orm import (
     backref,
+    Bundle,
     joinedload,
     relationship,
     scoped_session,
@@ -373,15 +374,27 @@ class Composite_Id_Comparator(Comparator):
     """
 
     def __init__(
-        self, client_id, object_id):
+        self,
+        client_id,
+        object_id):
 
         self.client_id = client_id
         self.object_id = object_id
 
-        super().__init__(
+        self.tuple = (
+
             tuple_(
                 client_id,
                 object_id))
+
+        super().__init__(
+
+            Bundle(
+                'composite_id_bundle',
+                client_id,
+                object_id,
+                single_entity = True))
+
 
     def operate(
         self, op, other, **kwargs):
@@ -393,17 +406,18 @@ class Composite_Id_Comparator(Comparator):
                     op(self.client_id, None, **kwargs),
                     op(self.object_id, None, **kwargs)))
 
-        if isinstance(other, (list, tuple)):
+        comparator = (
+            getattr(other, 'comparator', None))
 
-            return (
-                and_(
-                    op(self.client_id, other[0], **kwargs),
-                    op(self.object_id, other[1], **kwargs)))
+        if (comparator is not None and
+            isinstance(comparator, Composite_Id_Comparator)):
+
+            other = other.tuple
 
         return (
 
             op(
-                self.__clause_element__(),
+                self.tuple,
                 other,
                 **kwargs))
 
