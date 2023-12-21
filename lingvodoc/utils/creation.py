@@ -934,10 +934,8 @@ def create_field(translation_atoms, client_id, data_type="Text", DBSession=DBSes
 
     dbfield = Field(client_id=client_id,
                     object_id=None,
-                    data_type_translation_gist_client_id=data_type_translation_gist_id[0],
-                    data_type_translation_gist_object_id=data_type_translation_gist_id[1],
-                    translation_gist_client_id=field_translation_gist_id[0],
-                    translation_gist_object_id=field_translation_gist_id[1],
+                    data_type_translation_gist_id=data_type_translation_gist_id,
+                    translation_gist_id=field_translation_gist_id,
                     marked_for_deletion=False)
 
     DBSession.add(dbfield)

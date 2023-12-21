@@ -59,7 +59,7 @@ log = logging.getLogger(__name__)
 
 #: Set of statistically simple field types, statistics of entities belonging to fields with these types are
 #: simple counts.
-simple_field_type_set = set(['image', 'link', 'markup', 'sound', 'text', "directed link"])
+simple_field_type_set = set(['image', 'link', 'markup', 'ordering', 'sound', 'text', "directed link"])
 
 
 def time_format(

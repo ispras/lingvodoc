@@ -23,29 +23,39 @@ from lingvodoc.utils.static_fields import fields_static
 #from lingvodoc.views.v2.translations import translationgist_contents
 
 
-def translation_gist_search(searchstring, gist_type='Service'):
-    translationgist = (
-        DBSession
+def translation_gist_search(searchstring, session=DBSession, gist_type='Service'):
+    return (
+        session
             .query(dbTranslationGist)
             .join(dbTranslationAtom)
             .filter(
+                dbTranslationAtom.marked_for_deletion == False,
                 dbTranslationAtom.content == searchstring,
                 dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationGist.marked_for_deletion == False,
                 dbTranslationGist.type == gist_type)
             .order_by(
                 dbTranslationGist.created_at,
                 dbTranslationGist.client_id,
                 dbTranslationGist.object_id)
-            .first())
+            .one_or_none())
 
-    # translationatoms_list = list()
-    # for translationatom in translationgist.translationatom:
-    #     translationatoms_list.append(translationatom)
-    # translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
-    #                                          type=translationgist.type,
-    #                                          created_at=translationgist.created_at,
-    #                                          translationatoms=translationatoms_list)
-    return translationgist
+def translation_gist_id_search(searchstring, session=DBSession, gist_type='Service'):
+    return (
+        session
+            .query(dbTranslationGist.id)
+            .join(dbTranslationAtom)
+            .filter(
+                dbTranslationAtom.marked_for_deletion == False,
+                dbTranslationAtom.content == searchstring,
+                dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationGist.type == gist_type)
+            .order_by(
+                dbTranslationGist.created_at,
+                dbTranslationGist.client_id,
+                dbTranslationGist.object_id)
+            .one_or_none())
 
 def field_search(searchstring, data_type='Text', DBSession=DBSession):
 
@@ -58,19 +68,12 @@ def field_search(searchstring, data_type='Text', DBSession=DBSession):
     field = (
         DBSession
             .query(dbField)
-            .join(dbTranslationGistF, and_(
-                dbTranslationGistF.client_id == dbField.translation_gist_client_id,
-                dbTranslationGistF.object_id == dbField.translation_gist_object_id))
-            .join(dbTranslationGistD, and_(
-                dbTranslationGistD.client_id == dbField.data_type_translation_gist_client_id,
-                dbTranslationGistD.object_id == dbField.data_type_translation_gist_object_id))
-            .join(dbTranslationAtomF, and_(
-                dbTranslationAtomF.parent_client_id == dbTranslationGistF.client_id,
-                dbTranslationAtomF.parent_object_id == dbTranslationGistF.object_id))
-            .join(dbTranslationAtomD, and_(
-                dbTranslationAtomD.parent_client_id == dbTranslationGistD.client_id,
-                dbTranslationAtomD.parent_object_id == dbTranslationGistD.object_id))
             .filter(
+                dbTranslationGistF.id == dbField.translation_gist_id,
+                dbTranslationGistD.id == dbField.data_type_translation_gist_id,
+                dbTranslationAtomF.parent_id == dbTranslationGistF.id,
+                dbTranslationAtomD.parent_id == dbTranslationGistD.id,
+
                 dbTranslationGistF.marked_for_deletion == False,
                 dbTranslationGistF.type == 'Field',
                 dbTranslationAtomF.content == searchstring,
