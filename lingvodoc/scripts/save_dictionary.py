@@ -2504,13 +2504,18 @@ class Save_Context(object):
 
                     cells = list()
                     for index, value in enumerate(cell_list):
-                        if isinstance(value, tuple):
-                            value = value[0]
-                        if not isinstance(value, str):
-                            value = ''
                         if (len(self.fields) > index and
                                 self.is_order_field(self.fields[index].field_id)):
+
                             value = str(self.row)
+
+                        else:
+
+                            if isinstance(value, tuple):
+                                value = value[0]
+
+                            if not isinstance(value, str):
+                                value = ''
 
                         cells.append(Cell(Paragraph(self.fix_unicode(value), frame)))
 
