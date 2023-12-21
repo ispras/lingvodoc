@@ -55,7 +55,7 @@ from lingvodoc.models import (
 
 from lingvodoc.cache.caching import TaskStatus, initialize_cache
 from lingvodoc.utils import explain_analyze, sanitize_worksheet_name
-from lingvodoc.utils.search import recursive_sort
+from lingvodoc.utils.search import recursive_sort, translation_gist_id_search
 from lingvodoc.utils.static_fields import fields_static
 from lingvodoc.views.v2.utils import as_storage_file, storage_file
 
@@ -1262,47 +1262,18 @@ class Save_Context(object):
             self.storage_f = (
                 as_storage_file if __debug_flag__ else storage_file)
 
+        self.ordering_type_id = (
+            translation_gist_id_search('Ordering', self.session))
+
         if sound_flag:
 
             self.sound_type_id = (
-
-                self.session
-
-                    .query(
-                        TranslationGist.client_id,
-                        TranslationGist.object_id)
-
-                    .join(TranslationAtom)
-
-                    .filter(
-                        TranslationGist.marked_for_deletion == False,
-                        TranslationGist.type == 'Service',
-                        TranslationAtom.marked_for_deletion == False,
-                        TranslationAtom.content == 'Sound',
-                        TranslationAtom.locale_id == 2)
-                    
-                    .first())
+                translation_gist_id_search('Sound', self.session))
 
         if markup_flag:
 
             self.markup_type_id = (
-
-                self.session
-
-                    .query(
-                        TranslationGist.client_id,
-                        TranslationGist.object_id)
-
-                    .join(TranslationAtom)
-
-                    .filter(
-                        TranslationGist.marked_for_deletion == False,
-                        TranslationGist.type == 'Service',
-                        TranslationAtom.marked_for_deletion == False,
-                        TranslationAtom.content == 'Markup',
-                        TranslationAtom.locale_id == 2)
-                    
-                    .first())
+                translation_gist_id_search('Markup', self.session))
 
         self.is_order_field_dict = {}
 
@@ -1439,71 +1410,31 @@ class Save_Context(object):
 
         # Getting field data.
 
-        if self.sound_flag and self.markup_flag:
+        data_type_id_list = []
 
-            self.field_condition = (
+        if self.ordering_type_id:
 
-                or_(
+            data_type_id_list.append(self.ordering_type_id)
 
-                    tuple_(
-                        DictionaryPerspectiveToField.field_client_id,
-                        DictionaryPerspectiveToField.field_object_id)
+        if (self.sound_flag and
+            self.sound_type_id):
 
-                        .in_(
-                            sqlalchemy.text('select * from text_field_id_view')),
+            data_type_id_list.append(self.sound_type_id)
 
-                    and_(
-                        Field.data_type_translation_gist_client_id == self.sound_type_id[0],
-                        Field.data_type_translation_gist_object_id == self.sound_type_id[1]),
+        if (self.markup_flag and
+            self.markup_type_id):
 
-                    and_(
-                        Field.data_type_translation_gist_client_id == self.markup_type_id[0],
-                        Field.data_type_translation_gist_object_id == self.markup_type_id[1])))
+            data_type_id_list.append(self.markup_type_id)
 
-        elif self.sound_flag:
+        self.field_condition = (
 
-            self.field_condition = (
+            or_(
+                DictionaryPerspectiveToField.field_id.in_(
+                    sqlalchemy.text('select * from text_field_id_view')),
 
-                or_(
-
-                    tuple_(
-                        DictionaryPerspectiveToField.field_client_id,
-                        DictionaryPerspectiveToField.field_object_id)
-
-                        .in_(
-                            sqlalchemy.text('select * from text_field_id_view')),
-
-                    and_(
-                        Field.data_type_translation_gist_client_id == self.sound_type_id[0],
-                        Field.data_type_translation_gist_object_id == self.sound_type_id[1])))
-
-        elif self.markup_flag:
-
-            self.field_condition = (
-
-                or_(
-
-                    tuple_(
-                        DictionaryPerspectiveToField.field_client_id,
-                        DictionaryPerspectiveToField.field_object_id)
-
-                        .in_(
-                            sqlalchemy.text('select * from text_field_id_view')),
-
-                    and_(
-                        Field.data_type_translation_gist_client_id == self.markup_type_id[0],
-                        Field.data_type_translation_gist_object_id == self.markup_type_id[1])))
-
-        else:
-
-            self.field_condition = (
-
-                tuple_(
-                    DictionaryPerspectiveToField.field_client_id,
-                    DictionaryPerspectiveToField.field_object_id)
-
-                    .in_(
-                        sqlalchemy.text('select * from text_field_id_view')))
+                *(
+                    Field.data_type_translation_gist_id == data_type_id
+                    for data_type_id in data_type_id_list)))
 
         field_query = (
                 
@@ -1514,11 +1445,9 @@ class Save_Context(object):
                     Field)
 
                 .filter(
-                    DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
-                    DictionaryPerspectiveToField.parent_object_id == perspective.object_id,
+                    DictionaryPerspectiveToField.parent_id == perspective.id,
                     DictionaryPerspectiveToField.marked_for_deletion == False,
-                    Field.client_id == DictionaryPerspectiveToField.field_client_id,
-                    Field.object_id == DictionaryPerspectiveToField.field_object_id,
+                    Field.id == DictionaryPerspectiveToField.field_id,
                     Field.marked_for_deletion == False,
                     self.field_condition)
 

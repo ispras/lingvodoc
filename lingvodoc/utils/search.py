@@ -23,29 +23,39 @@ from lingvodoc.utils.static_fields import fields_static
 #from lingvodoc.views.v2.translations import translationgist_contents
 
 
-def translation_gist_search(searchstring, gist_type='Service'):
-    translationgist = (
-        DBSession
+def translation_gist_search(searchstring, session=DBSession, gist_type='Service'):
+    return (
+        session
             .query(dbTranslationGist)
             .join(dbTranslationAtom)
             .filter(
+                dbTranslationAtom.marked_for_deletion == False,
                 dbTranslationAtom.content == searchstring,
                 dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationGist.marked_for_deletion == False,
                 dbTranslationGist.type == gist_type)
             .order_by(
                 dbTranslationGist.created_at,
                 dbTranslationGist.client_id,
                 dbTranslationGist.object_id)
-            .first())
+            .one_or_none())
 
-    # translationatoms_list = list()
-    # for translationatom in translationgist.translationatom:
-    #     translationatoms_list.append(translationatom)
-    # translationgist_object = TranslationGist(id=[translationgist.client_id, translationgist.object_id],
-    #                                          type=translationgist.type,
-    #                                          created_at=translationgist.created_at,
-    #                                          translationatoms=translationatoms_list)
-    return translationgist
+def translation_gist_id_search(searchstring, session=DBSession, gist_type='Service'):
+    return (
+        session
+            .query(dbTranslationGist.id)
+            .join(dbTranslationAtom)
+            .filter(
+                dbTranslationAtom.marked_for_deletion == False,
+                dbTranslationAtom.content == searchstring,
+                dbTranslationAtom.locale_id == ENGLISH_LOCALE,
+                dbTranslationGist.marked_for_deletion == False,
+                dbTranslationGist.type == gist_type)
+            .order_by(
+                dbTranslationGist.created_at,
+                dbTranslationGist.client_id,
+                dbTranslationGist.object_id)
+            .one_or_none())
 
 def field_search(searchstring, data_type='Text', DBSession=DBSession):
 
