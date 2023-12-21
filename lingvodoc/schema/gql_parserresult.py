@@ -652,7 +652,7 @@ class Valency(graphene.Mutation):
         for entity in entity_list:
 
             entry_id = (
-                (entity.parent_client_id, entity.parent_object_id))
+                entity.parent_id)
 
             new_entry_flag = (
                 entry_id not in entry_dict)
@@ -671,6 +671,9 @@ class Valency(graphene.Mutation):
 
             elif not is_subject_for_parsing(entity.content):
                 continue
+
+            log.debug(
+                f'\n entity {entity.id}: {repr(entity.content)}')
 
             parser_result_list = (
 

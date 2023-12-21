@@ -63,18 +63,30 @@ def corpus_to_arx(
                 if len(t) <= 1:
                     continue
 
-                t = {k: v.strip() if isinstance(v, str) else v for k, v in t.items()}
+                t = {
+                    k.strip() if isinstance(k, str) else k:
+                        v.strip() if isinstance(v, str) else v
+                    for k, v in t.items()}
+
+                if 'gr' not in t:
+                    continue
 
                 grammar = t['gr'].split(',')
-                transl = 'I ' + t['trans_ru'] + '; II ' + t['trans_ru2'] if 'trans_ru2' in t.keys() else t['trans_ru']
-                if 'V' in grammar:
-                    lex_transl.append(t['lex'].replace(' ', ''))
-                    tok_val_list = []
-                    for g in grammar:
-                        if re.match(r'(with_)', g) or g == 'tr':
-                            tok_val_list.append(g)
-                    tok_val_list.sort()
-                    verbs.append([t['lex'], tok_val_list if tok_val_list else [], transl])
+
+                if 'V' not in grammar:
+                    continue
+
+                transl = (
+                    'I ' + t['trans_ru'] +
+                    '; II ' + t['trans_ru2'] if 'trans_ru2' in t else t['trans_ru'])
+
+                lex_transl.append(t['lex'].replace(' ', ''))
+                tok_val_list = []
+                for g in grammar:
+                    if re.match(r'(with_)', g) or g == 'tr':
+                        tok_val_list.append(g)
+                tok_val_list.sort()
+                verbs.append([t['lex'], tok_val_list if tok_val_list else [], transl])
 
     verbs_counted = {}
 
@@ -304,6 +316,14 @@ def sentences_valencies_to_result(
                 for t in s:
 
                     if len(t) <= 1:
+                        continue
+
+                    t = {
+                        k.strip() if isinstance(k, str) else k:
+                            v.strip() if isinstance(v, str) else v
+                        for k, v in t.items()}
+
+                    if 'gr' not in t:
                         continue
 
                     gram = (
