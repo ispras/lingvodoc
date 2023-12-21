@@ -58,19 +58,12 @@ def field_search(searchstring, data_type='Text', DBSession=DBSession):
     field = (
         DBSession
             .query(dbField)
-            .join(dbTranslationGistF, and_(
-                dbTranslationGistF.client_id == dbField.translation_gist_client_id,
-                dbTranslationGistF.object_id == dbField.translation_gist_object_id))
-            .join(dbTranslationGistD, and_(
-                dbTranslationGistD.client_id == dbField.data_type_translation_gist_client_id,
-                dbTranslationGistD.object_id == dbField.data_type_translation_gist_object_id))
-            .join(dbTranslationAtomF, and_(
-                dbTranslationAtomF.parent_client_id == dbTranslationGistF.client_id,
-                dbTranslationAtomF.parent_object_id == dbTranslationGistF.object_id))
-            .join(dbTranslationAtomD, and_(
-                dbTranslationAtomD.parent_client_id == dbTranslationGistD.client_id,
-                dbTranslationAtomD.parent_object_id == dbTranslationGistD.object_id))
             .filter(
+                dbTranslationGistF.id == dbField.translation_gist_id,
+                dbTranslationGistD.id == dbField.data_type_translation_gist_id,
+                dbTranslationAtomF.parent_id == dbTranslationGistF.id,
+                dbTranslationAtomD.parent_id == dbTranslationGistD.id,
+
                 dbTranslationGistF.marked_for_deletion == False,
                 dbTranslationGistF.type == 'Field',
                 dbTranslationAtomF.content == searchstring,
