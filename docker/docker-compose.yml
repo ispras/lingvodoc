@@ -16,6 +16,7 @@ services:
     container_name: ngx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./frontend/dist:/dist
       - ./nginx:/etc/nginx/conf.d
