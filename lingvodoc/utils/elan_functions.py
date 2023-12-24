@@ -141,49 +141,33 @@ def _export_to_elan(textGrid_file):
     return elan
 
 
-def eaf_wordlist(entity):
-    if not entity:
-        raise KeyError("No such file")
-    resp = requests.get(entity.content)
-    if not resp:
-        raise KeyError("Cannot access file")
-    content = resp.content
-    try:
-        fd, filename = tempfile.mkstemp()
-        with open(filename, 'wb') as f:
-            f.write(content)
-        if os.path.getsize(filename) / (50 * 1024 * 1024.0) < 1:
-            try:
-                eaf_obj = pympi.Eaf(file_path=filename)
-                word_list = eaf_words(eaf_obj)
-                return word_list
-            except:
-                textgrid_obj = pympi.TextGrid(file_path=filename)
-                eaf_obj = textgrid_obj.to_eaf()
-                word_list = eaf_words(eaf_obj)
-                return word_list
-            #
-            # if 'data_type' in entity.additional_metadata :
-            #     if 'praat' in entity.additional_metadata['data_type']:
-            #         textgrid_obj = pympi.TextGrid(file_path=filename)
-            #         eaf_obj = textgrid_obj.to_eaf()
-            #         word_list = eaf_words(eaf_obj)
-            #         return word_list
-            #
-            #     elif 'elan' in entity.additional_metadata['data_type']:
-            #         eaf_obj = pympi.Eaf(file_path=filename)
-            #         word_list = eaf_words(eaf_obj)
-            #         return word_list
-            #     else:
-            #         raise KeyError("Not allowed convert option")
-            #raise KeyError("Not allowed convert option")
+def eaf_wordlist(content):
+
+    if len(content) > 50 * 1048576:
+
         raise KeyError('File too big')
-    except Exception as e:
-        raise KeyError(e)
-    finally:
-        os.close(fd)
-        os.remove(filename)
-        pass
+
+    with tempfile.NamedTemporaryFile() as temp_file:
+
+        temp_file.write(content)
+        temp_file.flush()
+
+        try:
+
+            eaf_obj = (
+                pympi.Eaf(file_path = temp_file.name))
+
+            return eaf_words(eaf_obj)
+
+        except:
+
+            textgrid_obj = (
+                pympi.TextGrid(file_path = temp_file.name))
+
+            eaf_obj = (
+                textgrid_obj.to_eaf())
+
+            return eaf_words(eaf_obj)
 
 
 def tgt_to_eaf(content, additional_metadata):

@@ -405,7 +405,7 @@ class CreateEntity(graphene.Mutation):
             db_entity.additional_metadata['data_type'] = data_type
 
             if 'elan' in data_type:
-                bag_of_words = list(eaf_wordlist(db_entity))
+                bag_of_words = list(eaf_wordlist(content))
                 db_entity.additional_metadata['bag_of_words'] = bag_of_words
         elif data_type == 'link':
             if link_id:
@@ -1004,6 +1004,11 @@ class BulkCreateEntity(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, entities = None):
+
+        # No assurances that this even works, will need to be rewritten if we would need this.
+
+        raise NotImplementedError
+
         client = Client.get(info.context.client_id)
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",

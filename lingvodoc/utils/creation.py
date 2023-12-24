@@ -414,7 +414,7 @@ def create_entity(id=None,
         filename = blob.filename
         content = blob.file.read()
         # filename=
-        real_location, url = create_object(base64.urlsafe_b64encode(content).decode(), dbentity, data_type, filename,
+        real_location, url = create_object(content, dbentity, data_type, filename,
                                            "graphql_files", request.registry.settings["storage"])
         dbentity.content = url
         old_meta = dbentity.additional_metadata
@@ -423,7 +423,7 @@ def create_entity(id=None,
             if old_meta.get('hash'):
                 need_hash = False
         if need_hash:
-            hash = hashlib.sha224(base64.urlsafe_b64decode(base64.urlsafe_b64encode(content).decode())).hexdigest()
+            hash = hashlib.sha224(content).hexdigest()
             hash_dict = {'hash': hash}
             if old_meta:
                 old_meta.update(hash_dict)
@@ -440,7 +440,7 @@ def create_entity(id=None,
                 data_type = 'elan markup'
 
         if 'elan' in data_type:
-            bag_of_words = list(eaf_wordlist(dbentity))
+            bag_of_words = list(eaf_wordlist(content))
             dbentity.additional_metadata['bag_of_words'] = bag_of_words
 
         dbentity.additional_metadata['data_type'] = data_type
@@ -580,8 +580,6 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
     settings = request.registry.settings
     storage = settings['storage']
     if storage['type'] == 'openstack':
-        if json_input:
-            content = base64.urlsafe_b64decode(content)
         # TODO: openstack objects correct naming
         filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
         real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
@@ -597,7 +595,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
         with open(storage_path, 'wb+') as f:
             # set_trace()
             if json_input:
-                f.write(base64.urlsafe_b64decode(content))
+                f.write(content)
             else:
                 shutil.copyfileobj(content, f)
 
