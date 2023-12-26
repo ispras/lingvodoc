@@ -12,7 +12,7 @@ services:
     ports:
       - "15432:5432"
   nginx:
-    image: nginx:latest
+    image: 'nginx:latest'
     container_name: ngx
     ports:
       - "80:80"
@@ -34,6 +34,7 @@ services:
     ports:
       - '16379:6379'
   api:
+    image: 'docker_api:latest'
     build: ..
     depends_on:
       - pg
