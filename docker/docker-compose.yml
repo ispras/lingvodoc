@@ -1,7 +1,7 @@
 version: '3.2'
 services:
   pg:
-    image: postgres:13.2
+    image: ${PG_IMG}
     container_name: postgres
     environment:
       POSTGRES_PASSWORD: password
@@ -53,6 +53,6 @@ services:
 
     env_file:
       - ./locale_env.sh
-    command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --preload --paster /api/docker/docker.ini"
+    command: bash -c "python3 setup.py clean && python3 setup.py install --react-interface=/dist && /api/wait-for-postgres.sh pg && docker commit postgres postgres:ready && git config --global --add safe.directory /api && alembic --config /api/docker/docker-alembic.ini upgrade head && gunicorn --preload --paster /api/docker/docker.ini"
     ports:
       - "16543:6543"
