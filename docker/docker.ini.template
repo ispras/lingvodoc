@@ -34,7 +34,7 @@ apertium_path = /opt/apertium
 [server:main]
 use = egg:gunicorn#main
 bind = unix:/sock/lingvodoc.sock
-workers = @workers_number@
+workers = workers_number
 timeout = 360000
 pidfile = /tmp/lingvodoc.pid
 accesslog = /var/log/access.log
@@ -94,15 +94,15 @@ format = [%(process)d] %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] 
 # disk or openstack
 type = disk
 path = /tmp/
-prefix = @backend_prefix@
+prefix = backend_prefix
 static_route = objects/
 
 [backend:storage.temporary]
 host = minio.at.ispras.ru
-access_key = @ld_development_access_key@
-secret_key = @ld_development_secret_key@
+access_key = ld_development_access_key
+secret_key = ld_development_secret_key
 bucket = lingvodoc-temp-files
-prefix = @temp_storage_prefix@
+prefix = temp_storage_prefix
 
 ;[cache:dogpile]
 ;expiration_time = 3600000
