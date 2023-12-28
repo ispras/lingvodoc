@@ -1,0 +1,130 @@
+###
+# app configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/environment.html
+###
+
+[app:main]
+use = egg:lingvodoc
+
+secret = 'secret-1'
+
+pyramid.reload_templates = true
+pyramid.debug_authorization = false
+pyramid.debug_notfound = false
+pyramid.debug_routematch = false
+pyramid.default_locale_name = ru
+pyramid.includes =
+    pyramid_tm
+#    pyramid_debugtoolbar
+
+sqlalchemy.url = postgresql+psycopg2://postgres:password@pg:5432/lingvodoc
+
+# These parameters should be specified manually
+dedoc_url = http://dedoc-demo.at.ispras.ru/upload
+apertium_path = /opt/apertium
+
+# By default, the toolbar only appears for clients from IP addresses
+# '127.0.0.1' and '::1'.
+# debugtoolbar.hosts = 127.0.0.1 ::1
+
+###
+# wsgi server configuration
+###
+
+[server:main]
+use = egg:gunicorn#main
+bind = unix:/sock/lingvodoc.sock
+workers = workers_number
+timeout = 360000
+pidfile = /tmp/lingvodoc.pid
+accesslog = /var/log/access.log
+errorlog = /var/log/error.log
+loglevel = warning
+#preload_app = True
+#daemon = True
+proc_name = lingvodoc
+
+###
+# logging configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/logging.html
+###
+
+[loggers]
+keys = root, lingvodoc, sqlalchemy
+
+[handlers]
+keys = console, filelog
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARN
+handlers = console, filelog
+
+[logger_lingvodoc]
+level = WARN
+handlers =
+qualname = lingvodoc
+
+[logger_sqlalchemy]
+level = ERROR
+handlers =
+qualname = sqlalchemy.engine
+# "level = INFO" logs SQL queries.
+# "level = DEBUG" logs SQL queries and results.
+# "level = WARN" logs neither.  (Recommended for production systems.)
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[handler_filelog]
+class = concurrent_log_handler.ConcurrentRotatingFileHandler
+args = ('/tmp/ld.log', 'a', 16777216, 4)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = [%(process)d] %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s
+
+[backend:storage]
+# disk or openstack
+type = disk
+path = /tmp/
+prefix = backend_prefix
+static_route = objects/
+
+[backend:storage.temporary]
+host = minio.at.ispras.ru
+access_key = ld_development_access_key
+secret_key = ld_development_secret_key
+bucket = lingvodoc-temp-files
+prefix = temp_storage_prefix
+
+;[cache:dogpile]
+;expiration_time = 3600000
+;backend = dogpile.cache.redis
+;backend = dogpile.cache.memcached
+
+[cache:redis:args]
+;redis_expiration_time = 60*60*2
+host = redis
+port = 6379
+db = 0
+
+# Info of the SMTP server account used to send emails, e.g. emails of user signup approval.
+[smtp]
+host = mailserver.example.com
+username = noreply
+password = password
+port = 25
+tls = True
+debug = 0
+
+# Controls whether user signups are moderated or not.
+[signup]
+approve = False
+address = al@somestuff.ru

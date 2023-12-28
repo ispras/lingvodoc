@@ -1,7 +1,8 @@
 version: '3.2'
 services:
   pg:
-    image: postgres:13.2
+    image: ${PG_IMG:-docker_pg:latest}
+    build: ./postgres
     container_name: postgres
     environment:
       POSTGRES_PASSWORD: password
@@ -12,7 +13,7 @@ services:
     ports:
       - "15432:5432"
   nginx:
-    image: nginx:latest
+    image: 'nginx:latest'
     container_name: ngx
     ports:
       - "80:80"
@@ -34,6 +35,7 @@ services:
     ports:
       - '16379:6379'
   api:
+    image: 'docker_api:latest'
     build: ..
     depends_on:
       - pg
