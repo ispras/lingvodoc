@@ -381,16 +381,13 @@ def hfst_parser(dedoc_output, lang):
                 lookup = xfst.lookup(w.lower())
             if len(lookup) > 0:
                 analyzed = analyzed + 1
-                print('<a title="')
-                for lkp in lookup:
-                    print(lkp[0])
-                print('">')
-                print(w)
-                print('</a>')
-            else:
-                print('<span style="color:red">')
-                print(w)
-                print('</span>')
+                print(f'word: {w}')
+                for i, lkp in enumerate(map(lambda l: l[0], lookup)):
+                    plus_pos = lkp.index('+')
+                    print(f"{i+1}. lex: {lkp[:plus_pos]}; gr: {lkp[plus_pos+1:].replace('+', ',')}")
+                print('\n---\n')
+            #else:
+            #    print(w)
     pers = analyzed / words
     print(pers)
 
