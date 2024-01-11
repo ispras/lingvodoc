@@ -552,11 +552,10 @@ def create_parser_result(
         r = requests.post(url=dedoc_url, files=files, data=data)
         dedoc_output = re.sub(r"(<sub>.*?</sub>)", "", r.content.decode('utf-8'))
 
-    if parser.method.find("timarkh") != -1:
-        result = parse_method(dedoc_output, **arguments)
-
-    elif parser.method.find("apertium") != -1:
+    if parser.method.find("apertium") != -1:
         result = parse_method(dedoc_output, apertium_path, **arguments)
+    else:
+        result = parse_method(dedoc_output, **arguments)
 
     dbparserresult = ParserResult(client_id=client_id, object_id=object_id,
                                   parser_object_id=parser_object_id, parser_client_id=parser_client_id,

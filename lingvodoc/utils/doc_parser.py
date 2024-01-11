@@ -7,6 +7,7 @@ from uniparser_udmurt import UdmurtAnalyzer
 from uniparser_moksha import MokshaAnalyzer
 from uniparser_komi_zyrian import KomiZyrianAnalyzer
 from nltk.tokenize import RegexpTokenizer
+from hfst_dev import HfstTransducer
 import csv
 import os
 import tempfile
@@ -120,7 +121,12 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
     else:
         parser_output = analyzer.analyze_words(wordlist, format="xml")
     parser_output_str = print_to_str(parser_output)
+    '''
+    with open("parser_output.html", 'w') as f:
+        print(parser_output_str, file=f)
 
+    print(dedoc_output)
+    '''
     return insert_parser_output_to_text(dedoc_output, parser_output_str, lang=lang)
 
 def apertium_parser(dedoc_output, apertium_path, lang):
@@ -358,6 +364,38 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
     return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
+def hfst_parser(dedoc_output, lang):
+    xfst = HfstTransducer.read_from_file("rules.xfst.hfst")
+    xfst.invert()
+    sent_regex = re.compile(r'[.|!|?|...]')
+    word_regex = re.compile(r'[,| |:|"|-|*]')
+    sentences = filter(lambda t: t, [t.strip() for t in sent_regex.split(dedoc_output)])
+    words = 0
+    analyzed = 0
+    for s in sentences:
+        wordlist = filter(lambda t: t, [t.strip() for t in word_regex.split(s)])
+        for w in wordlist:
+            words = words + 1
+            lookup = xfst.lookup(w)
+            if len(lookup) == 0:
+                lookup = xfst.lookup(w.lower())
+            if len(lookup) > 0:
+                analyzed = analyzed + 1
+                print('<a title="')
+                for lkp in lookup:
+                    print(lkp[0])
+                print('">')
+                print(w)
+                print('</a>')
+            else:
+                print('<span style="color:red">')
+                print(w)
+                print('</span>')
+    pers = analyzed / words
+    print(pers)
+
+    parser_output_str = ""
+    return insert_parser_output_to_text(dedoc_output, parser_output_str, lang=lang)
 
 def timarkh_udm(dedoc_output):
     return timarkh_uniparser(dedoc_output, 'udm')
@@ -392,3 +430,5 @@ def apertium_bak(dedoc_output, apertium_path):
 def apertium_rus(dedoc_output, apertium_path):
     return apertium_parser(dedoc_output, apertium_path, 'rus')
 
+def hfst_kalmyk(dedoc_output):
+    return hfst_parser(dedoc_output, 'xal')
