@@ -360,7 +360,7 @@ def apertium_parser(dedoc_output, apertium_path, lang):
     return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
 def hfst_parser(dedoc_output, lang, debug_flag=False):
-    xfst = HfstTransducer.read_from_file("rules.xfst.hfst")
+    xfst = HfstTransducer.read_from_file(f"{lang}.xfst.hfst")
     xfst.invert()
 
     sent_regex = re.compile(r'[.|!|?|...]')
