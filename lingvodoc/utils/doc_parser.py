@@ -121,12 +121,7 @@ def timarkh_uniparser(dedoc_output, lang, has_disamb=False, disambiguate=False):
     else:
         parser_output = analyzer.analyze_words(wordlist, format="xml")
     parser_output_str = print_to_str(parser_output)
-    '''
-    with open("parser_output.html", 'w') as f:
-        print(parser_output_str, file=f)
 
-    print(dedoc_output)
-    '''
     return insert_parser_output_to_text(dedoc_output, parser_output_str, lang=lang)
 
 def apertium_parser(dedoc_output, apertium_path, lang):
@@ -364,14 +359,21 @@ def apertium_parser(dedoc_output, apertium_path, lang):
 
     return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
-def hfst_parser(dedoc_output, lang):
+def hfst_parser(dedoc_output, lang, debug_flag=False):
     xfst = HfstTransducer.read_from_file("rules.xfst.hfst")
     xfst.invert()
+
     sent_regex = re.compile(r'[.|!|?|...]')
     word_regex = re.compile(r'[,| |:|"|-|*]')
-    sentences = filter(lambda t: t, [t.strip() for t in sent_regex.split(dedoc_output)])
+    dedoc_regex = re.compile(r'<.*?>')
+
     words = 0
     analyzed = 0
+    parser_list = []
+
+    # remove html tags from dedoc_output
+    dedoc_output = re.sub(dedoc_regex, '', dedoc_output)
+    sentences = filter(lambda t: t, [t.strip() for t in sent_regex.split(dedoc_output)])
     for s in sentences:
         wordlist = filter(lambda t: t, [t.strip() for t in word_regex.split(s)])
         for w in wordlist:
@@ -381,18 +383,25 @@ def hfst_parser(dedoc_output, lang):
                 lookup = xfst.lookup(w.lower())
             if len(lookup) > 0:
                 analyzed = analyzed + 1
-                print(f'word: {w}')
-                for i, lkp in enumerate(map(lambda l: l[0], lookup)):
+                section = "'<w>"
+                for lkp in map(lambda l: l[0], lookup):
                     plus_pos = lkp.index('+')
-                    print(f"{i+1}. lex: {lkp[:plus_pos]}; gr: {lkp[plus_pos+1:].replace('+', ',')}")
-                print('\n---\n')
-            #else:
-            #    print(w)
-    pers = analyzed / words
-    print(pers)
+                    lex = lkp[:plus_pos]
+                    gr = lkp[plus_pos+1:].replace('+', ',')
+                    section += f"<ana lex={lex} gr={gr}></ana>"
+                section += f"{w}</w>'"
+                parser_list.append(section)
+            else:
+                parser_list.append(f'\'<w><ana lex="" gr="" parts="" gloss=""></ana>{w}</w>\'')
 
-    parser_output_str = ""
-    return insert_parser_output_to_text(dedoc_output, parser_output_str, lang=lang)
+    parser_output = ", ".join(parser_list)
+
+    if debug_flag:
+        with open("parser_output.html", 'w') as f:
+            print(parser_output, file=f)
+        print(f"Analyzed per word: {analyzed / words}")
+
+    return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
 def timarkh_udm(dedoc_output):
     return timarkh_uniparser(dedoc_output, 'udm')

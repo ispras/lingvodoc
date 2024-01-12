@@ -17,7 +17,7 @@ from alembic import op
 def upgrade():
     op.execute('''
     INSERT INTO public.parser(additional_metadata, created_at, object_id, client_id, name, parameters, method)
-    VALUES(null, '2024-01-11 12:20:38', 12, 1, 'Парсер калмыцкого языка (hfst формат)', '[]',
+    VALUES(null, '2024-01-11 12:20:38', 12, 1, 'Парсер калмыцкого языка (hfst)', '[]',
            'hfst_kalmyk');
     ''')
 
