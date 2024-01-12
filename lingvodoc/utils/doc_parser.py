@@ -8,6 +8,7 @@ from uniparser_moksha import MokshaAnalyzer
 from uniparser_komi_zyrian import KomiZyrianAnalyzer
 from nltk.tokenize import RegexpTokenizer
 from hfst_dev import HfstTransducer
+from lxml.html import fromstring
 import csv
 import os
 import tempfile
@@ -360,20 +361,24 @@ def apertium_parser(dedoc_output, apertium_path, lang):
     return insert_parser_output_to_text(dedoc_output, parser_output, lang=lang)
 
 def hfst_parser(dedoc_output, lang, debug_flag=False):
+
+    if debug_flag:
+        with open("dedoc_output", 'w') as f:
+            print(dedoc_output, file=f)
+
     xfst = HfstTransducer.read_from_file(f"{lang}.xfst.hfst")
     xfst.invert()
 
     sent_regex = re.compile(r'[.|!|?|...]')
     word_regex = re.compile(r'[,| |:|"|-|*]')
-    dedoc_regex = re.compile(r'<.*?>')
 
     words = 0
     analyzed = 0
     parser_list = []
 
     # remove html tags from dedoc_output
-    dedoc_output = re.sub(dedoc_regex, '', dedoc_output)
-    sentences = filter(lambda t: t, [t.strip() for t in sent_regex.split(dedoc_output)])
+    text = fromstring(dedoc_output).text_content()
+    sentences = filter(lambda t: t, [t.strip() for t in sent_regex.split(text)])
     for s in sentences:
         wordlist = filter(lambda t: t, [t.strip() for t in word_regex.split(s)])
         for w in wordlist:
@@ -397,7 +402,7 @@ def hfst_parser(dedoc_output, lang, debug_flag=False):
     parser_output = ", ".join(parser_list)
 
     if debug_flag:
-        with open("parser_output.html", 'w') as f:
+        with open("parser_output", 'w') as f:
             print(parser_output, file=f)
         print(f"Analyzed per word: {analyzed / words}")
 
