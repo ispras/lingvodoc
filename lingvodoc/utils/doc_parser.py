@@ -397,7 +397,7 @@ def hfst_parser(dedoc_output, lang, debug_flag=False):
                     lex = lkp[:plus_pos]
                     gr = lkp[plus_pos+1:].replace('+', ',')
 
-                    if xln := re.search(f"[\r\n]{lex}:{w}!([^0].*)[\r\n]", lexicon):
+                    if xln := re.search(f"[\r\n]+{lex}:{w}!([^0].*)[\r\n]+", lexicon):
                         xln = xln.group(1)
                     else:
                         xln = "Unknown"
