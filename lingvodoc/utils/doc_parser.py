@@ -366,10 +366,12 @@ def hfst_parser(dedoc_output, lang, debug_flag=False):
         with open("dedoc_output", 'w') as f:
             print(dedoc_output, file=f)
 
-    with open(f"{lang}.lexc", 'r') as f:
+    parser_path = f"/opt/hfst/{lang}"
+
+    with open(f"{parser_path}/lexicon.lexc", 'r') as f:
         lexicon = f.read()
 
-    xfst = HfstTransducer.read_from_file(f"{lang}.xfst.hfst")
+    xfst = HfstTransducer.read_from_file(f"{parser_path}/rules.xfst.hfst")
     xfst.invert()
 
     sent_regex = re.compile(r'[.|!|?|...]')
