@@ -366,6 +366,9 @@ def hfst_parser(dedoc_output, lang, debug_flag=False):
         with open("dedoc_output", 'w') as f:
             print(dedoc_output, file=f)
 
+    with open(f"{lang}.lexc", 'r') as f:
+        lexicon = f.read()
+
     xfst = HfstTransducer.read_from_file(f"{lang}.xfst.hfst")
     xfst.invert()
 
@@ -393,7 +396,13 @@ def hfst_parser(dedoc_output, lang, debug_flag=False):
                     plus_pos = lkp.index('+')
                     lex = lkp[:plus_pos]
                     gr = lkp[plus_pos+1:].replace('+', ',')
-                    section += f"<ana lex={lex} gr={gr}></ana>"
+
+                    if xln := re.search(f"[\r\n]{lex}:.*!([^0].*)[\r\n]", lexicon):
+                        xln = xln.group(1)
+                    else:
+                        xln = "Unknown"
+
+                    section += f"<ana lex={lex} gr={gr} trans_ru={xln}></ana>"
                 section += f"{w}</w>'"
                 parser_list.append(section)
             else:
