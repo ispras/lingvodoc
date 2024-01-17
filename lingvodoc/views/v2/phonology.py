@@ -2078,7 +2078,7 @@ def process_sound_markup(
             log.debug(traceback_string)
 
             caching.CACHE.set(cache_key, ('exception', exception,
-                traceback_string.replace('Traceback', 'CACHEd traceback')))
+                traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
 
             return None
 
@@ -4018,8 +4018,23 @@ def analyze_sound_markup(
             # If we have cached exception, we do the same as with absence of vowels, show its info and
             # continue.
 
+            elif isinstance(cache_result, tuple) and cache_result[0] == 'warning':
+                warn_msg = cache_result[1]
+
+                fails_stream.write(f"\nWARNING: {warn_msg} ::\n"
+                   f"{cache_key}\n"
+                   f"sound_url: {sound_url}\n"
+                   f"markup_url: {markup_url}\n"
+                   f"-----\n")
+
+                task_status.set(2, 1 + int(math.floor(
+                    complete_already + complete_range * (index + 1) / state.total_count)),
+                    'Analyzing sound and markup')
+
+                return False, None
+
             elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
-                exception, traceback_string = cache_result[1:3]
+                exception, traceback_string, err_msg = cache_result[1:4]
 
                 log.debug(
                     '{0} [CACHE {1}]: exception\n{2}\n{3}\n{4}'.format(
@@ -4028,7 +4043,7 @@ def analyze_sound_markup(
                 log.debug(
                     '\n' + traceback_string)
 
-                fails_stream.write(f"\nERROR: earlier cached ::\n"
+                fails_stream.write(f"\nERROR: {err_msg} ::\n"
                    f"{cache_key}\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n\n"
@@ -4131,11 +4146,14 @@ def analyze_sound_markup(
                     codec = 'utf-8')
 
                 # Parsed sound as markup and markup as sound and succeeded.
-                fails_stream.write(f"\nWARNING: Sound-markup swap occurred ::\n"
+                warn_msg = "Sound-markup swap occurred"
+                fails_stream.write(f"\nWARNING: {warn_msg} ::\n"
                                    f"{cache_key}\n"
                                    f"sound_url: {sound_url}\n"
                                    f"markup_url: {markup_url}\n"
                                    f"-----\n")
+                caching.CACHE.set(cache_key, ('warning', warn_msg))
+
             except Exception as e:
 
                 fails_stream.write("\nERROR: Sound-markup swap failed\n")
@@ -4272,7 +4290,8 @@ def analyze_sound_markup(
 
         log.debug(traceback_string)
 
-        fails_stream.write(f"\nERROR: Sound-markup analysis general exception ::\n"
+        err_msg = "Sound-markup analysis general exception"
+        fails_stream.write(f"\nERROR: {err_msg} ::\n"
                            f"{cache_key}\n"
                            f"sound_url: {sound_url}\n"
                            f"markup_url: {markup_url}\n\n"
@@ -4280,7 +4299,7 @@ def analyze_sound_markup(
                            f"-----\n")
 
         caching.CACHE.set(cache_key, ('exception', exception,
-            traceback_string.replace('Traceback', 'CACHEd traceback')))
+            traceback_string.replace('Traceback', 'CACHEd traceback'), err_msg))
 
         state.exception_counter += 1
 
