@@ -3695,9 +3695,11 @@ class Phonology_Parameters(object):
 
         parameter_dict = \
             request.params if 'url_parameters' in request.params else request_json
-
+        '''
         self.limit = (None if 'limit' not in parameter_dict else
             int(parameter_dict.get('limit')))
+        '''
+        self.limit = 100
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -3788,7 +3790,7 @@ class Phonology_Parameters(object):
 
         self.synchronous = args.get('synchronous')
 
-        self.limit = args.get('limit')
+        self.limit = 100 #args.get('limit')
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
         self.limit_result = args.get('limit_result')
@@ -3960,7 +3962,8 @@ def analyze_sound_markup(
     index,
     row,
     row_str,
-    text_list):
+    text_list,
+    fails_stream):
     """
     Performs phonological analysis of a single sound/markup pair.
     """
@@ -4024,6 +4027,13 @@ def analyze_sound_markup(
 
                 log.debug(
                     '\n' + traceback_string)
+
+                fails_stream.write(f"ERROR: earlier cached ::\n"
+                   f"{cache_key}\n"
+                   f"sound_url: {sound_url}\n"
+                   f"markup_url: {markup_url}\n\n"
+                   f"{traceback_string}\n"
+                   f"-----\n\n")
 
                 state.exception_counter += 1
 
@@ -4100,24 +4110,36 @@ def analyze_sound_markup(
 
         except:
 
-            # If we failed to parse TextGrid markup, we assume that sound and markup files were
-            # accidentally swapped and try again.
+            try:
+                # If we failed to parse TextGrid markup, we assume that sound and markup files were
+                # accidentally swapped and try again.
 
-            markup_url, sound_url = sound_url, markup_url
+                markup_url, sound_url = sound_url, markup_url
 
-            with storage_f(storage, markup_url) as markup_stream:
-                markup_bytes = markup_stream.read()
+                with storage_f(storage, markup_url) as markup_stream:
+                    markup_bytes = markup_stream.read()
 
-            textgrid = pympi.Praat.TextGrid(xmax = 0)
+                textgrid = pympi.Praat.TextGrid(xmax = 0)
 
-            textgrid.from_file(
+                textgrid.from_file(
 
-                io.BytesIO(
-                    markup_bytes
-                        .decode(chardet.detect(markup_bytes)['encoding'])
-                        .encode('utf-8')),
+                    io.BytesIO(
+                        markup_bytes
+                            .decode(chardet.detect(markup_bytes)['encoding'])
+                            .encode('utf-8')),
 
-                codec = 'utf-8')
+                    codec = 'utf-8')
+
+                # Parsed sound as markup and markup as sound and succeeded.
+                fails_stream.write(f"WARNING: Sound-markup swap occurred ::\n"
+                                   f"{cache_key}\n"
+                                   f"sound_url: {sound_url}\n"
+                                   f"markup_url: {markup_url}\n"
+                                   f"-----\n\n")
+            except Exception as e:
+
+                fails_stream.write("ERROR: Sound-markup swap failed\n")
+                raise e
 
         # Some helper functions.
 
@@ -4250,6 +4272,13 @@ def analyze_sound_markup(
 
         log.debug(traceback_string)
 
+        fails_stream.write(f"ERROR: Sound-markup analysis general exception ::\n"
+                           f"{cache_key}\n"
+                           f"sound_url: {sound_url}\n"
+                           f"markup_url: {markup_url}\n\n"
+                           f"{traceback_string}\n"
+                           f"-----\n\n")
+
         caching.CACHE.set(cache_key, ('exception', exception,
             traceback_string.replace('Traceback', 'CACHEd traceback')))
 
@@ -4268,6 +4297,8 @@ def perform_phonology(args, task_status, storage):
     """
     Performs phonology compilation.
     """
+
+    fails_stream = io.StringIO()
 
     log.debug('phonology {}/{}:'
         '\n  dictionary_name: \'{}\'\n  perspective_name: \'{}\''
@@ -4474,7 +4505,8 @@ def perform_phonology(args, task_status, storage):
                 result_filter,
                 state, 0.0, 99.0 / (1 + len(args.link_field_dict)),
                 index, row, row_str,
-                text_list))
+                text_list,
+                fails_stream))
 
         # If we had cache processing error, we terminate.
 
@@ -4753,7 +4785,8 @@ def perform_phonology(args, task_status, storage):
                         perspective_complete_step * perspective_index,
                     perspective_complete_step,
                     index, row, row_str,
-                    text_list)
+                    text_list,
+                    fails_stream)
 
                 # If we had cache processing error, we terminate.
 
@@ -4969,6 +5002,10 @@ def perform_phonology(args, task_status, storage):
             filename])
 
         for filename in filename_list]
+
+    fails_stream.seek(0)
+    print(fails_stream.read())
+    fails_stream.close()
 
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
@@ -5529,8 +5566,11 @@ def sound_and_markup(request):
 
         published_mode = request.params.get('published_mode')
 
+        '''
         limit = (None if 'limit' not in request.params else
             int(request.params.get('limit')))
+        '''
+        limit = 100
 
         log.debug('sound_and_markup {0}/{1}: {2}'.format(
             perspective_cid, perspective_oid, published_mode))
