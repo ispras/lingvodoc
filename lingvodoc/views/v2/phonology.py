@@ -4028,12 +4028,12 @@ def analyze_sound_markup(
                 log.debug(
                     '\n' + traceback_string)
 
-                fails_stream.write(f"ERROR: earlier cached ::\n"
+                fails_stream.write(f"\nERROR: earlier cached ::\n"
                    f"{cache_key}\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n\n"
                    f"{traceback_string}\n"
-                   f"-----\n\n")
+                   f"-----\n")
 
                 state.exception_counter += 1
 
@@ -4131,14 +4131,14 @@ def analyze_sound_markup(
                     codec = 'utf-8')
 
                 # Parsed sound as markup and markup as sound and succeeded.
-                fails_stream.write(f"WARNING: Sound-markup swap occurred ::\n"
+                fails_stream.write(f"\nWARNING: Sound-markup swap occurred ::\n"
                                    f"{cache_key}\n"
                                    f"sound_url: {sound_url}\n"
                                    f"markup_url: {markup_url}\n"
-                                   f"-----\n\n")
+                                   f"-----\n")
             except Exception as e:
 
-                fails_stream.write("ERROR: Sound-markup swap failed\n")
+                fails_stream.write("\nERROR: Sound-markup swap failed\n")
                 raise e
 
         # Some helper functions.
@@ -4272,12 +4272,12 @@ def analyze_sound_markup(
 
         log.debug(traceback_string)
 
-        fails_stream.write(f"ERROR: Sound-markup analysis general exception ::\n"
+        fails_stream.write(f"\nERROR: Sound-markup analysis general exception ::\n"
                            f"{cache_key}\n"
                            f"sound_url: {sound_url}\n"
                            f"markup_url: {markup_url}\n\n"
                            f"{traceback_string}\n"
-                           f"-----\n\n")
+                           f"-----\n")
 
         caching.CACHE.set(cache_key, ('exception', exception,
             traceback_string.replace('Traceback', 'CACHEd traceback')))
