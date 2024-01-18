@@ -4024,7 +4024,7 @@ def analyze_sound_markup(
                 msg = cache_result[1]
 
                 fails_stream.write(f"\n{msg}"
-                   f"{cache_key} (sound:markup ids)\n"
+                   f"{row_str}\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n"
                    f"-----\n")
@@ -4046,7 +4046,7 @@ def analyze_sound_markup(
                     '\n' + traceback_string)
 
                 fails_stream.write(f"\n{msg}"
-                   f"{cache_key} (sound:markup ids)\n"
+                   f"{row_str}\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n\n"
                    f"{traceback_string}\n"
@@ -4192,7 +4192,7 @@ def analyze_sound_markup(
 
         if warn_msg:
             fails_stream.write(f"\n{warn_msg}"
-                               f"{cache_key} (sound:markup ids)\n"
+                               f"{row_str}\n"
                                f"sound_url: {sound_url}\n"
                                f"markup_url: {markup_url}\n"
                                f"-----\n")
@@ -4300,7 +4300,7 @@ def analyze_sound_markup(
 
         err_msg += "ERROR: Sound-markup analysis general exception.\n"
         fails_stream.write(f"\n{err_msg}"
-                           f"{cache_key} (sound:markup ids)\n"
+                           f"{row_str}\n"
                            f"sound_url: {sound_url}\n"
                            f"markup_url: {markup_url}\n\n"
                            f"{traceback_string}\n"
