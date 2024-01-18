@@ -3963,7 +3963,8 @@ def analyze_sound_markup(
     row,
     row_str,
     text_list,
-    fails_stream):
+    fails_stream,
+    fails_dict):
     """
     Performs phonological analysis of a single sound/markup pair.
     """
@@ -3979,6 +3980,12 @@ def analyze_sound_markup(
             row.Sound.client_id, row.Sound.object_id,
             row.Markup.client_id, row.Markup.object_id,
             '+ft' if args and args.use_fast_track else ''))
+
+    fails_dict[row_str] = {
+        'urls': f"sound_url: {sound_url}\nmarkup_url: {markup_url}",
+        'errs': "",
+        'warns': ""
+    }
 
     # Processing grouping, if required.
 
@@ -4006,6 +4013,8 @@ def analyze_sound_markup(
                                f"sound_url: {sound_url}\n"
                                f"markup_url: {markup_url}\n"
                                f"-----\n")
+
+            fails_dict[row_str]['warns'] += cache_warn
 
         cache_result = caching.CACHE.get(cache_key)
 
@@ -4044,6 +4053,8 @@ def analyze_sound_markup(
                    f"markup_url: {markup_url}\n\n"
                    f"{traceback_string}\n"
                    f"-----\n")
+
+                fails_dict[row_str]['errs'] += f"{msg}\n{traceback_string}"
 
                 state.exception_counter += 1
 
@@ -4189,6 +4200,9 @@ def analyze_sound_markup(
                                f"sound_url: {sound_url}\n"
                                f"markup_url: {markup_url}\n"
                                f"-----\n")
+
+            fails_dict[row_str]['warns'] += warn_msg
+
             caching.CACHE.set(f"{cache_key}:warn", warn_msg)
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
@@ -4299,6 +4313,8 @@ def analyze_sound_markup(
                            f"{traceback_string}\n"
                            f"-----\n")
 
+        fails_dict[row_str]['errs'] += f"{err_msg}\n{traceback_string}"
+
         caching.CACHE.set(cache_key, ('exception', exception,
             traceback_string.replace('Traceback', 'CACHEd traceback'), err_msg))
 
@@ -4319,6 +4335,7 @@ def perform_phonology(args, task_status, storage):
     """
 
     fails_stream = io.StringIO()
+    fails_dict = collections.OrderedDict()
 
     log.debug('phonology {}/{}:'
         '\n  dictionary_name: \'{}\'\n  perspective_name: \'{}\''
@@ -4526,7 +4543,8 @@ def perform_phonology(args, task_status, storage):
                 state, 0.0, 99.0 / (1 + len(args.link_field_dict)),
                 index, row, row_str,
                 text_list,
-                fails_stream))
+                fails_stream,
+                fails_dict))
 
         # If we had cache processing error, we terminate.
 
@@ -4806,7 +4824,8 @@ def perform_phonology(args, task_status, storage):
                     perspective_complete_step,
                     index, row, row_str,
                     text_list,
-                    fails_stream)
+                    fails_stream,
+                    fails_dict)
 
                 # If we had cache processing error, we terminate.
 
@@ -5036,9 +5055,12 @@ def perform_phonology(args, task_status, storage):
 
         for filename in filename_list]
 
+    '''
     fails_stream.seek(0)
     print(fails_stream.read())
     fails_stream.close()
+    '''
+    pprint.pprint(fails_dict, width=192)
 
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
