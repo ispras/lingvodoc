@@ -4023,7 +4023,7 @@ def analyze_sound_markup(
             elif isinstance(cache_result, tuple) and cache_result[0] == 'warning':
                 msg = cache_result[1]
 
-                fails_stream.write(f"\nWARNING: {msg}"
+                fails_stream.write(f"\n{msg}"
                    f"{cache_key} (sound:markup ids)\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n"
@@ -4045,7 +4045,7 @@ def analyze_sound_markup(
                 log.debug(
                     '\n' + traceback_string)
 
-                fails_stream.write(f"\nERROR: {msg}"
+                fails_stream.write(f"\n{msg}"
                    f"{cache_key} (sound:markup ids)\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n\n"
@@ -4148,11 +4148,11 @@ def analyze_sound_markup(
                     codec = 'utf-8')
 
                 # Parsed sound as markup and markup as sound and succeeded.
-                warn_msg += "Sound-markup swap occurred.\n"
+                warn_msg += "WARNING: Sound-markup swap occurred.\n"
 
             except Exception as e:
 
-                err_msg += "Sound-markup swap failed.\n"
+                err_msg += "ERROR: Sound-markup swap failed.\n"
                 raise e
 
         # Some helper functions.
@@ -4166,7 +4166,8 @@ def analyze_sound_markup(
                 '{3} / {4}'.format(
                 row_str, tier_number, tier_name, transcription, unusual_markup_dict))
 
-            warn_msg += (f"Tier {tier_number} '{tier_name}' has interval(s) with unusual transcription text: "
+            warn_msg += (f"WARNING: Tier {tier_number} '{tier_name}'"
+                         f"has interval(s) with unusual transcription text: "
                          f"{transcription} / {unusual_markup_dict}\n")
 
         def no_vowel_f(tier_number, tier_name, transcription_list):
@@ -4192,7 +4193,7 @@ def analyze_sound_markup(
                 args.interval_only))
 
         if warn_msg:
-            fails_stream.write(f"\nWARNING: {warn_msg}"
+            fails_stream.write(f"\n{warn_msg}"
                                f"{cache_key} (sound:markup ids)\n"
                                f"sound_url: {sound_url}\n"
                                f"markup_url: {markup_url}\n"
@@ -4299,8 +4300,8 @@ def analyze_sound_markup(
 
         log.debug(traceback_string)
 
-        err_msg += "Sound-markup analysis general exception.\n"
-        fails_stream.write(f"\nERROR: {err_msg}"
+        err_msg += "ERROR: Sound-markup analysis general exception.\n"
+        fails_stream.write(f"\n{err_msg}"
                            f"{cache_key} (sound:markup ids)\n"
                            f"sound_url: {sound_url}\n"
                            f"markup_url: {markup_url}\n\n"
