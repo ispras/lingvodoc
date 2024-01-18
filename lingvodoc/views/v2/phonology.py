@@ -4024,7 +4024,7 @@ def analyze_sound_markup(
                 msg = cache_result[1]
 
                 fails_stream.write(f"\nWARNING:{msg} ::\n"
-                   f"{cache_key}\n"
+                   f"{cache_key} (sound:markup ids)\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n"
                    f"-----\n")
@@ -4046,7 +4046,7 @@ def analyze_sound_markup(
                     '\n' + traceback_string)
 
                 fails_stream.write(f"\nERROR:{msg} ::\n"
-                   f"{cache_key}\n"
+                   f"{cache_key} (sound:markup ids)\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n\n"
                    f"{traceback_string}\n"
@@ -4150,7 +4150,7 @@ def analyze_sound_markup(
                 # Parsed sound as markup and markup as sound and succeeded.
                 warn_msg += " Sound-markup swap occurred."
                 fails_stream.write(f"\nWARNING:{warn_msg} ::\n"
-                                   f"{cache_key}\n"
+                                   f"{cache_key} (sound:markup ids)\n"
                                    f"sound_url: {sound_url}\n"
                                    f"markup_url: {markup_url}\n"
                                    f"-----\n")
@@ -4294,7 +4294,7 @@ def analyze_sound_markup(
 
         err_msg += " Sound-markup analysis general exception."
         fails_stream.write(f"\nERROR:{err_msg} ::\n"
-                           f"{cache_key}\n"
+                           f"{cache_key} (sound:markup ids)\n"
                            f"sound_url: {sound_url}\n"
                            f"markup_url: {markup_url}\n\n"
                            f"{traceback_string}\n"
