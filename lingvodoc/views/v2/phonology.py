@@ -3970,6 +3970,8 @@ def analyze_sound_markup(
 
     markup_url = row.Markup.content
     sound_url = row.Sound.content
+    err_msg = ""
+    warn_msg = ""
 
     cache_key = (
 
@@ -4019,9 +4021,9 @@ def analyze_sound_markup(
             # continue.
 
             elif isinstance(cache_result, tuple) and cache_result[0] == 'warning':
-                warn_msg = cache_result[1]
+                msg = cache_result[1]
 
-                fails_stream.write(f"\nWARNING: {warn_msg} ::\n"
+                fails_stream.write(f"\nWARNING:{msg} ::\n"
                    f"{cache_key}\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n"
@@ -4034,7 +4036,7 @@ def analyze_sound_markup(
                 return False, None
 
             elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
-                exception, traceback_string, err_msg = cache_result[1:4]
+                exception, traceback_string, msg = cache_result[1:4]
 
                 log.debug(
                     '{0} [CACHE {1}]: exception\n{2}\n{3}\n{4}'.format(
@@ -4043,7 +4045,7 @@ def analyze_sound_markup(
                 log.debug(
                     '\n' + traceback_string)
 
-                fails_stream.write(f"\nERROR: {err_msg} ::\n"
+                fails_stream.write(f"\nERROR:{msg} ::\n"
                    f"{cache_key}\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n\n"
@@ -4146,8 +4148,8 @@ def analyze_sound_markup(
                     codec = 'utf-8')
 
                 # Parsed sound as markup and markup as sound and succeeded.
-                warn_msg = "Sound-markup swap occurred"
-                fails_stream.write(f"\nWARNING: {warn_msg} ::\n"
+                warn_msg += " Sound-markup swap occurred."
+                fails_stream.write(f"\nWARNING:{warn_msg} ::\n"
                                    f"{cache_key}\n"
                                    f"sound_url: {sound_url}\n"
                                    f"markup_url: {markup_url}\n"
@@ -4156,7 +4158,7 @@ def analyze_sound_markup(
 
             except Exception as e:
 
-                fails_stream.write("\nERROR: Sound-markup swap failed\n")
+                err_msg += " Sound-markup swap failed."
                 raise e
 
         # Some helper functions.
@@ -4290,8 +4292,8 @@ def analyze_sound_markup(
 
         log.debug(traceback_string)
 
-        err_msg = "Sound-markup analysis general exception"
-        fails_stream.write(f"\nERROR: {err_msg} ::\n"
+        err_msg += " Sound-markup analysis general exception."
+        fails_stream.write(f"\nERROR:{err_msg} ::\n"
                            f"{cache_key}\n"
                            f"sound_url: {sound_url}\n"
                            f"markup_url: {markup_url}\n\n"
