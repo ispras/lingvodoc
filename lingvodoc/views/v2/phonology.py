@@ -3999,6 +3999,14 @@ def analyze_sound_markup(
 
     if not args.no_cache:
 
+        if cache_warn := caching.CACHE.get(f"{cache_key}:warn"):
+
+            fails_stream.write(f"\n{cache_warn}"
+                               f"{row_str}\n"
+                               f"sound_url: {sound_url}\n"
+                               f"markup_url: {markup_url}\n"
+                               f"-----\n")
+
         cache_result = caching.CACHE.get(cache_key)
 
         try:
@@ -4019,21 +4027,6 @@ def analyze_sound_markup(
 
             # If we have cached exception, we do the same as with absence of vowels, show its info and
             # continue.
-
-            elif isinstance(cache_result, tuple) and cache_result[0] == 'warning':
-                msg = cache_result[1]
-
-                fails_stream.write(f"\n{msg}"
-                   f"{row_str}\n"
-                   f"sound_url: {sound_url}\n"
-                   f"markup_url: {markup_url}\n"
-                   f"-----\n")
-
-                task_status.set(2, 1 + int(math.floor(
-                    complete_already + complete_range * (index + 1) / state.total_count)),
-                    'Analyzing sound and markup')
-
-                return False, None
 
             elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
                 exception, traceback_string, msg = cache_result[1:4]
@@ -4159,11 +4152,11 @@ def analyze_sound_markup(
 
         def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
 
-            msg = (f"{row_str}: tier {tier_number} '{tier_name}' "
+            msg = (f"Tier {tier_number} '{tier_name}' "
                    f"has interval(s) with unusual transcription text: "
                    f"{transcription} / {unusual_markup_dict}")
 
-            log.debug(msg)
+            log.debug(f"{row_str}: {msg}")
 
             nonlocal warn_msg
             warn_msg += f"WARNING: {msg}\n"
@@ -4196,7 +4189,7 @@ def analyze_sound_markup(
                                f"sound_url: {sound_url}\n"
                                f"markup_url: {markup_url}\n"
                                f"-----\n")
-            caching.CACHE.set(cache_key, ('warning', warn_msg))
+            caching.CACHE.set(f"{cache_key}:warn", warn_msg)
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
 
