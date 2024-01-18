@@ -4931,12 +4931,14 @@ def perform_phonology(args, task_status, storage):
         current_datetime.day)
 
     xlsx_filename = sanitize_filename(result_filename + '.xlsx')
+    fails_filename = sanitize_filename(result_filename + '.txt')
     csv_filename = sanitize_filename(result_filename + '.csv')
 
     cur_time = time.time()
     storage_dir = path.join(storage['path'], 'phonology', str(cur_time))
 
     xlsx_path = path.join(storage_dir, xlsx_filename)
+    fails_path = path.join(storage_dir, fails_filename)
     csv_path = path.join(storage_dir, csv_filename)
 
     makedirs(path.dirname(xlsx_path), exist_ok = True)
@@ -4944,8 +4946,14 @@ def perform_phonology(args, task_status, storage):
     # If the name of the result file is too long, we try again with a shorter name.
 
     try:
+
+        workbook_stream.seek(0)
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
+
+        fails_stream.seek(0)
+        with open(fails_path, 'w') as fails_file:
+            copyfileobj(fails_stream, fails_file)
 
     except OSError as os_error:
 
@@ -4959,15 +4967,20 @@ def perform_phonology(args, task_status, storage):
             current_datetime.day)
 
         xlsx_filename = sanitize_filename(result_filename + '.xlsx')
+        fails_filename = sanitize_filename(result_filename + '.txt')
         csv_filename = sanitize_filename(result_filename + '.csv')
 
         xlsx_path = path.join(storage_dir, xlsx_filename)
+        fails_path = path.join(storage_dir, fails_filename)
         csv_path = path.join(storage_dir, csv_filename)
 
         workbook_stream.seek(0)
-
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
+
+        fails_stream.seek(0)
+        with open(fails_path, 'w') as fails_file:
+            copyfileobj(fails_stream, fails_file)
 
     if args.__debug_flag__:
 
@@ -5008,7 +5021,7 @@ def perform_phonology(args, task_status, storage):
 
     # Successfully compiled phonology, finishing and returning links to files with results.
 
-    filename_list = [xlsx_filename] + \
+    filename_list = [xlsx_filename] + [fails_filename] + \
         ([csv_filename] if args.generate_csv else []) + \
         chart_filename_list
 
