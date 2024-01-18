@@ -4023,7 +4023,7 @@ def analyze_sound_markup(
             elif isinstance(cache_result, tuple) and cache_result[0] == 'warning':
                 msg = cache_result[1]
 
-                fails_stream.write(f"\nWARNING:{msg} ::\n"
+                fails_stream.write(f"\nWARNING: {msg}"
                    f"{cache_key} (sound:markup ids)\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n"
@@ -4045,7 +4045,7 @@ def analyze_sound_markup(
                 log.debug(
                     '\n' + traceback_string)
 
-                fails_stream.write(f"\nERROR:{msg} ::\n"
+                fails_stream.write(f"\nERROR: {msg}"
                    f"{cache_key} (sound:markup ids)\n"
                    f"sound_url: {sound_url}\n"
                    f"markup_url: {markup_url}\n\n"
@@ -4148,27 +4148,26 @@ def analyze_sound_markup(
                     codec = 'utf-8')
 
                 # Parsed sound as markup and markup as sound and succeeded.
-                warn_msg += " Sound-markup swap occurred."
-                fails_stream.write(f"\nWARNING:{warn_msg} ::\n"
-                                   f"{cache_key} (sound:markup ids)\n"
-                                   f"sound_url: {sound_url}\n"
-                                   f"markup_url: {markup_url}\n"
-                                   f"-----\n")
-                caching.CACHE.set(cache_key, ('warning', warn_msg))
+                warn_msg += "Sound-markup swap occurred.\n"
 
             except Exception as e:
 
-                err_msg += " Sound-markup swap failed."
+                err_msg += "Sound-markup swap failed.\n"
                 raise e
 
         # Some helper functions.
 
         def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
 
+            nonlocal warn_msg
+
             log.debug(
                 '{0}: tier {1} \'{2}\' has interval(s) with unusual transcription text: '
                 '{3} / {4}'.format(
                 row_str, tier_number, tier_name, transcription, unusual_markup_dict))
+
+            warn_msg += (f"Tier {tier_number} '{tier_name}' has interval(s) with unusual transcription text: "
+                         f"{transcription} / {unusual_markup_dict}\n")
 
         def no_vowel_f(tier_number, tier_name, transcription_list):
 
@@ -4191,6 +4190,14 @@ def analyze_sound_markup(
                 no_vowel_f,
                 no_vowel_selected_f,
                 args.interval_only))
+
+        if warn_msg:
+            fails_stream.write(f"\nWARNING: {warn_msg}"
+                               f"{cache_key} (sound:markup ids)\n"
+                               f"sound_url: {sound_url}\n"
+                               f"markup_url: {markup_url}\n"
+                               f"-----\n")
+            caching.CACHE.set(cache_key, ('warning', warn_msg))
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
 
@@ -4292,8 +4299,8 @@ def analyze_sound_markup(
 
         log.debug(traceback_string)
 
-        err_msg += " Sound-markup analysis general exception."
-        fails_stream.write(f"\nERROR:{err_msg} ::\n"
+        err_msg += "Sound-markup analysis general exception.\n"
+        fails_stream.write(f"\nERROR: {err_msg}"
                            f"{cache_key} (sound:markup ids)\n"
                            f"sound_url: {sound_url}\n"
                            f"markup_url: {markup_url}\n\n"
