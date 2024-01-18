@@ -4159,16 +4159,14 @@ def analyze_sound_markup(
 
         def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
 
+            msg = (f"{row_str}: tier {tier_number} '{tier_name}' "
+                   f"has interval(s) with unusual transcription text: "
+                   f"{transcription} / {unusual_markup_dict}")
+
+            log.debug(msg)
+
             nonlocal warn_msg
-
-            log.debug(
-                '{0}: tier {1} \'{2}\' has interval(s) with unusual transcription text: '
-                '{3} / {4}'.format(
-                row_str, tier_number, tier_name, transcription, unusual_markup_dict))
-
-            warn_msg += (f"WARNING: Tier {tier_number} '{tier_name}'"
-                         f"has interval(s) with unusual transcription text: "
-                         f"{transcription} / {unusual_markup_dict}\n")
+            warn_msg += f"WARNING: {msg}\n"
 
         def no_vowel_f(tier_number, tier_name, transcription_list):
 
