@@ -2556,6 +2556,7 @@ def compile_workbook(
     args,
     source_entry_id_set,
     result_dict,
+    fails_dict,
     result_group_set,
     workbook_stream,
     csv_stream = None):
@@ -2568,6 +2569,8 @@ def compile_workbook(
 
     format_percent = (
         workbook.add_format({'num_format': '0.00%'}))
+    format_textwrap = (
+        workbook.add_format({'text_wrap': True}))
 
     if csv_stream:
         csv_writer = csv.writer(csv_stream)
@@ -3515,6 +3518,18 @@ def compile_workbook(
 
             chart_stream_list.append(
                 (chart_stream, group_name_string))
+
+    fails_sheet = workbook.add_worksheet("Fails")
+    fails_sheet.set_column(0, 3, 60, format_textwrap)
+    row = 0
+    for key, values in fails_dict.items():
+        if values['warns'] or values['errs']:
+            fails_sheet.set_row(row, 120)
+            fails_sheet.write(row, 0, key)
+            fails_sheet.write(row, 1, values['urls'])
+            fails_sheet.write(row, 2, values['warns'])
+            fails_sheet.write(row, 3, values['errs'])
+            row += 1
 
     # Finishing workbook compilation, returning some result counts.
 
@@ -4910,6 +4925,7 @@ def perform_phonology(args, task_status, storage):
                 args,
                 source_entry_id_set,
                 result_dict,
+                fails_dict,
                 result_group_set,
                 workbook_stream,
                 csv_wrapper))
@@ -5058,10 +5074,10 @@ def perform_phonology(args, task_status, storage):
     '''
     fails_stream.seek(0)
     print(fails_stream.read())
-    fails_stream.close()
-    '''
     pprint.pprint(fails_dict, width=192)
+    '''
 
+    fails_stream.close()
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
 
