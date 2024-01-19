@@ -2569,8 +2569,6 @@ def compile_workbook(
 
     format_percent = (
         workbook.add_format({'num_format': '0.00%'}))
-    format_textwrap = (
-        workbook.add_format({'text_wrap': True}))
 
     if csv_stream:
         csv_writer = csv.writer(csv_stream)
@@ -3519,16 +3517,23 @@ def compile_workbook(
             chart_stream_list.append(
                 (chart_stream, group_name_string))
 
+    # Handling met warnings and errors
+
+    init_conf = {'text_wrap': True, 'align': 'vcenter'}
+    format_inf = workbook.add_format({**init_conf, 'font_color': 'gray'})
+    format_wrn = workbook.add_format({**init_conf, 'font_color': 'black'})
+    format_err = workbook.add_format({**init_conf, 'font_color': 'red'})
+
     fails_sheet = workbook.add_worksheet("Fails")
-    fails_sheet.set_column(0, 3, 60, format_textwrap)
+    fails_sheet.set_column(0, 0, 120)
+    fails_sheet.set_column(1, 1, 150)
     row = 0
     for key, values in fails_dict.items():
         if values['warns'] or values['errs']:
-            fails_sheet.set_row(row, 120)
-            fails_sheet.write(row, 0, key)
-            fails_sheet.write(row, 1, values['urls'])
-            fails_sheet.write(row, 2, values['warns'])
-            fails_sheet.write(row, 3, values['errs'])
+            fails_sheet.set_row(row, 150)
+            fails_sheet.write(row, 0, f"{key}\n\n{values['urls']}", format_inf)
+            fails_sheet.write(row, 1, f"{values['warns']}\n{values['errs']}",
+                              format_err if values['errs'] else format_wrn)
             row += 1
 
     # Finishing workbook compilation, returning some result counts.
@@ -3978,7 +3983,6 @@ def analyze_sound_markup(
     row,
     row_str,
     text_list,
-    fails_stream,
     fails_dict):
     """
     Performs phonological analysis of a single sound/markup pair.
@@ -4022,13 +4026,6 @@ def analyze_sound_markup(
     if not args.no_cache:
 
         if cache_warn := caching.CACHE.get(f"{cache_key}:warn"):
-
-            fails_stream.write(f"\n{cache_warn}"
-                               f"{row_str}\n"
-                               f"sound_url: {sound_url}\n"
-                               f"markup_url: {markup_url}\n"
-                               f"-----\n")
-
             fails_dict[row_str]['warns'] += cache_warn
 
         cache_result = caching.CACHE.get(cache_key)
@@ -4061,13 +4058,6 @@ def analyze_sound_markup(
 
                 log.debug(
                     '\n' + traceback_string)
-
-                fails_stream.write(f"\n{msg}"
-                   f"{row_str}\n"
-                   f"sound_url: {sound_url}\n"
-                   f"markup_url: {markup_url}\n\n"
-                   f"{traceback_string}\n"
-                   f"-----\n")
 
                 fails_dict[row_str]['errs'] += f"{msg}\n{traceback_string}"
 
@@ -4210,14 +4200,7 @@ def analyze_sound_markup(
                 args.interval_only))
 
         if warn_msg:
-            fails_stream.write(f"\n{warn_msg}"
-                               f"{row_str}\n"
-                               f"sound_url: {sound_url}\n"
-                               f"markup_url: {markup_url}\n"
-                               f"-----\n")
-
             fails_dict[row_str]['warns'] += warn_msg
-
             caching.CACHE.set(f"{cache_key}:warn", warn_msg)
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
@@ -4321,12 +4304,6 @@ def analyze_sound_markup(
         log.debug(traceback_string)
 
         err_msg += "ERROR: Sound-markup analysis general exception.\n"
-        fails_stream.write(f"\n{err_msg}"
-                           f"{row_str}\n"
-                           f"sound_url: {sound_url}\n"
-                           f"markup_url: {markup_url}\n\n"
-                           f"{traceback_string}\n"
-                           f"-----\n")
 
         fails_dict[row_str]['errs'] += f"{err_msg}\n{traceback_string}"
 
@@ -4349,7 +4326,6 @@ def perform_phonology(args, task_status, storage):
     Performs phonology compilation.
     """
 
-    fails_stream = io.StringIO()
     fails_dict = collections.OrderedDict()
 
     log.debug('phonology {}/{}:'
@@ -4558,7 +4534,6 @@ def perform_phonology(args, task_status, storage):
                 state, 0.0, 99.0 / (1 + len(args.link_field_dict)),
                 index, row, row_str,
                 text_list,
-                fails_stream,
                 fails_dict))
 
         # If we had cache processing error, we terminate.
@@ -4839,7 +4814,6 @@ def perform_phonology(args, task_status, storage):
                     perspective_complete_step,
                     index, row, row_str,
                     text_list,
-                    fails_stream,
                     fails_dict)
 
                 # If we had cache processing error, we terminate.
@@ -4986,10 +4960,6 @@ def perform_phonology(args, task_status, storage):
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
 
-        fails_stream.seek(0)
-        with open(fails_path, 'w') as fails_file:
-            copyfileobj(fails_stream, fails_file)
-
     except OSError as os_error:
 
         if os_error.errno != 36:
@@ -5012,10 +4982,6 @@ def perform_phonology(args, task_status, storage):
         workbook_stream.seek(0)
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
-
-        fails_stream.seek(0)
-        with open(fails_path, 'w') as fails_file:
-            copyfileobj(fails_stream, fails_file)
 
     if args.__debug_flag__:
 
@@ -5071,13 +5037,6 @@ def perform_phonology(args, task_status, storage):
 
         for filename in filename_list]
 
-    '''
-    fails_stream.seek(0)
-    print(fails_stream.read())
-    pprint.pprint(fails_dict, width=192)
-    '''
-
-    fails_stream.close()
     task_status.set(4, 100, 'Finished', result_link_list = url_list)
 
 
