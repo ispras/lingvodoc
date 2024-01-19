@@ -2080,7 +2080,7 @@ def process_sound_markup(
             log.debug(traceback_string)
 
             caching.CACHE.set(cache_key, ('exception', exception,
-                traceback_string.replace('Traceback', 'CACHEd traceback')))
+                traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
 
             return None
 
@@ -2558,6 +2558,7 @@ def compile_workbook(
     args,
     source_entry_id_set,
     result_dict,
+    fails_dict,
     result_group_set,
     workbook_stream,
     csv_stream = None):
@@ -3518,6 +3519,25 @@ def compile_workbook(
             chart_stream_list.append(
                 (chart_stream, group_name_string))
 
+    # Handling met warnings and errors
+
+    init_conf = {'text_wrap': True, 'align': 'vcenter'}
+    format_inf = workbook.add_format({**init_conf, 'font_color': 'gray'})
+    format_wrn = workbook.add_format({**init_conf, 'font_color': 'black'})
+    format_err = workbook.add_format({**init_conf, 'font_color': 'red'})
+
+    fails_sheet = workbook.add_worksheet("Fails")
+    fails_sheet.set_column(0, 0, 120)
+    fails_sheet.set_column(1, 1, 150)
+    row = 0
+    for key, values in fails_dict.items():
+        if values['warns'] or values['errs']:
+            fails_sheet.set_row(row, 150)
+            fails_sheet.write(row, 0, f"{key}\n\n{values['urls']}", format_inf)
+            fails_sheet.write(row, 1, f"{values['warns']}\n{values['errs']}",
+                              format_err if values['errs'] else format_wrn)
+            row += 1
+
     # Finishing workbook compilation, returning some result counts.
 
     workbook.close()
@@ -3964,13 +3984,16 @@ def analyze_sound_markup(
     index,
     row,
     row_str,
-    text_list):
+    text_list,
+    fails_dict):
     """
     Performs phonological analysis of a single sound/markup pair.
     """
 
     markup_url = row.Markup.content
     sound_url = row.Sound.content
+    err_msg = ""
+    warn_msg = ""
 
     cache_key = (
 
@@ -3978,6 +4001,12 @@ def analyze_sound_markup(
             row.Sound.client_id, row.Sound.object_id,
             row.Markup.client_id, row.Markup.object_id,
             '+ft' if args and args.use_fast_track else ''))
+
+    fails_dict[row_str] = {
+        'urls': f"sound_url: {sound_url}\nmarkup_url: {markup_url}",
+        'errs': "",
+        'warns': ""
+    }
 
     # Processing grouping, if required.
 
@@ -3997,6 +4026,9 @@ def analyze_sound_markup(
     # imported ealier.
 
     if not args.no_cache:
+
+        if cache_warn := caching.CACHE.get(f"{cache_key}:warn"):
+            fails_dict[row_str]['warns'] += cache_warn
 
         cache_result = caching.CACHE.get(cache_key)
 
@@ -4020,7 +4052,7 @@ def analyze_sound_markup(
             # continue.
 
             elif isinstance(cache_result, tuple) and cache_result[0] == 'exception':
-                exception, traceback_string = cache_result[1:3]
+                exception, traceback_string, msg = cache_result[1:4]
 
                 log.debug(
                     '{0} [CACHE {1}]: exception\n{2}\n{3}\n{4}'.format(
@@ -4028,6 +4060,8 @@ def analyze_sound_markup(
 
                 log.debug(
                     '\n' + traceback_string)
+
+                fails_dict[row_str]['errs'] += f"{msg}\n{traceback_string}"
 
                 state.exception_counter += 1
 
@@ -4104,33 +4138,46 @@ def analyze_sound_markup(
 
         except:
 
-            # If we failed to parse TextGrid markup, we assume that sound and markup files were
-            # accidentally swapped and try again.
+            try:
+                # If we failed to parse TextGrid markup, we assume that sound and markup files were
+                # accidentally swapped and try again.
 
-            markup_url, sound_url = sound_url, markup_url
+                markup_url, sound_url = sound_url, markup_url
 
-            with storage_f(storage, markup_url) as markup_stream:
-                markup_bytes = markup_stream.read()
+                with storage_f(storage, markup_url) as markup_stream:
+                    markup_bytes = markup_stream.read()
 
-            textgrid = pympi.Praat.TextGrid(xmax = 0)
+                textgrid = pympi.Praat.TextGrid(xmax = 0)
 
-            textgrid.from_file(
+                textgrid.from_file(
 
-                io.BytesIO(
-                    markup_bytes
-                        .decode(chardet.detect(markup_bytes)['encoding'])
-                        .encode('utf-8')),
+                    io.BytesIO(
+                        markup_bytes
+                            .decode(chardet.detect(markup_bytes)['encoding'])
+                            .encode('utf-8')),
 
-                codec = 'utf-8')
+                    codec = 'utf-8')
+
+                # Parsed sound as markup and markup as sound and succeeded.
+                warn_msg += "WARNING: Sound-markup swap occurred.\n"
+
+            except Exception as e:
+
+                err_msg += "ERROR: Sound-markup swap failed.\n"
+                raise e
 
         # Some helper functions.
 
         def unusual_f(tier_number, tier_name, transcription, unusual_markup_dict):
 
-            log.debug(
-                '{0}: tier {1} \'{2}\' has interval(s) with unusual transcription text: '
-                '{3} / {4}'.format(
-                row_str, tier_number, tier_name, transcription, unusual_markup_dict))
+            msg = (f"Tier {tier_number} '{tier_name}' "
+                   f"has interval(s) with unusual transcription text: "
+                   f"{transcription} / {unusual_markup_dict}")
+
+            log.debug(f"{row_str}: {msg}")
+
+            nonlocal warn_msg
+            warn_msg += f"WARNING: {msg}\n"
 
         def no_vowel_f(tier_number, tier_name, transcription_list):
 
@@ -4153,6 +4200,10 @@ def analyze_sound_markup(
                 no_vowel_f,
                 no_vowel_selected_f,
                 args.interval_only))
+
+        if warn_msg:
+            fails_dict[row_str]['warns'] += warn_msg
+            caching.CACHE.set(f"{cache_key}:warn", warn_msg)
 
         # If there are no tiers with vowel markup, we skip this sound-markup pair altogether.
 
@@ -4254,8 +4305,12 @@ def analyze_sound_markup(
 
         log.debug(traceback_string)
 
+        err_msg += "ERROR: Sound-markup analysis general exception.\n"
+
+        fails_dict[row_str]['errs'] += f"{err_msg}\n{traceback_string}"
+
         caching.CACHE.set(cache_key, ('exception', exception,
-            traceback_string.replace('Traceback', 'CACHEd traceback')))
+            traceback_string.replace('Traceback', 'CACHEd traceback'), err_msg))
 
         state.exception_counter += 1
 
@@ -4272,6 +4327,8 @@ def perform_phonology(args, task_status, storage):
     """
     Performs phonology compilation.
     """
+
+    fails_dict = collections.OrderedDict()
 
     log.debug('phonology {}/{}:'
         '\n  dictionary_name: \'{}\'\n  perspective_name: \'{}\''
@@ -4478,7 +4535,8 @@ def perform_phonology(args, task_status, storage):
                 result_filter,
                 state, 0.0, 99.0 / (1 + len(args.link_field_dict)),
                 index, row, row_str,
-                text_list))
+                text_list,
+                fails_dict))
 
         # If we had cache processing error, we terminate.
 
@@ -4757,7 +4815,8 @@ def perform_phonology(args, task_status, storage):
                         perspective_complete_step * perspective_index,
                     perspective_complete_step,
                     index, row, row_str,
-                    text_list)
+                    text_list,
+                    fails_dict)
 
                 # If we had cache processing error, we terminate.
 
@@ -4842,6 +4901,7 @@ def perform_phonology(args, task_status, storage):
                 args,
                 source_entry_id_set,
                 result_dict,
+                fails_dict,
                 result_group_set,
                 workbook_stream,
                 csv_wrapper))
@@ -4895,6 +4955,8 @@ def perform_phonology(args, task_status, storage):
     # If the name of the result file is too long, we try again with a shorter name.
 
     try:
+
+        workbook_stream.seek(0)
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
 
@@ -4916,7 +4978,6 @@ def perform_phonology(args, task_status, storage):
         csv_path = path.join(storage_dir, csv_filename)
 
         workbook_stream.seek(0)
-
         with open(xlsx_path, 'wb+') as workbook_file:
             copyfileobj(workbook_stream, workbook_file)
 
