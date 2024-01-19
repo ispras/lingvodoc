@@ -3715,11 +3715,9 @@ class Phonology_Parameters(object):
 
         parameter_dict = \
             request.params if 'url_parameters' in request.params else request_json
-        '''
+
         self.limit = (None if 'limit' not in parameter_dict else
             int(parameter_dict.get('limit')))
-        '''
-        self.limit = 100
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -3810,7 +3808,7 @@ class Phonology_Parameters(object):
 
         self.synchronous = args.get('synchronous')
 
-        self.limit = 100 #args.get('limit')
+        self.limit = args.get('limit')
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
         self.limit_result = args.get('limit_result')
@@ -4940,14 +4938,12 @@ def perform_phonology(args, task_status, storage):
         current_datetime.day)
 
     xlsx_filename = sanitize_filename(result_filename + '.xlsx')
-    fails_filename = sanitize_filename(result_filename + '.txt')
     csv_filename = sanitize_filename(result_filename + '.csv')
 
     cur_time = time.time()
     storage_dir = path.join(storage['path'], 'phonology', str(cur_time))
 
     xlsx_path = path.join(storage_dir, xlsx_filename)
-    fails_path = path.join(storage_dir, fails_filename)
     csv_path = path.join(storage_dir, csv_filename)
 
     makedirs(path.dirname(xlsx_path), exist_ok = True)
@@ -4972,11 +4968,9 @@ def perform_phonology(args, task_status, storage):
             current_datetime.day)
 
         xlsx_filename = sanitize_filename(result_filename + '.xlsx')
-        fails_filename = sanitize_filename(result_filename + '.txt')
         csv_filename = sanitize_filename(result_filename + '.csv')
 
         xlsx_path = path.join(storage_dir, xlsx_filename)
-        fails_path = path.join(storage_dir, fails_filename)
         csv_path = path.join(storage_dir, csv_filename)
 
         workbook_stream.seek(0)
@@ -5022,7 +5016,7 @@ def perform_phonology(args, task_status, storage):
 
     # Successfully compiled phonology, finishing and returning links to files with results.
 
-    filename_list = [xlsx_filename] + [fails_filename] + \
+    filename_list = [xlsx_filename] + \
         ([csv_filename] if args.generate_csv else []) + \
         chart_filename_list
 
@@ -5596,11 +5590,8 @@ def sound_and_markup(request):
 
         published_mode = request.params.get('published_mode')
 
-        '''
         limit = (None if 'limit' not in request.params else
             int(request.params.get('limit')))
-        '''
-        limit = 100
 
         log.debug('sound_and_markup {0}/{1}: {2}'.format(
             perspective_cid, perspective_oid, published_mode))
