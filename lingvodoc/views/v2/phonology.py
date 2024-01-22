@@ -7,7 +7,6 @@ import collections
 import configparser
 import csv
 import datetime
-import pdb
 from errno import EEXIST
 from hashlib import md5
 import io
@@ -59,8 +58,7 @@ from pathvalidate import sanitize_filename
 import pydub
 from pydub.utils import ratio_to_db
 
-from lingvodoc import pympi
-from textgrid import TextGrid as tg
+import pympi
 
 from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFailed, HTTPOk
 from pyramid.view import view_config
@@ -3663,7 +3661,7 @@ class Phonology_Parameters(object):
 
             self.use_fast_track = 'use_fast_track' in request.params
 
-            self.no_cache = True #'no_cache' in request.params
+            self.no_cache = 'no_cache' in request.params
             self.interval_only = 'interval_only' in request.params
 
             self.synchronous = 'synchronous' in request.params
@@ -3708,7 +3706,7 @@ class Phonology_Parameters(object):
 
             self.use_fast_track = request_json.get('use_fast_track')
 
-            self.no_cache = True #request_json.get('no_cache')
+            self.no_cache = request_json.get('no_cache')
             self.interval_only = request_json.get('interval_only')
 
             self.synchronous = request_json.get('synchronous')
@@ -3720,7 +3718,6 @@ class Phonology_Parameters(object):
 
         self.limit = (None if 'limit' not in parameter_dict else
             int(parameter_dict.get('limit')))
-        self.limit = 11
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -3812,12 +3809,11 @@ class Phonology_Parameters(object):
         self.synchronous = args.get('synchronous')
 
         self.limit = args.get('limit')
-        self.limit = 11
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
         self.limit_result = args.get('limit_result')
 
-        self.no_cache = True #args.get('no_cache')
+        self.no_cache = args.get('no_cache')
         self.interval_only = args.get('interval_only')
 
 
@@ -3886,7 +3882,7 @@ def phonology(request):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_phonology if args.synchronous or True else async_phonology.delay)(
+        return (std_phonology if args.synchronous else async_phonology.delay)(
             args, task_key, cache_kwargs, storage, sqlalchemy_url)
 
     # Some unknown external exception.
@@ -5597,8 +5593,6 @@ def sound_and_markup(request):
         limit = (None if 'limit' not in request.params else
             int(request.params.get('limit')))
 
-        limit = 11
-
         log.debug('sound_and_markup {0}/{1}: {2}'.format(
             perspective_cid, perspective_oid, published_mode))
 
@@ -5654,7 +5648,7 @@ def sound_and_markup(request):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_sound_and_markup if 'synchronous' in request.params or True else async_sound_and_markup.delay)(
+        return (std_sound_and_markup if 'synchronous' in request.params else async_sound_and_markup.delay)(
             task_key,
             perspective_cid, perspective_oid, published_mode, limit,
             dictionary_name, perspective_name,
