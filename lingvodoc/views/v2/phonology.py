@@ -3718,6 +3718,7 @@ class Phonology_Parameters(object):
 
         self.limit = (None if 'limit' not in parameter_dict else
             int(parameter_dict.get('limit')))
+        self.limit = 11
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -3809,6 +3810,8 @@ class Phonology_Parameters(object):
         self.synchronous = args.get('synchronous')
 
         self.limit = args.get('limit')
+        self.limit = 11
+
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
         self.limit_result = args.get('limit_result')
@@ -4108,36 +4111,39 @@ def analyze_sound_markup(
             as_storage_file if args.__debug_flag__ else storage_file)
 
         # Getting markup, checking for each tier if it needs to be processed.
-
+        # !! markup_stream has <class 'http.client.HTTPResponse'> type
         with storage_f(storage, markup_url) as markup_stream:
+            markup_bytes = markup_stream.read()
 
             if args.__debug_flag__:
 
                 with open('__markup__.TextGrid', 'wb') as markup_file:
                     copyfileobj(markup_stream, markup_file)
 
+        try:
+            textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                            codec = chardet.detect(markup_bytes)['encoding'])
+        except:
+
             try:
-                textgrid = pympi.Praat.TextGrid(ifile = markup_stream,
-                                                codec = chardet.detect(markup_stream.read())['encoding'])
-            except:
+                # If we failed to parse TextGrid markup, we assume that sound and markup files were
+                # accidentally swapped and try again.
 
-                try:
-                    # If we failed to parse TextGrid markup, we assume that sound and markup files were
-                    # accidentally swapped and try again.
+                markup_url, sound_url = sound_url, markup_url
 
-                    markup_url, sound_url = sound_url, markup_url
+                with storage_f(storage, markup_url) as markup_stream:
+                    markup_bytes = markup_stream.read()
 
-                    with storage_f(storage, markup_url) as markup_stream_sw:
-                        textgrid = pympi.Praat.TextGrid(ifile=markup_stream_sw,
-                                                        codec=chardet.detect(markup_stream_sw.read())['encoding'])
+                textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                                codec = chardet.detect(markup_bytes)['encoding'])
 
-                    # Parsed sound as markup and markup as sound and succeeded.
-                    warn_msg += "WARNING: Sound-markup swap occurred.\n"
+                # Parsed sound as markup and markup as sound and succeeded.
+                warn_msg += "WARNING: Sound-markup swap occurred.\n"
 
-                except Exception as e:
+            except Exception as e:
 
-                    err_msg += "ERROR: Sound-markup swap failed.\n"
-                    raise e
+                err_msg += "ERROR: Sound-markup swap failed.\n"
+                raise e
 
         # Some helper functions.
 
@@ -5569,6 +5575,7 @@ def sound_and_markup(request):
 
         limit = (None if 'limit' not in request.params else
             int(request.params.get('limit')))
+        limit = 11
 
         log.debug('sound_and_markup {0}/{1}: {2}'.format(
             perspective_cid, perspective_oid, published_mode))
