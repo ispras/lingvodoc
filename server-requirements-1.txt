@@ -1,4 +1,5 @@
 git+https://github.com/myrix/poio-api.git
+git+https://github.com/myrix/pympi.git
 alabaster==0.7.12
 alembic==1.0.0
 amqp==1.4.9
@@ -60,7 +61,7 @@ pycparser==2.16
 pydub==0.16.5
 Pygments==2.1.3
 pylev==1.3.0
-pympi-ling==1.69
+#pympi-ling==1.69
 pyparsing==2.2.0
 pyramid==1.10.8
 pyramid-chameleon==0.3
