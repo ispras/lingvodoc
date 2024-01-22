@@ -4110,57 +4110,34 @@ def analyze_sound_markup(
         # Getting markup, checking for each tier if it needs to be processed.
 
         with storage_f(storage, markup_url) as markup_stream:
-            markup_bytes = markup_stream.read()
-
-        try:
-            textgrid = pympi.Praat.TextGrid(xmax = 0)
 
             if args.__debug_flag__:
 
                 with open('__markup__.TextGrid', 'wb') as markup_file:
-                    markup_file.write(markup_bytes)
-
-            # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
-            # endianness specified by the BOM at the start of the file may be lost.
-
-            textgrid.from_file(
-
-                io.BytesIO(
-                    markup_bytes
-                        .decode(chardet.detect(markup_bytes)['encoding'])
-                        .encode('utf-8')),
-
-                codec = 'utf-8')
-
-        except:
+                    copyfileobj(markup_stream, markup_file)
 
             try:
-                # If we failed to parse TextGrid markup, we assume that sound and markup files were
-                # accidentally swapped and try again.
+                textgrid = pympi.Praat.TextGrid(ifile = markup_stream,
+                                                codec = chardet.detect(markup_stream.read())['encoding'])
+            except:
 
-                markup_url, sound_url = sound_url, markup_url
+                try:
+                    # If we failed to parse TextGrid markup, we assume that sound and markup files were
+                    # accidentally swapped and try again.
 
-                with storage_f(storage, markup_url) as markup_stream:
-                    markup_bytes = markup_stream.read()
+                    markup_url, sound_url = sound_url, markup_url
 
-                textgrid = pympi.Praat.TextGrid(xmax = 0)
+                    with storage_f(storage, markup_url) as markup_stream_sw:
+                        textgrid = pympi.Praat.TextGrid(ifile=markup_stream_sw,
+                                                        codec=chardet.detect(markup_stream_sw.read())['encoding'])
 
-                textgrid.from_file(
+                    # Parsed sound as markup and markup as sound and succeeded.
+                    warn_msg += "WARNING: Sound-markup swap occurred.\n"
 
-                    io.BytesIO(
-                        markup_bytes
-                            .decode(chardet.detect(markup_bytes)['encoding'])
-                            .encode('utf-8')),
+                except Exception as e:
 
-                    codec = 'utf-8')
-
-                # Parsed sound as markup and markup as sound and succeeded.
-                warn_msg += "WARNING: Sound-markup swap occurred.\n"
-
-            except Exception as e:
-
-                err_msg += "ERROR: Sound-markup swap failed.\n"
-                raise e
+                    err_msg += "ERROR: Sound-markup swap failed.\n"
+                    raise e
 
         # Some helper functions.
 
