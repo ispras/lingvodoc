@@ -1,5 +1,4 @@
 import os
-#import tgt
 import pympi
 
 
@@ -43,29 +42,6 @@ def _export_to_elan(textGrid_file):
             return 'error'
     return elan
 
-
-'''
-""" Not used any more """
-def _import_from_elan(elan_file):
-    if os.stat(elan_file).st_size == 0:
-        return 'error'
-    try:
-        textgrid = tgt.io.read_eaf(elan_file)
-        content = tgt.io.export_to_long_textgrid(textgrid)
-    except Exception as e:
-        print(e)
-        return 'error'
-    return content
-
-""" Not used any more """
-def _is_empty(tier):
-    """ Checks whether all intervals are marked as ""
-    """
-    for int in tier:
-        if int.text != "":
-            return False
-    return True
-'''
 
 def praat_to_elan(filename, user_config=None, converter_config=None):
     content = _export_to_elan(filename)
