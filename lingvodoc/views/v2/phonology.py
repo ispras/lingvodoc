@@ -3699,7 +3699,6 @@ class Phonology_Parameters(object):
 
         self.limit = (None if 'limit' not in parameter_dict else
             int(parameter_dict.get('limit')))
-        self.limit = 11
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -3791,7 +3790,6 @@ class Phonology_Parameters(object):
         self.synchronous = args.get('synchronous')
 
         self.limit = args.get('limit')
-        self.limit = 11
 
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
@@ -5537,7 +5535,6 @@ def sound_and_markup(request):
 
         limit = (None if 'limit' not in request.params else
             int(request.params.get('limit')))
-        limit = 11
 
         log.debug('sound_and_markup {0}/{1}: {2}'.format(
             perspective_cid, perspective_oid, published_mode))
