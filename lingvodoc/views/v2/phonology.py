@@ -1976,26 +1976,15 @@ def process_sound_markup(
             with storage_f(storage, markup_url) as markup_stream:
                 markup_bytes = markup_stream.read()
 
-            try:
-
-                textgrid = pympi.Praat.TextGrid(xmax = 0)
-
                 if __debug_flag__:
 
                     with open('__markup__.TextGrid', 'wb') as markup_file:
-                        markup_file.write(markup_bytes)
+                        copyfileobj(markup_stream, markup_file)
 
-                # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
-                # endianness specified by the BOM at the start of the file may be lost.
+            try:
 
-                textgrid.from_file(
-
-                    io.BytesIO(
-                        markup_bytes
-                            .decode(chardet.detect(markup_bytes)['encoding'])
-                            .encode('utf-8')),
-
-                    codec = 'utf-8')
+                textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                                codec = chardet.detect(markup_bytes)['encoding'])
 
             except:
 
@@ -2008,16 +1997,8 @@ def process_sound_markup(
                 with storage_f(storage, markup_url) as markup_stream:
                     markup_bytes = markup_stream.read()
 
-                textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-                textgrid.from_file(
-
-                    io.BytesIO(
-                        markup_bytes
-                            .decode(chardet.detect(markup_bytes)['encoding'])
-                            .encode('utf-8')),
-
-                    codec = 'utf-8')
+                textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                                codec = chardet.detect(markup_bytes)['encoding'])
 
             # Processing markup, getting info we need.
 
@@ -3718,6 +3699,7 @@ class Phonology_Parameters(object):
 
         self.limit = (None if 'limit' not in parameter_dict else
             int(parameter_dict.get('limit')))
+        self.limit = 11
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -3809,6 +3791,8 @@ class Phonology_Parameters(object):
         self.synchronous = args.get('synchronous')
 
         self.limit = args.get('limit')
+        self.limit = 11
+
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
         self.limit_result = args.get('limit_result')
@@ -4108,30 +4092,18 @@ def analyze_sound_markup(
             as_storage_file if args.__debug_flag__ else storage_file)
 
         # Getting markup, checking for each tier if it needs to be processed.
-
+        # !! markup_stream has <class 'http.client.HTTPResponse'> type
         with storage_f(storage, markup_url) as markup_stream:
             markup_bytes = markup_stream.read()
-
-        try:
-            textgrid = pympi.Praat.TextGrid(xmax = 0)
 
             if args.__debug_flag__:
 
                 with open('__markup__.TextGrid', 'wb') as markup_file:
-                    markup_file.write(markup_bytes)
+                    copyfileobj(markup_stream, markup_file)
 
-            # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
-            # endianness specified by the BOM at the start of the file may be lost.
-
-            textgrid.from_file(
-
-                io.BytesIO(
-                    markup_bytes
-                        .decode(chardet.detect(markup_bytes)['encoding'])
-                        .encode('utf-8')),
-
-                codec = 'utf-8')
-
+        try:
+            textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                            codec = chardet.detect(markup_bytes)['encoding'])
         except:
 
             try:
@@ -4143,16 +4115,8 @@ def analyze_sound_markup(
                 with storage_f(storage, markup_url) as markup_stream:
                     markup_bytes = markup_stream.read()
 
-                textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-                textgrid.from_file(
-
-                    io.BytesIO(
-                        markup_bytes
-                            .decode(chardet.detect(markup_bytes)['encoding'])
-                            .encode('utf-8')),
-
-                    codec = 'utf-8')
+                textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                                codec = chardet.detect(markup_bytes)['encoding'])
 
                 # Parsed sound as markup and markup as sound and succeeded.
                 warn_msg += "WARNING: Sound-markup swap occurred.\n"
@@ -5120,19 +5084,8 @@ class Sound_Markup_Iterator(object):
 
                 try:
 
-                    textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-                    # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
-                    # endianness specified by the BOM at the start of the file may be lost.
-
-                    textgrid.from_file(
-
-                        io.BytesIO(
-                            markup_bytes
-                                .decode(chardet.detect(markup_bytes)['encoding'])
-                                .encode('utf-8')),
-
-                        codec = 'utf-8')
+                    textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                                    codec = chardet.detect(markup_bytes)['encoding'])
 
                 except:
 
@@ -5146,16 +5099,8 @@ class Sound_Markup_Iterator(object):
 
                         markup_bytes = markup_stream.read()
 
-                    textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-                    textgrid.from_file(
-
-                        io.BytesIO(
-                            markup_bytes
-                                .decode(chardet.detect(markup_bytes)['encoding'])
-                                .encode('utf-8')),
-
-                        codec = 'utf-8')
+                    textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                                    codec = chardet.detect(markup_bytes)['encoding'])
 
                 result = self.process_sound_markup(row_str, textgrid)
                 caching.CACHE.set(cache_key, result)
@@ -5592,6 +5537,7 @@ def sound_and_markup(request):
 
         limit = (None if 'limit' not in request.params else
             int(request.params.get('limit')))
+        limit = 11
 
         log.debug('sound_and_markup {0}/{1}: {2}'.format(
             perspective_cid, perspective_oid, published_mode))
@@ -5784,19 +5730,8 @@ def get_sound_markup_bytes(storage, sound_url, markup_url):
 
     try:
 
-        textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-        # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
-        # endianness specified by the BOM at the start of the file may be lost.
-
-        textgrid.from_file(
-
-            io.BytesIO(
-                markup_bytes
-                    .decode(chardet.detect(markup_bytes)['encoding'])
-                    .encode('utf-8')),
-
-            codec = 'utf-8')
+        textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                        codec = chardet.detect(markup_bytes)['encoding'])
 
         return sound_bytes, markup_bytes
 
@@ -5805,16 +5740,8 @@ def get_sound_markup_bytes(storage, sound_url, markup_url):
         # If we failed to parse TextGrid markup, we assume that sound and markup files were
         # accidentally swapped and try again.
 
-        textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-        textgrid.from_file(
-
-            io.BytesIO(
-                markup_bytes
-                    .decode(chardet.detect(markup_bytes)['encoding'])
-                    .encode('utf-8')),
-
-            codec = 'utf-8')
+        textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                        codec = chardet.detect(markup_bytes)['encoding'])
 
         return markup_bytes, sound_bytes
 
@@ -6498,19 +6425,8 @@ def main_test_alpha(args):
 
     markup_bytes = open('корень_БИН_(1_раз).TextGrid', 'rb').read()
 
-    textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-    # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
-    # endianness specified by the BOM at the start of the file may be lost.
-
-    textgrid.from_file(
-
-        io.BytesIO(
-            markup_bytes
-                .decode(chardet.detect(markup_bytes)['encoding'])
-                .encode('utf-8')),
-
-        codec = 'utf-8')
+    textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                    codec = chardet.detect(markup_bytes)['encoding'])
 
     raw_interval_list = textgrid.get_tier(1).get_all_intervals()
     interval_list = []
@@ -6630,19 +6546,8 @@ def main_test_profile(args):
 
                 markup_bytes = open(textgrid_path, 'rb').read()
 
-                textgrid = pympi.Praat.TextGrid(xmax = 0)
-
-                # Textgrid package decodes files line by line, and that means that for UTF-16 / UTF-32
-                # endianness specified by the BOM at the start of the file may be lost.
-
-                textgrid.from_file(
-
-                    io.BytesIO(
-                        markup_bytes
-                            .decode(chardet.detect(markup_bytes)['encoding'])
-                            .encode('utf-8')),
-
-                    codec = 'utf-8')
+                textgrid = pympi.Praat.TextGrid(ifile = io.BytesIO(markup_bytes),
+                                                codec = chardet.detect(markup_bytes)['encoding'])
 
             except Exception as exception:
 

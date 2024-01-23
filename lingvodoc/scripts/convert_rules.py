@@ -1,5 +1,5 @@
 import os
-import tgt
+import pympi
 
 
 class ConvertRule:
@@ -18,40 +18,29 @@ def _export_to_elan(textGrid_file):
     if os.stat(textGrid_file).st_size == 0:
         return 'error'
     try:
+        '''
         textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-8')
         elan = tgt.io.export_to_elan(textgrid)
+        '''
+        textgrid = pympi.Praat.TextGrid(file_path=textGrid_file, codec='utf-8')
+        elan = pympi.Elan.to_string(textgrid.to_eaf())
+
     except Exception as e:
         try:
             print('first exception')
             print(e)
+            '''
             textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-16')
             elan = tgt.io.export_to_elan(textgrid)
+            '''
+            textgrid = pympi.Praat.TextGrid(file_path=textGrid_file, codec='utf-16')
+            elan = pympi.Elan.to_string(textgrid.to_eaf())
+
         except Exception as e:
             print('second exception')
             print(e)
             return 'error'
     return elan
-
-
-def _import_from_elan(elan_file):
-    if os.stat(elan_file).st_size == 0:
-        return 'error'
-    try:
-        textgrid = tgt.io.read_eaf(elan_file)
-        content = tgt.io.export_to_long_textgrid(textgrid)
-    except Exception as e:
-            print(e)
-            return 'error'
-    return content
-
-
-# def _is_empty(tier):
-#     """ Checks whether all intervals are marked as ""
-#     """
-#     for int in tier:
-#         if int.text != "":
-#             return False
-#     return True
 
 
 def praat_to_elan(filename, user_config=None, converter_config=None):
