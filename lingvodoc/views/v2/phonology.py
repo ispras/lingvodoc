@@ -325,6 +325,93 @@ def compute_formants(sample_list, nyquist_frequency):
     return formant_list
 
 
+def compute_pitch(sample_list):
+    """
+    Computes pitches of an audio sample.
+    """
+
+    minimumPitch = 75
+    maximumPitch = 600
+    periodsPerWindow = 3.0
+    oversampling = 4
+    # z[channel] = [??]
+    x1 = 0
+    ny = 1
+    dx = 1 / maximumPitch / oversampling
+    nx = len(sample_list)
+    dt_window = periodsPerWindow / minimumPitch
+    dt = dt_window / oversampling
+    nyquist_frequency = maximumPitch * oversampling * 0.5
+
+    maxnCandidates = 15
+    veryAccurate = False
+    silenceThreshold = 0.03
+    voicingThreshold = 0.45
+    octaveCost = 0.01
+    octaveJumpCost = 0.35
+    voicedUnvoicedCost = 0.14
+
+    # for Gaussian
+    #periodsPerWindow *= 2 # because Gaussian window is twice as long
+    #brent_depth = NUM_PEAK_INTERPOLATE_SINC700 # 4
+    #interpolation_depth = 0.25 # because Gaussian window is twice as long
+
+    sample_list = [sample * weight
+        for sample, weight in zip(sample_list,
+            get_gaussian_window(len(sample_list)))]
+
+    duration = dx * nx
+    nsamp_period = math.floor(1.0 / dx / minimumPitch)
+    halfnsamp_period = nsamp_period / 2 + 1
+
+    if (maximumPitch > 0.5 / dx) maximumPitch = 0.5 / dx
+    nsamp_window = math.floor(dt_window / dx)
+    halfnsamp_window = nsamp_window / 2 - 1
+    nsamp_window = halfnsamp_window * 2 # what?
+
+    minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
+    maximumLag = min(math.floor(nsamp_window / periodsPerWindow) + 2, nsamp_window)
+
+    numberOfFrames = math.floor((duration - dt_window) / dt) + 1
+    ourMidTime = x1 + 0.5 * (duration - dx)
+    thyDuration = numberOfFrames * dt
+    t1 = ourMidTime + 0.5 * (dt - thyDuration)
+
+    three = {
+        'xmin': x1,
+        'xmax': x1 + duration,
+        'nx': numberOfFrames,
+        'dx': dt,
+        'x1': t1,
+        'ceiling': maximumPitch,
+        'maxnCandidates': maxnCandidates,
+        #'frame': NUMvector <structPitch_Frame> (1, nt) with one candidate in every frame (unvoiced, silent)
+    }
+
+    # Create (too much) space for candidates.
+    '''
+    for (iframe = 1; iframe <= numberOfFrames; iframe ++)
+        pitchFrame = three.frame[iframe]
+        Pitch_Frame_init(pitchFrame, maxnCandidates)
+    '''
+
+    # Compute the global absolute peak for determination of silence threshold.
+    globalPeak = 0.0
+    for (channel = 1; channel <= ny; channel++)
+        sum = 0.0
+        for (i = 1; i <= nx; i++)
+            sum += z[channel][i]
+
+        mean = sum / nx
+        for (i = 1; i <= nx; i ++)
+            value = math.fabs(z[channel][i] - mean)
+            if (value > globalPeak) globalPeak = value
+
+    if (globalPeak == 0.0)
+        return thee
+
+
+
 class AudioPraatLike(object):
     """
     Allows computations of sound intensity and formants using algorithms mimicking as close as possible
