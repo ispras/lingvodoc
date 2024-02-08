@@ -13246,7 +13246,7 @@ class SwadeshAnalysis(graphene.Mutation):
                 if "убрать из стословника" in lex:
                     return set()
 
-                return set(form.strip()
+                return set(form.replace('ё', 'е').strip()
                            for form in lex.replace('(', ',').split(',')
                            if form.strip() and ')' not in form)  # exclude notes
 
