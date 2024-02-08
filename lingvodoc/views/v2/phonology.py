@@ -352,13 +352,9 @@ def compute_pitch(sample_list):
     voicedUnvoicedCost = 0.14
 
     # for Gaussian
-    #periodsPerWindow *= 2 # because Gaussian window is twice as long
-    #brent_depth = NUM_PEAK_INTERPOLATE_SINC700 # 4
-    #interpolation_depth = 0.25 # because Gaussian window is twice as long
-
-    sample_list = [sample * weight
-        for sample, weight in zip(sample_list,
-            get_gaussian_window(len(sample_list)))]
+    periodsPerWindow *= 2 # because Gaussian window is twice as long
+    brent_depth = 4
+    interpolation_depth = 0.25 # because Gaussian window is twice as long
 
     duration = dx * nx
     nsamp_period = math.floor(1.0 / dx / minimumPitch)
@@ -413,6 +409,38 @@ def compute_pitch(sample_list):
     if globalPeak == 0.0:
         return thee
 
+    '''
+    Compute the number of samples needed for doing FFT.
+    To avoid edge effects, we have to append zeroes to the window.
+    The maximum lag considered for maxima is maximumLag.
+    The maximum lag used in interpolation is nsamp_window * interpolation_depth.
+    '''
+    nsampFFT = 1
+    while nsampFFT < nsamp_window * (1 + interpolation_depth):
+        nsampFFT *= 2
+
+    sample_list = [sample * weight
+        for sample, weight in zip(sample_list,
+            get_gaussian_window(len(sample_list)))]
+
+    windowR = numpy.zeros(nsampFFT)
+    for i in range(1, nsamp_window + 1):
+        windowR[i] = sample_list[i]
+
+    windowR = numpy.fft.rfft(windowR)
+    windowR[1] *= windowR[1] #DC component
+    for i in range(2, nsampFFT, 2):
+        windowR[i] = windowR[i] * windowR[i] + windowR[i + 1] * windowR[i + 1]
+        windowR[i + 1] = 0.0  # power spectrum: square and zero
+
+    windowR[nsampFFT] *= windowR[nsampFFT]  # Nyquist frequency
+    windowR = numpy.fft.irfft(windowR)  # autocorrelation
+
+    for i in range(2, nsamp_window + 1):
+        windowR[i] /= windowR[1]  # normalize
+    windowR[1] = 1.0  # normalize
+
+    brent_ixmax = floor(nsamp_window * interpolation_depth)
 
 
 class AudioPraatLike(object):
