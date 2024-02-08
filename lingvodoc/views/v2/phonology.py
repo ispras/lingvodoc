@@ -364,10 +364,12 @@ def compute_pitch(sample_list):
     nsamp_period = math.floor(1.0 / dx / minimumPitch)
     halfnsamp_period = nsamp_period / 2 + 1
 
-    if (maximumPitch > 0.5 / dx) maximumPitch = 0.5 / dx
+    if maximumPitch > 0.5 / dx:
+        maximumPitch = 0.5 / dx
+
     nsamp_window = math.floor(dt_window / dx)
     halfnsamp_window = nsamp_window / 2 - 1
-    nsamp_window = halfnsamp_window * 2 # what?
+    nsamp_window = halfnsamp_window * 2  # what?
 
     minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
     maximumLag = min(math.floor(nsamp_window / periodsPerWindow) + 2, nsamp_window)
@@ -397,17 +399,18 @@ def compute_pitch(sample_list):
 
     # Compute the global absolute peak for determination of silence threshold.
     globalPeak = 0.0
-    for (channel = 1; channel <= ny; channel++)
+    for channel in range(1, ny+1):
         sum = 0.0
-        for (i = 1; i <= nx; i++)
+        for i in range(1, nx+1):
             sum += z[channel][i]
 
         mean = sum / nx
-        for (i = 1; i <= nx; i ++)
+        for i in range(1, nx+1):
             value = math.fabs(z[channel][i] - mean)
-            if (value > globalPeak) globalPeak = value
+            if value > globalPeak:
+                globalPeak = value
 
-    if (globalPeak == 0.0)
+    if globalPeak == 0.0:
         return thee
 
 
