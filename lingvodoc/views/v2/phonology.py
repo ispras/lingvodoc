@@ -443,6 +443,29 @@ def compute_pitch(sample_list):
     brent_ixmax = floor(nsamp_window * interpolation_depth)
 
 
+def sound_into_pitch(me):
+    for iframe in range(me.first_frame, me.last_frame + 1):
+        pitch_frame = me.pitch.frames[iframe]
+        t = me.pitch.index_to_x(iframe)
+        if me.is_main_thread:
+            try:
+                progress = 0.1 + 0.8 * (iframe - me.first_frame) / (me.last_frame - me.first_frame)
+                print(f"Sound to Pitch: analysing {me.last_frame} frames")
+            except Exception as e:
+                me.cancelled[0] = 1
+                raise e
+        elif me.cancelled[0]:
+            return
+        me.sound_into_pitch_frame(me.sound, pitch_frame, t,
+                                  me.pitch_floor, me.maxn_candidates, me.method, me.voicing_threshold,
+                                  me.octave_cost,
+                                  me.fft_table, me.dt_window, me.nsamp_window, me.halfnsamp_window,
+                                  me.maximum_lag, me.nsamp_fft, me.nsamp_period, me.halfnsamp_period,
+                                  me.brent_ixmax, me.brent_depth, me.global_peak,
+                                  me.frame, me.ac, me.window, me.window_r,
+                                  me.r, me.imax, me.local_mean)
+
+
 class AudioPraatLike(object):
     """
     Allows computations of sound intensity and formants using algorithms mimicking as close as possible
