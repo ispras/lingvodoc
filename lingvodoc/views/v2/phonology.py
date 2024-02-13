@@ -326,7 +326,11 @@ def compute_formants(sample_list, nyquist_frequency):
 
     return formant_list
 
-def sound_into_pitch_frame(me, pitchFrame, t, pitchFloor, maxnCandidates, method, voicingThreshold, octaveCost, fftTable, dt_window, nsamp_window, halfnsamp_window, maximumLag, nsampFFT, nsamp_period, halfnsamp_period, brent_ixmax, brent_depth, globalPeak, frame, ac, window, windowR, r, imax, localMean):
+# Compute pitch frames
+def sound_into_pitch_frame(arg, pitchFrame, t):
+    for k, v in arg.items():
+        exec(f'{k} = {v}')
+
     leftSample = Sampled_xToLowIndex(me, t)
     rightSample = leftSample + 1
     startSample = rightSample - nsamp_period
@@ -462,18 +466,11 @@ def sound_into_pitch_frame(me, pitchFrame, t, pitchFloor, maxnCandidates, method
 
 
 def sound_into_pitch(arg):
-    for iframe in range(arg.get('firstFrame'), arg.get('lastFrame')):
-        pitch_frame = arg.get('pitch').get('frames')[iframe]
-        t =  arg.get('x1') + iframe * arg.get('dx')
-        sound_into_pitch_frame(arg['sound'], pitch_frame, t,
-                               arg['pitchFloor'], arg['maxnCandidates'], arg['method'], arg['voicingThreshold'],
-                               arg['octaveCost'],
-                               arg['fftTable'], arg['dt_window'], arg['nsamp_window'], arg['halfnsamp_window'],
-                               arg['maximumLag'], arg['nsampFFT'], arg['nsamp_period'], arg['halfnsamp_period'],
-                               arg['brent_ixmax'], arg['brent_depth'], arg['globalPeak'],
-                               arg['frame'], arg['ac'], arg['window'], arg['windowR'],
-                               arg['r'], arg['imax'], arg['localMean'])
+    pitch, firstFrame, lastFrame = [arg.get(key) for key in pitch, firstFrame, lastFrame]
+    x1, dx, frames = [pitch.get(key) for key in x1, dx, frames]
 
+    for iframe in range(firstFrame, lastFrame):
+        sound_into_pitch_frame(arg, pitch_frame := frames[iframe], t := x1 + iframe * dx)
 
 def compute_pitch(sample_list):
     """
@@ -597,6 +594,7 @@ def compute_pitch(sample_list):
     firstFrame = 0
     lastFrame = numberOfFramesPerThread
     cancelled = [False]
+    args = []
 
     for ithread in range(numberOfThreads):
         # Get the rest
@@ -639,7 +637,7 @@ def compute_pitch(sample_list):
         # ??? originally ref is required
         arg['r'] = (arg['rbuffer'], 1 + nsamp_window)
 
-        args[ithread] = arg
+        args.append(arg)
         firstFrame = lastFrame + 1
         lastFrame += numberOfFramesPerThread
 
