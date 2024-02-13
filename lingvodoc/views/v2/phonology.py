@@ -329,7 +329,7 @@ def compute_formants(sample_list, nyquist_frequency):
 # Compute pitch frames
 def sound_into_pitch_frame(arg, pitchFrame, t):
     for k, v in arg.items():
-        exec(f'{k} = {v}')
+        locals()[k] = v
 
     leftSample = Sampled_xToLowIndex(me, t)
     rightSample = leftSample + 1
@@ -466,8 +466,11 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
 
 
 def sound_into_pitch(arg):
-    pitch, firstFrame, lastFrame = [arg.get(key) for key in pitch, firstFrame, lastFrame]
-    x1, dx, frames = [pitch.get(key) for key in x1, dx, frames]
+    # Get some values from 'arg'
+    for key in 'pitch', 'firstFrame', 'lastFrame':
+        locals()[key] = arg.get(key)
+    for key in 'x1', 'dx', 'frames':
+        locals()[key] = pitch.get(key)
 
     for iframe in range(firstFrame, lastFrame):
         sound_into_pitch_frame(arg, pitch_frame := frames[iframe], t := x1 + iframe * dx)
@@ -596,13 +599,17 @@ def compute_pitch(sample_list):
     cancelled = [False]
     args = []
 
+    # Gather parameters into 'sound'
+    for key in 'x1', 'dx', 'nx', 'ny', 'z':
+        sound[key] = locals()[key]
+
     for ithread in range(numberOfThreads):
         # Get the rest
         if ithread == numberOfThreads - 1:
             lastFrame = numberOfFrames
 
         arg = {
-            'sound': me,
+            'sound': sound,
             'pitch': thee,
             'firstFrame': firstFrame,
             'lastFrame': lastFrame,
@@ -621,8 +628,8 @@ def compute_pitch(sample_list):
             'brent_ixmax': brent_ixmax,
             'brent_depth': brent_depth,
             'globalPeak': globalPeak,
-            'window': window.get(),
-            'windowR': windowR.get(),
+            'window': window,
+            'windowR': windowR,
             'isMainThread': (ithread == numberOfThreads),
             'cancelled': cancelled,
             # ???
@@ -635,7 +642,7 @@ def compute_pitch(sample_list):
             'localMean': np.zeros(ny)
         }
         # ??? originally ref is required
-        arg['r'] = (arg['rbuffer'], 1 + nsamp_window)
+        #arg['r'] = arg['rbuffer'][1 + nsamp_window]
 
         args.append(arg)
         firstFrame = lastFrame + 1
