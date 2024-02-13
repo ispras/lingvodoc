@@ -328,141 +328,159 @@ def compute_formants(sample_list, nyquist_frequency):
 
 # Compute pitch frames
 def sound_into_pitch_frame(arg, pitchFrame, t):
+    # Unpack variables from 'arg'
     for k, v in arg.items():
         locals()[k] = v
+    for k, v in sound.items():
+        locals()[k] = v
 
-    leftSample = Sampled_xToLowIndex(me, t)
+    leftSample = (t - x1) // dx
     rightSample = leftSample + 1
-    startSample = rightSample - nsamp_period
-    endSample = leftSample + nsamp_period
-    assert startSample >= 1
-    assert endSample <= my nx
-    localMean = [0.0] * len(me.ny)
-    for channel in range(1, me.ny + 1):
+    for channel in range(ny):
+        '''
+        Compute the local mean; look one longest period to both sides.
+        '''
+        startSample = rightSample - nsamp_period
+        endSample = leftSample + nsamp_period
+        assert startSample >= 0
+        assert endSample < nx
+
         localMean[channel] = 0.0
-        for i in range(startSample, endSample + 1):
-            localMean[channel] += me.z[channel][i]
+        for i in range(startSample, endSample):
+            localMean[channel] += z[channel][i]
         localMean[channel] /= 2 * nsamp_period
 
-    startSample = rightSample - halfnsamp_window
-    endSample = leftSample + halfnsamp_window
-    assert startSample >= 1
-    assert endSample <= my nx
-    if method < FCC_NORMAL:
-        for j in range(1, nsamp_window + 1):
-            frame[channel][j] = (me.z[channel][startSample] - localMean[channel]) * window[j]
-        for j in range(nsamp_window + 1, nsampFFT + 1):
+        '''
+		Copy a window to a frame and subtract the local mean.
+		We are going to kill the DC component before windowing.
+        '''
+        startSample = rightSample - halfnsamp_window
+        endSample = leftSample + halfnsamp_window
+        assert startSample >= 0
+        assert endSample < nx
+
+        for j in range(nsamp_window):
+            frame[channel][j] = (z[channel][j + startSample] - localMean[channel]) * window[j]
+        for j in range(nsamp_window, nsampFFT):
             frame[channel][j] = 0.0
-    else:
-        for j in range(1, nsamp_window + 1):
-            frame[channel][j] = me.z[channel][startSample] - localMean[channel]
 
     localPeak = 0.0
-    startSample = halfnsamp_window + 1 - halfnsamp_period
-    if startSample < 1:
-        startSample = 1
-    endSample = halfnsamp_window + halfnsamp_period
-    if endSample > nsamp_window:
-        endSample = nsamp_window
-    for channel in range(1, me.ny + 1):
-        for j in range(startSample, endSample + 1):
-            value = abs(frame[channel][j])
+    startSample = max(0, halfnsamp_window - halfnsamp_period)
+    endSample = min(nsamp_window, halfnsamp_window + halfnsamp_period)
+
+    for channel in range(ny):
+        for j in range(startSample, endSample):
+            value = math.fabs(frame[channel][j])
             if value > localPeak:
                 localPeak = value
+
     pitchFrame.intensity = 1.0 if localPeak > globalPeak else localPeak / globalPeak
 
-    if method >= FCC_NORMAL:
-        startTime = t - 0.5 * (1.0 / pitchFloor + dt_window)
-        localSpan = maximumLag + nsamp_window
-        startSample = Sampled_xToLowIndex(me, startTime)
-        if startSample < 1:
-            startSample = 1
-        if localSpan > me.nx + 1 - startSample:
-            localSpan = me.nx + 1 - startSample
-        localMaximumLag = localSpan - nsamp_window
-        offset = startSample - 1
-        sumx2 = 0.0
-        for channel in range(1, me.ny + 1):
-            amp = me.z[channel][0] + offset
-            for i in range(1, nsamp_window + 1):
-                x = amp[i] - localMean[channel]
-                sumx2 += x * x
-        sumy2 = sumx2
-        r[0] = 1.0
-        for i in range(1, localMaximumLag + 1):
-            product = 0.0
-            for channel in range(1, me.ny + 1):
-                amp = me.z[channel][0] + offset
-                y0 = amp[i] - localMean[channel]
-                yZ = amp[i + nsamp_window] - localMean[channel]
-                sumy2 += yZ * yZ - y0 * y0
-                for j in range(1, nsamp_window + 1):
-                    x = amp[j] - localMean[channel]
-                    y = amp[i + j] - localMean[channel]
-                    product += x * y
-            r[-i] = r[i] = product / sqrt(sumx2 * sumy2)
-    else:
-        for i in range(1, nsampFFT + 1):
-            ac[i] = 0.0
-        for channel in range(1, me.ny + 1):
-            NUMfft_forward(fftTable, frame[channel][1:fftTable.n])
-            ac[1] += frame[channel][1] * frame[channel][1]
-            for i in range(2, nsampFFT, 2):
-                ac[i] += frame[channel][i] * frame[channel][i] + frame[channel][i+1] * frame[channel][i+1]
-            ac[nsampFFT] += frame[channel][nsampFFT] * frame[channel][nsampFFT]
-        NUMfft_backward(fftTable, ac)
+    '''
+    Compute the correlation into the array 'r'.
+    The FFT of the autocorrelation is the power spectrum.
+    '''
+    for i in range(nsampFFT):
+        ac[i] = 0.0
+    for channel in range(ny):
+        ### ???
+        fftTable = NUMfft_forward(frame[channel][0])  # complex spectrum
+        ac[0] += frame[channel][0] ** 2  # DC component
+        for i in range(1, nsampFFT-1, 2):
+            ac[i] += frame[channel][i] ** 2 + frame[channel][i+1] ** 2
+        ac[nsampFFT-1] += frame[channel][nsampFFT-1] ** 2  # Nyquist frequency
 
-        r[0] = 1.0
-        for i in range(1, brent_ixmax + 1):
-            r[-i] = r[i] = ac[i + 1] / (ac[1] * windowR[i + 1])
+    #???
+    np.fft.irfft(fftTable, ac)  # autocorrelation
 
-    pitchFrame.candidates.resize(pitchFrame.nCandidates = 1)
-    pitchFrame.candidates[1].frequency = 0.0
-    pitchFrame.candidates[1].strength = 0.0
+    '''
+    Normalize the autocorrelation to the value with zero lag,
+	and divide it by the normalized autocorrelation of the window.
+    '''
+    r = [1.0] * (brent_ixmax + 1)
+    for i in range(1, brent_ixmax + 1):
+        r[-i] = r[i] = ac[i + 1] / (ac[0] * windowR[i + 1])
 
+    '''
+    Register the first candidate, which is always present: voicelessness.
+    '''
+    pitchFrame['nCandidates'] = 1
+    del pitchFrame['candidates'][1:]
+    pitchFrame['candidates'][0]['frequency'] = 0.0
+    pitchFrame['candidates'][0]['strength'] = 0.0
+
+    '''
+    Shortcut: absolute silence is always voiceless.
+	We are done for this frame.
+    '''
     if localPeak == 0.0:
         return
 
-    imax[1] = 0
-    for i in range(2, maximumLag):
-        if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:
+    '''
+	Find the strongest maxima of the correlation of this frame,
+	and register them as candidates.
+    '''
+    imax[0] = 0
+    for i in range(2, min(maximumLag, brent_imax)):
+        if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:  # maximum?
             place = 0
+            '''
+            Use parabolic interpolation for first estimate of frequency,
+			and sin(x)/x interpolation to compute the strength of this frequency.
+            '''
             dr = 0.5 * (r[i+1] - r[i-1])
             d2r = 2.0 * r[i] - r[i-1] - r[i+1]
-            frequencyOfMaximum = 1.0 / my.dx / (i + dr / d2r)
-            offset = -brent_ixmax - 1
-            strengthOfMaximum = NUM_interpolate_sinc(constVEC(r[offset + 1:brent_ixmax - offset]), 1.0 / my.dx / frequencyOfMaximum - offset, 30)
+            frequencyOfMaximum = 1.0 / dx / (i + dr / d2r)
+            offset = - brent_ixmax - 1
+            #???
+            strengthOfMaximum = NUM_interpolate_sinc( constVEC ( r[offset + 1], brent_ixmax - offset ), 1.0 / dx / frequencyOfMaximum - offset, 30 )
 
+            '''
+            High values due to short windows are to be reflected around 1.
+            '''
             if strengthOfMaximum > 1.0:
                 strengthOfMaximum = 1.0 / strengthOfMaximum
 
-            if pitchFrame.nCandidates < maxnCandidates:
-                pitchFrame.candidates.resize(++pitchFrame.nCandidates)
-                place = pitchFrame.nCandidates
+            '''
+            Find a place for this maximum.
+            '''
+            if pitchFrame['nCandidates'] < maxnCandidates:
+                pitchFrame['nCandidates'] += 1
+                pitchFrame['candidates'].append(pitchFrame['candidates'][-1])
+                place = pitchFrame['nCandidates']
             else:
+                '''
+                Try the place of the weakest candidate so far.
+                '''
                 weakest = 2.0
-                for iweak in range(2, maxnCandidates + 1):
-                    localStrength = pitchFrame.candidates[iweak].strength - octaveCost * NUMlog2(pitchFloor / pitchFrame.candidates[iweak].frequency)
+                for iweak in range(1, maxnCandidates):
+                    '''
+                    High frequencies are to be favoured
+					if we want to analyze a perfectly periodic signal correctly.
+                    '''
+                    localStrength = pitchFrame['candidates'][iweak]['strength'] - octaveCost * math.log2(pitchFloor / pitchFrame['candidates'][iweak]['frequency'])
                     if localStrength < weakest:
                         weakest = localStrength
                         place = iweak
-
-                if strengthOfMaximum - octaveCost * NUMlog2(pitchFloor / frequencyOfMaximum) <= weakest:
+                '''
+                If this maximum is weaker than the weakest candidate so far, give it no place.
+                '''
+                if strengthOfMaximum - octaveCost * math.log2(pitchFloor / frequencyOfMaximum) <= weakest:
                     place = 0
             if place:
-                pitchFrame.candidates[place].frequency = frequencyOfMaximum
-                pitchFrame.candidates[place].strength = strengthOfMaximum
+                pitchFrame['candidates'][place]['frequency'] = frequencyOfMaximum
+                pitchFrame['candidates'][place]['strength'] = strengthOfMaximum
                 imax[place] = i
 
-    for i in range(2, pitchFrame.nCandidates + 1):
-        if method != AC_HANNING or pitchFrame.candidates[i].frequency > 0.0 / my.dx:
-            offset = -brent_ixmax - 1
-            xmid, ymid = NUMimproveMaximum(constVEC(r[offset + 1:brent_ixmax - offset]), imax[i] - offset, NUM_PEAK_INTERPOLATE_SINC700 if pitchFrame.candidates[i].frequency > 0.3 / my.dx else brent_depth)
-            xmid += offset
-            pitchFrame.candidates[i].frequency = 1.0 / my.dx / xmid
-            if ymid > 1.0:
-                ymid = 1.0 / ymid
-            pitchFrame.candidates[i].strength = ymid
+    for i in range(1, pitchFrame['nCandidates']):
+        offset = -brent_ixmax - 1
+        #?????
+        xmid, ymid = NUMimproveMaximum(constVEC(r[offset + 1:brent_ixmax - offset]), imax[i] - offset, NUM_PEAK_INTERPOLATE_SINC700 if pitchFrame.candidates[i].frequency > 0.3 / my.dx else brent_depth)
+        xmid += offset
+        pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
+        if ymid > 1.0:
+            ymid = 1.0 / ymid
+        pitchFrame['candidates'][i]['strength'] = ymid
 
 
 def sound_into_pitch(arg):
@@ -534,10 +552,11 @@ def compute_pitch(sample_list):
         'ceiling': maximumPitch,
         'maxnCandidates': maxnCandidates,
         'frames': [{
+            'intensity': 0.0,
             'nCandidates': maxnCandidates,
             'candidates': [{
-                'frequency': 0
-                'strength': 0
+                'frequency': 0.0,
+                'strength': 0.0
             }] * maxnCandidates
          }] * numberOfFrames
     }
