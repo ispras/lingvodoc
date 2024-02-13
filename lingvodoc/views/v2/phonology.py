@@ -43,6 +43,8 @@ import cchardet as chardet
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
+import numpy as np
+import multiprocessing
 matplotlib.use('Agg', warn = False)
 
 import matplotlib.pyplot as pyplot
@@ -324,6 +326,154 @@ def compute_formants(sample_list, nyquist_frequency):
 
     return formant_list
 
+def sound_into_pitch_frame(me, pitchFrame, t, pitchFloor, maxnCandidates, method, voicingThreshold, octaveCost, fftTable, dt_window, nsamp_window, halfnsamp_window, maximumLag, nsampFFT, nsamp_period, halfnsamp_period, brent_ixmax, brent_depth, globalPeak, frame, ac, window, windowR, r, imax, localMean):
+    leftSample = Sampled_xToLowIndex(me, t)
+    rightSample = leftSample + 1
+    startSample = rightSample - nsamp_period
+    endSample = leftSample + nsamp_period
+    assert startSample >= 1
+    assert endSample <= my nx
+    localMean = [0.0] * len(me.ny)
+    for channel in range(1, me.ny + 1):
+        localMean[channel] = 0.0
+        for i in range(startSample, endSample + 1):
+            localMean[channel] += me.z[channel][i]
+        localMean[channel] /= 2 * nsamp_period
+
+    startSample = rightSample - halfnsamp_window
+    endSample = leftSample + halfnsamp_window
+    assert startSample >= 1
+    assert endSample <= my nx
+    if method < FCC_NORMAL:
+        for j in range(1, nsamp_window + 1):
+            frame[channel][j] = (me.z[channel][startSample] - localMean[channel]) * window[j]
+        for j in range(nsamp_window + 1, nsampFFT + 1):
+            frame[channel][j] = 0.0
+    else:
+        for j in range(1, nsamp_window + 1):
+            frame[channel][j] = me.z[channel][startSample] - localMean[channel]
+
+    localPeak = 0.0
+    startSample = halfnsamp_window + 1 - halfnsamp_period
+    if startSample < 1:
+        startSample = 1
+    endSample = halfnsamp_window + halfnsamp_period
+    if endSample > nsamp_window:
+        endSample = nsamp_window
+    for channel in range(1, me.ny + 1):
+        for j in range(startSample, endSample + 1):
+            value = abs(frame[channel][j])
+            if value > localPeak:
+                localPeak = value
+    pitchFrame.intensity = 1.0 if localPeak > globalPeak else localPeak / globalPeak
+
+    if method >= FCC_NORMAL:
+        startTime = t - 0.5 * (1.0 / pitchFloor + dt_window)
+        localSpan = maximumLag + nsamp_window
+        startSample = Sampled_xToLowIndex(me, startTime)
+        if startSample < 1:
+            startSample = 1
+        if localSpan > me.nx + 1 - startSample:
+            localSpan = me.nx + 1 - startSample
+        localMaximumLag = localSpan - nsamp_window
+        offset = startSample - 1
+        sumx2 = 0.0
+        for channel in range(1, me.ny + 1):
+            amp = me.z[channel][0] + offset
+            for i in range(1, nsamp_window + 1):
+                x = amp[i] - localMean[channel]
+                sumx2 += x * x
+        sumy2 = sumx2
+        r[0] = 1.0
+        for i in range(1, localMaximumLag + 1):
+            product = 0.0
+            for channel in range(1, me.ny + 1):
+                amp = me.z[channel][0] + offset
+                y0 = amp[i] - localMean[channel]
+                yZ = amp[i + nsamp_window] - localMean[channel]
+                sumy2 += yZ * yZ - y0 * y0
+                for j in range(1, nsamp_window + 1):
+                    x = amp[j] - localMean[channel]
+                    y = amp[i + j] - localMean[channel]
+                    product += x * y
+            r[-i] = r[i] = product / sqrt(sumx2 * sumy2)
+    else:
+        for i in range(1, nsampFFT + 1):
+            ac[i] = 0.0
+        for channel in range(1, me.ny + 1):
+            NUMfft_forward(fftTable, frame[channel][1:fftTable.n])
+            ac[1] += frame[channel][1] * frame[channel][1]
+            for i in range(2, nsampFFT, 2):
+                ac[i] += frame[channel][i] * frame[channel][i] + frame[channel][i+1] * frame[channel][i+1]
+            ac[nsampFFT] += frame[channel][nsampFFT] * frame[channel][nsampFFT]
+        NUMfft_backward(fftTable, ac)
+
+        r[0] = 1.0
+        for i in range(1, brent_ixmax + 1):
+            r[-i] = r[i] = ac[i + 1] / (ac[1] * windowR[i + 1])
+
+    pitchFrame.candidates.resize(pitchFrame.nCandidates = 1)
+    pitchFrame.candidates[1].frequency = 0.0
+    pitchFrame.candidates[1].strength = 0.0
+
+    if localPeak == 0.0:
+        return
+
+    imax[1] = 0
+    for i in range(2, maximumLag):
+        if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:
+            place = 0
+            dr = 0.5 * (r[i+1] - r[i-1])
+            d2r = 2.0 * r[i] - r[i-1] - r[i+1]
+            frequencyOfMaximum = 1.0 / my.dx / (i + dr / d2r)
+            offset = -brent_ixmax - 1
+            strengthOfMaximum = NUM_interpolate_sinc(constVEC(r[offset + 1:brent_ixmax - offset]), 1.0 / my.dx / frequencyOfMaximum - offset, 30)
+
+            if strengthOfMaximum > 1.0:
+                strengthOfMaximum = 1.0 / strengthOfMaximum
+
+            if pitchFrame.nCandidates < maxnCandidates:
+                pitchFrame.candidates.resize(++pitchFrame.nCandidates)
+                place = pitchFrame.nCandidates
+            else:
+                weakest = 2.0
+                for iweak in range(2, maxnCandidates + 1):
+                    localStrength = pitchFrame.candidates[iweak].strength - octaveCost * NUMlog2(pitchFloor / pitchFrame.candidates[iweak].frequency)
+                    if localStrength < weakest:
+                        weakest = localStrength
+                        place = iweak
+
+                if strengthOfMaximum - octaveCost * NUMlog2(pitchFloor / frequencyOfMaximum) <= weakest:
+                    place = 0
+            if place:
+                pitchFrame.candidates[place].frequency = frequencyOfMaximum
+                pitchFrame.candidates[place].strength = strengthOfMaximum
+                imax[place] = i
+
+    for i in range(2, pitchFrame.nCandidates + 1):
+        if method != AC_HANNING or pitchFrame.candidates[i].frequency > 0.0 / my.dx:
+            offset = -brent_ixmax - 1
+            xmid, ymid = NUMimproveMaximum(constVEC(r[offset + 1:brent_ixmax - offset]), imax[i] - offset, NUM_PEAK_INTERPOLATE_SINC700 if pitchFrame.candidates[i].frequency > 0.3 / my.dx else brent_depth)
+            xmid += offset
+            pitchFrame.candidates[i].frequency = 1.0 / my.dx / xmid
+            if ymid > 1.0:
+                ymid = 1.0 / ymid
+            pitchFrame.candidates[i].strength = ymid
+
+
+def sound_into_pitch(arg):
+    for iframe in range(arg.get('firstFrame'), arg.get('lastFrame')):
+        pitch_frame = arg.get('pitch').get('frames')[iframe]
+        t =  arg.get('x1') + iframe * arg.get('dx')
+        sound_into_pitch_frame(arg['sound'], pitch_frame, t,
+                               arg['pitchFloor'], arg['maxnCandidates'], arg['method'], arg['voicingThreshold'],
+                               arg['octaveCost'],
+                               arg['fftTable'], arg['dt_window'], arg['nsamp_window'], arg['halfnsamp_window'],
+                               arg['maximumLag'], arg['nsampFFT'], arg['nsamp_period'], arg['halfnsamp_period'],
+                               arg['brent_ixmax'], arg['brent_depth'], arg['globalPeak'],
+                               arg['frame'], arg['ac'], arg['window'], arg['windowR'],
+                               arg['r'], arg['imax'], arg['localMean'])
+
 
 def compute_pitch(sample_list):
     """
@@ -334,11 +484,11 @@ def compute_pitch(sample_list):
     maximumPitch = 600
     periodsPerWindow = 3.0
     oversampling = 4
-    # z[channel] = [??]
     x1 = 0
-    ny = 1
     dx = 1 / maximumPitch / oversampling
-    nx = len(sample_list)
+    z = sample_list
+    ny = 1  # number of channels
+    nx = len(z[0])
     dt_window = periodsPerWindow / minimumPitch
     dt = dt_window / oversampling
     nyquist_frequency = maximumPitch * oversampling * 0.5
@@ -375,7 +525,7 @@ def compute_pitch(sample_list):
     thyDuration = numberOfFrames * dt
     t1 = ourMidTime + 0.5 * (dt - thyDuration)
 
-    three = {
+    thee = {
         'xmin': x1,
         'xmax': x1 + duration,
         'nx': numberOfFrames,
@@ -383,26 +533,21 @@ def compute_pitch(sample_list):
         'x1': t1,
         'ceiling': maximumPitch,
         'maxnCandidates': maxnCandidates,
-        #'frame': NUMvector <structPitch_Frame> (1, nt) with one candidate in every frame (unvoiced, silent)
+        'frames': [{
+            'nCandidates': maxnCandidates,
+            'candidates': [{
+                'frequency': 0
+                'strength': 0
+            }] * maxnCandidates
+         }] * numberOfFrames
     }
-
-    # Create (too much) space for candidates.
-    '''
-    for (iframe = 1; iframe <= numberOfFrames; iframe ++)
-        pitchFrame = three.frame[iframe]
-        Pitch_Frame_init(pitchFrame, maxnCandidates)
-    '''
 
     # Compute the global absolute peak for determination of silence threshold.
     globalPeak = 0.0
-    for channel in range(1, ny+1):
-        sum = 0.0
-        for i in range(1, nx+1):
-            sum += z[channel][i]
-
-        mean = sum / nx
-        for i in range(1, nx+1):
-            value = math.fabs(z[channel][i] - mean)
+    for ichan in range(ny):
+        mean = math.mean(z[ichan])
+        for i in range(nx):
+            value = math.fabs(z[ichan][i] - mean)
             if value > globalPeak:
                 globalPeak = value
 
@@ -419,51 +564,98 @@ def compute_pitch(sample_list):
     while nsampFFT < nsamp_window * (1 + interpolation_depth):
         nsampFFT *= 2
 
-    sample_list = [sample * weight
-        for sample, weight in zip(sample_list,
-            get_gaussian_window(len(sample_list)))]
+    window = get_gaussian_window(nsamp_window)
+    windowR = window + np.zeros(nsampFFT - nsamp_window)
 
-    windowR = numpy.zeros(nsampFFT)
-    for i in range(1, nsamp_window + 1):
-        windowR[i] = sample_list[i]
+    spectrum = numpy.fft.rfft(windowR)
 
-    windowR = numpy.fft.rfft(windowR)
-    windowR[1] *= windowR[1] #DC component
-    for i in range(2, nsampFFT, 2):
+    # Change input windowR according to praat algorithms
+    windowR[0] *= windowR[0] #DC component
+    for i in range(1, nsampFFT, 2):
         windowR[i] = windowR[i] * windowR[i] + windowR[i + 1] * windowR[i + 1]
         windowR[i + 1] = 0.0  # power spectrum: square and zero
-
     windowR[nsampFFT] *= windowR[nsampFFT]  # Nyquist frequency
-    windowR = numpy.fft.irfft(windowR)  # autocorrelation
 
-    for i in range(2, nsamp_window + 1):
-        windowR[i] /= windowR[1]  # normalize
-    windowR[1] = 1.0  # normalize
+    # ?????
+    windowR = numpy.fft.irfft(spectrum)  # autocorrelation
+
+    for i in range(1, nsamp_window):
+        windowR[i] /= windowR[0]  # normalize
+    windowR[0] = 1.0  # normalize
 
     brent_ixmax = floor(nsamp_window * interpolation_depth)
 
+    # Calculating threads number
+    numberOfFramesPerThread = 20
+    numberOfThreads = (numberOfFrames - 1) // numberOfFramesPerThread + 1
+    numberOfProcessors = multiprocessing.cpu_count()
+    print(f"{numberOfProcessors} processors")
+    numberOfThreads = min(numberOfThreads, numberOfProcessors)
+    numberOfThreads = max(1, min(numberOfThreads, 16))
+    numberOfFramesPerThread = (numberOfFrames - 1) // numberOfThreads + 1
 
-def sound_into_pitch(me):
-    for iframe in range(me.first_frame, me.last_frame + 1):
-        pitch_frame = me.pitch.frames[iframe]
-        t = me.pitch.index_to_x(iframe)
-        if me.is_main_thread:
-            try:
-                progress = 0.1 + 0.8 * (iframe - me.first_frame) / (me.last_frame - me.first_frame)
-                print(f"Sound to Pitch: analysing {me.last_frame} frames")
-            except Exception as e:
-                me.cancelled[0] = 1
-                raise e
-        elif me.cancelled[0]:
-            return
-        me.sound_into_pitch_frame(me.sound, pitch_frame, t,
-                                  me.pitch_floor, me.maxn_candidates, me.method, me.voicing_threshold,
-                                  me.octave_cost,
-                                  me.fft_table, me.dt_window, me.nsamp_window, me.halfnsamp_window,
-                                  me.maximum_lag, me.nsamp_fft, me.nsamp_period, me.halfnsamp_period,
-                                  me.brent_ixmax, me.brent_depth, me.global_peak,
-                                  me.frame, me.ac, me.window, me.window_r,
-                                  me.r, me.imax, me.local_mean)
+    firstFrame = 0
+    lastFrame = numberOfFramesPerThread
+    cancelled = [False]
+
+    for ithread in range(numberOfThreads):
+        # Get the rest
+        if ithread == numberOfThreads - 1:
+            lastFrame = numberOfFrames
+
+        arg = {
+            'sound': me,
+            'pitch': thee,
+            'firstFrame': firstFrame,
+            'lastFrame': lastFrame,
+            'pitchFloor': minimumPitch,
+            'maxnCandidates': maxnCandidates,
+            #'method': method,
+            'voicingThreshold': voicingThreshold,
+            'octaveCost': octaveCost,
+            'dt_window': dt_window,
+            'nsamp_window': nsamp_window,
+            'halfnsamp_window': halfnsamp_window,
+            'maximumLag': maximumLag,
+            'nsampFFT': nsampFFT,
+            'nsamp_period': nsamp_period,
+            'halfnsamp_period': halfnsamp_period,
+            'brent_ixmax': brent_ixmax,
+            'brent_depth': brent_depth,
+            'globalPeak': globalPeak,
+            'window': window.get(),
+            'windowR': windowR.get(),
+            'isMainThread': (ithread == numberOfThreads),
+            'cancelled': cancelled,
+            # ???
+            'fftTable': np.fft.rfft(np.zeros(nsampFFT)),
+            'frame': np.zeros((ny, nsampFFT)),
+            'ac': np.zeros(nsampFFT),
+            'rbuffer': np.zeros(2 * nsamp_window + 1),
+            # ???
+            'imax': np.zeros(maxnCandidates, dtype=int),
+            'localMean': np.zeros(ny)
+        }
+        # ??? originally ref is required
+        arg['r'] = (arg['rbuffer'], 1 + nsamp_window)
+
+        args[ithread] = arg
+        firstFrame = lastFrame + 1
+        lastFrame += numberOfFramesPerThread
+
+    # MelderThread_run equivalent in Python
+    pool = multiprocessing.Pool(numberOfThreads)
+    pool.map(sound_into_pitch, args)
+    pool.close()
+    pool.join()
+
+    # Melder_progress equivalent in Python
+    print("Sound to Pitch: path finder - 95% complete")
+    # Assuming Pitch_pathFinder is a function defined elsewhere
+    Pitch_pathFinder(thee, silenceThreshold, voicingThreshold,
+                     octaveCost, octaveJumpCost, voicedUnvoicedCost, pitchCeiling, False)
+
+    return thee
 
 
 class AudioPraatLike(object):
