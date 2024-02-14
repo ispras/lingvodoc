@@ -16,6 +16,7 @@ import math
 
 import os
 from os import makedirs, path
+import multiprocessing
 
 import pprint
 import re
@@ -43,11 +44,9 @@ import cchardet as chardet
 # So that matplotlib does not require display stuff, in particular, tkinter. See e.g. https://
 # stackoverflow.com/questions/4931376/generating-matplotlib-graphs-without-a-running-x-server.
 import matplotlib
-import numpy as np
-import multiprocessing
 matplotlib.use('Agg', warn = False)
-
 import matplotlib.pyplot as pyplot
+
 from mpl_toolkits.mplot3d import Axes3D
 
 import numpy
@@ -340,8 +339,8 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
         octaveJumpCost *= timeStepCorrection
         voicedUnvoicedCost *= timeStepCorrection
 
-        delta = np.zeros((nx, maxnCandidates), dtype=float)
-        psi = np.zeros((nx, maxnCandidates), dtype=int)
+        delta = numpy.zeros((nx, maxnCandidates), dtype=float)
+        psi = numpy.zeros((nx, maxnCandidates), dtype=int)
 
         for iframe in range(nx):
             frame = frames[iframe]
@@ -486,7 +485,7 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
         ac[nsampFFT - 1] += frame[channel][nsampFFT - 1] ** 2  # Nyquist frequency
 
     #???
-    ac = np.fft.irfft(ac)  # autocorrelation
+    ac = numpy.fft.irfft(ac)  # autocorrelation
 
     '''
     Normalize the autocorrelation to the value with zero lag,
@@ -684,7 +683,7 @@ def compute_pitch(sample_list):
         nsampFFT *= 2
 
     window = get_gaussian_window(nsamp_window)
-    windowR = window + np.zeros(nsampFFT - nsamp_window)
+    windowR = window + numpy.zeros(nsampFFT - nsamp_window)
 
     # ????
     windowR = numpy.fft.rfft(windowR)
@@ -752,12 +751,12 @@ def compute_pitch(sample_list):
             'isMainThread': (ithread == numberOfThreads),
             'cancelled': cancelled,
             # ???
-            'fftTable': np.fft.rfft(np.zeros(nsampFFT)),
-            'frame': np.zeros((ny, nsampFFT)),
-            'ac': np.zeros(nsampFFT, dtype=float),
-            'rbuffer': np.zeros(2 * nsamp_window), # +1?
-            'imax': np.zeros(maxnCandidates, dtype=int),
-            'localMean': np.zeros(ny, dtype=float)
+            'fftTable': numpy.fft.rfft(numpy.zeros(nsampFFT)),
+            'frame': numpy.zeros((ny, nsampFFT)),
+            'ac': numpy.zeros(nsampFFT, dtype=float),
+            'rbuffer': numpy.zeros(2 * nsamp_window), # +1?
+            'imax': numpy.zeros(maxnCandidates, dtype=int),
+            'localMean': numpy.zeros(ny, dtype=float)
         }
         arg['r'] = arg['rbuffer'][:nsamp_window] # +1?
 
