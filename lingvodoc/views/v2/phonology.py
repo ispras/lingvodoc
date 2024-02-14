@@ -326,6 +326,114 @@ def compute_formants(sample_list, nyquist_frequency):
 
     return formant_list
 
+
+def Pitch_pathFinder(me, silenceThreshold, voicingThreshold, octaveCost, octaveJumpCost, voicedUnvoicedCost, ceiling, pullFormants):
+    if Melder_debug == 33:
+        Melder_casual("Pitch path finder:\nSilence threshold = ", silenceThreshold,
+                      "\nVoicing threshold = ", voicingThreshold,
+                      "\nOctave cost = ", octaveCost,
+                      "\nOctave jump cost = ", octaveJumpCost,
+                      "\nVoiced/unvoiced cost = ", voicedUnvoicedCost,
+                      "\nCeiling = ", ceiling,
+                      "\nPull formants = ", pullFormants)
+    try:
+        maxnCandidates = Pitch_getMaxnCandidates(me)
+        place = 0
+        maximum = 0
+        value = 0
+        ceiling2 = 2.0 * ceiling if pullFormants else ceiling
+
+        timeStepCorrection = 0.01 / my.dx
+        octaveJumpCost *= timeStepCorrection
+        voicedUnvoicedCost *= timeStepCorrection
+        my.ceiling = ceiling
+        delta = [[0] * maxnCandidates for _ in range(my.nx)]
+        psi = [[0] * maxnCandidates for _ in range(my.nx)]
+        for iframe in range(1, my.nx + 1):
+            frame = my.frames[iframe]
+            unvoicedStrength = 0.0 if silenceThreshold <= 0 else 2.0 - frame.intensity / (silenceThreshold / (1.0 + voicingThreshold))
+            unvoicedStrength = voicingThreshold + max(0.0, unvoicedStrength)
+            for icand in range(1, frame.nCandidates + 1):
+                candidate = frame.candidates[icand]
+                voiceless = not Pitch_util_frequencyIsVoiced(candidate.frequency, ceiling2)
+                delta[iframe][icand] = unvoicedStrength if voiceless else candidate.strength - octaveCost * NUMlog2(ceiling / candidate.frequency)
+
+        for iframe in range(2, my.nx + 1):
+            prevFrame = my.frames[iframe - 1]
+            curFrame = my.frames[iframe]
+            prevDelta = delta[iframe - 1]
+            curDelta = delta[iframe]
+            curPsi = psi[iframe]
+            for icand2 in range(1, curFrame.nCandidates + 1):
+                f2 = curFrame.candidates[icand2].frequency
+                maximum = -1e30
+                place = 0
+                for icand1 in range(1, prevFrame.nCandidates + 1):
+                    f1 = prevFrame.candidates[icand1].frequency
+                    transitionCost = 0.0
+                    previousVoiceless = not Pitch_util_frequencyIsVoiced(f1, ceiling2)
+                    currentVoiceless = not Pitch_util_frequencyIsVoiced(f2, ceiling2)
+                    if currentVoiceless:
+                        if previousVoiceless:
+                            transitionCost = 0.0
+                        else:
+                            transitionCost = voicedUnvoicedCost
+                    else:
+                        if previousVoiceless:
+                            transitionCost = voicedUnvoicedCost
+                            if Melder_debug == 30:
+                                place1 = icand1
+                                for jframe in range(iframe - 2, 0, -1):
+                                    place1 = psi[jframe + 1][place1]
+                                    f1 = my.frames[jframe].candidates[place1].frequency
+                                    if Pitch_util_frequencyIsVoiced(f1, ceiling):
+                                        transitionCost += octaveJumpCost * abs(NUMlog2(f1 / f2)) / (iframe - jframe)
+                                        break
+                        else:
+                            transitionCost = octaveJumpCost * abs(NUMlog2(f1 / f2))
+                    value = prevDelta[icand1] - transitionCost + curDelta[icand2]
+                    if value > maximum:
+                        maximum = value
+                        place = icand1
+                    elif value == maximum:
+                        if Melder_debug == 33:
+                            Melder_casual("A tie in frame ", iframe,
+                                          ", current candidate ", icand2,
+                                          ", previous candidate ", icand1)
+                curDelta[icand2] = maximum
+                curPsi[icand2] = place
+
+        place = 1
+        maximum = delta[my.nx][place]
+        for icand in range(2, my.frames[my.nx].nCandidates + 1):
+            if delta[my.nx][icand] > maximum:
+                place = icand
+                maximum = delta[my.nx][place]
+
+        for iframe in range(my.nx, 0, -1):
+            if Melder_debug == 33:
+                Melder_casual("Frame ", iframe, ": swapping candidates 1 and ", place)
+            frame = my.frames[iframe]
+            frame.candidates[1], frame.candidates[place] = frame.candidates[place], frame.candidates[1]
+            place = psi[iframe][place]
+
+        if ceiling2 > ceiling:
+            if Melder_debug == 33:
+                Melder_casual("Pulling formants...")
+            for iframe in range(my.nx, 0, -1):
+                frame = my.frames[iframe]
+                winner = frame.candidates[1]
+                f = winner.frequency
+                if ceiling < f < ceiling2:
+                    for icand in range(2, frame.nCandidates + 1):
+                        loser = frame.candidates[icand]
+                        if loser.frequency == 0.0:
+                            winner, loser = loser, winner
+                            break
+    except MelderError:
+        Melder_throw(me, ": path not found.")
+
+
 # Compute pitch frames
 def sound_into_pitch_frame(arg, pitchFrame, t):
     # Unpack variables from 'arg'
@@ -400,7 +508,7 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
     Normalize the autocorrelation to the value with zero lag,
 	and divide it by the normalized autocorrelation of the window.
     '''
-    r = [1.0] * (brent_ixmax)
+    r = [1.0] * brent_ixmax
     for i in range(brent_ixmax):
         r[-( i + 1 )] = r[i] = ac[i + 1] / (ac[0] * windowR[i + 1])
 
@@ -436,7 +544,8 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
             frequencyOfMaximum = 1.0 / dx / (i + dr / d2r)
             offset = - brent_ixmax - 1
             #???
-            strengthOfMaximum = NUM_interpolate_sinc( constVEC ( r[offset + 1], brent_ixmax - offset ), 1.0 / dx / frequencyOfMaximum - offset, 30 )
+            strengthOfMaximum = \
+                NUM_interpolate_sinc( r[offset:], 1.0 / dx / frequencyOfMaximum - offset, 30 )
 
             '''
             High values due to short windows are to be reflected around 1.
@@ -477,8 +586,9 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
 
     for i in range(1, pitchFrame['nCandidates']):
         offset = -brent_ixmax - 1
-        #?????
-        xmid, ymid = NUMimproveMaximum(constVEC(r[offset + 1], brent_ixmax - offset), imax[i] - offset, 4 if pitchFrame.['candidates'][i]['frequency'] > 0.3 / dx else brent_depth)
+        #???? get improved x and y of maximum after sinc interpolation
+        xmid, ymid = \
+            NUMimproveMaximum( r[offset:], imax[i] - offset, 4 if pitchFrame['candidates'][i]['frequency'] > 0.3 / dx else brent_depth)
         xmid += offset
         pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
         if ymid > 1.0:
