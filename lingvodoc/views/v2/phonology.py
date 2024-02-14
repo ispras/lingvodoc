@@ -387,7 +387,9 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
                             transitionCost = voicedUnvoicedCost  # unvoiced-to-voiced transition
                         else:
                             transitionCost = octaveJumpCost * math.fabs( math.log2(f1 / f2) )  # both voiced
+
                     value = prevDelta[icand1] - transitionCost + curDelta[icand2]
+
                     if value > maximum:
                         maximum = value
                         place = icand1
@@ -474,26 +476,25 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
     Compute the correlation into the array 'r'.
     The FFT of the autocorrelation is the power spectrum.
     '''
-    for i in range(nsampFFT):
-        ac[i] = 0.0
+
     for channel in range(ny):
         ### ???
-        fftTable = NUMfft_forward(frame[channel][0])  # complex spectrum
+        frame[channel] = NUMfft_forward(frame[channel])  # complex spectrum
         ac[0] += frame[channel][0] ** 2  # DC component
         for i in range(1, nsampFFT-1, 2):
             ac[i] += frame[channel][i] ** 2 + frame[channel][i+1] ** 2  # power spectrum
         ac[nsampFFT - 1] += frame[channel][nsampFFT - 1] ** 2  # Nyquist frequency
 
     #???
-    np.fft.irfft(fftTable, ac)  # autocorrelation
+    ac = np.fft.irfft(ac)  # autocorrelation
 
     '''
     Normalize the autocorrelation to the value with zero lag,
 	and divide it by the normalized autocorrelation of the window.
     '''
-    r = [1.0] * brent_ixmax
-    for i in range(brent_ixmax):
-        r[-( i + 1 )] = r[i] = ac[i + 1] / (ac[0] * windowR[i + 1])
+    r [0] = 1.0
+    for i in range(1, brent_ixmax + 1):
+        r[-i] = r[i] = ac[i] / (ac[0] * windowR[i])
 
     '''
     Register the first candidate, which is always present: voicelessness.
@@ -515,7 +516,7 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
 	and register them as candidates.
     '''
     imax[0] = 0
-    for i in range(1, min(maximumLag, brent_imax) - 1):
+    for i in range(2, min(maximumLag, brent_ixmax)):
         if r[i] > 0.5 * voicingThreshold and r[i] > r[i-1] and r[i] >= r[i+1]:  # maximum?
             place = None
             '''
@@ -528,7 +529,7 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
             offset = - brent_ixmax - 1
             #???
             strengthOfMaximum = \
-                NUM_interpolate_sinc( r[offset:], 1.0 / dx / frequencyOfMaximum - offset, 30 )
+                NUM_interpolate_sinc( r[offset + 1:], 1.0 / dx / frequencyOfMaximum - offset, 30 )
 
             '''
             High values due to short windows are to be reflected around 1.
@@ -568,11 +569,14 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
                 pitchFrame['candidates'][place]['strength'] = strengthOfMaximum
                 imax[place] = i
 
+    '''
+    Second pass: for extra precision, maximize sin(x)/x interpolation ('sinc').
+    '''
     for i in range(1, pitchFrame['nCandidates']):
         offset = -brent_ixmax - 1
         #???? get improved x and y of maximum after sinc interpolation
         xmid, ymid = \
-            NUMimproveMaximum( r[offset:], imax[i] - offset, 4 if pitchFrame['candidates'][i]['frequency'] > 0.3 / dx else brent_depth)
+            NUMimproveMaximum( r[offset+1:], imax[i] - offset, 4 if pitchFrame['candidates'][i]['frequency'] > 0.3 / dx else brent_depth)
         xmid += offset
         pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
         if ymid > 1.0:
@@ -608,7 +612,7 @@ def compute_pitch(sample_list):
     nyquist_frequency = maximumPitch * oversampling * 0.5
 
     maxnCandidates = 15
-    veryAccurate = False
+    #veryAccurate = False
     silenceThreshold = 0.03
     voicingThreshold = 0.45
     octaveCost = 0.01
@@ -682,7 +686,8 @@ def compute_pitch(sample_list):
     window = get_gaussian_window(nsamp_window)
     windowR = window + np.zeros(nsampFFT - nsamp_window)
 
-    spectrum = numpy.fft.rfft(windowR)
+    # ????
+    windowR = numpy.fft.rfft(windowR)
 
     # Change input windowR according to praat algorithms
     windowR[0] *= windowR[0] #DC component
@@ -692,7 +697,7 @@ def compute_pitch(sample_list):
     windowR[nsampFFT - 1] *= windowR[nsampFFT - 1]  # Nyquist frequency
 
     # ?????
-    windowR = numpy.fft.irfft(spectrum)  # autocorrelation
+    windowR = numpy.fft.irfft(windowR)  # autocorrelation
 
     for i in range(1, nsamp_window):
         windowR[i] /= windowR[0]  # normalize
@@ -730,7 +735,6 @@ def compute_pitch(sample_list):
             'lastFrame': lastFrame,
             'pitchFloor': minimumPitch,
             'maxnCandidates': maxnCandidates,
-            #'method': method,
             'voicingThreshold': voicingThreshold,
             'octaveCost': octaveCost,
             'dt_window': dt_window,
@@ -750,13 +754,12 @@ def compute_pitch(sample_list):
             # ???
             'fftTable': np.fft.rfft(np.zeros(nsampFFT)),
             'frame': np.zeros((ny, nsampFFT)),
-            'ac': np.zeros(nsampFFT),
-            'rbuffer': np.zeros(2 * nsamp_window + 1),
+            'ac': np.zeros(nsampFFT, dtype=float),
+            'rbuffer': np.zeros(2 * nsamp_window), # +1?
             'imax': np.zeros(maxnCandidates, dtype=int),
-            'localMean': np.zeros(ny)
+            'localMean': np.zeros(ny, dtype=float)
         }
-        # ??? what?
-        #arg['r'] = arg['rbuffer'][1 + nsamp_window]
+        arg['r'] = arg['rbuffer'][:nsamp_window] # +1?
 
         args.append(arg)
         firstFrame = lastFrame + 1
