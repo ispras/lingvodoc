@@ -327,7 +327,7 @@ def compute_formants(sample_list, nyquist_frequency):
     return formant_list
 
 
-def Pitch_pathFinder(pitchFrame, silenceThreshold, voicingThreshold,
+def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
                      octaveCost, octaveJumpCost, voicedUnvoicedCost, floor):
     try:
         # Unpacking pitchFrame
@@ -358,9 +358,14 @@ def Pitch_pathFinder(pitchFrame, silenceThreshold, voicingThreshold,
                     octaveCost * math.log2( ceiling / candidate.frequency )
                 )
 
+        '''
+        Look for the most probable path through the maxima.
+        There is a cost for the voiced/unvoiced transition,
+        and a cost for a frequency jump.
+        '''
         for iframe in range(1, nx):
-            prevFrame = my.frames[iframe - 1]
-            curFrame = my.frames[iframe]
+            prevFrame = frames[iframe - 1]
+            curFrame = frames[iframe]
             prevDelta = delta[iframe - 1]
             curDelta = delta[iframe]
             curPsi = psi[iframe]
@@ -370,19 +375,18 @@ def Pitch_pathFinder(pitchFrame, silenceThreshold, voicingThreshold,
                 place = None
                 for icand1 in range(prevFrame['nCandidates']):
                     f1 = prevFrame['candidates'][icand1]['frequency']
-                    transitionCost = 0.0
-                    previousVoiceless = not ( floor < f1 < ceiling )
-                    currentVoiceless = not ( floor < f2 < ceiling )
+                    previousVoiceless = not (floor < f1 < ceiling)
+                    currentVoiceless = not (floor < f2 < ceiling)
                     if currentVoiceless:
                         if previousVoiceless:
-                            transitionCost = 0.0
+                            transitionCost = 0.0   # both voiceless
                         else:
-                            transitionCost = voicedUnvoicedCost
+                            transitionCost = voicedUnvoicedCost  # voiced-to-unvoiced transition
                     else:
                         if previousVoiceless:
-                            transitionCost = voicedUnvoicedCost
+                            transitionCost = voicedUnvoicedCost  # unvoiced-to-voiced transition
                         else:
-                            transitionCost = octaveJumpCost * abs(math.log2(f1 / f2))
+                            transitionCost = octaveJumpCost * math.fabs( math.log2(f1 / f2) )  # both voiced
                     value = prevDelta[icand1] - transitionCost + curDelta[icand2]
                     if value > maximum:
                         maximum = value
@@ -391,6 +395,9 @@ def Pitch_pathFinder(pitchFrame, silenceThreshold, voicingThreshold,
                 curDelta[icand2] = maximum
                 curPsi[icand2] = place
 
+        '''
+        Find the end of the most probable path.
+        '''
         place = 0
         maximum = delta[nx][place]
         for icand in range(1, frames[nx]['nCandidates']):
@@ -398,6 +405,9 @@ def Pitch_pathFinder(pitchFrame, silenceThreshold, voicingThreshold,
                 place = icand
                 maximum = delta[nx][place]
 
+        '''
+        Backtracking: follow the path backwards.
+        '''
         for iframe in range(nx - 1, -1, -1):
             frame = frames[iframe]
             frame['candidates'][0], frame['candidates'][place] = frame['candidates'][place], frame['candidates'][0]
@@ -760,7 +770,7 @@ def compute_pitch(sample_list):
 
     # Melder_progress equivalent in Python
     print("Sound to Pitch: path finder - 95% complete")
-    Pitch_pathFinder(thee, silenceThreshold, voicingThreshold, octaveCost,
+    pitch_path_finder(thee, silenceThreshold, voicingThreshold, octaveCost,
                      octaveJumpCost, voicedUnvoicedCost, minimumPitch)
 
     return thee
