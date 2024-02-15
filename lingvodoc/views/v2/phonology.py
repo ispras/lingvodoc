@@ -333,7 +333,7 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
         for k, v in pitchFrame.items():
             locals()[k] = v
 
-        maxnCandidates = max(map(lambda frame: frame['nCandidates'], pitchFrame['frames']))
+        maxnCandidates = max(map(lambda frame: frame['nCandidates'], frames))
 
         timeStepCorrection = 0.01 / dx
         octaveJumpCost *= timeStepCorrection
@@ -354,7 +354,7 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
                 voiceless = not (floor < candidate['frequency'] < ceiling)
                 delta[iframe][icand] = (
                     unvoicedStrength if voiceless else candidate['strength'] -
-                    octaveCost * math.log2( ceiling / candidate.frequency )
+                    octaveCost * math.log2( ceiling / candidate['frequency'] )
                 )
 
         '''
