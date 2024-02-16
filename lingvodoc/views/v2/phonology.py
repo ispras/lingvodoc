@@ -240,6 +240,8 @@ def compute_formants(sample_list, nyquist_frequency):
         for sample, weight in zip(sample_list,
             get_gaussian_window(len(sample_list)))]
 
+    print(f"Sample list after Gaussian: {sample_list}")
+
     # Computing Linear Prediction coefficients via Burg method, number of coefficients is twice the
     # number of formants we want to detect (hence 2 * 5 = 10).
     #
@@ -544,7 +546,7 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
             '''
             if pitchFrame['nCandidates'] < maxnCandidates:
                 pitchFrame['nCandidates'] += 1
-                while len(pitchFrame['candidates']) < pitchFrame['nCandidates']
+                while len(pitchFrame['candidates']) < pitchFrame['nCandidates']:
                     pitchFrame['candidates'].append(pitchFrame['candidates'][-1].copy())
                 place = pitchFrame['nCandidates'] - 1
             else:
