@@ -65,6 +65,8 @@ from pyramid.httpexceptions import HTTPInternalServerError, HTTPPreconditionFail
 from pyramid.view import view_config
 
 import scipy.linalg
+from scipy.interpolate import CubicSpline
+from scipy.optimize import fmin
 
 from sqlalchemy import and_, create_engine, func, tuple_
 from sqlalchemy.orm import aliased
@@ -520,15 +522,16 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
             place = None
             '''
             Use parabolic interpolation for first estimate of frequency,
-			and sin(x)/x interpolation to compute the strength of this frequency.
+			and cubic spline interpolation to compute the strength of this frequency.
             '''
             dr = 0.5 * (r[i+1] - r[i-1])
             d2r = 2.0 * r[i] - r[i-1] - r[i+1]
             frequencyOfMaximum = 1.0 / dx / (i + dr / d2r)
             offset = - brent_ixmax - 1
-            #???
-            strengthOfMaximum = \
-                NUM_interpolate_sinc( r[offset + 1:], 1.0 / dx / frequencyOfMaximum - offset, 30 )
+
+            # Use cubic spline to interpolete discrete values and get function for exact argument
+            r_offset_spline_func =  CubicSpline(numpy.arange(brent_ixmax - offset), r[offset:])
+            strengthOfMaximum = r_offset_spline_func(1.0 / dx / frequencyOfMaximum - offset)
 
             '''
             High values due to short windows are to be reflected around 1.
@@ -569,13 +572,13 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
                 imax[place] = i
 
     '''
-    Second pass: for extra precision, maximize sin(x)/x interpolation ('sinc').
+    Second pass: for extra precision, maximize cubic spline interpolation.
     '''
     for i in range(1, pitchFrame['nCandidates']):
         offset = -brent_ixmax - 1
-        #???? get improved x and y of maximum after sinc interpolation
-        xmid, ymid = \
-            NUMimproveMaximum( r[offset+1:], imax[i] - offset, 4 if pitchFrame['candidates'][i]['frequency'] > 0.3 / dx else brent_depth)
+        # Get improved x and y of function maximum after cubic spline interpolation
+        xmid = fmin(lambda x: (- r_offset_spline_func(x)), imax[i] - offset)[0]
+        ymid = r_offset_spline_func(xmid)
         xmid += offset
         pitchFrame['candidates'][i]['frequency'] = 1.0 / dx / xmid
         if ymid > 1.0:
