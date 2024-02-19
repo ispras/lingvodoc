@@ -240,8 +240,6 @@ def compute_formants(sample_list, nyquist_frequency):
         for sample, weight in zip(sample_list,
             get_gaussian_window(len(sample_list)))]
 
-    print(f"Sample list after Gaussian: {sample_list}")
-
     # Computing Linear Prediction coefficients via Burg method, number of coefficients is twice the
     # number of formants we want to detect (hence 2 * 5 = 10).
     #
@@ -598,190 +596,6 @@ def sound_into_pitch(arg):
     for iframe in range(firstFrame, lastFrame):
         sound_into_pitch_frame(arg, pitch_frame := frames[iframe], t := x1 + iframe * dx)
 
-def compute_pitch(sample_list):
-    """
-    Computes pitches of an audio sample.
-    """
-    minimumPitch = 75
-    maximumPitch = 600
-    periodsPerWindow = 3.0
-    oversampling = 4
-    x1 = 0
-    dx = 1 / maximumPitch / oversampling
-    z = sample_list
-    ny = 1  # number of channels
-    nx = len(z[0])
-    dt_window = periodsPerWindow / minimumPitch
-    dt = dt_window / oversampling
-    nyquist_frequency = maximumPitch * oversampling * 0.5
-
-    maxnCandidates = 15
-    #veryAccurate = False
-    silenceThreshold = 0.03
-    voicingThreshold = 0.45
-    octaveCost = 0.01
-    octaveJumpCost = 0.35
-    voicedUnvoicedCost = 0.14
-
-    # for Gaussian
-    periodsPerWindow *= 2 # because Gaussian window is twice as long
-    brent_depth = 4
-    interpolation_depth = 0.25 # because Gaussian window is twice as long
-
-    duration = dx * nx
-    nsamp_period = math.floor(1.0 / dx / minimumPitch)
-    halfnsamp_period = nsamp_period / 2 + 1
-
-    if maximumPitch > 0.5 / dx:
-        maximumPitch = 0.5 / dx
-
-    nsamp_window = math.floor(dt_window / dx)
-    halfnsamp_window = nsamp_window / 2 - 1
-    nsamp_window = halfnsamp_window * 2  # what?
-
-    minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
-    maximumLag = min(math.floor(nsamp_window / periodsPerWindow) + 2, nsamp_window)
-
-    numberOfFrames = math.floor((duration - dt_window) / dt) + 1
-    ourMidTime = x1 + 0.5 * (duration - dx)
-    thyDuration = numberOfFrames * dt
-    t1 = ourMidTime + 0.5 * (dt - thyDuration)
-
-    thee = {
-        'xmin': x1,
-        'xmax': x1 + duration,
-        'nx': numberOfFrames,
-        'dx': dt,
-        'x1': t1,
-        'ceiling': maximumPitch,
-        'maxnCandidates': maxnCandidates,
-        'frames': [{
-            'intensity': 0.0,
-            'nCandidates': maxnCandidates,
-            'candidates': [{
-                'frequency': 0.0,
-                'strength': 0.0
-            } for _ in range(maxnCandidates)]
-         } for _ in range(numberOfFrames)]
-    }
-
-    # Compute the global absolute peak for determination of silence threshold.
-    globalPeak = 0.0
-    for ichan in range(ny):
-        mean = math.mean(z[ichan])
-        for i in range(nx):
-            value = math.fabs(z[ichan][i] - mean)
-            if value > globalPeak:
-                globalPeak = value
-
-    if globalPeak == 0.0:
-        return thee
-
-    '''
-    Compute the number of samples needed for doing FFT.
-    To avoid edge effects, we have to append zeroes to the window.
-    The maximum lag considered for maxima is maximumLag.
-    The maximum lag used in interpolation is nsamp_window * interpolation_depth.
-    '''
-    nsampFFT = 1
-    while nsampFFT < nsamp_window * (1 + interpolation_depth):
-        nsampFFT *= 2
-
-    window = get_gaussian_window(nsamp_window)
-    windowR = window + numpy.zeros(nsampFFT - nsamp_window)
-
-    # ????
-    windowR = numpy.fft.rfft(windowR)
-
-    # Change input windowR according to praat algorithms
-    windowR[0] *= windowR[0] #DC component
-    for i in range(1, nsampFFT - 1, 2):
-        windowR[i] = windowR[i] ** 2 + windowR[i + 1] ** 2
-        windowR[i + 1] = 0.0  # power spectrum: square and zero
-    windowR[nsampFFT - 1] *= windowR[nsampFFT - 1]  # Nyquist frequency
-
-    # ?????
-    windowR = numpy.fft.irfft(windowR)  # autocorrelation
-
-    for i in range(1, nsamp_window):
-        windowR[i] /= windowR[0]  # normalize
-    windowR[0] = 1.0  # normalize
-
-    brent_ixmax = math.floor(nsamp_window * interpolation_depth)
-
-    # Calculating threads number
-    numberOfFramesPerThread = 20
-    numberOfThreads = (numberOfFrames - 1) // numberOfFramesPerThread + 1
-    numberOfProcessors = multiprocessing.cpu_count()
-    print(f"{numberOfProcessors} processors")
-    numberOfThreads = min(numberOfThreads, numberOfProcessors)
-    numberOfThreads = max(1, min(numberOfThreads, 16))
-    numberOfFramesPerThread = (numberOfFrames - 1) // numberOfThreads + 1
-
-    firstFrame = 0
-    lastFrame = numberOfFramesPerThread
-    cancelled = [False]
-    args = []
-
-    # Gather parameters into 'sound'
-    for key in 'x1', 'dx', 'nx', 'ny', 'z':
-        sound[key] = locals()[key]
-
-    for ithread in range(numberOfThreads):
-        # Get the rest
-        if ithread == numberOfThreads - 1:
-            lastFrame = numberOfFrames
-
-        arg = {
-            'sound': sound,
-            'pitch': thee,
-            'firstFrame': firstFrame,
-            'lastFrame': lastFrame,
-            'pitchFloor': minimumPitch,
-            'maxnCandidates': maxnCandidates,
-            'voicingThreshold': voicingThreshold,
-            'octaveCost': octaveCost,
-            'dt_window': dt_window,
-            'nsamp_window': nsamp_window,
-            'halfnsamp_window': halfnsamp_window,
-            'maximumLag': maximumLag,
-            'nsampFFT': nsampFFT,
-            'nsamp_period': nsamp_period,
-            'halfnsamp_period': halfnsamp_period,
-            'brent_ixmax': brent_ixmax,
-            'brent_depth': brent_depth,
-            'globalPeak': globalPeak,
-            'window': window,
-            'windowR': windowR,
-            'isMainThread': (ithread == numberOfThreads),
-            'cancelled': cancelled,
-            # ???
-            'fftTable': numpy.fft.rfft(numpy.zeros(nsampFFT)),
-            'frame': numpy.zeros((ny, nsampFFT)),
-            'ac': numpy.zeros(nsampFFT, dtype=float),
-            'rbuffer': numpy.zeros(2 * nsamp_window), # +1?
-            'imax': numpy.zeros(maxnCandidates, dtype=int),
-            'localMean': numpy.zeros(ny, dtype=float)
-        }
-        arg['r'] = arg['rbuffer'][:nsamp_window] # +1?
-
-        args.append(arg)
-        firstFrame = lastFrame + 1
-        lastFrame += numberOfFramesPerThread
-
-    # MelderThread_run equivalent in Python
-    pool = multiprocessing.Pool(numberOfThreads)
-    pool.map(sound_into_pitch, args)
-    pool.close()
-    pool.join()
-
-    # Melder_progress equivalent in Python
-    print("Sound to Pitch: path finder - 95% complete")
-    pitch_path_finder(thee, silenceThreshold, voicingThreshold, octaveCost,
-                     octaveJumpCost, voicedUnvoicedCost, minimumPitch)
-
-    return thee
-
 
 class AudioPraatLike(object):
     """
@@ -1086,6 +900,8 @@ class AudioPraatLike(object):
             math.floor((self.formant_sound.frame_count() - 1) // self.formant_step_size + 1))
 
         self.formant_list = [None for i in range(self.formant_step_count)]
+
+        import pdb; pdb.set_trace()
 
     def init_formant_fft(self, padding_length = None):
         """
@@ -1712,6 +1528,216 @@ class AudioPraatLike(object):
             f1_median, f2_median, f3_median,
             sum(f1_list) / len(f1_list), sum(f2_list) / len(f2_list), sum(f3_list) / len(f3_list)]
 
+
+    def get_pitch(self, begin, end):
+        """
+        Computes pitches of an audio sample.
+        """
+
+        x1 = max(0, begin)
+        assert end >= x1
+
+        fq = self.intensity_sound.frame_rate  # frequency of frames (sampling)
+        nx = min((end - x1) * fq, self.intensity_sound.frame_count())  # number of frames to compute
+        dx = 1 / fq  # single frame duration in sec
+        duration = nx / fq  # duration of frames to compute in sec
+
+        ny = self.intensity_sound.channels  # number of channels
+        plain_z = self.intensity_sound.get_array_of_samples()  # samples of all the channels
+        assert nx * ny <= len(plain_z)
+
+        # lay out samples by channels
+        z = [[] for _ in range(ny)]
+        for channel in range(ny):
+            for frame in range(nx):
+                z[channel].append(plain_z[ny * frame + channel])  # signal
+
+        minimumPitch = 75
+        maximumPitch = 600
+        periodsPerWindow = 3.0
+        oversampling = 4
+        dt = periodsPerWindow / minimumPitch / oversampling
+        assert minimumPitch >= periodsPerWindow / duration,
+            f"To analyse this Sound, 'pitch floor' must not be less than {periodsPerWindow / duration} Hz."
+        maximumPitch = min(0.5 / dx, maximumPitch)
+
+        maxnCandidates = 15
+        silenceThreshold = 0.03
+        voicingThreshold = 0.45
+        octaveCost = 0.01
+        octaveJumpCost = 0.35
+        voicedUnvoicedCost = 0.14
+
+        # for Gaussian
+        periodsPerWindow *= 2  # because Gaussian window is twice as long
+        #brent_depth = 4
+        interpolation_depth = 0.25  # because Gaussian window is twice as long
+
+        '''
+    	Determine the number of samples in the longest period.
+		We need this to compute the local mean of the sound (looking one period in both directions),
+		and to compute the local peak of the sound (looking half a period in both directions).
+        '''
+        nsamp_period = math.floor(1.0 / dx / minimumPitch)
+        halfnsamp_period = nsamp_period / 2 + 1
+
+
+        # Determine window duration in seconds and in samples.
+        dt_window = periodsPerWindow / minimumPitch
+        nsamp_window = math.floor(dt_window / dx)
+        halfnsamp_window = nsamp_window / 2 - 1
+        assert halfnsamp_window >= 2, "Analysis window too short."
+        nsamp_window = halfnsamp_window * 2
+
+        minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
+        maximumLag = min(math.floor(nsamp_window / periodsPerWindow) + 2, nsamp_window)
+
+        '''
+		Determine the number of frames.
+		Fit as many frames as possible symmetrically in the total duration.
+		We do this even for the forward cross-correlation method,
+		because that allows us to compare the two methods.
+        '''
+        numberOfFrames = math.floor((duration - dt_window) / dt) + 1
+        ourMidTime = x1 + 0.5 * (duration - dx)
+        thyDuration = numberOfFrames * dt
+        t1 = ourMidTime + 0.5 * (dt - thyDuration)
+
+        # Create the resulting pitch contour.
+        thee = {
+            'xmin': x1,
+            'xmax': x1 + duration,
+            'nx': numberOfFrames,
+            'dx': dt,
+            'x1': t1,
+            'ceiling': maximumPitch,
+            'maxnCandidates': maxnCandidates,
+            'frames': [{
+                'intensity': 0.0,
+                'nCandidates': maxnCandidates,
+                'candidates': [{
+                    'frequency': 0.0,
+                    'strength': 0.0
+                } for _ in range(maxnCandidates)]
+            } for _ in range(numberOfFrames)]
+        }
+
+        # Compute the global absolute peak for determination of silence threshold.
+        globalPeak = 0.0
+        for ichan in range(ny):
+            mean = math.mean(z[ichan])
+            for i in range(nx):
+                value = math.fabs(z[ichan][i] - mean)
+                if value > globalPeak:
+                    globalPeak = value
+
+        if globalPeak == 0.0:
+            return thee
+
+        '''
+        Compute the number of samples needed for doing FFT.
+        To avoid edge effects, we have to append zeroes to the window.
+        The maximum lag considered for maxima is maximumLag.
+        The maximum lag used in interpolation is nsamp_window * interpolation_depth.
+        '''
+        nsampFFT = 1
+        while nsampFFT < nsamp_window * (1 + interpolation_depth):
+            nsampFFT *= 2
+
+        window = get_gaussian_window(nsamp_window)
+        windowR = window + numpy.zeros(nsampFFT - nsamp_window)
+
+        # ????
+        windowR = numpy.fft.rfft(windowR)
+
+        # Change input windowR according to praat algorithms
+        windowR[0] *= windowR[0]  # DC component
+        for i in range(1, nsampFFT - 1, 2):
+            windowR[i] = windowR[i] ** 2 + windowR[i + 1] ** 2
+            windowR[i + 1] = 0.0  # power spectrum: square and zero
+        windowR[nsampFFT - 1] *= windowR[nsampFFT - 1]  # Nyquist frequency
+
+        # ?????
+        windowR = numpy.fft.irfft(windowR)  # autocorrelation
+
+        for i in range(1, nsamp_window):
+            windowR[i] /= windowR[0]  # normalize
+        windowR[0] = 1.0  # normalize
+
+        brent_ixmax = math.floor(nsamp_window * interpolation_depth)
+
+        # Calculating threads number
+        numberOfFramesPerThread = 20
+        numberOfThreads = (numberOfFrames - 1) // numberOfFramesPerThread + 1
+        numberOfProcessors = multiprocessing.cpu_count()
+        print(f"{numberOfProcessors} processors")
+        numberOfThreads = min(numberOfThreads, numberOfProcessors)
+        numberOfThreads = max(1, min(numberOfThreads, 16))
+        numberOfFramesPerThread = (numberOfFrames - 1) // numberOfThreads + 1
+
+        firstFrame = 0
+        lastFrame = numberOfFramesPerThread
+        cancelled = [False]
+        args = []
+
+        # Gather parameters into 'sound'
+        for key in 'x1', 'dx', 'nx', 'ny', 'z':
+            sound[key] = locals()[key]
+
+        for ithread in range(numberOfThreads):
+            # Get the rest
+            if ithread == numberOfThreads - 1:
+                lastFrame = numberOfFrames
+
+            arg = {
+                'sound': sound,
+                'pitch': thee,
+                'firstFrame': firstFrame,
+                'lastFrame': lastFrame,
+                'pitchFloor': minimumPitch,
+                'maxnCandidates': maxnCandidates,
+                'voicingThreshold': voicingThreshold,
+                'octaveCost': octaveCost,
+                'dt_window': dt_window,
+                'nsamp_window': nsamp_window,
+                'halfnsamp_window': halfnsamp_window,
+                'maximumLag': maximumLag,
+                'nsampFFT': nsampFFT,
+                'nsamp_period': nsamp_period,
+                'halfnsamp_period': halfnsamp_period,
+                'brent_ixmax': brent_ixmax,
+                #'brent_depth': brent_depth,
+                'globalPeak': globalPeak,
+                'window': window,
+                'windowR': windowR,
+                'isMainThread': (ithread == numberOfThreads),
+                'cancelled': cancelled,
+                # ???
+                'fftTable': numpy.fft.rfft(numpy.zeros(nsampFFT)),
+                'frame': numpy.zeros((ny, nsampFFT)),
+                'ac': numpy.zeros(nsampFFT, dtype=float),
+                'rbuffer': numpy.zeros(2 * nsamp_window),  # +1?
+                'imax': numpy.zeros(maxnCandidates, dtype=int),
+                'localMean': numpy.zeros(ny, dtype=float)
+            }
+            arg['r'] = arg['rbuffer'][:nsamp_window]  # +1?
+
+            args.append(arg)
+            firstFrame = lastFrame + 1
+            lastFrame += numberOfFramesPerThread
+
+        # MelderThread_run equivalent in Python
+        pool = multiprocessing.Pool(numberOfThreads)
+        pool.map(sound_into_pitch, args)
+        pool.close()
+        pool.join()
+
+        # Melder_progress equivalent in Python
+        print("Sound to Pitch: path finder - 95% complete")
+        pitch_path_finder(thee, silenceThreshold, voicingThreshold, octaveCost,
+                          octaveJumpCost, voicedUnvoicedCost, minimumPitch)
+
+        return thee
 
 def find_max_interval_praat(sound, interval_list):
     """
@@ -2481,7 +2507,7 @@ def process_sound_markup(
                 urllib.parse.urlparse(sound_url).path)[1]
 
             sound = None
-            with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix = extension, delete=False) as temp_file:
 
                 if sound_bytes is None:
 
@@ -2492,6 +2518,8 @@ def process_sound_markup(
                 temp_file.flush()
 
                 sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
+
+            import pdb; pdb.set_trace()
 
             # Analysing sound, showing and caching analysis results.
 
@@ -4156,7 +4184,7 @@ class Phonology_Parameters(object):
             request.params if 'url_parameters' in request.params else request_json
 
         self.limit = (None if 'limit' not in parameter_dict else
-            int(parameter_dict.get('limit')))
+            int(parameter_dict.get('limit'))) or 1
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -4247,7 +4275,7 @@ class Phonology_Parameters(object):
 
         self.synchronous = args.get('synchronous')
 
-        self.limit = args.get('limit')
+        self.limit = args.get('limit') or 1
 
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
@@ -4322,7 +4350,7 @@ def phonology(request):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_phonology if args.synchronous else async_phonology.delay)(
+        return (std_phonology if args.synchronous or True else async_phonology.delay)(
             args, task_key, cache_kwargs, storage, sqlalchemy_url)
 
     # Some unknown external exception.
@@ -4649,7 +4677,7 @@ def analyze_sound_markup(
             urllib.parse.urlparse(sound_url).path)[1]
 
         sound = None
-        with tempfile.NamedTemporaryFile(suffix = extension) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix = extension, delete=False) as temp_file:
 
             with storage_f(storage, sound_url) as sound_stream:
                 temp_file.write(sound_stream.read())
@@ -4661,6 +4689,8 @@ def analyze_sound_markup(
                     pydub.AudioSegment.from_file(temp_file.name),
                     args,
                     vowel_range_list if args.interval_only else None))
+
+        import pdb; pdb.set_trace()
 
         textgrid_result_list = (
             process_sound(tier_data_list, sound))
@@ -5289,6 +5319,9 @@ def perform_phonology(args, task_status, storage):
                     perspective_id[0], perspective_id[1],
                     perspective_result_count, '' if perspective_result_count == 1 else 's',
                     state.no_vowel_counter, state.exception_counter))
+
+    #for row in fails_dict.values(): print(row.get('errs'))
+    #sys.stdout.flush()
 
     # If we have no results, we indicate the situation and also show number of failures and number of
     # markups with no vowels.
@@ -6049,7 +6082,7 @@ def sound_and_markup(request):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_sound_and_markup if 'synchronous' in request.params else async_sound_and_markup.delay)(
+        return (std_sound_and_markup if 'synchronous' in request.params or True else async_sound_and_markup.delay)(
             task_key,
             perspective_cid, perspective_oid, published_mode, limit,
             dictionary_name, perspective_name,
