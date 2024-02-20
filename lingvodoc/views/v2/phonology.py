@@ -97,6 +97,7 @@ from lingvodoc.queue.celery import celery
 from lingvodoc.utils import sanitize_worksheet_name
 from lingvodoc.views.v2.utils import anonymous_userid, as_storage_file, message, storage_file, unimplemented
 
+from pdb import set_trace as A
 
 # Setting up logging.
 log = logging.getLogger(__name__)
@@ -181,11 +182,11 @@ def get_gaussian_window(window_size):
     middle = float(window_size + 1) / 2
     edge = math.exp(-12)
     edge_one_minus = 1.0 - edge
-
+    A()
     window_list = [
         (math.exp(-48 * ((i - middle) / (window_size + 1)) ** 2) - edge) / edge_one_minus
             for i in range(1, window_size + 1)]
-
+    A()
     gaussian_window_dict[window_size] = window_list
     return window_list
 
@@ -901,8 +902,6 @@ class AudioPraatLike(object):
 
         self.formant_list = [None for i in range(self.formant_step_count)]
 
-        import pdb; pdb.set_trace()
-
     def init_formant_fft(self, padding_length = None):
         """
         Initializes formant computation data using FFT-based resampling computed via numpy.
@@ -1538,7 +1537,7 @@ class AudioPraatLike(object):
         assert end >= x1
 
         fq = self.intensity_sound.frame_rate  # frequency of frames (sampling)
-        nx = min((end - x1) * fq, self.intensity_sound.frame_count())  # number of frames to compute
+        nx = min(math.floor((end - x1) * fq), self.intensity_sound.frame_count())  # number of frames to compute
         dx = 1 / fq  # single frame duration in sec
         duration = nx / fq  # duration of frames to compute in sec
 
@@ -1557,7 +1556,7 @@ class AudioPraatLike(object):
         periodsPerWindow = 3.0
         oversampling = 4
         dt = periodsPerWindow / minimumPitch / oversampling
-        assert minimumPitch >= periodsPerWindow / duration,
+        assert minimumPitch >= periodsPerWindow / duration, \
             f"To analyse this Sound, 'pitch floor' must not be less than {periodsPerWindow / duration} Hz."
         maximumPitch = min(0.5 / dx, maximumPitch)
 
@@ -1581,7 +1580,6 @@ class AudioPraatLike(object):
         nsamp_period = math.floor(1.0 / dx / minimumPitch)
         halfnsamp_period = nsamp_period / 2 + 1
 
-
         # Determine window duration in seconds and in samples.
         dt_window = periodsPerWindow / minimumPitch
         nsamp_window = math.floor(dt_window / dx)
@@ -1589,7 +1587,7 @@ class AudioPraatLike(object):
         assert halfnsamp_window >= 2, "Analysis window too short."
         nsamp_window = halfnsamp_window * 2
 
-        minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
+        #minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
         maximumLag = min(math.floor(nsamp_window / periodsPerWindow) + 2, nsamp_window)
 
         '''
@@ -1625,7 +1623,7 @@ class AudioPraatLike(object):
         # Compute the global absolute peak for determination of silence threshold.
         globalPeak = 0.0
         for ichan in range(ny):
-            mean = math.mean(z[ichan])
+            mean = sum(z[ichan])/len(z[ichan])
             for i in range(nx):
                 value = math.fabs(z[ichan][i] - mean)
                 if value > globalPeak:
@@ -1645,8 +1643,9 @@ class AudioPraatLike(object):
             nsampFFT *= 2
 
         window = get_gaussian_window(nsamp_window)
+        A()
         windowR = window + numpy.zeros(nsampFFT - nsamp_window)
-
+        A()
         # ????
         windowR = numpy.fft.rfft(windowR)
 
@@ -1656,14 +1655,14 @@ class AudioPraatLike(object):
             windowR[i] = windowR[i] ** 2 + windowR[i + 1] ** 2
             windowR[i + 1] = 0.0  # power spectrum: square and zero
         windowR[nsampFFT - 1] *= windowR[nsampFFT - 1]  # Nyquist frequency
-
+        A()
         # ?????
         windowR = numpy.fft.irfft(windowR)  # autocorrelation
 
         for i in range(1, nsamp_window):
             windowR[i] /= windowR[0]  # normalize
         windowR[0] = 1.0  # normalize
-
+        A()
         brent_ixmax = math.floor(nsamp_window * interpolation_depth)
 
         # Calculating threads number
@@ -2265,6 +2264,10 @@ def process_sound(tier_data_list, sound):
             if len(interval_list) <= 0:
                 continue
 
+            pitch_list = [
+                sound.get_pitch(begin_sec, end_sec)
+                    for begin_sec, end_sec, _ in interval_list]
+
             # Looking in particular at longest interval and interval with highest intensity, and at all
             # intervals in general.
 
@@ -2518,8 +2521,6 @@ def process_sound_markup(
                 temp_file.flush()
 
                 sound = AudioPraatLike(pydub.AudioSegment.from_file(temp_file.name))
-
-            import pdb; pdb.set_trace()
 
             # Analysing sound, showing and caching analysis results.
 
@@ -4184,7 +4185,7 @@ class Phonology_Parameters(object):
             request.params if 'url_parameters' in request.params else request_json
 
         self.limit = (None if 'limit' not in parameter_dict else
-            int(parameter_dict.get('limit'))) or 1
+            int(parameter_dict.get('limit')))
 
         self.limit_exception = (None if 'limit_exception' not in parameter_dict else
             int(parameter_dict.get('limit_exception')))
@@ -4275,7 +4276,7 @@ class Phonology_Parameters(object):
 
         self.synchronous = args.get('synchronous')
 
-        self.limit = args.get('limit') or 1
+        self.limit = args.get('limit')
 
         self.limit_exception = args.get('limit_exception')
         self.limit_no_vowel = args.get('limit_no_vowel')
@@ -4350,7 +4351,7 @@ def phonology(request):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_phonology if args.synchronous or True else async_phonology.delay)(
+        return (std_phonology if args.synchronous else async_phonology.delay)(
             args, task_key, cache_kwargs, storage, sqlalchemy_url)
 
     # Some unknown external exception.
@@ -4689,8 +4690,6 @@ def analyze_sound_markup(
                     pydub.AudioSegment.from_file(temp_file.name),
                     args,
                     vowel_range_list if args.interval_only else None))
-
-        import pdb; pdb.set_trace()
 
         textgrid_result_list = (
             process_sound(tier_data_list, sound))
@@ -6082,7 +6081,7 @@ def sound_and_markup(request):
         sqlalchemy_url = request.registry.settings['sqlalchemy.url']
         storage = request.registry.settings['storage']
 
-        return (std_sound_and_markup if 'synchronous' in request.params or True else async_sound_and_markup.delay)(
+        return (std_sound_and_markup if 'synchronous' in request.params else async_sound_and_markup.delay)(
             task_key,
             perspective_cid, perspective_oid, published_mode, limit,
             dictionary_name, perspective_name,
