@@ -432,16 +432,14 @@ def sound_into_pitch_frame(
         ac, r, imax, localMean,
         x1, dx, nx, ny, z, **rest):
 
-    A()
-
     leftSample = (t - x1) // dx  # +1?
     rightSample = leftSample + 1
     for channel in range(ny):
         '''
         Compute the local mean; look one longest period to both sides.
         '''
-        startSample = rightSample - nsamp_period
-        endSample = leftSample + nsamp_period
+        startSample = int(rightSample - nsamp_period)
+        endSample = int(leftSample + nsamp_period)
         assert startSample >= 0
         assert endSample < nx
 
@@ -454,8 +452,8 @@ def sound_into_pitch_frame(
 		Copy a window to a frame and subtract the local mean.
 		We are going to kill the DC component before windowing.
         '''
-        startSample = rightSample - halfnsamp_window
-        endSample = leftSample + halfnsamp_window
+        startSample = int(rightSample - halfnsamp_window)
+        endSample = int(leftSample + halfnsamp_window)
         assert startSample >= 0
         assert endSample < nx
 
@@ -468,8 +466,8 @@ def sound_into_pitch_frame(
     Compute the local peak; look half a longest period to both sides.
     '''
     localPeak = 0.0
-    startSample = max(0, halfnsamp_window - halfnsamp_period)
-    endSample = min(nsamp_window, halfnsamp_window + halfnsamp_period)
+    startSample = int(max(0, halfnsamp_window - halfnsamp_period))
+    endSample = int(min(nsamp_window, halfnsamp_window + halfnsamp_period))
 
     for channel in range(ny):
         for j in range(startSample, endSample):
@@ -485,21 +483,21 @@ def sound_into_pitch_frame(
     '''
 
     for channel in range(ny):
-        ### ???
-        frame[channel] = NUMfft_forward(frame[channel])  # complex spectrum
-        ac[0] += frame[channel][0] ** 2  # DC component
-        for i in range(1, nsampFFT-1, 2):
-            ac[i] += frame[channel][i] ** 2 + frame[channel][i+1] ** 2  # power spectrum
-        ac[nsampFFT - 1] += frame[channel][nsampFFT - 1] ** 2  # Nyquist frequency
+        nsampRFFT = nsampFFT // 2 + 1
+        frame[channel][:nsampRFFT] = numpy.fft.rfft(frame[channel])  # complex spectrum
 
-    #???
-    ac = numpy.fft.irfft(ac)  # autocorrelation
+        ac[0] += frame[channel][0] ** 2  # DC component
+        for i in range(1, nsampRFFT - 2, 2):
+            ac[i] += frame[channel][i] ** 2 + frame[channel][i+1] ** 2  # power spectrum
+        ac[nsampRFFT - 1] += frame[channel][nsampRFFT - 1] ** 2  # Nyquist frequency
+
+    ac[:] = numpy.fft.irfft(ac[:nsampRFFT])  # autocorrelation
 
     '''
     Normalize the autocorrelation to the value with zero lag,
 	and divide it by the normalized autocorrelation of the window.
     '''
-    r [0] = 1.0
+    r[0] = 1.0
     for i in range(1, brent_ixmax + 1):
         r[-i] = r[i] = ac[i] / (ac[0] * windowR[i])
 
@@ -1721,7 +1719,7 @@ class AudioPraatLike(object):
                 'imax': numpy.zeros(maxnCandidates, dtype=int),
                 'localMean': numpy.zeros(ny, dtype=float)
             }
-            arg['r'] = arg['rbuffer'][:nsamp_window]  # +1?
+            arg['r'] = arg['rbuffer'][:nsamp_window + 1]
 
             args.append(arg)
             sound_into_pitch(arg)  # debug
