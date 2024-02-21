@@ -182,11 +182,9 @@ def get_gaussian_window(window_size):
     middle = float(window_size + 1) / 2
     edge = math.exp(-12)
     edge_one_minus = 1.0 - edge
-    A()
     window_list = [
         (math.exp(-48 * ((i - middle) / (window_size + 1)) ** 2) - edge) / edge_one_minus
             for i in range(1, window_size + 1)]
-    A()
     gaussian_window_dict[window_size] = window_list
     return window_list
 
@@ -334,7 +332,7 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
     try:
         # Unpacking pitchFrame
         for k, v in pitchFrame.items():
-            locals()[k] = v
+            exec(f'{k} = {v}')
 
         maxnCandidates = max(map(lambda frame: frame['nCandidates'], frames))
 
@@ -422,12 +420,19 @@ def pitch_path_finder(pitchFrame, silenceThreshold, voicingThreshold,
 
 
 # Compute pitch frames
-def sound_into_pitch_frame(arg, pitchFrame, t):
-    # Unpack variables from 'arg'
-    for k, v in arg.items():
-        locals()[k] = v
-    for k, v in sound.items():
-        locals()[k] = v
+def sound_into_pitch_frame(
+        pitchFrame, t, pitchFloor,
+        maxnCandidates, voicingThreshold,
+        octaveCost, dt_window,
+        nsamp_window, halfnsamp_window,
+        maximumLag, nsampFFT,
+        nsamp_period, halfnsamp_period,
+        brent_ixmax, globalPeak,
+        window, windowR,frame,
+        ac, r, imax, localMean,
+        x1, dx, nx, ny, z, **rest):
+
+    A()
 
     leftSample = (t - x1) // dx  # +1?
     rightSample = leftSample + 1
@@ -588,14 +593,12 @@ def sound_into_pitch_frame(arg, pitchFrame, t):
 
 
 def sound_into_pitch(arg):
-    # Get some values from 'arg'
-    for key in 'pitch', 'firstFrame', 'lastFrame':
-        locals()[key] = arg[key]
-    for key in 'x1', 'dx', 'frames':
-        locals()[key] = pitch[key]
-
-    for iframe in range(firstFrame, lastFrame):
-        sound_into_pitch_frame(arg, pitch_frame := frames[iframe], t := x1 + iframe * dx)
+    def f(arg, firstFrame, lastFrame, x1, dx, frames, **rest):
+        for iframe in range(firstFrame, lastFrame):
+            sound_into_pitch_frame(pitch_frame := frames[iframe],
+                                   t := x1 + iframe * dx,
+                                   **arg, **(arg.get('sound')))
+    f(arg, **arg, **(arg.get('pitch')))
 
 
 class AudioPraatLike(object):
@@ -1585,7 +1588,7 @@ class AudioPraatLike(object):
         nsamp_window = math.floor(dt_window / dx)
         halfnsamp_window = nsamp_window / 2 - 1
         assert halfnsamp_window >= 2, "Analysis window too short."
-        nsamp_window = halfnsamp_window * 2
+        nsamp_window = int(halfnsamp_window * 2)
 
         #minimumLag = max(2, math.floor(1.0 / dx / maximumPitch))
         maximumLag = min(math.floor(nsamp_window / periodsPerWindow) + 2, nsamp_window)
@@ -1609,7 +1612,7 @@ class AudioPraatLike(object):
             'dx': dt,
             'x1': t1,
             'ceiling': maximumPitch,
-            'maxnCandidates': maxnCandidates,
+            #'maxnCandidates': maxnCandidates,
             'frames': [{
                 'intensity': 0.0,
                 'nCandidates': maxnCandidates,
@@ -1643,26 +1646,24 @@ class AudioPraatLike(object):
             nsampFFT *= 2
 
         window = get_gaussian_window(nsamp_window)
-        A()
-        windowR = window + numpy.zeros(nsampFFT - nsamp_window)
-        A()
-        # ????
+        windowR = window + numpy.zeros(nsampFFT - nsamp_window).tolist()
+
         windowR = numpy.fft.rfft(windowR)
+        nsampRFFT = nsampFFT // 2 + 1  # RFFT computes such length
 
         # Change input windowR according to praat algorithms
         windowR[0] *= windowR[0]  # DC component
-        for i in range(1, nsampFFT - 1, 2):
+        for i in range(1, nsampRFFT - 2, 2):
             windowR[i] = windowR[i] ** 2 + windowR[i + 1] ** 2
             windowR[i + 1] = 0.0  # power spectrum: square and zero
-        windowR[nsampFFT - 1] *= windowR[nsampFFT - 1]  # Nyquist frequency
-        A()
-        # ?????
+        windowR[nsampRFFT - 1] *= windowR[nsampRFFT - 1]  # Nyquist frequency
+
         windowR = numpy.fft.irfft(windowR)  # autocorrelation
 
         for i in range(1, nsamp_window):
             windowR[i] /= windowR[0]  # normalize
         windowR[0] = 1.0  # normalize
-        A()
+
         brent_ixmax = math.floor(nsamp_window * interpolation_depth)
 
         # Calculating threads number
@@ -1676,13 +1677,14 @@ class AudioPraatLike(object):
 
         firstFrame = 0
         lastFrame = numberOfFramesPerThread
-        cancelled = [False]
-        args = []
+        #cancelled = [False]
 
         # Gather parameters into 'sound'
+        sound = {}
         for key in 'x1', 'dx', 'nx', 'ny', 'z':
             sound[key] = locals()[key]
 
+        args = []
         for ithread in range(numberOfThreads):
             # Get the rest
             if ithread == numberOfThreads - 1:
@@ -1710,7 +1712,7 @@ class AudioPraatLike(object):
                 'window': window,
                 'windowR': windowR,
                 'isMainThread': (ithread == numberOfThreads),
-                'cancelled': cancelled,
+                #'cancelled': cancelled,
                 # ???
                 'fftTable': numpy.fft.rfft(numpy.zeros(nsampFFT)),
                 'frame': numpy.zeros((ny, nsampFFT)),
@@ -1722,20 +1724,24 @@ class AudioPraatLike(object):
             arg['r'] = arg['rbuffer'][:nsamp_window]  # +1?
 
             args.append(arg)
+            sound_into_pitch(arg)  # debug
+
             firstFrame = lastFrame + 1
             lastFrame += numberOfFramesPerThread
 
+        '''
         # MelderThread_run equivalent in Python
         pool = multiprocessing.Pool(numberOfThreads)
         pool.map(sound_into_pitch, args)
         pool.close()
         pool.join()
+        '''
+        A()
 
         # Melder_progress equivalent in Python
         print("Sound to Pitch: path finder - 95% complete")
         pitch_path_finder(thee, silenceThreshold, voicingThreshold, octaveCost,
                           octaveJumpCost, voicedUnvoicedCost, minimumPitch)
-
         return thee
 
 def find_max_interval_praat(sound, interval_list):
@@ -2431,7 +2437,7 @@ def process_sound_markup(
             '{0} [CACHE {1}]: exception'.format(
             log_str, cache_key))
 
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         return None
 
@@ -2543,7 +2549,7 @@ def process_sound_markup(
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('{0}: exception'.format(log_str))
-            log.debug(traceback_string)
+            log.warn(traceback_string)
 
             caching.CACHE.set(cache_key, ('exception', exception,
                 traceback_string.replace('Traceback', 'CACHEd traceback'), log_str))
@@ -4362,7 +4368,7 @@ def phonology(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         request.response.status = HTTPInternalServerError.code
 
@@ -4390,7 +4396,7 @@ def std_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -4430,7 +4436,7 @@ def async_phonology(args, task_key, cache_kwargs, storage, sqlalchemy_url):
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('phonology: exception')
-            log.debug(traceback_string)
+            log.warn(traceback_string)
 
             if task_status is not None:
                 task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -4748,7 +4754,7 @@ def analyze_sound_markup(
         traceback_string = ''.join(traceback.format_exception(
             exception, exception, exception.__traceback__))[:-1]
 
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         err_msg += "ERROR: Sound-markup analysis general exception.\n"
 
@@ -5368,7 +5374,7 @@ def perform_phonology(args, task_status, storage):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('compile_workbook: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         # If we failed to create an Excel file, we terminate with error.
 
@@ -5601,7 +5607,7 @@ class Sound_Markup_Iterator(object):
                     exception, exception, exception.__traceback__))[:-1]
 
                 log.debug('{0}: exception'.format(row_str))
-                log.debug(traceback_string)
+                log.warn(traceback_string)
 
 
 class Tier_List_Iterator(Sound_Markup_Iterator):
@@ -5679,7 +5685,7 @@ def get_tier_list(perspective_cid, perspective_oid):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_tier_list: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         return False, traceback_string
 
@@ -5870,7 +5876,7 @@ def get_skip_list(perspective_cid, perspective_oid):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_skip_list: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         return False, traceback_string
 
@@ -5997,7 +6003,7 @@ def get_link_perspective_data(perspective_id, field_id_list):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('phonology_link_perspective_data: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         return False, traceback_string
 
@@ -6095,7 +6101,7 @@ def sound_and_markup(request):
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('sound_and_markup: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6129,7 +6135,7 @@ def std_sound_and_markup(
             exception, exception, exception.__traceback__))[:-1]
 
         log.debug('sound_and_markup: exception')
-        log.debug(traceback_string)
+        log.warn(traceback_string)
 
         if task_status is not None:
             task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6176,7 +6182,7 @@ def async_sound_and_markup(
                 exception, exception, exception.__traceback__))[:-1]
 
             log.debug('sound_and_markup: exception')
-            log.debug(traceback_string)
+            log.warn(traceback_string)
 
             if task_status is not None:
                 task_status.set(4, 100, 'Finished (ERROR), external error')
@@ -6486,7 +6492,7 @@ def perform_sound_and_markup(
                     traceback_string = ''.join(traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1]
 
-                    log.debug(traceback_string)
+                    log.warn(traceback_string)
 
                     task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / total_count)),
                         'Archiving sound and markup')
@@ -6564,7 +6570,7 @@ def perform_sound_and_markup(
                     traceback_string = ''.join(traceback.format_exception(
                         exception, exception, exception.__traceback__))[:-1]
 
-                    log.debug(traceback_string)
+                    log.warn(traceback_string)
 
                     task_status.set(3, int(math.floor(50.5 + (index + 1) * 49.5 / sound_count)),
                         'Archiving sounds without markup')
@@ -6735,7 +6741,7 @@ def perform_sound_and_markup(
                         traceback_string = ''.join(traceback.format_exception(
                             exception, exception, exception.__traceback__))[:-1]
 
-                        log.debug(traceback_string)
+                        log.warn(traceback_string)
 
                         task_status.set(2, int(math.floor(1 + (index + 1) * 49.5 / len(update_list))),
                             'Archiving sound and markup')
@@ -6806,7 +6812,7 @@ def perform_sound_and_markup(
                         traceback_string = ''.join(traceback.format_exception(
                             exception, exception, exception.__traceback__))[:-1]
 
-                        log.debug(traceback_string)
+                        log.warn(traceback_string)
 
                         task_status.set(3,
                             int(math.floor(50.5 + (index + 1) * 49.5 / len(sound_update_list))),
