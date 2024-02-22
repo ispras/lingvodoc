@@ -152,7 +152,7 @@ def translation_service_search(searchstring):
         return translationgist_contents(translationgist)
 
 
-def translation_service_get(searchstring):
+def translation_get(searchstring, client_id, gist_type='Service'):
     translationgist = (
         DBSession
             .query(TranslationGist)
@@ -174,8 +174,8 @@ def translation_service_get(searchstring):
     translation_gist_id = create_gists_with_atoms([{'locale_id': ENGLISH_LOCALE,
                                                     'content': searchstring}],
                                                   None,
-                                                  [66, None],
-                                                  gist_type='Service')
+                                                  [client_id, None],
+                                                  gist_type=gist_type)
 
     return {"client_id": translation_gist_id[0], "object_id": translation_gist_id[1]}
 
@@ -876,7 +876,8 @@ def convert_five_tiers(
             and not morphology)
 
         if new_p1_flag:
-            response = translation_service_get("Lexical Entries")
+            response = translation_get("Lexical Entries",
+                                       client_id=extra_client_id, gist_type='Perspective')
             le_perspective = add_perspective(response)
 
         le_perspective_id = le_perspective.id if le_perspective else None
@@ -891,7 +892,8 @@ def convert_five_tiers(
             and not morphology)
 
         if new_p2_flag:
-            response = translation_service_get("Paradigms")
+            response = translation_get("Paradigms",
+                                       client_id=extra_client_id, gist_type='Perspective')
             pa_perspective = add_perspective(response)
 
         pa_perspective_id = pa_perspective.id if pa_perspective else None
@@ -906,7 +908,8 @@ def convert_five_tiers(
             and morphology)
 
         if new_p3_flag:
-            response = translation_service_get("Morphology")
+            response = translation_get("Morphology",
+                                       client_id=extra_client_id, gist_type='Perspective')
             mo_perspective = add_perspective(response)
 
         mo_perspective_id = mo_perspective.id if mo_perspective else None
@@ -921,7 +924,8 @@ def convert_five_tiers(
             and morphology)
 
         if new_p4_flag:
-            response = translation_service_get("Morphological Paradigms")
+            response = translation_get("Morphological Paradigms",
+                                       client_id=extra_client_id, gist_type='Perspective')
             mp_perspective = add_perspective(response)
 
         mp_perspective_id = mp_perspective.id if mp_perspective else None
