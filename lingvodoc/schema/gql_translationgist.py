@@ -205,7 +205,7 @@ class UndeleteTranslationGist(graphene.Mutation):
     triumph = graphene.Boolean()
 
     @staticmethod
-    @acl_check_by_id('delete', 'translationgist')
+    @acl_check_by_id('delete', 'translations')
     def mutate(root, info, **args):
         id = args.get("id")
         client_id, object_id = id
