@@ -395,10 +395,16 @@ def hfst_parser(dedoc_output, lang, debug_flag=False):
                 analyzed = analyzed + 1
                 section = "'<w>"
                 for lkp in map(lambda l: l[0], lookup):
-                    plus_pos = lkp.index('+')
-                    lex = lkp[:plus_pos]
-                    gr = lkp[plus_pos+1:].replace('+', ',')
 
+                    if '+' in lkp:
+                        plus_pos = lkp.index('+')
+                        lex = lkp[:plus_pos]
+                        gr = lkp[plus_pos + 1:].replace('+', ',')
+                    else:
+                        lex = lkp
+                        gr = "Unknown"
+
+                    # Get translation
                     if ((xln := re.search(f"[\r\n]{lex}:{w} .*!([^0].*)[\r\n]", lexicon)) or
                         (xln := re.search(f"[\r\n]{lex}:{w.lower()} .*!([^0].*)[\r\n]", lexicon)) or
                         (xln := re.search(f"[\r\n]{lex}:.*!([^0].*)[\r\n]", lexicon))):
