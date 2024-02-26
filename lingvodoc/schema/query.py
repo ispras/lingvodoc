@@ -273,7 +273,8 @@ from lingvodoc.schema.gql_translationatom import (
 from lingvodoc.schema.gql_translationgist import (
     CreateTranslationGist,
     DeleteTranslationGist,
-    TranslationGist)
+    TranslationGist,
+    UndeleteTranslationGist)
 
 from lingvodoc.schema.gql_user import (
     ActivateDeactivateUser,
@@ -7089,6 +7090,7 @@ class MyMutations(graphene.ObjectType):
     delete_translationatom = DeleteTranslationAtom.Field()
     create_translationgist = CreateTranslationGist.Field()
     delete_translationgist = DeleteTranslationGist.Field()
+    undelete_translationgist = UndeleteTranslationGist.Field()
     create_lexicalentry = CreateLexicalEntry.Field()
     delete_lexicalentry = DeleteLexicalEntry.Field()
     bulk_delete_lexicalentry = BulkDeleteLexicalEntry.Field()
