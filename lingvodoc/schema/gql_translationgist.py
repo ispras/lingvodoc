@@ -197,7 +197,18 @@ class DeleteTranslationGist(graphene.Mutation):
 
 
 class UndeleteTranslationGist(graphene.Mutation):
-
+    """
+    # Request example (bash script with args: <client_id of the gist> <object_id of the gist>):
+    tkt='123456789' #! Set real auth_tkt
+    usr='9876' #! Set real user_id
+    curl 'http://watson.local:6543/graphql' \
+        -H 'Content-Type: application/json' \
+        -H "Cookie: locale_id=2; auth_tkt=$tkt!userid_type:int; client_id=$usr" \
+        --data-raw '{ "operationName": "UndeleteTranslationGist", "variables":{"id":['$1','$2']}, \
+        "query": "mutation UndeleteTranslationGist($id: LingvodocID!) \
+        { undelete_translationgist(id: $id) { translationgist {id}, triumph }}"}'
+    #! Remove any newline from the curl command above
+    """
     class Arguments:
         id = LingvodocID(required=True)
 
