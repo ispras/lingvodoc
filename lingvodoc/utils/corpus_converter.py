@@ -158,6 +158,7 @@ def translation_get(searchstring, client_id, gist_type='Service'):
             .query(TranslationGist)
             .join(TranslationAtom)
             .filter(
+                TranslationGist.type == gist_type,
                 TranslationGist.marked_for_deletion == False,
                 TranslationAtom.marked_for_deletion == False,
                 TranslationAtom.content == searchstring,
@@ -173,9 +174,9 @@ def translation_get(searchstring, client_id, gist_type='Service'):
 
     translation_gist_id = create_gists_with_atoms([{'locale_id': ENGLISH_LOCALE,
                                                     'content': searchstring}],
-                                                  None,
-                                                  [client_id, None],
-                                                  gist_type=gist_type)
+                                                    None,
+                                                    [client_id, None],
+                                                    gist_type=gist_type)
 
     return {"client_id": translation_gist_id[0], "object_id": translation_gist_id[1]}
 
