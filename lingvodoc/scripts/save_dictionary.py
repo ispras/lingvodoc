@@ -2059,7 +2059,7 @@ class Save_Context(object):
             self.perspective_info_dict[perspective.id] = (
                 order_key, name_str, transcription_fid, translation_fid, sound_fid, markup_fid)
 
-        # Updating perspectives' transcription / transpation field info, if required.
+        # Updating perspectives' transcription / translation field info, if required.
 
         if insert_list:
 
@@ -2835,7 +2835,6 @@ def compile_document(
 
         if context.workbook:
             write_xlsx(context, lex_dict, published, __debug_flag__)
-            context.workbook.close()
         elif context.document:
             write_docx(context, lex_dict, published, __debug_flag__)
             context.document.save(context.stream)
@@ -2844,6 +2843,9 @@ def compile_document(
             # Write utf to bytes
             wrapper_file = codecs.getwriter('utf-8')(context.stream)
             context.richtext.write(wrapper_file)
+
+    if context.workbook:
+        context.workbook.close()
 
 
 # @profile()
