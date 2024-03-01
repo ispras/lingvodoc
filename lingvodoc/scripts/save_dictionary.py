@@ -65,7 +65,7 @@ from sqlalchemy.orm import (
 
 from sqlalchemy import tuple_, and_, or_
 from lingvodoc.scripts import elan_parser
-from pdb import set_trace
+from pdb import set_trace as A
 import io, codecs
 from xlsxwriter import Workbook as xlsxDocument
 from docx import Document as docxDocument
@@ -2202,6 +2202,9 @@ class Save_Context(object):
             if translation_list is None:
                 translation_list = []
 
+            if third_field_list is None:
+                third_field_list = []
+
             if sound_markup_list is None:
                 sound_markup_list = []
 
@@ -2213,7 +2216,10 @@ class Save_Context(object):
                     for t in transcription_list],
 
                 ['\'' + t.strip() + '\''
-                    for t in translation_list]]
+                    for t in translation_list],
+
+                [t.strip()
+                    for t in third_field_list]]
 
             # Processing sound and/or markup links.
 
@@ -2365,7 +2371,7 @@ class Save_Context(object):
                         len(rows_to_write))
 
                     rows_to_write.extend(
-                        ([], [], [], [], []))
+                        ([], [], [], [], [], []))
 
                     for _, cognate_entry_id, row_list in etymology_info:
 
