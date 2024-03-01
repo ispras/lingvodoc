@@ -829,7 +829,9 @@ class Save_Context(object):
                   transcription_client_id BIGINT,
                   transcription_object_id BIGINT,
                   translation_client_id BIGINT,
-                  translation_object_id BIGINT,{sound_str}{markup_str}
+                  translation_object_id BIGINT,
+                  third_field_client_id BIGINT,
+                  third_field_object_id BIGINT,{sound_str}{markup_str}
 
                   primary key (
                     perspective_client_id,
@@ -1134,7 +1136,9 @@ class Save_Context(object):
                   Tp.transcription_client_id,
                   Tp.transcription_object_id,
                   Tp.translation_client_id,
-                  Tp.translation_object_id{sound_fid_str}{markup_fid_str}
+                  Tp.translation_object_id,
+                  Tp.third_field_client_id,
+                  Tp.third_field_object_id{sound_fid_str}{markup_fid_str}
 
                   from
                   {eid_pid_table_name} Te,
@@ -1196,6 +1200,33 @@ class Save_Context(object):
                   
                   group by
                   E.parent_client_id,
+                  E.parent_object_id),
+
+                third_field_cte as (
+
+                  select
+                  E.parent_client_id,
+                  E.parent_object_id,
+                  array_agg(E.content) content_list
+
+                  from
+                  eid_pid_fid_cte T,
+                  public.entity E,
+                  publishingentity P
+                  
+                  where
+                  E.parent_client_id = T.entry_client_id and
+                  E.parent_object_id = T.entry_object_id and
+                  E.field_client_id = T.third_field_client_id and
+                  E.field_object_id = T.third_field_object_id and
+                  E.content is not null and
+                  E.marked_for_deletion = false and
+                  P.client_id = E.client_id and
+                  P.object_id = E.object_id and
+                  P.accepted = true{{0}}
+                  
+                  group by
+                  E.parent_client_id,
                   E.parent_object_id){sound_markup_cte_str}
 
                 select
@@ -1204,7 +1235,8 @@ class Save_Context(object):
                 T.perspective_client_id,
                 T.perspective_object_id,
                 Xc.content_list,
-                Xl.content_list{sound_markup_select_str}
+                Xl.content_list,
+                Tf.content_list{sound_markup_select_str}
 
                 from
                 eid_pid_fid_cte T
@@ -1219,7 +1251,13 @@ class Save_Context(object):
                 translation_cte Xl
                 on
                 Xl.parent_client_id = T.entry_client_id and
-                Xl.parent_object_id = T.entry_object_id{sound_markup_join_str};
+                Xl.parent_object_id = T.entry_object_id
+                
+                left outer join
+                third_field_cte Tf
+                on
+                Tf.parent_client_id = T.entry_client_id and
+                Tf.parent_object_id = T.entry_object_id{sound_markup_join_str};
 
                 '''.format(
 
@@ -1617,7 +1655,7 @@ class Save_Context(object):
 
             if perspective_info:
 
-                order_key, name_str, xcript_fid, xlat_fid, snd_fid, mrkp_fid = perspective_info
+                order_key, name_str, xcript_fid, xlat_fid, thrd_fid, snd_fid, mrkp_fid = perspective_info
 
                 if xcript_fid is None or xlat_fid is None:
 
@@ -1715,8 +1753,9 @@ class Save_Context(object):
                         func.jsonb_object_agg(
                             TranslationAtom.locale_id,
                             TranslationAtom.content)
+                        .label('name'),
 
-                            .label('name'))
+                        DictionaryPerspectiveToField.position)
 
                     .filter(
                         DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
@@ -1732,7 +1771,8 @@ class Save_Context(object):
 
                     .group_by(
                         Field.client_id,
-                        Field.object_id)
+                        Field.object_id,
+                        DictionaryPerspectiveToField.position)
 
                     .order_by(
                         Field.client_id,
@@ -1755,7 +1795,7 @@ class Save_Context(object):
             sound_fid = None
             markup_fid = None
 
-            for field_cid, field_oid, name_dict in field_name_info_list:
+            for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                 if field_cid == 66 and field_oid == 8:
                     transcription_fid = (field_cid, field_oid)
@@ -1785,7 +1825,7 @@ class Save_Context(object):
                 ru_snd_fid = None
                 ru_mrkp_fid = None
 
-                for field_cid, field_oid, name_dict in field_name_info_list:
+                for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1854,7 +1894,7 @@ class Save_Context(object):
                 ru_snd_fid = None
                 ru_mrkp_fid = None
 
-                for field_cid, field_oid, name_dict in field_name_info_list:
+                for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1919,7 +1959,7 @@ class Save_Context(object):
                 ru_xcript_fid = None
                 ru_xlat_fid = None
 
-                for field_cid, field_oid, name_dict in field_name_info_list:
+                for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1953,16 +1993,23 @@ class Save_Context(object):
                     transcription_fid = ru_xcript_fid
                     translation_fid = ru_xlat_fid
 
-            # Ok, failed to get transcription & translation fields, we should remember it.
-
+            # Failed to get transcription & translation fields, we will get first three fields.
             if transcription_fid is None or translation_fid is None:
 
-                self.perspective_fail_set.add(
-                    (order_key, name_str))
+                cognate_description_fids = [None, None, ('null', 'null')]
+                for field_cid, field_oid, _, position in field_name_info_list:
+                    if position <= 3:
+                        cognate_description_fids[position - 1] = (field_cid, field_oid)
+
+                # Ok, failed to get three fields, we should remember it.
+                if not all(cognate_description_fids):
+                    self.perspective_fail_set.add(
+                        (order_key, name_str))
+            else:
+                cognate_description_fids = [transcription_fid, translation_fid, ('null', 'null')]
 
             # Got transcription & translation fields, what about sound and/or markup?
-
-            else:
+            if all(cognate_description_fids):
 
                 # If we are going to show both sound and markup fields for cognates, we require that the
                 # markup field is a subfield of the sound field.
@@ -1981,7 +2028,7 @@ class Save_Context(object):
                                 .query(
 
                                     self.session
-                                    
+
                                         .query(
                                             literal(1))
 
@@ -2028,17 +2075,12 @@ class Save_Context(object):
                         (order_key, name_str))
 
                 format_str = (
-                    '({}, {}, {}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag and self.markup_flag else
-                    '({}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag or self.markup_flag else
-                    '({}, {}, {}, {}, {}, {})')
+                    '({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag and self.markup_flag else
+                    '({}, {}, {}, {}, {}, {}, {}, {}, {}, {})' if self.sound_flag or self.markup_flag else
+                    '({}, {}, {}, {}, {}, {}, {}, {})')
 
-                format_arg_list = [
-                    perspective.client_id,
-                    perspective.object_id,
-                    transcription_fid[0],
-                    transcription_fid[1],
-                    translation_fid[0],
-                    translation_fid[1]]
+                format_arg_list = [perspective.client_id, perspective.object_id] + \
+                                  [cognate_description_fids[i][j] for i in range(3) for j in range(2)]
 
                 if self.sound_flag:
 
@@ -2057,7 +2099,11 @@ class Save_Context(object):
                         *format_arg_list))
 
             self.perspective_info_dict[perspective.id] = (
-                order_key, name_str, transcription_fid, translation_fid, sound_fid, markup_fid)
+                order_key, name_str,
+                cognate_description_fids[0],
+                cognate_description_fids[1],
+                cognate_description_fids[2],
+                sound_fid, markup_fid)
 
         # Updating perspectives' transcription / translation field info, if required.
 
@@ -2131,9 +2177,10 @@ class Save_Context(object):
                 perspective_cid,
                 perspective_oid,
                 transcription_list,
-                translation_list) = (
+                translation_list,
+                third_field_list) = (
 
-                result_item[:6])
+                result_item[:7])
 
             sound_markup_list = result_item[-1]
 
@@ -2145,7 +2192,7 @@ class Save_Context(object):
             if perspective_info is None:
                 continue
 
-            order_key, name_str, _, _, _, _ = perspective_info
+            order_key, name_str, _, _, _, _, _ = perspective_info
 
             # Getting ready to compose etymology info to inserted into XLSX.
 
