@@ -1137,6 +1137,10 @@ class CognateAnalysis(graphene.Mutation):
             perspective_id
             for perspective_id, _, _ in perspective_info_list]
 
+        if not perspective_id_list:
+
+            return set(), [], time.time() - start_time
+
         entry_id_query = (
 
             DBSession.query(

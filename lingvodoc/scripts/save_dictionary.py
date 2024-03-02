@@ -1753,8 +1753,9 @@ class Save_Context(object):
                         func.jsonb_object_agg(
                             TranslationAtom.locale_id,
                             TranslationAtom.content)
+                        .label('name'),
 
-                            .label('name'))
+                        DictionaryPerspectiveToField.position)
 
                     .filter(
                         DictionaryPerspectiveToField.parent_client_id == perspective.client_id,
@@ -1770,7 +1771,8 @@ class Save_Context(object):
 
                     .group_by(
                         Field.client_id,
-                        Field.object_id)
+                        Field.object_id,
+                        DictionaryPerspectiveToField.position)
 
                     .order_by(
                         Field.client_id,
@@ -1819,7 +1821,7 @@ class Save_Context(object):
             sound_fid = None
             markup_fid = None
 
-            for field_cid, field_oid, name_dict in field_name_info_list:
+            for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                 if field_cid == 66 and field_oid == 8:
                     transcription_fid = (field_cid, field_oid)
@@ -1849,7 +1851,7 @@ class Save_Context(object):
                 ru_snd_fid = None
                 ru_mrkp_fid = None
 
-                for field_cid, field_oid, name_dict in field_name_info_list:
+                for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1918,7 +1920,7 @@ class Save_Context(object):
                 ru_snd_fid = None
                 ru_mrkp_fid = None
 
-                for field_cid, field_oid, name_dict in field_name_info_list:
+                for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                     if '2' in name_dict:
 
@@ -1983,7 +1985,7 @@ class Save_Context(object):
                 ru_xcript_fid = None
                 ru_xlat_fid = None
 
-                for field_cid, field_oid, name_dict in field_name_info_list:
+                for field_cid, field_oid, name_dict, _ in field_name_info_list:
 
                     if '2' in name_dict:
 
