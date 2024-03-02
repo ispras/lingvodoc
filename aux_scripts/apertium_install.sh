@@ -11,7 +11,7 @@ fi;
 
 locale-gen en_US.UTF-8 && update-locale;
 curl -sS https://apertium.projectjj.com/apt/install-nightly.sh | bash;
-apt install -y lttoolbox apertium-dev apertium-lex-tools apertium-separable hfst libhfst-dev cg3 cg3-dev autoconf;
+apt install -y lttoolbox apertium-all-dev apertium-lex-tools apertium-separable hfst libhfst-dev cg3 cg3-dev autoconf;
 
 if [ $# -gt 1 ]; then
 
